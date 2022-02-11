@@ -22,7 +22,7 @@ func SetupTestRun(t *testing.T, numNodes int) (context.Context, string, *dockert
 	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), t)
 	require.NoError(t, err)
 
-	return context.Background(), home, pool, network, MakeTestNodes(numNodes, home, "ibc-test-framework", getGaiadChain(), pool, t)
+	return context.Background(), home, pool, network, MakeTestNodes(t, numNodes, home, "ibc-test-framework", getGaiadChain(), pool)
 }
 
 // GetHostPort returns a resource's published port with an address.

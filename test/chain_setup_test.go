@@ -70,11 +70,24 @@ func (tn *TestNode) CliContext() client.Context {
 }
 
 // MakeTestNodes creates the test node objects required for bootstrapping tests
-func MakeTestNodes(count int, home, chainid string, chainType *ChainType,
-	pool *dockertest.Pool, t *testing.T) (out TestNodes) {
-	for i := 0; i < count; i++ {
-		tn := &TestNode{Home: home, Index: i, Chain: chainType, ChainID: chainid,
-			Pool: pool, t: t, ec: simapp.MakeTestEncodingConfig()}
+func MakeTestNodes(
+	t *testing.T,
+	numNodes int,
+	home string,
+	chainid string,
+	chainType *ChainType,
+	pool *dockertest.Pool,
+) (out TestNodes) {
+	for i := 0; i < numNodes; i++ {
+		tn := &TestNode{
+			Home:    home,
+			Index:   i,
+			Chain:   chainType,
+			ChainID: chainid,
+			Pool:    pool,
+			t:       t,
+			ec:      simapp.MakeTestEncodingConfig(),
+		}
 		tn.MkDir()
 		out = append(out, tn)
 	}
