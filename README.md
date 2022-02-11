@@ -15,4 +15,10 @@ The goals are to support:
 
 The tests will be run in `go test` and utilize docker to spin up complete chains and utilize only the chain docker images themseleves.
 
-This repo will rely on images built from https://github.com/strangelove-ventures/heighliner
+This repo will rely on images built from https://github.com/strangelove-ventures/heighliner.
+
+## Note
+
+If you do not have the containers from [heighliner](https://github.com/strangelove-ventures/heighliner)
+built already, you will need to pull them down (e.g. `docker pull ghcr.io/strangelove-ventures/heighliner/gaia:v6.0.0-rocks`).
+Future work will handle this for you.
