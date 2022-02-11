@@ -13,8 +13,10 @@ func TestChainSpinUp(t *testing.T) {
 
 	t.Cleanup(Cleanup(pool, t.Name(), home))
 
+	// TODO(desa): I think these need to be different from the existing validators
+	fullnodes := []*TestNode{}
 	// start validators and sentry nodes
-	StartNodeContainers(t, ctx, network, validators, validators)
+	StartNodeContainers(t, ctx, network, validators, fullnodes)
 
 	// Wait for all nodes to get to given block height
 	validators.WaitForHeight(5)
