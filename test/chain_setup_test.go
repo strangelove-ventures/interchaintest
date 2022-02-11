@@ -43,7 +43,7 @@ var (
 func getGaiadChain() *ChainType {
 	return &ChainType{
 		Repository: "ghcr.io/strangelove-ventures/heighliner/gaia",
-		Version:    "v6.0.0-rocks",
+		Version:    "v5.0.7",
 		Bin:        "gaiad",
 		Ports: map[docker.Port]struct{}{
 			"26656/tcp": {},
