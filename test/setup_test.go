@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/ory/dockertest"
@@ -12,17 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func SetupTestRun(t *testing.T, numNodes int) (context.Context, string, *dockertest.Pool, *docker.Network, TestNodes) {
+func SetupTestRun(t *testing.T, pool *dockertest.Pool, numNodes int) (*docker.Network, TestNodes) {
 	home, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(home)
+	})
 
 	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), t)
 	require.NoError(t, err)
 
-	return context.Background(), home, pool, network, MakeTestNodes(t, numNodes, home, "ibc-test-framework", getGaiadChain(), pool)
+	return network, MakeTestNodes(t, numNodes, home, "ibc-test-framework", getGaiadChain(), pool)
 }
 
 // GetHostPort returns a resource's published port with an address.

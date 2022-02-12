@@ -1,17 +1,23 @@
 package test
 
 import (
-	"os"
+	"context"
 	"testing"
 
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChainSpinUp(t *testing.T) {
-	ctx, home, pool, network, validators := SetupTestRun(t, 4)
+	ctx := context.Background()
 
-	t.Cleanup(Cleanup(pool, t.Name(), home))
+	pool, err := dockertest.NewPool("")
+	require.NoError(t, err)
+
+	network, validators := SetupTestRun(t, pool, 4)
+
+	t.Cleanup(Cleanup(pool, t.Name()))
 
 	// TODO(desa): I think these need to be different from the existing validators
 	fullnodes := []*TestNode{}
@@ -22,8 +28,9 @@ func TestChainSpinUp(t *testing.T) {
 	validators.WaitForHeight(5)
 }
 
-// Cleanup will clean up Docker containers, networks, and the other various config files generated in testing
-func Cleanup(pool *dockertest.Pool, testName, testDir string) func() {
+// Cleanup will clean up Docker containers, networks, and the other various
+// config files generated in testing
+func Cleanup(pool *dockertest.Pool, testName string) func() {
 	return func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
@@ -41,6 +48,5 @@ func Cleanup(pool *dockertest.Pool, testName, testDir string) func() {
 				}
 			}
 		}
-		_ = os.RemoveAll(testDir)
 	}
 }
