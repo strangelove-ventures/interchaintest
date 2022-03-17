@@ -28,6 +28,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
+	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 	"github.com/stretchr/testify/require"
 	tmconfig "github.com/tendermint/tendermint/config"
 	tmjson "github.com/tendermint/tendermint/libs/json"
@@ -44,13 +45,17 @@ var (
 	rpcPort   = "26657/tcp"
 )
 
-func getChain(name string, version string, binary string, bech32Prefix string) *ChainType {
+func getChain(name string, version string, binary string, bech32Prefix string, denom string, gasPrices string, gasAdjustment float64, trustingPeriod string) *ChainType {
 	return &ChainType{
-		Name:         name,
-		Bech32Prefix: bech32Prefix,
-		Repository:   fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-		Version:      version,
-		Bin:          binary,
+		Name:           name,
+		Bech32Prefix:   bech32Prefix,
+		Denom:          denom,
+		GasPrices:      gasPrices,
+		GasAdjustment:  gasAdjustment,
+		TrustingPeriod: trustingPeriod,
+		Repository:     fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
+		Version:        version,
+		Bin:            binary,
 		Ports: map[docker.Port]struct{}{
 			"26656/tcp":          {},
 			docker.Port(rpcPort): {},
@@ -95,13 +100,23 @@ func MakeTestNodes(count int, home, chainid string, chainType *ChainType,
 }
 
 // StartNodeContainers is passed a chain id and arrays of validators and full nodes to configure
-func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network, chainType *ChainType, validators, fullnodes []*TestNode) {
+func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network, chainType *ChainType, validators, fullnodes []*TestNode, additionalGenesisWallets []relayer.WalletAmount) {
 	var eg errgroup.Group
+
+	genesisAmount := types.Coin{
+		Amount: types.NewInt(1000000000000),
+		Denom:  chainType.Denom,
+	}
+
+	genesisSelfDelegation := types.Coin{
+		Amount: types.NewInt(100000000000),
+		Denom:  chainType.Denom,
+	}
 
 	// sign gentx for each validator
 	for _, v := range validators {
 		v := v
-		eg.Go(func() error { return v.InitValidatorFiles(ctx, chainType) })
+		eg.Go(func() error { return v.InitValidatorFiles(ctx, chainType, genesisAmount, genesisSelfDelegation) })
 	}
 
 	// just initialize folder for any full nodes
@@ -124,14 +139,19 @@ func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network,
 		bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, n0key.GetAddress().Bytes())
 		require.NoError(t, err)
 
-		require.NoError(t, validator0.AddGenesisAccount(ctx, bech32))
+		require.NoError(t, validator0.AddGenesisAccount(ctx, bech32, genesisAmount))
 		nNid, err := validatorN.NodeID()
 		require.NoError(t, err)
 		oldPath := path.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
 		newPath := path.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
 		require.NoError(t, os.Rename(oldPath, newPath))
 	}
-	require.NoError(t, eg.Wait())
+
+	for _, wallet := range additionalGenesisWallets {
+		require.NoError(t, validator0.RestoreKey(ctx, wallet.Address, wallet.Mnemonic))
+		require.NoError(t, validator0.AddGenesisAccount(ctx, wallet.Address, types.Coin{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}))
+	}
+
 	require.NoError(t, validator0.CollectGentxs(ctx))
 
 	genbz, err := ioutil.ReadFile(validator0.GenesisFilePath())
@@ -539,17 +559,28 @@ func (tn *TestNode) CreateKey(ctx context.Context, name string) error {
 	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
+// CreateKey restores a key in the keyring backend test for the given node
+func (tn *TestNode) RestoreKey(ctx context.Context, name string, mnemonic string) error {
+	command := []string{tn.Chain.Bin, "keys", "add", name,
+		"--keyring-backend", "test",
+		"--output", "json",
+		"--recover", mnemonic,
+		"--home", tn.NodeHome(),
+	}
+	return handleNodeJobError(tn.NodeJob(ctx, command))
+}
+
 // AddGenesisAccount adds a genesis account for each key
-func (tn *TestNode) AddGenesisAccount(ctx context.Context, address string) error {
-	command := []string{tn.Chain.Bin, "add-genesis-account", address, "1000000000000stake",
+func (tn *TestNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount types.Coin) error {
+	command := []string{tn.Chain.Bin, "add-genesis-account", address, fmt.Sprintf("%d%s", genesisAmount.Amount.Int64(), genesisAmount.Denom),
 		"--home", tn.NodeHome(),
 	}
 	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 // Gentx generates the gentx for a given node
-func (tn *TestNode) Gentx(ctx context.Context, name string) error {
-	command := []string{tn.Chain.Bin, "gentx", valKey, "100000000000stake",
+func (tn *TestNode) Gentx(ctx context.Context, name string, genesisSelfDelegation types.Coin) error {
+	command := []string{tn.Chain.Bin, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
 		"--keyring-backend", "test",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.ChainID,
@@ -636,7 +667,12 @@ func (tn *TestNode) StartContainer(ctx context.Context) error {
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
-func (tn *TestNode) InitValidatorFiles(ctx context.Context, chainType *ChainType) error {
+func (tn *TestNode) InitValidatorFiles(
+	ctx context.Context,
+	chainType *ChainType,
+	genesisAmount types.Coin,
+	genesisSelfDelegation types.Coin,
+) error {
 	if err := tn.InitHomeFolder(ctx); err != nil {
 		return err
 	}
@@ -651,10 +687,10 @@ func (tn *TestNode) InitValidatorFiles(ctx context.Context, chainType *ChainType
 	if err != nil {
 		return err
 	}
-	if err := tn.AddGenesisAccount(ctx, bech32); err != nil {
+	if err := tn.AddGenesisAccount(ctx, bech32, genesisAmount); err != nil {
 		return err
 	}
-	return tn.Gentx(ctx, valKey)
+	return tn.Gentx(ctx, valKey, genesisSelfDelegation)
 }
 
 func (tn *TestNode) InitFullNodeFiles(ctx context.Context) error {

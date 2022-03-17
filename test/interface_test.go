@@ -11,12 +11,16 @@ import (
 
 // ChainType represents the type of chain to instantiate
 type ChainType struct {
-	Name         string
-	Repository   string
-	Version      string
-	Bin          string
-	Bech32Prefix string
-	Ports        map[docker.Port]struct{}
+	Name           string
+	Repository     string
+	Version        string
+	Bin            string
+	Bech32Prefix   string
+	Denom          string
+	GasPrices      string
+	GasAdjustment  float64
+	TrustingPeriod string
+	Ports          map[docker.Port]struct{}
 }
 
 // TestNode represents a node in the test network that is being created
