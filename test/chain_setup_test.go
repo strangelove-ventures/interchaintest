@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -22,13 +23,14 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
+	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
-	"github.com/strangelove-ventures/horcrux/signer"
 	"github.com/stretchr/testify/require"
 	tmconfig "github.com/tendermint/tendermint/config"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -37,20 +39,24 @@ import (
 )
 
 var (
-	valKey = "validator"
+	valKey    = "validator"
+	blockTime = 3 // seconds
+	rpcPort   = "26657/tcp"
 )
 
-func getGaiadChain() *ChainType {
+func getChain(name string, version string, binary string, bech32Prefix string) *ChainType {
 	return &ChainType{
-		Repository: "ghcr.io/strangelove-ventures/heighliner/gaia",
-		Version:    "v6.0.0-rocks",
-		Bin:        "gaiad",
+		Name:         name,
+		Bech32Prefix: bech32Prefix,
+		Repository:   fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
+		Version:      version,
+		Bin:          binary,
 		Ports: map[docker.Port]struct{}{
-			"26656/tcp": {},
-			"26657/tcp": {},
-			"9090/tcp":  {},
-			"1337/tcp":  {},
-			"1234/tcp":  {},
+			"26656/tcp":          {},
+			docker.Port(rpcPort): {},
+			"9090/tcp":           {},
+			"1317/tcp":           {},
+			"1234/tcp":           {},
 		},
 	}
 }
@@ -72,6 +78,13 @@ func (tn *TestNode) CliContext() client.Context {
 // MakeTestNodes creates the test node objects required for bootstrapping tests
 func MakeTestNodes(count int, home, chainid string, chainType *ChainType,
 	pool *dockertest.Pool, t *testing.T) (out TestNodes) {
+	err := pool.Client.PullImage(docker.PullImageOptions{
+		Repository: chainType.Repository,
+		Tag:        chainType.Version,
+	}, docker.AuthConfiguration{})
+	if err != nil {
+		t.Logf("Error pulling image: %v", err)
+	}
 	for i := 0; i < count; i++ {
 		tn := &TestNode{Home: home, Index: i, Chain: chainType, ChainID: chainid,
 			Pool: pool, t: t, ec: simapp.MakeTestEncodingConfig()}
@@ -82,13 +95,13 @@ func MakeTestNodes(count int, home, chainid string, chainType *ChainType,
 }
 
 // StartNodeContainers is passed a chain id and arrays of validators and full nodes to configure
-func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network, validators, fullnodes []*TestNode) {
+func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network, chainType *ChainType, validators, fullnodes []*TestNode) {
 	var eg errgroup.Group
 
 	// sign gentx for each validator
 	for _, v := range validators {
 		v := v
-		eg.Go(func() error { return v.InitValidatorFiles(ctx) })
+		eg.Go(func() error { return v.InitValidatorFiles(ctx, chainType) })
 	}
 
 	// just initialize folder for any full nodes
@@ -108,7 +121,10 @@ func StartNodeContainers(t *testing.T, ctx context.Context, net *docker.Network,
 		n0key, err := validatorN.GetKey(valKey)
 		require.NoError(t, err)
 
-		require.NoError(t, validator0.AddGenesisAccount(ctx, n0key.GetAddress().String()))
+		bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, n0key.GetAddress().Bytes())
+		require.NoError(t, err)
+
+		require.NoError(t, validator0.AddGenesisAccount(ctx, bech32))
 		nNid, err := validatorN.NodeID()
 		require.NoError(t, err)
 		oldPath := path.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
@@ -255,7 +271,7 @@ func (hosts Hosts) WaitForAllToStart(t *testing.T, timeout int) {
 
 // Name is the hostname of the test node container
 func (tn *TestNode) Name() string {
-	return fmt.Sprintf("node-%d-%s", tn.Index, tn.t.Name())
+	return fmt.Sprintf("node-%s-%d-%s", tn.ChainID, tn.Index, tn.t.Name())
 }
 
 // Dir is the directory where the test node files are stored
@@ -286,11 +302,11 @@ func (tn *TestNode) TMConfigPath() string {
 
 // Bind returns the home folder bind point for running the node
 func (tn *TestNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:/home/.%s", tn.Dir(), tn.Chain.Bin)}
+	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.NodeHome())}
 }
 
 func (tn *TestNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", tn.Chain.Bin)
+	return fmt.Sprintf("/tmp/.%s", tn.Chain.Name)
 }
 
 // Keybase returns the keyring for a given node
@@ -328,6 +344,28 @@ func (tn *TestNode) getValSigningInfo() *slashingtypes.QuerySigningInfoResponse 
 	})
 	require.NoError(tn.t, err)
 	return slashInfo
+}
+
+func (tn *TestNode) GetMostRecentConsecutiveSignedBlocks(max int64) (count int64, latestHeight int64) {
+	status, err := tn.Client.Status(context.Background())
+	require.NoError(tn.t, err)
+
+	latestHeight = status.SyncInfo.LatestBlockHeight
+
+	pv, err := tn.GetPrivVal()
+	require.NoError(tn.t, err)
+
+	for i := latestHeight; i > latestHeight-max && i > 0; i-- {
+		block, err := tn.Client.Block(context.Background(), &i)
+		require.NoError(tn.t, err)
+		for _, voter := range block.Block.LastCommit.Signatures {
+			if reflect.DeepEqual(voter.ValidatorAddress, pv.Address) {
+				count++
+				break
+			}
+		}
+	}
+	return
 }
 
 func (tn *TestNode) getMissingBlocks() int64 {
@@ -391,24 +429,21 @@ func (tn *TestNode) WaitForConsecutiveBlocks(blocks int64) {
 	tn.t.Log("{WaitForConsecutiveBlocks} Initial Missed blocks:", initialMissed)
 	stat, err := tn.Client.Status(context.Background())
 	require.NoError(tn.t, err)
-	// timeout after ~1 minute
-	lastBlockChecked := stat.SyncInfo.LatestBlockHeight
-	for i := 0; i < 60; i++ {
+
+	startingBlock := stat.SyncInfo.LatestBlockHeight
+	// timeout after ~1 minute plus block time
+	timeoutSeconds := blocks*int64(blockTime) + int64(60)
+	for i := int64(0); i < timeoutSeconds; i++ {
 		time.Sleep(1 * time.Second)
-		missedBlocks := tn.getMissingBlocks()
-		deltaMissed := missedBlocks - initialMissed
-		newStat, err := tn.Client.Status(context.Background())
-		require.NoError(tn.t, err)
-		checkingBlock := newStat.SyncInfo.LatestBlockHeight
-		tn.t.Log("{WaitForConsecutiveBlocks} Missed blocks:", missedBlocks, "block", checkingBlock)
-		if deltaMissed <= 0 {
-			deltaBlocks := checkingBlock - lastBlockChecked
-			if deltaBlocks >= blocks {
-				tn.t.Log(fmt.Sprintf("Time (sec) to sign %d consecutive blocks:", blocks), i+1)
-				return // done waiting for consecutive signed blocks
-			}
-		} else {
-			require.NoError(tn.t, errors.New("missed blocks while waiting for consecutive blocks"))
+
+		recentSignedBlocksCount, checkingBlock := tn.GetMostRecentConsecutiveSignedBlocks(blocks)
+		deltaMissed := blocks - recentSignedBlocksCount
+		deltaBlocks := checkingBlock - startingBlock
+
+		tn.t.Log("{WaitForConsecutiveBlocks} Missed blocks:", deltaMissed, "block", checkingBlock)
+		if deltaMissed == 0 && deltaBlocks >= blocks {
+			tn.t.Log(fmt.Sprintf("Time (sec) to sign %d consecutive blocks:", blocks), i+1)
+			return // done waiting for consecutive signed blocks
 		}
 	}
 	require.NoError(tn.t, errors.New("timed out waiting for cluster to recover signing blocks"))
@@ -433,8 +468,8 @@ func (tn *TestNode) EnsureNoMissedBlocks() {
 
 func stdconfigchanges(cfg *tmconfig.Config, peers string) {
 	// turn down blocktimes to make the chain faster
-	cfg.Consensus.TimeoutCommit = 3 * time.Second
-	cfg.Consensus.TimeoutPropose = 3 * time.Second
+	cfg.Consensus.TimeoutCommit = time.Duration(blockTime) * time.Second
+	cfg.Consensus.TimeoutPropose = time.Duration(blockTime) * time.Second
 
 	// Open up rpc address
 	cfg.RPC.ListenAddress = "tcp://0.0.0.0:26657"
@@ -464,7 +499,7 @@ func (tn *TestNode) NodeJob(ctx context.Context, cmd []string) (int, error) {
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Chain.Repository, tn.Chain.Version),
 			Cmd:          cmd,
-			Labels:       map[string]string{"horcrux-test": tn.t.Name()},
+			Labels:       map[string]string{"ibc-test": tn.t.Name()},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -540,7 +575,7 @@ func (tn *TestNode) CreateNodeContainer(networkID string, rm bool) error {
 			ExposedPorts: tn.Chain.Ports,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Chain.Repository, tn.Chain.Version),
-			Labels:       map[string]string{"horcrux-test": tn.t.Name()},
+			Labels:       map[string]string{"ibc-test": tn.t.Name()},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -576,7 +611,7 @@ func (tn *TestNode) StartContainer(ctx context.Context) error {
 	}
 	tn.Container = c
 
-	port := GetHostPort(c, "26657/tcp")
+	port := GetHostPort(c, rpcPort)
 	tn.t.Logf("{%s} RPC => %s", tn.Name(), port)
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
@@ -601,7 +636,7 @@ func (tn *TestNode) StartContainer(ctx context.Context) error {
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
-func (tn *TestNode) InitValidatorFiles(ctx context.Context) error {
+func (tn *TestNode) InitValidatorFiles(ctx context.Context, chainType *ChainType) error {
 	if err := tn.InitHomeFolder(ctx); err != nil {
 		return err
 	}
@@ -612,7 +647,11 @@ func (tn *TestNode) InitValidatorFiles(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := tn.AddGenesisAccount(ctx, key.GetAddress().String()); err != nil {
+	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, key.GetAddress().Bytes())
+	if err != nil {
+		return err
+	}
+	if err := tn.AddGenesisAccount(ctx, bech32); err != nil {
 		return err
 	}
 	return tn.Gentx(ctx, valKey)
@@ -729,8 +768,15 @@ func (tn TestNodes) WaitForHeight(height int64) {
 	require.NoError(tn[0].t, eg.Wait())
 }
 
-func (tn *TestNode) GetPrivVal() (privval.FilePVKey, error) {
-	return signer.ReadPrivValidatorFile(path.Join(tn.Dir(), "config", "priv_validator_key.json"))
+func (tn *TestNode) GetPrivVal() (out privval.FilePVKey, err error) {
+	var bz []byte
+	if bz, err = ioutil.ReadFile(path.Join(tn.Dir(), "config", "priv_validator_key.json")); err != nil {
+		return
+	}
+	if err = tmjson.Unmarshal(bz, &out); err != nil {
+		return
+	}
+	return
 }
 
 func (tn *TestNode) GetConsPub() string {
@@ -743,13 +789,6 @@ func (tn *TestNode) GetConsPub() string {
 	return sdk.ConsAddress(pubkey.Address()).String()
 
 	// return sdk.Bech32ifyPubKey(sdk.Bech32PubKeyTypeValPub, pubkey)
-}
-
-func (tn *TestNode) CreateKeyShares(threshold, total int64) []signer.CosignerKey {
-	shares, err := signer.CreateCosignerSharesFromFile(
-		path.Join(tn.Dir(), "config", "priv_validator_key.json"), threshold, total)
-	require.NoError(tn.t, err)
-	return shares
 }
 
 func getDockerUserString() string {

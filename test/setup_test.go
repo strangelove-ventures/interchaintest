@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func SetupTestRun(t *testing.T, numNodes int) (context.Context, string, *dockertest.Pool, *docker.Network, TestNodes) {
+func SetupTestRun(t *testing.T, chainTypeSrc, chainTypeDst *ChainType, numNodes int) (context.Context, string, *dockertest.Pool, *docker.Network, TestNodes, TestNodes) {
 	home, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 
@@ -22,7 +22,10 @@ func SetupTestRun(t *testing.T, numNodes int) (context.Context, string, *dockert
 	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), t)
 	require.NoError(t, err)
 
-	return context.Background(), home, pool, network, MakeTestNodes(numNodes, home, "ibc-test-framework", getGaiadChain(), pool, t)
+	srcNodes := MakeTestNodes(numNodes, home, chainTypeSrc.Name, chainTypeSrc, pool, t)
+	dstNodes := MakeTestNodes(numNodes, home, chainTypeDst.Name, chainTypeDst, pool, t)
+
+	return context.Background(), home, pool, network, srcNodes, dstNodes
 }
 
 // GetHostPort returns a resource's published port with an address.
@@ -47,7 +50,7 @@ func CreateTestNetwork(pool *dockertest.Pool, name string, t *testing.T) (*docke
 	return pool.Client.CreateNetwork(docker.CreateNetworkOptions{
 		Name:           name,
 		Options:        map[string]interface{}{},
-		Labels:         map[string]string{"horcrux-test": t.Name()},
+		Labels:         map[string]string{"ibc-test": t.Name()},
 		CheckDuplicate: true,
 		Internal:       false,
 		EnableIPv6:     false,
