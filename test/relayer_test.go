@@ -132,7 +132,7 @@ func TestChainSpinUp(t *testing.T) {
 
 	fmt.Printf("Src chain: %v\nDst chain: %v\n", srcInitialBalance, dstInitialBalance)
 
-	err = relayerImpl.StartRelayer(ctx)
+	err = relayerImpl.StartRelayer(ctx, testPathName)
 	require.NoError(t, err)
 
 	// wait for relayer to start up

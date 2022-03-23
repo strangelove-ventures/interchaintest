@@ -87,8 +87,8 @@ func (relayer *CosmosRelayer) Name() string {
 }
 
 // Implements Relayer interface
-func (relayer *CosmosRelayer) StartRelayer(ctx context.Context) error {
-	return relayer.CreateNodeContainer()
+func (relayer *CosmosRelayer) StartRelayer(ctx context.Context, pathName string) error {
+	return relayer.CreateNodeContainer(pathName)
 }
 
 // Implements Relayer interface
@@ -145,7 +145,7 @@ func (relayer *CosmosRelayer) GeneratePath(ctx context.Context, srcChainID, dstC
 	return handleNodeJobError(relayer.NodeJob(ctx, command))
 }
 
-func (relayer *CosmosRelayer) CreateNodeContainer() error {
+func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
 		Repository: containerImage,
 		Tag:        containerVersion,
@@ -153,15 +153,16 @@ func (relayer *CosmosRelayer) CreateNodeContainer() error {
 	if err != nil {
 		return err
 	}
+	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: relayer.Name(),
 		Config: &docker.Config{
 			User:       getDockerUserString(),
-			Cmd:        []string{"rly", "start", "transfer"},
+			Cmd:        []string{"rly", "tx", "link-then-start", pathName},
 			Entrypoint: []string{},
-			Hostname:   relayer.Name(),
+			Hostname:   containerName,
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
-			Labels:     map[string]string{"ibc-test": relayer.Name()},
+			Labels:     map[string]string{"ibc-test": containerName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{
@@ -226,9 +227,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, e
 	}
 	exitCode, err := relayer.pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	if err == nil && exitCode == 0 {
-		err = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{
-			ID: cont.ID,
-		})
+		err = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 		if err != nil {
 			return 1, err
 		}

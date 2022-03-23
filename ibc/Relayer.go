@@ -21,7 +21,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, srcChainID, dstChainID, pathName string) error
 
 	// after configuration is initialized, begin relaying
-	StartRelayer(ctx context.Context) error
+	StartRelayer(ctx context.Context, pathName string) error
 
 	// wait until all existing packets are relayed
 	ClearQueue(ctx context.Context) error
