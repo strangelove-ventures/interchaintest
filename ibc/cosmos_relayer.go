@@ -1,6 +1,7 @@
 package ibc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -22,6 +24,7 @@ type CosmosRelayer struct {
 	container *docker.Container
 	networkID string
 	home      string
+	t         *testing.T
 }
 
 type CosmosRelayerChainConfigValue struct {
@@ -46,7 +49,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "main"
+	containerVersion = "justin-nil-pointer-fix"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -69,13 +72,14 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpc
 	}
 }
 
-func NewCosmosRelayerFromChains(src, dst Chain, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
+func NewCosmosRelayerFromChains(t *testing.T, src, dst Chain, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
 	relayer := &CosmosRelayer{
 		src:       src,
 		dst:       dst,
 		pool:      pool,
 		networkID: networkID,
 		home:      home,
+		t:         t,
 	}
 	relayer.MkDir()
 
@@ -83,11 +87,48 @@ func NewCosmosRelayerFromChains(src, dst Chain, pool *dockertest.Pool, networkID
 }
 
 func (relayer *CosmosRelayer) Name() string {
-	return fmt.Sprintf("rly-%s-to-%s", relayer.src.Config().ChainID, relayer.dst.Config().ChainID)
+	return fmt.Sprintf("rly-%s", relayer.t.Name())
+}
+
+func (relayer *CosmosRelayer) linkPath(ctx context.Context, pathName string) error {
+	command := []string{"rly", "tx", "link", pathName,
+		"--home", relayer.NodeHome(),
+	}
+	return handleNodeJobError(relayer.NodeJob(ctx, command))
+}
+
+func (relayer *CosmosRelayer) GetChannels(ctx context.Context, chainID string) ([]ChannelOutput, error) {
+	command := []string{"rly", "q", "channels", chainID,
+		"--home", relayer.NodeHome(),
+	}
+	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, command)
+	if err != nil {
+		return []ChannelOutput{}, handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	channels := []ChannelOutput{}
+	channelSplit := strings.Split(stdout, "\n")
+	for _, channel := range channelSplit {
+		if strings.TrimSpace(channel) == "" {
+			continue
+		}
+		channelOutput := ChannelOutput{}
+		err := json.Unmarshal([]byte(channel), &channelOutput)
+		if err != nil {
+			fmt.Printf("error parsing channels json: %v\n", err)
+			continue
+		}
+		channels = append(channels, channelOutput)
+	}
+
+	return channels, handleNodeJobError(exitCode, stdout, stderr, err)
 }
 
 // Implements Relayer interface
 func (relayer *CosmosRelayer) StartRelayer(ctx context.Context, pathName string) error {
+	err := relayer.linkPath(ctx, pathName)
+	if err != nil {
+		return err
+	}
 	return relayer.CreateNodeContainer(pathName)
 }
 
@@ -109,9 +150,9 @@ func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, chainCo
 		command := []string{"rly", "config", "init",
 			"--home", relayer.NodeHome(),
 		}
-		exitCode, err := relayer.NodeJob(ctx, command)
+		exitCode, stdout, stderr, err := relayer.NodeJob(ctx, command)
 		if err != nil {
-			return handleNodeJobError(exitCode, err)
+			return handleNodeJobError(exitCode, stdout, stderr, err)
 		}
 	}
 
@@ -155,14 +196,14 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	}
 	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: relayer.Name(),
+		Name: containerName,
 		Config: &docker.Config{
 			User:       getDockerUserString(),
-			Cmd:        []string{"rly", "tx", "link-then-start", pathName},
+			Cmd:        []string{"rly", "start", pathName, "--home", relayer.NodeHome()},
 			Entrypoint: []string{},
 			Hostname:   containerName,
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
-			Labels:     map[string]string{"ibc-test": containerName},
+			Labels:     map[string]string{"ibc-test": relayer.t.Name()},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{
@@ -186,13 +227,13 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
-func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, error) {
+func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
 		Repository: containerImage,
 		Tag:        containerVersion,
 	}, docker.AuthConfiguration{})
 	if err != nil {
-		return 1, err
+		return 1, "", "", err
 	}
 	counter, _, _, _ := runtime.Caller(1)
 	caller := runtime.FuncForPC(counter).Name()
@@ -207,7 +248,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, e
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Labels:     map[string]string{"ibc-test": relayer.Name()},
+			Labels:     map[string]string{"ibc-test": container},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{
@@ -220,19 +261,17 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, e
 		},
 	})
 	if err != nil {
-		return 1, err
+		return 1, "", "", err
 	}
 	if err := relayer.pool.Client.StartContainer(cont.ID, nil); err != nil {
-		return 1, err
+		return 1, "", "", err
 	}
 	exitCode, err := relayer.pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	if err == nil && exitCode == 0 {
-		err = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
-		if err != nil {
-			return 1, err
-		}
-	}
-	return exitCode, err
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
+	return exitCode, stdout.String(), stderr.String(), err
 }
 
 // CreateKey creates a key in the keyring backend test for the given node
@@ -241,6 +280,23 @@ func (relayer *CosmosRelayer) RestoreKey(ctx context.Context, chainID, keyName, 
 		"--home", relayer.NodeHome(),
 	}
 	return handleNodeJobError(relayer.NodeJob(ctx, command))
+}
+
+func (relayer *CosmosRelayer) AddKey(ctx context.Context, chainID, keyName string) (RelayerWallet, error) {
+	command := []string{"rly", "keys", "add", chainID, keyName,
+		"--home", relayer.NodeHome(),
+	}
+	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, command)
+	wallet := RelayerWallet{}
+	if err != nil {
+		return wallet, handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	err = json.Unmarshal([]byte(stdout), &wallet)
+	if err != nil {
+		return wallet, err
+	}
+
+	return wallet, nil
 }
 
 // Dir is the directory where the test node files are stored

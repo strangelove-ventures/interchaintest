@@ -1,6 +1,7 @@
 package ibc
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -165,7 +166,7 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) {
 	require.NoError(tn.t, err)
 
 	startingBlock := stat.SyncInfo.LatestBlockHeight
-	tn.t.Log("{WaitForConsecutiveBlocks} Initial Height:", startingBlock)
+	tn.t.Logf("{WaitForBlocks-%s} Initial Height: %d", tn.Chain.Config().ChainID, startingBlock)
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
 	for i := int64(0); i < timeoutSeconds; i++ {
@@ -178,9 +179,8 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) {
 
 		deltaBlocks := mostRecentBlock - startingBlock
 
-		tn.t.Log("{WaitForConsecutiveBlocks} Current Height:", mostRecentBlock, ", Delta: ", deltaBlocks)
 		if deltaBlocks >= blocks {
-			tn.t.Log(fmt.Sprintf("Time (sec) waiting for %d blocks:", blocks), i+1)
+			tn.t.Logf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d", tn.Chain.Config().ChainID, blocks, i+1)
 			return // done waiting for consecutive signed blocks
 		}
 	}
@@ -265,6 +265,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--from", keyName,
+		"-y",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
@@ -373,12 +374,12 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx)
 }
 
-func handleNodeJobError(i int, err error) error {
+func handleNodeJobError(i int, stdout string, stderr string, err error) error {
 	if err != nil {
-		return err
+		return fmt.Errorf("%v\n%s", err, stderr)
 	}
 	if i != 0 {
-		return fmt.Errorf("container returned non-zero error code: %d", i)
+		return fmt.Errorf("container returned non-zero error code: %d\n%s", i, stderr)
 	}
 	return nil
 }
@@ -462,7 +463,7 @@ func getDockerUserString() string {
 
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
-func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, error) {
+func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
 	counter, _, _, _ := runtime.Caller(1)
 	caller := runtime.FuncForPC(counter).Name()
 	funcName := strings.Split(caller, ".")
@@ -493,19 +494,16 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, error) {
 		Context: nil,
 	})
 	if err != nil {
-		return 1, err
+		return 1, "", "", err
 	}
 	if err := tn.Pool.Client.StartContainer(cont.ID, nil); err != nil {
-		return 1, err
+		return 1, "", "", err
 	}
+
 	exitCode, err := tn.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	if err == nil && exitCode == 0 {
-		err = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{
-			ID: cont.ID,
-		})
-		if err != nil {
-			return 1, err
-		}
-	}
-	return exitCode, err
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
+	return exitCode, stdout.String(), stderr.String(), err
 }

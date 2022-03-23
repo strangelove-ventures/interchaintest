@@ -11,11 +11,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type CosmosChain struct {
@@ -118,13 +120,15 @@ func (c *CosmosChain) WaitForBlocks(number int64) {
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := GetHostPort(c.getRelayerNode().Container, grpcPort)
-	conn, err := grpc.Dial(grpcAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err
 	}
 	defer conn.Close()
+
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.Balance(ctx, params)
+
 	if err != nil {
 		return 0, err
 	}

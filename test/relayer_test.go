@@ -1,14 +1,17 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -18,17 +21,10 @@ import (
 var (
 	relayerImplementation = "cosmos/relayer" // TODO make dynamic
 
-	srcMnemonic       = "bind problem flower execute floor position aerobic still enlist south royal example wave element desert gadget sing game goddess dolphin aunt place tuition tennis"
-	srcAccount        = "cosmos1a5d6rh8zcrsfdft8uqpkepllf78fqesdc0rx7z"
-	srcAccountKeyName = "src-chain"
-
-	dstMnemonic       = "push sample catch crystal jewel episode clip crane betray scrub kidney air glow whale faith business fade balance enhance alpha write such leopard alcohol"
-	dstAccount        = "osmo1wjf74ee7whft9rdveceuuhjm22t6e54zr72pzc"
-	dstAccountKeyName = "dst-chain"
-
+	srcAccountKeyName  = "src-chain"
+	dstAccountKeyName  = "dst-chain"
 	userAccountKeyName = "user"
-
-	testPathName = "test-path"
+	testPathName       = "test-path"
 )
 
 func TestChainSpinUp(t *testing.T) {
@@ -38,6 +34,7 @@ func TestChainSpinUp(t *testing.T) {
 
 	ctx, home, pool, network := ibc.SetupTestRun(t)
 
+	// TODO make chain configuration an input
 	srcChain := ibc.NewCosmosChain(t, pool, home, network.ID, "gaia", "cosmoshub-1004", "v6.0.4", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h", numValidatorsPerChain, numFullNodesPerChain)
 	dstChain := ibc.NewCosmosChain(t, pool, home, network.ID, "osmosis", "osmosis-1001", "v7.0.4", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h", numValidatorsPerChain, numFullNodesPerChain)
 
@@ -50,6 +47,7 @@ func TestChainSpinUp(t *testing.T) {
 
 	if relayerImplementation == "cosmos/relayer" {
 		relayerImpl = ibc.NewCosmosRelayerFromChains(
+			t,
 			srcChain,
 			dstChain,
 			pool,
@@ -66,10 +64,13 @@ func TestChainSpinUp(t *testing.T) {
 		dstChain.GetRPCAddress(), dstChain.GetGRPCAddress())
 	require.NoError(t, err)
 
-	err = relayerImpl.RestoreKey(ctx, srcChain.Config().ChainID, srcAccountKeyName, srcMnemonic)
+	srcRelayerWallet, err := relayerImpl.AddKey(ctx, srcChain.Config().ChainID, srcAccountKeyName)
 	require.NoError(t, err)
-	err = relayerImpl.RestoreKey(ctx, srcChain.Config().ChainID, dstAccountKeyName, dstMnemonic)
+	dstRelayerWallet, err := relayerImpl.AddKey(ctx, dstChain.Config().ChainID, dstAccountKeyName)
 	require.NoError(t, err)
+
+	srcAccount := srcRelayerWallet.Address
+	dstAccount := dstRelayerWallet.Address
 
 	err = relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName)
 	require.NoError(t, err)
@@ -135,6 +136,10 @@ func TestChainSpinUp(t *testing.T) {
 	err = relayerImpl.StartRelayer(ctx, testPathName)
 	require.NoError(t, err)
 
+	channels, err := relayerImpl.GetChannels(ctx, srcChainCfg.ChainID)
+	require.NoError(t, err)
+	require.Equal(t, len(channels), 1)
+
 	// wait for relayer to start up
 	time.Sleep(5 * time.Second)
 
@@ -148,17 +153,17 @@ func TestChainSpinUp(t *testing.T) {
 		Amount:  1000000,
 	}
 
-	err = srcChain.SendIBCTransfer(ctx, testPathName, userAccountKeyName, testCoin)
+	err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, userAccountKeyName, testCoin)
 	require.NoError(t, err)
 
 	chainsConsecutiveBlocksWaitGroup := sync.WaitGroup{}
 	chainsConsecutiveBlocksWaitGroup.Add(2)
 	go func() {
-		srcChain.WaitForBlocks(5)
+		srcChain.WaitForBlocks(10)
 		chainsConsecutiveBlocksWaitGroup.Done()
 	}()
 	go func() {
-		dstChain.WaitForBlocks(5)
+		dstChain.WaitForBlocks(10)
 		chainsConsecutiveBlocksWaitGroup.Done()
 	}()
 	chainsConsecutiveBlocksWaitGroup.Wait()
@@ -166,10 +171,14 @@ func TestChainSpinUp(t *testing.T) {
 	srcFinalBalance, err := srcChain.GetBalance(ctx, userAccountSrc, testDenom)
 	require.NoError(t, err)
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, userAccountDst, testDenom)
+	// get ibc denom for test denom on dst chain
+	denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
+	dstIbcDenom := denomTrace.IBCDenom()
+
+	dstFinalBalance, err := dstChain.GetBalance(ctx, userAccountDst, dstIbcDenom)
 	require.NoError(t, err)
 
-	fmt.Printf("Src chain: %v\nDst chain: %v\n", srcFinalBalance, dstFinalBalance)
+	fmt.Printf("Src chain final balance: %v\nDst chain final balance: %v\n", srcFinalBalance, dstFinalBalance)
 
 	require.Equal(t, srcFinalBalance, srcInitialBalance-testCoin.Amount)
 	require.Equal(t, dstFinalBalance, dstInitialBalance+testCoin.Amount)
@@ -179,15 +188,19 @@ func TestChainSpinUp(t *testing.T) {
 func Cleanup(pool *dockertest.Pool, testName, testDir string) func() {
 	return func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
+		ctx := context.Background()
 		for _, c := range cont {
 			for k, v := range c.Labels {
 				if k == "ibc-test" && v == testName {
 					_ = pool.Client.StopContainer(c.ID, 10)
-					exitCode, err := pool.Client.WaitContainerWithContext(c.ID, context.Background())
-					// remove containers without error
-					if err == nil && exitCode == 0 {
-						_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID})
+					_, err := pool.Client.WaitContainerWithContext(c.ID, ctx)
+					if err != nil {
+						stdout := new(bytes.Buffer)
+						stderr := new(bytes.Buffer)
+						_ = pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+						fmt.Printf("{%s} - %s\n", strings.Join(c.Names, ","), stderr)
 					}
+					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID})
 				}
 			}
 		}

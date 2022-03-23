@@ -19,6 +19,12 @@ type ChainConfig struct {
 	TrustingPeriod string
 }
 
+type WalletAmount struct {
+	Address string
+	Denom   string
+	Amount  int64
+}
+
 type Chain interface {
 	// fetch chain configuration
 	Config() ChainConfig
