@@ -1,10 +1,13 @@
-package test
+package ibc
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/ory/dockertest"
@@ -12,7 +15,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func SetupTestRun(t *testing.T, chainTypeSrc, chainTypeDst *ChainType, numNodes int) (context.Context, string, *dockertest.Pool, *docker.Network, TestNodes, TestNodes) {
+// RandLowerCaseLetterString returns a lowercase letter string of given length
+func RandLowerCaseLetterString(length int) string {
+	chars := []rune("abcdefghijklmnopqrstuvwxyz")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		i, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		b.WriteRune(chars[i.Int64()])
+	}
+	return b.String()
+}
+
+func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, *docker.Network) {
 	home, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 
@@ -22,10 +36,7 @@ func SetupTestRun(t *testing.T, chainTypeSrc, chainTypeDst *ChainType, numNodes 
 	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), t)
 	require.NoError(t, err)
 
-	srcNodes := MakeTestNodes(numNodes, home, chainTypeSrc.Name, chainTypeSrc, pool, t)
-	dstNodes := MakeTestNodes(numNodes, home, chainTypeDst.Name, chainTypeDst, pool, t)
-
-	return context.Background(), home, pool, network, srcNodes, dstNodes
+	return context.Background(), home, pool, network
 }
 
 // GetHostPort returns a resource's published port with an address.
