@@ -49,7 +49,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "justin-nil-pointer-fix"
+	containerVersion = "latest"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
