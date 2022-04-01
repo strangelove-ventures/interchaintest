@@ -158,6 +158,11 @@ func TestRelayPacket(t *testing.T) {
 	}()
 	chainsConsecutiveBlocksWaitGroup.Wait()
 
+	srcTx, err := srcChain.GetTransaction(ctx, txHash)
+	require.NoError(t, err)
+
+	fmt.Printf("Transaction:\n%v\n", srcTx)
+
 	srcFinalBalance, err := srcChain.GetBalance(ctx, userAccountSrc, testDenom)
 	require.NoError(t, err)
 
@@ -172,11 +177,6 @@ func TestRelayPacket(t *testing.T) {
 
 	require.Equal(t, srcFinalBalance, srcInitialBalance-testCoin.Amount)
 	require.Equal(t, dstFinalBalance, dstInitialBalance+testCoin.Amount)
-
-	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	require.NoError(t, err)
-
-	fmt.Printf("Transaction:\n%v\n", srcTx)
 
 }
 
@@ -324,6 +324,11 @@ func TestRelayTimeoutH(t *testing.T) {
 	}()
 	chainsConsecutiveBlocksWaitGroup.Wait()
 
+	srcTx, err := srcChain.GetTransaction(ctx, txHash)
+	require.NoError(t, err)
+
+	fmt.Printf("Transaction:\n%v\n", srcTx)
+
 	srcFinalBalance, err := srcChain.GetBalance(ctx, userAccountSrc, testDenom)
 	require.NoError(t, err)
 
@@ -336,11 +341,6 @@ func TestRelayTimeoutH(t *testing.T) {
 
 	require.Equal(t, srcFinalBalance, srcInitialBalance)
 	require.Equal(t, dstFinalBalance, dstInitialBalance)
-
-	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	require.NoError(t, err)
-
-	fmt.Printf("Transaction:\n%v\n", srcTx)
 
 }
 
@@ -488,6 +488,11 @@ func TestRelayTimeoutT(t *testing.T) {
 	}()
 	chainsConsecutiveBlocksWaitGroup.Wait()
 
+	srcTx, err := srcChain.GetTransaction(ctx, txHash)
+	require.NoError(t, err)
+
+	fmt.Printf("Transaction:\n%v\n", srcTx)
+
 	srcFinalBalance, err := srcChain.GetBalance(ctx, userAccountSrc, testDenom)
 	require.NoError(t, err)
 
@@ -500,10 +505,5 @@ func TestRelayTimeoutT(t *testing.T) {
 
 	require.Equal(t, srcFinalBalance, srcInitialBalance)
 	require.Equal(t, dstFinalBalance, dstInitialBalance)
-
-	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	require.NoError(t, err)
-
-	fmt.Printf("Transaction:\n%v\n", srcTx)
 
 }
