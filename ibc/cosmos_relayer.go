@@ -90,7 +90,7 @@ func (relayer *CosmosRelayer) Name() string {
 	return fmt.Sprintf("rly-%s", relayer.t.Name())
 }
 
-func (relayer *CosmosRelayer) linkPath(ctx context.Context, pathName string) error {
+func (relayer *CosmosRelayer) LinkPath(ctx context.Context, pathName string) error {
 	command := []string{"rly", "tx", "link", pathName,
 		"--home", relayer.NodeHome(),
 	}
@@ -125,10 +125,6 @@ func (relayer *CosmosRelayer) GetChannels(ctx context.Context, chainID string) (
 
 // Implements Relayer interface
 func (relayer *CosmosRelayer) StartRelayer(ctx context.Context, pathName string) error {
-	err := relayer.linkPath(ctx, pathName)
-	if err != nil {
-		return err
-	}
 	return relayer.CreateNodeContainer(pathName)
 }
 
@@ -138,9 +134,9 @@ func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
 }
 
 // Implements Relayer interface
-func (relayer *CosmosRelayer) ClearQueue(ctx context.Context) error {
-	// TODO
-	return nil
+func (relayer *CosmosRelayer) ClearQueue(ctx context.Context, pathName string, channelID string) error {
+	command := []string{"rly", "tx", "relay-pkts", pathName, channelID, "--home", relayer.NodeHome()}
+	return handleNodeJobError(relayer.NodeJob(ctx, command))
 }
 
 // Implements Relayer interface

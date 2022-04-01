@@ -1,12 +1,14 @@
 package ibc
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
 	"strings"
 	"testing"
 
@@ -35,6 +37,8 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, *doc
 
 	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), t)
 	require.NoError(t, err)
+
+	t.Cleanup(Cleanup(pool, t.Name(), home))
 
 	return context.Background(), home, pool, network
 }
@@ -67,4 +71,36 @@ func CreateTestNetwork(pool *dockertest.Pool, name string, t *testing.T) (*docke
 		EnableIPv6:     false,
 		Context:        context.Background(),
 	})
+}
+
+// Cleanup will clean up Docker containers, networks, and the other various config files generated in testing
+func Cleanup(pool *dockertest.Pool, testName, testDir string) func() {
+	return func() {
+		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
+		ctx := context.Background()
+		for _, c := range cont {
+			for k, v := range c.Labels {
+				if k == "ibc-test" && v == testName {
+					_ = pool.Client.StopContainer(c.ID, 10)
+					_, err := pool.Client.WaitContainerWithContext(c.ID, ctx)
+					if err != nil {
+						stdout := new(bytes.Buffer)
+						stderr := new(bytes.Buffer)
+						_ = pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+						fmt.Printf("{%s} - %s\n", strings.Join(c.Names, ","), stderr)
+					}
+					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID})
+				}
+			}
+		}
+		nets, _ := pool.Client.ListNetworks()
+		for _, n := range nets {
+			for k, v := range n.Labels {
+				if k == "ibc-test" && v == testName {
+					_ = pool.Client.RemoveNetwork(n.ID)
+				}
+			}
+		}
+		_ = os.RemoveAll(testDir)
+	}
 }

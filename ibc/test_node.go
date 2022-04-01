@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,19 +16,21 @@ import (
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
-
 	tmconfig "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"golang.org/x/sync/errgroup"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -90,6 +93,22 @@ func (tn *ChainNode) NewClient(addr string) error {
 	tn.Client = rpcClient
 	return nil
 
+}
+
+// CliContext creates a new Cosmos SDK client context
+func (tn *ChainNode) CliContext() client.Context {
+	encoding := simapp.MakeTestEncodingConfig()
+	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
+	return client.Context{
+		Client:            tn.Client,
+		ChainID:           tn.Chain.Config().ChainID,
+		InterfaceRegistry: tn.ec.InterfaceRegistry,
+		Input:             os.Stdin,
+		Output:            os.Stdout,
+		OutputFormat:      "json",
+		LegacyAmino:       tn.ec.Amino,
+		TxConfig:          encoding.TxConfig,
+	}
 }
 
 // Name is the hostname of the test node container
@@ -258,18 +277,39 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
+type IBCTransferTx struct {
+	TxHash string `json:"txhash"`
+}
+
 // CollectGentxs runs collect gentxs on the node's home folders
-func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount WalletAmount) error {
+func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--from", keyName,
+		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return handleNodeJobError(tn.NodeJob(ctx, command))
+	if timeout != nil {
+		if timeout.NanoSeconds > 0 {
+			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(timeout.NanoSeconds))
+		} else if timeout.Height > 0 {
+			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
+		}
+	}
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	output := IBCTransferTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	return output.TxHash, nil
 }
 
 func (tn *ChainNode) CreateNodeContainer() error {

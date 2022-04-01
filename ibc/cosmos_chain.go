@@ -10,6 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"github.com/ory/dockertest"
@@ -107,8 +108,8 @@ func (c *CosmosChain) GetAddress(keyName string) ([]byte, error) {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount) error {
-	return c.getRelayerNode().SendIBCTransfer(ctx, channelID, keyName, amount)
+func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error) {
+	return c.getRelayerNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
 // Implements Chain interface
@@ -134,6 +135,10 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	}
 
 	return res.Balance.Amount.Int64(), nil
+}
+
+func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
+	return authTx.QueryTx(c.getRelayerNode().CliContext(), txHash)
 }
 
 // creates the test node objects required for bootstrapping tests

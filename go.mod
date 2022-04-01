@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/cosmos/cosmos-sdk v0.45.1
-	github.com/cosmos/ibc-go/v3 v3.0.0
+	github.com/cosmos/cosmos-sdk v0.44.6
+	github.com/cosmos/ibc-go/v3 v3.0.0-alpha2
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/stretchr/testify v1.7.0
 	github.com/tendermint/tendermint v0.34.14
