@@ -49,7 +49,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "main"
+	containerVersion = "latest"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -195,7 +195,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 		Name: containerName,
 		Config: &docker.Config{
 			User:       getDockerUserString(),
-			Cmd:        []string{"rly", "start", pathName, "--home", relayer.NodeHome()},
+			Cmd:        []string{"rly", "start", pathName, "--debug", "--home", relayer.NodeHome()},
 			Entrypoint: []string{},
 			Hostname:   containerName,
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
