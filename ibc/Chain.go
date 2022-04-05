@@ -2,9 +2,9 @@ package ibc
 
 import (
 	"context"
-	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/ory/dockertest"
 )
 
 type ChainConfig struct {
@@ -36,8 +36,11 @@ type Chain interface {
 	// fetch chain configuration
 	Config() ChainConfig
 
+	// initializes node structs so that things like initializing keys can be done before starting the chain
+	Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error
+
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
-	Start(t *testing.T, ctx context.Context, additionalGenesisWallets []WalletAmount)
+	Start(testName string, ctx context.Context, additionalGenesisWallets []WalletAmount) error
 
 	// retrieves rpc address that can be reached by other containers in the docker network
 	GetRPCAddress() string
@@ -56,7 +59,7 @@ type Chain interface {
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
 
 	// waits for # of blocks to be produced
-	WaitForBlocks(number int64)
+	WaitForBlocks(number int64) error
 
 	// fetch balance for a specific account address and denom
 	GetBalance(ctx context.Context, address string, denom string) (int64, error)
