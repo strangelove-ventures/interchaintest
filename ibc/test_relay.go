@@ -391,7 +391,7 @@ func (ibc IBCTestCase) JunoHaltTest(testName string, srcChain Chain, dstChain Ch
 	userWalletSrc := WalletAmount{
 		Address: userAccountSrc,
 		Denom:   srcChainCfg.Denom,
-		Amount:  100000000,
+		Amount:  100000000000,
 	}
 
 	if err := srcChain.Start(testName, ctx, []WalletAmount{userWalletSrc}); err != nil {
@@ -405,25 +405,35 @@ func (ibc IBCTestCase) JunoHaltTest(testName string, srcChain Chain, dstChain Ch
 	rootPath := filepath.Dir(executablePath)
 	contractPath := path.Join(rootPath, "assets", "badcontract_local.wasm")
 
-	contractAddress, err := srcChain.InstantiateContract(ctx, userAccountKeyName, WalletAmount{Amount: 100, Denom: srcChain.Config().Denom}, contractPath, "{\"count\":0}")
+	contractAddress, err := srcChain.InstantiateContract(ctx, userAccountKeyName, WalletAmount{Amount: 100, Denom: srcChain.Config().Denom}, contractPath, "{\"count\":0}", false)
 	if err != nil {
 		return err
 	}
 
-	// run increment a bunch of times
-	for i := 0; i < 50; i++ {
-		if err := srcChain.ExecuteContract(ctx, userAccountKeyName, contractAddress, "{\"msg\":{\"increment\":{}},\"funds\":[]}"); err != nil {
-			return err
-		}
-		if err := srcChain.WaitForBlocks(1); err != nil {
-			return err
+	resets := []int{0, 15, 84, 0, 84, 42, 55, 42, 15, 84, 42}
+
+	for i := 0; i < 10; i++ {
+		for _, resetCount := range resets {
+			// run reset
+			if err := srcChain.ExecuteContract(ctx, userAccountKeyName, contractAddress, fmt.Sprintf("{\"reset\":{\"count\": %d}}", resetCount)); err != nil {
+				return err
+			}
+			if err := srcChain.WaitForBlocks(5); err != nil {
+				return err
+			}
+			// run increment a bunch of times
+			for i := 0; i < 5; i++ {
+				if err := srcChain.ExecuteContract(ctx, userAccountKeyName, contractAddress, "{\"increment\":{}}"); err != nil {
+					return err
+				}
+				if err := srcChain.WaitForBlocks(1); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
-	// run reset
-	if err := srcChain.ExecuteContract(ctx, userAccountKeyName, contractAddress, "{\"msg\":{\"reset\":{\"count\": 42}},\"funds\":[]}"); err != nil {
-		return err
-	}
+	return nil
 
-	return srcChain.WaitForBlocks(10)
+	//return srcChain.WaitForBlocks(10)
 }

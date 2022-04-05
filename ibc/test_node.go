@@ -59,7 +59,7 @@ type Hosts []ContainerPort
 
 var (
 	valKey      = "validator"
-	blockTime   = 3 // seconds
+	blockTime   = 2 // seconds
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -380,7 +380,7 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	_, file := filepath.Split(fileName)
 	newFilePath := path.Join(tn.Dir(), file)
 	newFilePathContainer := path.Join(tn.NodeHome(), file)
@@ -431,7 +431,6 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	command = []string{tn.Chain.Config().Bin,
 		"tx", "wasm", "instantiate", codeID, initMessage,
-		"--no-admin",
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas", fmt.Sprint(10000000000),
 		"--label", "satoshi-test",
@@ -442,6 +441,10 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"-y",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	if needsNoAdminFlag {
+		command = append(command, "--no-admin")
 	}
 
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
@@ -479,6 +482,8 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	command := []string{tn.Chain.Config().Bin,
 		"tx", "wasm", "execute", contractAddress, message,
 		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas", fmt.Sprint(10000000000),
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--output", "json",
@@ -495,6 +500,8 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 	command := []string{tn.Chain.Config().Bin,
 		"tx", "gamm", "create-pool",
 		"--pool-file", poolFilePath,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas", fmt.Sprint(10000000000),
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
@@ -510,6 +517,20 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome()}
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
+
+	var version string
+	if tn.Index < 4 {
+		version = "v2.1.0"
+	} else if tn.Index < 8 {
+		version = "v2.1.0"
+		// version = "v2.1.0-unpatched"
+	} else {
+		version = "v2.2.0-do-not-use"
+	}
+
+	containerImage := fmt.Sprintf("%s:%s", chainCfg.Repository, version)
+	fmt.Printf("{%s} image: %s\n", tn.Name(), containerImage)
+
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
 		Config: &docker.Config{
@@ -518,7 +539,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 			Hostname:     tn.Name(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
+			Image:        containerImage,
 			Labels:       map[string]string{"ibc-test": tn.testName},
 		},
 		HostConfig: &docker.HostConfig{

@@ -111,8 +111,8 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 }
 
 // Implements Chain interface
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
-	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage)
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoContactFlag bool) (string, error) {
+	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoContactFlag)
 }
 
 // Implements Chain interface

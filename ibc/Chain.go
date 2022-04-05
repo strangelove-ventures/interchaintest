@@ -62,7 +62,7 @@ type Chain interface {
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
 
 	// takes file path to smart contract and initialization message. returns contract address
-	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error)
+	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoContactFlag bool) (string, error)
 
 	// executes a contract transaction with a message using it's address
 	ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error

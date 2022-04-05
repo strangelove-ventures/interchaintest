@@ -27,5 +27,5 @@ func (ibc IBCTestCase) IBCReflectTest(testName string, srcChain Chain, dstChain 
 	}
 	defer rlyCleanup()
 
-	srcChain.InstantiateContract(ctx, userAccountKeyName, WalletAmount{}, path.join())
+	//srcChain.InstantiateContract(ctx, userAccountKeyName, WalletAmount{}, path.join())
 }
