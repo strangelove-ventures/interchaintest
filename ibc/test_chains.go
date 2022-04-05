@@ -5,7 +5,7 @@ import "fmt"
 var chainConfigs = []ChainConfig{
 	NewCosmosChainConfig("gaia", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h"),
 	NewCosmosChainConfig("osmosis", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h"),
-	NewCosmosChainConfig("juno", "junod", "juno", "ujuno", "0.0ujuno", 1.3, "672h"),
+	NewCosmosChainConfig("juno", "junod", "juno", "ujuno", "0.0025ujuno", 1.3, "672h"),
 }
 
 var chainConfigMap map[string]ChainConfig

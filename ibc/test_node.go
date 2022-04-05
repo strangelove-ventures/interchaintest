@@ -373,6 +373,13 @@ type QueryContractResponse struct {
 	Contracts []string `json:"contracts"`
 }
 
+type CodeInfo struct {
+	CodeID string `json:"code_id"`
+}
+type CodeInfosResponse struct {
+	CodeInfos []CodeInfo `json:"code_infos"`
+}
+
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
 	_, file := filepath.Split(fileName)
 	newFilePath := path.Join(tn.Dir(), file)
@@ -380,9 +387,11 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	if _, err := copy(fileName, newFilePath); err != nil {
 		return "", err
 	}
+
 	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", newFilePathContainer,
 		"--from", keyName,
-		"--amount", fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas", fmt.Sprint(10000000000),
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--output", "json",
@@ -396,15 +405,36 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	res := InstantiateContractResponse{}
+	if err := tn.Chain.WaitForBlocks(5); err != nil {
+		return "", err
+	}
+
+	command = []string{tn.Chain.Config().Bin,
+		"query", "wasm", "list-code", "--reverse",
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	res := CodeInfosResponse{}
 	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
 		return "", err
 	}
-	attributes := res.Logs[0].Events[0].Attributes
-	codeID := attributes[len(attributes)-1].Value
+
+	codeID := res.CodeInfos[0].CodeID
 
 	command = []string{tn.Chain.Config().Bin,
 		"tx", "wasm", "instantiate", codeID, initMessage,
+		"--no-admin",
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas", fmt.Sprint(10000000000),
+		"--label", "satoshi-test",
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
@@ -417,6 +447,10 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	if err := tn.Chain.WaitForBlocks(5); err != nil {
+		return "", err
 	}
 
 	command = []string{tn.Chain.Config().Bin,
