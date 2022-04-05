@@ -54,9 +54,21 @@ type Chain interface {
 	// fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 	GetAddress(keyName string) ([]byte, error)
 
+	// send funds to wallet from user account
+	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
+
 	// sends an IBC transfer from a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 	// returns tx hash
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
+
+	// takes file path to smart contract and initialization message. returns contract address
+	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error)
+
+	// executes a contract transaction with a message using it's address
+	ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error
+
+	// create balancer pool
+	CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error
 
 	// waits for # of blocks to be produced
 	WaitForBlocks(number int64) error

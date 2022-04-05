@@ -1,38 +1,11 @@
 package ibc
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 )
-
-// all methods on this struct have the same signature and are method names that will be called by the CLI
-type IBCTestCase struct{}
-
-// uses reflection to get test case
-func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error, error) {
-	v := reflect.ValueOf(IBCTestCase{})
-	m := v.MethodByName(testCase)
-	if m.Kind() != reflect.Func {
-		return nil, fmt.Errorf("invalid test case: %s", testCase)
-	}
-
-	testCaseFunc := func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
-		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(srcChain), reflect.ValueOf(dstChain), reflect.ValueOf(relayerImplementation)}
-		result := m.Call(args)
-		if len(result) != 1 || !result[0].CanInterface() {
-			return errors.New("error reflecting error return var")
-		}
-
-		err, _ := result[0].Interface().(error)
-		return err
-	}
-
-	return testCaseFunc, nil
-}
 
 func (ibc IBCTestCase) RelayPacketTest(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
 	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)

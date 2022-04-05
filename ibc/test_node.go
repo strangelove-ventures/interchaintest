@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -310,6 +312,164 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 		return "", err
 	}
 	return output.TxHash, nil
+}
+
+func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount WalletAmount) error {
+	command := []string{tn.Chain.Config().Bin, "tx", "bank", "send", keyName,
+		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"-y",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	return handleNodeJobError(tn.NodeJob(ctx, command))
+}
+
+func copy(src, dst string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
+}
+
+type InstantiateContractAttribute struct {
+	Value string `json:"value"`
+}
+
+type InstantiateContractEvent struct {
+	Attributes []InstantiateContractAttribute `json:"attributes"`
+}
+
+type InstantiateContractLog struct {
+	Events []InstantiateContractEvent `json:"event"`
+}
+
+type InstantiateContractResponse struct {
+	Logs []InstantiateContractLog `json:"log"`
+}
+
+type QueryContractResponse struct {
+	Contracts []string `json:"contracts"`
+}
+
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
+	_, file := filepath.Split(fileName)
+	newFilePath := path.Join(tn.Dir(), file)
+	newFilePathContainer := path.Join(tn.NodeHome(), file)
+	if _, err := copy(fileName, newFilePath); err != nil {
+		return "", err
+	}
+	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", newFilePathContainer,
+		"--from", keyName,
+		"--amount", fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"-y",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	res := InstantiateContractResponse{}
+	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
+		return "", err
+	}
+	attributes := res.Logs[0].Events[0].Attributes
+	codeID := attributes[len(attributes)-1].Value
+
+	command = []string{tn.Chain.Config().Bin,
+		"tx", "wasm", "instantiate", codeID, initMessage,
+		"--from", keyName,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"-y",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	command = []string{tn.Chain.Config().Bin,
+		"query", "wasm", "list-contract-by-code", codeID,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	contactsRes := QueryContractResponse{}
+	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
+		return "", err
+	}
+
+	contractAddress := contactsRes.Contracts[len(contactsRes.Contracts)-1]
+	return contractAddress, nil
+}
+
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "wasm", "execute", contractAddress, message,
+		"--from", keyName,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"-y",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+	return handleNodeJobError(tn.NodeJob(ctx, command))
+}
+
+func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
+	// TODO generate --pool-file
+	poolFilePath := "TODO"
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "gamm", "create-pool",
+		"--pool-file", poolFilePath,
+		"--from", keyName,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"-y",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 func (tn *ChainNode) CreateNodeContainer() error {

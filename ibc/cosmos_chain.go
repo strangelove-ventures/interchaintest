@@ -101,8 +101,28 @@ func (c *CosmosChain) GetAddress(keyName string) ([]byte, error) {
 }
 
 // Implements Chain interface
+func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount WalletAmount) error {
+	return c.getRelayerNode().SendFunds(ctx, keyName, amount)
+}
+
+// Implements Chain interface
 func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error) {
 	return c.getRelayerNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
+	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+	return c.getRelayerNode().ExecuteContract(ctx, keyName, contractAddress, message)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
+	return c.getRelayerNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
 }
 
 // Implements Chain interface

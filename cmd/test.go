@@ -61,10 +61,10 @@ e.g.
 ibc-test-framework test
 
 # Specify specific chains/versions, relayer implementation, and test cases
-ibc-test-framework test --source osmosis:v7.0.4 --destination juno:v2.3.0 --relayer rly RelayPacketTest,RelayPacketTestHeightTimeout
+ibc-test-framework test --src osmosis:v7.0.4 --dst juno:v2.3.0 --relayer rly RelayPacketTest,RelayPacketTestHeightTimeout
 
 # Shorthand flags
-ibc-test-framework test -src osmosis:v7.0.4 -dst juno:v2.3.0 -r rly RelayPacketTest
+ibc-test-framework test -s osmosis:v7.0.4 -d juno:v2.3.0 -r rly RelayPacketTest
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("IBC Test Framework")
@@ -101,7 +101,7 @@ ibc-test-framework test -src osmosis:v7.0.4 -dst juno:v2.3.0 -r rly RelayPacketT
 			var eg errgroup.Group
 			for i, testCase := range testCases {
 				testCase := testCase
-				testName := fmt.Sprintf("RelayTest%d", i)
+				testName := fmt.Sprintf("Test%d", i)
 				eg.Go(func() error {
 					return runTestCase(testName, testCase, relayerImplementation, srcChainName, srcChainVersion, srcChainID, srcVals, dstChainName, dstChainVersion, dstChainID, dstVals)
 				})
@@ -111,7 +111,7 @@ ibc-test-framework test -src osmosis:v7.0.4 -dst juno:v2.3.0 -r rly RelayPacketT
 			}
 		} else {
 			for i, testCase := range testCases {
-				testName := fmt.Sprintf("RelayTest%d", i)
+				testName := fmt.Sprintf("Test%d", i)
 				if err := runTestCase(testName, testCase, relayerImplementation, srcChainName, srcChainVersion, srcChainID, srcVals, dstChainName, dstChainVersion, dstChainID, dstVals); err != nil {
 					panic(err)
 				}

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -31,6 +33,32 @@ const (
 	userAccountKeyName = "user"
 	testPathName       = "test-path"
 )
+
+// all methods on this struct have the same signature and are method names that will be called by the CLI
+// func (ibc IBCTestCase) TestCaseName(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error
+type IBCTestCase struct{}
+
+// uses reflection to get test case
+func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error, error) {
+	v := reflect.ValueOf(IBCTestCase{})
+	m := v.MethodByName(testCase)
+	if m.Kind() != reflect.Func {
+		return nil, fmt.Errorf("invalid test case: %s", testCase)
+	}
+
+	testCaseFunc := func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(srcChain), reflect.ValueOf(dstChain), reflect.ValueOf(relayerImplementation)}
+		result := m.Call(args)
+		if len(result) != 1 || !result[0].CanInterface() {
+			return errors.New("error reflecting error return var")
+		}
+
+		err, _ := result[0].Interface().(error)
+		return err
+	}
+
+	return testCaseFunc, nil
+}
 
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
