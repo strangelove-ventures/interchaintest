@@ -402,7 +402,7 @@ func (ibc IBCTestCase) JunoHaltTest(testName string, srcChain Chain, dstChain Ch
 	if err != nil {
 		return err
 	}
-	rootPath := filepath.Base(executablePath)
+	rootPath := filepath.Dir(executablePath)
 	contractPath := path.Join(rootPath, "assets", "badcontract_local.wasm")
 
 	contractAddress, err := srcChain.InstantiateContract(ctx, userAccountKeyName, WalletAmount{Amount: 100, Denom: srcChain.Config().Denom}, contractPath, "{\"count\":0}")
