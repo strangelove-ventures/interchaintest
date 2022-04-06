@@ -275,10 +275,10 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		}
 
 		// modify genesis file overwriting validators address with the one generated for this test node
-		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address), 5)
+		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address), -1)
 
 		// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
-		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value), 5)
+		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value), -1)
 
 		totalConsensus += validator.Power
 
