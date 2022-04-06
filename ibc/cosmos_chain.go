@@ -3,6 +3,7 @@ package ibc
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -215,6 +217,8 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		return err
 	}
 
+	chainCfg := c.Config()
+
 	genesisJsonBytes, err := ioutil.ReadFile(genesisTmpFilePath)
 	if err != nil {
 		return err
@@ -275,10 +279,34 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		}
 
 		// modify genesis file overwriting validators address with the one generated for this test node
-		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address), -1)
+		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address))
 
 		// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
-		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value), -1)
+		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value))
+
+		existingValAddressBytes, err := hex.DecodeString(validator.Address)
+		if err != nil {
+			return err
+		}
+
+		testNodeAddressBytes, err := hex.DecodeString(testNodePrivValFile.Address)
+		if err != nil {
+			return err
+		}
+
+		valConsPrefix := fmt.Sprintf("%svalcons", chainCfg.Bech32Prefix)
+
+		existingValBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, existingValAddressBytes)
+		if err != nil {
+			return err
+		}
+
+		testNodeBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, testNodeAddressBytes)
+		if err != nil {
+			return err
+		}
+
+		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(existingValBech32ValConsAddress), []byte(testNodeBech32ValConsAddress))
 
 		totalConsensus += validator.Power
 
@@ -321,8 +349,9 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		if err := n.StartContainer(ctx); err != nil {
 			return err
 		}
-		time.Sleep(60 * time.Second)
 	}
+
+	time.Sleep(2 * time.Hour)
 
 	// Wait for 5 blocks before considering the chains "started"
 	_, err = c.getRelayerNode().WaitForBlocks(5)
