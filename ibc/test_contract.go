@@ -97,3 +97,29 @@ func (ibc IBCTestCase) JunoHaltTest(testName string, srcChain Chain, dstChain Ch
 
 	return nil
 }
+
+func (ibc IBCTestCase) JunoPostHaltGenesis(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	if err := srcChain.Initialize(testName, home, pool, network); err != nil {
+		return err
+	}
+
+	executablePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	rootPath := filepath.Dir(executablePath)
+	genesisFilePath := path.Join(rootPath, "assets", "juno-1-96.json")
+
+	if err := srcChain.StartWithGenesisFile(testName, ctx, home, pool, network, genesisFilePath); err != nil {
+		return err
+	}
+
+	_, err = srcChain.WaitForBlocks(20)
+	return err
+}

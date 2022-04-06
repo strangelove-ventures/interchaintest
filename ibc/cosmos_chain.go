@@ -1,11 +1,17 @@
 package ibc
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
+	"sort"
+	"strconv"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -179,6 +185,148 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 		chainNodes = append(chainNodes, tn)
 	}
 	c.chainNodes = chainNodes
+}
+
+type GenesisValidatorPubKey struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+type GenesisValidators struct {
+	Address string                 `json:"address"`
+	Name    string                 `json:"name"`
+	Power   string                 `json:"power"`
+	PubKey  GenesisValidatorPubKey `json:"pub_key"`
+}
+type GenesisFile struct {
+	Validators []GenesisValidators `json:"validators"`
+}
+
+type ValidatorWithIntPower struct {
+	Address      string
+	Power        int64
+	PubKeyBase64 string
+}
+
+// Bootstraps the chain and starts it from genesis
+func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
+	// copy genesis file to tmp path for modification
+	genesisTmpFilePath := path.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
+	if _, err := copy(genesisFilePath, genesisTmpFilePath); err != nil {
+		return err
+	}
+
+	genesisJsonBytes, err := ioutil.ReadFile(genesisTmpFilePath)
+	if err != nil {
+		return err
+	}
+
+	genesisFile := GenesisFile{}
+	if err := json.Unmarshal(genesisJsonBytes, &genesisFile); err != nil {
+		return err
+	}
+
+	genesisValidators := genesisFile.Validators
+	totalPower := int64(0)
+
+	validatorsWithPower := make([]ValidatorWithIntPower, 0)
+
+	for _, genesisValidator := range genesisValidators {
+		power, err := strconv.ParseInt(genesisValidator.Power, 10, 64)
+		if err != nil {
+			return err
+		}
+		totalPower += power
+		validatorsWithPower = append(validatorsWithPower, ValidatorWithIntPower{
+			Address:      genesisValidator.Address,
+			Power:        power,
+			PubKeyBase64: genesisValidator.PubKey.Value,
+		})
+	}
+
+	sort.Slice(validatorsWithPower, func(i, j int) bool {
+		return validatorsWithPower[i].Power > validatorsWithPower[j].Power
+	})
+
+	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
+	totalConsensus := int64(0)
+
+	c.chainNodes = []*ChainNode{}
+
+	for i, validator := range validatorsWithPower {
+		tn := &ChainNode{Home: home, Index: i, Chain: c,
+			Pool: pool, NetworkID: networkID, testName: testName}
+		tn.MkDir()
+		c.chainNodes = append(c.chainNodes, tn)
+
+		// just need to get pubkey here
+		// don't care about what goes into this node's genesis file since it will be overwritten with the modified one
+		if err := tn.InitHomeFolder(ctx); err != nil {
+			return err
+		}
+
+		testNodePubKeyJsonBytes, err := ioutil.ReadFile(tn.PrivValKeyFilePath())
+		if err != nil {
+			return err
+		}
+
+		testNodePrivValFile := PrivValidatorKeyFile{}
+		if err := json.Unmarshal(testNodePubKeyJsonBytes, &testNodePrivValFile); err != nil {
+			return err
+		}
+
+		// modify genesis file overwriting validators address with the one generated for this test node
+		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address), 5)
+
+		// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
+		genesisJsonBytes = bytes.Replace(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value), 5)
+
+		totalConsensus += validator.Power
+
+		if totalConsensus > twoThirdsConsensus {
+			break
+		}
+	}
+
+	for i := 0; i < len(c.chainNodes); i++ {
+		if err := ioutil.WriteFile(c.chainNodes[i].GenesisFilePath(), genesisJsonBytes, 0644); err != nil { //nolint
+			return err
+		}
+	}
+
+	if err := ChainNodes(c.chainNodes).LogGenesisHashes(); err != nil {
+		return err
+	}
+
+	var eg errgroup.Group
+
+	for _, n := range c.chainNodes {
+		n := n
+		eg.Go(func() error {
+			return n.CreateNodeContainer()
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	peers := ChainNodes(c.chainNodes).PeerString()
+
+	for _, n := range c.chainNodes {
+		n.SetValidatorConfigAndPeers(peers)
+	}
+
+	for _, n := range c.chainNodes {
+		n := n
+		fmt.Printf("{%s} => starting container...\n", n.Name())
+		if err := n.StartContainer(ctx); err != nil {
+			return err
+		}
+		time.Sleep(60 * time.Second)
+	}
+
+	// Wait for 5 blocks before considering the chains "started"
+	_, err = c.getRelayerNode().WaitForBlocks(5)
+	return err
 }
 
 // Bootstraps the chain and starts it from genesis
