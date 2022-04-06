@@ -111,8 +111,8 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 }
 
 // Implements Chain interface
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoContactFlag bool) (string, error) {
-	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoContactFlag)
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
 // Implements Chain interface
@@ -121,12 +121,17 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 }
 
 // Implements Chain interface
+func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
+	return c.getRelayerNode().DumpContractState(ctx, contractAddress, height)
+}
+
+// Implements Chain interface
 func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
 	return c.getRelayerNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
 }
 
 // Implements Chain interface
-func (c *CosmosChain) WaitForBlocks(number int64) error {
+func (c *CosmosChain) WaitForBlocks(number int64) (int64, error) {
 	return c.getRelayerNode().WaitForBlocks(number)
 }
 
@@ -301,5 +306,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return c.getRelayerNode().WaitForBlocks(5)
+	_, err = c.getRelayerNode().WaitForBlocks(5)
+	return err
 }

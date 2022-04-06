@@ -62,16 +62,19 @@ type Chain interface {
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
 
 	// takes file path to smart contract and initialization message. returns contract address
-	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoContactFlag bool) (string, error)
+	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
 
 	// executes a contract transaction with a message using it's address
 	ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error
 
+	// dump state of contract at block height
+	DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error)
+
 	// create balancer pool
 	CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error
 
-	// waits for # of blocks to be produced
-	WaitForBlocks(number int64) error
+	// waits for # of blocks to be produced. Returns latest height
+	WaitForBlocks(number int64) (int64, error)
 
 	// fetch balance for a specific account address and denom
 	GetBalance(ctx context.Context, address string, denom string) (int64, error)

@@ -178,13 +178,14 @@ func (tn *ChainNode) SetPrivValdidatorListen(peers string) {
 }
 
 // Wait until we have signed n blocks in a row
-func (tn *ChainNode) WaitForBlocks(blocks int64) error {
+func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	stat, err := tn.Client.Status(context.Background())
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	startingBlock := stat.SyncInfo.LatestBlockHeight
+	mostRecentBlock := startingBlock
 	fmt.Printf("{WaitForBlocks-%s} Initial Height: %d\n", tn.Chain.Config().ChainID, startingBlock)
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -193,19 +194,19 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) error {
 
 		stat, err := tn.Client.Status(context.Background())
 		if err != nil {
-			return err
+			return mostRecentBlock, err
 		}
 
-		mostRecentBlock := stat.SyncInfo.LatestBlockHeight
+		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
 
 		deltaBlocks := mostRecentBlock - startingBlock
 
 		if deltaBlocks >= blocks {
 			fmt.Printf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d\n", tn.Chain.Config().ChainID, blocks, i+1)
-			return nil // done waiting for consecutive signed blocks
+			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
-	return errors.New("timed out waiting for blocks")
+	return mostRecentBlock, errors.New("timed out waiting for blocks")
 }
 
 func applyConfigChanges(cfg *tmconfig.Config, peers string) {
@@ -405,7 +406,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	if err := tn.Chain.WaitForBlocks(5); err != nil {
+	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
 		return "", err
 	}
 
@@ -452,7 +453,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	if err := tn.Chain.WaitForBlocks(5); err != nil {
+	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
 		return "", err
 	}
 
@@ -494,6 +495,36 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
+type ContractStateModels struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type DumpContractStateResponse struct {
+	Models []ContractStateModels `json:"models"`
+}
+
+func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"query", "wasm", "contract-state", "all", contractAddress,
+		"--height", fmt.Sprint(height),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return nil, handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	res := &DumpContractStateResponse{}
+	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
 	// TODO generate --pool-file
 	poolFilePath := "TODO"
@@ -519,13 +550,17 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
 	var version string
-	if tn.Index < 4 {
-		version = "v2.1.0"
-	} else if tn.Index < 8 {
-		version = "v2.1.0"
-		// version = "v2.1.0-unpatched"
+	if chainCfg.Name == "juno" {
+
+		if tn.Index < 4 {
+			version = "v2.1.0"
+		} else if tn.Index < 8 {
+			version = "v2.1.0-unpatched"
+		} else {
+			version = "v2.2.0-do-not-use"
+		}
 	} else {
-		version = "v2.2.0-do-not-use"
+		version = chainCfg.Version
 	}
 
 	containerImage := fmt.Sprintf("%s:%s", chainCfg.Repository, version)

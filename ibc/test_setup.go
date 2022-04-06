@@ -42,6 +42,7 @@ type IBCTestCase struct{}
 func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error, error) {
 	v := reflect.ValueOf(IBCTestCase{})
 	m := v.MethodByName(testCase)
+
 	if m.Kind() != reflect.Func {
 		return nil, fmt.Errorf("invalid test case: %s", testCase)
 	}
@@ -264,11 +265,13 @@ func StartChainsAndRelayer(
 
 func WaitForBlocks(srcChain Chain, dstChain Chain, blocksToWait int64) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		return srcChain.WaitForBlocks(blocksToWait)
+	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
+		_, err = srcChain.WaitForBlocks(blocksToWait)
+		return
 	})
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		return dstChain.WaitForBlocks(blocksToWait)
+	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
+		_, err = dstChain.WaitForBlocks(blocksToWait)
+		return
 	})
 	return chainsConsecutiveBlocksWaitGroup.Wait()
 }
