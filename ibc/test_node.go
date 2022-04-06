@@ -549,23 +549,6 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome()}
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
-	var version string
-	if chainCfg.Name == "juno" {
-
-		if tn.Index < 4 {
-			version = "v2.1.0"
-		} else if tn.Index < 8 {
-			version = "v2.1.0-unpatched"
-		} else {
-			version = "v2.2.0-do-not-use"
-		}
-	} else {
-		version = chainCfg.Version
-	}
-
-	containerImage := fmt.Sprintf("%s:%s", chainCfg.Repository, version)
-	fmt.Printf("{%s} image: %s\n", tn.Name(), containerImage)
-
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
 		Config: &docker.Config{
@@ -574,7 +557,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 			Hostname:     tn.Name(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        containerImage,
+			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
 			Labels:       map[string]string{"ibc-test": tn.testName},
 		},
 		HostConfig: &docker.HostConfig{
