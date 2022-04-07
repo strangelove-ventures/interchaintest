@@ -45,11 +45,17 @@ type Chain interface {
 	// start a chain with a provided genesis file. Will override validators for first 2/3 of voting power
 	StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error
 
+	// export state at specific height
+	ExportState(ctx context.Context, height int64) (string, error)
+
 	// retrieves rpc address that can be reached by other containers in the docker network
 	GetRPCAddress() string
 
 	// retrieves grpc address that can be reached by other containers in the docker network
 	GetGRPCAddress() string
+
+	// get current height
+	Height() (int64, error)
 
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error

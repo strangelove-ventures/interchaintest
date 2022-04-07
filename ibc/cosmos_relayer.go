@@ -129,7 +129,14 @@ func (relayer *CosmosRelayer) StartRelayer(ctx context.Context, pathName string)
 
 // Implements Relayer interface
 func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
-	return relayer.StopContainer()
+	if err := relayer.StopContainer(); err != nil {
+		return err
+	}
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: relayer.container.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
+	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", relayer.Name(), stdout.String(), relayer.Name(), stderr.String())
+	return relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: relayer.container.ID})
 }
 
 // Implements Relayer interface
@@ -266,7 +273,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	exitCode, err := relayer.pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
 	return exitCode, stdout.String(), stderr.String(), err

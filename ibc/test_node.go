@@ -224,6 +224,14 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	return mostRecentBlock, errors.New("timed out waiting for blocks")
 }
 
+func (tn *ChainNode) Height() (int64, error) {
+	stat, err := tn.Client.Status(context.Background())
+	if err != nil {
+		return -1, err
+	}
+	return stat.SyncInfo.LatestBlockHeight, nil
+}
+
 func applyConfigChanges(cfg *tmconfig.Config, peers string) {
 	// turn down blocktimes to make the chain faster
 	cfg.Consensus.TimeoutCommit = time.Duration(blockTime) * time.Second
@@ -304,6 +312,8 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 		"--keyring-backend", keyring.BackendTest,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas", fmt.Sprint(10000000000),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--from", keyName,
 		"--output", "json",
@@ -540,6 +550,30 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	return res, nil
 }
 
+func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"export",
+		"--height", fmt.Sprint(height),
+		"--home", tn.NodeHome(),
+	}
+
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	// output comes to stderr for some reason
+	return stderr, nil
+}
+
+func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
+	command := []string{tn.Chain.Config().Bin,
+		"unsafe-reset-all",
+		"--home", tn.NodeHome(),
+	}
+
+	return handleNodeJobError(tn.NodeJob(ctx, command))
+}
+
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
 	// TODO generate --pool-file
 	poolFilePath := "TODO"
@@ -618,20 +652,19 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	time.Sleep(5 * time.Second)
-	// return retry.Do(func() error {
-	// 	stat, err := tn.Client.Status(ctx)
-	// 	if err != nil {
-	// 		// tn.t.Log(err)
-	// 		return err
-	// 	}
-	// 	// TODO: reenable this check, having trouble with it for some reason
-	// 	if stat != nil && stat.SyncInfo.CatchingUp {
-	// 		return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
-	// 			stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
-	// 	}
-	// 	return nil
-	// }, retry.DelayType(retry.BackOffDelay))
-	return nil
+	return retry.Do(func() error {
+		stat, err := tn.Client.Status(ctx)
+		if err != nil {
+			// tn.t.Log(err)
+			return err
+		}
+		// TODO: reenable this check, having trouble with it for some reason
+		if stat != nil && stat.SyncInfo.CatchingUp {
+			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
+				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
+		}
+		return nil
+	}, retry.DelayType(retry.BackOffDelay))
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
@@ -797,7 +830,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	exitCode, err := tn.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
 	return exitCode, stdout.String(), stderr.String(), err

@@ -19,7 +19,7 @@ func (ibc IBCTestCase) RelayPacketTest(testName string, srcChain Chain, dstChain
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a user account on the src chain (separate fullnode)
 	// funds user account on src chain in genesis
-	channels, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, nil)
+	_, channels, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, nil)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (ibc IBCTestCase) RelayPacketTestNoTimeout(testName string, srcChain Chain,
 	}
 
 	// Startup both chains and relayer
-	_, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
+	_, _, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, srcChain Ch
 	}
 
 	// Startup both chains and relayer
-	_, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
+	_, _, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain
 	}
 
 	// Startup both chains and relayer
-	_, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
+	_, _, user, rlyCleanup, err := StartChainsAndRelayer(testName, ctx, pool, network, home, srcChain, dstChain, relayerImplementation, preRelayerStart)
 	if err != nil {
 		return err
 	}

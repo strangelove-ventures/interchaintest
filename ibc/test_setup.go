@@ -113,7 +113,7 @@ func StartChainsAndRelayer(
 	dstChain Chain,
 	relayerImplementation RelayerImplementation,
 	preRelayerStart func(channels []ChannelOutput, user User) error,
-) ([]ChannelOutput, User, func(), error) {
+) (Relayer, []ChannelOutput, User, func(), error) {
 	var relayerImpl Relayer
 	switch relayerImplementation {
 	case CosmosRly:
@@ -129,8 +129,8 @@ func StartChainsAndRelayer(
 		// not yet supported
 	}
 
-	errResponse := func(err error) ([]ChannelOutput, User, func(), error) {
-		return []ChannelOutput{}, User{}, nil, err
+	errResponse := func(err error) (Relayer, []ChannelOutput, User, func(), error) {
+		return nil, []ChannelOutput{}, User{}, nil, err
 	}
 
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
@@ -212,7 +212,7 @@ func StartChainsAndRelayer(
 	userWalletSrc := WalletAmount{
 		Address: userAccountSrc,
 		Denom:   srcChainCfg.Denom,
-		Amount:  100000000,
+		Amount:  10000000000,
 	}
 
 	// start chains from genesis, wait until they are producing blocks
@@ -260,7 +260,7 @@ func StartChainsAndRelayer(
 		}
 	}
 
-	return channels, user, relayerCleanup, nil
+	return relayerImpl, channels, user, relayerCleanup, nil
 }
 
 func WaitForBlocks(srcChain Chain, dstChain Chain, blocksToWait int64) error {
