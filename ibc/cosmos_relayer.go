@@ -48,7 +48,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "latest"
+	containerVersion = "v2.0.0-beta4"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -188,6 +188,13 @@ func (relayer *CosmosRelayer) GeneratePath(ctx context.Context, srcChainID, dstC
 	return handleNodeJobError(relayer.NodeJob(ctx, command))
 }
 
+func (relayer *CosmosRelayer) UpdateClients(ctx context.Context, pathName string) error {
+	command := []string{"rly", "tx", "update-clients", pathName,
+		"--home", relayer.NodeHome(),
+	}
+	return handleNodeJobError(relayer.NodeJob(ctx, command))
+}
+
 func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
 		Repository: containerImage,
@@ -197,7 +204,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 		return err
 	}
 	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
-	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome()}
+	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
 	fmt.Printf("{%s} -> '%s'\n", containerName, strings.Join(cmd, " "))
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: containerName,

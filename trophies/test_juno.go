@@ -1,4 +1,4 @@
-package ibc
+//go:build exclude
 
 import (
 	"encoding/base64"
@@ -219,13 +219,16 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 
 	fmt.Printf("First balance check: Source: %d, Destination: %d\n", srcFinalBalance, dstFinalBalance)
 
-	// if srcFinalBalance != srcInitialBalance-testCoin.Amount {
-	// 	return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance-testCoin.Amount, srcFinalBalance)
-	// }
+	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
+	expectedDifference := testCoin.Amount + totalFees
 
-	// if dstFinalBalance != dstInitialBalance+testCoin.Amount {
-	// 	return fmt.Errorf("destination balances do not match. expected: %d, actual: %d", dstInitialBalance+testCoin.Amount, dstFinalBalance)
-	// }
+	if srcFinalBalance != srcInitialBalance-expectedDifference {
+		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance-expectedDifference, srcFinalBalance)
+	}
+
+	if dstFinalBalance != dstInitialBalance+testCoin.Amount {
+		return fmt.Errorf("destination balances do not match. expected: %d, actual: %d", dstInitialBalance+testCoin.Amount, dstFinalBalance)
+	}
 
 	// IBC is confirmed working on 2.1.0, now use bad contract to halt chain
 
@@ -266,7 +269,8 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 		}
 		fmt.Printf("Contract data: %s\n", contractData)
 
-		// run increment a bunch of times
+		// run increment a bunch of times.
+		// Actual mainnet halt included this, but this test shows they are not necessary to cause halt
 		// for i := 0; i < 5; i++ {
 		// 	if err := srcChain.ExecuteContract(ctx, userAccountKeyName, contractAddress, "{\"increment\":{}}"); err != nil {
 		// 		return err
@@ -306,12 +310,12 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 
 	newGenesisJson = strings.ReplaceAll(newGenesisJson, fmt.Sprintf("\"initial_height\":%d", 0), fmt.Sprintf("\"initial_height\":%d", haltHeight+2))
 
-	juno3Chain, err := GetChain(testName, "juno", "v3.0.0-alpha", "juno-1", 10, 1)
+	juno3Chain, err := GetChain(testName, "juno", "v3.0.0", "juno-1", 10, 1)
 	if err != nil {
 		return err
 	}
 
-	// write modified genesis file to 2/3
+	// write modified genesis file to 2/3 vals and fullnode
 	for i := 3; i < len(junoChainAsCosmosChain.ChainNodes); i++ {
 		if err := junoChainAsCosmosChain.ChainNodes[i].UnsafeResetAll(ctx); err != nil {
 			return err
@@ -346,8 +350,8 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 	}
 
 	// check IBC again
-
-	if err = relayer.LinkPath(ctx, testPathName); err != nil {
+	// note: this requires relayer version with hack to use old RPC for blocks before the halt, and new RPC for blocks after new genesis
+	if err = relayer.UpdateClients(ctx, testPathName); err != nil {
 		return err
 	}
 
@@ -356,7 +360,7 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 	}
 
 	// wait for relayer to start up
-	time.Sleep(20 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	// send ibc transfer from the user wallet using its fullnode
 	// timeout is nil so that it will use the default timeout
@@ -390,15 +394,16 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 		return err
 	}
 
-	fmt.Printf("Second balance check: Source: %d, Destination: %d\n", srcFinalBalance2, dstFinalBalance2)
+	totalFees = srcChain.GetGasFeesInNativeDenom(srcTx2.GasWanted)
+	expectedDifference = testCoin.Amount + totalFees
 
-	// if srcFinalBalance2 != srcFinalBalance-testCoin.Amount {
-	// 	return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcFinalBalance-testCoin.Amount, srcFinalBalance2)
-	// }
+	if srcFinalBalance2 != srcFinalBalance-expectedDifference {
+		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcFinalBalance-expectedDifference, srcFinalBalance2)
+	}
 
-	// if dstFinalBalance2 != dstFinalBalance+testCoin.Amount {
-	// 	return fmt.Errorf("destination balances do not match. expected: %d, actual: %d", dstFinalBalance+testCoin.Amount, dstFinalBalance2)
-	// }
+	if dstFinalBalance2 != dstFinalBalance+testCoin.Amount {
+		return fmt.Errorf("destination balances do not match. expected: %d, actual: %d", dstFinalBalance+testCoin.Amount, dstFinalBalance2)
+	}
 
 	return nil
 
