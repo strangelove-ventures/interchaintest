@@ -333,8 +333,10 @@ func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, srcChain Ch
 		return err
 	}
 
-	if srcFinalBalance != srcInitialBalance {
-		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance, srcFinalBalance)
+	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
+
+	if srcFinalBalance != srcInitialBalance-totalFees {
+		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance-totalFees, srcFinalBalance)
 	}
 
 	if dstFinalBalance != dstInitialBalance {
@@ -423,8 +425,10 @@ func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain
 		return err
 	}
 
-	if srcFinalBalance != srcInitialBalance {
-		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance, srcFinalBalance)
+	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
+
+	if srcFinalBalance != srcInitialBalance-totalFees {
+		return fmt.Errorf("source balances do not match. expected: %d, actual: %d", srcInitialBalance-totalFees, srcFinalBalance)
 	}
 
 	if dstFinalBalance != dstInitialBalance {
