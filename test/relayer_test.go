@@ -47,7 +47,7 @@ func TestHeightTimeout(t *testing.T) {
 
 // queued packet with relative timestamp timeout (ns) that expires should not be relayed
 func TestTimestampTimeout(t *testing.T) {
-	t.Skip() // TODO turn this back on once fixed in cosmos relayer
+	//t.Skip() // TODO turn this back on once fixed in cosmos relayer
 	srcChain, dstChain := getTestChains(t)
 	relayerImplementation := ibc.CosmosRly
 
