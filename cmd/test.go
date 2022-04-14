@@ -67,7 +67,6 @@ ibc-test-framework test --src osmosis:v7.0.4 --dst juno:v2.3.0 --relayer rly Rel
 ibc-test-framework test -s osmosis:v7.0.4 -d juno:v2.3.0 -r rly RelayPacketTest
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("IBC Test Framework")
 		flags := cmd.Flags()
 		srcChainNameVersion, _ := flags.GetString("src")
 		dstChainNameVersion, _ := flags.GetString("dst")
