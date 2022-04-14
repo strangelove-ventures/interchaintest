@@ -88,6 +88,9 @@ type Chain interface {
 	// fetch balance for a specific account address and denom
 	GetBalance(ctx context.Context, address string, denom string) (int64, error)
 
+	// get the fees in native denom for an amount of spent gas
+	GetGasFeesInNativeDenom(gasPaid int64) int64
+
 	// fetch transaction
 	GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error)
 }

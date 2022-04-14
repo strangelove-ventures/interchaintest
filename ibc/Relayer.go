@@ -40,6 +40,9 @@ type Relayer interface {
 	// setup channels, connections, and clients
 	LinkPath(ctx context.Context, pathName string) error
 
+	// update clients, such as after new genesis
+	UpdateClients(ctx context.Context, pathName string) error
+
 	// get channel IDs for chain
 	GetChannels(ctx context.Context, chainID string) ([]ChannelOutput, error)
 

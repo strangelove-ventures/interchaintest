@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -174,6 +175,12 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 
 func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
 	return authTx.QueryTx(c.getRelayerNode().CliContext(), txHash)
+}
+
+func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
+	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
+	fees := float64(gasPaid) * gasPrice
+	return int64(fees)
 }
 
 // creates the test node objects required for bootstrapping tests
