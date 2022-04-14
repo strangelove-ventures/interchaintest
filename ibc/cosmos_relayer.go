@@ -48,7 +48,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "v2.0.0-beta4"
+	containerVersion = "main"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -251,12 +251,17 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
+	version := containerVersion
+	if len(cmd) > 2 && cmd[2] == "link" {
+		fmt.Println("Using beta4 for link command")
+		version = "v2.0.0-beta4"
+	}
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
 			User:       getDockerUserString(),
 			Hostname:   container,
-			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
+			Image:      fmt.Sprintf("%s:%s", containerImage, version),
 			Cmd:        cmd,
 			Entrypoint: []string{},
 			Labels:     map[string]string{"ibc-test": container},
