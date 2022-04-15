@@ -42,6 +42,7 @@ type IBCTestCase struct{}
 func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error, error) {
 	v := reflect.ValueOf(IBCTestCase{})
 	m := v.MethodByName(testCase)
+
 	if m.Kind() != reflect.Func {
 		return nil, fmt.Errorf("invalid test case: %s", testCase)
 	}
@@ -111,8 +112,8 @@ func StartChainsAndRelayer(
 	srcChain Chain,
 	dstChain Chain,
 	relayerImplementation RelayerImplementation,
-	preRelayerStart func(channels []ChannelOutput, user User) error,
-) ([]ChannelOutput, User, func(), error) {
+	preRelayerStart func([]ChannelOutput, User, User) error,
+) (Relayer, []ChannelOutput, *User, *User, func(), error) {
 	var relayerImpl Relayer
 	switch relayerImplementation {
 	case CosmosRly:
@@ -128,8 +129,8 @@ func StartChainsAndRelayer(
 		// not yet supported
 	}
 
-	errResponse := func(err error) ([]ChannelOutput, User, func(), error) {
-		return []ChannelOutput{}, User{}, nil, err
+	errResponse := func(err error) (Relayer, []ChannelOutput, *User, *User, func(), error) {
+		return nil, []ChannelOutput{}, nil, nil, nil, err
 	}
 
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
@@ -169,14 +170,14 @@ func StartChainsAndRelayer(
 	}
 
 	// Fund relayer account on src chain
-	srcWallet := WalletAmount{
+	srcRelayerWalletAmount := WalletAmount{
 		Address: srcAccount,
 		Denom:   srcChainCfg.Denom,
 		Amount:  10000000,
 	}
 
 	// Fund relayer account on dst chain
-	dstWallet := WalletAmount{
+	dstRelayerWalletAmount := WalletAmount{
 		Address: dstAccount,
 		Denom:   dstChainCfg.Denom,
 		Amount:  10000000,
@@ -186,41 +187,74 @@ func StartChainsAndRelayer(
 	if err := srcChain.CreateKey(ctx, userAccountKeyName); err != nil {
 		return errResponse(err)
 	}
-	userAccountAddressBytes, err := srcChain.GetAddress(userAccountKeyName)
+
+	srcUserAccountAddressBytes, err := srcChain.GetAddress(userAccountKeyName)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	userAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, userAccountAddressBytes)
+	srcUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcUserAccountAddressBytes)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	userAccountDst, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, userAccountAddressBytes)
+	srcUserAccountDst, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, srcUserAccountAddressBytes)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	user := User{
+	if err := dstChain.CreateKey(ctx, userAccountKeyName); err != nil {
+		return errResponse(err)
+	}
+
+	dstUserAccountAddressBytes, err := dstChain.GetAddress(userAccountKeyName)
+	if err != nil {
+		return errResponse(err)
+	}
+
+	dstUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, dstUserAccountAddressBytes)
+	if err != nil {
+		return errResponse(err)
+	}
+
+	dstUserAccountDst, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstUserAccountAddressBytes)
+	if err != nil {
+		return errResponse(err)
+	}
+
+	srcUser := User{
 		KeyName:         userAccountKeyName,
-		SrcChainAddress: userAccountSrc,
-		DstChainAddress: userAccountDst,
+		SrcChainAddress: srcUserAccountSrc,
+		DstChainAddress: srcUserAccountDst,
+	}
+
+	dstUser := User{
+		KeyName:         userAccountKeyName,
+		SrcChainAddress: dstUserAccountSrc,
+		DstChainAddress: dstUserAccountDst,
 	}
 
 	// Fund user account on src chain in order to relay from src to dst
-	userWalletSrc := WalletAmount{
-		Address: userAccountSrc,
+	srcUserWalletAmount := WalletAmount{
+		Address: srcUserAccountSrc,
 		Denom:   srcChainCfg.Denom,
-		Amount:  100000000,
+		Amount:  10000000000,
+	}
+
+	// Fund user account on dst chain in order to relay from dst to src
+	dstUserWalletAmount := WalletAmount{
+		Address: dstUserAccountDst,
+		Denom:   dstChainCfg.Denom,
+		Amount:  10000000000,
 	}
 
 	// start chains from genesis, wait until they are producing blocks
 	chainsGenesisWaitGroup := errgroup.Group{}
 	chainsGenesisWaitGroup.Go(func() error {
-		return srcChain.Start(testName, ctx, []WalletAmount{srcWallet, userWalletSrc})
+		return srcChain.Start(testName, ctx, []WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount})
 	})
 	chainsGenesisWaitGroup.Go(func() error {
-		return dstChain.Start(testName, ctx, []WalletAmount{dstWallet})
+		return dstChain.Start(testName, ctx, []WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount})
 	})
 
 	if err := chainsGenesisWaitGroup.Wait(); err != nil {
@@ -240,7 +274,7 @@ func StartChainsAndRelayer(
 	}
 
 	if preRelayerStart != nil {
-		if err := preRelayerStart(channels, user); err != nil {
+		if err := preRelayerStart(channels, srcUser, dstUser); err != nil {
 			return errResponse(err)
 		}
 	}
@@ -259,16 +293,18 @@ func StartChainsAndRelayer(
 		}
 	}
 
-	return channels, user, relayerCleanup, nil
+	return relayerImpl, channels, &srcUser, &dstUser, relayerCleanup, nil
 }
 
 func WaitForBlocks(srcChain Chain, dstChain Chain, blocksToWait int64) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		return srcChain.WaitForBlocks(blocksToWait)
+	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
+		_, err = srcChain.WaitForBlocks(blocksToWait)
+		return
 	})
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		return dstChain.WaitForBlocks(blocksToWait)
+	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
+		_, err = dstChain.WaitForBlocks(blocksToWait)
+		return
 	})
 	return chainsConsecutiveBlocksWaitGroup.Wait()
 }
@@ -306,6 +342,7 @@ func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*do
 // Cleanup will clean up Docker containers, networks, and the other various config files generated in testing
 func Cleanup(testName string, pool *dockertest.Pool, testDir string) func() {
 	return func() {
+		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		ctx := context.Background()
 		for _, c := range cont {
@@ -317,7 +354,9 @@ func Cleanup(testName string, pool *dockertest.Pool, testDir string) func() {
 					stderr := new(bytes.Buffer)
 					_ = pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 					names := strings.Join(c.Names, ",")
-					fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", names, stdout, names, stderr)
+					if showContainerLogs != "" {
+						fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", names, stdout, names, stderr)
+					}
 					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID})
 				}
 			}

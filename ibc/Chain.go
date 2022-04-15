@@ -42,11 +42,20 @@ type Chain interface {
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 	Start(testName string, ctx context.Context, additionalGenesisWallets []WalletAmount) error
 
+	// start a chain with a provided genesis file. Will override validators for first 2/3 of voting power
+	StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error
+
+	// export state at specific height
+	ExportState(ctx context.Context, height int64) (string, error)
+
 	// retrieves rpc address that can be reached by other containers in the docker network
 	GetRPCAddress() string
 
 	// retrieves grpc address that can be reached by other containers in the docker network
 	GetGRPCAddress() string
+
+	// get current height
+	Height() (int64, error)
 
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error
@@ -62,19 +71,25 @@ type Chain interface {
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
 
 	// takes file path to smart contract and initialization message. returns contract address
-	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error)
+	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
 
 	// executes a contract transaction with a message using it's address
 	ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error
 
+	// dump state of contract at block height
+	DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error)
+
 	// create balancer pool
 	CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error
 
-	// waits for # of blocks to be produced
-	WaitForBlocks(number int64) error
+	// waits for # of blocks to be produced. Returns latest height
+	WaitForBlocks(number int64) (int64, error)
 
 	// fetch balance for a specific account address and denom
 	GetBalance(ctx context.Context, address string, denom string) (int64, error)
+
+	// get the fees in native denom for an amount of spent gas
+	GetGasFeesInNativeDenom(gasPaid int64) int64
 
 	// fetch transaction
 	GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error)

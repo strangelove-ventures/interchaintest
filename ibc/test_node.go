@@ -59,7 +59,7 @@ type Hosts []ContainerPort
 
 var (
 	valKey      = "validator"
-	blockTime   = 3 // seconds
+	blockTime   = 2 // seconds
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -136,6 +136,21 @@ func (tn *ChainNode) GenesisFilePath() string {
 	return path.Join(tn.Dir(), "config", "genesis.json")
 }
 
+type PrivValidatorKey struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type PrivValidatorKeyFile struct {
+	Address string           `json:"address"`
+	PubKey  PrivValidatorKey `json:"pub_key"`
+	PrivKey PrivValidatorKey `json:"priv_key"`
+}
+
+func (tn *ChainNode) PrivValKeyFilePath() string {
+	return path.Join(tn.Dir(), "config", "priv_validator_key.json")
+}
+
 func (tn *ChainNode) TMConfigPath() string {
 	return path.Join(tn.Dir(), "config", "config.toml")
 }
@@ -178,13 +193,14 @@ func (tn *ChainNode) SetPrivValdidatorListen(peers string) {
 }
 
 // Wait until we have signed n blocks in a row
-func (tn *ChainNode) WaitForBlocks(blocks int64) error {
+func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	stat, err := tn.Client.Status(context.Background())
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	startingBlock := stat.SyncInfo.LatestBlockHeight
+	mostRecentBlock := startingBlock
 	fmt.Printf("{WaitForBlocks-%s} Initial Height: %d\n", tn.Chain.Config().ChainID, startingBlock)
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -193,19 +209,27 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) error {
 
 		stat, err := tn.Client.Status(context.Background())
 		if err != nil {
-			return err
+			return mostRecentBlock, err
 		}
 
-		mostRecentBlock := stat.SyncInfo.LatestBlockHeight
+		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
 
 		deltaBlocks := mostRecentBlock - startingBlock
 
 		if deltaBlocks >= blocks {
 			fmt.Printf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d\n", tn.Chain.Config().ChainID, blocks, i+1)
-			return nil // done waiting for consecutive signed blocks
+			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
-	return errors.New("timed out waiting for blocks")
+	return mostRecentBlock, errors.New("timed out waiting for blocks")
+}
+
+func (tn *ChainNode) Height() (int64, error) {
+	stat, err := tn.Client.Status(context.Background())
+	if err != nil {
+		return -1, err
+	}
+	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
 func applyConfigChanges(cfg *tmconfig.Config, peers string) {
@@ -288,6 +312,8 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 		"--keyring-backend", keyring.BackendTest,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--from", keyName,
 		"--output", "json",
@@ -373,16 +399,25 @@ type QueryContractResponse struct {
 	Contracts []string `json:"contracts"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string) (string, error) {
+type CodeInfo struct {
+	CodeID string `json:"code_id"`
+}
+type CodeInfosResponse struct {
+	CodeInfos []CodeInfo `json:"code_infos"`
+}
+
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	_, file := filepath.Split(fileName)
 	newFilePath := path.Join(tn.Dir(), file)
 	newFilePathContainer := path.Join(tn.NodeHome(), file)
 	if _, err := copy(fileName, newFilePath); err != nil {
 		return "", err
 	}
+
 	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", newFilePathContainer,
 		"--from", keyName,
-		"--amount", fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--output", "json",
@@ -396,15 +431,35 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	res := InstantiateContractResponse{}
+	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
+		return "", err
+	}
+
+	command = []string{tn.Chain.Config().Bin,
+		"query", "wasm", "list-code", "--reverse",
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	res := CodeInfosResponse{}
 	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
 		return "", err
 	}
-	attributes := res.Logs[0].Events[0].Attributes
-	codeID := attributes[len(attributes)-1].Value
+
+	codeID := res.CodeInfos[0].CodeID
 
 	command = []string{tn.Chain.Config().Bin,
 		"tx", "wasm", "instantiate", codeID, initMessage,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--label", "satoshi-test",
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
@@ -414,9 +469,17 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
+	if needsNoAdminFlag {
+		command = append(command, "--no-admin")
+	}
+
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
+		return "", err
 	}
 
 	command = []string{tn.Chain.Config().Bin,
@@ -445,6 +508,8 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	command := []string{tn.Chain.Config().Bin,
 		"tx", "wasm", "execute", contractAddress, message,
 		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--output", "json",
@@ -455,12 +520,68 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return handleNodeJobError(tn.NodeJob(ctx, command))
 }
 
+type ContractStateModels struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type DumpContractStateResponse struct {
+	Models []ContractStateModels `json:"models"`
+}
+
+func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"query", "wasm", "contract-state", "all", contractAddress,
+		"--height", fmt.Sprint(height),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--output", "json",
+		"--home", tn.NodeHome(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return nil, handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	res := &DumpContractStateResponse{}
+	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"export",
+		"--height", fmt.Sprint(height),
+		"--home", tn.NodeHome(),
+	}
+
+	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	if err != nil {
+		return "", handleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	// output comes to stderr for some reason
+	return stderr, nil
+}
+
+func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
+	command := []string{tn.Chain.Config().Bin,
+		"unsafe-reset-all",
+		"--home", tn.NodeHome(),
+	}
+
+	return handleNodeJobError(tn.NodeJob(ctx, command))
+}
+
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
 	// TODO generate --pool-file
 	poolFilePath := "TODO"
 	command := []string{tn.Chain.Config().Bin,
 		"tx", "gamm", "create-pool",
 		"--pool-file", poolFilePath,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
@@ -474,8 +595,9 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 
 func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
-	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome()}
+	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
+
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
 		Config: &docker.Config{
@@ -708,7 +830,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	exitCode, err := tn.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "100", Follow: false, Timestamps: false})
+	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
 	return exitCode, stdout.String(), stderr.String(), err
