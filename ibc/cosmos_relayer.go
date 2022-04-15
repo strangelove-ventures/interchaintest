@@ -239,9 +239,14 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
 func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
+	version := containerVersion
+	if len(cmd) > 2 && cmd[2] == "link" {
+		fmt.Println("Using beta4 for link command")
+		version = "v2.0.0-beta4"
+	}
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
 		Repository: containerImage,
-		Tag:        containerVersion,
+		Tag:        version,
 	}, docker.AuthConfiguration{})
 	if err != nil {
 		return 1, "", "", err
@@ -251,11 +256,6 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	version := containerVersion
-	if len(cmd) > 2 && cmd[2] == "link" {
-		fmt.Println("Using beta4 for link command")
-		version = "v2.0.0-beta4"
-	}
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
