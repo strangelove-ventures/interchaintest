@@ -323,6 +323,12 @@ func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, srcChain Ch
 
 	fmt.Printf("Transaction:\n%v\n", srcTx)
 
+	// This test is super flaky for some reason. Sometimes it times the packet out immediately,
+	// other times it takes one failed attempt before being timed out. Without this sleep statement,
+	// you end up seeing the test fail approx. half the time. My only guess is that there is some
+	// weird timing issue.
+	time.Sleep(time.Second * 30)
+
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
 	if err != nil {
 		return err
@@ -418,7 +424,7 @@ func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain
 	// This test is super flaky for some reason. Sometimes it times the packet out immediately,
 	// other times it takes one failed attempt before being timed out. Without this sleep statement,
 	// you end up seeing the test fail approx. half the time. My only guess is that there is some
-	// weird timing issue between the docker containers.
+	// weird timing issue.
 	time.Sleep(time.Second * 30)
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
