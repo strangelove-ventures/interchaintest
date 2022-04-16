@@ -48,7 +48,7 @@ type CosmosRelayerChainConfig struct {
 
 var (
 	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "latest"
+	containerVersion = "main"
 )
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -239,9 +239,14 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
 func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
+	version := containerVersion
+	if len(cmd) > 2 && cmd[2] == "link" {
+		fmt.Println("Using beta4 for link command")
+		version = "v2.0.0-beta4"
+	}
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
 		Repository: containerImage,
-		Tag:        containerVersion,
+		Tag:        version,
 	}, docker.AuthConfiguration{})
 	if err != nil {
 		return 1, "", "", err
