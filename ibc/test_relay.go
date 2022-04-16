@@ -390,7 +390,7 @@ func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain
 		}
 
 		// wait until ibc transfer times out
-		time.Sleep(15 * time.Second)
+		time.Sleep(40 * time.Second)
 
 		return nil
 	}
@@ -414,6 +414,12 @@ func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain
 	}
 
 	fmt.Printf("Transaction:\n%v\n", srcTx)
+
+	// This test is super flaky for some reason. Sometimes it times the packet out immediately,
+	// other times it takes one failed attempt before being timed out. Without this sleep statement,
+	// you end up seeing the test fail approx. half the time. My only guess is that there is some
+	// weird timing issue between the docker containers.
+	time.Sleep(time.Second * 30)
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
 	if err != nil {
