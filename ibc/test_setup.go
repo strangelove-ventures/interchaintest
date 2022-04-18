@@ -98,36 +98,45 @@ type User struct {
 	KeyName         string
 }
 
-// startup both chains and relayer
-// creates wallets in the relayer for src and dst chain
-// funds relayer src and dst wallets on respective chain in genesis
-// creates a user account on the src chain (separate fullnode)
-// funds user account on src chain in genesis
 func StartChainsAndRelayer(
 	testName string,
 	ctx context.Context,
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
-	srcChain Chain,
-	dstChain Chain,
+	srcChain, dstChain Chain,
 	relayerImplementation RelayerImplementation,
 	preRelayerStart func([]ChannelOutput, User, User) error,
 ) (Relayer, []ChannelOutput, *User, *User, func(), error) {
-	var relayerImpl Relayer
-	switch relayerImplementation {
-	case CosmosRly:
-		relayerImpl = NewCosmosRelayerFromChains(
-			testName,
-			srcChain,
-			dstChain,
-			pool,
-			networkID,
-			home,
-		)
-	case Hermes:
-		// not yet supported
-	}
+	return StartChainsAndRelayerFromFactory(
+		testName,
+		ctx,
+		pool,
+		networkID,
+		home,
+		srcChain,
+		dstChain,
+		builtinRelayerFactory{impl: relayerImplementation},
+		preRelayerStart,
+	)
+}
+
+// startup both chains and relayer
+// creates wallets in the relayer for src and dst chain
+// funds relayer src and dst wallets on respective chain in genesis
+// creates a user account on the src chain (separate fullnode)
+// funds user account on src chain in genesis
+func StartChainsAndRelayerFromFactory(
+	testName string,
+	ctx context.Context,
+	pool *dockertest.Pool,
+	networkID string,
+	home string,
+	srcChain, dstChain Chain,
+	f RelayerFactory,
+	preRelayerStart func([]ChannelOutput, User, User) error,
+) (Relayer, []ChannelOutput, *User, *User, func(), error) {
+	relayerImpl := f.Build(testName, pool, networkID, home, srcChain, dstChain)
 
 	errResponse := func(err error) (Relayer, []ChannelOutput, *User, *User, func(), error) {
 		return nil, []ChannelOutput{}, nil, nil, nil, err
