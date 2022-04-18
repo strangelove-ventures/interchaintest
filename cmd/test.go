@@ -38,16 +38,8 @@ func parseRelayerImplementation(relayerImplementationString string) ibc.RelayerI
 	}
 }
 
-func runTestCase(testName string, testCase func(testName string, srcChain ibc.Chain, dstChain ibc.Chain, relayerImplementation ibc.RelayerImplementation) error, relayerImplementation ibc.RelayerImplementation, srcChainName, srcChainVersion, srcChainID string, srcVals int, dstChainName, dstChainVersion, dstChainID string, dstVals int) error {
-	srcChain, err := ibc.GetChain(testName, srcChainName, srcChainVersion, srcChainID, srcVals, 1)
-	if err != nil {
-		return err
-	}
-	dstChain, err := ibc.GetChain(testName, dstChainName, dstChainVersion, dstChainID, dstVals, 1)
-	if err != nil {
-		return err
-	}
-	return testCase(testName, srcChain, dstChain, relayerImplementation)
+func runTestCase(testName string, testCase func(testName string, cf ibc.ChainFactory, relayerImplementation ibc.RelayerImplementation) error, relayerImplementation ibc.RelayerImplementation, cf ibc.ChainFactory) error {
+	return testCase(testName, cf, relayerImplementation)
 }
 
 // testCmd represents the test command
@@ -86,7 +78,7 @@ ibc-test-framework test -s osmosis:v7.0.4 -d juno:v2.3.0 -r rly RelayPacketTest
 
 		parallel, _ := flags.GetBool("parallel")
 
-		var testCases []func(testName string, srcChain ibc.Chain, dstChain ibc.Chain, relayerImplementation ibc.RelayerImplementation) error
+		var testCases []func(testName string, cf ibc.ChainFactory, relayerImplementation ibc.RelayerImplementation) error
 
 		for _, testCaseString := range strings.Split(testCasesString, ",") {
 			testCase, err := ibc.GetTestCase(testCaseString)
@@ -96,13 +88,18 @@ ibc-test-framework test -s osmosis:v7.0.4 -d juno:v2.3.0 -r rly RelayPacketTest
 			testCases = append(testCases, testCase)
 		}
 
+		cf := ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
+			{Name: srcChainName, Version: srcChainVersion, ChainID: srcChainID, NumValidators: srcVals, NumFullNodes: 1},
+			{Name: dstChainName, Version: dstChainVersion, ChainID: dstChainID, NumValidators: dstVals, NumFullNodes: 1},
+		})
+
 		if parallel {
 			var eg errgroup.Group
 			for i, testCase := range testCases {
 				testCase := testCase
 				testName := fmt.Sprintf("Test%d", i)
 				eg.Go(func() error {
-					return runTestCase(testName, testCase, relayerImplementation, srcChainName, srcChainVersion, srcChainID, srcVals, dstChainName, dstChainVersion, dstChainID, dstVals)
+					return runTestCase(testName, testCase, relayerImplementation, cf)
 				})
 			}
 			if err := eg.Wait(); err != nil {
@@ -111,7 +108,7 @@ ibc-test-framework test -s osmosis:v7.0.4 -d juno:v2.3.0 -r rly RelayPacketTest
 		} else {
 			for i, testCase := range testCases {
 				testName := fmt.Sprintf("Test%d", i)
-				if err := runTestCase(testName, testCase, relayerImplementation, srcChainName, srcChainVersion, srcChainID, srcVals, dstChainName, dstChainVersion, dstChainID, dstVals); err != nil {
+				if err := runTestCase(testName, testCase, relayerImplementation, cf); err != nil {
 					panic(err)
 				}
 			}
