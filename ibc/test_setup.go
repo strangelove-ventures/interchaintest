@@ -143,10 +143,10 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to initialize source chain: %w", err))
 	}
 	if err := dstChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to initialize dest chain: %w", err))
 	}
 
 	srcChainCfg := srcChain.Config()
@@ -154,12 +154,12 @@ func StartChainsAndRelayerFromFactory(
 
 	if err := relayerImpl.AddChainConfiguration(ctx, srcChainCfg, srcAccountKeyName,
 		srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
 	}
 
 	if err := relayerImpl.AddChainConfiguration(ctx, dstChainCfg, dstAccountKeyName,
 		dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
 	}
 
 	srcRelayerWallet, err := relayerImpl.AddKey(ctx, srcChain.Config().ChainID, srcAccountKeyName)

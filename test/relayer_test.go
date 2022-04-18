@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,6 +17,10 @@ func getTestChainFactory() ibc.ChainFactory {
 			{Name: "osmosis", Version: "v7.0.4", ChainID: "osmosis-1001", NumValidators: 4, NumFullNodes: 1},
 		},
 	)
+}
+
+func TestRelayerByRelayerTest(t *testing.T) {
+	relayertest.TestRelayer(t, getTestChainFactory(t), ibc.NewBuiltinRelayerFactory(ibc.CosmosRly))
 }
 
 // queued packet with default timeout should be relayed

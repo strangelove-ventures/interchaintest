@@ -801,7 +801,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 		Name: container,
 		Config: &docker.Config{
 			User:         getDockerUserString(),
-			Hostname:     container,
+			Hostname:     condenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),

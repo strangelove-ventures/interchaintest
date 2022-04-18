@@ -10,7 +10,7 @@ type ChainFactory interface {
 	Pair(testName string) (Chain, Chain, error)
 }
 
-// FixedChainFactory implements ChainFactory to return a fixed set of chains.
+// BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
 // Use NewBuiltinChainFactory to create an instance.
 type BuiltinChainFactory struct {
 	entries []BuiltinChainFactoryEntry
