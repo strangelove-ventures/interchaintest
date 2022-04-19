@@ -34,12 +34,12 @@ const (
 	testPathName       = "test-path"
 )
 
-// all methods on this struct have the same signature and are method names that will be called by the CLI
-// func (ibc IBCTestCase) TestCaseName(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error
+// all methods on this struct have the same signature and are method names that will be called by the CLI:
+//     func (ibc IBCTestCase) TestCaseName(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error
 type IBCTestCase struct{}
 
 // uses reflection to get test case
-func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error, error) {
+func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error, error) {
 	v := reflect.ValueOf(IBCTestCase{})
 	m := v.MethodByName(testCase)
 
@@ -47,8 +47,8 @@ func GetTestCase(testCase string) (func(testName string, srcChain Chain, dstChai
 		return nil, fmt.Errorf("invalid test case: %s", testCase)
 	}
 
-	testCaseFunc := func(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
-		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(srcChain), reflect.ValueOf(dstChain), reflect.ValueOf(relayerImplementation)}
+	testCaseFunc := func(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
+		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(cf), reflect.ValueOf(relayerImplementation)}
 		result := m.Call(args)
 		if len(result) != 1 || !result[0].CanInterface() {
 			return errors.New("error reflecting error return var")

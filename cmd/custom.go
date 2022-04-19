@@ -85,7 +85,7 @@ for spinning up the source and destination chains
 		srcChainCfg.Version = srcVersion
 		dstChainCfg.Version = dstVersion
 
-		var testCases []func(testName string, srcChain ibc.Chain, dstChain ibc.Chain, relayerImplementation ibc.RelayerImplementation) error
+		var testCases []func(testName string, cf ibc.ChainFactory, relayerImplementation ibc.RelayerImplementation) error
 
 		for _, testCaseString := range strings.Split(testCasesString, ",") {
 			testCase, err := ibc.GetTestCase(testCaseString)
@@ -95,15 +95,18 @@ for spinning up the source and destination chains
 			testCases = append(testCases, testCase)
 		}
 
+		cf := ibc.NewCustomChainFactory([]ibc.CustomChainFactoryEntry{
+			{Type: srcType, Config: srcChainCfg, NumValidators: srcVals, NumFullNodes: 1},
+			{Type: dstType, Config: dstChainCfg, NumValidators: dstVals, NumFullNodes: 1},
+		})
+
 		if parallel {
 			var eg errgroup.Group
 			for i, testCase := range testCases {
 				testCase := testCase
 				testName := fmt.Sprintf("Test%d", i)
-				srcChain := ibc.NewCosmosChain(testName, srcChainCfg, srcVals, 1)
-				dstChain := ibc.NewCosmosChain(testName, dstChainCfg, dstVals, 1)
 				eg.Go(func() error {
-					return testCase(testName, srcChain, dstChain, relayerImplementation)
+					return testCase(testName, cf, relayerImplementation)
 				})
 			}
 			if err := eg.Wait(); err != nil {
@@ -112,9 +115,7 @@ for spinning up the source and destination chains
 		} else {
 			for i, testCase := range testCases {
 				testName := fmt.Sprintf("Test%d", i)
-				srcChain := ibc.NewCosmosChain(testName, srcChainCfg, srcVals, 1)
-				dstChain := ibc.NewCosmosChain(testName, dstChainCfg, dstVals, 1)
-				if err := testCase(testName, srcChain, dstChain, relayerImplementation); err != nil {
+				if err := testCase(testName, cf, relayerImplementation); err != nil {
 					panic(err)
 				}
 			}

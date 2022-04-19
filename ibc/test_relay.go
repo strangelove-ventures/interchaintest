@@ -7,12 +7,17 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 )
 
-func (ibc IBCTestCase) RelayPacketTest(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+func (ibc IBCTestCase) RelayPacketTest(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
 	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
+
+	srcChain, dstChain, err := cf.Pair(testName)
+	if err != nil {
+		return fmt.Errorf("failed to get chain pair: %w", err)
+	}
 
 	// startup both chains and relayer
 	// creates wallets in the relayer for src and dst chain
@@ -171,12 +176,17 @@ func (ibc IBCTestCase) RelayPacketTest(testName string, srcChain Chain, dstChain
 }
 
 // makes sure that a queued packet that is timed out (relative height timeout) will not be relayed
-func (ibc IBCTestCase) RelayPacketTestNoTimeout(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+func (ibc IBCTestCase) RelayPacketTestNoTimeout(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
 	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
+
+	srcChain, dstChain, err := cf.Pair(testName)
+	if err != nil {
+		return fmt.Errorf("failed to get chain pair: %w", err)
+	}
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
@@ -257,12 +267,17 @@ func (ibc IBCTestCase) RelayPacketTestNoTimeout(testName string, srcChain Chain,
 }
 
 // makes sure that a queued packet that is timed out (relative height timeout) will not be relayed
-func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
 	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
+
+	srcChain, dstChain, err := cf.Pair(testName)
+	if err != nil {
+		return fmt.Errorf("failed to get chain pair: %w", err)
+	}
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
@@ -347,12 +362,17 @@ func (ibc IBCTestCase) RelayPacketTestHeightTimeout(testName string, srcChain Ch
 }
 
 // makes sure that a queued packet that is timed out (nanoseconds timeout) will not be relayed
-func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {
+func (ibc IBCTestCase) RelayPacketTestTimestampTimeout(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
 	ctx, home, pool, network, cleanup, err := SetupTestRun(testName)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
+
+	srcChain, dstChain, err := cf.Pair(testName)
+	if err != nil {
+		return fmt.Errorf("failed to get chain pair: %w", err)
+	}
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
