@@ -603,7 +603,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 		Config: &docker.Config{
 			User:         getDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     tn.Name(),
+			Hostname:     condenseHostName(tn.Name()),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),

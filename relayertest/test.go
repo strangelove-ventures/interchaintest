@@ -48,7 +48,13 @@ func TestRelayer(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 }
 
 func sanitizeTestNameForContainer(testName string) string {
-	return strings.ReplaceAll(testName, "/", "_")
+	// Subtests have slashes.
+	testName = strings.ReplaceAll(testName, "/", "_")
+
+	// Constructed subtest names in ibctest may contain + or @.
+	testName = strings.ReplaceAll(testName, "+", "_")
+	testName = strings.ReplaceAll(testName, "@", "_")
+	return testName
 }
 
 // TestingT is a subset of *testing.T,

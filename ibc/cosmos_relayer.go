@@ -211,7 +211,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 			User:       getDockerUserString(),
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Hostname:   containerName,
+			Hostname:   condenseHostName(containerName),
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Labels:     map[string]string{"ibc-test": relayer.testName},
 		},
