@@ -23,13 +23,6 @@ func TestRelayerByRelayerTest(t *testing.T) {
 	relayertest.TestRelayer(t, getTestChainFactory(), ibc.NewBuiltinRelayerFactory(ibc.CosmosRly))
 }
 
-// queued packet with default timeout should be relayed
-func TestRelayPacket(t *testing.T) {
-	relayerImplementation := ibc.CosmosRly
-
-	require.NoError(t, ibc.IBCTestCase{}.RelayPacketTest(t.Name(), getTestChainFactory(), relayerImplementation))
-}
-
 // queued packet with no timeout should be relayed
 func TestNoTimeout(t *testing.T) {
 	relayerImplementation := ibc.CosmosRly
