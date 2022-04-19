@@ -20,7 +20,7 @@ func getTestChainFactory() ibc.ChainFactory {
 }
 
 func TestRelayerByRelayerTest(t *testing.T) {
-	relayertest.TestRelayer(t, getTestChainFactory(t), ibc.NewBuiltinRelayerFactory(ibc.CosmosRly))
+	relayertest.TestRelayer(t, getTestChainFactory(), ibc.NewBuiltinRelayerFactory(ibc.CosmosRly))
 }
 
 // queued packet with default timeout should be relayed

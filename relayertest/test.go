@@ -29,7 +29,6 @@
 package relayertest
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -38,6 +37,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestRelayer is the stable API exposed by the relayertest package.
+// This is intended to be used by Go unit tests.
 func TestRelayer(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 	t.Run("relay packet", func(t *testing.T) {
 		t.Parallel()
@@ -50,18 +51,32 @@ func sanitizeTestNameForContainer(testName string) string {
 	return strings.ReplaceAll(testName, "/", "_")
 }
 
-func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+// TestingT is a subset of *testing.T,
+// to support calling certain test-like functions
+// from a non-test binary.
+type TestingT interface {
+	// Many tests need to be aware of the current test's name.
+	Name() string
+
+	// We do some diagnostic logging.
+	Logf(format string, args ...interface{})
+
+	// Use require for assertions and failures.
+	require.TestingT
+}
+
+func TestRelayer_RelayPacket(t TestingT, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
 	if err != nil {
-		t.Fatalf("failed to set up test run: %v", err)
+		require.FailNow(t, "failed to set up test run: %v", err)
 	}
 	defer cleanup()
 
 	srcChain, dstChain, err := cf.Pair(testName)
 	if err != nil {
-		t.Fatalf("failed to get chain pair: %v", err)
+		require.FailNow(t, "failed to get chain pair: %v", err)
 	}
 
 	// startup both chains and relayer
@@ -71,7 +86,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// funds user account on src chain in genesis
 	_, channels, srcUser, dstUser, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, nil)
 	if err != nil {
-		t.Fatalf("failed to StartChainsAndRelayerFromFactory: %v", err)
+		require.FailNow(t, "failed to StartChainsAndRelayerFromFactory: %v", err)
 	}
 	defer rlyCleanup()
 
@@ -82,7 +97,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// query initial balance of user wallet for src chain native denom on the src chain
 	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
 	if err != nil {
-		t.Fatalf("failed to get balance from source chain %s: %v", srcChain.Config().Name, err)
+		require.FailNow(t, "failed to get balance from source chain %s: %v", srcChain.Config().Name, err)
 	}
 
 	// get ibc denom for test denom on dst chain
@@ -93,7 +108,8 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// don't care about error here, account does not exist on destination chain
 	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
 
-	fmt.Printf("Initial balances: Src chain: %d\nDst chain: %d\n", srcInitialBalance, dstInitialBalance)
+	t.Logf("Initial source balance: %d", srcInitialBalance)
+	t.Logf("Initial dest balance: %d", dstInitialBalance)
 
 	// test coin, address is recipient of ibc transfer on dst chain
 	testCoinSrc := ibc.WalletAmount{
@@ -106,18 +122,18 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// timeout is nil so that it will use the default timeout
 	srcTxHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrc, nil)
 	if err != nil {
-		t.Fatalf("failed to send ibc transfer: %v", err)
+		require.FailNow(t, "failed to send ibc transfer: %v", err)
 	}
 
 	// wait for both chains to produce 10 blocks
 	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		t.Fatalf("failed to wait for blocks: %v", err)
+		require.FailNow(t, "failed to wait for blocks: %v", err)
 	}
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
 	if err != nil {
-		t.Fatalf("failed to get ibc transaction: %v", err)
+		require.FailNow(t, "failed to get ibc transaction: %v", err)
 	}
 
 	t.Logf("Transaction: %v", srcTx)
@@ -125,13 +141,13 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// query final balance of src user wallet for src chain native denom on the src chain
 	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
 	if err != nil {
-		t.Fatalf("failed to get balance from source chain: %v", err)
+		require.FailNow(t, "failed to get balance from source chain: %v", err)
 	}
 
 	// query final balance of src user wallet for src chain native denom on the dst chain
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
 	if err != nil {
-		t.Fatalf("failed to get balance from dest chain: %v", err)
+		require.FailNow(t, "failed to get balance from dest chain: %v", err)
 	}
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -149,7 +165,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// query initial balance of dst user wallet for dst chain native denom on the dst chain
 	dstInitialBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
 	if err != nil {
-		t.Fatalf("failed to get balance from dest chain: %v", err)
+		require.FailNow(t, "failed to get balance from dest chain: %v", err)
 	}
 
 	// get ibc denom for test denom on src chain
@@ -174,18 +190,18 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// timeout is nil so that it will use the default timeout
 	dstTxHash, err := dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDst, nil)
 	if err != nil {
-		t.Fatalf("failed to send ibc transfer: %v", err)
+		require.FailNow(t, "failed to send ibc transfer: %v", err)
 	}
 
 	// wait for both chains to produce 10 blocks
 	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		t.Fatalf("failed to wait for blocks: %v", err)
+		require.FailNow(t, "failed to wait for blocks: %v", err)
 	}
 
 	// fetch ibc transfer tx
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
 	if err != nil {
-		t.Fatalf("failed to get transaction: %v", err)
+		require.FailNow(t, "failed to get transaction: %v", err)
 	}
 
 	t.Logf("Transaction: %v", dstTx)
@@ -193,13 +209,13 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// query final balance of dst user wallet for dst chain native denom on the dst chain
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
 	if err != nil {
-		t.Fatalf("failed to get dest balance: %v", err)
+		require.FailNow(t, "failed to get dest balance: %v", err)
 	}
 
 	// query final balance of dst user wallet for dst chain native denom on the src chain
 	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.SrcChainAddress, srcIbcDenom)
 	if err != nil {
-		t.Fatalf("failed to get src balance: %v", err)
+		require.FailNow(t, "failed to get src balance: %v", err)
 	}
 
 	totalFeesDst := dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)

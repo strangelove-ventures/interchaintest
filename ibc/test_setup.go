@@ -35,7 +35,7 @@ const (
 )
 
 // all methods on this struct have the same signature and are method names that will be called by the CLI:
-//     func (ibc IBCTestCase) TestCaseName(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error
+//     func (ibc IBCTestCase) TestCaseName(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error
 type IBCTestCase struct{}
 
 // uses reflection to get test case

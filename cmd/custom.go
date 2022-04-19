@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -88,7 +89,15 @@ for spinning up the source and destination chains
 		var testCases []func(testName string, cf ibc.ChainFactory, relayerImplementation ibc.RelayerImplementation) error
 
 		for _, testCaseString := range strings.Split(testCasesString, ",") {
-			testCase, err := ibc.GetTestCase(testCaseString)
+			// Prefer the new way of getting legacy test cases,
+			// but fall back to the old way for now.
+			testCase, err := relayertest.GetLegacyTestCase(testCaseString)
+			if err != nil {
+				testCase, err = ibc.GetTestCase(testCaseString)
+				if err != nil {
+					panic(err)
+				}
+			}
 			if err != nil {
 				panic(err)
 			}
