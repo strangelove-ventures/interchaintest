@@ -1,3 +1,5 @@
 # Don't commit the ibctest.test file,
 # regardless of where it was built.
 ibctest.test
+
+/bin
