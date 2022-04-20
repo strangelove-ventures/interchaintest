@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -24,7 +23,7 @@ var testMatrix struct {
 
 	ChainSets [][]ibc.BuiltinChainFactoryEntry
 
-	// TODO: support a slice of ibc.CustomChainFactoryEntry too.
+	CustomChainSets [][]ibc.CustomChainFactoryEntry
 }
 
 func TestMain(m *testing.M) {
@@ -89,6 +88,12 @@ func validateTestMatrix() error {
 		}
 	}
 
+	for _, ccs := range testMatrix.CustomChainSets {
+		if _, err := getCustomChainFactory(ccs); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -111,6 +116,14 @@ func getChainFactory(chainSet []ibc.BuiltinChainFactoryEntry) (ibc.ChainFactory,
 	return ibc.NewBuiltinChainFactory(chainSet), nil
 }
 
+func getCustomChainFactory(customChainSet []ibc.CustomChainFactoryEntry) (ibc.ChainFactory, error) {
+	if len(customChainSet) != 2 {
+		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(customChainSet))
+	}
+
+	return ibc.NewCustomChainFactory(customChainSet), nil
+}
+
 // TestRelayer is the root test for the relayer.
 // It runs each subtest in parallel;
 // if this is too taxing on a system, the -test.parallel flag
@@ -129,18 +142,35 @@ func TestRelayer(t *testing.T) {
 		t.Run(r, func(t *testing.T) {
 			t.Parallel()
 
-			// And another layer of subtests for each chainset.
+			// Collect all the chain factories from both the builtins and the customs.
+			chainFactories := make([]ibc.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
 			for _, cs := range testMatrix.ChainSets {
 				cf, err := getChainFactory(cs)
 				if err != nil {
 					panic(err)
 				}
-
-				chainNames := make([]string, len(cs))
-				for i, c := range cs {
-					chainNames[i] = c.Name + "@" + c.Version
+				chainFactories = append(chainFactories, cf)
+			}
+			for _, ccs := range testMatrix.CustomChainSets {
+				ccf, err := getCustomChainFactory(ccs)
+				if err != nil {
+					panic(err)
 				}
-				chainTestName := strings.Join(chainNames, "+")
+				chainFactories = append(chainFactories, ccf)
+			}
+
+			for _, cf := range chainFactories {
+				// As of writing, it's fine to build a chain pair just to inspect names and versions.
+				srcChain, dstChain, err := cf.Pair("")
+				if err != nil {
+					panic(err)
+				}
+
+				chainTestName := fmt.Sprintf(
+					"%s@%s+%s@%s",
+					srcChain.Config().Name, srcChain.Config().Version,
+					dstChain.Config().Name, dstChain.Config().Version,
+				)
 
 				t.Run(chainTestName, func(t *testing.T) {
 					t.Parallel()
