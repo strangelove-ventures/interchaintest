@@ -756,17 +756,20 @@ func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
 
 // PeerString returns the string for connecting the nodes passed in
 func (tn ChainNodes) PeerString() string {
-	bldr := new(strings.Builder)
-	for _, n := range tn {
+	addrs := make([]string, len(tn))
+	for i, n := range tn {
 		id, err := n.NodeID()
 		if err != nil {
-			return bldr.String()
+			// TODO: would this be better to panic?
+			// When would NodeId return an error?
+			break
 		}
-		ps := fmt.Sprintf("%s@%s:26656,", id, n.Name())
-		fmt.Printf("{%s} peering (%s)\n", n.Name(), strings.TrimSuffix(ps, ","))
-		bldr.WriteString(ps)
+		hostName := condenseHostName(n.Name())
+		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
+		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
+		addrs[i] = ps
 	}
-	return strings.TrimSuffix(bldr.String(), ",")
+	return strings.Join(addrs, ",")
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
