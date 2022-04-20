@@ -147,7 +147,6 @@ func (relayer *CosmosRelayer) ClearQueue(ctx context.Context, pathName string, c
 
 // Implements Relayer interface
 func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, chainConfig ChainConfig, keyName, rpcAddr, grpcAddr string) error {
-
 	if _, err := os.Stat(fmt.Sprintf("%s/config", relayer.Dir())); os.IsNotExist(err) {
 		command := []string{"rly", "config", "init",
 			"--home", relayer.NodeHome(),
@@ -212,7 +211,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 			User:       getDockerUserString(),
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Hostname:   containerName,
+			Hostname:   condenseHostName(containerName),
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Labels:     map[string]string{"ibc-test": relayer.testName},
 		},
@@ -255,7 +254,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 		Name: container,
 		Config: &docker.Config{
 			User:       getDockerUserString(),
-			Hostname:   container,
+			Hostname:   condenseHostName(container),
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Cmd:        cmd,
 			Entrypoint: []string{},
@@ -334,4 +333,20 @@ func (relayer *CosmosRelayer) Bind() []string {
 
 func (relayer *CosmosRelayer) StopContainer() error {
 	return relayer.pool.Client.StopContainer(relayer.container.ID, uint(time.Second*30))
+}
+
+// condenseHostName truncates the middle of the given name
+// if it is 64 characters or longer.
+//
+// Without this helper, you may see an error like:
+//     API error (500): failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: process_linux.go:545: container init caused: sethostname: invalid argument: unknown
+func condenseHostName(name string) string {
+	if len(name) < 64 {
+		return name
+	}
+
+	// I wanted to use ... as the middle separator,
+	// but that causes resolution problems for other hosts.
+	// Instead, use _._ which will be okay if there is a . on either end.
+	return name[:30] + "_._" + name[len(name)-30:]
 }

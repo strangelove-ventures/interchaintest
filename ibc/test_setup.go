@@ -35,7 +35,7 @@ const (
 )
 
 // all methods on this struct have the same signature and are method names that will be called by the CLI:
-//     func (ibc IBCTestCase) TestCaseName(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error
+//     func (ibc IBCTestCase) TestCaseName(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error
 type IBCTestCase struct{}
 
 // uses reflection to get test case
@@ -143,10 +143,10 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to initialize source chain: %w", err))
 	}
 	if err := dstChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to initialize dest chain: %w", err))
 	}
 
 	srcChainCfg := srcChain.Config()
@@ -154,28 +154,28 @@ func StartChainsAndRelayerFromFactory(
 
 	if err := relayerImpl.AddChainConfiguration(ctx, srcChainCfg, srcAccountKeyName,
 		srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
 	}
 
 	if err := relayerImpl.AddChainConfiguration(ctx, dstChainCfg, dstAccountKeyName,
 		dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
 	}
 
 	srcRelayerWallet, err := relayerImpl.AddKey(ctx, srcChain.Config().ChainID, srcAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to add key to source chain: %w", err))
 	}
 	dstRelayerWallet, err := relayerImpl.AddKey(ctx, dstChain.Config().ChainID, dstAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to add key to dest chain: %w", err))
 	}
 
 	srcAccount := srcRelayerWallet.Address
 	dstAccount := dstRelayerWallet.Address
 
 	if err := relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to generate path: %w", err))
 	}
 
 	// Fund relayer account on src chain

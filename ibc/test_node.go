@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
@@ -251,9 +254,35 @@ func applyConfigChanges(cfg *tmconfig.Config, peers string) {
 	cfg.P2P.PersistentPeers = peers
 }
 
+// CondenseMoniker fits a moniker into the cosmos character limit for monikers.
+// If the moniker already fits, it is returned unmodified.
+// Otherwise, the middle is truncated, and a hash is appended to the end
+// in case the only unique data was in the middle.
+func CondenseMoniker(m string) string {
+	if len(m) <= stakingtypes.MaxMonikerLength {
+		return m
+	}
+
+	// Get the hash suffix, a 32-bit uint formatted in base36.
+	// fnv32 was chosen because a 32-bit number ought to be sufficient
+	// as a distinguishing suffix, and it will be short enough so that
+	// less of the middle will be truncated to fit in the character limit.
+	// It's also non-cryptographic, not that this function will ever be a bottleneck in tests.
+	h := fnv.New32()
+	h.Write([]byte(m))
+	suffix := "-" + strconv.FormatUint(uint64(h.Sum32()), 36)
+
+	wantLen := stakingtypes.MaxMonikerLength - len(suffix)
+
+	// Half of the want length, minus 2 to account for half of the ... we add in the middle.
+	keepLen := (wantLen / 2) - 2
+
+	return m[:keepLen] + "..." + m[len(m)-keepLen:] + suffix
+}
+
 // InitHomeFolder initializes a home folder for the given node
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin, "init", tn.Name(),
+	command := []string{tn.Chain.Config().Bin, "init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
 	}
@@ -603,7 +632,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 		Config: &docker.Config{
 			User:         getDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     tn.Name(),
+			Hostname:     condenseHostName(tn.Name()),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
@@ -727,17 +756,20 @@ func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
 
 // PeerString returns the string for connecting the nodes passed in
 func (tn ChainNodes) PeerString() string {
-	bldr := new(strings.Builder)
-	for _, n := range tn {
+	addrs := make([]string, len(tn))
+	for i, n := range tn {
 		id, err := n.NodeID()
 		if err != nil {
-			return bldr.String()
+			// TODO: would this be better to panic?
+			// When would NodeId return an error?
+			break
 		}
-		ps := fmt.Sprintf("%s@%s:26656,", id, n.Name())
-		fmt.Printf("{%s} peering (%s)\n", n.Name(), strings.TrimSuffix(ps, ","))
-		bldr.WriteString(ps)
+		hostName := condenseHostName(n.Name())
+		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
+		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
+		addrs[i] = ps
 	}
-	return strings.TrimSuffix(bldr.String(), ",")
+	return strings.Join(addrs, ",")
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
@@ -801,7 +833,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 		Name: container,
 		Config: &docker.Config{
 			User:         getDockerUserString(),
-			Hostname:     container,
+			Hostname:     condenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),

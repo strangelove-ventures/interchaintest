@@ -29,6 +29,10 @@ type builtinRelayerFactory struct {
 	impl RelayerImplementation
 }
 
+func NewBuiltinRelayerFactory(impl RelayerImplementation) RelayerFactory {
+	return builtinRelayerFactory{impl: impl}
+}
+
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
 	testName string,
