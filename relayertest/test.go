@@ -57,21 +57,7 @@ func sanitizeTestNameForContainer(testName string) string {
 	return testName
 }
 
-// TestingT is a subset of *testing.T,
-// to support calling certain test-like functions
-// from a non-test binary.
-type TestingT interface {
-	// Many tests need to be aware of the current test's name.
-	Name() string
-
-	// We do some diagnostic logging.
-	Logf(format string, args ...interface{})
-
-	// Use require for assertions and failures.
-	require.TestingT
-}
-
-func TestRelayer_RelayPacket(t TestingT, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
