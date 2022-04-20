@@ -138,12 +138,7 @@ func TestRelayer(t *testing.T) {
 
 				chainNames := make([]string, len(cs))
 				for i, c := range cs {
-					// TODO: this shouldn't need to truncate bits of the name and version,
-					// but without this, the tests hang on a failed container running gentx, with this error:
-					//    panic: failed to execute message; message index: 0: invalid moniker length; got: 75, max: 70
-					// It would be better to figure out the correct gentx invocation
-					// rather than hiding details from the test name.
-					chainNames[i] = c.Name[:3] + "@" + c.Version[1:]
+					chainNames[i] = c.Name + "@" + c.Version
 				}
 				chainTestName := strings.Join(chainNames, "+")
 
