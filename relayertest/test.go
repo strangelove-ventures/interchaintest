@@ -83,15 +83,11 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
-	if err != nil {
-		require.FailNow(t, "failed to set up test run: %v", err)
-	}
+	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
 	srcChain, dstChain, err := cf.Pair(testName)
-	if err != nil {
-		require.FailNow(t, "failed to get chain pair: %v", err)
-	}
+	require.NoError(t, err, "failed to get chain pair")
 
 	// startup both chains and relayer
 	// creates wallets in the relayer for src and dst chain
@@ -99,9 +95,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// creates a user account on the src chain (separate fullnode)
 	// funds user account on src chain in genesis
 	_, channels, srcUser, dstUser, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, nil)
-	if err != nil {
-		require.FailNow(t, "failed to StartChainsAndRelayerFromFactory: %v", err)
-	}
+	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// will test a user sending an ibc transfer from the src chain to the dst chain
@@ -110,9 +104,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 
 	// query initial balance of user wallet for src chain native denom on the src chain
 	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from source chain %s: %v", srcChain.Config().Name, err)
-	}
+	require.NoErrorf(t, err, "failed to get balance from source chain %s", srcChain.Config().Name)
 
 	// get ibc denom for test denom on dst chain
 	denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenomSrc))
@@ -135,34 +127,24 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// send ibc transfer from the user wallet using its fullnode
 	// timeout is nil so that it will use the default timeout
 	srcTxHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrc, nil)
-	if err != nil {
-		require.FailNow(t, "failed to send ibc transfer: %v", err)
-	}
+	require.NoError(t, err, "failed to send ibc transfer")
 
 	// wait for both chains to produce 10 blocks
-	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		require.FailNow(t, "failed to wait for blocks: %v", err)
-	}
+	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
-	if err != nil {
-		require.FailNow(t, "failed to get ibc transaction: %v", err)
-	}
+	require.NoError(t, err, "failed to get ibc transaction")
 
 	t.Logf("Transaction: %v", srcTx)
 
 	// query final balance of src user wallet for src chain native denom on the src chain
 	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from source chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from source chain")
 
 	// query final balance of src user wallet for src chain native denom on the dst chain
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from dest chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 	expectedDifference := testCoinSrc.Amount + totalFees
@@ -178,9 +160,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 
 	// query initial balance of dst user wallet for dst chain native denom on the dst chain
 	dstInitialBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from dest chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from dest chain")
 
 	// get ibc denom for test denom on src chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, testDenomDst))
@@ -203,41 +183,30 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// send ibc transfer from the dst user wallet using its fullnode
 	// timeout is nil so that it will use the default timeout
 	dstTxHash, err := dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDst, nil)
-	if err != nil {
-		require.FailNow(t, "failed to send ibc transfer: %v", err)
-	}
+	require.NoError(t, err, "failed to send ibc transfer")
 
 	// wait for both chains to produce 10 blocks
-	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		require.FailNow(t, "failed to wait for blocks: %v", err)
-	}
+	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
-	if err != nil {
-		require.FailNow(t, "failed to get transaction: %v", err)
-	}
+	require.NoError(t, err, "failed to get transaction")
 
 	t.Logf("Transaction: %v", dstTx)
 
 	// query final balance of dst user wallet for dst chain native denom on the dst chain
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
-	if err != nil {
-		require.FailNow(t, "failed to get dest balance: %v", err)
-	}
+	require.NoError(t, err, "failed to get dest balance")
 
 	// query final balance of dst user wallet for dst chain native denom on the src chain
 	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.SrcChainAddress, srcIbcDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get src balance: %v", err)
-	}
+	require.NoError(t, err, "failed to get source balance")
 
 	totalFeesDst := dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
 	expectedDifference = testCoinDst.Amount + totalFeesDst
 
-	require.Equal(t, dstFinalBalance, dstInitialBalance-expectedDifference)
-
-	require.Equal(t, srcFinalBalance, srcInitialBalance+testCoinDst.Amount)
+	require.Equal(t, dstInitialBalance-expectedDifference, dstFinalBalance)
+	require.Equal(t, srcInitialBalance+testCoinDst.Amount, srcFinalBalance)
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
@@ -245,15 +214,11 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
-	if err != nil {
-		require.FailNow(t, "failed to set up test run: %v", err)
-	}
+	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
 	srcChain, dstChain, err := cf.Pair(testName)
-	if err != nil {
-		require.FailNow(t, "failed to get chain pair: %v", err)
-	}
+	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
@@ -292,39 +257,29 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.
 
 	// Startup both chains and relayer
 	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	if err != nil {
-		require.FailNow(t, "failed to StartChainsAndRelayerFromFactory: %v", err)
-	}
+	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		require.FailNow(t, "failed to wait for blocks: %v", err)
-	}
+	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	if err != nil {
-		require.FailNow(t, "failed to get ibc transaction: %v", err)
-	}
+	require.NoError(t, err, "failed to get ibc transaction")
 
 	t.Logf("Transaction: %v", srcTx)
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from source chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from dest chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 	expectedDifference := testCoin.Amount + totalFees
 
-	require.Equal(t, srcFinalBalance, srcInitialBalance-expectedDifference)
-	require.Equal(t, dstFinalBalance, dstInitialBalance+testCoin.Amount)
+	require.Equal(t, srcInitialBalance-expectedDifference, srcFinalBalance)
+	require.Equal(t, dstInitialBalance+testCoin.Amount, dstFinalBalance)
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
@@ -332,15 +287,11 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf 
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
-	if err != nil {
-		require.FailNow(t, "failed to set up test run: %v", err)
-	}
+	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
 	srcChain, dstChain, err := cf.Pair(testName)
-	if err != nil {
-		require.FailNow(t, "failed to get chain pair: %v", err)
-	}
+	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
@@ -384,53 +335,39 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf 
 
 	// Startup both chains and relayer
 	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	if err != nil {
-		require.FailNow(t, "failed to StartChainsAndRelayerFromFactory: %v", err)
-	}
+	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		require.FailNow(t, "failed to wait for blocks: %v", err)
-	}
+	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	if err != nil {
-		require.FailNow(t, "failed to get ibc transaction: %v", err)
-	}
+	require.NoError(t, err, "failed to get ibc transaction")
 
 	t.Logf("Transaction: %v", srcTx)
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from source chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from dest chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 
-	require.Equal(t, srcFinalBalance, srcInitialBalance-totalFees)
-	require.Equal(t, dstFinalBalance, dstInitialBalance)
+	require.Equal(t, srcInitialBalance-totalFees, srcFinalBalance)
+	require.Equal(t, dstInitialBalance, dstFinalBalance)
 }
 
 func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
 	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
-	if err != nil {
-		require.FailNow(t, "failed to set up test run: %v", err)
-	}
+	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
 	srcChain, dstChain, err := cf.Pair(testName)
-	if err != nil {
-		require.FailNow(t, "failed to get chain pair: %v", err)
-	}
+	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
 	var txHash string
@@ -476,36 +413,26 @@ func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibc.ChainFactory, 
 
 	// Startup both chains and relayer
 	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	if err != nil {
-		require.FailNow(t, "failed to StartChainsAndRelayerFromFactory: %v", err)
-	}
+	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	if err := ibc.WaitForBlocks(srcChain, dstChain, 10); err != nil {
-		require.FailNow(t, "failed to wait for blocks: %v", err)
-	}
+	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
-	if err != nil {
-		require.FailNow(t, "failed to get ibc transaction: %v", err)
-	}
+	require.NoError(t, err, "failed to get ibc transaction")
 
 	t.Logf("Transaction: %v", srcTx)
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from source chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
-	if err != nil {
-		require.FailNow(t, "failed to get balance from dest chain: %v", err)
-	}
+	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 
-	require.Equal(t, srcFinalBalance, srcInitialBalance-totalFees)
-	require.Equal(t, dstFinalBalance, dstInitialBalance)
+	require.Equal(t, srcInitialBalance-totalFees, srcFinalBalance)
+	require.Equal(t, dstInitialBalance, dstFinalBalance)
 }
