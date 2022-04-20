@@ -164,18 +164,18 @@ func StartChainsAndRelayerFromFactory(
 
 	srcRelayerWallet, err := relayerImpl.AddKey(ctx, srcChain.Config().ChainID, srcAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to add key to source chain: %w", err))
 	}
 	dstRelayerWallet, err := relayerImpl.AddKey(ctx, dstChain.Config().ChainID, dstAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to add key to dest chain: %w", err))
 	}
 
 	srcAccount := srcRelayerWallet.Address
 	dstAccount := dstRelayerWallet.Address
 
 	if err := relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to generate path: %w", err))
 	}
 
 	// Fund relayer account on src chain
