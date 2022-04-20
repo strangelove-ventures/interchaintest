@@ -4,26 +4,6 @@ import (
 	"context"
 )
 
-type ChannelCounterparty struct {
-	PortID    string `json:"port_id"`
-	ChannelID string `json:"channel_id"`
-}
-
-type ChannelOutput struct {
-	State          string              `json:"state"`
-	Ordering       string              `json:"ordering"`
-	Counterparty   ChannelCounterparty `json:"counterparty"`
-	ConnectionHops []string            `json:"connection_hops"`
-	Version        string              `json:"version"`
-	PortID         string              `json:"port_id"`
-	ChannelID      string              `json:"channel_id"`
-}
-
-type RelayerWallet struct {
-	Mnemonic string `json:"mnemonic"`
-	Address  string `json:"address"`
-}
-
 type Relayer interface {
 	// restore a mnemonic to be used as a relayer wallet for a chain
 	RestoreKey(ctx context.Context, chainID, keyName, mnemonic string) error

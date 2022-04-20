@@ -1,9 +1,11 @@
-package ibc
+package ibctest
 
 import (
 	"fmt"
 
 	"github.com/ory/dockertest"
+	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
 )
 
 // RelayerFactory describes how to start a Relayer.
@@ -14,8 +16,8 @@ type RelayerFactory interface {
 		pool *dockertest.Pool,
 		networkID string,
 		home string,
-		srcChain, dstChain Chain,
-	) Relayer
+		srcChain, dstChain ibc.Chain,
+	) ibc.Relayer
 
 	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
 	//
@@ -26,7 +28,7 @@ type RelayerFactory interface {
 // builtinRelayerFactory is the built-in relayer factory that understands
 // how to start the cosmos relayer in a docker container.
 type builtinRelayerFactory struct {
-	impl RelayerImplementation
+	impl ibc.RelayerImplementation
 }
 
 func NewBuiltinRelayerFactory(impl RelayerImplementation) RelayerFactory {
@@ -39,11 +41,11 @@ func (f builtinRelayerFactory) Build(
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
-	srcChain, dstChain Chain,
-) Relayer {
+	srcChain, dstChain ibc.Chain,
+) ibc.Relayer {
 	switch f.impl {
-	case CosmosRly:
-		return NewCosmosRelayerFromChains(
+	case ibc.CosmosRly:
+		return rly.NewCosmosRelayerFromChains(
 			testName,
 			srcChain,
 			dstChain,

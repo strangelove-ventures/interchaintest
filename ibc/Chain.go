@@ -7,31 +7,6 @@ import (
 	"github.com/ory/dockertest"
 )
 
-type ChainConfig struct {
-	Type           string
-	Name           string
-	ChainID        string
-	Repository     string
-	Version        string
-	Bin            string
-	Bech32Prefix   string
-	Denom          string
-	GasPrices      string
-	GasAdjustment  float64
-	TrustingPeriod string
-}
-
-type WalletAmount struct {
-	Address string
-	Denom   string
-	Amount  int64
-}
-
-type IBCTimeout struct {
-	NanoSeconds uint64
-	Height      uint64
-}
-
 type Chain interface {
 	// fetch chain configuration
 	Config() ChainConfig

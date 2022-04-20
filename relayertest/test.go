@@ -35,12 +35,13 @@ import (
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/stretchr/testify/require"
 )
 
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
-func TestRelayer(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	t.Run("relay packet", func(t *testing.T) {
 		t.Parallel()
 
@@ -79,10 +80,10 @@ func sanitizeTestNameForContainer(testName string) string {
 	return validContainerCharsRE.ReplaceAllLiteralString(testName, "_")
 }
 
-func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
-	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
+	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
 	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
@@ -94,7 +95,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a user account on the src chain (separate fullnode)
 	// funds user account on src chain in genesis
-	_, channels, srcUser, dstUser, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, nil)
+	_, channels, srcUser, dstUser, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, nil)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
@@ -130,7 +131,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	require.NoError(t, err, "failed to send ibc transfer")
 
 	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
@@ -186,7 +187,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 	require.NoError(t, err, "failed to send ibc transfer")
 
 	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
@@ -210,10 +211,10 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFa
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
-func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
-	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
+	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
 	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
@@ -227,7 +228,7 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.
 	var testCoin ibc.WalletAmount
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibc.User, dstUser ibc.User) error {
+	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
 		var err error
 		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
 		if err != nil {
@@ -256,12 +257,12 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
@@ -283,10 +284,10 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
-func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
-	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
+	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
 	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
@@ -299,7 +300,7 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf 
 	var dstIbcDenom string
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibc.User, dstUser ibc.User) error {
+	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
 		var err error
 		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
 		if err != nil {
@@ -334,12 +335,12 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf 
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
@@ -359,10 +360,10 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibc.ChainFactory, rf 
 	require.Equal(t, dstInitialBalance, dstFinalBalance)
 }
 
-func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
+func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	testName := sanitizeTestNameForContainer(t.Name())
 
-	ctx, home, pool, network, cleanup, err := ibc.SetupTestRun(testName)
+	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
 	require.NoErrorf(t, err, "failed to set up test run")
 	defer cleanup()
 
@@ -376,7 +377,7 @@ func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibc.ChainFactory, 
 	var dstIbcDenom string
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibc.User, dstUser ibc.User) error {
+	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
 		var err error
 		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
 		if err != nil {
@@ -412,12 +413,12 @@ func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibc.ChainFactory, 
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibc.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibc.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
