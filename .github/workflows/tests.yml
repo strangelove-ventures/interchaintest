@@ -13,8 +13,7 @@ on:
 jobs:
   test:
     name: run tests
-    #runs-on: [self-hosted, linux]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
       - name: Set up Go 1.17
