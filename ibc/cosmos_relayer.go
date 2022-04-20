@@ -345,5 +345,8 @@ func condenseHostName(name string) string {
 		return name
 	}
 
-	return name[:30] + "..." + name[len(name)-30:]
+	// I wanted to use ... as the middle separator,
+	// but that causes resolution problems for other hosts.
+	// Instead, use _._ which will be okay if there is a . on either end.
+	return name[:30] + "_._" + name[len(name)-30:]
 }
