@@ -12,6 +12,7 @@ type ChainConfig struct {
 	GasPrices      string
 	GasAdjustment  float64
 	TrustingPeriod string
+	Meta           []string
 }
 
 type WalletAmount struct {

@@ -134,7 +134,7 @@ func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) GetAddress(keyName string) ([]byte, error) {
+func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyInfo, err := c.getRelayerNode().Keybase().Key(keyName)
 	if err != nil {
 		return []byte{}, err
@@ -232,7 +232,7 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 	}
 	for i := 0; i < count; i++ {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, testName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName}
 		tn.MkDir()
 		ChainNodes = append(ChainNodes, tn)
 	}
@@ -263,7 +263,7 @@ type ValidatorWithIntPower struct {
 func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
 	// copy genesis file to tmp path for modification
 	genesisTmpFilePath := path.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
-	if _, err := copy(genesisFilePath, genesisTmpFilePath); err != nil {
+	if _, err := dockerutil.Copy(genesisFilePath, genesisTmpFilePath); err != nil {
 		return err
 	}
 
@@ -308,7 +308,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for i, validator := range validatorsWithPower {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, testName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName}
 		tn.MkDir()
 		c.ChainNodes = append(c.ChainNodes, tn)
 
@@ -495,20 +495,17 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	nodes := validators
-	nodes = append(nodes, fullnodes...)
-
-	for i := 1; i < len(nodes); i++ {
-		if err := os.WriteFile(nodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
+	for i := 1; i < len(c.ChainNodes); i++ {
+		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
 			return err
 		}
 	}
 
-	if err := ChainNodes(nodes).LogGenesisHashes(); err != nil {
+	if err := ChainNodes(c.ChainNodes).LogGenesisHashes(); err != nil {
 		return err
 	}
 
-	for _, n := range nodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer()
@@ -518,9 +515,9 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := ChainNodes(nodes).PeerString()
+	peers := ChainNodes(c.ChainNodes).PeerString()
 
-	for _, n := range nodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		fmt.Printf("{%s} => starting container...\n", n.Name())
 		eg.Go(func() error {

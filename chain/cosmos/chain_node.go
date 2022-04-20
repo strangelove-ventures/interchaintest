@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,7 +47,7 @@ type ChainNode struct {
 	Pool         *dockertest.Pool
 	Client       rpcclient.Client
 	Container    *docker.Container
-	testName     string
+	TestName     string
 }
 
 // ChainNodes is a collection of ChainNode
@@ -118,7 +117,7 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name is the hostname of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.testName))
+	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 // Dir is the directory where the test node files are stored
@@ -387,31 +386,6 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
-func copy(src, dst string) (int64, error) {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return 0, err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return 0, fmt.Errorf("%s is not a regular file", src)
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return 0, err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return 0, err
-	}
-	defer destination.Close()
-	nBytes, err := io.Copy(destination, source)
-	return nBytes, err
-}
-
 type InstantiateContractAttribute struct {
 	Value string `json:"value"`
 }
@@ -443,7 +417,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	_, file := filepath.Split(fileName)
 	newFilePath := path.Join(tn.Dir(), file)
 	newFilePathContainer := path.Join(tn.NodeHome(), file)
-	if _, err := copy(fileName, newFilePath); err != nil {
+	if _, err := dockerutil.Copy(fileName, newFilePath); err != nil {
 		return "", err
 	}
 
@@ -631,7 +605,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
-			Labels:       map[string]string{"ibc-test": tn.testName},
+			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -811,7 +785,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
 			Cmd:          cmd,
-			Labels:       map[string]string{"ibc-test": tn.testName},
+			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),

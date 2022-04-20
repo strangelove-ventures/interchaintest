@@ -44,7 +44,7 @@ type Chain interface {
 	CreateKey(ctx context.Context, keyName string) error
 
 	// fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
-	GetAddress(keyName string) ([]byte, error)
+	GetAddress(ctx context.Context, keyName string) ([]byte, error)
 
 	// send funds to wallet from user account
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error

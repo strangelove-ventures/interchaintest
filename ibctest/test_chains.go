@@ -1,7 +1,11 @@
 package ibctest
 
 import (
+	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -11,6 +15,7 @@ var chainConfigs = []ibc.ChainConfig{
 	cosmos.NewCosmosHeighlinerChainConfig("gaia", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h"),
 	cosmos.NewCosmosHeighlinerChainConfig("osmosis", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h"),
 	cosmos.NewCosmosHeighlinerChainConfig("juno", "junod", "juno", "ujuno", "0.0025ujuno", 1.3, "672h"),
+	penumbra.NewPenumbraChainConfig(),
 }
 
 var chainConfigMap map[string]ibc.ChainConfig
@@ -27,12 +32,21 @@ func GetChain(testName, name, version, chainID string, numValidators, numFullNod
 	if !exists {
 		return nil, fmt.Errorf("No chain configuration for %s", name)
 	}
-	chainConfig.Version = version
+
 	chainConfig.ChainID = chainID
 
 	switch chainConfig.Type {
 	case "cosmos":
+		chainConfig.Version = version
 		return cosmos.NewCosmosChain(testName, chainConfig, numValidators, numFullNodes), nil
+	case "penumbra":
+		versionSplit := strings.Split(version, ",")
+		if len(versionSplit) != 2 {
+			return nil, errors.New("penumbra version should be comma separated penumbra_version,tendermint_version")
+		}
+		chainConfig.Version = versionSplit[1]
+		chainConfig.Meta = append(chainConfig.Meta, versionSplit[0])
+		return penumbra.NewPenumbraChain(testName, chainConfig, numValidators, numFullNodes), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", chainConfig.Type, name)
 	}
