@@ -29,7 +29,7 @@
 package relayertest
 
 import (
-	"strings"
+	"regexp"
 	"testing"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
@@ -47,14 +47,15 @@ func TestRelayer(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
 	})
 }
 
-func sanitizeTestNameForContainer(testName string) string {
-	// Subtests have slashes.
-	testName = strings.ReplaceAll(testName, "/", "_")
+var validContainerCharsRE = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
 
-	// Constructed subtest names in ibctest may contain + or @.
-	testName = strings.ReplaceAll(testName, "+", "_")
-	testName = strings.ReplaceAll(testName, "@", "_")
-	return testName
+// sanitizeTestNameForContainer returns testName with any
+// invalid characters replaced with underscores.
+// Subtests will include slashes, and there may be other
+// invalid characters too.
+func sanitizeTestNameForContainer(testName string) string {
+	// Subtests contain slashes and other characters that are invalid for container names.
+	return validContainerCharsRE.ReplaceAllLiteralString(testName, "_")
 }
 
 func TestRelayer_RelayPacket(t *testing.T, cf ibc.ChainFactory, rf ibc.RelayerFactory) {
