@@ -1,4 +1,4 @@
-package utils
+package dockerutil
 
 import (
 	"crypto/rand"
@@ -64,7 +64,7 @@ func GetDockerUserString() string {
 	return usr
 }
 
-// condenseHostName truncates the middle of the given name
+// CondenseHostName truncates the middle of the given name
 // if it is 64 characters or longer.
 //
 // Without this helper, you may see an error like:

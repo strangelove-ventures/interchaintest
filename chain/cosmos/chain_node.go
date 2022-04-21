@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	"hash/fnv"
 	"io"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
@@ -26,8 +26,8 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
+	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/utils"
 	tmconfig "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -115,7 +115,7 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name is the hostname of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, utils.SanitizeContainerName(tn.testName))
+	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.testName))
 }
 
 // Dir is the directory where the test node files are stored
@@ -287,7 +287,7 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 // CreateKey creates a key in the keyring backend test for the given node
@@ -297,7 +297,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 		"--output", "json",
 		"--home", tn.NodeHome(),
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 // AddGenesisAccount adds a genesis account for each key
@@ -312,7 +312,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	command := []string{tn.Chain.Config().Bin, "add-genesis-account", address, amount,
 		"--home", tn.NodeHome(),
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 // Gentx generates the gentx for a given node
@@ -322,7 +322,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 // CollectGentxs runs collect gentxs on the node's home folders
@@ -330,7 +330,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
 		"--home", tn.NodeHome(),
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 type IBCTransferTx struct {
@@ -360,7 +360,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 	output := IBCTransferTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
@@ -381,7 +381,7 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 func copy(src, dst string) (int64, error) {
@@ -458,7 +458,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
 	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
@@ -475,7 +475,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
 	res := CodeInfosResponse{}
@@ -505,7 +505,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
 	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
@@ -522,7 +522,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
 	contactsRes := QueryContractResponse{}
@@ -547,7 +547,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
@@ -561,7 +561,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	}
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return nil, utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return nil, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
 	res := &ibc.DumpContractStateResponse{}
@@ -580,7 +580,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", utils.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 	// output comes to stderr for some reason
 	return stderr, nil
@@ -592,7 +592,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 		"--home", tn.NodeHome(),
 	}
 
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
@@ -611,7 +611,7 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return utils.HandleNodeJobError(tn.NodeJob(ctx, command))
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
 func (tn *ChainNode) CreateNodeContainer() error {
@@ -622,9 +622,9 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
 		Config: &docker.Config{
-			User:         utils.GetDockerUserString(),
+			User:         dockerutil.GetDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     utils.CondenseHostName(tn.Name()),
+			Hostname:     dockerutil.CondenseHostName(tn.Name()),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
@@ -664,7 +664,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 	tn.Container = c
 
-	port := utils.GetHostPort(c, rpcPort)
+	port := dockerutil.GetHostPort(c, rpcPort)
 	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
@@ -746,7 +746,7 @@ func (tn ChainNodes) PeerString() string {
 			// When would NodeId return an error?
 			break
 		}
-		hostName := utils.CondenseHostName(n.Name())
+		hostName := dockerutil.CondenseHostName(n.Name())
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
 		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
 		addrs[i] = ps
@@ -796,14 +796,14 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	counter, _, _, _ := runtime.Caller(1)
 	caller := runtime.FuncForPC(counter).Name()
 	funcName := strings.Split(caller, ".")
-	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], utils.RandLowerCaseLetterString(3))
+	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
 	chainCfg := tn.Chain.Config()
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
-			User:         utils.GetDockerUserString(),
-			Hostname:     utils.CondenseHostName(container),
+			User:         dockerutil.GetDockerUserString(),
+			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),

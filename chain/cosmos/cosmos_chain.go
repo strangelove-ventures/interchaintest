@@ -18,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/utils"
 
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
@@ -190,7 +190,7 @@ func (c *CosmosChain) Height() (int64, error) {
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := utils.GetHostPort(c.getRelayerNode().Container, grpcPort)
+	grpcAddress := dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err

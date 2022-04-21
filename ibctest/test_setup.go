@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
+	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/utils"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -66,7 +66,7 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 
 	home := t.TempDir()
 
-	networkName := fmt.Sprintf("ibc-test-framework-%s", utils.RandLowerCaseLetterString(8))
+	networkName := fmt.Sprintf("ibc-test-framework-%s", dockerutil.RandLowerCaseLetterString(8))
 	network, err := CreateTestNetwork(pool, networkName, t.Name())
 	if err != nil {
 		return ctx, "", nil, "", err
