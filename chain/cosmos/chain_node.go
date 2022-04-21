@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/avast/retry-go/v4"
 	"hash/fnv"
 	"io"
 	"os"
@@ -17,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/avast/retry-go/v4"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -61,7 +62,7 @@ type ContainerPort struct {
 
 type Hosts []ContainerPort
 
-var (
+const (
 	valKey      = "validator"
 	blockTime   = 2 // seconds
 	p2pPort     = "26656/tcp"
@@ -69,7 +70,9 @@ var (
 	grpcPort    = "9090/tcp"
 	apiPort     = "1317/tcp"
 	privValPort = "1234/tcp"
+)
 
+var (
 	sentryPorts = map[docker.Port]struct{}{
 		docker.Port(p2pPort):     {},
 		docker.Port(rpcPort):     {},
