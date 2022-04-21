@@ -1,11 +1,10 @@
-package ibc_test
+package cosmos
 
 import (
 	"strings"
 	"testing"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,12 +17,12 @@ func TestCondenseMoniker_MiddleDetail(t *testing.T) {
 	m1 := start + "1" + end
 	m2 := start + "2" + end
 
-	require.NotEqual(t, ibc.CondenseMoniker(m1), ibc.CondenseMoniker(m2))
+	require.NotEqual(t, CondenseMoniker(m1), CondenseMoniker(m2))
 
-	require.LessOrEqual(t, len(ibc.CondenseMoniker(m1)), stakingtypes.MaxMonikerLength)
+	require.LessOrEqual(t, len(CondenseMoniker(m1)), stakingtypes.MaxMonikerLength)
 }
 
 func TestCondenseMoniker_Short(t *testing.T) {
 	const m = "my_moniker"
-	require.Equal(t, m, ibc.CondenseMoniker(m))
+	require.Equal(t, m, CondenseMoniker(m))
 }

@@ -31,7 +31,7 @@ type builtinRelayerFactory struct {
 	impl ibc.RelayerImplementation
 }
 
-func NewBuiltinRelayerFactory(impl RelayerImplementation) RelayerFactory {
+func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation) RelayerFactory {
 	return builtinRelayerFactory{impl: impl}
 }
 

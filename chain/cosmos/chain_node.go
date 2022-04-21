@@ -625,7 +625,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 		Config: &docker.Config{
 			User:         utils.GetDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     condenseHostName(tn.Name()),
+			Hostname:     utils.CondenseHostName(tn.Name()),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
@@ -747,7 +747,7 @@ func (tn ChainNodes) PeerString() string {
 			// When would NodeId return an error?
 			break
 		}
-		hostName := condenseHostName(n.Name())
+		hostName := utils.CondenseHostName(n.Name())
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
 		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
 		addrs[i] = ps
@@ -804,7 +804,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 		Name: container,
 		Config: &docker.Config{
 			User:         utils.GetDockerUserString(),
-			Hostname:     condenseHostName(container),
+			Hostname:     utils.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
