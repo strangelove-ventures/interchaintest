@@ -2,12 +2,13 @@ package dockerutil
 
 import (
 	"fmt"
-	"github.com/ory/dockertest/docker"
 	"math/rand"
 	"net"
 	"os"
 	"regexp"
 	"runtime"
+
+	"github.com/ory/dockertest/docker"
 )
 
 // GetHostPort returns a resource's published port with an address.
@@ -42,8 +43,7 @@ func RandLowerCaseLetterString(length int) string {
 func GetDockerUserString() string {
 	uid := os.Getuid()
 	var usr string
-	userOS := runtime.GOOS
-	if userOS == "darwin" {
+	if runtime.GOOS == "darwin" {
 		usr = ""
 	} else {
 		usr = fmt.Sprintf("%d:%d", uid, uid)
