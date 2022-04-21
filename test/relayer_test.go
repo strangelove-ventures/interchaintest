@@ -20,5 +20,8 @@ func getTestChainFactory() ibctest.ChainFactory {
 }
 
 func TestRelayer(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	relayertest.TestRelayer(t, getTestChainFactory(), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly))
 }
