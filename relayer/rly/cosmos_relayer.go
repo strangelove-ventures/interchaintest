@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -170,8 +169,7 @@ func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, chainCo
 		return err
 	}
 
-	err = ioutil.WriteFile(chainConfigLocalFilePath, json, 0644) //nolint
-	if err != nil {
+	if err := os.WriteFile(chainConfigLocalFilePath, json, 0644); err != nil { //nolint
 		return err
 	}
 

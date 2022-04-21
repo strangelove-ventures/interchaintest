@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -54,7 +53,7 @@ func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relaye
 }
 
 func SetupTestRun(testName string) (context.Context, string, *dockertest.Pool, string, func(), error) {
-	home, err := ioutil.TempDir("", "")
+	home, err := os.MkdirTemp("", "")
 	ctx := context.Background()
 	if err != nil {
 		return ctx, "", nil, "", nil, err
