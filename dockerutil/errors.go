@@ -2,7 +2,7 @@ package dockerutil
 
 import "fmt"
 
-func HandleNodeJobError(exitCode int, stdout, stderr string, err error) error {
+func HandleNodeJobError(exitCode int, _, _ string, err error) error {
 	if err != nil {
 		return err
 	}
