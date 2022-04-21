@@ -1,16 +1,13 @@
 package dockerutil
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
+	"github.com/ory/dockertest/docker"
+	"math/rand"
 	"net"
 	"os"
 	"regexp"
 	"runtime"
-	"strings"
-
-	"github.com/ory/dockertest/docker"
 )
 
 // GetHostPort returns a resource's published port with an address.
@@ -31,25 +28,15 @@ func GetHostPort(cont *docker.Container, portID string) string {
 	return net.JoinHostPort(ip, m[0].HostPort)
 }
 
+var chars = []rune("abcdefghijklmnopqrstuvwxyz")
+
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
-	chars := []rune("abcdefghijklmnopqrstuvwxyz")
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		i, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
-		b.WriteRune(chars[i.Int64()])
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = chars[rand.Intn(length)]
 	}
-	return b.String()
-}
-
-func HandleNodeJobError(exitCode int, stdout, stderr string, err error) error {
-	if err != nil {
-		return err
-	}
-	if exitCode != 0 {
-		return fmt.Errorf("container returned non-zero error code: %d\n", exitCode)
-	}
-	return nil
+	return string(b)
 }
 
 func GetDockerUserString() string {
