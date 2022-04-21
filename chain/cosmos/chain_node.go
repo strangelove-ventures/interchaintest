@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
@@ -686,7 +686,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.DelayType(retry.BackOffDelay))
+	}, retry.Context(ctx), retry.DelayType(retry.BackOffDelay))
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
