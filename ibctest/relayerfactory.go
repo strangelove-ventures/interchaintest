@@ -2,6 +2,7 @@ package ibctest
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/ory/dockertest"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -12,7 +13,7 @@ import (
 type RelayerFactory interface {
 	// Build returns a Relayer associated with the given arguments.
 	Build(
-		testName string,
+		t *testing.T,
 		pool *dockertest.Pool,
 		networkID string,
 		home string,
@@ -37,7 +38,7 @@ func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation) RelayerFactory {
 
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
-	testName string,
+	t *testing.T,
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
@@ -46,7 +47,7 @@ func (f builtinRelayerFactory) Build(
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.NewCosmosRelayerFromChains(
-			testName,
+			t,
 			srcChain,
 			dstChain,
 			pool,

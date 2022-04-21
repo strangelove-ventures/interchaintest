@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -72,14 +73,14 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	}
 }
 
-func NewCosmosRelayerFromChains(testName string, src, dst ibc.Chain, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
+func NewCosmosRelayerFromChains(t *testing.T, src, dst ibc.Chain, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
 	relayer := &CosmosRelayer{
 		src:       src,
 		dst:       dst,
 		pool:      pool,
 		networkID: networkID,
 		home:      home,
-		testName:  testName,
+		testName:  t.Name(),
 	}
 	relayer.MkDir()
 
@@ -87,7 +88,7 @@ func NewCosmosRelayerFromChains(testName string, src, dst ibc.Chain, pool *docke
 }
 
 func (relayer *CosmosRelayer) Name() string {
-	return fmt.Sprintf("rly-%s", relayer.testName)
+	return fmt.Sprintf("rly-%s", utils.SanitizeContainerName(relayer.testName))
 }
 
 func (relayer *CosmosRelayer) LinkPath(ctx context.Context, pathName string) error {

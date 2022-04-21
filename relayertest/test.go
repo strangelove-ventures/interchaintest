@@ -29,7 +29,6 @@
 package relayertest
 
 import (
-	"regexp"
 	"testing"
 	"time"
 
@@ -69,25 +68,11 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	})
 }
 
-var validContainerCharsRE = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
-
-// sanitizeTestNameForContainer returns testName with any
-// invalid characters replaced with underscores.
-// Subtests will include slashes, and there may be other
-// invalid characters too.
-func sanitizeTestNameForContainer(testName string) string {
-	// Subtests contain slashes and other characters that are invalid for container names.
-	return validContainerCharsRE.ReplaceAllLiteralString(testName, "_")
-}
-
 func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	testName := sanitizeTestNameForContainer(t.Name())
-
-	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
+	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
-	defer cleanup()
 
-	srcChain, dstChain, err := cf.Pair(testName)
+	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
 
 	// startup both chains and relayer
@@ -95,9 +80,8 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a user account on the src chain (separate fullnode)
 	// funds user account on src chain in genesis
-	_, channels, srcUser, dstUser, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, nil)
+	_, channels, srcUser, dstUser, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, nil)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
-	defer rlyCleanup()
 
 	// will test a user sending an ibc transfer from the src chain to the dst chain
 	// denom will be src chain native denom
@@ -212,13 +196,10 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
 func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	testName := sanitizeTestNameForContainer(t.Name())
-
-	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
+	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
-	defer cleanup()
 
-	srcChain, dstChain, err := cf.Pair(testName)
+	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
@@ -257,9 +238,8 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
-	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
 	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
@@ -285,13 +265,10 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
 func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	testName := sanitizeTestNameForContainer(t.Name())
-
-	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
+	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
-	defer cleanup()
 
-	srcChain, dstChain, err := cf.Pair(testName)
+	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
@@ -335,9 +312,8 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory,
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
-	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
 	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
@@ -361,13 +337,10 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory,
 }
 
 func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	testName := sanitizeTestNameForContainer(t.Name())
-
-	ctx, home, pool, network, cleanup, err := ibctest.SetupTestRun(testName)
+	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
-	defer cleanup()
 
-	srcChain, dstChain, err := cf.Pair(testName)
+	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
 
 	var srcInitialBalance, dstInitialBalance int64
@@ -413,9 +386,8 @@ func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFacto
 	}
 
 	// Startup both chains and relayer
-	_, _, user, _, rlyCleanup, err := ibctest.StartChainsAndRelayerFromFactory(testName, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
+	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
-	defer rlyCleanup()
 
 	// wait for both chains to produce 10 blocks
 	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")

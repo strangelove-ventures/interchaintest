@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -52,24 +53,24 @@ func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relaye
 	return testCaseFunc, nil
 }
 
-func SetupTestRun(testName string) (context.Context, string, *dockertest.Pool, string, func(), error) {
-	home, err := os.MkdirTemp("", "")
+func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, string, error) {
 	ctx := context.Background()
-	if err != nil {
-		return ctx, "", nil, "", nil, err
-	}
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return ctx, "", nil, "", nil, err
+		return ctx, "", nil, "", err
 	}
+	t.Cleanup(dockerCleanup(t.Name(), pool))
 
-	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", utils.RandLowerCaseLetterString(8)), testName)
+	home := t.TempDir()
+
+	networkName := fmt.Sprintf("ibc-test-framework-%s", utils.RandLowerCaseLetterString(8))
+	network, err := CreateTestNetwork(pool, networkName, t.Name())
 	if err != nil {
-		return ctx, "", nil, "", nil, err
+		return ctx, "", nil, "", err
 	}
 
-	return ctx, home, pool, network.ID, Cleanup(testName, pool, home), nil
+	return ctx, home, pool, network.ID, nil
 }
 
 type User struct {
@@ -79,7 +80,7 @@ type User struct {
 }
 
 func StartChainsAndRelayer(
-	testName string,
+	t *testing.T,
 	ctx context.Context,
 	pool *dockertest.Pool,
 	networkID string,
@@ -87,9 +88,9 @@ func StartChainsAndRelayer(
 	srcChain, dstChain ibc.Chain,
 	relayerImplementation ibc.RelayerImplementation,
 	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
-) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
+) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
 	return StartChainsAndRelayerFromFactory(
-		testName,
+		t,
 		ctx,
 		pool,
 		networkID,
@@ -107,7 +108,7 @@ func StartChainsAndRelayer(
 // creates a user account on the src chain (separate fullnode)
 // funds user account on src chain in genesis
 func StartChainsAndRelayerFromFactory(
-	testName string,
+	t *testing.T,
 	ctx context.Context,
 	pool *dockertest.Pool,
 	networkID string,
@@ -115,13 +116,14 @@ func StartChainsAndRelayerFromFactory(
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
 	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
-) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
-	relayerImpl := f.Build(testName, pool, networkID, home, srcChain, dstChain)
+) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
+	relayerImpl := f.Build(t, pool, networkID, home, srcChain, dstChain)
 
-	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
-		return nil, []ibc.ChannelOutput{}, nil, nil, nil, err
+	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
+		return nil, []ibc.ChannelOutput{}, nil, nil, err
 	}
 
+	testName := t.Name()
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
 		return errResponse(fmt.Errorf("failed to initialize source chain: %w", err))
 	}
@@ -174,12 +176,12 @@ func StartChainsAndRelayerFromFactory(
 
 	// Generate key to be used for "user" that will execute IBC transaction
 	if err := srcChain.CreateKey(ctx, userAccountKeyName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to create key on source chain: %w", err))
 	}
 
 	srcUserAccountAddressBytes, err := srcChain.GetAddress(userAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to get source user account address: %w", err))
 	}
 
 	srcUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcUserAccountAddressBytes)
@@ -193,12 +195,12 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	if err := dstChain.CreateKey(ctx, userAccountKeyName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to create key on dest chain: %w", err))
 	}
 
 	dstUserAccountAddressBytes, err := dstChain.GetAddress(userAccountKeyName)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to get dest user account address: %w", err))
 	}
 
 	dstUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, dstUserAccountAddressBytes)
@@ -240,10 +242,16 @@ func StartChainsAndRelayerFromFactory(
 	// start chains from genesis, wait until they are producing blocks
 	chainsGenesisWaitGroup := errgroup.Group{}
 	chainsGenesisWaitGroup.Go(func() error {
-		return srcChain.Start(testName, ctx, []ibc.WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount})
+		if err := srcChain.Start(testName, ctx, []ibc.WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount}); err != nil {
+			return fmt.Errorf("failed to start source chain: %w", err)
+		}
+		return nil
 	})
 	chainsGenesisWaitGroup.Go(func() error {
-		return dstChain.Start(testName, ctx, []ibc.WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount})
+		if err := dstChain.Start(testName, ctx, []ibc.WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount}); err != nil {
+			return fmt.Errorf("failed to start dest chain: %w", err)
+		}
+		return nil
 	})
 
 	if err := chainsGenesisWaitGroup.Wait(); err != nil {
@@ -271,18 +279,16 @@ func StartChainsAndRelayerFromFactory(
 	if err := relayerImpl.StartRelayer(ctx, testPathName); err != nil {
 		return errResponse(err)
 	}
+	t.Cleanup(func() {
+		if err := relayerImpl.StopRelayer(ctx); err != nil {
+			t.Logf("error stopping relayer: %v", err)
+		}
+	})
 
 	// wait for relayer to start up
 	time.Sleep(5 * time.Second)
 
-	relayerCleanup := func() {
-		err := relayerImpl.StopRelayer(ctx)
-		if err != nil {
-			fmt.Printf("error stopping relayer: %v\n", err)
-		}
-	}
-
-	return relayerImpl, channels, &srcUser, &dstUser, relayerCleanup, nil
+	return relayerImpl, channels, &srcUser, &dstUser, nil
 }
 
 func WaitForBlocks(srcChain, dstChain ibc.Chain, blocksToWait int64) error {
@@ -310,8 +316,8 @@ func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*do
 	})
 }
 
-// Cleanup will clean up Docker containers, networks, and the other various config files generated in testing
-func Cleanup(testName string, pool *dockertest.Pool, testDir string) func() {
+// dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
+func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
@@ -340,6 +346,5 @@ func Cleanup(testName string, pool *dockertest.Pool, testDir string) func() {
 				}
 			}
 		}
-		_ = os.RemoveAll(testDir)
 	}
 }

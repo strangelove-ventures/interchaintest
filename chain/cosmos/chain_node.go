@@ -115,7 +115,7 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name is the hostname of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, tn.testName)
+	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, utils.SanitizeContainerName(tn.testName))
 }
 
 // Dir is the directory where the test node files are stored

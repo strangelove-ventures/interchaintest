@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -77,4 +78,14 @@ func CondenseHostName(name string) string {
 	// but that causes resolution problems for other hosts.
 	// Instead, use _._ which will be okay if there is a . on either end.
 	return name[:30] + "_._" + name[len(name)-30:]
+}
+
+var validContainerCharsRE = regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
+
+// SanitizeContainerName returns name with any
+// invalid characters replaced with underscores.
+// Subtests will include slashes, and there may be other
+// invalid characters too.
+func SanitizeContainerName(name string) string {
+	return validContainerCharsRE.ReplaceAllLiteralString(name, "_")
 }
