@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -258,7 +257,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	chainCfg := c.Config()
 
-	genesisJsonBytes, err := ioutil.ReadFile(genesisTmpFilePath)
+	genesisJsonBytes, err := os.ReadFile(genesisTmpFilePath)
 	if err != nil {
 		return err
 	}
@@ -307,7 +306,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 			return err
 		}
 
-		testNodePubKeyJsonBytes, err := ioutil.ReadFile(tn.PrivValKeyFilePath())
+		testNodePubKeyJsonBytes, err := os.ReadFile(tn.PrivValKeyFilePath())
 		if err != nil {
 			return err
 		}
@@ -355,7 +354,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 	}
 
 	for i := 0; i < len(c.ChainNodes); i++ {
-		if err := ioutil.WriteFile(c.ChainNodes[i].GenesisFilePath(), genesisJsonBytes, 0644); err != nil { //nolint
+		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genesisJsonBytes, 0644); err != nil { //nolint
 			return err
 		}
 	}
@@ -479,7 +478,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	genbz, err := ioutil.ReadFile(validator0.GenesisFilePath())
+	genbz, err := os.ReadFile(validator0.GenesisFilePath())
 	if err != nil {
 		return err
 	}
@@ -488,7 +487,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	nodes = append(nodes, fullnodes...)
 
 	for i := 1; i < len(nodes); i++ {
-		if err := ioutil.WriteFile(nodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
+		if err := os.WriteFile(nodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
 			return err
 		}
 	}

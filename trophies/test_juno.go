@@ -1,9 +1,10 @@
 //go:build exclude
 
+package trophies
+
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -320,7 +321,7 @@ func (ibc IBCTestCase) JunoHaltNewGenesis(testName string, _ Chain, _ Chain, rel
 		if err := junoChainAsCosmosChain.ChainNodes[i].UnsafeResetAll(ctx); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(junoChainAsCosmosChain.ChainNodes[i].GenesisFilePath(), []byte(newGenesisJson), 0644); err != nil {
+		if err := os.WriteFile(junoChainAsCosmosChain.ChainNodes[i].GenesisFilePath(), []byte(newGenesisJson), 0644); err != nil {
 			return err
 		}
 		junoChainAsCosmosChain.ChainNodes[i].Chain = juno3Chain

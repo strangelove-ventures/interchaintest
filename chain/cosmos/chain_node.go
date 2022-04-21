@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -758,7 +757,7 @@ func (tn ChainNodes) PeerString() string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (tn ChainNodes) LogGenesisHashes() error {
 	for _, n := range tn {
-		gen, err := ioutil.ReadFile(path.Join(n.Dir(), "config", "genesis.json"))
+		gen, err := os.ReadFile(path.Join(n.Dir(), "config", "genesis.json"))
 		if err != nil {
 			return err
 		}
