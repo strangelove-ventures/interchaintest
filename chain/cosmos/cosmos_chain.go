@@ -116,6 +116,18 @@ func (c *CosmosChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getRelayerNode().Name())
 }
 
+// GetHostRPCAddress returns the address of the RPC server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostRPCAddress() string {
+	return "http://" + utils.GetHostPort(c.getRelayerNode().Container, rpcPort)
+}
+
+// GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostGRPCAddress() string {
+	return utils.GetHostPort(c.getRelayerNode().Container, grpcPort)
+}
+
 // Implements Chain interface
 func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().CreateKey(ctx, keyName)

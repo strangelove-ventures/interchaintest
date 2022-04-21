@@ -29,6 +29,14 @@ type Chain interface {
 	// retrieves grpc address that can be reached by other containers in the docker network
 	GetGRPCAddress() string
 
+	// GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
+	// Note that this will not return a valid value until after Start returns.
+	GetHostRPCAddress() string
+
+	// GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
+	// Note that this will not return a valid value until after Start returns.
+	GetHostGRPCAddress() string
+
 	// get current height
 	Height() (int64, error)
 
