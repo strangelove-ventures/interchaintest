@@ -1,14 +1,11 @@
-package ibc
+package ibctest
 
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
-	"net"
 	"os"
 	"reflect"
 	"strings"
@@ -17,14 +14,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
+	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/utils"
 	"golang.org/x/sync/errgroup"
-)
-
-type RelayerImplementation int64
-
-const (
-	CosmosRly RelayerImplementation = iota
-	Hermes
 )
 
 const (
@@ -39,7 +31,7 @@ const (
 type IBCTestCase struct{}
 
 // uses reflection to get test case
-func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error, error) {
+func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relayerImplementation ibc.RelayerImplementation) error, error) {
 	v := reflect.ValueOf(IBCTestCase{})
 	m := v.MethodByName(testCase)
 
@@ -47,7 +39,7 @@ func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relaye
 		return nil, fmt.Errorf("invalid test case: %s", testCase)
 	}
 
-	testCaseFunc := func(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error {
+	testCaseFunc := func(testName string, cf ChainFactory, relayerImplementation ibc.RelayerImplementation) error {
 		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(cf), reflect.ValueOf(relayerImplementation)}
 		result := m.Call(args)
 		if len(result) != 1 || !result[0].CanInterface() {
@@ -59,17 +51,6 @@ func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relaye
 	}
 
 	return testCaseFunc, nil
-}
-
-// RandLowerCaseLetterString returns a lowercase letter string of given length
-func RandLowerCaseLetterString(length int) string {
-	chars := []rune("abcdefghijklmnopqrstuvwxyz")
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		i, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
-		b.WriteRune(chars[i.Int64()])
-	}
-	return b.String()
 }
 
 func SetupTestRun(testName string) (context.Context, string, *dockertest.Pool, string, func(), error) {
@@ -84,7 +65,7 @@ func SetupTestRun(testName string) (context.Context, string, *dockertest.Pool, s
 		return ctx, "", nil, "", nil, err
 	}
 
-	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", RandLowerCaseLetterString(8)), testName)
+	network, err := CreateTestNetwork(pool, fmt.Sprintf("ibc-test-framework-%s", utils.RandLowerCaseLetterString(8)), testName)
 	if err != nil {
 		return ctx, "", nil, "", nil, err
 	}
@@ -104,10 +85,10 @@ func StartChainsAndRelayer(
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
-	srcChain, dstChain Chain,
-	relayerImplementation RelayerImplementation,
-	preRelayerStart func([]ChannelOutput, User, User) error,
-) (Relayer, []ChannelOutput, *User, *User, func(), error) {
+	srcChain, dstChain ibc.Chain,
+	relayerImplementation ibc.RelayerImplementation,
+	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
+) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
 	return StartChainsAndRelayerFromFactory(
 		testName,
 		ctx,
@@ -132,14 +113,14 @@ func StartChainsAndRelayerFromFactory(
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
-	srcChain, dstChain Chain,
+	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
-	preRelayerStart func([]ChannelOutput, User, User) error,
-) (Relayer, []ChannelOutput, *User, *User, func(), error) {
+	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
+) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
 	relayerImpl := f.Build(testName, pool, networkID, home, srcChain, dstChain)
 
-	errResponse := func(err error) (Relayer, []ChannelOutput, *User, *User, func(), error) {
-		return nil, []ChannelOutput{}, nil, nil, nil, err
+	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, func(), error) {
+		return nil, []ibc.ChannelOutput{}, nil, nil, nil, err
 	}
 
 	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
@@ -179,14 +160,14 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	// Fund relayer account on src chain
-	srcRelayerWalletAmount := WalletAmount{
+	srcRelayerWalletAmount := ibc.WalletAmount{
 		Address: srcAccount,
 		Denom:   srcChainCfg.Denom,
 		Amount:  10000000,
 	}
 
 	// Fund relayer account on dst chain
-	dstRelayerWalletAmount := WalletAmount{
+	dstRelayerWalletAmount := ibc.WalletAmount{
 		Address: dstAccount,
 		Denom:   dstChainCfg.Denom,
 		Amount:  10000000,
@@ -244,14 +225,14 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	// Fund user account on src chain in order to relay from src to dst
-	srcUserWalletAmount := WalletAmount{
+	srcUserWalletAmount := ibc.WalletAmount{
 		Address: srcUserAccountSrc,
 		Denom:   srcChainCfg.Denom,
 		Amount:  10000000000,
 	}
 
 	// Fund user account on dst chain in order to relay from dst to src
-	dstUserWalletAmount := WalletAmount{
+	dstUserWalletAmount := ibc.WalletAmount{
 		Address: dstUserAccountDst,
 		Denom:   dstChainCfg.Denom,
 		Amount:  10000000000,
@@ -260,10 +241,10 @@ func StartChainsAndRelayerFromFactory(
 	// start chains from genesis, wait until they are producing blocks
 	chainsGenesisWaitGroup := errgroup.Group{}
 	chainsGenesisWaitGroup.Go(func() error {
-		return srcChain.Start(testName, ctx, []WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount})
+		return srcChain.Start(testName, ctx, []ibc.WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount})
 	})
 	chainsGenesisWaitGroup.Go(func() error {
-		return dstChain.Start(testName, ctx, []WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount})
+		return dstChain.Start(testName, ctx, []ibc.WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount})
 	})
 
 	if err := chainsGenesisWaitGroup.Wait(); err != nil {
@@ -305,7 +286,7 @@ func StartChainsAndRelayerFromFactory(
 	return relayerImpl, channels, &srcUser, &dstUser, relayerCleanup, nil
 }
 
-func WaitForBlocks(srcChain Chain, dstChain Chain, blocksToWait int64) error {
+func WaitForBlocks(srcChain, dstChain ibc.Chain, blocksToWait int64) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
 	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
 		_, err = srcChain.WaitForBlocks(blocksToWait)
@@ -316,24 +297,6 @@ func WaitForBlocks(srcChain Chain, dstChain Chain, blocksToWait int64) error {
 		return
 	})
 	return chainsConsecutiveBlocksWaitGroup.Wait()
-}
-
-// GetHostPort returns a resource's published port with an address.
-func GetHostPort(cont *docker.Container, portID string) string {
-	if cont == nil || cont.NetworkSettings == nil {
-		return ""
-	}
-
-	m, ok := cont.NetworkSettings.Ports[docker.Port(portID)]
-	if !ok || len(m) == 0 {
-		return ""
-	}
-
-	ip := m[0].HostIP
-	if ip == "0.0.0.0" {
-		ip = "localhost"
-	}
-	return net.JoinHostPort(ip, m[0].HostPort)
 }
 
 func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*docker.Network, error) {

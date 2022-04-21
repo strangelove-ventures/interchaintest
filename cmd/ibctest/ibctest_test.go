@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 )
 
@@ -21,9 +22,9 @@ var mainFlags struct {
 var testMatrix struct {
 	Relayers []string
 
-	ChainSets [][]ibc.BuiltinChainFactoryEntry
+	ChainSets [][]ibctest.BuiltinChainFactoryEntry
 
-	CustomChainSets [][]ibc.CustomChainFactoryEntry
+	CustomChainSets [][]ibctest.CustomChainFactoryEntry
 }
 
 func TestMain(m *testing.M) {
@@ -51,7 +52,7 @@ func setUpTestMatrix() error {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
 		testMatrix.Relayers = []string{"rly"}
-		testMatrix.ChainSets = [][]ibc.BuiltinChainFactoryEntry{
+		testMatrix.ChainSets = [][]ibctest.BuiltinChainFactoryEntry{
 			{
 				{Name: "gaia", Version: "v6.0.4", ChainID: "cosmoshub-1004", NumValidators: 1, NumFullNodes: 1},
 				{Name: "osmosis", Version: "v7.0.4", ChainID: "osmosis-1001", NumValidators: 1, NumFullNodes: 1},
@@ -97,31 +98,31 @@ func validateTestMatrix() error {
 	return nil
 }
 
-func getRelayerFactory(name string) (ibc.RelayerFactory, error) {
+func getRelayerFactory(name string) (ibctest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
-		return ibc.NewBuiltinRelayerFactory(ibc.CosmosRly), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly), nil
 	case "hermes":
-		return ibc.NewBuiltinRelayerFactory(ibc.Hermes), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes), nil
 	default:
 		return nil, fmt.Errorf("unknown relayer type %q (valid types: rly, hermes)", name)
 	}
 }
 
-func getChainFactory(chainSet []ibc.BuiltinChainFactoryEntry) (ibc.ChainFactory, error) {
+func getChainFactory(chainSet []ibctest.BuiltinChainFactoryEntry) (ibctest.ChainFactory, error) {
 	if len(chainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(chainSet))
 	}
 
-	return ibc.NewBuiltinChainFactory(chainSet), nil
+	return ibctest.NewBuiltinChainFactory(chainSet), nil
 }
 
-func getCustomChainFactory(customChainSet []ibc.CustomChainFactoryEntry) (ibc.ChainFactory, error) {
+func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry) (ibctest.ChainFactory, error) {
 	if len(customChainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(customChainSet))
 	}
 
-	return ibc.NewCustomChainFactory(customChainSet), nil
+	return ibctest.NewCustomChainFactory(customChainSet), nil
 }
 
 // TestRelayer is the root test for the relayer.
@@ -143,7 +144,7 @@ func TestRelayer(t *testing.T) {
 			t.Parallel()
 
 			// Collect all the chain factories from both the builtins and the customs.
-			chainFactories := make([]ibc.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
+			chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
 			for _, cs := range testMatrix.ChainSets {
 				cf, err := getChainFactory(cs)
 				if err != nil {

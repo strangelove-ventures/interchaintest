@@ -1,4 +1,4 @@
-package ibc
+package cosmos
 
 import (
 	"bytes"
@@ -19,6 +19,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/utils"
 
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
@@ -29,7 +31,7 @@ import (
 
 type CosmosChain struct {
 	testName      string
-	cfg           ChainConfig
+	cfg           ibc.ChainConfig
 	numValidators int
 	numFullNodes  int
 	ChainNodes    ChainNodes
@@ -42,8 +44,8 @@ func NewCosmosChainConfig(name string,
 	denom string,
 	gasPrices string,
 	gasAdjustment float64,
-	trustingPeriod string) ChainConfig {
-	return ChainConfig{
+	trustingPeriod string) ibc.ChainConfig {
+	return ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           name,
 		Bech32Prefix:   bech32Prefix,
@@ -62,8 +64,8 @@ func NewCosmosHeighlinerChainConfig(name string,
 	denom string,
 	gasPrices string,
 	gasAdjustment float64,
-	trustingPeriod string) ChainConfig {
-	return ChainConfig{
+	trustingPeriod string) ibc.ChainConfig {
+	return ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           name,
 		Bech32Prefix:   bech32Prefix,
@@ -76,7 +78,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 	}
 }
 
-func NewCosmosChain(testName string, chainConfig ChainConfig, numValidators int, numFullNodes int) *CosmosChain {
+func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *CosmosChain {
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
@@ -86,7 +88,7 @@ func NewCosmosChain(testName string, chainConfig ChainConfig, numValidators int,
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Config() ChainConfig {
+func (c *CosmosChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
@@ -131,17 +133,17 @@ func (c *CosmosChain) GetAddress(keyName string) ([]byte, error) {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount WalletAmount) error {
+func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.getRelayerNode().SendFunds(ctx, keyName, amount)
 }
 
 // Implements Chain interface
-func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error) {
+func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
 	return c.getRelayerNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
 // Implements Chain interface
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
@@ -151,7 +153,7 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 }
 
 // Implements Chain interface
-func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
+func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
 	return c.getRelayerNode().DumpContractState(ctx, contractAddress, height)
 }
 
@@ -161,7 +163,7 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 }
 
 // Implements Chain interface
-func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error {
+func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	return c.getRelayerNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
 }
 
@@ -177,7 +179,7 @@ func (c *CosmosChain) Height() (int64, error) {
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := GetHostPort(c.getRelayerNode().Container, grpcPort)
+	grpcAddress := utils.GetHostPort(c.getRelayerNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err
@@ -396,7 +398,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets []WalletAmount) error {
+func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets []ibc.WalletAmount) error {
 	var eg errgroup.Group
 
 	chainCfg := c.Config()
