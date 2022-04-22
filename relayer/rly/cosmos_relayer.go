@@ -19,8 +19,6 @@ import (
 )
 
 type CosmosRelayer struct {
-	src       ibc.Chain
-	dst       ibc.Chain
 	pool      *dockertest.Pool
 	container *docker.Container
 	networkID string
@@ -73,10 +71,8 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	}
 }
 
-func NewCosmosRelayerFromChains(t *testing.T, src, dst ibc.Chain, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
+func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID string, home string) *CosmosRelayer {
 	relayer := &CosmosRelayer{
-		src:       src,
-		dst:       dst,
 		pool:      pool,
 		networkID: networkID,
 		home:      home,

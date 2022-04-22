@@ -17,7 +17,6 @@ type RelayerFactory interface {
 		pool *dockertest.Pool,
 		networkID string,
 		home string,
-		srcChain, dstChain ibc.Chain,
 	) ibc.Relayer
 
 	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
@@ -42,14 +41,11 @@ func (f builtinRelayerFactory) Build(
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
-	srcChain, dstChain ibc.Chain,
 ) ibc.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.NewCosmosRelayerFromChains(
 			t,
-			srcChain,
-			dstChain,
 			pool,
 			networkID,
 			home,
