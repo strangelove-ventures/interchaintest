@@ -276,13 +276,13 @@ func StartChainsAndRelayerFromFactory(
 
 func WaitForBlocks(srcChain, dstChain ibc.Chain, blocksToWait int64) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
-		_, err = srcChain.WaitForBlocks(blocksToWait)
-		return
+	chainsConsecutiveBlocksWaitGroup.Go(func() error {
+		_, err := srcChain.WaitForBlocks(blocksToWait)
+		return err
 	})
-	chainsConsecutiveBlocksWaitGroup.Go(func() (err error) {
-		_, err = dstChain.WaitForBlocks(blocksToWait)
-		return
+	chainsConsecutiveBlocksWaitGroup.Go(func() error {
+		_, err := dstChain.WaitForBlocks(blocksToWait)
+		return err
 	})
 	return chainsConsecutiveBlocksWaitGroup.Wait()
 }
