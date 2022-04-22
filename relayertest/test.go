@@ -285,7 +285,7 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
 func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoErrorf(t, err, "failed to set up test run")
+	require.NoError(t, err, "failed to set up test run")
 
 	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
@@ -357,7 +357,7 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory,
 
 func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoErrorf(t, err, "failed to set up test run")
+	require.NoError(t, err, "failed to set up test run")
 
 	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
