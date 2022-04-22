@@ -1,18 +1,21 @@
 # IBC Test Framework
 
-This repo is going to house a new IBC testing framework based on the following work:
-- https://github.com/PeggyJV/sommelier/tree/main/integration_tests
-- https://github.com/strangelove-ventures/horcrux/tree/main/test
-- https://github.com/cosmos/relayer/tree/main/test
+The IBC Test Framework orchestrates Go tests that utilize Docker containers for multiple
+[IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
-The goals are to support:
-- [ ] Testing complex IBC interactions between arbitrary chains
-- [ ] Testing multiple relayer implemenations
-    - [ ] cosmos/relayer
-    - [ ] hermes
-    - [ ] tsrelayer
-- [ ] Testing multiple versions of each chain and compatability of new versions
+## Contributing
 
-The tests will be run in `go test` and utilize docker to spin up complete chains and utilize only the chain docker images themseleves.
+Running `make ibctest` will produce an `ibctest` binary into `./bin`.
+Running that binary without any extra arguments will run a simple IBC test suite involving
+the [Go Relayer](https://github.com/cosmos/relayer).
+Alternatively, you can run `ibctest -matrix path/to/matrix.json` to define a set of chains to IBC-test.
+See [`cmd/ibctest/README.md`](cmd/ibctest/README.md) for more details.
 
-This repo will rely on images built from https://github.com/strangelove-ventures/heighliner
+Note that `ibc-test-framework` is under active development
+and we are not yet ready to commit to any stable APIs around the testing interfaces.
+
+## Trophies
+
+Significant bugs that were more easily fixed with the `ibc-test-framework`:
+
+- [Juno network halt](https://github.com/strangelove-ventures/ibc-test-framework/pull/7)
