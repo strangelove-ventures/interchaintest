@@ -13,7 +13,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3/docker"
 )
 
 func (ibc IBCTestCase) JunoHaltTest(testName string, srcChain Chain, dstChain Chain, relayerImplementation RelayerImplementation) error {

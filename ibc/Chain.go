@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 )
 
 type Chain interface {
