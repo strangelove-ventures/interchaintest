@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
@@ -28,6 +30,7 @@ var testMatrix struct {
 }
 
 func TestMain(m *testing.M) {
+	rand.Seed(time.Now().UnixNano())
 	addFlags()
 	flag.Parse()
 

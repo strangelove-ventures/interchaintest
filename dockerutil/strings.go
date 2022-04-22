@@ -1,14 +1,12 @@
-package utils
+package dockerutil
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
+	"math/rand"
 	"net"
 	"os"
 	"regexp"
 	"runtime"
-	"strings"
 
 	"github.com/ory/dockertest/docker"
 )
@@ -31,32 +29,21 @@ func GetHostPort(cont *docker.Container, portID string) string {
 	return net.JoinHostPort(ip, m[0].HostPort)
 }
 
+var chars = []byte("abcdefghijklmnopqrstuvwxyz")
+
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
-	chars := []rune("abcdefghijklmnopqrstuvwxyz")
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		i, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
-		b.WriteRune(chars[i.Int64()])
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = chars[rand.Intn(length)]
 	}
-	return b.String()
-}
-
-func HandleNodeJobError(exitCode int, stdout, stderr string, err error) error {
-	if err != nil {
-		return err
-	}
-	if exitCode != 0 {
-		return fmt.Errorf("container returned non-zero error code: %d\n", exitCode)
-	}
-	return nil
+	return string(b)
 }
 
 func GetDockerUserString() string {
 	uid := os.Getuid()
 	var usr string
-	userOS := runtime.GOOS
-	if userOS == "darwin" {
+	if runtime.GOOS == "darwin" {
 		usr = ""
 	} else {
 		usr = fmt.Sprintf("%d:%d", uid, uid)
@@ -64,7 +51,7 @@ func GetDockerUserString() string {
 	return usr
 }
 
-// condenseHostName truncates the middle of the given name
+// CondenseHostName truncates the middle of the given name
 // if it is 64 characters or longer.
 //
 // Without this helper, you may see an error like:
