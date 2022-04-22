@@ -88,7 +88,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 
 func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoErrorf(t, err, "failed to set up test run")
+	require.NoError(t, err, "failed to set up test run")
 
 	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
