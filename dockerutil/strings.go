@@ -29,11 +29,11 @@ func GetHostPort(cont *docker.Container, portID string) string {
 	return net.JoinHostPort(ip, m[0].HostPort)
 }
 
-var chars = []rune("abcdefghijklmnopqrstuvwxyz")
+var chars = []byte("abcdefghijklmnopqrstuvwxyz")
 
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
-	b := make([]rune, length)
+	b := make([]byte, length)
 	for i := range b {
 		b[i] = chars[rand.Intn(length)]
 	}
