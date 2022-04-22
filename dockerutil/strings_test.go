@@ -1,10 +1,11 @@
 package dockerutil
 
 import (
-	"github.com/ory/dockertest/docker"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
+
+	"github.com/ory/dockertest/docker"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetHostPort(t *testing.T) {
@@ -41,9 +42,10 @@ func TestRandLowerCaseLetterString(t *testing.T) {
 	require.Empty(t, RandLowerCaseLetterString(0))
 
 	rand.Seed(1)
+	require.Equal(t, "xvlbzgbaicmr", RandLowerCaseLetterString(12))
 
-	const want = `fdllbgbieach`
-	require.Equal(t, want, RandLowerCaseLetterString(12))
+	rand.Seed(1)
+	require.Equal(t, "xvlbzgbaicmrajwwhthctcuaxhxkqf", RandLowerCaseLetterString(30))
 }
 
 func TestCondenseHostName(t *testing.T) {
