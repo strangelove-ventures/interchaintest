@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
@@ -134,31 +136,24 @@ func StartChainsAndRelayerFromFactory(
 	srcChainCfg := srcChain.Config()
 	dstChainCfg := dstChain.Config()
 
-	if err := relayerImpl.AddChainConfiguration(ctx, srcChainCfg, srcAccountKeyName,
-		srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
-	}
+	kr := keyring.NewInMemory()
 
-	if err := relayerImpl.AddChainConfiguration(ctx, dstChainCfg, dstAccountKeyName,
-		dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
-	}
+	// NOTE: this is hardcoded to the cosmos coin type.
+	// We will need to choose other coin types for non-cosmos IBC once that happens.
+	const coinType = types.CoinType
 
-	srcRelayerWallet, err := relayerImpl.AddKey(ctx, srcChain.Config().ChainID, srcAccountKeyName)
+	// Create accounts out of band, because the chain genesis needs to know where to send initial funds.
+	srcInfo, srcMnemonic, err := kr.NewMnemonic(srcAccountKeyName, keyring.English, hd.CreateHDPath(coinType, 0, 0).String(), "", hd.Secp256k1)
 	if err != nil {
-		return errResponse(fmt.Errorf("failed to add key to source chain: %w", err))
+		return errResponse(fmt.Errorf("failed to create source account: %w", err))
 	}
-	dstRelayerWallet, err := relayerImpl.AddKey(ctx, dstChain.Config().ChainID, dstAccountKeyName)
+	srcAccount := types.MustBech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcInfo.GetAddress().Bytes())
+
+	dstInfo, dstMnemonic, err := kr.NewMnemonic(dstAccountKeyName, keyring.English, hd.CreateHDPath(coinType, 0, 0).String(), "", hd.Secp256k1)
 	if err != nil {
-		return errResponse(fmt.Errorf("failed to add key to dest chain: %w", err))
+		return errResponse(fmt.Errorf("failed to create dest account: %w", err))
 	}
-
-	srcAccount := srcRelayerWallet.Address
-	dstAccount := dstRelayerWallet.Address
-
-	if err := relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to generate path: %w", err))
-	}
+	dstAccount := types.MustBech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstInfo.GetAddress().Bytes())
 
 	// Fund relayer account on src chain
 	srcRelayerWalletAmount := ibc.WalletAmount{
@@ -258,13 +253,48 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(err)
 	}
 
+	// Now that the chains are running, we can start the relayer.
+	// (We couldn't do this earlier,
+	// because a non-docker relayer would not have had an address for the nodes.)
+	srcRPCAddr, srcGRPCAddr := srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()
+	dstRPCAddr, dstGRPCAddr := dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()
+	if !f.UseDockerNetwork() {
+		srcRPCAddr, srcGRPCAddr = srcChain.GetHostRPCAddress(), srcChain.GetHostGRPCAddress()
+		dstRPCAddr, dstGRPCAddr = dstChain.GetHostRPCAddress(), dstChain.GetHostGRPCAddress()
+	}
+
+	if err := relayerImpl.AddChainConfiguration(ctx,
+		srcChainCfg, srcAccountKeyName,
+		srcRPCAddr, srcGRPCAddr,
+	); err != nil {
+		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
+	}
+
+	if err := relayerImpl.AddChainConfiguration(ctx,
+		dstChainCfg, dstAccountKeyName,
+		dstRPCAddr, dstGRPCAddr,
+	); err != nil {
+		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
+	}
+
+	if err := relayerImpl.RestoreKey(ctx, srcChain.Config().ChainID, srcAccountKeyName, srcMnemonic); err != nil {
+		return errResponse(fmt.Errorf("failed to restore key to source chain: %w", err))
+	}
+	if err := relayerImpl.RestoreKey(ctx, dstChain.Config().ChainID, dstAccountKeyName, dstMnemonic); err != nil {
+		return errResponse(fmt.Errorf("failed to restore key to dest chain: %w", err))
+	}
+
+	if err := relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
+		return errResponse(fmt.Errorf("failed to generate path: %w", err))
+	}
+
 	if err := relayerImpl.LinkPath(ctx, testPathName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to create link in relayer: %w", err))
 	}
 
 	channels, err := relayerImpl.GetChannels(ctx, srcChainCfg.ChainID)
 	if err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to get channels: %w", err))
 	}
 	if len(channels) != 1 {
 		return errResponse(fmt.Errorf("channel count invalid. expected: 1, actual: %d", len(channels)))
@@ -277,7 +307,7 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	if err := relayerImpl.StartRelayer(ctx, testPathName); err != nil {
-		return errResponse(err)
+		return errResponse(fmt.Errorf("failed to start relayer: %w", err))
 	}
 	t.Cleanup(func() {
 		if err := relayerImpl.StopRelayer(ctx); err != nil {
