@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3/docker"
 )
 
 // GetHostPort returns a resource's published port with an address.
