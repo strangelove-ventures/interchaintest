@@ -16,6 +16,7 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 )
 
 type CosmosRelayer struct {
@@ -46,10 +47,20 @@ type CosmosRelayerChainConfig struct {
 	Value CosmosRelayerChainConfigValue `json:"value"`
 }
 
-var (
+const (
 	containerImage   = "ghcr.io/cosmos/relayer"
 	containerVersion = "v2.0.0-beta4"
 )
+
+// Capabilities returns the set of capabilities of the Cosmos relayer.
+//
+// Note, this API may change if the rly package eventually needs
+// to distinguish between multiple rly versions.
+func Capabilities() map[relayer.Capability]bool {
+	m := relayer.FullCapabilities()
+	m[relayer.HeightTimeout] = false
+	return m
+}
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	return CosmosRelayerChainConfig{
