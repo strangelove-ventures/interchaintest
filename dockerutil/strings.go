@@ -35,7 +35,7 @@ var chars = []byte("abcdefghijklmnopqrstuvwxyz")
 func RandLowerCaseLetterString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = chars[rand.Intn(length)]
+		b[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(b)
 }
