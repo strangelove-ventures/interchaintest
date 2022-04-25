@@ -3,10 +3,8 @@ package ibctest
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +12,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/ory/dockertest"
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"golang.org/x/sync/errgroup"
@@ -27,33 +25,6 @@ const (
 	userAccountKeyName = "user"
 	testPathName       = "test-path"
 )
-
-// all methods on this struct have the same signature and are method names that will be called by the CLI:
-//     func (ibc IBCTestCase) TestCaseName(testName string, cf ChainFactory, relayerImplementation RelayerImplementation) error
-type IBCTestCase struct{}
-
-// uses reflection to get test case
-func GetTestCase(testCase string) (func(testName string, cf ChainFactory, relayerImplementation ibc.RelayerImplementation) error, error) {
-	v := reflect.ValueOf(IBCTestCase{})
-	m := v.MethodByName(testCase)
-
-	if m.Kind() != reflect.Func {
-		return nil, fmt.Errorf("invalid test case: %s", testCase)
-	}
-
-	testCaseFunc := func(testName string, cf ChainFactory, relayerImplementation ibc.RelayerImplementation) error {
-		args := []reflect.Value{reflect.ValueOf(testName), reflect.ValueOf(cf), reflect.ValueOf(relayerImplementation)}
-		result := m.Call(args)
-		if len(result) != 1 || !result[0].CanInterface() {
-			return errors.New("error reflecting error return var")
-		}
-
-		err, _ := result[0].Interface().(error)
-		return err
-	}
-
-	return testCaseFunc, nil
-}
 
 func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, string, error) {
 	ctx := context.Background()
@@ -79,29 +50,6 @@ type User struct {
 	SrcChainAddress string
 	DstChainAddress string
 	KeyName         string
-}
-
-func StartChainsAndRelayer(
-	t *testing.T,
-	ctx context.Context,
-	pool *dockertest.Pool,
-	networkID string,
-	home string,
-	srcChain, dstChain ibc.Chain,
-	relayerImplementation ibc.RelayerImplementation,
-	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
-) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
-	return StartChainsAndRelayerFromFactory(
-		t,
-		ctx,
-		pool,
-		networkID,
-		home,
-		srcChain,
-		dstChain,
-		builtinRelayerFactory{impl: relayerImplementation},
-		preRelayerStart,
-	)
 }
 
 // startup both chains and relayer

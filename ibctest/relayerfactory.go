@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
 )
