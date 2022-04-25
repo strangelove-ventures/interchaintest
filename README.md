@@ -18,4 +18,5 @@ and we are not yet ready to commit to any stable APIs around the testing interfa
 
 Significant bugs that were more easily fixed with the `ibc-test-framework`:
 
-- [Juno network halt](https://github.com/strangelove-ventures/ibc-test-framework/pull/7)
+- [Juno network halt reproduction](https://github.com/strangelove-ventures/ibc-test-framework/pull/7)
+- [Juno network halt fix confirmation](https://github.com/strangelove-ventures/ibc-test-framework/pull/8)
