@@ -114,8 +114,8 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	srcTxHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrc, nil)
 	require.NoError(t, err, "failed to send ibc transfer")
 
-	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	// wait for both chains to produce 20 blocks
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 20), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
@@ -170,8 +170,8 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	dstTxHash, err := dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDst, nil)
 	require.NoError(t, err, "failed to send ibc transfer")
 
-	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	// wait for both chains to produce 20 blocks
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 20), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
@@ -241,8 +241,9 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 
-	// wait for both chains to produce 10 blocks
-	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
+	// Wait for both chains to produce 20 blocks.
+	// This is long to allow for intermittent retries inside the relayer.
+	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 20), "failed to wait for blocks")
 
 	// fetch ibc transfer tx
 	srcTx, err := srcChain.GetTransaction(ctx, txHash)
