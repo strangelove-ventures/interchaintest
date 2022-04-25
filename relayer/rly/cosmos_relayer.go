@@ -58,7 +58,7 @@ const (
 // to distinguish between multiple rly versions.
 func Capabilities() map[relayer.Capability]bool {
 	m := relayer.FullCapabilities()
-	m[relayer.HeightTimeout] = false
+	m[relayer.TimestampTimeout] = false
 	return m
 }
 
