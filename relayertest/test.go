@@ -35,8 +35,24 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
+	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 	"github.com/stretchr/testify/require"
 )
+
+func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) {
+	t.Helper()
+
+	if len(reqCaps) == 0 {
+		panic("requireCapabilities called without any capabilities provided")
+	}
+
+	caps := rf.Capabilities()
+	for _, c := range reqCaps {
+		if !caps[c] {
+			t.Skipf("skipping due to missing capability %s", c)
+		}
+	}
+}
 
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
@@ -54,13 +70,15 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	})
 
 	t.Run("height timeout", func(t *testing.T) {
+		requireCapabilities(t, rf, relayer.HeightTimeout)
+
 		t.Parallel()
 
 		TestRelayer_RelayPacketHeightTimeout(t, cf, rf)
 	})
 
 	t.Run("timestamp timeout", func(t *testing.T) {
-		t.Skip("not implemented for rly yet: https://github.com/cosmos/relayer/pull/663")
+		requireCapabilities(t, rf, relayer.TimestampTimeout)
 
 		t.Parallel()
 

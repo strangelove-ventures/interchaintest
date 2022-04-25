@@ -6,6 +6,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
 )
 
@@ -18,6 +19,10 @@ type RelayerFactory interface {
 		networkID string,
 		home string,
 	) ibc.Relayer
+
+	// Capabilities is an indication of the features this relayer supports.
+	// Tests for any unsupported features will be skipped rather than failed.
+	Capabilities() map[relayer.Capability]bool
 
 	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
 	//
@@ -50,6 +55,17 @@ func (f builtinRelayerFactory) Build(
 			networkID,
 			home,
 		)
+	default:
+		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
+	}
+}
+
+// Capabilities returns the set of capabilities for the
+// relayer implementation backing this factory.
+func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
+	switch f.impl {
+	case ibc.CosmosRly:
+		return rly.Capabilities()
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
