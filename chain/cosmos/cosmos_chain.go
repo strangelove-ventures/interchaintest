@@ -36,27 +36,6 @@ type CosmosChain struct {
 	ChainNodes    ChainNodes
 }
 
-func NewCosmosChainConfig(name string,
-	dockerImage string,
-	binary string,
-	bech32Prefix string,
-	denom string,
-	gasPrices string,
-	gasAdjustment float64,
-	trustingPeriod string) ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:           "cosmos",
-		Name:           name,
-		Bech32Prefix:   bech32Prefix,
-		Denom:          denom,
-		GasPrices:      gasPrices,
-		GasAdjustment:  gasAdjustment,
-		TrustingPeriod: trustingPeriod,
-		Repository:     dockerImage,
-		Bin:            binary,
-	}
-}
-
 func NewCosmosHeighlinerChainConfig(name string,
 	binary string,
 	bech32Prefix string,
