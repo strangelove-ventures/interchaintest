@@ -1,4 +1,4 @@
-name: Strangelove Project Managment
+name: Strangelove Project Management
 on:
   issues:
     types:
