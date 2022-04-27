@@ -80,12 +80,12 @@ func (c *PenumbraChain) getRelayerNode() PenumbraNode {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().TendermintNode.Name())
+	return fmt.Sprintf("http://%s:26657", dockerutil.CondenseHostName(c.getRelayerNode().TendermintNode.Name()))
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", c.getRelayerNode().TendermintNode.Name())
+	return fmt.Sprintf("%s:9090", dockerutil.CondenseHostName(c.getRelayerNode().TendermintNode.Name()))
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
