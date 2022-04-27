@@ -8,21 +8,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"os"
 	"path"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
@@ -36,16 +29,14 @@ import (
 
 // TendermintNode represents a node in the test network that is being created
 type TendermintNode struct {
-	Home         string
-	Index        int
-	Chain        ibc.Chain
-	GenesisCoins string
-	Validator    bool
-	NetworkID    string
-	Pool         *dockertest.Pool
-	Client       rpcclient.Client
-	Container    *docker.Container
-	TestName     string
+	Home      string
+	Index     int
+	Chain     ibc.Chain
+	NetworkID string
+	Pool      *dockertest.Pool
+	Client    rpcclient.Client
+	Container *docker.Container
+	TestName  string
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -94,22 +85,6 @@ func (tn *TendermintNode) NewClient(addr string) error {
 	tn.Client = rpcClient
 	return nil
 
-}
-
-// CliContext creates a new Cosmos SDK client context
-func (tn *TendermintNode) CliContext() client.Context {
-	encoding := simapp.MakeTestEncodingConfig()
-	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
-	return client.Context{
-		Client:            tn.Client,
-		ChainID:           tn.Chain.Config().ChainID,
-		InterfaceRegistry: encoding.InterfaceRegistry,
-		Input:             os.Stdin,
-		Output:            os.Stdout,
-		OutputFormat:      "json",
-		LegacyAmino:       encoding.Amino,
-		TxConfig:          encoding.TxConfig,
-	}
 }
 
 // Name is the hostname of the test node container
@@ -171,15 +146,6 @@ func (tn *TendermintNode) NodeHome() string {
 	return path.Join("/tmp", tn.Chain.Config().Name)
 }
 
-// Keybase returns the keyring for a given node
-func (tn *TendermintNode) Keybase() keyring.Keyring {
-	kr, err := keyring.New("", keyring.BackendTest, tn.Dir(), os.Stdin)
-	if err != nil {
-		panic(err)
-	}
-	return kr
-}
-
 func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
 	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, tn.TMConfigPathContainer())
 }
@@ -236,32 +202,6 @@ func (tn *TendermintNode) Height() (int64, error) {
 		return -1, err
 	}
 	return stat.SyncInfo.LatestBlockHeight, nil
-}
-
-// CondenseMoniker fits a moniker into the cosmos character limit for monikers.
-// If the moniker already fits, it is returned unmodified.
-// Otherwise, the middle is truncated, and a hash is appended to the end
-// in case the only unique data was in the middle.
-func CondenseMoniker(m string) string {
-	if len(m) <= stakingtypes.MaxMonikerLength {
-		return m
-	}
-
-	// Get the hash suffix, a 32-bit uint formatted in base36.
-	// fnv32 was chosen because a 32-bit number ought to be sufficient
-	// as a distinguishing suffix, and it will be short enough so that
-	// less of the middle will be truncated to fit in the character limit.
-	// It's also non-cryptographic, not that this function will ever be a bottleneck in tests.
-	h := fnv.New32()
-	h.Write([]byte(m))
-	suffix := "-" + strconv.FormatUint(uint64(h.Sum32()), 36)
-
-	wantLen := stakingtypes.MaxMonikerLength - len(suffix)
-
-	// Half of the want length, minus 2 to account for half of the ... we add in the middle.
-	keepLen := (wantLen / 2) - 2
-
-	return m[:keepLen] + "..." + m[len(m)-keepLen:] + suffix
 }
 
 // InitHomeFolder initializes a home folder for the given node
