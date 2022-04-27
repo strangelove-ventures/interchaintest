@@ -341,10 +341,6 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesis Penu
 		return fmt.Errorf("error marshaling genesis file: %v", err)
 	}
 
-	if err := os.WriteFile("/home/andrew/Desktop/genesisPenumbraTest.json", genesisFileBytes, 0644); err != nil { //nolint
-		return err
-	}
-
 	var tendermintNodes []*tendermint.TendermintNode
 	for _, node := range c.PenumbraNodes {
 		tendermintNodes = append(tendermintNodes, node.TendermintNode)
