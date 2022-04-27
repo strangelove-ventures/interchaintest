@@ -57,6 +57,12 @@ func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...rel
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
 func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
+	t.Run("from scratch", func(t *testing.T) {
+		t.Parallel()
+
+		TestRelayer_FromScratch(t, cf, rf)
+	})
+
 	t.Run("relay packet", func(t *testing.T) {
 		t.Parallel()
 
