@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ var exposedPorts = map[docker.Port]struct{}{
 
 // Name is the hostname of the test node container
 func (p *PenumbraAppNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
+	return fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
 }
 
 // Dir is the directory where the test node files are stored
@@ -60,22 +61,46 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) NodeHome() string {
-	return fmt.Sprintf("/tmp/.%s", p.Chain.Config().Name)
+	return fmt.Sprintf("/root/.%s", p.Chain.Config().Name)
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "wallet", "generate"}
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "wallet", "generate"}
 	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
 	// already exists error is okay
 	if err != nil && !strings.Contains(stderr, "already exists, refusing to overwrite it") {
 		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
-	cmd = []string{"pcli", "addr", "new", keyName}
+	cmd = []string{"pcli", "-w", p.WalletPathContainer(), "addr", "new", keyName}
 	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
 }
 
+// initializes validator definition template file
+// wallet must be generated first
+func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
+	cmd := []string{
+		"pcli",
+		"-w", p.WalletPathContainer(),
+		"validator", "template-definition",
+		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
+	}
+	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+}
+
+func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
+	return path.Join(p.Dir(), "validator.json")
+}
+
+func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
+	return path.Join(p.NodeHome(), "validator.json")
+}
+
+func (p *PenumbraAppNode) WalletPathContainer() string {
+	return path.Join(p.NodeHome(), "wallet")
+}
+
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := []string{"pcli", "addr", "list"}
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
 	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
 	if err != nil {
 		return []byte{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -87,15 +112,15 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 			continue
 		}
 		if fields[1] == keyName {
-			// TODO looks like penumbra address is bech64? need to decode to bytes here
+			// TODO penumbra address is bech32m. need to decode to bytes here
 			return []byte(fields[2]), nil
 		}
 	}
 	return []byte{}, errors.New("address not found")
 }
 
-func (p *PenumbraAppNode) GetAddressBech64(ctx context.Context, keyName string) (string, error) {
-	cmd := []string{"pcli", "addr", "list"}
+func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
 	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -107,7 +132,6 @@ func (p *PenumbraAppNode) GetAddressBech64(ctx context.Context, keyName string) 
 			continue
 		}
 		if fields[1] == keyName {
-			// TODO looks like penumbra address is bech64? need to decode to bytes here
 			return fields[2], nil
 		}
 	}
@@ -130,13 +154,13 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: p.Name(),
 		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
 			Cmd:          cmd,
 			Hostname:     p.Name(),
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Meta[0], chainCfg.Meta[1]),
-			Labels:       map[string]string{"ibc-test": p.TestName},
+			// Env:          []string{"RUST_BACKTRACE=full"},
+			Image:  fmt.Sprintf("%s:%s", chainCfg.Meta[0], chainCfg.Meta[1]),
+			Labels: map[string]string{"ibc-test": p.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           p.Bind(),
@@ -186,13 +210,13 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
-			Cmd:          cmd,
-			Labels:       map[string]string{"ibc-test": p.TestName},
+			// Env:          []string{"RUST_BACKTRACE=full"},
+			Image:  fmt.Sprintf("%s:%s", chainCfg.Meta[0], chainCfg.Meta[1]),
+			Cmd:    cmd,
+			Labels: map[string]string{"ibc-test": p.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           p.Bind(),

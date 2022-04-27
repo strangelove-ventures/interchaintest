@@ -122,7 +122,7 @@ func (tn *ChainNode) Name() string {
 
 // Dir is the directory where the test node files are stored
 func (tn *ChainNode) Dir() string {
-	return fmt.Sprintf("%s/%s/", tn.Home, tn.Name())
+	return path.Join(tn.Home, tn.Name())
 }
 
 // MkDir creates the directory for the testnode
@@ -167,7 +167,7 @@ func (tn *ChainNode) Bind() []string {
 }
 
 func (tn *ChainNode) NodeHome() string {
-	return fmt.Sprintf("/tmp/.%s", tn.Chain.Config().Name)
+	return path.Join("/tmp", tn.Chain.Config().Name)
 }
 
 // Keybase returns the keyring for a given node
@@ -188,13 +188,6 @@ func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
 	applyConfigChanges(cfg, peers)
 
 	// overwrite with the new config
-	tmconfig.WriteConfigFile(tn.TMConfigPath(), cfg)
-}
-
-func (tn *ChainNode) SetPrivValdidatorListen(peers string) {
-	cfg := tmconfig.DefaultConfig()
-	cfg.BaseConfig.PrivValidatorListenAddr = "tcp://0.0.0.0:1234"
-	applyConfigChanges(cfg, peers) // Reapply the changes made to the config file in SetValidatorConfigAndPeers()
 	tmconfig.WriteConfigFile(tn.TMConfigPath(), cfg)
 }
 

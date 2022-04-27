@@ -409,7 +409,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets []ibc.WalletAmount) error {
+func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	var eg errgroup.Group
 
 	chainCfg := c.Config()

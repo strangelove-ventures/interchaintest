@@ -1,24 +1,16 @@
 package penumbra
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math"
 	"os"
-	"path"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
+	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 
@@ -28,7 +20,7 @@ import (
 )
 
 type PenumbraNode struct {
-	TendermintNode  *cosmos.ChainNode
+	TendermintNode  *tendermint.TendermintNode
 	PenumbraAppNode *PenumbraAppNode
 }
 
@@ -131,30 +123,30 @@ func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 // Implements Chain interface
 func (c *PenumbraChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	// NOOP
-	return "", nil
+	return "", errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	// NOOP
-	return nil
+	return errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
 	// NOOP
-	return nil, nil
+	return nil, errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
-	return c.getRelayerNode().TendermintNode.ExportState(ctx, height)
+	return "", errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	// NOOP
-	return nil
+	return errors.New("not yet implemented")
 }
 
 // Implements Chain interface
@@ -189,6 +181,7 @@ func (c *PenumbraChain) initializeChainNodes(testName, home string,
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
+	fmt.Printf("Pulling image: %s:%s\n", chainCfg.Repository, chainCfg.Version)
 	err := pool.Client.PullImage(docker.PullImageOptions{
 		Repository: chainCfg.Repository,
 		Tag:        chainCfg.Version,
@@ -196,8 +189,16 @@ func (c *PenumbraChain) initializeChainNodes(testName, home string,
 	if err != nil {
 		fmt.Printf("error pulling image: %v", err)
 	}
+	fmt.Printf("Pulling image: %s:%s\n", chainCfg.Meta[0], chainCfg.Meta[1])
+	err = pool.Client.PullImage(docker.PullImageOptions{
+		Repository: chainCfg.Meta[0],
+		Tag:        chainCfg.Meta[1],
+	}, docker.AuthConfiguration{})
+	if err != nil {
+		fmt.Printf("error pulling image: %v", err)
+	}
 	for i := 0; i < count; i++ {
-		tn := &cosmos.ChainNode{Home: home, Index: i, Chain: c,
+		tn := &tendermint.TendermintNode{Home: home, Index: i, Chain: c,
 			Pool: pool, NetworkID: networkID, TestName: testName}
 		tn.MkDir()
 		pn := &PenumbraAppNode{Home: home, Index: i, Chain: c,
@@ -230,272 +231,141 @@ type ValidatorWithIntPower struct {
 
 // Bootstraps the chain and starts it from genesis
 func (c *PenumbraChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
-	// copy genesis file to tmp path for modification
-	genesisTmpFilePath := path.Join(c.getRelayerNode().TendermintNode.Dir(), "genesis_tmp.json")
-	if _, err := dockerutil.Copy(genesisFilePath, genesisTmpFilePath); err != nil {
-		return err
-	}
-
-	chainCfg := c.Config()
-
-	genesisJsonBytes, err := ioutil.ReadFile(genesisTmpFilePath)
+	genesisJsonBytes, err := os.ReadFile(genesisFilePath)
 	if err != nil {
 		return err
 	}
 
-	genesisFile := GenesisFile{}
+	genesisFile := PenumbraGenesisFile{}
 	if err := json.Unmarshal(genesisJsonBytes, &genesisFile); err != nil {
 		return err
 	}
 
-	genesisValidators := genesisFile.Validators
-	totalPower := int64(0)
+	// TODO overwrite consensus keys on 2/3 voting power of validators
 
-	validatorsWithPower := make([]ValidatorWithIntPower, 0)
-
-	for _, genesisValidator := range genesisValidators {
-		power, err := strconv.ParseInt(genesisValidator.Power, 10, 64)
-		if err != nil {
-			return err
-		}
-		totalPower += power
-		validatorsWithPower = append(validatorsWithPower, ValidatorWithIntPower{
-			Address:      genesisValidator.Address,
-			Power:        power,
-			PubKeyBase64: genesisValidator.PubKey.Value,
-		})
-	}
-
-	sort.Slice(validatorsWithPower, func(i, j int) bool {
-		return validatorsWithPower[i].Power > validatorsWithPower[j].Power
-	})
-
-	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
-	totalConsensus := int64(0)
-
-	c.PenumbraNodes = []PenumbraNode{}
-
-	for i, validator := range validatorsWithPower {
-		tn := &cosmos.ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
-		tn.MkDir()
-		pn := &PenumbraAppNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
-		pn.MkDir()
-		c.PenumbraNodes = append(c.PenumbraNodes, PenumbraNode{
-			TendermintNode:  tn,
-			PenumbraAppNode: pn,
-		})
-
-		// just need to get pubkey here
-		// don't care about what goes into this node's genesis file since it will be overwritten with the modified one
-		if err := tn.InitHomeFolder(ctx); err != nil {
-			return err
-		}
-
-		testNodePubKeyJsonBytes, err := ioutil.ReadFile(tn.PrivValKeyFilePath())
-		if err != nil {
-			return err
-		}
-
-		testNodePrivValFile := cosmos.PrivValidatorKeyFile{}
-		if err := json.Unmarshal(testNodePubKeyJsonBytes, &testNodePrivValFile); err != nil {
-			return err
-		}
-
-		// modify genesis file overwriting validators address with the one generated for this test node
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address))
-
-		// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value))
-
-		existingValAddressBytes, err := hex.DecodeString(validator.Address)
-		if err != nil {
-			return err
-		}
-
-		testNodeAddressBytes, err := hex.DecodeString(testNodePrivValFile.Address)
-		if err != nil {
-			return err
-		}
-
-		valConsPrefix := fmt.Sprintf("%svalcons", chainCfg.Bech32Prefix)
-
-		existingValBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, existingValAddressBytes)
-		if err != nil {
-			return err
-		}
-
-		testNodeBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, testNodeAddressBytes)
-		if err != nil {
-			return err
-		}
-
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(existingValBech32ValConsAddress), []byte(testNodeBech32ValConsAddress))
-
-		totalConsensus += validator.Power
-
-		if totalConsensus > twoThirdsConsensus {
-			break
-		}
-	}
-
-	for i := 0; i < len(c.PenumbraNodes); i++ {
-		if err := ioutil.WriteFile(c.PenumbraNodes[i].TendermintNode.GenesisFilePath(), genesisJsonBytes, 0644); err != nil { //nolint
-			return err
-		}
-	}
-
-	chainNodes := []*cosmos.ChainNode{}
-	for _, pn := range c.PenumbraNodes {
-		chainNodes = append(chainNodes, pn.TendermintNode)
-	}
-
-	if err := cosmos.ChainNodes(chainNodes).LogGenesisHashes(); err != nil {
-		return err
-	}
-
-	var eg errgroup.Group
-
-	for _, n := range c.PenumbraNodes {
-		n := n
-		eg.Go(func() error {
-			return n.TendermintNode.CreateNodeContainer()
-		})
-		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer()
-		})
-	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	peers := cosmos.ChainNodes(chainNodes).PeerString()
-
-	for _, n := range c.PenumbraNodes {
-		n.TendermintNode.SetValidatorConfigAndPeers(peers)
-	}
-
-	for _, n := range c.PenumbraNodes {
-		fmt.Printf("{%s} => starting container...\n", n.TendermintNode.Name())
-		if err := n.TendermintNode.StartContainer(ctx); err != nil {
-			return err
-		}
-		fmt.Printf("{%s} => starting container...\n", n.PenumbraAppNode.Name())
-		if err := n.PenumbraAppNode.StartContainer(ctx); err != nil {
-			return err
-		}
-	}
-
-	time.Sleep(2 * time.Hour)
-
-	// Wait for 5 blocks before considering the chains "started"
-	_, err = c.getRelayerNode().TendermintNode.WaitForBlocks(5)
-	return err
+	return c.start(testName, ctx, genesisFile)
 }
 
-// Bootstraps the chain and starts it from genesis
-func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets []ibc.WalletAmount) error {
-	var eg errgroup.Group
-
-	chainCfg := c.Config()
-
-	genesisAmount := types.Coin{
-		Amount: types.NewInt(1000000000000),
-		Denom:  chainCfg.Denom,
-	}
-
-	genesisStakeAmount := types.Coin{
-		Amount: types.NewInt(1000000000000),
-		Denom:  "stake",
-	}
-
-	genesisSelfDelegation := types.Coin{
-		Amount: types.NewInt(100000000000),
-		Denom:  "stake",
-	}
-
-	genesisAmounts := []types.Coin{genesisAmount, genesisStakeAmount}
-
+func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	validators := c.PenumbraNodes[:c.numValidators]
 	fullnodes := c.PenumbraNodes[c.numValidators:]
 
-	chainNodes := []*cosmos.ChainNode{}
+	chainCfg := c.Config()
 
-	// sign gentx for each validator
-	for _, v := range validators {
-		v := v
-		chainNodes = append(chainNodes, v.TendermintNode)
-		eg.Go(func() error {
-			return v.TendermintNode.InitValidatorFiles(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+	var validatorDefinitions []PenumbraValidatorDefinition
+	var allocations []PenumbraGenesisAppStateAllocation
+
+	for _, wallet := range additionalGenesisWallets {
+		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
+			Address: wallet.Address,
+			Denom:   wallet.Denom,
+			Amount:  wallet.Amount,
 		})
 	}
 
-	// just initialize folder for any full nodes
+	var eg errgroup.Group
+	for i, v := range validators {
+		v := v
+		i := i
+		eg.Go(func() error {
+			if err := v.TendermintNode.InitValidatorFiles(ctx); err != nil {
+				return fmt.Errorf("error initializing validator files: %v", err)
+			}
+			privValKeyBytes, err := os.ReadFile(v.TendermintNode.PrivValKeyFilePath())
+			if err != nil {
+				return fmt.Errorf("error reading tendermint privval key file: %v", err)
+			}
+			privValKey := tendermint.PrivValidatorKeyFile{}
+			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
+				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
+			}
+			if err := v.PenumbraAppNode.CreateKey(ctx, valKey); err != nil {
+				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
+			}
+			if err := v.PenumbraAppNode.InitValidatorFile(ctx); err != nil {
+				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
+			}
+			validatorTemplateDefinitionFileBytes, err := os.ReadFile(v.PenumbraAppNode.ValidatorDefinitionTemplateFilePath())
+			if err != nil {
+				return fmt.Errorf("error reading validator definition template file: %v", err)
+			}
+			validatorTemplateDefinition := PenumbraValidatorDefinition{}
+			if err := json.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
+				return fmt.Errorf("error unmarshaling validator definition template key: %v", err)
+			}
+			validatorTemplateDefinition.ConsensusKey = privValKey.PubKey.Value
+			validatorTemplateDefinition.Name = fmt.Sprintf("validator-%d", i)
+			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
+			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)
+			validatorDefinitions = append(validatorDefinitions, validatorTemplateDefinition)
+
+			allocations = append(allocations,
+				// self delegation
+				PenumbraGenesisAppStateAllocation{
+					Amount:  100000000000,
+					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
+					Address: validatorTemplateDefinition.FundingStreams[0].Address,
+				},
+				// liquid
+				PenumbraGenesisAppStateAllocation{
+					Amount:  1000000000000,
+					Denom:   chainCfg.Denom,
+					Address: validatorTemplateDefinition.FundingStreams[0].Address,
+				},
+			)
+
+			return nil
+		})
+	}
+
 	for _, n := range fullnodes {
 		n := n
-		chainNodes = append(chainNodes, n.TendermintNode)
 		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(ctx) })
 	}
 
-	// wait for this to finish
 	if err := eg.Wait(); err != nil {
 		return err
 	}
 
-	// for the validators we need to collect the gentxs and the accounts
-	// to the first node's genesis file
-	validator0 := validators[0]
-	for i := 1; i < len(validators); i++ {
-		validatorN := validators[i]
-		bech64, err := validatorN.PenumbraAppNode.GetAddressBech64(ctx, valKey)
-		if err != nil {
-			return err
-		}
+	genesisFile := newPenumbraGenesisFileJSON(chainCfg.ChainID, validatorDefinitions, allocations)
 
-		if err := validator0.TendermintNode.AddGenesisAccount(ctx, bech64, genesisAmounts); err != nil {
-			return err
-		}
-		nNid, err := validatorN.TendermintNode.NodeID()
-		if err != nil {
-			return err
-		}
-		oldPath := path.Join(validatorN.TendermintNode.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		newPath := path.Join(validator0.TendermintNode.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		if err := os.Rename(oldPath, newPath); err != nil {
-			return err
-		}
-	}
+	return c.start(testName, ctx, genesisFile)
+}
 
-	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.TendermintNode.AddGenesisAccount(ctx, wallet.Address, []types.Coin{types.Coin{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
-			return err
-		}
-	}
+// Bootstraps the chain and starts it from genesis
+func (c *PenumbraChain) start(testName string, ctx context.Context, genesis PenumbraGenesisFile) error {
+	var eg errgroup.Group
 
-	if err := validator0.TendermintNode.CollectGentxs(ctx); err != nil {
-		return err
-	}
-
-	genbz, err := ioutil.ReadFile(validator0.TendermintNode.GenesisFilePath())
+	genesisFileBytes, err := json.Marshal(genesis)
 	if err != nil {
+		return fmt.Errorf("error marshaling genesis file: %v", err)
+	}
+
+	if err := os.WriteFile("/home/andrew/Desktop/genesisPenumbraTest.json", genesisFileBytes, 0644); err != nil { //nolint
 		return err
 	}
 
-	for i := 1; i < len(c.PenumbraNodes); i++ {
-		if err := ioutil.WriteFile(c.PenumbraNodes[i].TendermintNode.GenesisFilePath(), genbz, 0644); err != nil { //nolint
+	var tendermintNodes []*tendermint.TendermintNode
+	for _, node := range c.PenumbraNodes {
+		tendermintNodes = append(tendermintNodes, node.TendermintNode)
+		if err := os.WriteFile(node.TendermintNode.GenesisFilePath(), genesisFileBytes, 0644); err != nil { //nolint
 			return err
 		}
 	}
 
-	if err := cosmos.ChainNodes(chainNodes).LogGenesisHashes(); err != nil {
+	tmNodes := tendermint.TendermintNodes(tendermintNodes)
+
+	if err := tmNodes.LogGenesisHashes(); err != nil {
 		return err
 	}
 
 	for _, n := range c.PenumbraNodes {
 		n := n
 		eg.Go(func() error {
-			return n.TendermintNode.CreateNodeContainer()
+			return n.TendermintNode.CreateNodeContainer(
+				fmt.Sprintf("--proxy-app=tcp://%s:26658", dockerutil.CondenseHostName(n.PenumbraAppNode.Name())),
+				"--rpc.laddr=tcp://0.0.0.0:26657",
+			)
 		})
 		eg.Go(func() error {
 			return n.PenumbraAppNode.CreateNodeContainer()
@@ -505,13 +375,14 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		return err
 	}
 
-	peers := cosmos.ChainNodes(chainNodes).PeerString()
-
 	for _, n := range c.PenumbraNodes {
 		n := n
 		fmt.Printf("{%s} => starting container...\n", n.TendermintNode.Name())
 		eg.Go(func() error {
-			n.TendermintNode.SetValidatorConfigAndPeers(peers)
+			peers := tmNodes.PeerString(n.TendermintNode)
+			if err := n.TendermintNode.SetConfigAndPeers(ctx, peers); err != nil {
+				return err
+			}
 			return n.TendermintNode.StartContainer(ctx)
 		})
 		fmt.Printf("{%s} => starting container...\n", n.PenumbraAppNode.Name())
