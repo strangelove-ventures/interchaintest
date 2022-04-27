@@ -266,7 +266,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Labels:     map[string]string{"ibc-test": container},
+			Labels:     map[string]string{"ibc-test": relayer.testName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{

@@ -57,8 +57,8 @@ func setUpTestMatrix() error {
 		testMatrix.Relayers = []string{"rly"}
 		testMatrix.ChainSets = [][]ibctest.BuiltinChainFactoryEntry{
 			{
-				{Name: "gaia", Version: "v6.0.4", ChainID: "cosmoshub-1004", NumValidators: 1, NumFullNodes: 1},
-				{Name: "osmosis", Version: "v7.0.4", ChainID: "osmosis-1001", NumValidators: 1, NumFullNodes: 1},
+				{Name: "gaia", Version: "latest", ChainID: "cosmoshub-1004", NumValidators: 1, NumFullNodes: 1},
+				{Name: "osmosis", Version: "latest", ChainID: "osmosis-1001", NumValidators: 1, NumFullNodes: 1},
 			},
 		}
 

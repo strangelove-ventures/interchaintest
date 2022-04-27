@@ -33,7 +33,12 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 	if err != nil {
 		return ctx, "", nil, "", err
 	}
+
+	// schedule cleanup for afterwards
 	t.Cleanup(dockerCleanup(t.Name(), pool))
+
+	// run cleanup for this test first in case previous run was killed (e.g. Ctrl+C)
+	dockerCleanup(t.Name(), pool)()
 
 	home := t.TempDir()
 
@@ -299,20 +304,24 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
-		ctx := context.Background()
 		for _, c := range cont {
 			for k, v := range c.Labels {
 				if k == "ibc-test" && v == testName {
-					_ = pool.Client.StopContainer(c.ID, 10)
-					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctx)
-					stdout := new(bytes.Buffer)
-					stderr := new(bytes.Buffer)
-					_ = pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 					names := strings.Join(c.Names, ",")
+					_ = pool.Client.StopContainer(c.ID, 10)
+					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+					defer cancelWait()
+					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctxWait)
 					if showContainerLogs != "" {
+						stdout := new(bytes.Buffer)
+						stderr := new(bytes.Buffer)
+						ctxLogs, cancelLogs := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+						defer cancelLogs()
+						_ = pool.Client.Logs(docker.LogsOptions{Context: ctxLogs, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 						fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", names, stdout, names, stderr)
 					}
-					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID})
+					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID, Force: true})
+					break
 				}
 			}
 		}
@@ -321,6 +330,7 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 			for k, v := range n.Labels {
 				if k == "ibc-test" && v == testName {
 					_ = pool.Client.RemoveNetwork(n.ID)
+					break
 				}
 			}
 		}
