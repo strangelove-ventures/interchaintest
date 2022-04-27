@@ -172,12 +172,12 @@ func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, chainCo
 	chainConfigContainerFilePath := fmt.Sprintf("%s/%s", relayer.NodeHome(), chainConfigFile)
 
 	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(chainConfig, keyName, rpcAddr, grpcAddr)
-	json, err := json.Marshal(cosmosRelayerChainConfig)
+	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(chainConfigLocalFilePath, json, 0644); err != nil { //nolint
+	if err := os.WriteFile(chainConfigLocalFilePath, jsonBytes, 0644); err != nil { //nolint
 		return err
 	}
 
@@ -237,10 +237,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 		return err
 	}
 	relayer.container = cont
-	if err := relayer.pool.Client.StartContainer(relayer.container.ID, nil); err != nil {
-		return err
-	}
-	return nil
+	return relayer.pool.Client.StartContainer(relayer.container.ID, nil)
 }
 
 // NodeJob run a container for a specific job and block until the container exits
@@ -311,11 +308,7 @@ func (relayer *CosmosRelayer) AddKey(ctx context.Context, chainID, keyName strin
 		return wallet, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 	err = json.Unmarshal([]byte(stdout), &wallet)
-	if err != nil {
-		return wallet, err
-	}
-
-	return wallet, nil
+	return wallet, err
 }
 
 // Dir is the directory where the test node files are stored
