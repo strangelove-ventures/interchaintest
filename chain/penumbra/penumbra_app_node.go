@@ -38,9 +38,14 @@ var exposedPorts = map[docker.Port]struct{}{
 	docker.Port(tendermintPort): {},
 }
 
-// Name is the hostname of the test node container
+// Name of the test node container
 func (p *PenumbraAppNode) Name() string {
 	return fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
+}
+
+// the hostname of the test node container
+func (p *PenumbraAppNode) HostName() string {
+	return dockerutil.CondenseHostName(fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName))
 }
 
 // Dir is the directory where the test node files are stored
@@ -155,7 +160,7 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 		Name: p.Name(),
 		Config: &docker.Config{
 			Cmd:          cmd,
-			Hostname:     p.Name(),
+			Hostname:     p.HostName(),
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},
 			// Env:          []string{"RUST_BACKTRACE=full"},
@@ -210,6 +215,7 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
+			// random hostname is okay here
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},

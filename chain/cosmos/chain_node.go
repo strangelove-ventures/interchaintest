@@ -115,9 +115,14 @@ func (tn *ChainNode) CliContext() client.Context {
 	}
 }
 
-// Name is the hostname of the test node container
+// Name of the test node container
 func (tn *ChainNode) Name() string {
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
+}
+
+// hostname of the test node container
+func (tn *ChainNode) HostName() string {
+	return dockerutil.CondenseHostName(tn.Name())
 }
 
 // Dir is the directory where the test node files are stored
@@ -339,7 +344,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 		"--keyring-backend", keyring.BackendTest,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--from", keyName,
 		"--output", "json",
 		"-y",
@@ -369,7 +374,7 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 	command := []string{tn.Chain.Config().Bin, "tx", "bank", "send", keyName,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
@@ -419,7 +424,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
@@ -437,7 +442,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	command = []string{tn.Chain.Config().Bin,
 		"query", "wasm", "list-code", "--reverse",
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -462,7 +467,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--label", "satoshi-test",
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
@@ -484,7 +489,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	command = []string{tn.Chain.Config().Bin,
 		"query", "wasm", "list-contract-by-code", codeID,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -511,7 +516,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
@@ -524,7 +529,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	command := []string{tn.Chain.Config().Bin,
 		"query", "wasm", "contract-state", "all", contractAddress,
 		"--height", fmt.Sprint(height),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -575,7 +580,7 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--from", keyName,
 		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
 		"--home", tn.NodeHome(),
@@ -594,7 +599,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 		Config: &docker.Config{
 			User:         dockerutil.GetDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     dockerutil.CondenseHostName(tn.Name()),
+			Hostname:     tn.HostName(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
@@ -716,7 +721,7 @@ func (tn ChainNodes) PeerString() string {
 			// When would NodeId return an error?
 			break
 		}
-		hostName := dockerutil.CondenseHostName(n.Name())
+		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
 		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
 		addrs[i] = ps
@@ -772,7 +777,8 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
+			User: dockerutil.GetDockerUserString(),
+			// random hostname is fine here since this is just for setup
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},

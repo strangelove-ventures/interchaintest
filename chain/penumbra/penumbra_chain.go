@@ -80,12 +80,12 @@ func (c *PenumbraChain) getRelayerNode() PenumbraNode {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", dockerutil.CondenseHostName(c.getRelayerNode().TendermintNode.Name()))
+	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().TendermintNode.HostName())
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", dockerutil.CondenseHostName(c.getRelayerNode().TendermintNode.Name()))
+	return fmt.Sprintf("%s:9090", c.getRelayerNode().TendermintNode.HostName())
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
@@ -359,7 +359,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesis Penu
 		n := n
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
-				fmt.Sprintf("--proxy-app=tcp://%s:26658", dockerutil.CondenseHostName(n.PenumbraAppNode.Name())),
+				fmt.Sprintf("--proxy-app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
 		})

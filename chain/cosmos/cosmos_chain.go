@@ -108,12 +108,12 @@ func (c *CosmosChain) getRelayerNode() *ChainNode {
 
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", dockerutil.CondenseHostName(c.getRelayerNode().Name()))
+	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().HostName())
 }
 
 // Implements Chain interface
 func (c *CosmosChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", dockerutil.CondenseHostName(c.getRelayerNode().Name()))
+	return fmt.Sprintf("%s:9090", c.getRelayerNode().HostName())
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.

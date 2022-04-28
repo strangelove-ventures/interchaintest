@@ -92,6 +92,10 @@ func (tn *TendermintNode) Name() string {
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
+func (tn *TendermintNode) HostName() string {
+	return dockerutil.CondenseHostName(tn.Name())
+}
+
 // Dir is the directory where the test node files are stored
 func (tn *TendermintNode) Dir() string {
 	return path.Join(tn.Home, tn.Name())
@@ -223,7 +227,7 @@ func (tn *TendermintNode) CreateNodeContainer(additionalFlags ...string) error {
 		Config: &docker.Config{
 			User:         dockerutil.GetDockerUserString(),
 			Cmd:          cmd,
-			Hostname:     dockerutil.CondenseHostName(tn.Name()),
+			Hostname:     tn.HostName(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
@@ -319,7 +323,7 @@ func (tn TendermintNodes) PeerString(node *TendermintNode) string {
 			// When would NodeId return an error?
 			break
 		}
-		hostName := dockerutil.CondenseHostName(n.Name())
+		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
 		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
 		addrs[i] = ps
@@ -375,7 +379,8 @@ func (tn *TendermintNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
+			User: dockerutil.GetDockerUserString(),
+			// random hostname is okay here, just for setup
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
