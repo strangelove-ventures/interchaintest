@@ -8,6 +8,8 @@ import (
 )
 
 func TestPenumbraChainStart(t *testing.T) {
+	t.Parallel()
+
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
 

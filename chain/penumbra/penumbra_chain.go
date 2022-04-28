@@ -43,9 +43,15 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 		GasPrices:      "0.0upenumbra",
 		GasAdjustment:  1.3,
 		TrustingPeriod: "672h",
-		Repository:     "ghcr.io/strangelove-ventures/heighliner/tendermint",
-		Bin:            "tendermint",
-		Meta:           []string{"ghcr.io/strangelove-ventures/heighliner/penumbra"},
+		Images: []ibc.ChainDockerImage{
+			ibc.ChainDockerImage{
+				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
+			},
+			ibc.ChainDockerImage{
+				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
+			},
+		},
+		Bin: "tendermint",
 	}
 }
 
@@ -181,28 +187,21 @@ func (c *PenumbraChain) initializeChainNodes(testName, home string,
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
-	fmt.Printf("Pulling image: %s:%s\n", chainCfg.Repository, chainCfg.Version)
-	err := pool.Client.PullImage(docker.PullImageOptions{
-		Repository: chainCfg.Repository,
-		Tag:        chainCfg.Version,
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		fmt.Printf("error pulling image: %v", err)
-	}
-	fmt.Printf("Pulling image: %s:%s\n", chainCfg.Meta[0], chainCfg.Meta[1])
-	err = pool.Client.PullImage(docker.PullImageOptions{
-		Repository: chainCfg.Meta[0],
-		Tag:        chainCfg.Meta[1],
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		fmt.Printf("error pulling image: %v", err)
+	for _, image := range chainCfg.Images {
+		err := pool.Client.PullImage(docker.PullImageOptions{
+			Repository: image.Repository,
+			Tag:        image.Version,
+		}, docker.AuthConfiguration{})
+		if err != nil {
+			fmt.Printf("error pulling image: %v", err)
+		}
 	}
 	for i := 0; i < count; i++ {
 		tn := &tendermint.TendermintNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
 		pn := &PenumbraAppNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
 		pn.MkDir()
 		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
 	}

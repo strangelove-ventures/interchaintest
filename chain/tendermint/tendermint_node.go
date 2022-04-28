@@ -37,6 +37,7 @@ type TendermintNode struct {
 	Client    rpcclient.Client
 	Container *docker.Container
 	TestName  string
+	Image     ibc.ChainDockerImage
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -230,7 +231,7 @@ func (tn *TendermintNode) CreateNodeContainer(additionalFlags ...string) error {
 			Hostname:     tn.HostName(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
+			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
@@ -375,7 +376,6 @@ func (tn *TendermintNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	chainCfg := tn.Chain.Config()
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -384,7 +384,7 @@ func (tn *TendermintNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
+			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Cmd:          cmd,
 			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},

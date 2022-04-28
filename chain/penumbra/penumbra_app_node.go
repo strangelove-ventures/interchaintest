@@ -25,6 +25,7 @@ type PenumbraAppNode struct {
 	NetworkID string
 	Pool      *dockertest.Pool
 	Container *docker.Container
+	Image     ibc.ChainDockerImage
 }
 
 const (
@@ -45,7 +46,7 @@ func (p *PenumbraAppNode) Name() string {
 
 // the hostname of the test node container
 func (p *PenumbraAppNode) HostName() string {
-	return dockerutil.CondenseHostName(fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName))
+	return dockerutil.CondenseHostName(p.Name())
 }
 
 // Dir is the directory where the test node files are stored
@@ -152,7 +153,6 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer() error {
-	chainCfg := p.Chain.Config()
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.NodeHome()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
@@ -164,7 +164,7 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},
 			// Env:          []string{"RUST_BACKTRACE=full"},
-			Image:  fmt.Sprintf("%s:%s", chainCfg.Meta[0], chainCfg.Meta[1]),
+			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
 			Labels: map[string]string{"ibc-test": p.TestName},
 		},
 		HostConfig: &docker.HostConfig{
@@ -211,7 +211,6 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", p.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	chainCfg := p.Chain.Config()
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -220,7 +219,7 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 			ExposedPorts: exposedPorts,
 			DNS:          []string{},
 			// Env:          []string{"RUST_BACKTRACE=full"},
-			Image:  fmt.Sprintf("%s:%s", chainCfg.Meta[0], chainCfg.Meta[1]),
+			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
 			Cmd:    cmd,
 			Labels: map[string]string{"ibc-test": p.TestName},
 		},

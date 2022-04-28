@@ -37,15 +37,15 @@ func GetChain(testName, name, version, chainID string, numValidators, numFullNod
 
 	switch chainConfig.Type {
 	case "cosmos":
-		chainConfig.Version = version
+		chainConfig.Images[0].Version = version
 		return cosmos.NewCosmosChain(testName, chainConfig, numValidators, numFullNodes), nil
 	case "penumbra":
 		versionSplit := strings.Split(version, ",")
 		if len(versionSplit) != 2 {
 			return nil, errors.New("penumbra version should be comma separated penumbra_version,tendermint_version")
 		}
-		chainConfig.Version = versionSplit[1]
-		chainConfig.Meta = append(chainConfig.Meta, versionSplit[0])
+		chainConfig.Images[0].Version = versionSplit[1]
+		chainConfig.Images[1].Version = versionSplit[0]
 		return penumbra.NewPenumbraChain(testName, chainConfig, numValidators, numFullNodes), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", chainConfig.Type, name)

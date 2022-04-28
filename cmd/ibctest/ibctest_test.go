@@ -172,8 +172,8 @@ func TestRelayer(t *testing.T) {
 
 				chainTestName := fmt.Sprintf(
 					"%s@%s+%s@%s",
-					srcChain.Config().Name, srcChain.Config().Version,
-					dstChain.Config().Name, dstChain.Config().Version,
+					srcChain.Config().Name, srcChain.Config().Images[0].Version,
+					dstChain.Config().Name, dstChain.Config().Images[0].Version,
 				)
 
 				t.Run(chainTestName, func(t *testing.T) {

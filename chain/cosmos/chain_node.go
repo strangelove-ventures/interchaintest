@@ -48,6 +48,7 @@ type ChainNode struct {
 	Client       rpcclient.Client
 	Container    *docker.Container
 	TestName     string
+	Image        ibc.ChainDockerImage
 }
 
 // ChainNodes is a collection of ChainNode
@@ -602,7 +603,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 			Hostname:     tn.HostName(),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
+			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
@@ -773,7 +774,6 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	chainCfg := tn.Chain.Config()
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -782,7 +782,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", chainCfg.Repository, chainCfg.Version),
+			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Cmd:          cmd,
 			Labels:       map[string]string{"ibc-test": tn.TestName},
 		},

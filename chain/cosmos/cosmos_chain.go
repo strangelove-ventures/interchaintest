@@ -52,8 +52,12 @@ func NewCosmosChainConfig(name string,
 		GasPrices:      gasPrices,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
-		Repository:     dockerImage,
-		Bin:            binary,
+		Images: []ibc.ChainDockerImage{
+			ibc.ChainDockerImage{
+				Repository: dockerImage,
+			},
+		},
+		Bin: binary,
 	}
 }
 
@@ -72,8 +76,12 @@ func NewCosmosHeighlinerChainConfig(name string,
 		GasPrices:      gasPrices,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
-		Repository:     fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-		Bin:            binary,
+		Images: []ibc.ChainDockerImage{
+			ibc.ChainDockerImage{
+				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
+			},
+		},
+		Bin: binary,
 	}
 }
 
@@ -223,16 +231,18 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 	ChainNodes := []*ChainNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
-	err := pool.Client.PullImage(docker.PullImageOptions{
-		Repository: chainCfg.Repository,
-		Tag:        chainCfg.Version,
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		fmt.Printf("error pulling image: %v", err)
+	for _, image := range chainCfg.Images {
+		err := pool.Client.PullImage(docker.PullImageOptions{
+			Repository: image.Repository,
+			Tag:        image.Version,
+		}, docker.AuthConfiguration{})
+		if err != nil {
+			fmt.Printf("error pulling image: %v", err)
+		}
 	}
 	for i := 0; i < count; i++ {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
 		ChainNodes = append(ChainNodes, tn)
 	}
