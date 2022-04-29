@@ -625,7 +625,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 }
 
 func (tn *ChainNode) StopContainer() error {
-	return tn.Pool.Client.StopContainer(tn.Container.ID, uint(time.Second*30))
+	return tn.Pool.Client.StopContainer(tn.Container.ID, 30)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

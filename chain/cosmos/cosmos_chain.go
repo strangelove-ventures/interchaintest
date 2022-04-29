@@ -228,7 +228,7 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 // creates the test node objects required for bootstrapping tests
 func (c *CosmosChain) initializeChainNodes(testName, home string,
 	pool *dockertest.Pool, networkID string) {
-	ChainNodes := []*ChainNode{}
+	var chainNodes []*ChainNode
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
@@ -244,9 +244,9 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
 			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
-		ChainNodes = append(ChainNodes, tn)
+		chainNodes = append(chainNodes, tn)
 	}
-	c.ChainNodes = ChainNodes
+	c.ChainNodes = chainNodes
 }
 
 type GenesisValidatorPubKey struct {
