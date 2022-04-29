@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,8 +52,12 @@ func NewCosmosChainConfig(name string,
 		GasPrices:      gasPrices,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
-		Repository:     dockerImage,
-		Bin:            binary,
+		Images: []ibc.ChainDockerImage{
+			ibc.ChainDockerImage{
+				Repository: dockerImage,
+			},
+		},
+		Bin: binary,
 	}
 }
 
@@ -72,8 +76,12 @@ func NewCosmosHeighlinerChainConfig(name string,
 		GasPrices:      gasPrices,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
-		Repository:     fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-		Bin:            binary,
+		Images: []ibc.ChainDockerImage{
+			ibc.ChainDockerImage{
+				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
+			},
+		},
+		Bin: binary,
 	}
 }
 
@@ -108,12 +116,12 @@ func (c *CosmosChain) getRelayerNode() *ChainNode {
 
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", dockerutil.CondenseHostName(c.getRelayerNode().Name()))
+	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().HostName())
 }
 
 // Implements Chain interface
 func (c *CosmosChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", dockerutil.CondenseHostName(c.getRelayerNode().Name()))
+	return fmt.Sprintf("%s:9090", c.getRelayerNode().HostName())
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
@@ -134,7 +142,7 @@ func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) GetAddress(keyName string) ([]byte, error) {
+func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyInfo, err := c.getRelayerNode().Keybase().Key(keyName)
 	if err != nil {
 		return []byte{}, err
@@ -223,16 +231,18 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 	ChainNodes := []*ChainNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
-	err := pool.Client.PullImage(docker.PullImageOptions{
-		Repository: chainCfg.Repository,
-		Tag:        chainCfg.Version,
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		fmt.Printf("error pulling image: %v", err)
+	for _, image := range chainCfg.Images {
+		err := pool.Client.PullImage(docker.PullImageOptions{
+			Repository: image.Repository,
+			Tag:        image.Version,
+		}, docker.AuthConfiguration{})
+		if err != nil {
+			fmt.Printf("error pulling image: %v", err)
+		}
 	}
 	for i := 0; i < count; i++ {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, testName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
 		ChainNodes = append(ChainNodes, tn)
 	}
@@ -262,8 +272,8 @@ type ValidatorWithIntPower struct {
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
 	// copy genesis file to tmp path for modification
-	genesisTmpFilePath := path.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
-	if _, err := copy(genesisFilePath, genesisTmpFilePath); err != nil {
+	genesisTmpFilePath := filepath.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
+	if _, err := dockerutil.CopyFile(genesisFilePath, genesisTmpFilePath); err != nil {
 		return err
 	}
 
@@ -308,7 +318,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for i, validator := range validatorsWithPower {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, testName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName}
 		tn.MkDir()
 		c.ChainNodes = append(c.ChainNodes, tn)
 
@@ -409,7 +419,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets []ibc.WalletAmount) error {
+func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	var eg errgroup.Group
 
 	chainCfg := c.Config()
@@ -473,8 +483,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		if err != nil {
 			return err
 		}
-		oldPath := path.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		newPath := path.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
+		oldPath := filepath.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
+		newPath := filepath.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
 		if err := os.Rename(oldPath, newPath); err != nil {
 			return err
 		}
@@ -495,20 +505,17 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	nodes := validators
-	nodes = append(nodes, fullnodes...)
-
-	for i := 1; i < len(nodes); i++ {
-		if err := os.WriteFile(nodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
+	for i := 1; i < len(c.ChainNodes); i++ {
+		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
 			return err
 		}
 	}
 
-	if err := ChainNodes(nodes).LogGenesisHashes(); err != nil {
+	if err := ChainNodes(c.ChainNodes).LogGenesisHashes(); err != nil {
 		return err
 	}
 
-	for _, n := range nodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer()
@@ -518,9 +525,9 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := ChainNodes(nodes).PeerString()
+	peers := ChainNodes(c.ChainNodes).PeerString()
 
-	for _, n := range nodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		fmt.Printf("{%s} => starting container...\n", n.Name())
 		eg.Go(func() error {

@@ -98,6 +98,10 @@ func (relayer *CosmosRelayer) Name() string {
 	return fmt.Sprintf("rly-%s", dockerutil.SanitizeContainerName(relayer.testName))
 }
 
+func (relayer *CosmosRelayer) HostName(pathName string) string {
+	return dockerutil.CondenseHostName(fmt.Sprintf("%s-%s", relayer.Name(), pathName))
+}
+
 func (relayer *CosmosRelayer) LinkPath(ctx context.Context, pathName string) error {
 	command := []string{"rly", "tx", "link", pathName,
 		"--home", relayer.NodeHome(),
@@ -219,7 +223,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 			User:       dockerutil.GetDockerUserString(),
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Hostname:   dockerutil.CondenseHostName(containerName),
+			Hostname:   relayer.HostName(pathName),
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Labels:     map[string]string{"ibc-test": relayer.testName},
 		},
@@ -261,7 +265,8 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
-			User:       dockerutil.GetDockerUserString(),
+			User: dockerutil.GetDockerUserString(),
+			// random hostname is fine here, just for setup
 			Hostname:   dockerutil.CondenseHostName(container),
 			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
 			Cmd:        cmd,

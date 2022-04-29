@@ -15,7 +15,7 @@ type Chain interface {
 	Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error
 
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
-	Start(testName string, ctx context.Context, additionalGenesisWallets []WalletAmount) error
+	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
 
 	// start a chain with a provided genesis file. Will override validators for first 2/3 of voting power
 	StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error
@@ -44,7 +44,7 @@ type Chain interface {
 	CreateKey(ctx context.Context, keyName string) error
 
 	// fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
-	GetAddress(keyName string) ([]byte, error)
+	GetAddress(ctx context.Context, keyName string) ([]byte, error)
 
 	// send funds to wallet from user account
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error

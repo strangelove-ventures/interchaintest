@@ -127,7 +127,7 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(fmt.Errorf("failed to create key on source chain: %w", err))
 	}
 
-	srcUserAccountAddressBytes, err := srcChain.GetAddress(userAccountKeyName)
+	srcUserAccountAddressBytes, err := srcChain.GetAddress(ctx, userAccountKeyName)
 	if err != nil {
 		return errResponse(fmt.Errorf("failed to get source user account address: %w", err))
 	}
@@ -146,7 +146,7 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(fmt.Errorf("failed to create key on dest chain: %w", err))
 	}
 
-	dstUserAccountAddressBytes, err := dstChain.GetAddress(userAccountKeyName)
+	dstUserAccountAddressBytes, err := dstChain.GetAddress(ctx, userAccountKeyName)
 	if err != nil {
 		return errResponse(fmt.Errorf("failed to get dest user account address: %w", err))
 	}
@@ -190,13 +190,13 @@ func StartChainsAndRelayerFromFactory(
 	// start chains from genesis, wait until they are producing blocks
 	chainsGenesisWaitGroup := errgroup.Group{}
 	chainsGenesisWaitGroup.Go(func() error {
-		if err := srcChain.Start(testName, ctx, []ibc.WalletAmount{srcRelayerWalletAmount, srcUserWalletAmount}); err != nil {
+		if err := srcChain.Start(testName, ctx, srcRelayerWalletAmount, srcUserWalletAmount); err != nil {
 			return fmt.Errorf("failed to start source chain: %w", err)
 		}
 		return nil
 	})
 	chainsGenesisWaitGroup.Go(func() error {
-		if err := dstChain.Start(testName, ctx, []ibc.WalletAmount{dstRelayerWalletAmount, dstUserWalletAmount}); err != nil {
+		if err := dstChain.Start(testName, ctx, dstRelayerWalletAmount, dstUserWalletAmount); err != nil {
 			return fmt.Errorf("failed to start dest chain: %w", err)
 		}
 		return nil

@@ -4,14 +4,18 @@ type ChainConfig struct {
 	Type           string
 	Name           string
 	ChainID        string
-	Repository     string
-	Version        string
+	Images         []ChainDockerImage
 	Bin            string
 	Bech32Prefix   string
 	Denom          string
 	GasPrices      string
 	GasAdjustment  float64
 	TrustingPeriod string
+}
+
+type ChainDockerImage struct {
+	Repository string
+	Version    string
 }
 
 type WalletAmount struct {
