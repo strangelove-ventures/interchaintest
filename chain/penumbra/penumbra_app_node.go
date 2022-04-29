@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -94,15 +94,15 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
-	return path.Join(p.Dir(), "validator.json")
+	return filepath.Join(p.Dir(), "validator.json")
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return path.Join(p.NodeHome(), "validator.json")
+	return filepath.Join(p.NodeHome(), "validator.json")
 }
 
 func (p *PenumbraAppNode) WalletPathContainer() string {
-	return path.Join(p.NodeHome(), "wallet")
+	return filepath.Join(p.NodeHome(), "wallet")
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -128,7 +127,7 @@ func (tn *ChainNode) HostName() string {
 
 // Dir is the directory where the test node files are stored
 func (tn *ChainNode) Dir() string {
-	return path.Join(tn.Home, tn.Name())
+	return filepath.Join(tn.Home, tn.Name())
 }
 
 // MkDir creates the directory for the testnode
@@ -141,11 +140,11 @@ func (tn *ChainNode) MkDir() {
 // GentxPath returns the path to the gentx for a node
 func (tn *ChainNode) GentxPath() (string, error) {
 	id, err := tn.NodeID()
-	return path.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
+	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
 }
 
 func (tn *ChainNode) GenesisFilePath() string {
-	return path.Join(tn.Dir(), "config", "genesis.json")
+	return filepath.Join(tn.Dir(), "config", "genesis.json")
 }
 
 type PrivValidatorKey struct {
@@ -160,11 +159,11 @@ type PrivValidatorKeyFile struct {
 }
 
 func (tn *ChainNode) PrivValKeyFilePath() string {
-	return path.Join(tn.Dir(), "config", "priv_validator_key.json")
+	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
 }
 
 func (tn *ChainNode) TMConfigPath() string {
-	return path.Join(tn.Dir(), "config", "config.toml")
+	return filepath.Join(tn.Dir(), "config", "config.toml")
 }
 
 // Bind returns the home folder bind point for running the node
@@ -173,7 +172,7 @@ func (tn *ChainNode) Bind() []string {
 }
 
 func (tn *ChainNode) NodeHome() string {
-	return path.Join("/tmp", tn.Chain.Config().Name)
+	return filepath.Join("/tmp", tn.Chain.Config().Name)
 }
 
 // Keybase returns the keyring for a given node
@@ -414,9 +413,9 @@ type CodeInfosResponse struct {
 
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	_, file := filepath.Split(fileName)
-	newFilePath := path.Join(tn.Dir(), file)
-	newFilePathContainer := path.Join(tn.NodeHome(), file)
-	if _, err := dockerutil.Copy(fileName, newFilePath); err != nil {
+	newFilePath := filepath.Join(tn.Dir(), file)
+	newFilePathContainer := filepath.Join(tn.NodeHome(), file)
+	if _, err := dockerutil.CopyFile(fileName, newFilePath); err != nil {
 		return "", err
 	}
 
@@ -697,7 +696,7 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 
 // NodeID returns the node of a given node
 func (tn *ChainNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(path.Join(tn.Dir(), "config", "node_key.json"))
+	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
 	if err != nil {
 		return "", err
 	}
@@ -733,7 +732,7 @@ func (tn ChainNodes) PeerString() string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (tn ChainNodes) LogGenesisHashes() error {
 	for _, n := range tn {
-		gen, err := os.ReadFile(path.Join(n.Dir(), "config", "genesis.json"))
+		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
 		if err != nil {
 			return err
 		}

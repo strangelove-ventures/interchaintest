@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -272,8 +272,8 @@ type ValidatorWithIntPower struct {
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
 	// copy genesis file to tmp path for modification
-	genesisTmpFilePath := path.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
-	if _, err := dockerutil.Copy(genesisFilePath, genesisTmpFilePath); err != nil {
+	genesisTmpFilePath := filepath.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
+	if _, err := dockerutil.CopyFile(genesisFilePath, genesisTmpFilePath); err != nil {
 		return err
 	}
 
@@ -483,8 +483,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		if err != nil {
 			return err
 		}
-		oldPath := path.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		newPath := path.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
+		oldPath := filepath.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
+		newPath := filepath.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
 		if err := os.Rename(oldPath, newPath); err != nil {
 			return err
 		}

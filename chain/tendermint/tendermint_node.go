@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -99,7 +99,7 @@ func (tn *TendermintNode) HostName() string {
 
 // Dir is the directory where the test node files are stored
 func (tn *TendermintNode) Dir() string {
-	return path.Join(tn.Home, tn.Name())
+	return filepath.Join(tn.Home, tn.Name())
 }
 
 // MkDir creates the directory for the testnode
@@ -112,11 +112,11 @@ func (tn *TendermintNode) MkDir() {
 // GentxPath returns the path to the gentx for a node
 func (tn *TendermintNode) GentxPath() (string, error) {
 	id, err := tn.NodeID()
-	return path.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
+	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
 }
 
 func (tn *TendermintNode) GenesisFilePath() string {
-	return path.Join(tn.Dir(), "config", "genesis.json")
+	return filepath.Join(tn.Dir(), "config", "genesis.json")
 }
 
 type PrivValidatorKey struct {
@@ -131,15 +131,15 @@ type PrivValidatorKeyFile struct {
 }
 
 func (tn *TendermintNode) PrivValKeyFilePath() string {
-	return path.Join(tn.Dir(), "config", "priv_validator_key.json")
+	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
 }
 
 func (tn *TendermintNode) TMConfigPath() string {
-	return path.Join(tn.Dir(), "config", "config.toml")
+	return filepath.Join(tn.Dir(), "config", "config.toml")
 }
 
 func (tn *TendermintNode) TMConfigPathContainer() string {
-	return path.Join(tn.NodeHome(), "config", "config.toml")
+	return filepath.Join(tn.NodeHome(), "config", "config.toml")
 }
 
 // Bind returns the home folder bind point for running the node
@@ -148,7 +148,7 @@ func (tn *TendermintNode) Bind() []string {
 }
 
 func (tn *TendermintNode) NodeHome() string {
-	return path.Join("/tmp", tn.Chain.Config().Name)
+	return filepath.Join("/tmp", tn.Chain.Config().Name)
 }
 
 func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
@@ -303,7 +303,7 @@ func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
 
 // NodeID returns the node of a given node
 func (tn *TendermintNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(path.Join(tn.Dir(), "config", "node_key.json"))
+	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
 	if err != nil {
 		return "", err
 	}
@@ -335,7 +335,7 @@ func (tn TendermintNodes) PeerString(node *TendermintNode) string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (tn TendermintNodes) LogGenesisHashes() error {
 	for _, n := range tn {
-		gen, err := os.ReadFile(path.Join(n.Dir(), "config", "genesis.json"))
+		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
 		if err != nil {
 			return err
 		}
