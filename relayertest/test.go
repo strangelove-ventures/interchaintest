@@ -29,6 +29,7 @@
 package relayertest
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -57,36 +58,6 @@ func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...rel
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
 func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	t.Run("relay packet", func(t *testing.T) {
-		t.Parallel()
-
-		TestRelayer_RelayPacket(t, cf, rf)
-	})
-
-	t.Run("no timeout", func(t *testing.T) {
-		t.Parallel()
-
-		TestRelayer_RelayPacketNoTimeout(t, cf, rf)
-	})
-
-	t.Run("height timeout", func(t *testing.T) {
-		requireCapabilities(t, rf, relayer.HeightTimeout)
-
-		t.Parallel()
-
-		TestRelayer_RelayPacketHeightTimeout(t, cf, rf)
-	})
-
-	t.Run("timestamp timeout", func(t *testing.T) {
-		requireCapabilities(t, rf, relayer.TimestampTimeout)
-
-		t.Parallel()
-
-		TestRelayer_RelayPacketTimestampTimeout(t, cf, rf)
-	})
-}
-
-func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoError(t, err, "failed to set up test run")
 
@@ -98,15 +69,54 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a user account on the src chain (separate fullnode)
 	// funds user account on src chain in genesis
-	_, channels, srcUser, dstUser, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, nil)
+	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
+
+	t.Run("relay packet", func(t *testing.T) {
+		t.Parallel()
+
+		TestRelayer_RelayPacket(t, ctx, srcChain, dstChain, channels)
+	})
+
+	t.Run("no timeout", func(t *testing.T) {
+		t.Parallel()
+
+		TestRelayer_RelayPacketNoTimeout(t, ctx, srcChain, dstChain, channels)
+	})
+
+	t.Run("height timeout", func(t *testing.T) {
+		requireCapabilities(t, rf, relayer.HeightTimeout)
+
+		t.Parallel()
+
+		TestRelayer_RelayPacketHeightTimeout(t, ctx, srcChain, dstChain, channels)
+	})
+
+	t.Run("timestamp timeout", func(t *testing.T) {
+		requireCapabilities(t, rf, relayer.TimestampTimeout)
+
+		t.Parallel()
+
+		TestRelayer_RelayPacketTimestampTimeout(t, ctx, srcChain, dstChain, channels)
+	})
+}
+
+func TestRelayer_RelayPacket(
+	t *testing.T,
+	ctx context.Context,
+	srcChain ibc.Chain,
+	dstChain ibc.Chain,
+	channels []ibc.ChannelOutput,
+) {
+	// get user wallet on both chains
+	srcUser, dstUser := ibctest.GetAndFundTestUsers(t, ctx, srcChain, dstChain)
 
 	// will test a user sending an ibc transfer from the src chain to the dst chain
 	// denom will be src chain native denom
 	testDenomSrc := srcChain.Config().Denom
 
 	// query initial balance of user wallet for src chain native denom on the src chain
-	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
+	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenomSrc)
 	require.NoErrorf(t, err, "failed to get balance from source chain %s", srcChain.Config().Name)
 
 	// get ibc denom for test denom on dst chain
@@ -115,14 +125,14 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 
 	// query initial balance of user wallet for src chain native denom on the dst chain
 	// don't care about error here, account does not exist on destination chain
-	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
+	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 
 	t.Logf("Initial source balance: %d", srcInitialBalance)
 	t.Logf("Initial dest balance: %d", dstInitialBalance)
 
 	// test coin, address is recipient of ibc transfer on dst chain
 	testCoinSrc := ibc.WalletAmount{
-		Address: srcUser.DstChainAddress,
+		Address: srcUser.CounterpartyChainAddress,
 		Denom:   testDenomSrc,
 		Amount:  1000000,
 	}
@@ -142,11 +152,11 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	t.Logf("Transaction: %v", srcTx)
 
 	// query final balance of src user wallet for src chain native denom on the src chain
-	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenomSrc)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenomSrc)
 	require.NoError(t, err, "failed to get balance from source chain")
 
 	// query final balance of src user wallet for src chain native denom on the dst chain
-	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -162,7 +172,7 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	testDenomDst := dstChain.Config().Denom
 
 	// query initial balance of dst user wallet for dst chain native denom on the dst chain
-	dstInitialBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
+	dstInitialBalance, err = dstChain.GetBalance(ctx, dstUser.NativeChainAddress, testDenomDst)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	// get ibc denom for test denom on src chain
@@ -171,14 +181,14 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 
 	// query initial balance of user wallet for src chain native denom on the dst chain
 	// don't care about error here, account does not exist on destination chain
-	srcInitialBalance, _ = srcChain.GetBalance(ctx, dstUser.SrcChainAddress, srcIbcDenom)
+	srcInitialBalance, _ = srcChain.GetBalance(ctx, dstUser.CounterpartyChainAddress, srcIbcDenom)
 
 	t.Logf("Initial balance on src chain: %d", srcInitialBalance)
 	t.Logf("Initial balance on dst chain: %d", dstInitialBalance)
 
 	// test coin, address is recipient of ibc transfer on src chain
 	testCoinDst := ibc.WalletAmount{
-		Address: dstUser.SrcChainAddress,
+		Address: dstUser.CounterpartyChainAddress,
 		Denom:   testDenomDst,
 		Amount:  1000000,
 	}
@@ -198,11 +208,11 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 	t.Logf("Transaction: %v", dstTx)
 
 	// query final balance of dst user wallet for dst chain native denom on the dst chain
-	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.DstChainAddress, testDenomDst)
+	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.NativeChainAddress, testDenomDst)
 	require.NoError(t, err, "failed to get dest balance")
 
 	// query final balance of dst user wallet for dst chain native denom on the src chain
-	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.SrcChainAddress, srcIbcDenom)
+	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.CounterpartyChainAddress, srcIbcDenom)
 	require.NoError(t, err, "failed to get source balance")
 
 	totalFeesDst := dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
@@ -213,51 +223,43 @@ func TestRelayer_RelayPacket(t *testing.T, cf ibctest.ChainFactory, rf ibctest.R
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
-func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoErrorf(t, err, "failed to set up test run")
+func TestRelayer_RelayPacketNoTimeout(
+	t *testing.T,
+	ctx context.Context,
+	srcChain ibc.Chain,
+	dstChain ibc.Chain,
+	channels []ibc.ChannelOutput,
+) {
+	// get user wallet on both chains
+	// TODO implement reverse flow for dstUser, like above in TestRelayer_RelayPacket
+	srcUser, _ := ibctest.GetAndFundTestUsers(t, ctx, srcChain, dstChain)
 
-	srcChain, dstChain, err := cf.Pair(t.Name())
-	require.NoError(t, err, "failed to get chain pair")
-
-	var srcInitialBalance, dstInitialBalance int64
-	var txHash string
 	testDenom := srcChain.Config().Denom
-	var dstIbcDenom string
-	var testCoin ibc.WalletAmount
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
-		var err error
-		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
-		if err != nil {
-			return err
-		}
+	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
+	require.NoErrorf(t, err, "failed to get balance from source chain %s", srcChain.Config().Name)
 
-		// get ibc denom for test denom on dst chain
-		denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
-		dstIbcDenom = denomTrace.IBCDenom()
+	// get ibc denom for test denom on dst chain
+	denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
+	dstIbcDenom := denomTrace.IBCDenom()
 
-		// don't care about error here, account does not exist on destination chain
-		dstInitialBalance, _ = dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
+	// don't care about error here, account does not exist on destination chain
+	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 
-		t.Logf("Initial source balance: %d", srcInitialBalance)
-		t.Logf("Initial dest balance: %d", dstInitialBalance)
+	t.Logf("Initial source balance: %d", srcInitialBalance)
+	t.Logf("Initial dest balance: %d", dstInitialBalance)
 
-		testCoin = ibc.WalletAmount{
-			Address: srcUser.DstChainAddress,
-			Denom:   testDenom,
-			Amount:  1000000,
-		}
-
-		// send ibc transfer with both timeouts disabled
-		txHash, err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{Height: 0, NanoSeconds: 0})
-		return err
+	// send to dst address
+	testCoin := ibc.WalletAmount{
+		Address: srcUser.CounterpartyChainAddress,
+		Denom:   testDenom,
+		Amount:  1000000,
 	}
 
-	// Startup both chains and relayer
-	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
+	// send ibc transfer with both timeouts disabled
+	txHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{Height: 0, NanoSeconds: 0})
+	require.NoError(t, err, "failed to send ibc transfer")
 
 	// Wait for both chains to produce 20 blocks.
 	// This is long to allow for intermittent retries inside the relayer.
@@ -269,10 +271,10 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 
 	t.Logf("Transaction: %v", srcTx)
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -283,56 +285,50 @@ func TestRelayer_RelayPacketNoTimeout(t *testing.T, cf ibctest.ChainFactory, rf 
 }
 
 // Ensure that a queued packet that is timed out (relative height timeout) will not be relayed.
-func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoError(t, err, "failed to set up test run")
+func TestRelayer_RelayPacketHeightTimeout(
+	t *testing.T,
+	ctx context.Context,
+	srcChain ibc.Chain,
+	dstChain ibc.Chain,
+	channels []ibc.ChannelOutput,
+) {
+	// get user wallet on both chains
+	// TODO implement reverse flow for dstUser, like above in TestRelayer_RelayPacket
+	srcUser, _ := ibctest.GetAndFundTestUsers(t, ctx, srcChain, dstChain)
 
-	srcChain, dstChain, err := cf.Pair(t.Name())
-	require.NoError(t, err, "failed to get chain pair")
-
-	var srcInitialBalance, dstInitialBalance int64
-	var txHash string
 	testDenom := srcChain.Config().Denom
-	var dstIbcDenom string
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
-		var err error
-		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
-		if err != nil {
-			return err
-		}
+	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
+	require.NoErrorf(t, err, "failed to get balance from source chain %s", srcChain.Config().Name)
 
-		// get ibc denom for test denom on dst chain
-		denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
-		dstIbcDenom = denomTrace.IBCDenom()
+	// get ibc denom for test denom on dst chain
+	denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
+	dstIbcDenom := denomTrace.IBCDenom()
 
-		// don't care about error here, account does not exist on destination chain
-		dstInitialBalance, _ = dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
+	// don't care about error here, account does not exist on destination chain
+	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 
-		t.Logf("Initial source balance: %d", srcInitialBalance)
-		t.Logf("Initial dest balance: %d", dstInitialBalance)
+	t.Logf("Initial source balance: %d", srcInitialBalance)
+	t.Logf("Initial dest balance: %d", dstInitialBalance)
 
-		testCoin := ibc.WalletAmount{
-			Address: srcUser.DstChainAddress,
-			Denom:   testDenom,
-			Amount:  1000000,
-		}
-
-		// send ibc transfer with a timeout of 10 blocks from now on counterparty chain
-		txHash, err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{Height: 10})
-		if err != nil {
-			return err
-		}
-
-		// wait until counterparty chain has passed the timeout
-		_, err = dstChain.WaitForBlocks(11)
-		return err
+	testCoin := ibc.WalletAmount{
+		Address: srcUser.CounterpartyChainAddress,
+		Denom:   testDenom,
+		Amount:  1000000,
 	}
 
-	// Startup both chains and relayer
-	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
+	// TODO stop/pause relayer here
+
+	// send ibc transfer with a timeout of 10 blocks from now on counterparty chain
+	txHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{Height: 10})
+	require.NoError(t, err, "failed to send ibc transfer")
+
+	// wait until counterparty chain has passed the timeout
+	_, err = dstChain.WaitForBlocks(15)
+	require.NoError(t, err, "destination chain failed to produce blocks")
+
+	// TODO start relayer back up again here
 
 	// wait for both chains to produce 10 blocks
 	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
@@ -343,10 +339,10 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory,
 
 	t.Logf("Transaction: %v", srcTx)
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -355,58 +351,50 @@ func TestRelayer_RelayPacketHeightTimeout(t *testing.T, cf ibctest.ChainFactory,
 	require.Equal(t, dstInitialBalance, dstFinalBalance)
 }
 
-func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
-	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoError(t, err, "failed to set up test run")
-
-	srcChain, dstChain, err := cf.Pair(t.Name())
-	require.NoError(t, err, "failed to get chain pair")
-
-	var srcInitialBalance, dstInitialBalance int64
-	var txHash string
+func TestRelayer_RelayPacketTimestampTimeout(
+	t *testing.T,
+	ctx context.Context,
+	srcChain ibc.Chain,
+	dstChain ibc.Chain,
+	channels []ibc.ChannelOutput,
+) {
+	// get user wallet on both chains
+	// TODO implement reverse flow for dstUser, like above in TestRelayer_RelayPacket
+	srcUser, _ := ibctest.GetAndFundTestUsers(t, ctx, srcChain, dstChain)
 
 	testDenom := srcChain.Config().Denom
-	var dstIbcDenom string
 
 	// Query user account balances on both chains and send IBC transfer before starting the relayer
-	preRelayerStart := func(channels []ibc.ChannelOutput, srcUser ibctest.User, dstUser ibctest.User) error {
-		var err error
-		srcInitialBalance, err = srcChain.GetBalance(ctx, srcUser.SrcChainAddress, testDenom)
-		if err != nil {
-			return err
-		}
+	srcInitialBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
+	require.NoErrorf(t, err, "failed to get balance from source chain %s", srcChain.Config().Name)
 
-		// get ibc denom for test denom on dst chain
-		denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
-		dstIbcDenom = denomTrace.IBCDenom()
+	// get ibc denom for test denom on dst chain
+	denomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, testDenom))
+	dstIbcDenom := denomTrace.IBCDenom()
 
-		// don't care about error here, account does not exist on destination chain
-		dstInitialBalance, _ = dstChain.GetBalance(ctx, srcUser.DstChainAddress, dstIbcDenom)
+	// don't care about error here, account does not exist on destination chain
+	dstInitialBalance, _ := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 
-		t.Logf("Initial source balance: %d", srcInitialBalance)
-		t.Logf("Initial dest balance: %d", dstInitialBalance)
+	t.Logf("Initial source balance: %d", srcInitialBalance)
+	t.Logf("Initial dest balance: %d", dstInitialBalance)
 
-		testCoin := ibc.WalletAmount{
-			Address: srcUser.DstChainAddress,
-			Denom:   testDenom,
-			Amount:  1000000,
-		}
-
-		// send ibc transfer with a timeout of 10 blocks from now on counterparty chain
-		txHash, err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{NanoSeconds: uint64((10 * time.Second).Nanoseconds())})
-		if err != nil {
-			return err
-		}
-
-		// wait until ibc transfer times out
-		time.Sleep(15 * time.Second)
-
-		return nil
+	// send to dst address
+	testCoin := ibc.WalletAmount{
+		Address: srcUser.CounterpartyChainAddress,
+		Denom:   testDenom,
+		Amount:  1000000,
 	}
 
-	// Startup both chains and relayer
-	_, _, user, _, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStart)
-	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
+	// TODO stop/pause relayer here
+
+	// send ibc transfer with a timeout of 10 blocks from now on counterparty chain
+	txHash, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoin, &ibc.IBCTimeout{NanoSeconds: uint64((10 * time.Second).Nanoseconds())})
+	require.NoError(t, err, "failed to send ibc transfer")
+
+	// wait until ibc transfer times out
+	time.Sleep(15 * time.Second)
+
+	// TODO start relayer again here
 
 	// wait for both chains to produce 10 blocks
 	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 10), "failed to wait for blocks")
@@ -417,10 +405,10 @@ func TestRelayer_RelayPacketTimestampTimeout(t *testing.T, cf ibctest.ChainFacto
 
 	t.Logf("Transaction: %v", srcTx)
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, user.SrcChainAddress, testDenom)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, testDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, user.DstChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
