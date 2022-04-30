@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/ory/dockertest/v3/docker"
 )
@@ -33,6 +34,7 @@ var chars = []byte("abcdefghijklmnopqrstuvwxyz")
 
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
+	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = chars[rand.Intn(len(chars))]

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -61,8 +62,8 @@ type User struct {
 // startup both chains and relayer
 // creates wallets in the relayer for src and dst chain
 // funds relayer src and dst wallets on respective chain in genesis
-// creates a user account on the src chain (separate fullnode)
-// funds user account on src chain in genesis
+// creates a faucet account on the both chains (separate fullnode)
+// funds faucet accounts in genesis
 func StartChainsAndRelayerFromFactory(
 	t *testing.T,
 	ctx context.Context,
@@ -71,6 +72,7 @@ func StartChainsAndRelayerFromFactory(
 	home string,
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
+	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, []ibc.ChannelOutput, error) {
 	relayerImpl := f.Build(t, pool, networkID, home)
 
@@ -230,6 +232,20 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(fmt.Errorf("channel count invalid. expected: 1, actual: %d", len(channels)))
 	}
 
+	wg := sync.WaitGroup{}
+	for _, preRelayerStart := range preRelayerStartFuncs {
+		if preRelayerStart == nil {
+			continue
+		}
+		preRelayerStart := preRelayerStart
+		wg.Add(1)
+		go func() {
+			preRelayerStart(channels)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
 	if err := relayerImpl.StartRelayer(ctx, testPathName); err != nil {
 		return errResponse(fmt.Errorf("failed to start relayer: %w", err))
 	}
@@ -263,6 +279,7 @@ func getUserWallet(ctx context.Context, nativeChain ibc.Chain, counterpartyChain
 		return nil, fmt.Errorf("failed to get user bech32 address on destination chain")
 	}
 	user := User{
+		KeyName:                  keyName,
 		NativeChainAddress:       userAccountNative,
 		CounterpartyChainAddress: userAccountCounterparty,
 	}
@@ -274,22 +291,26 @@ func GetAndFundTestUsers(
 	ctx context.Context,
 	srcChain ibc.Chain,
 	dstChain ibc.Chain,
+	keyNamePrefix string,
+	amount int64,
 ) (*User, *User) {
-	srcUser, err := getUserWallet(ctx, srcChain, dstChain, fmt.Sprintf("%s-src", t.Name()))
+	srcUser, err := getUserWallet(ctx, srcChain, dstChain, fmt.Sprintf("%s-src", keyNamePrefix))
 	require.NoError(t, err, "failed to get source user wallet")
 
-	dstUser, err := getUserWallet(ctx, dstChain, srcChain, fmt.Sprintf("%s-dst", t.Name()))
+	dstUser, err := getUserWallet(ctx, dstChain, srcChain, fmt.Sprintf("%s-dst", keyNamePrefix))
 	require.NoError(t, err, "failed to get destination user wallet")
 
 	err = GetFundsFromFaucet(srcChain, ctx, ibc.WalletAmount{
 		Address: srcUser.NativeChainAddress,
-		Amount:  10000000000,
+		Amount:  amount,
+		Denom:   srcChain.Config().Denom,
 	})
 	require.NoError(t, err, "failed to get funds from faucet on source chain")
 
 	err = GetFundsFromFaucet(dstChain, ctx, ibc.WalletAmount{
 		Address: dstUser.NativeChainAddress,
-		Amount:  10000000000,
+		Amount:  amount,
+		Denom:   dstChain.Config().Denom,
 	})
 	require.NoError(t, err, "failed to get funds from faucet on destination chain")
 
