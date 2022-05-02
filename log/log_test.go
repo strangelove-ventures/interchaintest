@@ -18,6 +18,8 @@ func TestLogger(t *testing.T) {
 		lg.Infof("test %s", "info")
 		lg.Errorf("test %s", "error")
 
+		require.Contains(t, out.String(), "log_test.go")
+
 		type logLine struct {
 			Level, Message string
 		}
@@ -55,6 +57,7 @@ func TestLogger(t *testing.T) {
 		require.Contains(t, out.String(), "test info")
 		require.Contains(t, out.String(), "error")
 
+		require.Contains(t, out.String(), "log_test.go")
 	})
 
 	t.Run("log level", func(t *testing.T) {

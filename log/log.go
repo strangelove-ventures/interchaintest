@@ -92,17 +92,19 @@ func (l logger) Errorf(format string, args ...interface{}) {
 }
 
 func (l logger) send(event *zerolog.Event, args ...interface{}) {
+	event = event.Caller(2)
 	if len(args) == 0 {
-		event.Caller(2).Send()
+		event.Send()
 		return
 	}
-	event.Caller(2).Msg(strings.TrimSpace(fmt.Sprintln(args...)))
+	event.Msg(strings.TrimSpace(fmt.Sprintln(args...)))
 }
 
 func (l logger) sendf(event *zerolog.Event, format string, args ...interface{}) {
+	event = event.Caller(2)
 	if len(args) == 0 {
-		event.Caller(2).Send()
+		event.Send()
 		return
 	}
-	event.Caller(2).Msgf(format, args...)
+	event.Msgf(format, args...)
 }
