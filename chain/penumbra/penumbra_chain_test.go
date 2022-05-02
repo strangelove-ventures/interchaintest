@@ -8,6 +8,10 @@ import (
 )
 
 func TestPenumbraChainStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	t.Parallel()
 
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
