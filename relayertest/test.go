@@ -32,7 +32,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -50,23 +49,25 @@ const (
 )
 
 type RelayerTestCase struct {
+	Config RelayerTestCaseConfig
+	// user on source chain
+	Users []*ibctest.User
+	// temp storage in between test phases
+	Cache []string
+}
+
+type RelayerTestCaseConfig struct {
 	Name string
 	// which relayer capabilities are required to run this test
 	RequiredRelayerCapabilities []relayer.Capability
 	// function to run after the chains are started but before the relayer is started
 	// e.g. send a transfer and wait for it to timeout so that the relayer will handle it once it is timed out
 	PreRelayerStart func(*RelayerTestCase, *testing.T, context.Context, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
-	// user on source chain
-	SrcUser *ibctest.User
-	// user on destination chain
-	DstUser *ibctest.User
 	// test after chains and relayers are started
 	Test func(*RelayerTestCase, *testing.T, context.Context, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
-	// temp storage in between test phases
-	Cache []string
 }
 
-var relayerTestCases = [...]RelayerTestCase{
+var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 	{
 		Name:            "relay packet",
 		PreRelayerStart: preRelayerStart_RelayPacket,
@@ -94,16 +95,22 @@ var relayerTestCases = [...]RelayerTestCase{
 func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) {
 	t.Helper()
 
-	if len(reqCaps) == 0 {
-		panic("requireCapabilities called without any capabilities provided")
-	}
+	missing := missingCapabilities(rf, reqCaps...)
 
+	if len(missing) > 0 {
+		t.Skipf("skipping due to missing capabilities +%s", missing)
+	}
+}
+
+func missingCapabilities(rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) []relayer.Capability {
 	caps := rf.Capabilities()
+	missing := []relayer.Capability{}
 	for _, c := range reqCaps {
 		if !caps[c] {
-			t.Skipf("skipping due to missing capability %s", c)
+			missing = append(missing, c)
 		}
 	}
+	return missing
 }
 
 func sendIBCTransfersFromBothChainsWithTimeout(
@@ -115,50 +122,50 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	channels []ibc.ChannelOutput,
 	timeout *ibc.IBCTimeout,
 ) {
-	srcUser := testCase.SrcUser
-	dstUser := testCase.DstUser
+	srcChainCfg := srcChain.Config()
+	srcUser := testCase.Users[0]
+
+	dstChainCfg := dstChain.Config()
+	dstUser := testCase.Users[1]
 
 	// will send ibc transfers from user wallet on both chains to their own respective wallet on the other chain
+
 	testCoinSrcToDst := ibc.WalletAmount{
-		Address: srcUser.CounterpartyChainAddress,
-		Denom:   srcChain.Config().Denom,
+		Address: srcUser.Bech32Address(dstChainCfg.Bech32Prefix),
+		Denom:   srcChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
-		Address: dstUser.CounterpartyChainAddress,
-		Denom:   dstChain.Config().Denom,
+		Address: dstUser.Bech32Address(srcChainCfg.Bech32Prefix),
+		Denom:   dstChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
 
-	txHashes := []string{}
-	txHashLock := sync.Mutex{}
-
 	var eg errgroup.Group
+	var txHashSrc string
+	var txHashDst string
 
 	eg.Go(func() error {
-		txHashSrc, err := srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+		var err error
+		txHashSrc, err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from source: %v", err)
 		}
-		txHashLock.Lock()
-		defer txHashLock.Unlock()
-		txHashes = append(txHashes, txHashSrc)
 		return nil
 	})
 
 	eg.Go(func() error {
-		txHashDst, err := dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+		var err error
+		txHashDst, err = dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from source: %v", err)
 		}
-		txHashLock.Lock()
-		defer txHashLock.Unlock()
-		txHashes = append(txHashes, txHashDst)
 		return nil
 	})
 
 	require.NoError(t, eg.Wait())
-	testCase.Cache = txHashes
+
+	testCase.Cache = []string{txHashSrc, txHashDst}
 }
 
 // TestRelayer is the stable API exposed by the relayertest package.
@@ -172,13 +179,22 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 
 	preRelayerStartFuncs := []func([]ibc.ChannelOutput){}
 
-	for _, relayerTestCase := range relayerTestCases {
-		relayerTestCase := relayerTestCase
+	testCases := []*RelayerTestCase{}
+
+	for _, testCaseConfig := range relayerTestCaseConfigs {
+		if len(missingCapabilities(rf, testCaseConfig.RequiredRelayerCapabilities...)) > 0 {
+			continue
+		}
+		testCase := RelayerTestCase{
+			Config: testCaseConfig,
+		}
+		testCases = append(testCases, &testCase)
 		preRelayerStartFunc := func(channels []ibc.ChannelOutput) {
+
 			// fund a user wallet on both chains, save on test case
-			relayerTestCase.SrcUser, relayerTestCase.DstUser = ibctest.GetAndFundTestUsers(t, ctx, srcChain, dstChain, strings.ReplaceAll(relayerTestCase.Name, " ", "-"), userFaucetFund)
+			testCase.Users = ibctest.GetAndFundTestUsers(t, ctx, strings.ReplaceAll(testCase.Config.Name, " ", "-"), userFaucetFund, srcChain, dstChain)
 			// run test specific pre relayer start action
-			relayerTestCase.PreRelayerStart(&relayerTestCase, t, ctx, srcChain, dstChain, channels)
+			testCase.Config.PreRelayerStart(&testCase, t, ctx, srcChain, dstChain, channels)
 		}
 		preRelayerStartFuncs = append(preRelayerStartFuncs, preRelayerStartFunc)
 	}
@@ -191,18 +207,17 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
 
-	// Wait for both chains to produce 20 blocks.
+	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
+	// Wait for both chains to produce 10 blocks per test case.
 	// This is long to allow for intermittent retries inside the relayer.
-	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 20), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(int64(10*len(testCases)), srcChain, dstChain), "failed to wait for blocks")
 
-	for _, relayerTestCase := range relayerTestCases {
-		relayerTestCase := relayerTestCase
-		t.Run(relayerTestCase.Name, func(t *testing.T) {
-			for _, capability := range relayerTestCase.RequiredRelayerCapabilities {
-				requireCapabilities(t, rf, capability)
-			}
+	for _, testCase := range testCases {
+		testCase := testCase
+		t.Run(testCase.Config.Name, func(t *testing.T) {
+			requireCapabilities(t, rf, testCase.Config.RequiredRelayerCapabilities...)
 			t.Parallel()
-			relayerTestCase.Test(&relayerTestCase, t, ctx, srcChain, dstChain, channels)
+			testCase.Config.Test(testCase, t, ctx, srcChain, dstChain, channels)
 		})
 	}
 }
@@ -224,7 +239,7 @@ func preRelayerStart_HeightTimeout(testCase *RelayerTestCase, t *testing.T, ctx 
 	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(testCase, t, ctx, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
-	require.NoError(t, ibctest.WaitForBlocks(srcChain, dstChain, 15), "failed to wait for blocks")
+	require.NoError(t, ibctest.WaitForBlocks(15, srcChain, dstChain), "failed to wait for blocks")
 }
 
 func preRelayerStart_TimestampTimeout(testCase *RelayerTestCase, t *testing.T, ctx context.Context, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
@@ -243,11 +258,13 @@ func testPacketRelaySuccess(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
-	srcUser := testCase.SrcUser
-	srcDenom := srcChain.Config().Denom
+	srcChainCfg := srcChain.Config()
+	srcUser := testCase.Users[0]
+	srcDenom := srcChainCfg.Denom
 
-	dstUser := testCase.DstUser
-	dstDenom := srcChain.Config().Denom
+	dstChainCfg := dstChain.Config()
+	dstUser := testCase.Users[1]
+	dstDenom := dstChainCfg.Denom
 
 	// [BEGIN] assert on source to destination transfer
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
@@ -263,10 +280,10 @@ func testPacketRelaySuccess(
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, srcDenom)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -289,17 +306,17 @@ func testPacketRelaySuccess(
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
 	srcIbcDenom := dstDenomTrace.IBCDenom()
 
-	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.CounterpartyChainAddress, srcIbcDenom)
+	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.NativeChainAddress, dstDenom)
+	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
-	totalFees = srcChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
+	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
 	expectedDifference = testCoinAmount + totalFees
 
-	require.Equal(t, srcInitialBalance+expectedDifference, srcFinalBalance)
-	require.Equal(t, dstInitialBalance-testCoinAmount, dstFinalBalance)
+	require.Equal(t, srcInitialBalance+testCoinAmount, srcFinalBalance)
+	require.Equal(t, dstInitialBalance-expectedDifference, dstFinalBalance)
 	// [END] assert on destination to source transfer
 }
 
@@ -312,11 +329,13 @@ func testPacketRelayFail(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
-	srcUser := testCase.SrcUser
-	srcDenom := srcChain.Config().Denom
+	srcChainCfg := srcChain.Config()
+	srcUser := testCase.Users[0]
+	srcDenom := srcChainCfg.Denom
 
-	dstUser := testCase.DstUser
-	dstDenom := srcChain.Config().Denom
+	dstChainCfg := dstChain.Config()
+	dstUser := testCase.Users[1]
+	dstDenom := dstChainCfg.Denom
 
 	// [BEGIN] assert on source to destination transfer
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
@@ -332,10 +351,10 @@ func testPacketRelayFail(
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.NativeChainAddress, srcDenom)
+	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.CounterpartyChainAddress, dstIbcDenom)
+	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
@@ -357,13 +376,13 @@ func testPacketRelayFail(
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
 	srcIbcDenom := dstDenomTrace.IBCDenom()
 
-	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.CounterpartyChainAddress, srcIbcDenom)
+	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
 	require.NoError(t, err, "failed to get balance from source chain")
 
-	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.NativeChainAddress, dstDenom)
+	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
 	require.NoError(t, err, "failed to get balance from dest chain")
 
-	totalFees = srcChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
+	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
 
 	require.Equal(t, srcInitialBalance, srcFinalBalance)
 	require.Equal(t, dstInitialBalance-totalFees, dstFinalBalance)

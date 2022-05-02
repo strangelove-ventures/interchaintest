@@ -17,7 +17,6 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,12 +50,6 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 	}
 
 	return ctx, home, pool, network.ID, nil
-}
-
-type User struct {
-	NativeChainAddress       string
-	CounterpartyChainAddress string
-	KeyName                  string
 }
 
 // startup both chains and relayer
@@ -261,77 +254,15 @@ func StartChainsAndRelayerFromFactory(
 	return relayerImpl, channels, nil
 }
 
-// generate user wallet on source chain
-func getUserWallet(ctx context.Context, nativeChain ibc.Chain, counterpartyChain ibc.Chain, keyName string) (*User, error) {
-	if err := nativeChain.CreateKey(ctx, keyName); err != nil {
-		return nil, fmt.Errorf("failed to create key on source chain: %w", err)
-	}
-	userAccountAddressBytes, err := nativeChain.GetAddress(ctx, keyName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get source user account address: %w", err)
-	}
-	userAccountNative, err := types.Bech32ifyAddressBytes(nativeChain.Config().Bech32Prefix, userAccountAddressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user bech32 address on source chain")
-	}
-	userAccountCounterparty, err := types.Bech32ifyAddressBytes(counterpartyChain.Config().Bech32Prefix, userAccountAddressBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user bech32 address on destination chain")
-	}
-	user := User{
-		KeyName:                  keyName,
-		NativeChainAddress:       userAccountNative,
-		CounterpartyChainAddress: userAccountCounterparty,
-	}
-	return &user, nil
-}
-
-func GetAndFundTestUsers(
-	t *testing.T,
-	ctx context.Context,
-	srcChain ibc.Chain,
-	dstChain ibc.Chain,
-	keyNamePrefix string,
-	amount int64,
-) (*User, *User) {
-	srcUser, err := getUserWallet(ctx, srcChain, dstChain, fmt.Sprintf("%s-src", keyNamePrefix))
-	require.NoError(t, err, "failed to get source user wallet")
-
-	dstUser, err := getUserWallet(ctx, dstChain, srcChain, fmt.Sprintf("%s-dst", keyNamePrefix))
-	require.NoError(t, err, "failed to get destination user wallet")
-
-	err = GetFundsFromFaucet(srcChain, ctx, ibc.WalletAmount{
-		Address: srcUser.NativeChainAddress,
-		Amount:  amount,
-		Denom:   srcChain.Config().Denom,
-	})
-	require.NoError(t, err, "failed to get funds from faucet on source chain")
-
-	err = GetFundsFromFaucet(dstChain, ctx, ibc.WalletAmount{
-		Address: dstUser.NativeChainAddress,
-		Amount:  amount,
-		Denom:   dstChain.Config().Denom,
-	})
-	require.NoError(t, err, "failed to get funds from faucet on destination chain")
-
-	return srcUser, dstUser
-}
-
-// get funds from faucet if it was initialized in genesis
-func GetFundsFromFaucet(chain ibc.Chain, ctx context.Context, amount ibc.WalletAmount) error {
-	return chain.SendFunds(ctx, faucetAccountKeyName, amount)
-}
-
-func WaitForBlocks(srcChain, dstChain ibc.Chain, blocksToWait int64) error {
+func WaitForBlocks(blocksToWait int64, chains ...ibc.Chain) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		_, err := srcChain.WaitForBlocks(blocksToWait)
-		return err
-	})
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		_, err := dstChain.WaitForBlocks(blocksToWait)
-		return err
-	})
+	for _, chain := range chains {
+		chain := chain
+		chainsConsecutiveBlocksWaitGroup.Go(func() error {
+			_, err := chain.WaitForBlocks(blocksToWait)
+			return err
+		})
+	}
 	return chainsConsecutiveBlocksWaitGroup.Wait()
 }
 
