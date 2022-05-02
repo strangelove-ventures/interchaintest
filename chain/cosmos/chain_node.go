@@ -49,7 +49,7 @@ type ChainNode struct {
 	Container    *docker.Container
 	TestName     string
 	Image        ibc.ChainDockerImage
-	Lock         sync.Mutex
+	lock         sync.Mutex
 }
 
 // ChainNodes is a collection of ChainNode
@@ -299,8 +299,8 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 		"--output", "json",
 		"--home", tn.NodeHome(),
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
@@ -316,8 +316,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	command := []string{tn.Chain.Config().Bin, "add-genesis-account", address, amount,
 		"--home", tn.NodeHome(),
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
@@ -328,8 +328,8 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
@@ -338,8 +338,8 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
 		"--home", tn.NodeHome(),
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
@@ -368,8 +368,8 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
 		}
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -399,8 +399,8 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 }
 
 func (tn *ChainNode) NodeJobThenWaitForBlocksLocked(ctx context.Context, command []string) error {
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -455,8 +455,8 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	tn.Lock.Lock()
-	defer tn.Lock.Unlock()
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)

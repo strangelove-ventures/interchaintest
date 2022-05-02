@@ -301,13 +301,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			allocations = append(allocations,
 				// self delegation
 				PenumbraGenesisAppStateAllocation{
-					Amount:  100000000000,
+					Amount:  100_000_000_000,
 					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 					Address: validatorTemplateDefinition.FundingStreams[0].Address,
 				},
 				// liquid
 				PenumbraGenesisAppStateAllocation{
-					Amount:  1000000000000,
+					Amount:  1_000_000_000_000,
 					Denom:   chainCfg.Denom,
 					Address: validatorTemplateDefinition.FundingStreams[0].Address,
 				},

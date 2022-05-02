@@ -107,14 +107,14 @@ func StartChainsAndRelayerFromFactory(
 	srcRelayerWalletAmount := ibc.WalletAmount{
 		Address: srcAccount,
 		Denom:   srcChainCfg.Denom,
-		Amount:  10000000,
+		Amount:  10_000_000,
 	}
 
 	// Fund relayer account on dst chain
 	dstRelayerWalletAmount := ibc.WalletAmount{
 		Address: dstAccount,
 		Denom:   dstChainCfg.Denom,
-		Amount:  10000000,
+		Amount:  10_000_000,
 	}
 
 	// create faucets on both chains
@@ -150,13 +150,13 @@ func StartChainsAndRelayerFromFactory(
 	srcFaucetWalletAmount := ibc.WalletAmount{
 		Address: srcFaucetAccount,
 		Denom:   srcChainCfg.Denom,
-		Amount:  10000000000000,
+		Amount:  10_000_000_000_000,
 	}
 
 	dstFaucetWalletAmount := ibc.WalletAmount{
 		Address: dstFaucetAccount,
 		Denom:   dstChainCfg.Denom,
-		Amount:  10000000000000,
+		Amount:  10_000_000_000_000,
 	}
 
 	// start chains from genesis, wait until they are producing blocks
