@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,10 +21,10 @@ import (
 )
 
 const (
-	srcAccountKeyName  = "src-chain"
-	dstAccountKeyName  = "dst-chain"
-	userAccountKeyName = "user"
-	testPathName       = "test-path"
+	srcAccountKeyName    = "src-chain"
+	dstAccountKeyName    = "dst-chain"
+	faucetAccountKeyName = "faucet"
+	testPathName         = "test-path"
 )
 
 func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, string, error) {
@@ -51,17 +52,11 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 	return ctx, home, pool, network.ID, nil
 }
 
-type User struct {
-	SrcChainAddress string
-	DstChainAddress string
-	KeyName         string
-}
-
 // startup both chains and relayer
 // creates wallets in the relayer for src and dst chain
 // funds relayer src and dst wallets on respective chain in genesis
-// creates a user account on the src chain (separate fullnode)
-// funds user account on src chain in genesis
+// creates a faucet account on the both chains (separate fullnode)
+// funds faucet accounts in genesis
 func StartChainsAndRelayerFromFactory(
 	t *testing.T,
 	ctx context.Context,
@@ -70,12 +65,12 @@ func StartChainsAndRelayerFromFactory(
 	home string,
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
-	preRelayerStart func([]ibc.ChannelOutput, User, User) error,
-) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
+	preRelayerStartFuncs []func([]ibc.ChannelOutput),
+) (ibc.Relayer, []ibc.ChannelOutput, error) {
 	relayerImpl := f.Build(t, pool, networkID, home)
 
-	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, *User, *User, error) {
-		return nil, []ibc.ChannelOutput{}, nil, nil, err
+	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
+		return nil, []ibc.ChannelOutput{}, err
 	}
 
 	testName := t.Name()
@@ -112,91 +107,68 @@ func StartChainsAndRelayerFromFactory(
 	srcRelayerWalletAmount := ibc.WalletAmount{
 		Address: srcAccount,
 		Denom:   srcChainCfg.Denom,
-		Amount:  10000000,
+		Amount:  10_000_000,
 	}
 
 	// Fund relayer account on dst chain
 	dstRelayerWalletAmount := ibc.WalletAmount{
 		Address: dstAccount,
 		Denom:   dstChainCfg.Denom,
-		Amount:  10000000,
+		Amount:  10_000_000,
 	}
 
-	// Generate key to be used for "user" that will execute IBC transaction
-	if err := srcChain.CreateKey(ctx, userAccountKeyName); err != nil {
-		return errResponse(fmt.Errorf("failed to create key on source chain: %w", err))
+	// create faucets on both chains
+
+	if err := srcChain.CreateKey(ctx, faucetAccountKeyName); err != nil {
+		return errResponse(fmt.Errorf("failed to create faucet key on source chain: %w", err))
 	}
 
-	srcUserAccountAddressBytes, err := srcChain.GetAddress(ctx, userAccountKeyName)
+	srcFaucetAccountAddressBytes, err := srcChain.GetAddress(ctx, faucetAccountKeyName)
 	if err != nil {
-		return errResponse(fmt.Errorf("failed to get source user account address: %w", err))
+		return errResponse(fmt.Errorf("failed to get source faucet account address: %w", err))
 	}
 
-	srcUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcUserAccountAddressBytes)
-	if err != nil {
-		return errResponse(err)
-	}
-
-	srcUserAccountDst, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, srcUserAccountAddressBytes)
+	srcFaucetAccount, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcFaucetAccountAddressBytes)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	if err := dstChain.CreateKey(ctx, userAccountKeyName); err != nil {
-		return errResponse(fmt.Errorf("failed to create key on dest chain: %w", err))
+	if err := dstChain.CreateKey(ctx, faucetAccountKeyName); err != nil {
+		return errResponse(fmt.Errorf("failed to create faucet key on destination chain: %w", err))
 	}
 
-	dstUserAccountAddressBytes, err := dstChain.GetAddress(ctx, userAccountKeyName)
+	dstFaucetAccountAddressBytes, err := dstChain.GetAddress(ctx, faucetAccountKeyName)
 	if err != nil {
-		return errResponse(fmt.Errorf("failed to get dest user account address: %w", err))
+		return errResponse(fmt.Errorf("failed to get destination faucet account address: %w", err))
 	}
 
-	dstUserAccountSrc, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, dstUserAccountAddressBytes)
-	if err != nil {
-		return errResponse(err)
-	}
-
-	dstUserAccountDst, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstUserAccountAddressBytes)
+	dstFaucetAccount, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstFaucetAccountAddressBytes)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	srcUser := User{
-		KeyName:         userAccountKeyName,
-		SrcChainAddress: srcUserAccountSrc,
-		DstChainAddress: srcUserAccountDst,
-	}
-
-	dstUser := User{
-		KeyName:         userAccountKeyName,
-		SrcChainAddress: dstUserAccountSrc,
-		DstChainAddress: dstUserAccountDst,
-	}
-
-	// Fund user account on src chain in order to relay from src to dst
-	srcUserWalletAmount := ibc.WalletAmount{
-		Address: srcUserAccountSrc,
+	srcFaucetWalletAmount := ibc.WalletAmount{
+		Address: srcFaucetAccount,
 		Denom:   srcChainCfg.Denom,
-		Amount:  10000000000,
+		Amount:  10_000_000_000_000,
 	}
 
-	// Fund user account on dst chain in order to relay from dst to src
-	dstUserWalletAmount := ibc.WalletAmount{
-		Address: dstUserAccountDst,
+	dstFaucetWalletAmount := ibc.WalletAmount{
+		Address: dstFaucetAccount,
 		Denom:   dstChainCfg.Denom,
-		Amount:  10000000000,
+		Amount:  10_000_000_000_000,
 	}
 
 	// start chains from genesis, wait until they are producing blocks
 	chainsGenesisWaitGroup := errgroup.Group{}
 	chainsGenesisWaitGroup.Go(func() error {
-		if err := srcChain.Start(testName, ctx, srcRelayerWalletAmount, srcUserWalletAmount); err != nil {
+		if err := srcChain.Start(testName, ctx, srcRelayerWalletAmount, srcFaucetWalletAmount); err != nil {
 			return fmt.Errorf("failed to start source chain: %w", err)
 		}
 		return nil
 	})
 	chainsGenesisWaitGroup.Go(func() error {
-		if err := dstChain.Start(testName, ctx, dstRelayerWalletAmount, dstUserWalletAmount); err != nil {
+		if err := dstChain.Start(testName, ctx, dstRelayerWalletAmount, dstFaucetWalletAmount); err != nil {
 			return fmt.Errorf("failed to start dest chain: %w", err)
 		}
 		return nil
@@ -253,11 +225,19 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(fmt.Errorf("channel count invalid. expected: 1, actual: %d", len(channels)))
 	}
 
-	if preRelayerStart != nil {
-		if err := preRelayerStart(channels, srcUser, dstUser); err != nil {
-			return errResponse(err)
+	wg := sync.WaitGroup{}
+	for _, preRelayerStart := range preRelayerStartFuncs {
+		if preRelayerStart == nil {
+			continue
 		}
+		preRelayerStart := preRelayerStart
+		wg.Add(1)
+		go func() {
+			preRelayerStart(channels)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 
 	if err := relayerImpl.StartRelayer(ctx, testPathName); err != nil {
 		return errResponse(fmt.Errorf("failed to start relayer: %w", err))
@@ -271,19 +251,18 @@ func StartChainsAndRelayerFromFactory(
 	// wait for relayer to start up
 	time.Sleep(5 * time.Second)
 
-	return relayerImpl, channels, &srcUser, &dstUser, nil
+	return relayerImpl, channels, nil
 }
 
-func WaitForBlocks(srcChain, dstChain ibc.Chain, blocksToWait int64) error {
+func WaitForBlocks(blocksToWait int64, chains ...ibc.Chain) error {
 	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		_, err := srcChain.WaitForBlocks(blocksToWait)
-		return err
-	})
-	chainsConsecutiveBlocksWaitGroup.Go(func() error {
-		_, err := dstChain.WaitForBlocks(blocksToWait)
-		return err
-	})
+	for _, chain := range chains {
+		chain := chain
+		chainsConsecutiveBlocksWaitGroup.Go(func() error {
+			_, err := chain.WaitForBlocks(blocksToWait)
+			return err
+		})
+	}
 	return chainsConsecutiveBlocksWaitGroup.Wait()
 }
 
