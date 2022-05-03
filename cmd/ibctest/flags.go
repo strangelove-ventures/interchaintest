@@ -18,14 +18,14 @@ type mainFlags struct {
 }
 
 func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
-	lc.FilePath = f.LogFile
-
 	var w io.Writer
 	switch f.LogFile {
 	case "stderr", "":
 		w = os.Stderr
+		lc.FilePath = "stderr"
 	case "stdout":
 		w = os.Stdout
+		lc.FilePath = "stdout"
 	default:
 		file, err := ibctest.CreateLogFile(f.LogFile)
 		if err != nil {

@@ -16,7 +16,9 @@ func TestMainFlags_Logger(t *testing.T) {
 	} {
 		flags := mainFlags{LogFile: tt.LogFile}
 		logger, err := flags.Logger()
+
 		require.NoError(t, err)
 		require.NoError(t, logger.Close())
+		require.NotEmpty(t, logger.FilePath)
 	}
 }

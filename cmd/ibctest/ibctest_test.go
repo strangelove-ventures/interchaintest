@@ -138,6 +138,7 @@ func TestRelayer(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = logger.Close() })
+	t.Logf("View chain and relayer logs at %s", logger.FilePath)
 
 	// One layer of subtests for each relayer to be tested.
 	for _, r := range testMatrix.Relayers {
