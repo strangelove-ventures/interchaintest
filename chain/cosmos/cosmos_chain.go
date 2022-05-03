@@ -20,6 +20,7 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -34,31 +35,8 @@ type CosmosChain struct {
 	numValidators int
 	numFullNodes  int
 	ChainNodes    ChainNodes
-}
 
-func NewCosmosChainConfig(name string,
-	dockerImage string,
-	binary string,
-	bech32Prefix string,
-	denom string,
-	gasPrices string,
-	gasAdjustment float64,
-	trustingPeriod string) ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:           "cosmos",
-		Name:           name,
-		Bech32Prefix:   bech32Prefix,
-		Denom:          denom,
-		GasPrices:      gasPrices,
-		GasAdjustment:  gasAdjustment,
-		TrustingPeriod: trustingPeriod,
-		Images: []ibc.ChainDockerImage{
-			ibc.ChainDockerImage{
-				Repository: dockerImage,
-			},
-		},
-		Bin: binary,
-	}
+	log log.Logger
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
@@ -77,7 +55,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
 		Images: []ibc.ChainDockerImage{
-			ibc.ChainDockerImage{
+			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
 			},
 		},
@@ -85,12 +63,13 @@ func NewCosmosHeighlinerChainConfig(name string,
 	}
 }
 
-func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *CosmosChain {
+func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log log.Logger) *CosmosChain {
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
+		log:           log,
 	}
 }
 
@@ -242,7 +221,7 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 	}
 	for i := 0; i < count; i++ {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
+			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0], log: c.log}
 		tn.MkDir()
 		chainNodes = append(chainNodes, tn)
 	}
@@ -318,7 +297,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for i, validator := range validatorsWithPower {
 		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName}
+			Pool: pool, NetworkID: networkID, TestName: testName, log: c.log}
 		tn.MkDir()
 		c.ChainNodes = append(c.ChainNodes, tn)
 
@@ -511,7 +490,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if err := ChainNodes(c.ChainNodes).LogGenesisHashes(); err != nil {
+	if err := c.ChainNodes.LogGenesisHashes(); err != nil {
 		return err
 	}
 
@@ -525,11 +504,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := ChainNodes(c.ChainNodes).PeerString()
+	peers := c.ChainNodes.PeerString()
 
 	for _, n := range c.ChainNodes {
 		n := n
-		fmt.Printf("{%s} => starting container...\n", n.Name())
+		c.log.WithField("container", n.Name()).Info("staring container...")
 		eg.Go(func() error {
 			n.SetValidatorConfigAndPeers(peers)
 			return n.StartContainer(ctx)
