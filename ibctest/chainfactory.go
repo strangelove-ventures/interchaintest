@@ -84,7 +84,7 @@ func NewCustomChainFactory(entries []CustomChainFactoryEntry, logger log.Logger)
 		panic(fmt.Errorf("NewCustomChainFactory: received %d entries but required 2", len(entries)))
 	}
 
-	return &CustomChainFactory{entries: entries}
+	return &CustomChainFactory{entries: entries, log: logger}
 }
 
 // Pair returns two chains to be used in tests that expect exactly two chains.

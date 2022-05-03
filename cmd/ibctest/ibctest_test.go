@@ -114,7 +114,6 @@ func getChainFactory(chainSet []ibctest.BuiltinChainFactoryEntry, logger log.Log
 	if len(chainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(chainSet))
 	}
-
 	return ibctest.NewBuiltinChainFactory(chainSet, logger), nil
 }
 
@@ -122,7 +121,6 @@ func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, log
 	if len(customChainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(customChainSet))
 	}
-
 	return ibctest.NewCustomChainFactory(customChainSet, logger), nil
 }
 
@@ -138,7 +136,7 @@ func TestRelayer(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = logger.Close() })
-	fmt.Printf("%s: view chain and relayer logs at %s", t.Name(), logger.FilePath)
+	t.Logf("View chain and relayer logs at %s", logger.FilePath)
 
 	// One layer of subtests for each relayer to be tested.
 	for _, r := range testMatrix.Relayers {
