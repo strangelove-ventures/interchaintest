@@ -12,13 +12,9 @@ import (
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 )
-
-// The value of the extra flags this test supports.
-var mainFlags struct {
-	MatrixFile string
-}
 
 // The value of the test matrix.
 var testMatrix struct {
@@ -47,11 +43,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var extraFlags mainFlags
+
 // setUpTestMatrix populates the testMatrix singleton with
 // the parsed contents of the file referenced by the matrix flag,
 // or with a small reasonable default of rly against one gaia-osmosis set.
 func setUpTestMatrix() error {
-	if mainFlags.MatrixFile == "" {
+	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
 		testMatrix.Relayers = []string{"rly"}
@@ -66,8 +64,8 @@ func setUpTestMatrix() error {
 	}
 
 	// Otherwise parse the given file.
-	fmt.Fprintf(os.Stderr, "Loading matrix file from %s\n", mainFlags.MatrixFile)
-	j, err := os.ReadFile(mainFlags.MatrixFile)
+	fmt.Fprintf(os.Stderr, "Loading matrix file from %s\n", extraFlags.MatrixFile)
+	j, err := os.ReadFile(extraFlags.MatrixFile)
 	if err != nil {
 		return err
 	}
@@ -81,7 +79,7 @@ func setUpTestMatrix() error {
 
 func validateTestMatrix() error {
 	for _, r := range testMatrix.Relayers {
-		if _, err := getRelayerFactory(r); err != nil {
+		if _, err := getRelayerFactory(r, log.Nop()); err != nil {
 			return err
 		}
 	}
@@ -101,12 +99,12 @@ func validateTestMatrix() error {
 	return nil
 }
 
-func getRelayerFactory(name string) (ibctest.RelayerFactory, error) {
+func getRelayerFactory(name string, logger log.Logger) (ibctest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
-		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger), nil
 	case "hermes":
-		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes, logger), nil
 	default:
 		return nil, fmt.Errorf("unknown relayer type %q (valid types: rly, hermes)", name)
 	}
@@ -135,9 +133,15 @@ func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry) (ib
 func TestRelayer(t *testing.T) {
 	t.Parallel()
 
+	logger, err := extraFlags.Logger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = logger.Close() })
+
 	// One layer of subtests for each relayer to be tested.
 	for _, r := range testMatrix.Relayers {
-		rf, err := getRelayerFactory(r)
+		rf, err := getRelayerFactory(r, logger.WithField("process", "relayer"))
 		if err != nil {
 			// This error should have been validated before running tests.
 			panic(err)
@@ -193,5 +197,8 @@ func TestRelayer(t *testing.T) {
 // testing flags, so I fell back to plain Go standard library flags.
 // We can revisit if necessary.
 func addFlags() {
-	flag.StringVar(&mainFlags.MatrixFile, "matrix", "", "Path to matrix file defining what configurations to test")
+	flag.StringVar(&extraFlags.MatrixFile, "matrix", "", "Path to matrix file defining what configurations to test")
+	flag.StringVar(&extraFlags.LogFile, "log-file", "ibctest.log", "File to write chain and relayer logs. If a file name, logs written to $HOME/.ibctest/logs directory. Use 'stderr' or 'stdout' to print logs in line tests.")
+	flag.StringVar(&extraFlags.LogFormat, "log-format", "console", "Chain and relayer log format: console|json")
+	flag.StringVar(&extraFlags.LogLevel, "log-level", "info", "Chain and relayer log level: debug|info|error")
 }

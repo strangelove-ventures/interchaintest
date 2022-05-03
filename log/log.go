@@ -38,6 +38,11 @@ func New(w io.Writer, format string, level string) Logger {
 	}
 }
 
+// Nop returns a no-op logger
+func Nop() Logger {
+	return New(io.Discard, "console", "error")
+}
+
 type logger struct {
 	logger zerolog.Logger
 }
