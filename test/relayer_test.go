@@ -7,6 +7,7 @@ import (
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 )
 
@@ -26,5 +27,15 @@ func TestRelayer(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	relayertest.TestRelayer(t, getTestChainFactory(), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly))
+
+	logfile, err := ibctest.CreateLogFile("test-relayer.log")
+	if err != nil {
+		t.Fatal("failed to create log file:", err)
+	}
+	t.Cleanup(func() { _ = logfile.Close() })
+
+	logger := log.New(logfile, log.Console, log.InfoLevel)
+
+	t.Logf("View chain and relayer logs at: %s", logfile.Name())
+	relayertest.TestRelayer(t, getTestChainFactory(), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger))
 }
