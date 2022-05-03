@@ -2,6 +2,7 @@ package test
 
 import (
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -13,12 +14,13 @@ import (
 
 // These tests are run by CI
 
-func getTestChainFactory() ibctest.ChainFactory {
+func getTestChainFactory(logger log.Logger) ibctest.ChainFactory {
 	return ibctest.NewBuiltinChainFactory(
 		[]ibctest.BuiltinChainFactoryEntry{
 			{Name: "gaia", Version: "v7.0.1", ChainID: "cosmoshub-1004", NumValidators: 2, NumFullNodes: 1},
 			{Name: "osmosis", Version: "v7.2.0", ChainID: "osmosis-1001", NumValidators: 2, NumFullNodes: 1},
 		},
+		logger,
 	)
 }
 
@@ -28,14 +30,6 @@ func TestRelayer(t *testing.T) {
 		t.Skip()
 	}
 
-	logfile, err := ibctest.CreateLogFile("test-relayer.log")
-	if err != nil {
-		t.Fatal("failed to create log file:", err)
-	}
-	t.Cleanup(func() { _ = logfile.Close() })
-
-	logger := log.New(logfile, "console", "info")
-
-	t.Logf("View chain and relayer logs at: %s", logfile.Name())
-	relayertest.TestRelayer(t, getTestChainFactory(), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger))
+	logger := log.New(os.Stderr, "console", "info")
+	relayertest.TestRelayer(t, getTestChainFactory(logger), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger))
 }
