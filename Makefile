@@ -11,3 +11,12 @@ ibctest: ## Build ibctest binary into ./bin
 .PHONY: test
 test: ## Run unit tests
 	@go test -cover -short -race -timeout=60s $(shell go list ./... | grep -v /cmd/)
+
+.PHONY: docker-reset
+docker-reset: ## Attempt to delete all running containers. Useful if ibctest does not exit cleanly.
+	docker stop $$(docker ps -q)
+	docker rm --force $$(docker ps -q)
+
+.PHONY: docker-mac-nuke
+docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docker Desktop.
+	killall -9 Docker && open /Applications/Docker.app
