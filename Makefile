@@ -14,8 +14,8 @@ test: ## Run unit tests
 
 .PHONY: docker-reset
 docker-reset: ## Attempt to delete all running containers. Useful if ibctest does not exit cleanly.
-	docker stop $$(docker ps -q)
-	docker rm --force $$(docker ps -q)
+	@docker stop $(shell docker ps -q) &>/dev/null || true
+	@docker rm --force $(shell docker ps -q) &>/dev/null || true
 
 .PHONY: docker-mac-nuke
 docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docker Desktop.
