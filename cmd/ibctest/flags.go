@@ -29,7 +29,7 @@ func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
 	default:
 		file, err := ibctest.CreateLogFile(f.LogFile)
 		if err != nil {
-			return lc, fmt.Errorf("CreateLogFile: %w", err)
+			return lc, fmt.Errorf("create log file: %w", err)
 		}
 		w = file
 		lc.Closer = file
