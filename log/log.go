@@ -18,38 +18,20 @@ func init() {
 	}
 }
 
-// Format is the log output format
-type Format int
-
-const (
-	Console Format = iota
-	JSON
-)
-
-// Level is the log level
-type Level int8
-
-const (
-	DebugLevel Level = iota
-	InfoLevel
-	ErrorLevel
-)
-
-var lvlMapping = map[Level]zerolog.Level{
-	DebugLevel: zerolog.DebugLevel,
-	InfoLevel:  zerolog.InfoLevel,
-	ErrorLevel: zerolog.ErrorLevel,
-}
-
 // New returns a valid Logger.
-// Level can be error, info, debug.
-func New(w io.Writer, format Format, level Level) Logger {
+// Format must be one of: console or json.
+// Level must be one of: error, info, or debug.
+func New(w io.Writer, format string, level string) Logger {
 	lg := log.Output(zerolog.ConsoleWriter{Out: w})
-	if format == JSON {
+	if format == "json" {
 		lg = zerolog.New(w).With().Timestamp().Logger()
 	}
 
-	lg = lg.Level(lvlMapping[level])
+	lvl, err := zerolog.ParseLevel(level)
+	if err != nil {
+		lvl = zerolog.InfoLevel
+	}
+	lg = lg.Level(lvl)
 
 	return logger{
 		logger: lg,

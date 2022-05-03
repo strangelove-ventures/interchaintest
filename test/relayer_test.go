@@ -34,7 +34,7 @@ func TestRelayer(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = logfile.Close() })
 
-	logger := log.New(logfile, log.Console, log.InfoLevel)
+	logger := log.New(logfile, "console", "info")
 
 	t.Logf("View chain and relayer logs at: %s", logfile.Name())
 	relayertest.TestRelayer(t, getTestChainFactory(), ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger))

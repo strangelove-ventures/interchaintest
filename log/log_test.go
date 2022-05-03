@@ -13,7 +13,7 @@ import (
 func TestLogger(t *testing.T) {
 	t.Run("json", func(t *testing.T) {
 		out := new(bytes.Buffer)
-		lg := New(out, JSON, DebugLevel)
+		lg := New(out, "json", "debug")
 		lg.Debug("test", "debug")
 		lg.Infof("test %s", "info")
 		lg.Errorf("test %s", "error")
@@ -48,7 +48,7 @@ func TestLogger(t *testing.T) {
 
 	t.Run("console", func(t *testing.T) {
 		out := new(bytes.Buffer)
-		lg := New(out, Console, DebugLevel)
+		lg := New(out, "console", "debug")
 		lg.Debugf("test %s", "debug")
 		lg.Info("test info")
 		lg.Error("test error")
@@ -62,7 +62,7 @@ func TestLogger(t *testing.T) {
 
 	t.Run("log level", func(t *testing.T) {
 		out := new(bytes.Buffer)
-		lg := New(out, Console, InfoLevel)
+		lg := New(out, "console", "info")
 		lg.Debug("should not see me")
 
 		require.Empty(t, out.String())
@@ -71,7 +71,7 @@ func TestLogger(t *testing.T) {
 
 func TestLogger_WithField(t *testing.T) {
 	out := new(bytes.Buffer)
-	lg := New(out, JSON, InfoLevel)
+	lg := New(out, "json", "info")
 	lg.WithField("myField", "test").Info()
 
 	var logLine struct {
