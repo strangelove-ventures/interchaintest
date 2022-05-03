@@ -140,7 +140,7 @@ func TestRelayer(t *testing.T) {
 
 	// One layer of subtests for each relayer to be tested.
 	for _, r := range testMatrix.Relayers {
-		rf, err := getRelayerFactory(r, logger.WithField("process", "relayer"))
+		rf, err := getRelayerFactory(r, logger)
 		if err != nil {
 			// This error should have been validated before running tests.
 			panic(err)
