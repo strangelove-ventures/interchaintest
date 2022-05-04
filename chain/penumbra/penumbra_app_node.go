@@ -159,6 +159,7 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: p.Name(),
 		Config: &docker.Config{
+			User:         dockerutil.GetRootUserString(),
 			Cmd:          cmd,
 			Hostname:     p.HostName(),
 			ExposedPorts: exposedPorts,
@@ -214,6 +215,7 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
+			User: dockerutil.GetRootUserString(),
 			// random hostname is okay here
 			Hostname:     dockerutil.CondenseHostName(container),
 			ExposedPorts: exposedPorts,

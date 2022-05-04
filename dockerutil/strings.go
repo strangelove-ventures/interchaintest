@@ -51,6 +51,14 @@ func GetDockerUserString() string {
 	return usr
 }
 
+func GetHeighlinerUserString() string {
+	return "1025:1025"
+}
+
+func GetRootUserString() string {
+	return "0:0"
+}
+
 // CondenseHostName truncates the middle of the given name
 // if it is 64 characters or longer.
 //

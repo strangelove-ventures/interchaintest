@@ -37,10 +37,6 @@ type BuiltinChainFactoryEntry struct {
 // Currently, NewBuiltinChainFactory will panic if entries is not of length 2.
 // In the future, this method may allow or require entries to have length 3.
 func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry) *BuiltinChainFactory {
-	if len(entries) != 2 {
-		panic(fmt.Errorf("NewBuiltinChainFactory: received %d entries but required 2", len(entries)))
-	}
-
 	return &BuiltinChainFactory{entries: entries}
 }
 
@@ -92,10 +88,6 @@ type CustomChainFactoryEntry struct {
 // Currently, NewCustomChainFactory will panic if entries is not of length 2.
 // In the future, this method may allow or require entries to have length 3.
 func NewCustomChainFactory(entries []CustomChainFactoryEntry) *CustomChainFactory {
-	if len(entries) != 2 {
-		panic(fmt.Errorf("NewCustomChainFactory: received %d entries but required 2", len(entries)))
-	}
-
 	return &CustomChainFactory{entries: entries}
 }
 
