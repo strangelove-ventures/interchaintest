@@ -94,10 +94,10 @@ func NewCustomChainFactory(entries []CustomChainFactoryEntry, logger log.Logger)
 	return &CustomChainFactory{entries: entries, log: logger}
 }
 
-func (e CustomChainFactoryEntry) GetChain(testName string) (ibc.Chain, error) {
+func (e CustomChainFactoryEntry) GetChain(testName string, log log.Logger) (ibc.Chain, error) {
 	switch e.Config.Type {
 	case "cosmos":
-		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes, f.log), nil
+		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes, log), nil
 	case "penumbra":
 		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
 	default:
@@ -112,7 +112,7 @@ func (f *CustomChainFactory) GetChains(testName string, n int) ([]ibc.Chain, err
 	}
 	var chains []ibc.Chain
 	for i := 0; (n >= 0 && i < n) || (n < 0 && i < len(f.entries)); i++ {
-		chain, err := f.entries[i].GetChain(testName)
+		chain, err := f.entries[i].GetChain(testName, f.log)
 		if err != nil {
 			return nil, err
 		}
