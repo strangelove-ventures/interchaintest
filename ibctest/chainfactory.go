@@ -3,6 +3,8 @@ package ibctest
 import (
 	"fmt"
 
+	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
+
 	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 )
@@ -42,21 +44,35 @@ func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry) *BuiltinChainFac
 	return &BuiltinChainFactory{entries: entries}
 }
 
+// Returns first n chains (pass -1 for all)
+func (f *BuiltinChainFactory) GetChains(testName string, n int) ([]ibc.Chain, error) {
+	if n > 0 && len(f.entries) < n {
+		return nil, fmt.Errorf("received %d entries but required at least %d", len(f.entries), n)
+	}
+	var chains []ibc.Chain
+	for i := 0; (n >= 0 && i < n) || (n < 0 && i < len(f.entries)); i++ {
+		e := f.entries[i]
+		chain, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes)
+		if err != nil {
+			return nil, err
+		}
+		chains = append(chains, chain)
+	}
+	return chains, nil
+}
+
 // Pair returns two chains to be used in tests that expect exactly two chains.
 func (f *BuiltinChainFactory) Pair(testName string) (ibc.Chain, ibc.Chain, error) {
-	e := f.entries[0]
-	src, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes)
+	chains, err := f.GetChains(testName, 2)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get chain with name %q: %w", e.Name, err)
+		return nil, nil, err
 	}
+	return chains[0], chains[1], nil
+}
 
-	e = f.entries[1]
-	dst, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get chain with name %q: %w", e.Name, err)
-	}
-
-	return src, dst, nil
+// Returns all chains
+func (f *BuiltinChainFactory) GetAllChains(testName string) ([]ibc.Chain, error) {
+	return f.GetChains(testName, -1)
 }
 
 // CustomChainFactory is a ChainFactory that supports returning chains that are defined by ChainConfig values.
@@ -66,7 +82,6 @@ type CustomChainFactory struct {
 
 // CustomChainFactoryEntry describes a chain to be returned by a CustomChainFactory.
 type CustomChainFactoryEntry struct {
-	Type          string
 	Config        ibc.ChainConfig
 	NumValidators int
 	NumFullNodes  int
@@ -84,19 +99,43 @@ func NewCustomChainFactory(entries []CustomChainFactoryEntry) *CustomChainFactor
 	return &CustomChainFactory{entries: entries}
 }
 
+func (e CustomChainFactoryEntry) GetChain(testName string) (ibc.Chain, error) {
+	switch e.Config.Type {
+	case "cosmos":
+		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
+	case "penumbra":
+		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
+	default:
+		return nil, fmt.Errorf("only (cosmos, penumbra) type chains are currently supported (got %q)", e.Config.Type)
+	}
+}
+
+// Returns first n chains (pass -1 for all)
+func (f *CustomChainFactory) GetChains(testName string, n int) ([]ibc.Chain, error) {
+	if n > 0 && len(f.entries) < n {
+		return nil, fmt.Errorf("received %d entries but required at least %d", len(f.entries), n)
+	}
+	var chains []ibc.Chain
+	for i := 0; (n >= 0 && i < n) || (n < 0 && i < len(f.entries)); i++ {
+		chain, err := f.entries[i].GetChain(testName)
+		if err != nil {
+			return nil, err
+		}
+		chains = append(chains, chain)
+	}
+	return chains, nil
+}
+
 // Pair returns two chains to be used in tests that expect exactly two chains.
 func (f *CustomChainFactory) Pair(testName string) (ibc.Chain, ibc.Chain, error) {
-	e := f.entries[0]
-	if e.Type != "cosmos" {
-		return nil, nil, fmt.Errorf("only cosmos type chains are currently supported (got %q)", e.Type)
+	chains, err := f.GetChains(testName, 2)
+	if err != nil {
+		return nil, nil, err
 	}
-	src := cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes)
+	return chains[0], chains[1], nil
+}
 
-	e = f.entries[1]
-	if e.Type != "cosmos" {
-		return nil, nil, fmt.Errorf("only cosmos type chains are currently supported (got %q)", e.Type)
-	}
-	dst := cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes)
-
-	return src, dst, nil
+// Returns all chains
+func (f *CustomChainFactory) GetAllChains(testName string) ([]ibc.Chain, error) {
+	return f.GetChains(testName, -1)
 }
