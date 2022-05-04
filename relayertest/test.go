@@ -177,9 +177,10 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	srcChain, dstChain, err := cf.Pair(t.Name())
 	require.NoError(t, err, "failed to get chain pair")
 
-	preRelayerStartFuncs := []func([]ibc.ChannelOutput){}
-
-	testCases := []*RelayerTestCase{}
+	var (
+		preRelayerStartFuncs []func([]ibc.ChannelOutput)
+		testCases            []*RelayerTestCase
+	)
 
 	for _, testCaseConfig := range relayerTestCaseConfigs {
 		if len(missingCapabilities(rf, testCaseConfig.RequiredRelayerCapabilities...)) > 0 {

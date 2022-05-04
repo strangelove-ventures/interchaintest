@@ -7,6 +7,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.1
 	github.com/cosmos/ibc-go/v3 v3.0.0
 	github.com/ory/dockertest/v3 v3.8.1
+	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tendermint/tendermint v0.34.14
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c

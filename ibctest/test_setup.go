@@ -17,6 +17,7 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -280,6 +281,7 @@ func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*do
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
 func dockerCleanup(testName string, pool *dockertest.Pool) func() {
+	logger := log.New(os.Stderr, "console", "info") // dockerCleanup never called from cmd/ibctest main()
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
@@ -297,7 +299,11 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 						ctxLogs, cancelLogs := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
 						defer cancelLogs()
 						_ = pool.Client.Logs(docker.LogsOptions{Context: ctxLogs, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-						fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", names, stdout, names, stderr)
+						logger.
+							WithField("containers", names).
+							WithField("stdout", stdout).
+							WithField("stderr", stderr).
+							Info("docker cleanup")
 					}
 					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID, Force: true})
 					break

@@ -7,6 +7,7 @@ import (
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -21,6 +22,7 @@ type ChainFactory interface {
 // Use NewBuiltinChainFactory to create an instance.
 type BuiltinChainFactory struct {
 	entries []BuiltinChainFactoryEntry
+	log     log.Logger
 }
 
 // BuiltinChainFactoryEntry describes a chain to be returned from an instance of BuiltinChainFactory.
@@ -36,8 +38,8 @@ type BuiltinChainFactoryEntry struct {
 //
 // Currently, NewBuiltinChainFactory will panic if entries is not of length 2.
 // In the future, this method may allow or require entries to have length 3.
-func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry) *BuiltinChainFactory {
-	return &BuiltinChainFactory{entries: entries}
+func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry, logger log.Logger) *BuiltinChainFactory {
+	return &BuiltinChainFactory{entries: entries, log: logger}
 }
 
 // Returns first n chains (pass -1 for all)
@@ -48,7 +50,7 @@ func (f *BuiltinChainFactory) GetChains(testName string, n int) ([]ibc.Chain, er
 	var chains []ibc.Chain
 	for i := 0; (n >= 0 && i < n) || (n < 0 && i < len(f.entries)); i++ {
 		e := f.entries[i]
-		chain, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes)
+		chain, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes, f.log)
 		if err != nil {
 			return nil, err
 		}
@@ -74,6 +76,7 @@ func (f *BuiltinChainFactory) GetAllChains(testName string) ([]ibc.Chain, error)
 // CustomChainFactory is a ChainFactory that supports returning chains that are defined by ChainConfig values.
 type CustomChainFactory struct {
 	entries []CustomChainFactoryEntry
+	log     log.Logger
 }
 
 // CustomChainFactoryEntry describes a chain to be returned by a CustomChainFactory.
@@ -87,16 +90,16 @@ type CustomChainFactoryEntry struct {
 //
 // Currently, NewCustomChainFactory will panic if entries is not of length 2.
 // In the future, this method may allow or require entries to have length 3.
-func NewCustomChainFactory(entries []CustomChainFactoryEntry) *CustomChainFactory {
-	return &CustomChainFactory{entries: entries}
+func NewCustomChainFactory(entries []CustomChainFactoryEntry, logger log.Logger) *CustomChainFactory {
+	return &CustomChainFactory{entries: entries, log: logger}
 }
 
 func (e CustomChainFactoryEntry) GetChain(testName string) (ibc.Chain, error) {
 	switch e.Config.Type {
 	case "cosmos":
-		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
+		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes, f.log), nil
 	case "penumbra":
-		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
+		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes, f.log), nil
 	default:
 		return nil, fmt.Errorf("only (cosmos, penumbra) type chains are currently supported (got %q)", e.Config.Type)
 	}
