@@ -1,0 +1,50 @@
+{
+  "Relayers": ["rly"],
+
+  "CustomChainSets": [
+    [
+      {
+        "NumValidators": 2,
+        "NumFullNodes": 1,
+        "Config": {
+          "Type": "cosmos",
+          "Name": "gaia",
+          "ChainID": "cosmoshub-1004",
+          "Images": [
+            {
+              "Repository": "ghcr.io/strangelove-ventures/heighliner/gaia",
+              "Version": "latest"
+            }
+          ],
+          "Bin": "gaiad",
+          "Bech32Prefix": "cosmos",
+          "Denom": "cosmos",
+          "GasPrices": "0.01uatom",
+          "GasAdjustment": 1.3,
+          "TrustingPeriod": "504h"
+        }
+      },
+      {
+        "NumValidators": 2,
+        "NumFullNodes": 1,
+        "Config": {
+          "Type": "cosmos",
+          "Name": "osmosis",
+          "ChainID": "osmosis-1001",
+          "Images": [
+            {
+              "Repository": "ghcr.io/strangelove-ventures/heighliner/osmosis",
+              "Version": "latest"
+            }
+          ],
+          "Bin": "osmosisd",
+          "Bech32Prefix": "osmo",
+          "Denom": "uosmo",
+          "GasPrices": "0.0uosmo",
+          "GasAdjustment": 1.3,
+          "TrustingPeriod": "336h"
+        }
+      }
+    ]
+  ]
+}
