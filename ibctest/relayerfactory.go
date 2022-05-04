@@ -6,6 +6,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
 )
@@ -34,10 +35,11 @@ type RelayerFactory interface {
 // how to start the cosmos relayer in a docker container.
 type builtinRelayerFactory struct {
 	impl ibc.RelayerImplementation
+	log  log.Logger
 }
 
-func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation) RelayerFactory {
-	return builtinRelayerFactory{impl: impl}
+func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger log.Logger) RelayerFactory {
+	return builtinRelayerFactory{impl: impl, log: logger}
 }
 
 // Build returns a relayer chosen depending on f.impl.
@@ -54,6 +56,7 @@ func (f builtinRelayerFactory) Build(
 			pool,
 			networkID,
 			home,
+			f.log,
 		)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))

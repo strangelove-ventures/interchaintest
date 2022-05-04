@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -49,7 +50,9 @@ type ChainNode struct {
 	Container    *docker.Container
 	TestName     string
 	Image        ibc.ChainDockerImage
-	lock         sync.Mutex
+
+	lock sync.Mutex
+	log  log.Logger
 }
 
 // ChainNodes is a collection of ChainNode
@@ -207,7 +210,9 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 
 	startingBlock := stat.SyncInfo.LatestBlockHeight
 	mostRecentBlock := startingBlock
-	fmt.Printf("{WaitForBlocks-%s} Initial Height: %d\n", tn.Chain.Config().ChainID, startingBlock)
+	tn.logger().
+		WithField("initialHeight", startingBlock).
+		Info("wait for blocks")
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
 	for i := int64(0); i < timeoutSeconds; i++ {
@@ -223,7 +228,9 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 		deltaBlocks := mostRecentBlock - startingBlock
 
 		if deltaBlocks >= blocks {
-			fmt.Printf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d\n", tn.Chain.Config().ChainID, blocks, i+1)
+			tn.logger().
+				WithField("initialHeight", startingBlock).
+				Infof("Time (sec) waiting for %d blocks: %d", blocks, i+1)
 			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
@@ -617,7 +624,10 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
-	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
+	tn.logger().
+		WithField("container", tn.Name()).
+		WithField("command", strings.Join(cmd, " ")).
+		Info()
 
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
@@ -665,7 +675,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	tn.Container = c
 
 	port := dockerutil.GetHostPort(c, rpcPort)
-	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
+	tn.logger().WithField("container", tn.Name()).Infof("RPC => %s", port)
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
 	if err != nil {
@@ -737,9 +747,9 @@ func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (tn ChainNodes) PeerString() string {
-	addrs := make([]string, len(tn))
-	for i, n := range tn {
+func (nodes ChainNodes) PeerString() string {
+	addrs := make([]string, len(nodes))
+	for i, n := range nodes {
 		id, err := n.NodeID()
 		if err != nil {
 			// TODO: would this be better to panic?
@@ -748,28 +758,28 @@ func (tn ChainNodes) PeerString() string {
 		}
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
+		nodes.logger().WithField("container", n.Name()).Infof("(%s) peering (%s)", hostName, ps)
 		addrs[i] = ps
 	}
 	return strings.Join(addrs, ",")
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
-func (tn ChainNodes) LogGenesisHashes() error {
-	for _, n := range tn {
+func (nodes ChainNodes) LogGenesisHashes() error {
+	for _, n := range nodes {
 		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
 		if err != nil {
 			return err
 		}
-		fmt.Printf("{%s} genesis hash %x\n", n.Name(), sha256.Sum256(gen))
+		nodes.logger().WithField("container", n.Name()).Infof("genesis hash %x", sha256.Sum256(gen))
 	}
 	return nil
 }
 
-func (tn ChainNodes) WaitForHeight(height int64) error {
+func (nodes ChainNodes) WaitForHeight(height int64) error {
 	var eg errgroup.Group
-	fmt.Printf("Waiting For Nodes To Reach Block Height %d...\n", height)
-	for _, n := range tn {
+	nodes.logger().Infof("Waiting For Nodes To Reach Block Height %d...", height)
+	for _, n := range nodes {
 		n := n
 		eg.Go(func() error {
 			return retry.Do(func() error {
@@ -781,13 +791,20 @@ func (tn ChainNodes) WaitForHeight(height int64) error {
 				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
 					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
 				}
-				fmt.Printf("{%s} => reached block %d\n", n.Name(), height)
+				nodes.logger().WithField("container", n.Name()).Infof("reached block %d", height)
 				return nil
 				// TODO: setup backup delay here
 			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
 		})
 	}
 	return eg.Wait()
+}
+
+func (nodes ChainNodes) logger() log.Logger {
+	if len(nodes) == 0 {
+		return log.Nop()
+	}
+	return nodes[0].logger()
 }
 
 // NodeJob run a container for a specific job and block until the container exits
@@ -797,7 +814,10 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	caller := runtime.FuncForPC(counter).Name()
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
-	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
+	tn.logger().
+		WithField("container", container).
+		WithField("command", strings.Join(cmd, " ")).
+		Info()
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -834,6 +854,16 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	stderr := new(bytes.Buffer)
 	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
-	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
+	tn.logger().
+		WithField("container", container).
+		WithField("stdout", stdout.String()).
+		WithField("stderr", stderr.String()).
+		Info()
 	return exitCode, stdout.String(), stderr.String(), err
+}
+
+func (tn *ChainNode) logger() log.Logger {
+	return tn.log.
+		WithField("chainID", tn.Chain.Config().ChainID).
+		WithField("test", tn.TestName)
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
+	"github.com/strangelove-ventures/ibc-test-framework/log"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -27,10 +28,10 @@ func init() {
 	}
 }
 
-func GetChain(testName, name, version, chainID string, numValidators, numFullNodes int) (ibc.Chain, error) {
+func GetChain(testName, name, version, chainID string, numValidators, numFullNodes int, log log.Logger) (ibc.Chain, error) {
 	chainConfig, exists := chainConfigMap[name]
 	if !exists {
-		return nil, fmt.Errorf("No chain configuration for %s", name)
+		return nil, fmt.Errorf("no chain configuration for %s", name)
 	}
 
 	chainConfig.ChainID = chainID
@@ -38,7 +39,7 @@ func GetChain(testName, name, version, chainID string, numValidators, numFullNod
 	switch chainConfig.Type {
 	case "cosmos":
 		chainConfig.Images[0].Version = version
-		return cosmos.NewCosmosChain(testName, chainConfig, numValidators, numFullNodes), nil
+		return cosmos.NewCosmosChain(testName, chainConfig, numValidators, numFullNodes, log), nil
 	case "penumbra":
 		versionSplit := strings.Split(version, ",")
 		if len(versionSplit) != 2 {
