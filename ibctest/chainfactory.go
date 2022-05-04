@@ -99,7 +99,7 @@ func (e CustomChainFactoryEntry) GetChain(testName string) (ibc.Chain, error) {
 	case "cosmos":
 		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes, f.log), nil
 	case "penumbra":
-		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes, f.log), nil
+		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
 	default:
 		return nil, fmt.Errorf("only (cosmos, penumbra) type chains are currently supported (got %q)", e.Config.Type)
 	}
