@@ -141,24 +141,31 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 		Amount:  testCoinAmount,
 	}
 
-	var eg errgroup.Group
-	var txHashSrc string
-	var txHashDst string
+	var (
+		eg        errgroup.Group
+		txHashSrc string
+		txHashDst string
+
+		srcChannelID = channels[0].ChannelID
+		dstChannelID = channels[0].Counterparty.ChannelID
+	)
 
 	eg.Go(func() error {
 		var err error
-		txHashSrc, err = srcChain.SendIBCTransfer(ctx, channels[0].ChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+		t.Logf("Sending ibc transfer from %s to %s on channel %s", srcChain.Config().ChainID, dstChain.Config().ChainID, srcChannelID)
+		txHashSrc, err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
 		if err != nil {
-			return fmt.Errorf("failed to send ibc transfer from source: %v", err)
+			return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 		}
 		return nil
 	})
 
 	eg.Go(func() error {
 		var err error
-		txHashDst, err = dstChain.SendIBCTransfer(ctx, channels[0].Counterparty.ChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+		t.Logf("Sending ibc transfer from %s to %s on channel %s", dstChain.Config().ChainID, srcChain.Config().ChainID, dstChannelID)
+		txHashDst, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
 		if err != nil {
-			return fmt.Errorf("failed to send ibc transfer from source: %v", err)
+			return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 		}
 		return nil
 	})
@@ -264,10 +271,9 @@ func testPacketRelaySuccess(
 	srcDenom := srcChainCfg.Denom
 
 	dstChainCfg := dstChain.Config()
-	dstUser := testCase.Users[1]
-	dstDenom := dstChainCfg.Denom
 
 	// [BEGIN] assert on source to destination transfer
+	t.Logf("Asserting %s (source) to %s (destination) transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 	srcInitialBalance := userFaucetFund
 	dstInitialBalance := int64(0)
@@ -292,9 +298,16 @@ func testPacketRelaySuccess(
 
 	require.Equal(t, srcInitialBalance-expectedDifference, srcFinalBalance)
 	require.Equal(t, dstInitialBalance+testCoinAmount, dstFinalBalance)
+
+	srcAcks, err := srcChain.GetPacketAcknowledgments(ctx, "transfer", "channel-0")
+	require.NoError(t, err)
+	require.NotEmpty(t, srcAcks)
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
+	t.Logf("Asserting %s (destination) to %s (source) transfer", dstChainCfg.ChainID, srcChainCfg.ChainID)
+	dstUser := testCase.Users[1]
+	dstDenom := dstChainCfg.Denom
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 	srcInitialBalance = int64(0)
 	dstInitialBalance = userFaucetFund
@@ -318,7 +331,12 @@ func testPacketRelaySuccess(
 
 	require.Equal(t, srcInitialBalance+testCoinAmount, srcFinalBalance)
 	require.Equal(t, dstInitialBalance-expectedDifference, dstFinalBalance)
-	// [END] assert on destination to source transfer
+
+	dstAcks, err := dstChain.GetPacketAcknowledgments(ctx, "transfer", "channel-0")
+	require.NoError(t, err)
+	require.NotEmpty(t, dstAcks)
+
+	//[END] assert on destination to source transfer
 }
 
 // Ensure that a queued packet that should not be relayed is not relayed.

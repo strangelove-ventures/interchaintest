@@ -393,3 +393,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesis Penu
 	_, err = c.getRelayerNode().TendermintNode.WaitForBlocks(5)
 	return err
 }
+
+func (c *PenumbraChain) GetPacketAcknowledgments(ctx context.Context, portID, channelID string) ([]ibc.PacketAcknowledgment, error) {
+	return nil, errors.New("not yet implemented")
+}

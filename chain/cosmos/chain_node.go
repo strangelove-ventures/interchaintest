@@ -101,7 +101,6 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 	return nil
-
 }
 
 // CliContext creates a new Cosmos SDK client context
@@ -354,7 +353,6 @@ type IBCTransferTx struct {
 	TxHash string `json:"txhash"`
 }
 
-// CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
