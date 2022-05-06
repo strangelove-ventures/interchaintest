@@ -145,14 +145,11 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 		eg        errgroup.Group
 		txHashSrc string
 		txHashDst string
-
-		srcChannelID = channels[0].ChannelID
-		dstChannelID = channels[0].Counterparty.ChannelID
 	)
 
 	eg.Go(func() error {
 		var err error
-		t.Logf("Sending ibc transfer from %s to %s on channel %s", srcChain.Config().ChainID, dstChain.Config().ChainID, srcChannelID)
+		srcChannelID := channels[0].ChannelID
 		txHashSrc, err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from source: %w", err)
@@ -162,7 +159,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 
 	eg.Go(func() error {
 		var err error
-		t.Logf("Sending ibc transfer from %s to %s on channel %s", dstChain.Config().ChainID, srcChain.Config().ChainID, dstChannelID)
+		dstChannelID := channels[0].Counterparty.ChannelID
 		txHashDst, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
@@ -273,7 +270,7 @@ func testPacketRelaySuccess(
 	dstChainCfg := dstChain.Config()
 
 	// [BEGIN] assert on source to destination transfer
-	t.Logf("Asserting %s (source) to %s (destination) transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
+	t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 	srcInitialBalance := userFaucetFund
 	dstInitialBalance := int64(0)
@@ -305,7 +302,7 @@ func testPacketRelaySuccess(
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
-	t.Logf("Asserting %s (destination) to %s (source) transfer", dstChainCfg.ChainID, srcChainCfg.ChainID)
+	t.Logf("Asserting %s to %s transfer", dstChainCfg.ChainID, srcChainCfg.ChainID)
 	dstUser := testCase.Users[1]
 	dstDenom := dstChainCfg.Denom
 	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
