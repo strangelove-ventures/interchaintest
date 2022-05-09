@@ -33,7 +33,6 @@ func PrettyPrintTxs(ctx context.Context, txs types.Txs, getTx func(ctx context.C
 	buf := new(bytes.Buffer)
 	for i, tx := range txs {
 		buf.WriteString(fmt.Sprintf("TX %d: ", i))
-		buf.WriteString(tx.String() + "\n")
 
 		// Tx data may contain useful information such as protobuf message type but will be
 		// mixed in with non-human readable data.

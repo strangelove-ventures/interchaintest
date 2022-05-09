@@ -296,9 +296,11 @@ func testPacketRelaySuccess(
 	require.Equal(t, srcInitialBalance-expectedDifference, srcFinalBalance)
 	require.Equal(t, dstInitialBalance+testCoinAmount, dstFinalBalance)
 
-	srcAcks, err := srcChain.GetPacketAcknowledgments(ctx, "transfer", "channel-0")
+	seq, err := srcChain.GetPacketSequence(ctx, srcTxHash)
 	require.NoError(t, err)
-	require.NotEmpty(t, srcAcks)
+	_, err = srcChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	require.NoError(t, err)
+
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
@@ -329,9 +331,10 @@ func testPacketRelaySuccess(
 	require.Equal(t, srcInitialBalance+testCoinAmount, srcFinalBalance)
 	require.Equal(t, dstInitialBalance-expectedDifference, dstFinalBalance)
 
-	dstAcks, err := dstChain.GetPacketAcknowledgments(ctx, "transfer", "channel-0")
+	seq, err = dstChain.GetPacketSequence(ctx, dstTxHash)
 	require.NoError(t, err)
-	require.NotEmpty(t, dstAcks)
+	_, err = dstChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	require.NoError(t, err)
 
 	//[END] assert on destination to source transfer
 }

@@ -66,7 +66,6 @@ const (
 )
 
 type PacketAcknowledgment struct {
-	Data   []byte
-	Height uint64
-	Seq    uint64
+	Data     []byte
+	Sequence uint64
 }

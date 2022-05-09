@@ -16,10 +16,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
-	querytypes "github.com/cosmos/cosmos-sdk/types/query"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/log"
@@ -196,37 +196,40 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) GetPacketAcknowledgments(ctx context.Context, portID, channelID string) ([]ibc.PacketAcknowledgment, error) {
+func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
+	txResp, err := c.GetTransaction(ctx, txHash)
+	if err != nil {
+		return 0, err
+	}
+	seqData, ok := tendermint.AttributeValue(txResp.Events, "send_packet", []byte("packet_sequence"))
+	if !ok {
+		return 0, fmt.Errorf("packet sequence not found for %X", txHash)
+	}
+	seq, err := strconv.Atoi(string(seqData))
+	return uint64(seq), err
+}
+
+func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgment, _ error) {
 	grpcAddress := dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, err
+		return found, err
 	}
 	defer conn.Close()
 
 	client := chantypes.NewQueryClient(conn)
-	resp, err := client.PacketAcknowledgements(ctx, &chantypes.QueryPacketAcknowledgementsRequest{
+	resp, err := client.PacketAcknowledgement(ctx, &chantypes.QueryPacketAcknowledgementRequest{
 		PortId:    portID,
 		ChannelId: channelID,
-		Pagination: &querytypes.PageRequest{
-			Key:        []byte(""),
-			Offset:     0,
-			Limit:      1000,
-			CountTotal: true,
-		},
+		Sequence:  seq,
 	})
 	if err != nil {
-		return nil, err
+		return found, err
 	}
-	acks := make([]ibc.PacketAcknowledgment, len(resp.Acknowledgements))
-	for i := range resp.Acknowledgements {
-		acks[i] = ibc.PacketAcknowledgment{
-			Data:   resp.Acknowledgements[i].Data,
-			Height: resp.Height.RevisionNumber,
-			Seq:    resp.Acknowledgements[i].Sequence,
-		}
-	}
-	return acks, nil
+	return ibc.PacketAcknowledgment{
+		Data:     resp.Acknowledgement,
+		Sequence: seq,
+	}, nil
 }
 
 func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
