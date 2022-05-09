@@ -4,23 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 )
 
-// PrettyPrintBlock pretty prints tendermint block, all its transactions, and events
-func PrettyPrintBlock(ctx context.Context, client rpcclient.SignClient, height int64) (string, error) {
-	blockRes, err := client.Block(ctx, &height)
-	if err != nil {
-		return "", fmt.Errorf("tendermint rpc get block: %w", err)
-	}
+// PrettyPrintTxs pretty prints tendermint transactions and events
+func PrettyPrintTxs(ctx context.Context, txs types.Txs, getTx func(ctx context.Context, hash []byte, prove bool) (*coretypes.ResultTx, error)) (string, error) {
 	buf := new(bytes.Buffer)
-	buf.WriteString("BLOCK " + strconv.FormatInt(height, 10) + "\n")
-
-	for i, tx := range blockRes.Block.Txs {
-		buf.WriteString(fmt.Sprintf("TX %d:\n", i))
+	for i, tx := range txs {
+		buf.WriteString(fmt.Sprintf("TX %d: ", i))
 		buf.WriteString(tx.String() + "\n")
 
 		// Tx data may contain useful information such as protobuf message type but will be
@@ -29,7 +23,7 @@ func PrettyPrintBlock(ctx context.Context, client rpcclient.SignClient, height i
 		buf.Write(tx)
 		buf.WriteString("\n")
 
-		resTx, err := client.Tx(ctx, tx.Hash(), false)
+		resTx, err := getTx(ctx, tx.Hash(), false)
 		if err != nil {
 			return "", fmt.Errorf("tendermint rpc get tx: %w", err)
 		}
