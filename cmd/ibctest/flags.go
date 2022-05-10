@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // The value of the extra flags this test supports.
@@ -18,7 +20,7 @@ type mainFlags struct {
 }
 
 func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
-	var w log.WriteSyncer
+	var w zapcore.WriteSyncer
 	switch f.LogFile {
 	case "stderr", "":
 		w = os.Stderr
@@ -35,19 +37,38 @@ func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
 		lc.Closer = file
 		lc.FilePath = file.Name()
 	}
-	lc.Logger = log.New(w, f.LogFormat, f.LogLevel)
+	lc.Logger = f.newZap(w)
 	return lc, nil
 }
 
+func (f mainFlags) newZap(w zapcore.WriteSyncer) *zap.Logger {
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format("2006-01-02T15:04:05.000000Z07:00"))
+	}
+	config.LevelKey = "lvl"
+
+	enc := zapcore.NewConsoleEncoder(config)
+	if f.LogFormat == "json" {
+		enc = zapcore.NewJSONEncoder(config)
+	}
+
+	lvl := zap.NewAtomicLevel()
+	if err := lvl.UnmarshalText([]byte(f.LogLevel)); err != nil {
+		lvl = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+	return zap.New(zapcore.NewCore(enc, w, lvl))
+}
+
 type LoggerCloser struct {
-	log.Logger
+	*zap.Logger
 	io.Closer
 	FilePath string
 }
 
 func (lc LoggerCloser) Close() error {
 	// ignore error because of https://github.com/uber-go/zap/issues/880 with stderr/stdout
-	_ = lc.Logger.Flush()
+	_ = lc.Logger.Sync()
 	if lc.Closer == nil {
 		return nil
 	}
