@@ -262,7 +262,7 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 		return
 	}
 	tn.logger().
-		WithField("block", height).
+		With("block", height).
 		Debug(pp)
 }
 

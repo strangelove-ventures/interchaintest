@@ -18,5 +18,6 @@ type Logger interface {
 
 	// Level returns current log level as a lowercased string
 	Level() string
+
 	Flush() error
 }

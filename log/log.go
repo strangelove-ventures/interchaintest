@@ -29,20 +29,21 @@ func New(w WriteSyncer, format string, level string) Logger {
 		lvl = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
 	logger := zap.New(zapcore.NewCore(enc, w, lvl)).Sugar()
-	return zapLogger{logger}
+	return zapLogger{logger, lvl.Level()}
 }
 
 // Nop returns a no-op logger
 func Nop() Logger {
-	return zapLogger{zap.NewNop().Sugar()}
+	return zapLogger{zap.NewNop().Sugar(), zapcore.ErrorLevel}
 }
 
 type zapLogger struct {
 	logger *zap.SugaredLogger
+	level  zapcore.Level
 }
 
 func (z zapLogger) With(key string, val interface{}) Logger {
-	return zapLogger{z.logger.With(zap.Any(key, val))}
+	return zapLogger{z.logger.With(zap.Any(key, val)), z.level}
 }
 
 func (z zapLogger) Debug(args ...interface{}) {
@@ -69,8 +70,10 @@ func (z zapLogger) Errorf(format string, args ...interface{}) {
 	z.logger.Errorf(format, args...)
 }
 
-func (l logger) Level() string {
-	return l.logger.GetLevel().String()
+func (z zapLogger) Level() string {
+	return z.level.String()
+}
+
 func (z zapLogger) Flush() error {
 	return z.logger.Sync()
 }
