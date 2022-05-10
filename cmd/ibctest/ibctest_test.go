@@ -12,8 +12,8 @@ import (
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
+	"go.uber.org/zap"
 )
 
 // The value of the test matrix.
@@ -78,20 +78,21 @@ func setUpTestMatrix() error {
 }
 
 func validateTestMatrix() error {
+	nop := zap.NewNop()
 	for _, r := range testMatrix.Relayers {
-		if _, err := getRelayerFactory(r, log.Nop()); err != nil {
+		if _, err := getRelayerFactory(r, nop); err != nil {
 			return err
 		}
 	}
 
 	for _, cs := range testMatrix.ChainSets {
-		if _, err := getChainFactory(cs, log.Nop()); err != nil {
+		if _, err := getChainFactory(cs, nop); err != nil {
 			return err
 		}
 	}
 
 	for _, ccs := range testMatrix.CustomChainSets {
-		if _, err := getCustomChainFactory(ccs, log.Nop()); err != nil {
+		if _, err := getCustomChainFactory(ccs, nop); err != nil {
 			return err
 		}
 	}
@@ -138,9 +139,11 @@ func TestRelayer(t *testing.T) {
 	t.Cleanup(func() { _ = logger.Close() })
 	t.Logf("View chain and relayer logs at %s", logger.FilePath)
 
+	zlogger := logger.Logger
+
 	// One layer of subtests for each relayer to be tested.
 	for _, r := range testMatrix.Relayers {
-		rf, err := getRelayerFactory(r, logger)
+		rf, err := getRelayerFactory(r, zlogger)
 		if err != nil {
 			// This error should have been validated before running tests.
 			panic(err)
@@ -152,14 +155,14 @@ func TestRelayer(t *testing.T) {
 			// Collect all the chain factories from both the builtins and the customs.
 			chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
 			for _, cs := range testMatrix.ChainSets {
-				cf, err := getChainFactory(cs, logger)
+				cf, err := getChainFactory(cs, zlogger)
 				if err != nil {
 					panic(err)
 				}
 				chainFactories = append(chainFactories, cf)
 			}
 			for _, ccs := range testMatrix.CustomChainSets {
-				ccf, err := getCustomChainFactory(ccs, logger)
+				ccf, err := getCustomChainFactory(ccs, zlogger)
 				if err != nil {
 					panic(err)
 				}
