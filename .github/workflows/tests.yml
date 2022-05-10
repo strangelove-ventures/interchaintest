@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: all tests
+    name: tests
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -33,10 +33,5 @@ jobs:
       #     docker network prune -f || true
 
       # run tests
-      # TODO: add me back!
-#      - name: unit tests
-#        run: make test
-
-      - name: ibctest
-        # DELETEME: temporary
-        run: (make ibctest && cat doesnotexist) || (cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+      - name: run all tests
+        run: (go test -timeout 30m -v -p 2 ./...) || (cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
