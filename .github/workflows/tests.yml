@@ -33,5 +33,8 @@ jobs:
       #     docker network prune -f || true
 
       # run tests
-      - name: run tests
-        run: go test -timeout 30m -v -p 2 ./...
+      - name: run unit tests
+        run: make test
+
+      - name: run ibctest
+        run: make ibctest && ./bin/ibctest -test.v
