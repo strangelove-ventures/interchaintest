@@ -39,4 +39,4 @@ jobs:
 
       - name: ibctest
         # DELETEME: temporary
-        run: (make ibctest && cat doesnotexist) || cat ($HOME/.ibctest/logs/ibctest.log && exit 1)
+        run: (make ibctest && cat doesnotexist) || (cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
