@@ -33,9 +33,10 @@ jobs:
       #     docker network prune -f || true
 
       # run tests
-      - name: unit tests
-        run: make test
+      # TODO: add me back!
+#      - name: unit tests
+#        run: make test
 
       - name: ibctest
         # DELETEME: temporary
-        run: (make ibctest && cat doesnotexist) || cat $HOME/.ibctest/logs/ibctest.log
+        run: (make ibctest && cat doesnotexist) || cat ($HOME/.ibctest/logs/ibctest.log && exit 1)
