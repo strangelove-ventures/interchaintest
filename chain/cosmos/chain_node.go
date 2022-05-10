@@ -214,7 +214,7 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	mostRecentBlock := startingBlock
 	tn.logger().
 		With("initialHeight", startingBlock).
-		Info("wait for blocks")
+		Info("waiting for blocks")
 
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -234,8 +234,8 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 
 		if deltaBlocks >= blocks {
 			tn.logger().
-				WithField("initialHeight", startingBlock).
-				Debugf("Time (sec) waiting for %d blocks: %d", blocks, i+1)
+				With("initialHeight", startingBlock).
+				Debugf("time waiting for %d blocks: %ds", blocks, i+1)
 			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
@@ -654,8 +654,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	tn.logger().
 		With("container", tn.Name()).
-		With("command", strings.Join(cmd, " ")).
-		Info()
+		Info(strings.Join(cmd, " "))
 
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
@@ -843,8 +842,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	tn.logger().
 		With("container", container).
-		With("command", strings.Join(cmd, " ")).
-		Info()
+		Info(strings.Join(cmd, " "))
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -883,9 +881,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	tn.logger().
 		With("container", container).
-		With("stdout", stdout.String()).
-		With("stderr", stderr.String()).
-		Info()
+		Debugf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
 	return exitCode, stdout.String(), stderr.String(), err
 }
 

@@ -156,9 +156,7 @@ func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
 	relayer.log.
 		With("containerID", relayer.container.ID).
 		With("container", relayer.container.Name).
-		With("stdout", stdout.String()).
-		With("stderr", stderr.String()).
-		Info("stopped docker container")
+		Debugf("stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
 
 	return relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: relayer.container.ID})
 }
@@ -229,8 +227,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
 	relayer.log.
 		With("container", containerName).
-		With("command", strings.Join(cmd, " ")).
-		Info()
+		Info(strings.Join(cmd, " "))
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
@@ -275,8 +272,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 
 	relayer.log.
 		With("container", container).
-		With("command", strings.Join(cmd, " ")).
-		Info()
+		Info(strings.Join(cmd, " "))
 
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
@@ -312,9 +308,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	relayer.log.
 		With("container", container).
-		With("stdout", stdout.String()).
-		With("stderr", stderr.String()).
-		Info()
+		Debugf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
 	return exitCode, stdout.String(), stderr.String(), err
 }
 

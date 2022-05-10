@@ -422,7 +422,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.With("container", n.Name()).Info("staring container ...")
+		c.log.With("container", n.Name()).Info("starting container ...")
 		if err := n.StartContainer(ctx); err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.With("container", n.Name()).Info("staring container...")
+		c.log.With("container", n.Name()).Info("starting container...")
 		eg.Go(func() error {
 			n.SetValidatorConfigAndPeers(peers)
 			return n.StartContainer(ctx)
