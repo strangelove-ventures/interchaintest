@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
 )
 
 // The value of the test matrix.
@@ -181,11 +182,8 @@ func TestRelayer(t *testing.T) {
 				t.Run(chainTestName, func(t *testing.T) {
 					t.Parallel()
 
-					// TODO DELETEME
-					t.Fatal("BOOM = test failure for CI")
-
 					// Finally, the relayertest suite.
-					//relayertest.TestRelayer(t, cf, rf)
+					relayertest.TestRelayer(t, cf, rf)
 				})
 			}
 		})

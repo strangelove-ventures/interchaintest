@@ -34,4 +34,4 @@ jobs:
 
       # run tests
       - name: run all tests
-        run: (go test -timeout 30m -v -p 2 ./...) || (echo "*****Chain and Relayer Logs*****" && tail -n 20 "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (go test -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && tail -n 20 "$HOME/.ibctest/logs/ibctest.log" && exit 1)
