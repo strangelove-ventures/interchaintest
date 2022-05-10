@@ -1,10 +1,11 @@
 package log
 
-var _ Logger = logger{}
+var _ Logger = zapLogger{}
 
 // Logger is a convenience interface
 type Logger interface {
-	WithField(key string, val interface{}) Logger
+	// With adds a field and returns a new logger handle
+	With(key string, val interface{}) Logger
 
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
@@ -17,4 +18,5 @@ type Logger interface {
 
 	// Level returns current log level as a lowercased string
 	Level() string
+	Flush() error
 }

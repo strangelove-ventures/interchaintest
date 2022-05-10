@@ -7,6 +7,7 @@ import (
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"go.uber.org/multierr"
 )
 
 // The value of the extra flags this test supports.
@@ -18,7 +19,7 @@ type mainFlags struct {
 }
 
 func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
-	var w io.Writer
+	var w log.WriteSyncer
 	switch f.LogFile {
 	case "stderr", "":
 		w = os.Stderr
@@ -46,8 +47,9 @@ type LoggerCloser struct {
 }
 
 func (lc LoggerCloser) Close() error {
+	err := lc.Logger.Flush()
 	if lc.Closer == nil {
-		return nil
+		return err
 	}
-	return lc.Closer.Close()
+	return multierr.Append(err, lc.Closer.Close())
 }

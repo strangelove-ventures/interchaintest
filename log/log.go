@@ -1,101 +1,76 @@
 package log
 
 import (
-	"fmt"
-	"io"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"time"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-func init() {
-	// mimics stdlib Lshortfile
-	zerolog.CallerMarshalFunc = func(file string, line int) string {
-		return filepath.Base(file) + ":" + strconv.Itoa(line)
-	}
-}
+type WriteSyncer = zapcore.WriteSyncer
 
 // New returns a valid Logger.
 // Format must be one of: console or json.
 // Level must be one of: error, info, or debug.
-func New(w io.Writer, format string, level string) Logger {
-	lg := log.Output(zerolog.ConsoleWriter{Out: w})
+func New(w WriteSyncer, format string, level string) Logger {
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format("2006-01-02T15:04:05.000000Z07:00"))
+	}
+	config.LevelKey = "lvl"
+
+	enc := zapcore.NewConsoleEncoder(config)
 	if format == "json" {
-		lg = zerolog.New(w).With().Timestamp().Logger()
+		enc = zapcore.NewJSONEncoder(config)
 	}
 
-	lvl, err := zerolog.ParseLevel(level)
-	if err != nil {
-		lvl = zerolog.InfoLevel
+	lvl := zap.NewAtomicLevel()
+	if err := lvl.UnmarshalText([]byte(level)); err != nil {
+		lvl = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
-	lg = lg.Level(lvl)
-
-	return logger{
-		logger: lg,
-	}
+	logger := zap.New(zapcore.NewCore(enc, w, lvl)).Sugar()
+	return zapLogger{logger}
 }
 
 // Nop returns a no-op logger
 func Nop() Logger {
-	return New(io.Discard, "console", "error")
+	return zapLogger{zap.NewNop().Sugar()}
 }
 
-type logger struct {
-	logger zerolog.Logger
+type zapLogger struct {
+	logger *zap.SugaredLogger
 }
 
-// WithField returns a new logger with attached key-value pair as a field
-func (l logger) WithField(key string, val interface{}) Logger {
-	return logger{
-		logger: l.logger.With().Interface(key, val).Logger(),
-	}
+func (z zapLogger) With(key string, val interface{}) Logger {
+	return zapLogger{z.logger.With(zap.Any(key, val))}
 }
 
-func (l logger) Debug(args ...interface{}) {
-	l.send(l.logger.Debug(), args...)
+func (z zapLogger) Debug(args ...interface{}) {
+	z.logger.Debug(args...)
 }
 
-func (l logger) Debugf(format string, args ...interface{}) {
-	l.sendf(l.logger.Debug(), format, args...)
+func (z zapLogger) Debugf(format string, args ...interface{}) {
+	z.logger.Debugf(format, args...)
 }
 
-func (l logger) Info(args ...interface{}) {
-	l.send(l.logger.Info(), args...)
+func (z zapLogger) Info(args ...interface{}) {
+	z.logger.Info(args...)
 }
 
-func (l logger) Infof(format string, args ...interface{}) {
-	l.sendf(l.logger.Info(), format, args...)
+func (z zapLogger) Infof(format string, args ...interface{}) {
+	z.logger.Infof(format, args...)
 }
 
-func (l logger) Error(args ...interface{}) {
-	l.send(l.logger.Error(), args...)
+func (z zapLogger) Error(args ...interface{}) {
+	z.logger.Error(args...)
 }
 
-func (l logger) Errorf(format string, args ...interface{}) {
-	l.sendf(l.logger.Error(), format, args...)
+func (z zapLogger) Errorf(format string, args ...interface{}) {
+	z.logger.Errorf(format, args...)
 }
 
 func (l logger) Level() string {
 	return l.logger.GetLevel().String()
-}
-
-func (l logger) send(event *zerolog.Event, args ...interface{}) {
-	event = event.Caller(2)
-	if len(args) == 0 {
-		event.Send()
-		return
-	}
-	event.Msg(strings.TrimSpace(fmt.Sprintln(args...)))
-}
-
-func (l logger) sendf(event *zerolog.Event, format string, args ...interface{}) {
-	event = event.Caller(2)
-	if len(args) == 0 {
-		event.Send()
-		return
-	}
-	event.Msgf(format, args...)
+func (z zapLogger) Flush() error {
+	return z.logger.Sync()
 }

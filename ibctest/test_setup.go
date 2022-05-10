@@ -300,9 +300,9 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 						defer cancelLogs()
 						_ = pool.Client.Logs(docker.LogsOptions{Context: ctxLogs, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 						logger.
-							WithField("containers", names).
-							WithField("stdout", stdout).
-							WithField("stderr", stderr).
+							With("containers", names).
+							With("stdout", stdout).
+							With("stderr", stderr).
 							Info("docker cleanup")
 					}
 					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID, Force: true})

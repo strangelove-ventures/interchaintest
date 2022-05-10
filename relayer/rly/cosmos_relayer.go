@@ -91,8 +91,8 @@ func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID s
 		home:      home,
 		testName:  t.Name(),
 		log: logger.
-			WithField("test", t.Name()).
-			WithField("image", containerImage+":"+containerVersion),
+			With("test", t.Name()).
+			With("image", containerImage+":"+containerVersion),
 	}
 	rly.MkDir()
 	return rly
@@ -154,10 +154,10 @@ func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
 	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: relayer.container.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 
 	relayer.log.
-		WithField("containerID", relayer.container.ID).
-		WithField("container", relayer.container.Name).
-		WithField("stdout", stdout.String()).
-		WithField("stderr", stderr.String()).
+		With("containerID", relayer.container.ID).
+		With("container", relayer.container.Name).
+		With("stdout", stdout.String()).
+		With("stderr", stderr.String()).
 		Info("stopped docker container")
 
 	return relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: relayer.container.ID})
@@ -228,8 +228,8 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
 	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
 	relayer.log.
-		WithField("container", containerName).
-		WithField("command", strings.Join(cmd, " ")).
+		With("container", containerName).
+		With("command", strings.Join(cmd, " ")).
 		Info()
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: containerName,
@@ -274,8 +274,8 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	container := fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 
 	relayer.log.
-		WithField("container", container).
-		WithField("command", strings.Join(cmd, " ")).
+		With("container", container).
+		With("command", strings.Join(cmd, " ")).
 		Info()
 
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
@@ -311,9 +311,9 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	relayer.log.
-		WithField("container", container).
-		WithField("stdout", stdout.String()).
-		WithField("stderr", stderr.String()).
+		With("container", container).
+		With("stdout", stdout.String()).
+		With("stderr", stderr.String()).
 		Info()
 	return exitCode, stdout.String(), stderr.String(), err
 }

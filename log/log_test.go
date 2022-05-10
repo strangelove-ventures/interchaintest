@@ -10,18 +10,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type nopSyncer struct {
+	*bytes.Buffer
+}
+
+func (n nopSyncer) Sync() error { return nil }
+
 func TestLogger(t *testing.T) {
 	t.Run("json", func(t *testing.T) {
-		out := new(bytes.Buffer)
+		out := nopSyncer{new(bytes.Buffer)}
 		lg := New(out, "json", "debug")
-		lg.Debug("test", "debug")
+		lg.Debug("test debug")
 		lg.Infof("test %s", "info")
 		lg.Errorf("test %s", "error")
 
-		require.Contains(t, out.String(), "log_test.go")
-
 		type logLine struct {
-			Level, Message string
+			Lvl, Msg string
 		}
 
 		var (
@@ -47,7 +51,7 @@ func TestLogger(t *testing.T) {
 	})
 
 	t.Run("console", func(t *testing.T) {
-		out := new(bytes.Buffer)
+		out := nopSyncer{new(bytes.Buffer)}
 		lg := New(out, "console", "debug")
 		lg.Debugf("test %s", "debug")
 		lg.Info("test info")
@@ -56,12 +60,10 @@ func TestLogger(t *testing.T) {
 		require.Contains(t, out.String(), "test debug")
 		require.Contains(t, out.String(), "test info")
 		require.Contains(t, out.String(), "error")
-
-		require.Contains(t, out.String(), "log_test.go")
 	})
 
 	t.Run("log level", func(t *testing.T) {
-		out := new(bytes.Buffer)
+		out := nopSyncer{new(bytes.Buffer)}
 		lg := New(out, "console", "info")
 		lg.Debug("should not see me")
 
@@ -70,9 +72,9 @@ func TestLogger(t *testing.T) {
 }
 
 func TestLogger_WithField(t *testing.T) {
-	out := new(bytes.Buffer)
+	out := nopSyncer{new(bytes.Buffer)}
 	lg := New(out, "json", "info")
-	lg.WithField("myField", "test").Info()
+	lg.With("myField", "test").Info()
 
 	var logLine struct {
 		MyField string

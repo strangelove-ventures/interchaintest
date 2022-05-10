@@ -213,8 +213,8 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	startingBlock := stat.SyncInfo.LatestBlockHeight
 	mostRecentBlock := startingBlock
 	tn.logger().
-		WithField("initialHeight", startingBlock).
-		Debug("wait for blocks")
+		With("initialHeight", startingBlock).
+		Info("wait for blocks")
 
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -653,8 +653,8 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	tn.logger().
-		WithField("container", tn.Name()).
-		WithField("command", strings.Join(cmd, " ")).
+		With("container", tn.Name()).
+		With("command", strings.Join(cmd, " ")).
 		Info()
 
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
@@ -703,7 +703,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	tn.Container = c
 
 	port := dockerutil.GetHostPort(c, rpcPort)
-	tn.logger().WithField("container", tn.Name()).Infof("RPC => %s", port)
+	tn.logger().With("container", tn.Name()).Infof("RPC => %s", port)
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
 	if err != nil {
@@ -785,7 +785,7 @@ func (nodes ChainNodes) PeerString() string {
 		}
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		nodes.logger().WithField("container", n.Name()).Infof("(%s) peering (%s)", hostName, ps)
+		nodes.logger().With("container", n.Name()).Infof("(%s) peering (%s)", hostName, ps)
 		addrs[i] = ps
 	}
 	return strings.Join(addrs, ",")
@@ -798,7 +798,7 @@ func (nodes ChainNodes) LogGenesisHashes() error {
 		if err != nil {
 			return err
 		}
-		nodes.logger().WithField("container", n.Name()).Infof("genesis hash %x", sha256.Sum256(gen))
+		nodes.logger().With("container", n.Name()).Infof("genesis hash %x", sha256.Sum256(gen))
 	}
 	return nil
 }
@@ -818,7 +818,7 @@ func (nodes ChainNodes) WaitForHeight(height int64) error {
 				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
 					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
 				}
-				nodes.logger().WithField("container", n.Name()).Infof("reached block %d", height)
+				nodes.logger().With("container", n.Name()).Infof("reached block %d", height)
 				return nil
 				// TODO: setup backup delay here
 			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
@@ -842,8 +842,8 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	tn.logger().
-		WithField("container", container).
-		WithField("command", strings.Join(cmd, " ")).
+		With("container", container).
+		With("command", strings.Join(cmd, " ")).
 		Info()
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
@@ -882,15 +882,15 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	tn.logger().
-		WithField("container", container).
-		WithField("stdout", stdout.String()).
-		WithField("stderr", stderr.String()).
+		With("container", container).
+		With("stdout", stdout.String()).
+		With("stderr", stderr.String()).
 		Info()
 	return exitCode, stdout.String(), stderr.String(), err
 }
 
 func (tn *ChainNode) logger() log.Logger {
 	return tn.log.
-		WithField("chainID", tn.Chain.Config().ChainID).
-		WithField("test", tn.TestName)
+		With("chainID", tn.Chain.Config().ChainID).
+		With("test", tn.TestName)
 }
