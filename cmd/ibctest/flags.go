@@ -46,6 +46,7 @@ type LoggerCloser struct {
 }
 
 func (lc LoggerCloser) Close() error {
+	// ignore error because of https://github.com/uber-go/zap/issues/880 with stderr/stdout
 	_ = lc.Logger.Flush()
 	if lc.Closer == nil {
 		return nil
