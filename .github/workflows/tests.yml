@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: run tests
+    name: all tests
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -33,8 +33,9 @@ jobs:
       #     docker network prune -f || true
 
       # run tests
-      - name: run unit tests
+      - name: unit tests
         run: make test
 
-      - name: run ibctest
-        run: make ibctest && ./bin/ibctest -test.v
+      - name: ibctest
+        # DELETEME: temporary
+        run: (make ibctest && cat doesnotexist) || cat $HOME/.ibctest/logs/ibctest.log
