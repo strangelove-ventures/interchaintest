@@ -18,6 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/log"
@@ -192,6 +194,42 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	}
 
 	return res.Balance.Amount.Int64(), nil
+}
+
+func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
+	txResp, err := c.GetTransaction(ctx, txHash)
+	if err != nil {
+		return 0, err
+	}
+	seqData, ok := tendermint.AttributeValue(txResp.Events, "send_packet", []byte("packet_sequence"))
+	if !ok {
+		return 0, fmt.Errorf("packet sequence not found for %X", txHash)
+	}
+	seq, err := strconv.Atoi(string(seqData))
+	return uint64(seq), err
+}
+
+func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgment, _ error) {
+	grpcAddress := dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
+	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return found, err
+	}
+	defer conn.Close()
+
+	client := chantypes.NewQueryClient(conn)
+	resp, err := client.PacketAcknowledgement(ctx, &chantypes.QueryPacketAcknowledgementRequest{
+		PortId:    portID,
+		ChannelId: channelID,
+		Sequence:  seq,
+	})
+	if err != nil {
+		return found, err
+	}
+	return ibc.PacketAcknowledgment{
+		Data:     resp.Acknowledgement,
+		Sequence: seq,
+	}, nil
 }
 
 func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {

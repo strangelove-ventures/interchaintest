@@ -78,6 +78,10 @@ func (l logger) Errorf(format string, args ...interface{}) {
 	l.sendf(l.logger.Error(), format, args...)
 }
 
+func (l logger) Level() string {
+	return l.logger.GetLevel().String()
+}
+
 func (l logger) send(event *zerolog.Event, args ...interface{}) {
 	event = event.Caller(2)
 	if len(args) == 0 {

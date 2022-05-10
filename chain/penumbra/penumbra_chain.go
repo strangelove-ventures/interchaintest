@@ -44,10 +44,10 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 		GasAdjustment:  1.3,
 		TrustingPeriod: "672h",
 		Images: []ibc.ChainDockerImage{
-			ibc.ChainDockerImage{
+			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
 			},
-			ibc.ChainDockerImage{
+			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
 			},
 		},
@@ -392,4 +392,12 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesis Penu
 	// Wait for 5 blocks before considering the chains "started"
 	_, err = c.getRelayerNode().TendermintNode.WaitForBlocks(5)
 	return err
+}
+
+func (c *PenumbraChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (ibc.PacketAcknowledgment, error) {
+	panic("not implemented")
+}
+
+func (c *PenumbraChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
+	panic("not implemented")
 }

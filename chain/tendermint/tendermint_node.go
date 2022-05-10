@@ -85,7 +85,6 @@ func (tn *TendermintNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 	return nil
-
 }
 
 // Name is the hostname of the test node container

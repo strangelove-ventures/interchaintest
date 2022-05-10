@@ -14,4 +14,7 @@ type Logger interface {
 
 	Error(args ...interface{})
 	Errorf(format string, args ...interface{})
+
+	// Level returns current log level as a lowercased string
+	Level() string
 }

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
 	"github.com/strangelove-ventures/ibc-test-framework/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -101,7 +102,6 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 	return nil
-
 }
 
 // CliContext creates a new Cosmos SDK client context
@@ -203,6 +203,8 @@ func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
 
 // Wait until we have signed n blocks in a row
 func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
+	ctx := context.Background()
+
 	stat, err := tn.Client.Status(context.Background())
 	if err != nil {
 		return -1, err
@@ -212,29 +214,56 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	mostRecentBlock := startingBlock
 	tn.logger().
 		WithField("initialHeight", startingBlock).
-		Info("wait for blocks")
+		Debug("wait for blocks")
+
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
 	for i := int64(0); i < timeoutSeconds; i++ {
 		time.Sleep(1 * time.Second)
 
-		stat, err := tn.Client.Status(context.Background())
+		stat, err := tn.Client.Status(ctx)
 		if err != nil {
 			return mostRecentBlock, err
 		}
 
 		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
 
+		tn.maybeLogBlock(mostRecentBlock)
+
 		deltaBlocks := mostRecentBlock - startingBlock
 
 		if deltaBlocks >= blocks {
 			tn.logger().
 				WithField("initialHeight", startingBlock).
-				Infof("Time (sec) waiting for %d blocks: %d", blocks, i+1)
+				Debugf("Time (sec) waiting for %d blocks: %d", blocks, i+1)
 			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
 	return mostRecentBlock, errors.New("timed out waiting for blocks")
+}
+
+func (tn *ChainNode) maybeLogBlock(height int64) {
+	if tn.logger().Level() != "debug" {
+		return
+	}
+	ctx := context.Background()
+	blockRes, err := tn.Client.Block(ctx, &height)
+	if err != nil {
+		tn.logger().Error(err)
+		return
+	}
+	txs := blockRes.Block.Txs
+	if len(txs) == 0 {
+		return
+	}
+	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
+	if err != nil {
+		tn.logger().Error(err)
+		return
+	}
+	tn.logger().
+		WithField("block", height).
+		Debug(pp)
 }
 
 func (tn *ChainNode) Height() (int64, error) {
@@ -354,7 +383,6 @@ type IBCTransferTx struct {
 	TxHash string `json:"txhash"`
 }
 
-// CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
@@ -686,7 +714,6 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
 		if err != nil {
-			// tn.t.Log(err)
 			return err
 		}
 		// TODO: reenable this check, having trouble with it for some reason
