@@ -16,14 +16,14 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer"
+	"go.uber.org/zap"
 )
 
 type CosmosRelayer struct {
 	container *docker.Container
 	home      string
-	log       log.Logger
+	log       *zap.Logger
 	networkID string
 	pool      *dockertest.Pool
 	testName  string
@@ -84,15 +84,13 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	}
 }
 
-func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID string, home string, logger log.Logger) *CosmosRelayer {
+func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID string, home string, logger *zap.Logger) *CosmosRelayer {
 	rly := &CosmosRelayer{
 		pool:      pool,
 		networkID: networkID,
 		home:      home,
 		testName:  t.Name(),
-		log: logger.
-			With("test", t.Name()).
-			With("image", containerImage+":"+containerVersion),
+		log:       logger.With(zap.String("test", t.Name()), zap.String("image", containerImage+":"+containerVersion)),
 	}
 	rly.MkDir()
 	return rly
@@ -130,7 +128,7 @@ func (relayer *CosmosRelayer) GetChannels(ctx context.Context, chainID string) (
 		channelOutput := ibc.ChannelOutput{}
 		err := json.Unmarshal([]byte(channel), &channelOutput)
 		if err != nil {
-			relayer.log.Errorf("error parsing channels json: %v\n", err)
+			relayer.log.Error("error parsing channels json", zap.Error(err))
 			continue
 		}
 		channels = append(channels, channelOutput)
@@ -154,9 +152,10 @@ func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
 	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: relayer.container.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 
 	relayer.log.
-		With("containerID", relayer.container.ID).
-		With("container", relayer.container.Name).
-		Debugf("stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+		Debug(fmt.Sprintf("stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+			zap.String("containerID", relayer.container.ID),
+			zap.String("container", relayer.container.Name),
+		)
 
 	return relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: relayer.container.ID})
 }
@@ -226,8 +225,9 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
 	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
 	relayer.log.
-		With("container", containerName).
-		Info(strings.Join(cmd, " "))
+		Info("running command", zap.String("command", strings.Join(cmd, " ")),
+			zap.String("container", containerName),
+		)
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
@@ -271,8 +271,9 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	container := fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 
 	relayer.log.
-		With("container", container).
-		Info(strings.Join(cmd, " "))
+		Info("running command", zap.String("command", strings.Join(cmd, " ")),
+			zap.String("container", container),
+		)
 
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
@@ -307,8 +308,9 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	relayer.log.
-		With("container", container).
-		Debugf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+		Debug(fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+			zap.String("container", container),
+		)
 	return exitCode, stdout.String(), stderr.String(), err
 }
 

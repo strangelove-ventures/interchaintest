@@ -99,7 +99,7 @@ func validateTestMatrix() error {
 	return nil
 }
 
-func getRelayerFactory(name string, logger log.Logger) (ibctest.RelayerFactory, error) {
+func getRelayerFactory(name string, logger *zap.Logger) (ibctest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
 		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger), nil
@@ -110,14 +110,14 @@ func getRelayerFactory(name string, logger log.Logger) (ibctest.RelayerFactory, 
 	}
 }
 
-func getChainFactory(chainSet []ibctest.BuiltinChainFactoryEntry, logger log.Logger) (ibctest.ChainFactory, error) {
+func getChainFactory(chainSet []ibctest.BuiltinChainFactoryEntry, logger *zap.Logger) (ibctest.ChainFactory, error) {
 	if len(chainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(chainSet))
 	}
 	return ibctest.NewBuiltinChainFactory(chainSet, logger), nil
 }
 
-func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, logger log.Logger) (ibctest.ChainFactory, error) {
+func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, logger *zap.Logger) (ibctest.ChainFactory, error) {
 	if len(customChainSet) != 2 {
 		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(customChainSet))
 	}

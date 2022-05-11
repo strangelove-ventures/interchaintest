@@ -1,12 +1,11 @@
 package penumbra_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestPenumbraChainStart(t *testing.T) {
@@ -18,8 +17,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
 
-	logger := log.New(os.Stderr, "console", "info")
-	chain, err := ibctest.GetChain(t.Name(), "penumbra", "010-pasithee,v0.35.0", "penumbra-1", 4, 1, logger)
+	chain, err := ibctest.GetChain(t.Name(), "penumbra", "010-pasithee,v0.35.0", "penumbra-1", 4, 1, zap.NewNop())
 	require.NoError(t, err, "failed to get penumbra chain")
 
 	err = chain.Initialize(t.Name(), home, pool, network)

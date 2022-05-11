@@ -6,9 +6,9 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
+	"go.uber.org/zap"
 )
 
 // RelayerFactory describes how to start a Relayer.
@@ -35,10 +35,10 @@ type RelayerFactory interface {
 // how to start the cosmos relayer in a docker container.
 type builtinRelayerFactory struct {
 	impl ibc.RelayerImplementation
-	log  log.Logger
+	log  *zap.Logger
 }
 
-func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger log.Logger) RelayerFactory {
+func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger) RelayerFactory {
 	return builtinRelayerFactory{impl: impl, log: logger}
 }
 
