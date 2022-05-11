@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: run tests
+    name: tests
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -33,5 +33,6 @@ jobs:
       #     docker network prune -f || true
 
       # run tests
-      - name: run tests
-        run: go test -timeout 30m -v -p 2 ./...
+      - name: run all tests
+        # show cosmos chain and relayer logs on test failure
+        run: (go test -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
