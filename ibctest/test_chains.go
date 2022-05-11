@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
@@ -28,7 +28,7 @@ func init() {
 	}
 }
 
-func GetChain(testName, name, version, chainID string, numValidators, numFullNodes int, log log.Logger) (ibc.Chain, error) {
+func GetChain(testName, name, version, chainID string, numValidators, numFullNodes int, log *zap.Logger) (ibc.Chain, error) {
 	chainConfig, exists := chainConfigMap[name]
 	if !exists {
 		return nil, fmt.Errorf("no chain configuration for %s", name)

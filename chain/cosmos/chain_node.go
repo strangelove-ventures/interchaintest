@@ -18,7 +18,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"go.uber.org/zap"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -53,7 +53,7 @@ type ChainNode struct {
 	Image        ibc.ChainDockerImage
 
 	lock sync.Mutex
-	log  log.Logger
+	log  *zap.Logger
 }
 
 // ChainNodes is a collection of ChainNode
@@ -213,8 +213,7 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	startingBlock := stat.SyncInfo.LatestBlockHeight
 	mostRecentBlock := startingBlock
 	tn.logger().
-		WithField("initialHeight", startingBlock).
-		Debug("wait for blocks")
+		Info("Waiting for blocks", zap.Int64("initial_height", startingBlock))
 
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -234,8 +233,10 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 
 		if deltaBlocks >= blocks {
 			tn.logger().
-				WithField("initialHeight", startingBlock).
-				Debugf("Time (sec) waiting for %d blocks: %d", blocks, i+1)
+				Debug("Time waiting for blocks",
+					zap.Int64("num_blocks", blocks),
+					zap.Duration("duration", time.Duration(i+1)*time.Second),
+				)
 			return mostRecentBlock, nil // done waiting for consecutive signed blocks
 		}
 	}
@@ -243,13 +244,13 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 }
 
 func (tn *ChainNode) maybeLogBlock(height int64) {
-	if tn.logger().Level() != "debug" {
+	if !tn.logger().Core().Enabled(zap.DebugLevel) {
 		return
 	}
 	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
-		tn.logger().Error(err)
+		tn.logger().Error("Get block", zap.Error(err))
 		return
 	}
 	txs := blockRes.Block.Txs
@@ -258,12 +259,10 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	}
 	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
 	if err != nil {
-		tn.logger().Error(err)
+		tn.logger().Error("Pretty print block", zap.Error(err))
 		return
 	}
-	tn.logger().
-		WithField("block", height).
-		Debug(pp)
+	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
 }
 
 func (tn *ChainNode) Height() (int64, error) {
@@ -653,9 +652,10 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	tn.logger().
-		WithField("container", tn.Name()).
-		WithField("command", strings.Join(cmd, " ")).
-		Info()
+		Info("Running command",
+			zap.String("command", strings.Join(cmd, " ")),
+			zap.String("container", tn.Name()),
+		)
 
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: tn.Name(),
@@ -703,7 +703,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	tn.Container = c
 
 	port := dockerutil.GetHostPort(c, rpcPort)
-	tn.logger().WithField("container", tn.Name()).Infof("RPC => %s", port)
+	tn.logger().Info("Rpc", zap.String("container", tn.Name()), zap.String("port", port))
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
 	if err != nil {
@@ -785,7 +785,11 @@ func (nodes ChainNodes) PeerString() string {
 		}
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		nodes.logger().WithField("container", n.Name()).Infof("(%s) peering (%s)", hostName, ps)
+		nodes.logger().Info("Peering",
+			zap.String("host_name", hostName),
+			zap.String("peer", ps),
+			zap.String("container", n.Name()),
+		)
 		addrs[i] = ps
 	}
 	return strings.Join(addrs, ",")
@@ -798,14 +802,14 @@ func (nodes ChainNodes) LogGenesisHashes() error {
 		if err != nil {
 			return err
 		}
-		nodes.logger().WithField("container", n.Name()).Infof("genesis hash %x", sha256.Sum256(gen))
+		nodes.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
 
 func (nodes ChainNodes) WaitForHeight(height int64) error {
 	var eg errgroup.Group
-	nodes.logger().Infof("Waiting For Nodes To Reach Block Height %d...", height)
+	nodes.logger().Info("Waiting for nodes to reach height", zap.Int64("height", height))
 	for _, n := range nodes {
 		n := n
 		eg.Go(func() error {
@@ -818,7 +822,7 @@ func (nodes ChainNodes) WaitForHeight(height int64) error {
 				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
 					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
 				}
-				nodes.logger().WithField("container", n.Name()).Infof("reached block %d", height)
+				nodes.logger().Info("Reached block", zap.Int64("height", height), zap.String("container", n.Name()))
 				return nil
 				// TODO: setup backup delay here
 			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
@@ -827,9 +831,9 @@ func (nodes ChainNodes) WaitForHeight(height int64) error {
 	return eg.Wait()
 }
 
-func (nodes ChainNodes) logger() log.Logger {
+func (nodes ChainNodes) logger() *zap.Logger {
 	if len(nodes) == 0 {
-		return log.Nop()
+		return zap.NewNop()
 	}
 	return nodes[0].logger()
 }
@@ -842,9 +846,10 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	tn.logger().
-		WithField("container", container).
-		WithField("command", strings.Join(cmd, " ")).
-		Info()
+		Info("Running command",
+			zap.String("command", strings.Join(cmd, " ")),
+			zap.String("container", container),
+		)
 	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Name: container,
 		Config: &docker.Config{
@@ -882,15 +887,16 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
 	tn.logger().
-		WithField("container", container).
-		WithField("stdout", stdout.String()).
-		WithField("stderr", stderr.String()).
-		Info()
+		Debug(
+			fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+			zap.String("container", container),
+		)
 	return exitCode, stdout.String(), stderr.String(), err
 }
 
-func (tn *ChainNode) logger() log.Logger {
-	return tn.log.
-		WithField("chainID", tn.Chain.Config().ChainID).
-		WithField("test", tn.TestName)
+func (tn *ChainNode) logger() *zap.Logger {
+	return tn.log.With(
+		zap.String("chain_id", tn.Chain.Config().ChainID),
+		zap.String("test", tn.TestName),
+	)
 }

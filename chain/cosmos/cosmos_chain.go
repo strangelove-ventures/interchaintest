@@ -22,7 +22,7 @@ import (
 	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/log"
+	"go.uber.org/zap"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -38,7 +38,7 @@ type CosmosChain struct {
 	numFullNodes  int
 	ChainNodes    ChainNodes
 
-	log log.Logger
+	log *zap.Logger
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
@@ -65,7 +65,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 	}
 }
 
-func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log log.Logger) *CosmosChain {
+func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log *zap.Logger) *CosmosChain {
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
@@ -254,7 +254,7 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 			Tag:        image.Version,
 		}, docker.AuthConfiguration{})
 		if err != nil {
-			c.log.Errorf("error pulling image: %v", err)
+			c.log.Error("Pull image", zap.Error(err))
 		}
 	}
 	for i := 0; i < count; i++ {
@@ -422,7 +422,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.WithField("container", n.Name()).Info("staring container ...")
+		c.log.Info("Starting container", zap.String("container", n.Name()))
 		if err := n.StartContainer(ctx); err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.WithField("container", n.Name()).Info("staring container...")
+		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			n.SetValidatorConfigAndPeers(peers)
 			return n.StartContainer(ctx)
