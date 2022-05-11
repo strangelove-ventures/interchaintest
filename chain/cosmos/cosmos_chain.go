@@ -254,7 +254,7 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 			Tag:        image.Version,
 		}, docker.AuthConfiguration{})
 		if err != nil {
-			c.log.Error("error pulling image", zap.Error(err))
+			c.log.Error("Pull image", zap.Error(err))
 		}
 	}
 	for i := 0; i < count; i++ {
@@ -422,7 +422,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.Info("starting container", zap.String("container", n.Name()))
+		c.log.Info("Starting container", zap.String("container", n.Name()))
 		if err := n.StartContainer(ctx); err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	for _, n := range c.ChainNodes {
 		n := n
-		c.log.Info("starting container", zap.String("container", n.Name()))
+		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			n.SetValidatorConfigAndPeers(peers)
 			return n.StartContainer(ctx)

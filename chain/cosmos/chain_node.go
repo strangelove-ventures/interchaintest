@@ -213,7 +213,7 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 	startingBlock := stat.SyncInfo.LatestBlockHeight
 	mostRecentBlock := startingBlock
 	tn.logger().
-		Info("waiting for blocks", zap.Int64("initialHeight", startingBlock))
+		Info("Waiting for blocks", zap.Int64("initial_height", startingBlock))
 
 	// timeout after ~1 minute plus block time
 	timeoutSeconds := blocks*int64(blockTime) + int64(60)
@@ -233,8 +233,8 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 
 		if deltaBlocks >= blocks {
 			tn.logger().
-				Debug("time waiting for blocks",
-					zap.Int64("numBlocks", blocks),
+				Debug("Time waiting for blocks",
+					zap.Int64("num_blocks", blocks),
 					zap.Duration("duration", time.Duration(i+1)*time.Second),
 				)
 			return mostRecentBlock, nil // done waiting for consecutive signed blocks
@@ -250,7 +250,7 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
-		tn.logger().Error("get block", zap.Error(err))
+		tn.logger().Error("Get block", zap.Error(err))
 		return
 	}
 	txs := blockRes.Block.Txs
@@ -259,7 +259,7 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	}
 	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
 	if err != nil {
-		tn.logger().Error("pretty print block", zap.Error(err))
+		tn.logger().Error("Pretty print block", zap.Error(err))
 		return
 	}
 	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
@@ -652,7 +652,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	tn.logger().
-		Info("running command",
+		Info("Running command",
 			zap.String("command", strings.Join(cmd, " ")),
 			zap.String("container", tn.Name()),
 		)
@@ -703,7 +703,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	tn.Container = c
 
 	port := dockerutil.GetHostPort(c, rpcPort)
-	tn.logger().Info("rpc", zap.String("container", tn.Name()), zap.String("port", port))
+	tn.logger().Info("Rpc", zap.String("container", tn.Name()), zap.String("port", port))
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
 	if err != nil {
@@ -785,8 +785,8 @@ func (nodes ChainNodes) PeerString() string {
 		}
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		nodes.logger().Info("peering",
-			zap.String("hostName", hostName),
+		nodes.logger().Info("Peering",
+			zap.String("host_name", hostName),
 			zap.String("peer", ps),
 			zap.String("container", n.Name()),
 		)
@@ -802,14 +802,14 @@ func (nodes ChainNodes) LogGenesisHashes() error {
 		if err != nil {
 			return err
 		}
-		nodes.logger().Info("genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
+		nodes.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
 
 func (nodes ChainNodes) WaitForHeight(height int64) error {
 	var eg errgroup.Group
-	nodes.logger().Info("waiting for nodes to reach height", zap.Int64("height", height))
+	nodes.logger().Info("Waiting for nodes to reach height", zap.Int64("height", height))
 	for _, n := range nodes {
 		n := n
 		eg.Go(func() error {
@@ -822,7 +822,7 @@ func (nodes ChainNodes) WaitForHeight(height int64) error {
 				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
 					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
 				}
-				nodes.logger().Info("reached block", zap.Int64("height", height), zap.String("container", n.Name()))
+				nodes.logger().Info("Reached block", zap.Int64("height", height), zap.String("container", n.Name()))
 				return nil
 				// TODO: setup backup delay here
 			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
@@ -846,7 +846,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	funcName := strings.Split(caller, ".")
 	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 	tn.logger().
-		Info("running command",
+		Info("Running command",
 			zap.String("command", strings.Join(cmd, " ")),
 			zap.String("container", container),
 		)
@@ -896,7 +896,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 
 func (tn *ChainNode) logger() *zap.Logger {
 	return tn.log.With(
-		zap.String("chainID", tn.Chain.Config().ChainID),
+		zap.String("chain_id", tn.Chain.Config().ChainID),
 		zap.String("test", tn.TestName),
 	)
 }

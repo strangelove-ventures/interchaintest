@@ -128,7 +128,7 @@ func (relayer *CosmosRelayer) GetChannels(ctx context.Context, chainID string) (
 		channelOutput := ibc.ChannelOutput{}
 		err := json.Unmarshal([]byte(channel), &channelOutput)
 		if err != nil {
-			relayer.log.Error("error parsing channels json", zap.Error(err))
+			relayer.log.Error("Parse channels json", zap.Error(err))
 			continue
 		}
 		channels = append(channels, channelOutput)
@@ -152,8 +152,8 @@ func (relayer *CosmosRelayer) StopRelayer(ctx context.Context) error {
 	_ = relayer.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: relayer.container.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 
 	relayer.log.
-		Debug(fmt.Sprintf("stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
-			zap.String("containerID", relayer.container.ID),
+		Debug(fmt.Sprintf("Stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+			zap.String("container_id", relayer.container.ID),
 			zap.String("container", relayer.container.Name),
 		)
 
@@ -225,7 +225,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
 	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
 	relayer.log.
-		Info("running command", zap.String("command", strings.Join(cmd, " ")),
+		Info("Running command", zap.String("command", strings.Join(cmd, " ")),
 			zap.String("container", containerName),
 		)
 	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
@@ -271,7 +271,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 	container := fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
 
 	relayer.log.
-		Info("running command", zap.String("command", strings.Join(cmd, " ")),
+		Info("Running command", zap.String("command", strings.Join(cmd, " ")),
 			zap.String("container", container),
 		)
 
