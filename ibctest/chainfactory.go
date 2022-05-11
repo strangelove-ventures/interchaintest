@@ -2,6 +2,7 @@ package ibctest
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
 	"go.uber.org/zap"
@@ -16,6 +17,12 @@ import (
 type ChainFactory interface {
 	// Pair returns two chains for IBC.
 	Pair(testName string) (ibc.Chain, ibc.Chain, error)
+
+	// Name returns a descriptive name of the factory,
+	// indicating all of its chains.
+	// Depending on how the factory was configured,
+	// this may report more than two chains.
+	Name() string
 }
 
 // BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
@@ -71,6 +78,14 @@ func (f *BuiltinChainFactory) Pair(testName string) (ibc.Chain, ibc.Chain, error
 // Returns all chains
 func (f *BuiltinChainFactory) GetAllChains(testName string) ([]ibc.Chain, error) {
 	return f.GetChains(testName, -1)
+}
+
+func (f *BuiltinChainFactory) Name() string {
+	parts := make([]string, len(f.entries))
+	for i, e := range f.entries {
+		parts[i] = e.Name + "@" + e.Version
+	}
+	return strings.Join(parts, "+")
 }
 
 // CustomChainFactory is a ChainFactory that supports returning chains that are defined by ChainConfig values.
@@ -133,4 +148,12 @@ func (f *CustomChainFactory) Pair(testName string) (ibc.Chain, ibc.Chain, error)
 // Returns all chains
 func (f *CustomChainFactory) GetAllChains(testName string) ([]ibc.Chain, error) {
 	return f.GetChains(testName, -1)
+}
+
+func (f *CustomChainFactory) Name() string {
+	parts := make([]string, len(f.entries))
+	for i, e := range f.entries {
+		parts[i] = e.Config.Name + "@" + e.Config.Images[0].Version
+	}
+	return strings.Join(parts, "+")
 }

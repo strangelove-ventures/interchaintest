@@ -50,8 +50,8 @@ type CosmosRelayerChainConfig struct {
 }
 
 const (
-	containerImage   = "ghcr.io/cosmos/relayer"
-	containerVersion = "v2.0.0-beta4"
+	ContainerImage   = "ghcr.io/cosmos/relayer"
+	ContainerVersion = "v2.0.0-beta4"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -90,7 +90,7 @@ func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID s
 		networkID: networkID,
 		home:      home,
 		testName:  t.Name(),
-		log:       logger.With(zap.String("test", t.Name()), zap.String("image", containerImage+":"+containerVersion)),
+		log:       logger.With(zap.String("test", t.Name()), zap.String("image", ContainerImage+":"+ContainerVersion)),
 	}
 	rly.MkDir()
 	return rly
@@ -216,8 +216,8 @@ func (relayer *CosmosRelayer) UpdateClients(ctx context.Context, pathName string
 
 func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: containerImage,
-		Tag:        containerVersion,
+		Repository: ContainerImage,
+		Tag:        ContainerVersion,
 	}, docker.AuthConfiguration{})
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 			Cmd:        cmd,
 			Entrypoint: []string{},
 			Hostname:   relayer.HostName(pathName),
-			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
+			Image:      fmt.Sprintf("%s:%s", ContainerImage, ContainerVersion),
 			Labels:     map[string]string{"ibc-test": relayer.testName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
@@ -259,8 +259,8 @@ func (relayer *CosmosRelayer) CreateNodeContainer(pathName string) error {
 // NOTE: on job containers generate random name
 func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
 	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: containerImage,
-		Tag:        containerVersion,
+		Repository: ContainerImage,
+		Tag:        ContainerVersion,
 	}, docker.AuthConfiguration{})
 	if err != nil {
 		return 1, "", "", err
@@ -281,7 +281,7 @@ func (relayer *CosmosRelayer) NodeJob(ctx context.Context, cmd []string) (int, s
 			User: dockerutil.GetDockerUserString(),
 			// random hostname is fine here, just for setup
 			Hostname:   dockerutil.CondenseHostName(container),
-			Image:      fmt.Sprintf("%s:%s", containerImage, containerVersion),
+			Image:      fmt.Sprintf("%s:%s", ContainerImage, ContainerVersion),
 			Cmd:        cmd,
 			Entrypoint: []string{},
 			Labels:     map[string]string{"ibc-test": relayer.testName},

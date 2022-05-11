@@ -149,7 +149,7 @@ func TestRelayer(t *testing.T) {
 			panic(err)
 		}
 
-		t.Run(r, func(t *testing.T) {
+		t.Run(rf.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			// Collect all the chain factories from both the builtins and the customs.
@@ -170,19 +170,7 @@ func TestRelayer(t *testing.T) {
 			}
 
 			for _, cf := range chainFactories {
-				// As of writing, it's fine to build a chain pair just to inspect names and versions.
-				srcChain, dstChain, err := cf.Pair("")
-				if err != nil {
-					panic(err)
-				}
-
-				chainTestName := fmt.Sprintf(
-					"%s@%s+%s@%s",
-					srcChain.Config().Name, srcChain.Config().Images[0].Version,
-					dstChain.Config().Name, dstChain.Config().Images[0].Version,
-				)
-
-				t.Run(chainTestName, func(t *testing.T) {
+				t.Run(cf.Name(), func(t *testing.T) {
 					t.Parallel()
 
 					// Finally, the relayertest suite.

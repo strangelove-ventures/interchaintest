@@ -21,6 +21,10 @@ type RelayerFactory interface {
 		home string,
 	) ibc.Relayer
 
+	// Name returns a descriptive name of the factory,
+	// indicating details of the Relayer that will be built.
+	Name() string
+
 	// Capabilities is an indication of the features this relayer supports.
 	// Tests for any unsupported features will be skipped rather than failed.
 	Capabilities() map[relayer.Capability]bool
@@ -58,6 +62,18 @@ func (f builtinRelayerFactory) Build(
 			home,
 			f.log,
 		)
+	default:
+		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
+	}
+}
+
+func (f builtinRelayerFactory) Name() string {
+	switch f.impl {
+	case ibc.CosmosRly:
+		// This is using the string "rly" instead of rly.ContainerImage
+		// so that the slashes in the image repository don't add ambiguity
+		// to subtest paths, when the factory name is used in calls to t.Run.
+		return "rly@" + rly.ContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
