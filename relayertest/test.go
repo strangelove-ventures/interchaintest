@@ -380,6 +380,12 @@ func testPacketRelayFail(
 
 	require.Equal(t, srcInitialBalance-totalFees, srcFinalBalance)
 	require.Equal(t, dstInitialBalance, dstFinalBalance)
+
+	seq, err := srcChain.GetPacketSequence(ctx, srcTxHash)
+	require.NoError(t, err)
+	_, err = srcChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	require.NoError(t, err)
+
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
@@ -405,5 +411,10 @@ func testPacketRelayFail(
 
 	require.Equal(t, srcInitialBalance, srcFinalBalance)
 	require.Equal(t, dstInitialBalance-totalFees, dstFinalBalance)
+
+	seq, err = dstChain.GetPacketSequence(ctx, dstTxHash)
+	require.NoError(t, err)
+	_, err = dstChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	require.NoError(t, err)
 	// [END] assert on destination to source transfer
 }
