@@ -250,7 +250,7 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
-		tn.logger().Error("Get block", zap.Error(err))
+		tn.logger().Info("Failed to get block", zap.Error(err))
 		return
 	}
 	txs := blockRes.Block.Txs
@@ -259,7 +259,7 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	}
 	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
 	if err != nil {
-		tn.logger().Error("Pretty print block", zap.Error(err))
+		tn.logger().Info("Failed to pretty print block", zap.Error(err))
 		return
 	}
 	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
