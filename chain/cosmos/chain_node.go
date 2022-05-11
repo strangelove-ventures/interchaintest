@@ -244,14 +244,13 @@ func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
 }
 
 func (tn *ChainNode) maybeLogBlock(height int64) {
-	entry := tn.logger().Check(zap.DebugLevel, "current block")
-	if entry == nil {
+	if !tn.logger().Core().Enabled(zap.DebugLevel) {
 		return
 	}
 	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
-		entry.Write(zap.Error(err))
+		tn.logger().Error("get block", zap.Error(err))
 		return
 	}
 	txs := blockRes.Block.Txs
@@ -261,10 +260,9 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
 	if err != nil {
 		tn.logger().Error("pretty print block", zap.Error(err))
-		entry.Write(zap.Error(err))
 		return
 	}
-	entry.Write(zap.Int64("height", height), zap.String("block", pp))
+	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
 }
 
 func (tn *ChainNode) Height() (int64, error) {
