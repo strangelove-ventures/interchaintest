@@ -39,6 +39,7 @@ import (
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/strangelove-ventures/ibc-test-framework/relayer"
+	"github.com/strangelove-ventures/ibc-test-framework/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -64,7 +65,7 @@ type RelayerTestCaseConfig struct {
 	// e.g. send a transfer and wait for it to timeout so that the relayer will handle it once it is timed out
 	PreRelayerStart func(context.Context, *testing.T, *RelayerTestCase, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
 	// test after chains and relayers are started
-	Test func(context.Context, *testing.T, *RelayerTestCase, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
+	Test func(context.Context, *testing.T, *RelayerTestCase, *testreporter.Reporter, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
 }
 
 var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
@@ -174,7 +175,9 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
-func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory) {
+func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+	rep.TrackTest(t)
+
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoError(t, err, "failed to set up test run")
 
@@ -220,9 +223,10 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
+			rep.TrackTest(t)
 			requireCapabilities(t, rf, testCase.Config.RequiredRelayerCapabilities...)
 			t.Parallel()
-			testCase.Config.Test(ctx, t, testCase, srcChain, dstChain, channels)
+			testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
 		})
 	}
 }
@@ -259,6 +263,7 @@ func testPacketRelaySuccess(
 	ctx context.Context,
 	t *testing.T,
 	testCase *RelayerTestCase,
+	rep *testreporter.Reporter,
 	srcChain ibc.Chain,
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
@@ -344,6 +349,7 @@ func testPacketRelayFail(
 	ctx context.Context,
 	t *testing.T,
 	testCase *RelayerTestCase,
+	rep *testreporter.Reporter,
 	srcChain ibc.Chain,
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,

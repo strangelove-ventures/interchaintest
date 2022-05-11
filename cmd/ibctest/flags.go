@@ -17,6 +17,7 @@ type mainFlags struct {
 	LogFormat  string
 	LogLevel   string
 	MatrixFile string
+	ReportFile string
 }
 
 func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
