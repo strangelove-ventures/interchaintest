@@ -6,6 +6,7 @@ import (
 
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/chain/penumbra"
+	"github.com/strangelove-ventures/ibctest/chain/polkadot"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/label"
 	"go.uber.org/zap"
@@ -50,6 +51,7 @@ var builtinChainConfigs = map[string]ibc.ChainConfig{
 	"agoric":   cosmos.NewCosmosHeighlinerChainConfig("agoric", "agd", "agoric", "urun", "0.01urun", 1.3, "672h", true),
 	"icad":     cosmos.NewCosmosHeighlinerChainConfig("icad", "icad", "cosmos", "photon", "0.00photon", 1.2, "504h", false),
 	"penumbra": penumbra.NewPenumbraChainConfig(),
+	"polkadot": polkadot.NewPolkadotChainConfig(),
 }
 
 // NewBuiltinChainFactory returns a BuiltinChainFactory that returns chains defined by entries.
@@ -104,6 +106,33 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
+	case "polkadot":
+		parachains := []polkadot.ParachainConfig{}
+		for i := 1; i < len(cfg.Images); i++ {
+			repository := cfg.Images[i].Repository
+			var chain, bin string
+			var flags, relayChainFlags []string
+			if strings.Contains(repository, "composable") {
+				bin = "composable"
+				chain = "dali-dev"
+				flags = []string{}
+				relayChainFlags = []string{"--execution=wasm"}
+			} else if strings.Contains(repository, "basilisk") {
+				bin = "basilisk"
+				chain = "local"
+				flags = []string{}
+				relayChainFlags = []string{"--execution=wasm"}
+			}
+			parachains = append(parachains, polkadot.ParachainConfig{
+				Bin:             bin,
+				ChainID:         chain,
+				Image:           cfg.Images[i],
+				NumNodes:        nf,
+				Flags:           flags,
+				RelayChainFlags: relayChainFlags,
+			})
+		}
+		return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}
