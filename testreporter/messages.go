@@ -50,6 +50,24 @@ func (m FinishTestMessage) typ() string {
 	return "FinishTest"
 }
 
+type PauseTestMessage struct {
+	Name string
+	When time.Time
+}
+
+func (m PauseTestMessage) typ() string {
+	return "PauseTest"
+}
+
+type ContinueTestMessage struct {
+	Name string
+	When time.Time
+}
+
+func (m ContinueTestMessage) typ() string {
+	return "ContinueTest"
+}
+
 type TestErrorMessage struct {
 	Name    string
 	When    time.Time
@@ -101,6 +119,14 @@ func (m *WrappedMessage) UnmarshalJSON(b []byte) error {
 		msg = x
 	case "FinishTest":
 		x := FinishTestMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "PauseTest":
+		x := PauseTestMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "ContinueTest":
+		x := ContinueTestMessage{}
 		err = json.Unmarshal(raw, &x)
 		msg = x
 	case "TestError":

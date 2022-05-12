@@ -27,6 +27,8 @@ type mockT struct {
 	failed, skipped bool
 
 	errorfs []string
+
+	parallelDelay time.Duration
 }
 
 func (t *mockT) Name() string {
@@ -54,6 +56,11 @@ func (t *mockT) Errorf(format string, args ...interface{}) {
 // FailNow just marks t as failed without any control flow influences.
 func (t *mockT) FailNow() {
 	t.failed = true
+}
+
+// Parallel blocks for t.parallelDelay and then returns.
+func (t *mockT) Parallel() {
+	time.Sleep(t.parallelDelay)
 }
 
 // ReporterMessages decodes all the messages from r.
@@ -158,6 +165,42 @@ func TestReporter_TrackFailingSingleTest(t *testing.T) {
 	require.Equal(t, finishTestMsg.Name, "my_test")
 	require.True(t, finishTestMsg.Failed)
 	require.False(t, finishTestMsg.Skipped)
+}
+
+func TestReporter_TrackParallel(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	r := testreporter.NewReporter(nopCloser{Writer: buf})
+
+	// The underlying call to mt.Parallel will block for this duration.
+	parallelDelay := 50 * time.Millisecond
+	mt := &mockT{name: "my_test", parallelDelay: parallelDelay}
+	r.TrackTest(mt)
+
+	beforeParallel := time.Now()
+	r.TrackParallel(mt)
+	afterParallel := time.Now()
+
+	mt.RunCleanups()
+	require.NoError(t, r.Close())
+
+	msgs := ReporterMessages(t, buf)
+	require.Len(t, msgs, 6)
+
+	beginTestMsg := msgs[1].(testreporter.BeginTestMessage)
+	require.Equal(t, beginTestMsg.Name, "my_test")
+
+	pauseTestMsg := msgs[2].(testreporter.PauseTestMessage)
+	require.Equal(t, pauseTestMsg.Name, "my_test")
+	requireTimeInRange(t, pauseTestMsg.When, beforeParallel, beforeParallel.Add(parallelDelay))
+
+	continueTestMsg := msgs[3].(testreporter.ContinueTestMessage)
+	require.Equal(t, continueTestMsg.Name, "my_test")
+	requireTimeInRange(t, continueTestMsg.When, afterParallel.Add(-parallelDelay), afterParallel)
+
+	finishTestMsg := msgs[4].(testreporter.FinishTestMessage)
+	require.Equal(t, finishTestMsg.Name, "my_test")
 }
 
 func TestReporter_Errorf(t *testing.T) {

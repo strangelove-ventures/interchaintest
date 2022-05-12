@@ -17,6 +17,8 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 		{Message: testreporter.BeginSuiteMessage{StartedAt: time.Now()}},
 		{Message: testreporter.FinishSuiteMessage{FinishedAt: time.Now()}},
 		{Message: testreporter.BeginTestMessage{Name: "foo", StartedAt: time.Now()}},
+		{Message: testreporter.PauseTestMessage{Name: "foo", When: time.Now()}},
+		{Message: testreporter.ContinueTestMessage{Name: "foo", When: time.Now()}},
 		{Message: testreporter.FinishTestMessage{Name: "foo", FinishedAt: time.Now(), Skipped: true, Failed: true}},
 		{Message: testreporter.TestErrorMessage{Name: "foo", When: time.Now(), Message: "something failed"}},
 	}

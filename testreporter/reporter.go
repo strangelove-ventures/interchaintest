@@ -14,6 +14,8 @@ type T interface {
 	Name() string
 	Cleanup(func())
 
+	Parallel()
+
 	Failed() bool
 	Skipped() bool
 }
@@ -82,6 +84,21 @@ func (r *Reporter) TrackTest(t T) {
 			Skipped: t.Skipped(),
 		}
 	})
+}
+
+// TrackParallel tracks when the pause begins for a parallel test
+// and when it continues to resume.
+func (r *Reporter) TrackParallel(t T) {
+	name := t.Name()
+	r.in <- PauseTestMessage{
+		Name: name,
+		When: time.Now(),
+	}
+	t.Parallel()
+	r.in <- ContinueTestMessage{
+		Name: name,
+		When: time.Now(),
+	}
 }
 
 // TestifyT returns a TestifyReporter which will track logged errors in test.
