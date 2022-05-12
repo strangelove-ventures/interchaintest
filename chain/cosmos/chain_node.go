@@ -17,15 +17,17 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
-	"go.uber.org/zap"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
@@ -35,6 +37,7 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -107,6 +110,8 @@ func (tn *ChainNode) NewClient(addr string) error {
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	encoding := simapp.MakeTestEncodingConfig()
+	bankTypes.RegisterInterfaces(encoding.InterfaceRegistry)
+	ibctypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	return client.Context{
 		Client:            tn.Client,
