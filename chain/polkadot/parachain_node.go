@@ -2,6 +2,7 @@ package polkadot
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,10 +13,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"go.uber.org/zap"
-
+	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"go.uber.org/zap"
 )
 
 type ParachainNode struct {
@@ -29,6 +31,7 @@ type ParachainNode struct {
 	TestName        string
 	Image           ibc.DockerImage
 	Bin             string
+	NodeKey         p2pCrypto.PrivKey
 	ChainID         string
 	Flags           []string
 	RelayChainFlags []string
@@ -64,7 +67,7 @@ func (pn *ParachainNode) Bind() []string {
 }
 
 func (pn *ParachainNode) NodeHome() string {
-	return fmt.Sprintf("/root/.%s", pn.Chain.Config().Name)
+	return fmt.Sprintf("/home/.%s", pn.Chain.Config().Name)
 }
 
 func (pn *ParachainNode) RawChainSpecFilePath() string {
@@ -73,6 +76,22 @@ func (pn *ParachainNode) RawChainSpecFilePath() string {
 
 func (pn *ParachainNode) RawChainSpecFilePathContainer() string {
 	return filepath.Join(pn.NodeHome(), fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID))
+}
+
+func (pn *ParachainNode) PeerID() (string, error) {
+	id, err := peer.IDFromPrivateKey(pn.NodeKey)
+	if err != nil {
+		return "", err
+	}
+	return peer.Encode(id), nil
+}
+
+func (pn *ParachainNode) MultiAddress() (string, error) {
+	peerId, err := pn.PeerID()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", pn.HostName(), rpcPort, peerId), nil
 }
 
 type GetParachainIDResponse struct {
@@ -123,16 +142,27 @@ func (pn *ParachainNode) ExportGenesisState(ctx context.Context, parachainID int
 }
 
 func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
+	nodeKey, err := pn.NodeKey.Raw()
+	if err != nil {
+		return fmt.Errorf("error getting ed25519 node key: %w", err)
+	}
+	multiAddress, err := pn.MultiAddress()
+	if err != nil {
+		return err
+	}
 	cmd := []string{
 		pn.Bin,
 		fmt.Sprintf("--ws-port=%d", wsPort),
 		"--collator",
+		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
+		fmt.Sprintf("--%s", IndexedName[pn.Index]),
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
 		"--rpc-cors=all",
 		fmt.Sprintf("--prometheus-port=%d", prometheusPort),
 		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%d", rpcPort),
+		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", pn.NodeHome(),
 		fmt.Sprintf("--chain=%s", pn.ChainID),
 	}

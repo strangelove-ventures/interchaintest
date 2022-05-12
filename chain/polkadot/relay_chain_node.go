@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"hash/fnv"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,14 +13,16 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+
+	"github.com/ChainSafe/go-schnorrkel"
+
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/zap"
 
-	"github.com/decred/dcrd/dcrec/secp256k1"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
-	"github.com/tendermint/tendermint/crypto/sr25519"
 )
 
 type RelayChainNode struct {
@@ -34,8 +34,9 @@ type RelayChainNode struct {
 	DockerClient      *client.Client
 	TestName          string
 	Image             ibc.DockerImage
-	AccountKey        sr25519.PrivKey
-	StashKey          sr25519.PrivKey
+	NodeKey           p2pCrypto.PrivKey
+	AccountKey        *schnorrkel.MiniSecretKey
+	StashKey          *schnorrkel.MiniSecretKey
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
 	containerID       string
@@ -44,38 +45,15 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
-	wsPort           = 27451
-	rpcPort          = 27452
-	prometheusPort   = 27453
-	maxMonikerLength = 50
+	wsPort         = 27451
+	rpcPort        = 27452
+	prometheusPort = 27453
 )
 
 var exposedPorts = map[nat.Port]struct{}{
 	nat.Port(fmt.Sprint(wsPort)):         {},
 	nat.Port(fmt.Sprint(rpcPort)):        {},
 	nat.Port(fmt.Sprint(prometheusPort)): {},
-}
-
-func CondenseMoniker(m string) string {
-	if len(m) <= maxMonikerLength {
-		return m
-	}
-
-	// Get the hash suffix, a 32-bit uint formatted in base36.
-	// fnv32 was chosen because a 32-bit number ought to be sufficient
-	// as a distinguishing suffix, and it will be short enough so that
-	// less of the middle will be truncated to fit in the character limit.
-	// It's also non-cryptographic, not that this function will ever be a bottleneck in tests.
-	h := fnv.New32()
-	h.Write([]byte(m))
-	suffix := "-" + strconv.FormatUint(uint64(h.Sum32()), 36)
-
-	wantLen := maxMonikerLength - len(suffix)
-
-	// Half of the want length, minus 2 to account for half of the ... we add in the middle.
-	keepLen := (wantLen / 2) - 2
-
-	return m[:keepLen] + "---" + m[len(m)-keepLen:] + suffix
 }
 
 // Name of the test node container
@@ -106,11 +84,11 @@ func (p *RelayChainNode) Bind() []string {
 }
 
 func (p *RelayChainNode) NodeHome() string {
-	return fmt.Sprintf("/root/.%s", p.Chain.Config().Name)
+	return fmt.Sprintf("/home/.%s", p.Chain.Config().Name)
 }
 
 func (p *RelayChainNode) PeerID() (string, error) {
-	id, err := peer.IDFromPrivateKey(p.Ed25519PrivateKey)
+	id, err := peer.IDFromPrivateKey(p.NodeKey)
 	if err != nil {
 		return "", err
 	}
@@ -126,11 +104,19 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 }
 
 func (p *RelayChainNode) AccountAddress() (string, error) {
-	return EncodeAddressSS58(p.AccountKey.PubKey().Bytes())
+	pubKey := make([]byte, 32)
+	for i, mkByte := range p.AccountKey.Public().Encode() {
+		pubKey[i] = mkByte
+	}
+	return EncodeAddressSS58(pubKey)
 }
 
 func (p *RelayChainNode) StashAddress() (string, error) {
-	return EncodeAddressSS58(p.StashKey.PubKey().Bytes())
+	pubKey := make([]byte, 32)
+	for i, mkByte := range p.StashKey.Public().Encode() {
+		pubKey[i] = mkByte
+	}
+	return EncodeAddressSS58(pubKey)
 }
 
 func (p *RelayChainNode) EcdsaAddress() (string, error) {
@@ -196,9 +182,9 @@ func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
 }
 
 func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
-	privKey, err := p.Ed25519PrivateKey.Raw()
+	nodeKey, err := p.NodeKey.Raw()
 	if err != nil {
-		return fmt.Errorf("error getting ed25519 priv key: %w", err)
+		return fmt.Errorf("error getting ed25519 node key: %w", err)
 	}
 	multiAddress, err := p.MultiAddress()
 	if err != nil {
@@ -209,9 +195,8 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		chainCfg.Bin,
 		fmt.Sprintf("--chain=%s", p.RawChainSpecFilePathContainer()),
 		fmt.Sprintf("--ws-port=%d", wsPort),
-		fmt.Sprintf("--name=%s", CondenseMoniker(p.Name())),
-		fmt.Sprintf("--node-key=%s", hex.EncodeToString(privKey[0:32])),
-		"--validator",
+		fmt.Sprintf("--%s", IndexedName[p.Index]),
+		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
 		"--beefy",
 		"--rpc-cors=all",
 		"--unsafe-ws-external",

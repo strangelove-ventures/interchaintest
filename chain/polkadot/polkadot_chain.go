@@ -11,14 +11,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/decred/dcrd/dcrec/secp256k1"
+	"github.com/StirlingMarketingGroup/go-namecase"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
-	"github.com/tendermint/tendermint/crypto/sr25519"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -58,6 +57,8 @@ type ParachainConfig struct {
 	Flags           []string
 	RelayChainFlags []string
 }
+
+var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
 
 func NewPolkadotChainConfig() ibc.ChainConfig {
 	return ibc.ChainConfig{
@@ -131,13 +132,29 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 	for i := 0; i < c.numRelayChainNodes; i++ {
 		seed := make([]byte, 32)
 		rand.Read(seed)
-		ecdsaPrivKey, err := secp256k1.GeneratePrivateKey()
+
+		nodeKey, _, err := p2pCrypto.GenerateEd25519Key(cRand.Reader)
 		if err != nil {
-			return fmt.Errorf("error generating secp256k1 private key: %w", err)
+			return fmt.Errorf("error generating node key: %w", err)
 		}
-		ed25519PrivKey, _, err := p2pCrypto.GenerateEd25519Key(cRand.Reader)
+
+		nameCased := namecase.New().NameCase(IndexedName[i])
+
+		ed25519PrivKey, err := DeriveEd25519FromName(nameCased)
 		if err != nil {
 			return err
+		}
+		accountKey, err := DeriveSr25519FromName([]string{nameCased})
+		if err != nil {
+			return err
+		}
+		stashKey, err := DeriveSr25519FromName([]string{nameCased, "stash"})
+		if err != nil {
+			return err
+		}
+		ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
+		if err != nil {
+			return fmt.Errorf("error generating secp256k1 private key: %w", err)
 		}
 		pn := &RelayChainNode{
 			log:               c.log,
@@ -148,9 +165,10 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 			NetworkID:         networkID,
 			TestName:          testName,
 			Image:             chainCfg.Images[0],
+			NodeKey:           nodeKey,
 			Ed25519PrivateKey: ed25519PrivKey,
-			AccountKey:        sr25519.GenPrivKey(),
-			StashKey:          sr25519.GenPrivKey(),
+			AccountKey:        accountKey,
+			StashKey:          stashKey,
 			EcdsaPrivateKey:   *ecdsaPrivKey,
 		}
 
@@ -161,6 +179,10 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 	for _, parachainConfig := range c.parachainConfig {
 		parachainNodes := []*ParachainNode{}
 		for i := 0; i < parachainConfig.NumNodes; i++ {
+			nodeKey, _, err := p2pCrypto.GenerateEd25519Key(cRand.Reader)
+			if err != nil {
+				return fmt.Errorf("error generating node key: %w", err)
+			}
 			pn := &ParachainNode{
 				log:             c.log,
 				Home:            home,
@@ -169,6 +191,7 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 				DockerClient:    client,
 				NetworkID:       networkID,
 				TestName:        testName,
+				NodeKey:         nodeKey,
 				Image:           parachainConfig.Image,
 				Bin:             parachainConfig.Bin,
 				ChainID:         parachainConfig.ChainID,
@@ -326,7 +349,6 @@ func (c *PolkadotChain) Cleanup(ctx context.Context) error {
 
 // sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-
 	// generate chain spec
 	firstNode := c.RelayChainNodes[0]
 	if err := firstNode.GenerateChainSpec(ctx); err != nil {
@@ -354,18 +376,12 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return fmt.Errorf("error writing modified chain spec: %w", err)
 	}
 
-	// TODO remove
-	// fmt.Println(firstNode.ChainSpecFilePath())
-	// time.Sleep(10 * time.Second)
-	// end remove
-
 	fmt.Printf("{%s} => generating raw chain spec...\n", firstNode.Name())
 	if err := firstNode.GenerateChainSpecRaw(ctx); err != nil {
 		return err
 	}
 
 	rawChainSpecFilePath := firstNode.RawChainSpecFilePath()
-
 	var eg errgroup.Group
 	for i, n := range c.RelayChainNodes {
 		n := n
