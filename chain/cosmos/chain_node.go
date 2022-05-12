@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -262,12 +262,29 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
-	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
-	if err != nil {
-		tn.logger().Info("Failed to pretty print block", zap.Error(err))
-		return
+	sb := new(strings.Builder)
+	sb.WriteString("BLOCK INFO\n")
+	sb.WriteString(fmt.Sprintf("BLOCK HEIGHT: %d\n", height))
+	sb.WriteString(fmt.Sprintf("TOTAL TXs: %d\n", len(blockRes.Block.Txs)))
+
+	for i, tx := range blockRes.Block.Txs {
+		sb.WriteString(fmt.Sprintf("TX #%d\n", i))
+		txResp, err := authTx.QueryTx(tn.CliContext(), hex.EncodeToString(tx.Hash()))
+		if err != nil {
+			sb.WriteString(fmt.Sprintf("(Failed to query tx: %v)", err))
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("TX TYPE: %s\n", txResp.Tx.TypeUrl))
+
+		// Purposefully zero out fields to make spew's output less verbose
+		txResp.Data = "[redacted]"
+		txResp.RawLog = "[redacted]"
+		txResp.Events = nil // already present in TxResponse.Logs
+
+		sb.WriteString(spew.Sprint(txResp))
 	}
-	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
+
+	tn.logger().Debug(sb.String())
 }
 
 func (tn *ChainNode) Height() (int64, error) {
@@ -418,10 +435,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	output := IBCTransferTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
-	if err != nil {
-		return "", err
-	}
-	return output.TxHash, nil
+	return output.TxHash, err
 }
 
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
