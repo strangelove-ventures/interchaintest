@@ -193,6 +193,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 		testCases = append(testCases, &testCase)
 
 		if len(missingCapabilities(rf, testCaseConfig.RequiredRelayerCapabilities...)) > 0 {
+			// do not execute relayer before hook if capability missing
 			continue
 		}
 		preRelayerStartFunc := func(channels []ibc.ChannelOutput) {
