@@ -177,12 +177,13 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 // This is intended to be used by Go unit tests.
 func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
+	req := require.New(rep.TestifyT(t))
 
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoError(t, err, "failed to set up test run")
+	req.NoError(err, "failed to set up test run")
 
 	srcChain, dstChain, err := cf.Pair(t.Name())
-	require.NoError(t, err, "failed to get chain pair")
+	req.NoError(err, "failed to get chain pair")
 
 	var (
 		preRelayerStartFuncs []func([]ibc.ChannelOutput)
@@ -213,19 +214,19 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
 	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
-	require.NoError(t, err, "failed to StartChainsAndRelayerFromFactory")
+	req.NoError(err, "failed to StartChainsAndRelayerFromFactory")
 
 	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
 	// Wait for both chains to produce 10 blocks per test case.
 	// This is long to allow for intermittent retries inside the relayer.
-	require.NoError(t, ibctest.WaitForBlocks(int64(10*len(testCases)), srcChain, dstChain), "failed to wait for blocks")
+	req.NoError(ibctest.WaitForBlocks(int64(10*len(testCases)), srcChain, dstChain), "failed to wait for blocks")
 
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
 			rep.TrackTest(t)
 			requireCapabilities(t, rf, testCase.Config.RequiredRelayerCapabilities...)
-			t.Parallel()
+			rep.TrackParallel(t)
 			testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
 		})
 	}
@@ -268,6 +269,8 @@ func testPacketRelaySuccess(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	req := require.New(rep.TestifyT(t))
+
 	srcChainCfg := srcChain.Config()
 	srcUser := testCase.Users[0]
 	srcDenom := srcChainCfg.Denom
@@ -283,28 +286,28 @@ func testPacketRelaySuccess(
 	// fetch src ibc transfer tx
 	srcTxHash := testCase.Cache[0]
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
-	require.NoError(t, err, "failed to get ibc transaction")
+	req.NoError(err, "failed to get ibc transaction")
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
-	require.NoError(t, err, "failed to get balance from source chain")
+	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
-	require.NoError(t, err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 	expectedDifference := testCoinAmount + totalFees
 
-	require.Equal(t, srcInitialBalance-expectedDifference, srcFinalBalance)
-	require.Equal(t, dstInitialBalance+testCoinAmount, dstFinalBalance)
+	req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
+	req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
 
 	seq, err := srcChain.GetPacketSequence(ctx, srcTxHash)
-	require.NoError(t, err)
+	req.NoError(err)
 	_, err = srcChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	require.NoError(t, err)
+	req.NoError(err)
 
 	// [END] assert on source to destination transfer
 
@@ -318,28 +321,28 @@ func testPacketRelaySuccess(
 	// fetch src ibc transfer tx
 	dstTxHash := testCase.Cache[1]
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
-	require.NoError(t, err, "failed to get ibc transaction")
+	req.NoError(err, "failed to get ibc transaction")
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
 	srcIbcDenom := dstDenomTrace.IBCDenom()
 
 	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
-	require.NoError(t, err, "failed to get balance from source chain")
+	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
-	require.NoError(t, err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from dest chain")
 
 	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
 	expectedDifference = testCoinAmount + totalFees
 
-	require.Equal(t, srcInitialBalance+testCoinAmount, srcFinalBalance)
-	require.Equal(t, dstInitialBalance-expectedDifference, dstFinalBalance)
+	req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
+	req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
 
 	seq, err = dstChain.GetPacketSequence(ctx, dstTxHash)
-	require.NoError(t, err)
+	req.NoError(err)
 	_, err = dstChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	require.NoError(t, err)
+	req.NoError(err)
 
 	//[END] assert on destination to source transfer
 }
@@ -354,6 +357,8 @@ func testPacketRelayFail(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	req := require.New(rep.TestifyT(t))
+
 	srcChainCfg := srcChain.Config()
 	srcUser := testCase.Users[0]
 	srcDenom := srcChainCfg.Denom
@@ -370,22 +375,22 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	srcTxHash := testCase.Cache[0]
 	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
-	require.NoError(t, err, "failed to get ibc transaction")
+	req.NoError(err, "failed to get ibc transaction")
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
-	require.NoError(t, err, "failed to get balance from source chain")
+	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
-	require.NoError(t, err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from dest chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
 
-	require.Equal(t, srcInitialBalance-totalFees, srcFinalBalance)
-	require.Equal(t, dstInitialBalance, dstFinalBalance)
+	req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
+	req.Equal(dstInitialBalance, dstFinalBalance)
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
@@ -395,21 +400,21 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	dstTxHash := testCase.Cache[1]
 	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
-	require.NoError(t, err, "failed to get ibc transaction")
+	req.NoError(err, "failed to get ibc transaction")
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
 	srcIbcDenom := dstDenomTrace.IBCDenom()
 
 	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
-	require.NoError(t, err, "failed to get balance from source chain")
+	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
-	require.NoError(t, err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from dest chain")
 
 	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
 
-	require.Equal(t, srcInitialBalance, srcFinalBalance)
-	require.Equal(t, dstInitialBalance-totalFees, dstFinalBalance)
+	req.Equal(srcInitialBalance, srcFinalBalance)
+	req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
 	// [END] assert on destination to source transfer
 }

@@ -21,6 +21,7 @@ func (n nopCloser) Close() error {
 	return nil
 }
 
+// mockT is a stand-in testreporter.T for asserting against the reporter's behavior.
 type mockT struct {
 	name            string
 	cleanups        []func()
@@ -54,11 +55,13 @@ func (t *mockT) Errorf(format string, args ...interface{}) {
 }
 
 // FailNow just marks t as failed without any control flow influences.
+// FailNow on a real *testing.T would call runtime.Goexit,
+// but we don't need that for these tests (yet).
 func (t *mockT) FailNow() {
 	t.failed = true
 }
 
-// Parallel blocks for t.parallelDelay and then returns.
+// Parallel blocks for the configured t.parallelDelay and then returns.
 func (t *mockT) Parallel() {
 	time.Sleep(t.parallelDelay)
 }
@@ -85,6 +88,7 @@ func ReporterMessages(t *testing.T, r io.Reader) []testreporter.Message {
 	}
 }
 
+// Check message content and timestamps for a typical, basic, passing test.
 func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	t.Parallel()
 
@@ -167,6 +171,7 @@ func TestReporter_TrackFailingSingleTest(t *testing.T) {
 	require.False(t, finishTestMsg.Skipped)
 }
 
+// Check that TrackParallel logs the pause and continue messages.
 func TestReporter_TrackParallel(t *testing.T) {
 	t.Parallel()
 
@@ -203,6 +208,8 @@ func TestReporter_TrackParallel(t *testing.T) {
 	require.Equal(t, finishTestMsg.Name, "my_test")
 }
 
+// Check that calling (*Reporter).TestifyT(t).Errorf
+// actually calls Errorf on t.
 func TestReporter_Errorf(t *testing.T) {
 	buf := new(bytes.Buffer)
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
@@ -216,7 +223,7 @@ func TestReporter_Errorf(t *testing.T) {
 	require.Equal(t, mt.errorfs, []string{"failed? true"})
 }
 
-// requireTimeInRange is a helper to asser that a time occurs between a given start and end.
+// requireTimeInRange is a helper to assert that a time occurs between a given start and end.
 func requireTimeInRange(t *testing.T, actual, notBefore, notAfter time.Time) {
 	t.Helper()
 
