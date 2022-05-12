@@ -6,10 +6,14 @@ import (
 	"time"
 )
 
+// Message is the sentinel interface to all testreporter messages.
 type Message interface {
 	typ() string
 }
 
+// BeginSuiteMessage indicates when the Reporter was initialized,
+// which should correlate with the beginning of a TestMain function,
+// or an init function in a normal test suite.
 type BeginSuiteMessage struct {
 	StartedAt time.Time
 
@@ -22,6 +26,7 @@ func (m BeginSuiteMessage) typ() string {
 	return "BeginSuite"
 }
 
+// FinishSuiteMessage indicates the time the test suite has finished.
 type FinishSuiteMessage struct {
 	FinishedAt time.Time
 }
@@ -30,6 +35,9 @@ func (m FinishSuiteMessage) typ() string {
 	return "FinishSuite"
 }
 
+// BeginTestMessage indicates the beginning of a single test.
+// If the test uses t.Parallel (via (*Reporter).TrackParallel),
+// the reporter will also track a PauseTestMessage and a ContinueTestMessage.
 type BeginTestMessage struct {
 	Name      string
 	StartedAt time.Time
@@ -39,6 +47,7 @@ func (m BeginTestMessage) typ() string {
 	return "BeginTest"
 }
 
+// FinishTestMessage is tracked at the end of a single test.
 type FinishTestMessage struct {
 	Name       string
 	FinishedAt time.Time
@@ -50,6 +59,8 @@ func (m FinishTestMessage) typ() string {
 	return "FinishTest"
 }
 
+// PauseTestMessage indicates that a test is entering parallel mode
+// and waiting for its turn to continue execution.
 type PauseTestMessage struct {
 	Name string
 	When time.Time
@@ -59,6 +70,8 @@ func (m PauseTestMessage) typ() string {
 	return "PauseTest"
 }
 
+// ContinueTestMessage indicates that a test has resumed execution
+// after a call to t.Parallel.
 type ContinueTestMessage struct {
 	Name string
 	When time.Time
@@ -68,6 +81,11 @@ func (m ContinueTestMessage) typ() string {
 	return "ContinueTest"
 }
 
+// TestErrorMessage is tracked when a Reporter's TestifyT().Errorf method is called.
+// This is the intended usage of a Reporter with require:
+//     req := require.New(rep.TestifyT(t))
+//     req.NoError(foo())
+// If req.NoError fails, then rep will track a TestErrorMessage.
 type TestErrorMessage struct {
 	Name    string
 	When    time.Time
@@ -85,6 +103,9 @@ type WrappedMessage struct {
 	Message
 }
 
+// JSONMessage produces a WrappedMessage
+// so that a stream of Message values can be distinguishedu
+// by a top-level "Type" key.
 func JSONMessage(m Message) WrappedMessage {
 	return WrappedMessage{
 		Type:    m.typ(),

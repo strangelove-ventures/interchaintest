@@ -1,4 +1,3 @@
-// Package testreporter contains a Reporter for collecting detailed test reports.
 package testreporter
 
 import (
