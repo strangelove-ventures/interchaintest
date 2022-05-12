@@ -1,6 +1,10 @@
 package testreporter
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type Message interface {
 	typ() string
@@ -44,4 +48,73 @@ type FinishTestMessage struct {
 
 func (m FinishTestMessage) typ() string {
 	return "FinishTest"
+}
+
+type TestErrorMessage struct {
+	Name    string
+	When    time.Time
+	Message string
+}
+
+func (m TestErrorMessage) typ() string {
+	return "TestError"
+}
+
+// WrappedMessage wraps a Message with an outer Type field
+// so that decoders can determine the underlying message's type.
+type WrappedMessage struct {
+	Type string
+	Message
+}
+
+func JSONMessage(m Message) WrappedMessage {
+	return WrappedMessage{
+		Type:    m.typ(),
+		Message: m,
+	}
+}
+
+func (m *WrappedMessage) UnmarshalJSON(b []byte) error {
+	var outer struct {
+		Type    string
+		Message json.RawMessage
+	}
+	if err := json.Unmarshal(b, &outer); err != nil {
+		return err
+	}
+
+	raw := outer.Message
+	var err error
+	var msg Message
+	switch outer.Type {
+	case "BeginSuite":
+		x := BeginSuiteMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "FinishSuite":
+		x := FinishSuiteMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "BeginTest":
+		x := BeginTestMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "FinishTest":
+		x := FinishTestMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "TestError":
+		x := TestErrorMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	default:
+		return fmt.Errorf("unknown message type %q", outer.Type)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal message for type %q: %w", outer.Type, err)
+	}
+
+	m.Type = outer.Type
+	m.Message = msg
+	return nil
 }

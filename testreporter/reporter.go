@@ -41,26 +41,18 @@ func NewReporter(w io.WriteCloser) *Reporter {
 }
 
 // write runs in its own goroutine to continually output reporting messages.
+// Allowing all writes to happen in a single goroutine avoids any lock contention
+// that could happen with a mutex guarding concurrent writes to the io.Writer.
 func (r *Reporter) write() {
 	enc := json.NewEncoder(r.w)
 	enc.SetEscapeHTML(false)
 
 	for m := range r.in {
-		// Encode the message with an outer type field,
-		// so decoders can inspect the type and decide how to unmarshal.
-		j := struct {
-			Type string
-			Message
-		}{
-			Type:    m.typ(),
-			Message: m,
-		}
-		if err := enc.Encode(j); err != nil {
+		if err := enc.Encode(JSONMessage(m)); err != nil {
 			panic(fmt.Errorf("reporter failed to encode message; tests cannot continue: %w", err))
 		}
 	}
 
-	// Before closing the writer
 	r.writerDone <- r.w.Close()
 }
 
@@ -90,4 +82,49 @@ func (r *Reporter) TrackTest(t T) {
 			Skipped: t.Skipped(),
 		}
 	})
+}
+
+// TestifyT returns a TestifyReporter which will track logged errors in test.
+// Typically you will use this with the New method on the require or assert package:
+//     req := require.New(reporter.TestifyT(t))
+//     // ...
+//     req.NoError(err, "failed to foo the bar")
+func (r *Reporter) TestifyT(t TestifyT) *TestifyReporter {
+	return &TestifyReporter{r: r, t: t}
+}
+
+// TestifyT is a superset of the testify/require.TestingT interface.
+type TestifyT interface {
+	Name() string
+
+	Errorf(format string, args ...interface{})
+	FailNow()
+}
+
+// TestifyReporter wraps a Reporter to satisfy the testify/require.TestingT interface.
+// This allows the reporter to track logged errors.
+type TestifyReporter struct {
+	r *Reporter
+	t TestifyT
+}
+
+// Errorf records the error message in r's Reporter
+// and then passes through to r's underlying TestifyT.
+func (r *TestifyReporter) Errorf(format string, args ...interface{}) {
+	now := time.Now()
+
+	r.r.in <- TestErrorMessage{
+		Name:    r.t.Name(),
+		Message: fmt.Sprintf(format, args...),
+		When:    now,
+	}
+
+	r.t.Errorf(format, args...)
+}
+
+// FailNow passes through to r's TestifyT.
+// It does not need to log another message
+// because r's Reporter should be tracking the test already.
+func (r *TestifyReporter) FailNow() {
+	r.t.FailNow()
 }
