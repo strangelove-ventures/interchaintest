@@ -104,7 +104,7 @@ func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...rel
 
 func missingCapabilities(rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) []relayer.Capability {
 	caps := rf.Capabilities()
-	missing := []relayer.Capability{}
+	var missing []relayer.Capability
 	for _, c := range reqCaps {
 		if !caps[c] {
 			missing = append(missing, c)
@@ -187,15 +187,15 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	)
 
 	for _, testCaseConfig := range relayerTestCaseConfigs {
-		if len(missingCapabilities(rf, testCaseConfig.RequiredRelayerCapabilities...)) > 0 {
-			continue
-		}
 		testCase := RelayerTestCase{
 			Config: testCaseConfig,
 		}
 		testCases = append(testCases, &testCase)
-		preRelayerStartFunc := func(channels []ibc.ChannelOutput) {
 
+		if len(missingCapabilities(rf, testCaseConfig.RequiredRelayerCapabilities...)) > 0 {
+			continue
+		}
+		preRelayerStartFunc := func(channels []ibc.ChannelOutput) {
 			// fund a user wallet on both chains, save on test case
 			testCase.Users = ibctest.GetAndFundTestUsers(t, ctx, strings.ReplaceAll(testCase.Config.Name, " ", "-"), userFaucetFund, srcChain, dstChain)
 			// run test specific pre relayer start action
@@ -248,7 +248,7 @@ func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *
 }
 
 func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
-	ibcTimeoutTimestamp := ibc.IBCTimeout{NanoSeconds: uint64((10 * time.Second).Nanoseconds())}
+	ibcTimeoutTimestamp := ibc.IBCTimeout{NanoSeconds: uint64((1 * time.Second).Nanoseconds())}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutTimestamp)
 	// wait for 15 seconds to expire timeout
 	time.Sleep(15 * time.Second)
