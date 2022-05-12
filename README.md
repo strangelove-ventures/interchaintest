@@ -14,6 +14,8 @@ See [`cmd/ibctest/README.md`](cmd/ibctest/README.md) for more details.
 Note that `ibc-test-framework` is under active development
 and we are not yet ready to commit to any stable APIs around the testing interfaces.
 
+Please read the [logging style guide](./docs/logging.md).
+
 ## Trophies
 
 Significant bugs that were more easily fixed with the `ibc-test-framework`:

@@ -254,7 +254,11 @@ func (c *CosmosChain) initializeChainNodes(testName, home string,
 			Tag:        image.Version,
 		}, docker.AuthConfiguration{})
 		if err != nil {
-			c.log.Error("Pull image", zap.Error(err))
+			c.log.Error("Failed to pull image",
+				zap.Error(err),
+				zap.String("repository", image.Repository),
+				zap.String("tag", image.Version),
+			)
 		}
 	}
 	for i := 0; i < count; i++ {
