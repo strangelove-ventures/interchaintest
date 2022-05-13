@@ -19,9 +19,9 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
-	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibctest/chain/tendermint"
+	"github.com/strangelove-ventures/ibctest/dockerutil"
+	"github.com/strangelove-ventures/ibctest/ibc"
 	"go.uber.org/zap"
 
 	"github.com/ory/dockertest/v3"

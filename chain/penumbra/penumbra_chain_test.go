@@ -3,7 +3,7 @@ package penumbra_test
 import (
 	"testing"
 
-	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
+	"github.com/strangelove-ventures/ibctest"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )

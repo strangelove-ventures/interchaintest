@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
+	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -28,8 +28,8 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibctest/dockerutil"
+	"github.com/strangelove-ventures/ibctest/ibc"
 	tmconfig "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"

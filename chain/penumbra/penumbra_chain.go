@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
-	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibctest/chain/tendermint"
+	"github.com/strangelove-ventures/ibctest/dockerutil"
+	"github.com/strangelove-ventures/ibctest/ibc"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibc-test-framework/testreporter"
+	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 )
 

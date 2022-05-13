@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
-	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
-	"github.com/strangelove-ventures/ibc-test-framework/testreporter"
+	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/relayertest"
+	"github.com/strangelove-ventures/ibctest/testreporter"
 	"go.uber.org/zap"
 )
 

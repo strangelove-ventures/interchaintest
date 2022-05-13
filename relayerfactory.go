@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/ory/dockertest/v3"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/relayer"
-	"github.com/strangelove-ventures/ibc-test-framework/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/relayer"
+	"github.com/strangelove-ventures/ibctest/relayer/rly"
 	"go.uber.org/zap"
 )
 
