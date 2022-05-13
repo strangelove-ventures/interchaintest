@@ -3,6 +3,7 @@ package penumbra
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -103,6 +104,61 @@ func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string 
 
 func (p *PenumbraAppNode) WalletPathContainer() string {
 	return filepath.Join(p.NodeHome(), "wallet")
+}
+
+func (p *PenumbraAppNode) ValidatorsInputFile() string {
+	return filepath.Join(p.Dir(), "validators.json")
+}
+
+func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
+	return filepath.Join(p.NodeHome(), "validators.json")
+}
+
+func (p *PenumbraAppNode) AllocationsInputFile() string {
+	return filepath.Join(p.Dir(), "allocations.csv")
+}
+
+func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
+	return filepath.Join(p.NodeHome(), "allocations.csv")
+}
+
+func (p *PenumbraAppNode) GenesisFile() string {
+	return filepath.Join(p.Dir(), "node0", "tendermint", "config", "genesis.json")
+}
+
+func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
+	return filepath.Join(p.Dir(), fmt.Sprintf("node%d", nodeNum), "tendermint", "config", "priv_validator_key.json")
+}
+
+func (p *PenumbraAppNode) GenerateGenesisFile(
+	ctx context.Context,
+	chainID string,
+	validators []PenumbraValidatorDefinition,
+	allocations []PenumbraGenesisAppStateAllocation,
+) error {
+	validatorsJson, err := json.Marshal(validators)
+	if err != nil {
+		return fmt.Errorf("error marshalling validators to json: %v", err)
+	}
+	if err := os.WriteFile(p.ValidatorsInputFile(), validatorsJson, 0644); err != nil {
+		return fmt.Errorf("error writing validators to file: %v", err)
+	}
+	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
+	for _, allocation := range allocations {
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%d\",\"%s\",\"%s\"\n", allocation.Amount, allocation.Denom, allocation.Address))...)
+	}
+	if err := os.WriteFile(p.AllocationsInputFile(), allocationsCsv, 0644); err != nil {
+		return fmt.Errorf("error writing allocations to file: %v", err)
+	}
+	cmd := []string{
+		"pd",
+		"generate-testnet",
+		"--chain-id", chainID,
+		"--validators-input-file", p.ValidatorsInputFileContainer(),
+		"--allocations-input-file", p.AllocationsInputFileContainer(),
+		"--output-dir", p.NodeHome(),
+	}
+	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {

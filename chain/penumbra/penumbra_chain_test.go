@@ -17,7 +17,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
 	require.NoErrorf(t, err, "failed to set up test run")
 
-	chain, err := ibctest.GetChain(t.Name(), "penumbra", "010-pasithee,v0.35.0", "penumbra-1", 4, 1, zap.NewNop())
+	chain, err := ibctest.GetChain(t.Name(), "penumbra", "015-ersa-v2,v0.35.4", "penumbra-1", 4, 1, zap.NewNop())
 	require.NoError(t, err, "failed to get penumbra chain")
 
 	err = chain.Initialize(t.Name(), home, pool, network)
@@ -29,6 +29,3 @@ func TestPenumbraChainStart(t *testing.T) {
 	_, err = chain.WaitForBlocks(50)
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 }
-
-// pcli -w /root/.penumbra/wallet wallet generate
-// pcli -w /root/.penumbra/wallet addr new validator

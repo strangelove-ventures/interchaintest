@@ -230,19 +230,9 @@ type ValidatorWithIntPower struct {
 
 // Bootstraps the chain and starts it from genesis
 func (c *PenumbraChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
-	genesisJsonBytes, err := os.ReadFile(genesisFilePath)
-	if err != nil {
-		return err
-	}
-
-	genesisFile := PenumbraGenesisFile{}
-	if err := json.Unmarshal(genesisJsonBytes, &genesisFile); err != nil {
-		return err
-	}
-
 	// TODO overwrite consensus keys on 2/3 voting power of validators
 
-	return c.start(testName, ctx, genesisFile)
+	return c.start(testName, ctx, genesisFilePath)
 }
 
 func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
@@ -326,24 +316,29 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		return err
 	}
 
-	genesisFile := newPenumbraGenesisFileJSON(chainCfg.ChainID, validatorDefinitions, allocations)
+	firstValidator := validators[0]
+	if err := firstValidator.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
+		return err
+	}
 
-	return c.start(testName, ctx, genesisFile)
+	// penumbra generate-testnet right now overwrites new validator keys
+	for i, validator := range validators {
+		if _, err := dockerutil.CopyFile(firstValidator.PenumbraAppNode.ValidatorPrivateKeyFile(i), validator.TendermintNode.PrivValKeyFilePath()); err != nil {
+			return err
+		}
+	}
+
+	return c.start(testName, ctx, firstValidator.PenumbraAppNode.GenesisFile())
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *PenumbraChain) start(testName string, ctx context.Context, genesis PenumbraGenesisFile) error {
+func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFilePath string) error {
 	var eg errgroup.Group
-
-	genesisFileBytes, err := json.Marshal(genesis)
-	if err != nil {
-		return fmt.Errorf("error marshaling genesis file: %v", err)
-	}
 
 	var tendermintNodes []*tendermint.TendermintNode
 	for _, node := range c.PenumbraNodes {
 		tendermintNodes = append(tendermintNodes, node.TendermintNode)
-		if err := os.WriteFile(node.TendermintNode.GenesisFilePath(), genesisFileBytes, 0644); err != nil { //nolint
+		if _, err := dockerutil.CopyFile(genesisFilePath, node.TendermintNode.GenesisFilePath()); err != nil { //nolint
 			return err
 		}
 	}
@@ -390,7 +385,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesis Penu
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	_, err = c.getRelayerNode().TendermintNode.WaitForBlocks(5)
+	_, err := c.getRelayerNode().TendermintNode.WaitForBlocks(5)
 	return err
 }
 
