@@ -168,6 +168,10 @@ func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, log
 // if this is too taxing on a system, the -test.parallel flag
 // can be used to reduce how many tests actively run at once.
 func TestRelayer(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	t.Parallel()
 
 	logger, err := extraFlags.Logger()
