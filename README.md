@@ -3,6 +3,36 @@
 The IBC Test Framework orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
+## Focusing on Specific Tests
+
+You may focus on a specific tests using the `-test.run=<regex>` flag.
+
+```shell
+ibctest -test.run=/<relayer>/<chain combination>/<test name>
+```
+
+If you want to focus on a specific test:
+
+```shell
+ibctest -test.run=///relay_packet
+ibctest -test.run=///no_timeout
+ibctest -test.run=///height_timeout
+ibctest -test.run=///timestamp_timeout
+```
+
+Example of narrowing your focus even more:
+
+```shell
+# run all tests for Go relayer
+ibctest -test.run=/rly//
+
+# run all tests for Go relayer and gaia chains
+ibctest -test.run=/rly/gaia/
+
+# only run no_timeout test for Go relayer and gaia chains
+ibctest -test.run=/rly/gaia/no_timeout
+```
+
 ## Contributing
 
 Running `make ibctest` will produce an `ibctest` binary into `./bin`.
