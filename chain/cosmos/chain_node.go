@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,15 +18,16 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/strangelove-ventures/ibc-test-framework/chain/tendermint"
-	"go.uber.org/zap"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibc-test-framework/dockerutil"
@@ -35,6 +37,7 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -107,6 +110,8 @@ func (tn *ChainNode) NewClient(addr string) error {
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	encoding := simapp.MakeTestEncodingConfig()
+	bankTypes.RegisterInterfaces(encoding.InterfaceRegistry)
+	ibctypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	return client.Context{
 		Client:            tn.Client,
@@ -257,12 +262,29 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
-	pp, err := tendermint.PrettyPrintTxs(ctx, txs, tn.Client.Tx)
-	if err != nil {
-		tn.logger().Info("Failed to pretty print block", zap.Error(err))
-		return
+	buf := new(bytes.Buffer)
+	buf.WriteString("BLOCK INFO\n")
+	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
+	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))
+
+	for i, tx := range blockRes.Block.Txs {
+		fmt.Fprintf(buf, "TX #%d\n", i)
+		txResp, err := authTx.QueryTx(tn.CliContext(), hex.EncodeToString(tx.Hash()))
+		if err != nil {
+			fmt.Fprintf(buf, "(Failed to query tx: %v)", err)
+			continue
+		}
+		fmt.Fprintf(buf, "TX TYPE: %s\n", txResp.Tx.TypeUrl)
+
+		// Purposefully zero out fields to make spew's output less verbose
+		txResp.Data = "[redacted]"
+		txResp.RawLog = "[redacted]"
+		txResp.Events = nil // already present in TxResponse.Logs
+
+		spew.Fprint(buf, txResp)
 	}
-	tn.logger().Debug(pp, zap.Int64("height", height), zap.String("block", pp))
+
+	tn.logger().Debug(buf.String())
 }
 
 func (tn *ChainNode) Height() (int64, error) {
@@ -413,10 +435,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	output := IBCTransferTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
-	if err != nil {
-		return "", err
-	}
-	return output.TxHash, nil
+	return output.TxHash, err
 }
 
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
