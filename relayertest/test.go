@@ -215,7 +215,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
-	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
+	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainsAndRelayerFromFactory")
 
 	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
