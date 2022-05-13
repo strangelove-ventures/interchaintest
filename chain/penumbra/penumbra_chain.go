@@ -34,6 +34,27 @@ type PenumbraChain struct {
 	PenumbraNodes PenumbraNodes
 }
 
+type PenumbraValidatorDefinition struct {
+	IdentityKey    string                           `json:"identity_key"`
+	ConsensusKey   string                           `json:"consensus_key"`
+	Name           string                           `json:"name"`
+	Website        string                           `json:"website"`
+	Description    string                           `json:"description"`
+	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams"`
+	SequenceNumber int64                            `json:"sequence_number"`
+}
+
+type PenumbraValidatorFundingStream struct {
+	Address string `json:"address"`
+	RateBPS int64  `json:"rate_bps"`
+}
+
+type PenumbraGenesisAppStateAllocation struct {
+	Amount  int64  `json:"amount"`
+	Denom   string `json:"denom"`
+	Address string `json:"address"`
+}
+
 func NewPenumbraChainConfig() ibc.ChainConfig {
 	return ibc.ChainConfig{
 		Type:           "penumbra",
