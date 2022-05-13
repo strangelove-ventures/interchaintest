@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/strangelove-ventures/ibc-test-framework/ibc"
 	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
 	"github.com/strangelove-ventures/ibc-test-framework/relayertest"
+	"github.com/strangelove-ventures/ibc-test-framework/testreporter"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +42,19 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	os.Exit(m.Run())
+	if err := configureTestReporter(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failure configuring test reporter: %v\n", err)
+		os.Exit(1)
+	}
+
+	code := m.Run()
+
+	if err := reporter.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failure closing test reporter: %v\n", err)
+		// Don't os.Exit here, since we already have an exit code from running the tests.
+	}
+
+	os.Exit(code)
 }
 
 var extraFlags mainFlags
@@ -97,6 +111,30 @@ func validateTestMatrix() error {
 		}
 	}
 
+	return nil
+}
+
+var reporter *testreporter.Reporter
+
+func configureTestReporter() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user home dir: %w", err)
+	}
+	fpath := filepath.Join(home, ".ibctest", "reports")
+	err = os.MkdirAll(fpath, 0755)
+	if err != nil {
+		return fmt.Errorf("mkdirall: %w", err)
+	}
+
+	f, err := os.Create(filepath.Join(fpath, fmt.Sprintf("%d.json", time.Now().Unix())))
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Writing report to %s\n", f.Name())
+
+	reporter = testreporter.NewReporter(f)
 	return nil
 }
 
@@ -174,7 +212,7 @@ func TestRelayer(t *testing.T) {
 					t.Parallel()
 
 					// Finally, the relayertest suite.
-					relayertest.TestRelayer(t, cf, rf)
+					relayertest.TestRelayer(t, cf, rf, reporter)
 				})
 			}
 		})
@@ -191,4 +229,5 @@ func addFlags() {
 	flag.StringVar(&extraFlags.LogFile, "log-file", "ibctest.log", "File to write chain and relayer logs. If a file name, logs written to $HOME/.ibctest/logs directory. Use 'stderr' or 'stdout' to print logs in line tests.")
 	flag.StringVar(&extraFlags.LogFormat, "log-format", "console", "Chain and relayer log format: console|json")
 	flag.StringVar(&extraFlags.LogLevel, "log-level", "info", "Chain and relayer log level: debug|info|error")
+	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where test report will be stored. Defaults to $HOME/.ibctest/reports/$TIMESTAMP.json")
 }
