@@ -262,29 +262,29 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
-	sb := new(strings.Builder)
-	sb.WriteString("BLOCK INFO\n")
-	sb.WriteString(fmt.Sprintf("BLOCK HEIGHT: %d\n", height))
-	sb.WriteString(fmt.Sprintf("TOTAL TXs: %d\n", len(blockRes.Block.Txs)))
+	buf := new(bytes.Buffer)
+	buf.WriteString("BLOCK INFO\n")
+	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
+	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))
 
 	for i, tx := range blockRes.Block.Txs {
-		sb.WriteString(fmt.Sprintf("TX #%d\n", i))
+		fmt.Fprintf(buf, "TX #%d\n", i)
 		txResp, err := authTx.QueryTx(tn.CliContext(), hex.EncodeToString(tx.Hash()))
 		if err != nil {
-			sb.WriteString(fmt.Sprintf("(Failed to query tx: %v)", err))
+			fmt.Fprintf(buf, "(Failed to query tx: %v)", err)
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("TX TYPE: %s\n", txResp.Tx.TypeUrl))
+		fmt.Fprintf(buf, "TX TYPE: %s\n", txResp.Tx.TypeUrl)
 
 		// Purposefully zero out fields to make spew's output less verbose
 		txResp.Data = "[redacted]"
 		txResp.RawLog = "[redacted]"
 		txResp.Events = nil // already present in TxResponse.Logs
 
-		sb.WriteString(spew.Sprint(txResp))
+		spew.Fprint(buf, txResp)
 	}
 
-	tn.logger().Debug(sb.String())
+	tn.logger().Debug(buf.String())
 }
 
 func (tn *ChainNode) Height() (int64, error) {
