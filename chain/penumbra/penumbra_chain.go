@@ -417,3 +417,14 @@ func (c *PenumbraChain) GetPacketAcknowledgment(ctx context.Context, portID, cha
 func (c *PenumbraChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
 	panic("not implemented")
 }
+
+func (c *PenumbraChain) Cleanup(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, p := range c.PenumbraNodes {
+		p := p
+		eg.Go(func() error {
+			return p.PenumbraAppNode.Cleanup(ctx)
+		})
+	}
+	return eg.Wait()
+}

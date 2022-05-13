@@ -130,6 +130,11 @@ func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
 	return filepath.Join(p.Dir(), fmt.Sprintf("node%d", nodeNum), "tendermint", "config", "priv_validator_key.json")
 }
 
+func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
+	cmd := []string{"rm", "-rf", filepath.Join(p.NodeHome(), "{,.[!.],..?}*")}
+	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+}
+
 func (p *PenumbraAppNode) GenerateGenesisFile(
 	ctx context.Context,
 	chainID string,
@@ -138,17 +143,17 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 ) error {
 	validatorsJson, err := json.Marshal(validators)
 	if err != nil {
-		return fmt.Errorf("error marshalling validators to json: %v", err)
+		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
 	if err := os.WriteFile(p.ValidatorsInputFile(), validatorsJson, 0644); err != nil {
-		return fmt.Errorf("error writing validators to file: %v", err)
+		return fmt.Errorf("error writing validators to file: %w", err)
 	}
-	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
+	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%d\",\"%s\",\"%s\"\n", allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
 	}
 	if err := os.WriteFile(p.AllocationsInputFile(), allocationsCsv, 0644); err != nil {
-		return fmt.Errorf("error writing allocations to file: %v", err)
+		return fmt.Errorf("error writing allocations to file: %w", err)
 	}
 	cmd := []string{
 		"pd",

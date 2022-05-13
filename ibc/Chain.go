@@ -82,4 +82,6 @@ type Chain interface {
 
 	// GetPacketSequence returns the packet sequence given the transaction's hash
 	GetPacketSequence(ctx context.Context, txHash string) (uint64, error)
+
+	Cleanup(ctx context.Context) error
 }

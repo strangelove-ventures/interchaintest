@@ -26,6 +26,9 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start penumbra chain")
 
-	_, err = chain.WaitForBlocks(50)
+	_, err = chain.WaitForBlocks(10)
 	require.NoError(t, err, "penumbra chain failed to make blocks")
+
+	err = chain.Cleanup(ctx)
+	require.NoError(t, err, "failed to cleanup after penumbra test")
 }
