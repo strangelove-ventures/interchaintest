@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: tests
+    name: all tests
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -32,7 +32,11 @@ jobs:
       #     docker rm -f $(docker ps -a -q) || true
       #     docker network prune -f || true
 
-      # run tests
-      - name: run all tests
-        # show cosmos chain and relayer logs on test failure
-        run: (go test -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+      - name: unit tests
+        run: make test
+
+      - name: e2e test
+        # On test failure, clean test cache and show cosmos chain and relayer logs.
+        run: >
+          (go test -timeout 30m -v -p 2 -run=TestRelayer ./cmd/ibctest) || 
+          (go clean -testcache && echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
