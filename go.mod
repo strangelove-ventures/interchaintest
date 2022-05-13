@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibc-test-framework
+module github.com/strangelove-ventures/ibctest
 
 go 1.17
 
