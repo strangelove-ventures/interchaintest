@@ -21,6 +21,18 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 		{Message: testreporter.ContinueTestMessage{Name: "foo", When: time.Now()}},
 		{Message: testreporter.FinishTestMessage{Name: "foo", FinishedAt: time.Now(), Skipped: true, Failed: true}},
 		{Message: testreporter.TestErrorMessage{Name: "foo", When: time.Now(), Message: "something failed"}},
+		{
+			Message: testreporter.RelayerExecMessage{
+				Name:          "foo",
+				StartedAt:     time.Now(),
+				FinishedAt:    time.Now().Add(time.Second),
+				ContainerName: "relayer-exec-123",
+				Command:       []string{"rly", "version"},
+				Stdout:        "relayer v1.2.3",
+				ExitCode:      0,
+				Error:         "",
+			},
+		},
 	}
 
 	for _, tc := range tcs {

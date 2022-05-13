@@ -96,6 +96,29 @@ func (m TestErrorMessage) typ() string {
 	return "TestError"
 }
 
+// RelayerExecMessage is the result of executing a relayer command.
+// This message is populated through the RelayerExecReporter type,
+// which is returned by the Reporter's RelayerExecReporter method.
+type RelayerExecMessage struct {
+	Name string // Test name, but "Name" for consistency.
+
+	StartedAt, FinishedAt time.Time
+
+	ContainerName string `json:",omitempty"`
+
+	Command []string
+
+	Stdout, Stderr string
+
+	ExitCode int
+
+	Error string `json:",omitempty"`
+}
+
+func (m RelayerExecMessage) typ() string {
+	return "RelayerExec"
+}
+
 // WrappedMessage wraps a Message with an outer Type field
 // so that decoders can determine the underlying message's type.
 type WrappedMessage struct {
@@ -152,6 +175,10 @@ func (m *WrappedMessage) UnmarshalJSON(b []byte) error {
 		msg = x
 	case "TestError":
 		x := TestErrorMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "RelayerExec":
+		x := RelayerExecMessage{}
 		err = json.Unmarshal(raw, &x)
 		msg = x
 	default:
