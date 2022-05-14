@@ -51,7 +51,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	ContainerImage   = "ghcr.io/cosmos/relayer"
-	ContainerVersion = "v2.0.0-beta4"
+	ContainerVersion = "andrew-event_processor"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -60,7 +60,6 @@ const (
 // to distinguish between multiple rly versions.
 func Capabilities() map[relayer.Capability]bool {
 	m := relayer.FullCapabilities()
-	m[relayer.TimestampTimeout] = false
 	return m
 }
 
