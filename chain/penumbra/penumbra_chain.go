@@ -423,6 +423,9 @@ func (c *PenumbraChain) Cleanup(ctx context.Context) error {
 	for _, p := range c.PenumbraNodes {
 		p := p
 		eg.Go(func() error {
+			if err := p.PenumbraAppNode.StopContainer(); err != nil {
+				return err
+			}
 			return p.PenumbraAppNode.Cleanup(ctx)
 		})
 	}

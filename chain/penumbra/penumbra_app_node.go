@@ -131,7 +131,7 @@ func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
 }
 
 func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"rm", "-rf", filepath.Join(p.NodeHome(), "{,.[!.],..?}*")}
+	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
 	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
 }
 
