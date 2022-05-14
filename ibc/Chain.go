@@ -82,4 +82,8 @@ type Chain interface {
 
 	// GetPacketSequence returns the packet sequence given the transaction's hash
 	GetPacketSequence(ctx context.Context, txHash string) (uint64, error)
+
+	// cleanup any resources that won't be cleaned up by container and test file teardown
+	// for example if containers use a different user, and need the files to be deleted inside the container
+	Cleanup(ctx context.Context) error
 }
