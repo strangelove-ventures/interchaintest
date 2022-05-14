@@ -228,7 +228,7 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) (
 }
 
 func (pn *ParachainNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", pn.Home), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
+	cmd := []string{"find", fmt.Sprintf("%s/.", pn.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
 
 	// Cleanup should complete instantly,
 	// so add a 1-minute timeout in case Docker hangs.

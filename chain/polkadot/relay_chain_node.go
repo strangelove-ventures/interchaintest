@@ -265,7 +265,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) (
 }
 
 func (p *RelayChainNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", p.Home), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
+	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
 
 	// Cleanup should complete instantly,
 	// so add a 1-minute timeout in case Docker hangs.

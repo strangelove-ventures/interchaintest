@@ -51,7 +51,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.NoError(t, err, "failed to start polkadot chain")
 
 	// TODO
-	// _, err = chain.WaitForBlocks(50)
+	// _, err = chain.WaitForBlocks(10)
 	// require.NoError(t, err, "polkadot chain failed to make blocks")
 	time.Sleep(2 * time.Minute)
 }
