@@ -44,6 +44,10 @@ func init() {
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 // RandLowerCaseLetterString returns a lowercase letter string of given length
 func RandLowerCaseLetterString(length int) string {
 	b := make([]byte, length)
