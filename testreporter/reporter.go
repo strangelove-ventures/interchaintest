@@ -100,6 +100,44 @@ func (r *Reporter) TrackParallel(t T) {
 	}
 }
 
+// RelayerExecReporter returns a RelayerExecReporter associated with t.
+func (r *Reporter) RelayerExecReporter(t T) *RelayerExecReporter {
+	return &RelayerExecReporter{r: r, testName: t.Name()}
+}
+
+// RelayerExecReporter provides one method that satisfies the ibc.RelayerExecReporter interface.
+// Instances of RelayerExecReporter must be retrieved through (*Reporter).RelayerExecReporter.
+type RelayerExecReporter struct {
+	r        *Reporter
+	testName string
+}
+
+// TrackRelayerExec tracks the execution of an individual relayer command.
+func (r *RelayerExecReporter) TrackRelayerExec(
+	containerName string,
+	command []string,
+	stdout, stderr string,
+	exitCode int,
+	startedAt, finishedAt time.Time,
+	err error,
+) {
+	var errMsg string
+	if err != nil {
+		errMsg = err.Error()
+	}
+	r.r.in <- RelayerExecMessage{
+		Name:          r.testName,
+		StartedAt:     startedAt,
+		FinishedAt:    finishedAt,
+		ContainerName: containerName,
+		Command:       command,
+		Stdout:        stdout,
+		Stderr:        stderr,
+		ExitCode:      exitCode,
+		Error:         errMsg,
+	}
+}
+
 // TestifyT returns a TestifyReporter which will track logged errors in test.
 // Typically you will use this with the New method on the require or assert package:
 //     req := require.New(reporter.TestifyT(t))

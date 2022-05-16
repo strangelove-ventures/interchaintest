@@ -564,3 +564,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	_, err = c.getRelayerNode().WaitForBlocks(5)
 	return err
 }
+
+func (c *CosmosChain) Cleanup(ctx context.Context) error {
+	// noop
+	return nil
+}

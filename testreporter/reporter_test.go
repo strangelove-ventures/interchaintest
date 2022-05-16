@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 )
@@ -221,6 +222,48 @@ func TestReporter_Errorf(t *testing.T) {
 	require.NoError(t, r.Close())
 
 	require.Equal(t, mt.errorfs, []string{"failed? true"})
+}
+
+func TestReporter_RelayerExec(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	r := testreporter.NewReporter(nopCloser{Writer: buf})
+
+	mt := &mockT{name: "my_test"}
+
+	r.TrackTest(mt)
+
+	execStartedAt := time.Now()
+	execFinishedAt := execStartedAt.Add(time.Second)
+	r.RelayerExecReporter(mt).TrackRelayerExec(
+		"my_container",
+		[]string{"rly", "fake_command"},
+		"stdout", "stderr",
+		1,
+		execStartedAt, execFinishedAt,
+		nil,
+	)
+
+	mt.RunCleanups()
+
+	require.NoError(t, r.Close())
+
+	msgs := ReporterMessages(t, buf)
+	require.Len(t, msgs, 5)
+
+	diff := cmp.Diff(testreporter.RelayerExecMessage{
+		Name:          "my_test",
+		StartedAt:     execStartedAt,
+		FinishedAt:    execFinishedAt,
+		ContainerName: "my_container",
+		Command:       []string{"rly", "fake_command"},
+		Stdout:        "stdout",
+		Stderr:        "stderr",
+		ExitCode:      1,
+		Error:         "",
+	}, msgs[2].(testreporter.RelayerExecMessage))
+	require.Empty(t, diff)
 }
 
 // requireTimeInRange is a helper to assert that a time occurs between a given start and end.

@@ -16,6 +16,7 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/testreporter"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -59,6 +60,7 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 func StartChainsAndRelayerFromFactory(
 	t *testing.T,
 	ctx context.Context,
+	rep *testreporter.Reporter,
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
@@ -187,7 +189,10 @@ func StartChainsAndRelayerFromFactory(
 		dstRPCAddr, dstGRPCAddr = dstChain.GetHostRPCAddress(), dstChain.GetHostGRPCAddress()
 	}
 
+	eRep := rep.RelayerExecReporter(t)
+
 	if err := relayerImpl.AddChainConfiguration(ctx,
+		eRep,
 		srcChainCfg, srcAccountKeyName,
 		srcRPCAddr, srcGRPCAddr,
 	); err != nil {
@@ -195,28 +200,29 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	if err := relayerImpl.AddChainConfiguration(ctx,
+		eRep,
 		dstChainCfg, dstAccountKeyName,
 		dstRPCAddr, dstGRPCAddr,
 	); err != nil {
 		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
 	}
 
-	if err := relayerImpl.RestoreKey(ctx, srcChain.Config().ChainID, srcAccountKeyName, srcMnemonic); err != nil {
+	if err := relayerImpl.RestoreKey(ctx, eRep, srcChain.Config().ChainID, srcAccountKeyName, srcMnemonic); err != nil {
 		return errResponse(fmt.Errorf("failed to restore key to source chain: %w", err))
 	}
-	if err := relayerImpl.RestoreKey(ctx, dstChain.Config().ChainID, dstAccountKeyName, dstMnemonic); err != nil {
+	if err := relayerImpl.RestoreKey(ctx, eRep, dstChain.Config().ChainID, dstAccountKeyName, dstMnemonic); err != nil {
 		return errResponse(fmt.Errorf("failed to restore key to dest chain: %w", err))
 	}
 
-	if err := relayerImpl.GeneratePath(ctx, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
+	if err := relayerImpl.GeneratePath(ctx, eRep, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
 		return errResponse(fmt.Errorf("failed to generate path: %w", err))
 	}
 
-	if err := relayerImpl.LinkPath(ctx, testPathName); err != nil {
+	if err := relayerImpl.LinkPath(ctx, eRep, testPathName); err != nil {
 		return errResponse(fmt.Errorf("failed to create link in relayer: %w", err))
 	}
 
-	channels, err := relayerImpl.GetChannels(ctx, srcChainCfg.ChainID)
+	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChainCfg.ChainID)
 	if err != nil {
 		return errResponse(fmt.Errorf("failed to get channels: %w", err))
 	}
@@ -238,11 +244,11 @@ func StartChainsAndRelayerFromFactory(
 	}
 	wg.Wait()
 
-	if err := relayerImpl.StartRelayer(ctx, testPathName); err != nil {
+	if err := relayerImpl.StartRelayer(ctx, eRep, testPathName); err != nil {
 		return errResponse(fmt.Errorf("failed to start relayer: %w", err))
 	}
 	t.Cleanup(func() {
-		if err := relayerImpl.StopRelayer(ctx); err != nil {
+		if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
 			t.Logf("error stopping relayer: %v", err)
 		}
 	})
