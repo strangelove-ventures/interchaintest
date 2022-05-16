@@ -38,7 +38,6 @@ import (
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -824,30 +823,6 @@ func (nodes ChainNodes) LogGenesisHashes() error {
 		nodes.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
-}
-
-func (nodes ChainNodes) WaitForHeight(height int64) error {
-	var eg errgroup.Group
-	nodes.logger().Info("Waiting for nodes to reach height", zap.Int64("height", height))
-	for _, n := range nodes {
-		n := n
-		eg.Go(func() error {
-			return retry.Do(func() error {
-				stat, err := n.Client.Status(context.Background())
-				if err != nil {
-					return err
-				}
-
-				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
-					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
-				}
-				nodes.logger().Info("Reached block", zap.Int64("height", height), zap.String("container", n.Name()))
-				return nil
-				// TODO: setup backup delay here
-			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
-		})
-	}
-	return eg.Wait()
 }
 
 func (nodes ChainNodes) logger() *zap.Logger {

@@ -24,7 +24,6 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
-	"golang.org/x/sync/errgroup"
 )
 
 // TendermintNode represents a node in the test network that is being created
@@ -341,30 +340,6 @@ func (tn TendermintNodes) LogGenesisHashes() error {
 		fmt.Printf("{%s} genesis hash %x\n", n.Name(), sha256.Sum256(gen))
 	}
 	return nil
-}
-
-func (tn TendermintNodes) WaitForHeight(height int64) error {
-	var eg errgroup.Group
-	fmt.Printf("Waiting For Nodes To Reach Block Height %d...\n", height)
-	for _, n := range tn {
-		n := n
-		eg.Go(func() error {
-			return retry.Do(func() error {
-				stat, err := n.Client.Status(context.Background())
-				if err != nil {
-					return err
-				}
-
-				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
-					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
-				}
-				fmt.Printf("{%s} => reached block %d\n", n.Name(), height)
-				return nil
-				// TODO: setup backup delay here
-			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
-		})
-	}
-	return eg.Wait()
 }
 
 // NodeJob run a container for a specific job and block until the container exits
