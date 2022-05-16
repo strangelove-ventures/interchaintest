@@ -199,14 +199,6 @@ func (tn *TendermintNode) WaitForBlocks(blocks int64) (int64, error) {
 	return mostRecentBlock, errors.New("timed out waiting for blocks")
 }
 
-func (tn *TendermintNode) Height() (int64, error) {
-	stat, err := tn.Client.Status(context.Background())
-	if err != nil {
-		return -1, err
-	}
-	return stat.SyncInfo.LatestBlockHeight, nil
-}
-
 // InitHomeFolder initializes a home folder for the given node
 func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error {
 	command := []string{tn.Chain.Config().Bin, "init", mode,

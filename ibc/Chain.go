@@ -37,9 +37,6 @@ type Chain interface {
 	// Note that this will not return a valid value until after Start returns.
 	GetHostGRPCAddress() string
 
-	// get current height
-	Height() (int64, error)
-
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error
 

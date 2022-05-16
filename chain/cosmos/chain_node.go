@@ -286,14 +286,6 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	tn.logger().Debug(buf.String())
 }
 
-func (tn *ChainNode) Height() (int64, error) {
-	stat, err := tn.Client.Status(context.Background())
-	if err != nil {
-		return -1, err
-	}
-	return stat.SyncInfo.LatestBlockHeight, nil
-}
-
 func applyConfigChanges(cfg *tmconfig.Config, peers string) {
 	// turn down blocktimes to make the chain faster
 	cfg.Consensus.TimeoutCommit = time.Duration(blockTime) * time.Second

@@ -172,10 +172,6 @@ func (c *CosmosChain) WaitForBlocks(number int64) (int64, error) {
 	return c.getRelayerNode().WaitForBlocks(number)
 }
 
-func (c *CosmosChain) Height() (int64, error) {
-	return c.getRelayerNode().Height()
-}
-
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
