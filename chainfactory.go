@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/strangelove-ventures/ibc-test-framework/chain/penumbra"
+	"github.com/strangelove-ventures/ibctest/chain/penumbra"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/ibc-test-framework/chain/cosmos"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
+	"github.com/strangelove-ventures/ibctest/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/ibc"
 )
 
 // ChainFactory describes how to get chains for tests.

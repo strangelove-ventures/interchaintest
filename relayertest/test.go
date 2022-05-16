@@ -14,8 +14,8 @@
 //     import (
 //       "testing"
 //
-//       "github.com/strangelove-ventures/ibc-test-framework/ibc"
-//       "github.com/strangelove-ventures/ibc-test-framework/relayertest"
+//       "github.com/strangelove-ventures/ibctest/ibc"
+//       "github.com/strangelove-ventures/ibctest/relayertest"
 //     )
 //
 //     func TestMyRelayer(t *testing.T) {
@@ -36,10 +36,10 @@ import (
 	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibc-test-framework/ibc"
-	"github.com/strangelove-ventures/ibc-test-framework/ibctest"
-	"github.com/strangelove-ventures/ibc-test-framework/relayer"
-	"github.com/strangelove-ventures/ibc-test-framework/testreporter"
+	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/relayer"
+	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
