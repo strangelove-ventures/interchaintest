@@ -181,6 +181,10 @@ func (c *PenumbraChain) WaitForBlocks(number int64) (int64, error) {
 	return c.getRelayerNode().TendermintNode.WaitForBlocks(number)
 }
 
+func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
+	return c.getRelayerNode().TendermintNode.Height(ctx)
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	return -1, errors.New("not yet implemented")
