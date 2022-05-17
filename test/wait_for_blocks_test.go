@@ -47,7 +47,9 @@ func TestWaitForBlocks(t *testing.T) {
 
 	t.Run("zero state", func(t *testing.T) {
 		err := WaitForBlocks(context.Background(), 100)
+		require.NoError(t, err)
 
+		err = WaitForBlocks(context.Background(), 0, &mockChainHeighter{CurHeight: 1})
 		require.NoError(t, err)
 	})
 
