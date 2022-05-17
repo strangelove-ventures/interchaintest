@@ -58,14 +58,6 @@ type ChainNode struct {
 	log  *zap.Logger
 }
 
-func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
-	res, err := tn.Client.Status(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
-	}
-	return uint64(res.SyncInfo.LatestBlockHeight), nil
-}
-
 // ChainNodes is a collection of ChainNode
 type ChainNodes []*ChainNode
 
@@ -213,47 +205,15 @@ func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
 	tmconfig.WriteConfigFile(tn.TMConfigPath(), cfg)
 }
 
-// Wait until we have signed n blocks in a row
-//func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
-//	ctx := context.Background()
-//
-//	stat, err := tn.Client.Status(context.Background())
-//	if err != nil {
-//		return -1, err
-//	}
-//
-//	startingBlock := stat.SyncInfo.LatestBlockHeight
-//	mostRecentBlock := startingBlock
-//	tn.logger().
-//		Info("Waiting for blocks", zap.Int64("initial_height", startingBlock))
-//
-//	// timeout after ~1 minute plus block time
-//	timeoutSeconds := blocks*int64(blockTime) + int64(60)
-//	for i := int64(0); i < timeoutSeconds; i++ {
-//		time.Sleep(1 * time.Second)
-//
-//		stat, err := tn.Client.Status(ctx)
-//		if err != nil {
-//			return mostRecentBlock, err
-//		}
-//
-//		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
-//
-//		tn.maybeLogBlock(mostRecentBlock)
-//
-//		deltaBlocks := mostRecentBlock - startingBlock
-//
-//		if deltaBlocks >= blocks {
-//			tn.logger().
-//				Debug("Time waiting for blocks",
-//					zap.Int64("num_blocks", blocks),
-//					zap.Duration("duration", time.Duration(i+1)*time.Second),
-//				)
-//			return mostRecentBlock, nil // done waiting for consecutive signed blocks
-//		}
-//	}
-//	return mostRecentBlock, errors.New("timed out waiting for blocks")
-//}
+func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
+	res, err := tn.Client.Status(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
+	}
+	height := res.SyncInfo.LatestBlockHeight
+	tn.maybeLogBlock(height)
+	return uint64(height), nil
+}
 
 func (tn *ChainNode) maybeLogBlock(height int64) {
 	if !tn.logger().Core().Enabled(zap.DebugLevel) {
