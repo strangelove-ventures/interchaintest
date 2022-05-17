@@ -199,7 +199,7 @@ func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uin
 	}
 	seqData, ok := tendermint.AttributeValue(txResp.Events, "send_packet", []byte("packet_sequence"))
 	if !ok {
-		return 0, fmt.Errorf("packet sequence not found for %X", txHash)
+		return 0, fmt.Errorf("packet sequence not found for %s", txHash)
 	}
 	seq, err := strconv.Atoi(string(seqData))
 	return uint64(seq), err
