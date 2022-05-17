@@ -39,6 +39,7 @@ import (
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -221,7 +222,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
 	// Wait for both chains to produce 10 blocks per test case.
 	// This is long to allow for intermittent retries inside the relayer.
-	req.NoError(ibctest.WaitForBlocks(int64(10*len(testCases)), srcChain, dstChain), "failed to wait for blocks")
+	req.NoError(test.WaitForBlocks(int64(10*len(testCases)), srcChain, dstChain), "failed to wait for blocks")
 
 	for _, testCase := range testCases {
 		testCase := testCase
@@ -251,7 +252,7 @@ func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *
 	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
-	require.NoError(t, ibctest.WaitForBlocks(15, srcChain, dstChain), "failed to wait for blocks")
+	require.NoError(t, test.WaitForBlocks(15, srcChain, dstChain), "failed to wait for blocks")
 }
 
 func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {

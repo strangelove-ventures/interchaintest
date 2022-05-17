@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +62,7 @@ func GetAndFundTestUsers(
 		require.NoError(t, err, "failed to get funds from faucet")
 	}
 
-	require.NoError(t, WaitForBlocks(5, chains...), "failed to wait for blocks")
+	require.NoError(t, test.WaitForBlocks(ctx, 5, chains...), "failed to wait for blocks")
 
 	return users
 }
