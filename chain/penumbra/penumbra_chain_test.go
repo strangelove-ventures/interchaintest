@@ -1,4 +1,4 @@
-package penumbra_test
+package penumbra
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	t.Cleanup(func() {
 		if err := chain.Cleanup(ctx); err != nil {
-			log.Warn("chain cleanup failed", zap.String("chain", chain.Config().ChainID), zap.Error(err))
+			log.Warn("Chain cleanup failed", zap.String("chain", chain.Config().ChainID), zap.Error(err))
 		}
 	})
 
