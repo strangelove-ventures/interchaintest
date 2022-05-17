@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/strangelove-ventures/ibctest/label"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,17 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 	}{
 		{Message: testreporter.BeginSuiteMessage{StartedAt: time.Now()}},
 		{Message: testreporter.FinishSuiteMessage{FinishedAt: time.Now()}},
-		{Message: testreporter.BeginTestMessage{Name: "foo", StartedAt: time.Now()}},
+		{
+			Message: testreporter.BeginTestMessage{
+				Name:      "foo",
+				StartedAt: time.Now(),
+				Labels: testreporter.LabelSet{
+					Relayer: []label.Relayer{label.Rly},
+					Chain:   []label.Chain{label.Gaia},
+					Test:    []label.Test{label.Timeout},
+				},
+			},
+		},
 		{Message: testreporter.PauseTestMessage{Name: "foo", When: time.Now()}},
 		{Message: testreporter.ContinueTestMessage{Name: "foo", When: time.Now()}},
 		{Message: testreporter.FinishTestMessage{Name: "foo", FinishedAt: time.Now(), Skipped: true, Failed: true}},

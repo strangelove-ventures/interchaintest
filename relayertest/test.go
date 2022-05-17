@@ -38,6 +38,7 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/label"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
@@ -66,6 +67,9 @@ type RelayerTestCaseConfig struct {
 	PreRelayerStart func(context.Context, *testing.T, *RelayerTestCase, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
 	// test after chains and relayers are started
 	Test func(context.Context, *testing.T, *RelayerTestCase, *testreporter.Reporter, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
+
+	// Test-specific labels.
+	TestLabels []label.Test
 }
 
 var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
@@ -78,18 +82,21 @@ var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 		Name:            "no timeout",
 		PreRelayerStart: preRelayerStart_NoTimeout,
 		Test:            testPacketRelaySuccess,
+		TestLabels:      []label.Test{label.Timeout},
 	},
 	{
 		Name:                        "height timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.HeightTimeout},
 		PreRelayerStart:             preRelayerStart_HeightTimeout,
 		Test:                        testPacketRelayFail,
+		TestLabels:                  []label.Test{label.Timeout, label.HeightTimeout},
 	},
 	{
 		Name:                        "timestamp timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.TimestampTimeout},
 		PreRelayerStart:             preRelayerStart_TimestampTimeout,
 		Test:                        testPacketRelayFail,
+		TestLabels:                  []label.Test{label.Timeout, label.TimestampTimeout},
 	},
 }
 
@@ -176,7 +183,9 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
 func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	rep.TrackTest(t)
+	// Record the labels for this outer test.
+	rep.TrackParameters(t, rf.Labels(), cf.Labels())
+
 	req := require.New(rep.TestifyT(t))
 
 	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
@@ -226,7 +235,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
-			rep.TrackTest(t)
+			rep.TrackTest(t, testCase.Config.TestLabels...)
 			requireCapabilities(t, rf, testCase.Config.RequiredRelayerCapabilities...)
 			rep.TrackParallel(t)
 			testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
