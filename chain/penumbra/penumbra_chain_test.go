@@ -1,9 +1,10 @@
-package penumbra
+package penumbra_test
 
 import (
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -33,6 +34,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start penumbra chain")
 
-	_, err = chain.WaitForBlocks(10)
+	err = test.WaitForBlocks(ctx, 10, chain)
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 }
