@@ -62,8 +62,8 @@ type Chain interface {
 	// create balancer pool
 	CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error
 
-	// waits for # of blocks to be produced. Returns latest height
-	WaitForBlocks(number int64) (int64, error)
+	// Height returns the current block height or an error if unable to get current height
+	Height(context context.Context) (int64, error)
 
 	// fetch balance for a specific account address and denom
 	GetBalance(ctx context.Context, address string, denom string) (int64, error)
