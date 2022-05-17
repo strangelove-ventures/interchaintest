@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/strangelove-ventures/ibctest/label"
 )
 
 // T is a subset of testing.TB,
@@ -67,12 +69,30 @@ func (r *Reporter) Close() error {
 	return <-r.writerDone
 }
 
-// TrackTest tracks the test start and finish time.
-func (r *Reporter) TrackTest(t T) {
+// TrackParameters is intended to be called from the outermost layer of tests.
+// It tracks the test run including labels indicative of what relayers and chains are used.
+func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabels []label.Chain) {
+	r.trackTest(t, LabelSet{
+		Relayer: relayerLabels,
+		Chain:   chainLabels,
+	})
+}
+
+// TrackTest tracks execution of a subtest using the supplied labels.
+func (r *Reporter) TrackTest(t T, labels ...label.Test) {
+	r.trackTest(t, LabelSet{
+		Test: labels,
+	})
+}
+
+// trackTest tracks the test start and finish time.
+// It also records which labels are present on the test.
+func (r *Reporter) trackTest(t T, labels LabelSet) {
 	name := t.Name()
 	r.in <- BeginTestMessage{
 		Name:      name,
 		StartedAt: time.Now(),
+		Labels:    labels,
 	}
 	t.Cleanup(func() {
 		r.in <- FinishTestMessage{

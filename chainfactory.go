@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/strangelove-ventures/ibctest/chain/penumbra"
-	"go.uber.org/zap"
-
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/chain/penumbra"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/label"
+	"go.uber.org/zap"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -23,6 +23,11 @@ type ChainFactory interface {
 	// Depending on how the factory was configured,
 	// this may report more than two chains.
 	Name() string
+
+	// Labels are reported to allow simple filtering of tests depending on these Chains.
+	// While the Name should be fully descriptive,
+	// the Labels are intended to be short and fixed.
+	Labels() []label.Chain
 }
 
 // BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
@@ -86,6 +91,20 @@ func (f *BuiltinChainFactory) Name() string {
 		parts[i] = e.Name + "@" + e.Version
 	}
 	return strings.Join(parts, "+")
+}
+
+func (f *BuiltinChainFactory) Labels() []label.Chain {
+	labels := make([]label.Chain, len(f.entries))
+	for i, e := range f.entries {
+		label := label.Chain(e.Name)
+		if !label.IsKnown() {
+			// The label must be known (i.e. registered),
+			// otherwise filtering from the command line will be broken.
+			panic(fmt.Errorf("chain name %s is not a known label", e.Name))
+		}
+		labels[i] = label
+	}
+	return labels
 }
 
 // CustomChainFactory is a ChainFactory that supports returning chains that are defined by ChainConfig values.
@@ -156,4 +175,14 @@ func (f *CustomChainFactory) Name() string {
 		parts[i] = e.Config.Name + "@" + e.Config.Images[0].Version
 	}
 	return strings.Join(parts, "+")
+}
+
+func (f *CustomChainFactory) Labels() []label.Chain {
+	labels := make([]label.Chain, len(f.entries))
+	for i, e := range f.entries {
+		// Although the builtin chains panic if a label is unknown,
+		// we don't apply that check on custom chain factories.
+		labels[i] = label.Chain(e.Config.Name)
+	}
+	return labels
 }

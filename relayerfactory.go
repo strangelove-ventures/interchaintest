@@ -6,6 +6,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/label"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
 	"go.uber.org/zap"
@@ -24,6 +25,14 @@ type RelayerFactory interface {
 	// Name returns a descriptive name of the factory,
 	// indicating details of the Relayer that will be built.
 	Name() string
+
+	// Labels are reported to allow simple filtering of tests depending on this Relayer.
+	// While the Name should be fully descriptive,
+	// the Labels are intended to be short and fixed.
+	//
+	// Most relayers will probably only have one label indicative of its name,
+	// but we allow multiple labels for future compatibility.
+	Labels() []label.Relayer
 
 	// Capabilities is an indication of the features this relayer supports.
 	// Tests for any unsupported features will be skipped rather than failed.
@@ -74,6 +83,15 @@ func (f builtinRelayerFactory) Name() string {
 		// so that the slashes in the image repository don't add ambiguity
 		// to subtest paths, when the factory name is used in calls to t.Run.
 		return "rly@" + rly.ContainerVersion
+	default:
+		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
+	}
+}
+
+func (f builtinRelayerFactory) Labels() []label.Relayer {
+	switch f.impl {
+	case ibc.CosmosRly:
+		return []label.Relayer{label.Rly}
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

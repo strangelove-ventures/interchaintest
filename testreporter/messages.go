@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/strangelove-ventures/ibctest/label"
 )
 
 // Message is the sentinel interface to all testreporter messages.
@@ -41,6 +43,15 @@ func (m FinishSuiteMessage) typ() string {
 type BeginTestMessage struct {
 	Name      string
 	StartedAt time.Time
+	Labels    LabelSet
+}
+
+// LabelSet is the set of labels that can be associated with a test.
+type LabelSet struct {
+	Relayer []label.Relayer `json:",omitEmpty"`
+	Chain   []label.Chain   `json:",omitEmpty"`
+
+	Test []label.Test `json:",omitEmpty"`
 }
 
 func (m BeginTestMessage) typ() string {
