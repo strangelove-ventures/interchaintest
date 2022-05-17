@@ -1,6 +1,6 @@
 module github.com/strangelove-ventures/ibctest
 
-go 1.18
+go 1.17
 
 require (
 	github.com/avast/retry-go/v4 v4.0.4
