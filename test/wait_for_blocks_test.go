@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -43,15 +44,28 @@ func TestWaitForBlocks(t *testing.T) {
 		require.EqualValues(t, startHeight2+delta+1, chain2.CurHeight)
 	})
 
-	t.Run("no chains", func(t *testing.T) {
-		t.Fail()
+	t.Run("zero state", func(t *testing.T) {
+		err := WaitForBlocks(context.Background(), 100)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("error", func(t *testing.T) {
-		t.Fail()
+		errMock := mockChainHeighter{Err: errors.New("boom")}
+		const delta = 1
+		err := WaitForBlocks(context.Background(), delta, &mockChainHeighter{}, &errMock)
+
+		require.Error(t, err)
+		require.EqualError(t, err, "boom")
 	})
 
 	t.Run("context done", func(t *testing.T) {
-		t.Fail()
+		const delta = 100
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := WaitForBlocks(ctx, delta, &mockChainHeighter{Sleep: time.Minute}, &mockChainHeighter{})
+
+		require.Error(t, err)
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }
