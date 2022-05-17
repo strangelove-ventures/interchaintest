@@ -39,8 +39,7 @@ func TestWaitForBlocks(t *testing.T) {
 		err := WaitForBlocks(context.Background(), delta, &chain1, &chain2)
 
 		require.NoError(t, err)
-		// +1 includes initial fetch of the height
-		require.EqualValues(t, startHeight1+delta+1, chain1.CurHeight)
+		require.EqualValues(t, startHeight1+delta+1, chain1.CurHeight) // +1 accounts for initial fetch of the height
 		require.EqualValues(t, startHeight2+delta+1, chain2.CurHeight)
 	})
 
