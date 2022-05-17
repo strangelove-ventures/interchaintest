@@ -43,13 +43,15 @@ func TestWaitForBlocks(t *testing.T) {
 		require.EqualValues(t, startHeight2+delta+1, chain2.CurHeight)
 	})
 
-	t.Run("error", func(t *testing.T) {
-
+	t.Run("no chains", func(t *testing.T) {
 		t.Fail()
 	})
 
-	t.Run("timed out", func(t *testing.T) {
+	t.Run("error", func(t *testing.T) {
+		t.Fail()
+	})
 
+	t.Run("context done", func(t *testing.T) {
 		t.Fail()
 	})
 }
