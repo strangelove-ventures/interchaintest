@@ -43,7 +43,7 @@ func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, stri
 
 	home := t.TempDir()
 
-	networkName := fmt.Sprintf("ibc-test-framework-%s", dockerutil.RandLowerCaseLetterString(8))
+	networkName := fmt.Sprintf("ibctest-%s", dockerutil.RandLowerCaseLetterString(8))
 	network, err := CreateTestNetwork(pool, networkName, t.Name())
 	if err != nil {
 		return ctx, "", nil, "", err

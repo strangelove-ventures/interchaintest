@@ -25,7 +25,7 @@
 //     }
 //
 // Although the relayertest package is made available as a convenience for other projects,
-// the ibc-test-framework project should be considered the canonical definition of tests and configuration.
+// the ibctest project should be considered the canonical definition of tests and configuration.
 package relayertest
 
 import (
