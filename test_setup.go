@@ -259,18 +259,6 @@ func StartChainsAndRelayerFromFactory(
 	return relayerImpl, channels, nil
 }
 
-func WaitForBlocks(blocksToWait int64, chains ...ibc.Chain) error {
-	chainsConsecutiveBlocksWaitGroup := errgroup.Group{}
-	for _, chain := range chains {
-		chain := chain
-		chainsConsecutiveBlocksWaitGroup.Go(func() error {
-			_, err := chain.WaitForBlocks(blocksToWait)
-			return err
-		})
-	}
-	return chainsConsecutiveBlocksWaitGroup.Wait()
-}
-
 func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*docker.Network, error) {
 	return pool.Client.CreateNetwork(docker.CreateNetworkOptions{
 		Name:           name,
