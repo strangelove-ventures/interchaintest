@@ -35,5 +35,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	require.NoError(t, err, "failed to start penumbra chain")
 
 	err = test.WaitForBlocks(ctx, 10, chain)
+
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -174,11 +175,6 @@ func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, 
 func (c *PenumbraChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	// NOOP
 	return errors.New("not yet implemented")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) WaitForBlocks(number int64) (int64, error) {
-	return c.getRelayerNode().TendermintNode.WaitForBlocks(number)
 }
 
 func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
@@ -406,7 +402,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	_, err := c.getRelayerNode().TendermintNode.WaitForBlocks(5)
+	err := test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 	return err
 }
 

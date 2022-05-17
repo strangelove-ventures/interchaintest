@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -32,6 +31,7 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -56,6 +56,14 @@ type ChainNode struct {
 
 	lock sync.Mutex
 	log  *zap.Logger
+}
+
+func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
+	res, err := tn.Client.Status(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
+	}
+	return uint64(res.SyncInfo.LatestBlockHeight), nil
 }
 
 // ChainNodes is a collection of ChainNode
@@ -206,46 +214,46 @@ func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
 }
 
 // Wait until we have signed n blocks in a row
-func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
-	ctx := context.Background()
-
-	stat, err := tn.Client.Status(context.Background())
-	if err != nil {
-		return -1, err
-	}
-
-	startingBlock := stat.SyncInfo.LatestBlockHeight
-	mostRecentBlock := startingBlock
-	tn.logger().
-		Info("Waiting for blocks", zap.Int64("initial_height", startingBlock))
-
-	// timeout after ~1 minute plus block time
-	timeoutSeconds := blocks*int64(blockTime) + int64(60)
-	for i := int64(0); i < timeoutSeconds; i++ {
-		time.Sleep(1 * time.Second)
-
-		stat, err := tn.Client.Status(ctx)
-		if err != nil {
-			return mostRecentBlock, err
-		}
-
-		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
-
-		tn.maybeLogBlock(mostRecentBlock)
-
-		deltaBlocks := mostRecentBlock - startingBlock
-
-		if deltaBlocks >= blocks {
-			tn.logger().
-				Debug("Time waiting for blocks",
-					zap.Int64("num_blocks", blocks),
-					zap.Duration("duration", time.Duration(i+1)*time.Second),
-				)
-			return mostRecentBlock, nil // done waiting for consecutive signed blocks
-		}
-	}
-	return mostRecentBlock, errors.New("timed out waiting for blocks")
-}
+//func (tn *ChainNode) WaitForBlocks(blocks int64) (int64, error) {
+//	ctx := context.Background()
+//
+//	stat, err := tn.Client.Status(context.Background())
+//	if err != nil {
+//		return -1, err
+//	}
+//
+//	startingBlock := stat.SyncInfo.LatestBlockHeight
+//	mostRecentBlock := startingBlock
+//	tn.logger().
+//		Info("Waiting for blocks", zap.Int64("initial_height", startingBlock))
+//
+//	// timeout after ~1 minute plus block time
+//	timeoutSeconds := blocks*int64(blockTime) + int64(60)
+//	for i := int64(0); i < timeoutSeconds; i++ {
+//		time.Sleep(1 * time.Second)
+//
+//		stat, err := tn.Client.Status(ctx)
+//		if err != nil {
+//			return mostRecentBlock, err
+//		}
+//
+//		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
+//
+//		tn.maybeLogBlock(mostRecentBlock)
+//
+//		deltaBlocks := mostRecentBlock - startingBlock
+//
+//		if deltaBlocks >= blocks {
+//			tn.logger().
+//				Debug("Time waiting for blocks",
+//					zap.Int64("num_blocks", blocks),
+//					zap.Duration("duration", time.Duration(i+1)*time.Second),
+//				)
+//			return mostRecentBlock, nil // done waiting for consecutive signed blocks
+//		}
+//	}
+//	return mostRecentBlock, errors.New("timed out waiting for blocks")
+//}
 
 func (tn *ChainNode) maybeLogBlock(height int64) {
 	if !tn.logger().Core().Enabled(zap.DebugLevel) {
@@ -421,8 +429,9 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
-	if _, err := tn.WaitForBlocks(2); err != nil {
-		return "", err
+	err = test.WaitForBlocks(ctx, 2, tn)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
 	output := IBCTransferTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
@@ -449,8 +458,7 @@ func (tn *ChainNode) NodeJobThenWaitForBlocksLocked(ctx context.Context, command
 	if err != nil {
 		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
-	_, err = tn.WaitForBlocks(2)
-	return err
+	return test.WaitForBlocks(ctx, 2, tn)
 }
 
 type InstantiateContractAttribute struct {
@@ -506,8 +514,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
-		return "", err
+	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
 
 	command = []string{tn.Chain.Config().Bin,
@@ -553,8 +562,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	if _, err := tn.Chain.WaitForBlocks(5); err != nil {
-		return "", err
+	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
 
 	command = []string{tn.Chain.Config().Bin,

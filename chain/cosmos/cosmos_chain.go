@@ -22,6 +22,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 
 	"github.com/ory/dockertest/v3"
@@ -86,7 +87,7 @@ func (c *CosmosChain) Initialize(testName string, homeDirectory string, dockerPo
 	return nil
 }
 
-func (c *CosmosChain) getRelayerNode() *ChainNode {
+func (c *CosmosChain) getFullNode() *ChainNode {
 	if len(c.ChainNodes) > c.numValidators {
 		// use first full node
 		return c.ChainNodes[c.numValidators]
@@ -97,34 +98,34 @@ func (c *CosmosChain) getRelayerNode() *ChainNode {
 
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().HostName())
+	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
 }
 
 // Implements Chain interface
 func (c *CosmosChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", c.getRelayerNode().HostName())
+	return fmt.Sprintf("%s:9090", c.getFullNode().HostName())
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostRPCAddress() string {
-	return "http://" + dockerutil.GetHostPort(c.getRelayerNode().Container, rpcPort)
+	return "http://" + dockerutil.GetHostPort(c.getFullNode().Container, rpcPort)
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostGRPCAddress() string {
-	return dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
+	return dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
-	return c.getRelayerNode().CreateKey(ctx, keyName)
+	return c.getFullNode().CreateKey(ctx, keyName)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	keyInfo, err := c.getRelayerNode().Keybase().Key(keyName)
+	keyInfo, err := c.getFullNode().Keybase().Key(keyName)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -134,48 +135,43 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 
 // Implements Chain interface
 func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getRelayerNode().SendFunds(ctx, keyName, amount)
+	return c.getFullNode().SendFunds(ctx, keyName, amount)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
-	return c.getRelayerNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+	return c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	return c.getRelayerNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
+	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	return c.getRelayerNode().ExecuteContract(ctx, keyName, contractAddress, message)
+	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	return c.getRelayerNode().DumpContractState(ctx, contractAddress, height)
+	return c.getFullNode().DumpContractState(ctx, contractAddress, height)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, error) {
-	return c.getRelayerNode().ExportState(ctx, height)
+	return c.getFullNode().ExportState(ctx, height)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	return c.getRelayerNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
-}
-
-// Implements Chain interface
-func (c *CosmosChain) WaitForBlocks(number int64) (int64, error) {
-	return c.getRelayerNode().WaitForBlocks(number)
+	return c.getFullNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
 }
 
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
+	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err
@@ -206,7 +202,7 @@ func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uin
 }
 
 func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgment, _ error) {
-	grpcAddress := dockerutil.GetHostPort(c.getRelayerNode().Container, grpcPort)
+	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return found, err
@@ -229,7 +225,7 @@ func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, chann
 }
 
 func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
-	return authTx.QueryTx(c.getRelayerNode().CliContext(), txHash)
+	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 }
 
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
@@ -289,7 +285,7 @@ type ValidatorWithIntPower struct {
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
 	// copy genesis file to tmp path for modification
-	genesisTmpFilePath := filepath.Join(c.getRelayerNode().Dir(), "genesis_tmp.json")
+	genesisTmpFilePath := filepath.Join(c.getFullNode().Dir(), "genesis_tmp.json")
 	if _, err := dockerutil.CopyFile(genesisFilePath, genesisTmpFilePath); err != nil {
 		return err
 	}
@@ -428,11 +424,9 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		}
 	}
 
-	time.Sleep(2 * time.Hour)
+	time.Sleep(2 * time.Hour) // TODO(nix 05-17-2022) why sleep here for 2 hours?
 
-	// Wait for 5 blocks before considering the chains "started"
-	_, err = c.getRelayerNode().WaitForBlocks(5)
-	return err
+	return test.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 // Bootstraps the chain and starts it from genesis
@@ -557,11 +551,14 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	_, err = c.getRelayerNode().WaitForBlocks(5)
-	return err
+	return test.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 func (c *CosmosChain) Cleanup(ctx context.Context) error {
 	// noop
 	return nil
+}
+
+func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
+	return c.getFullNode().Height(ctx)
 }

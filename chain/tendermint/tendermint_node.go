@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,7 +50,9 @@ type ContainerPort struct {
 type Hosts []ContainerPort
 
 const (
-	blockTime   = 2 // seconds
+	// BlockTime is approx time to create a block
+	BlockTime = 2
+
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -155,7 +156,7 @@ func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", blockTime)
+	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", BlockTime)
 	cmds := []string{
 		tn.sedCommandForConfigFile("timeout-commit", timeoutCommitPropose),
 		tn.sedCommandForConfigFile("timeout-propose", timeoutCommitPropose),
@@ -165,38 +166,6 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 	}
 	cmd := []string{"sh", "-c", strings.Join(cmds, " && ")}
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, cmd))
-}
-
-// Wait until we have signed n blocks in a row
-func (tn *TendermintNode) WaitForBlocks(blocks int64) (int64, error) {
-	stat, err := tn.Client.Status(context.Background())
-	if err != nil {
-		return -1, err
-	}
-
-	startingBlock := stat.SyncInfo.LatestBlockHeight
-	mostRecentBlock := startingBlock
-	fmt.Printf("{WaitForBlocks-%s} Initial Height: %d\n", tn.Chain.Config().ChainID, startingBlock)
-	// timeout after ~1 minute plus block time
-	timeoutSeconds := blocks*int64(blockTime) + int64(60)
-	for i := int64(0); i < timeoutSeconds; i++ {
-		time.Sleep(1 * time.Second)
-
-		stat, err := tn.Client.Status(context.Background())
-		if err != nil {
-			return mostRecentBlock, err
-		}
-
-		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
-
-		deltaBlocks := mostRecentBlock - startingBlock
-
-		if deltaBlocks >= blocks {
-			fmt.Printf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d\n", tn.Chain.Config().ChainID, blocks, i+1)
-			return mostRecentBlock, nil // done waiting for consecutive signed blocks
-		}
-	}
-	return mostRecentBlock, errors.New("timed out waiting for blocks")
 }
 
 func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
