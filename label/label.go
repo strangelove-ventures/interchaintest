@@ -20,6 +20,11 @@ var knownTestLabels = map[Test]struct{}{
 	TimestampTimeout: {},
 }
 
+func (l Test) IsKnown() bool {
+	_, exists := knownTestLabels[l]
+	return exists
+}
+
 // Relayer is a label associated with a relayer during tests.
 // Relayer values must be registered through RegisterRelayerLabel, typically inside init functions.
 type Relayer string
@@ -32,6 +37,11 @@ const (
 var knownRelayerLabels = map[Relayer]struct{}{
 	Rly:    {},
 	Hermes: {},
+}
+
+func (l Relayer) IsKnown() bool {
+	_, exists := knownRelayerLabels[l]
+	return exists
 }
 
 // RegisterRelayerLabel is available for external packages that may import ibctest,
