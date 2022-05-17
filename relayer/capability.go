@@ -10,7 +10,7 @@ package relayer
 // Capability indicates a relayer's support of a given feature.
 type Capability int
 
-// The list of relayer capabilities that the ibc-test-framework understands.
+// The list of relayer capabilities that ibctest understands.
 const (
 	TimestampTimeout Capability = iota
 	HeightTimeout

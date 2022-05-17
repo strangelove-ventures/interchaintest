@@ -17,7 +17,7 @@ type Message interface {
 type BeginSuiteMessage struct {
 	StartedAt time.Time
 
-	// TODO: it would be nice to embed the ibc-test-framework commit in this message,
+	// TODO: it would be nice to embed the ibctest commit in this message,
 	// but while https://github.com/golang/go/issues/33976 is outstanding,
 	// we'll have to fall back to ldflags to embed it.
 }
