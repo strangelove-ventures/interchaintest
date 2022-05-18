@@ -20,35 +20,41 @@ func WaitForBlocks(parent context.Context, delta int, chains ...ChainHeighter) e
 	for i := range chains {
 		chain := chains[i]
 		eg.Go(func() error {
-			h := &height{}
-			for h.Delta() < delta {
-				cur, err := chain.Height(ctx)
-				if err != nil {
-					return err
-				}
-				h.Update(cur)
-			}
-			return nil
+			h := &height{Chain: chain}
+			return h.WaitForDelta(ctx, delta)
 		})
 	}
 	return eg.Wait()
 }
 
 type height struct {
-	Starting uint64
-	Current  uint64
+	Chain ChainHeighter
+
+	starting uint64
+	current  uint64
 }
 
-func (h *height) Delta() int {
-	if h.Starting == 0 {
+func (h *height) WaitForDelta(ctx context.Context, delta int) error {
+	for h.delta() < delta {
+		cur, err := h.Chain.Height(ctx)
+		if err != nil {
+			return err
+		}
+		h.update(cur)
+	}
+	return nil
+}
+
+func (h *height) delta() int {
+	if h.starting == 0 {
 		return 0
 	}
-	return int(h.Current - h.Starting)
+	return int(h.current - h.starting)
 }
 
-func (h *height) Update(height uint64) {
-	if h.Starting == 0 {
-		h.Starting = height
+func (h *height) update(height uint64) {
+	if h.starting == 0 {
+		h.starting = height
 	}
-	h.Current = height
+	h.current = height
 }
