@@ -27,29 +27,40 @@ const (
 	testPathName         = "test-path"
 )
 
-func SetupTestRun(t *testing.T) (context.Context, string, *dockertest.Pool, string, error) {
-	ctx := context.Background()
+// DockerSetup sets up a new dockertest.Pool (which is a client connection
+// to a Docker engine) and configures a network associated with t.
+//
+// If any part of the setup fails, t.Fatal is called.
+func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
+	t.Helper()
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return ctx, "", nil, "", err
+		t.Fatalf("failed to create dockertest pool: %v", err)
 	}
 
-	// schedule cleanup for afterwards
+	// Clean up docker resources at end of test.
 	t.Cleanup(dockerCleanup(t.Name(), pool))
 
-	// run cleanup for this test first in case previous run was killed (e.g. Ctrl+C)
+	// Also eagerly clean up any leftover resources from a previous test run,
+	// e.g. if the test was interrupted.
 	dockerCleanup(t.Name(), pool)()
 
-	home := t.TempDir()
-
-	networkName := fmt.Sprintf("ibctest-%s", dockerutil.RandLowerCaseLetterString(8))
-	network, err := CreateTestNetwork(pool, networkName, t.Name())
+	network, err := pool.Client.CreateNetwork(docker.CreateNetworkOptions{
+		Name:           fmt.Sprintf("ibctest-%s", dockerutil.RandLowerCaseLetterString(8)),
+		Options:        map[string]interface{}{},
+		Labels:         map[string]string{"ibc-test": t.Name()},
+		CheckDuplicate: true,
+		Internal:       false,
+		EnableIPv6:     false,
+		Context:        context.Background(),
+	})
 	if err != nil {
-		return ctx, "", nil, "", err
+		t.Fatalf("failed to create docker network: %v", err)
+
 	}
 
-	return ctx, home, pool, network.ID, nil
+	return pool, network.ID
 }
 
 // startup both chains and relayer
@@ -257,18 +268,6 @@ func StartChainsAndRelayerFromFactory(
 	time.Sleep(5 * time.Second)
 
 	return relayerImpl, channels, nil
-}
-
-func CreateTestNetwork(pool *dockertest.Pool, name string, testName string) (*docker.Network, error) {
-	return pool.Client.CreateNetwork(docker.CreateNetworkOptions{
-		Name:           name,
-		Options:        map[string]interface{}{},
-		Labels:         map[string]string{"ibc-test": testName},
-		CheckDuplicate: true,
-		Internal:       false,
-		EnableIPv6:     false,
-		Context:        context.Background(),
-	})
 }
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing

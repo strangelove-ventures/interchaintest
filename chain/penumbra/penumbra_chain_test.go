@@ -1,6 +1,7 @@
 package penumbra_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest"
@@ -15,13 +16,15 @@ func TestPenumbraChainStart(t *testing.T) {
 	}
 
 	t.Parallel()
-	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	require.NoErrorf(t, err, "failed to set up test run")
+
+	pool, network := ibctest.DockerSetup(t)
+	home := t.TempDir() // Must be before chain cleanup to avoid test error during cleanup.
 
 	log := zap.NewNop()
 	chain, err := ibctest.GetChain(t.Name(), "penumbra", "015-ersa-v2,v0.35.4", "penumbra-1", 4, 1, log)
 	require.NoError(t, err, "failed to get penumbra chain")
 
+	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := chain.Cleanup(ctx); err != nil {
 			log.Warn("Chain cleanup failed", zap.String("chain", chain.Config().ChainID), zap.Error(err))
