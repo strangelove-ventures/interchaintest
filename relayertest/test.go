@@ -189,8 +189,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 
 	req := require.New(rep.TestifyT(t))
 
-	ctx, home, pool, network, err := ibctest.SetupTestRun(t)
-	req.NoError(err, "failed to set up test run")
+	pool, network := ibctest.DockerSetup(t)
 
 	srcChain, dstChain, err := cf.Pair(t.Name())
 	req.NoError(err, "failed to get chain pair")
@@ -198,6 +197,8 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	var (
 		preRelayerStartFuncs []func([]ibc.ChannelOutput)
 		testCases            []*RelayerTestCase
+
+		ctx = context.Background()
 	)
 
 	for _, testCaseConfig := range relayerTestCaseConfigs {
@@ -225,6 +226,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
+	home := t.TempDir()
 	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainsAndRelayerFromFactory")
 
