@@ -258,16 +258,8 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	chainCfg := c.Config()
 
-	var validatorDefinitions []PenumbraValidatorDefinition
-	var allocations []PenumbraGenesisAppStateAllocation
-
-	for _, wallet := range additionalGenesisWallets {
-		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
-			Address: wallet.Address,
-			Denom:   wallet.Denom,
-			Amount:  wallet.Amount,
-		})
-	}
+	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
+	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
 
 	var eg errgroup.Group
 	for i, v := range validators {
@@ -303,24 +295,32 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorTemplateDefinition.Name = fmt.Sprintf("validator-%d", i)
 			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
 			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)
-			validatorDefinitions = append(validatorDefinitions, validatorTemplateDefinition)
 
-			allocations = append(allocations,
-				// self delegation
-				PenumbraGenesisAppStateAllocation{
-					Amount:  100_000_000_000,
-					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
-					Address: validatorTemplateDefinition.FundingStreams[0].Address,
-				},
-				// liquid
-				PenumbraGenesisAppStateAllocation{
-					Amount:  1_000_000_000_000,
-					Denom:   chainCfg.Denom,
-					Address: validatorTemplateDefinition.FundingStreams[0].Address,
-				},
-			)
+			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
+			validatorDefinitions[i] = validatorTemplateDefinition
+
+			// self delegation
+			allocations[2*i] = PenumbraGenesisAppStateAllocation{
+				Amount:  100_000_000_000,
+				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
+				Address: validatorTemplateDefinition.FundingStreams[0].Address,
+			}
+			// liquid
+			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
+				Amount:  1_000_000_000_000,
+				Denom:   chainCfg.Denom,
+				Address: validatorTemplateDefinition.FundingStreams[0].Address,
+			}
 
 			return nil
+		})
+	}
+
+	for _, wallet := range additionalGenesisWallets {
+		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
+			Address: wallet.Address,
+			Denom:   wallet.Denom,
+			Amount:  wallet.Amount,
 		})
 	}
 
