@@ -72,15 +72,16 @@ const (
 	Gaia    Chain = "gaia"
 	Osmosis Chain = "osmosis"
 	Juno    Chain = "juno"
+	Agoric  Chain = "agoric"
 
 	Penumbra Chain = "penumbra"
 )
 
 var knownChainLabels = map[Chain]struct{}{
-	Gaia:    {},
-	Osmosis: {},
-	Juno:    {},
-
+	Gaia:     {},
+	Osmosis:  {},
+	Juno:     {},
+	Agoric:   {},
 	Penumbra: {},
 }
 

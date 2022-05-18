@@ -631,6 +631,9 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 func (tn *ChainNode) CreateNodeContainer() error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
+	if chainCfg.NoHostMount {
+		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.NodeHome(), tn.NodeHome(), chainCfg.Bin, tn.NodeHome())}
+	}
 	tn.logger().
 		Info("Running command",
 			zap.String("command", strings.Join(cmd, " ")),
@@ -647,6 +650,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Labels:       map[string]string{"ibc-test": tn.TestName},
+			Entrypoint:   []string{},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -702,7 +706,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.Context(ctx), retry.DelayType(retry.BackOffDelay))
+	}, retry.Context(ctx), retry.Attempts(100), retry.Delay(5*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
@@ -817,6 +821,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Cmd:          cmd,
 			Labels:       map[string]string{"ibc-test": tn.TestName},
+			Entrypoint:   []string{},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
