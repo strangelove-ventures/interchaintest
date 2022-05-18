@@ -74,8 +74,8 @@ type Chain interface {
 	// fetch transaction
 	GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error)
 
-	// GetPacketAcknowledgment fetches ibc packet ack or an error if not found
-	GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (PacketAcknowledgement, error)
+	// GetPacketAcknowledgement fetches ibc packet ack or an error if not found
+	GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (PacketAcknowledgement, error)
 
 	// GetPacketSequence returns the packet sequence given the transaction's hash
 	GetPacketSequence(ctx context.Context, txHash string) (uint64, error)

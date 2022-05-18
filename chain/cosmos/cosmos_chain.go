@@ -203,7 +203,7 @@ func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uin
 	return uint64(seq), err
 }
 
-func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgment, _ error) {
+func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgement, _ error) {
 	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -220,7 +220,7 @@ func (c *CosmosChain) GetPacketAcknowledgment(ctx context.Context, portID, chann
 	if err != nil {
 		return found, err
 	}
-	return ibc.PacketAcknowledgment{
+	return ibc.PacketAcknowledgement{
 		Data:     resp.Acknowledgement,
 		Sequence: seq,
 	}, nil

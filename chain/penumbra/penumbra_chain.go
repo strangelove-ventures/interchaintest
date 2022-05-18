@@ -406,7 +406,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	return err
 }
 
-func (c *PenumbraChain) GetPacketAcknowledgment(ctx context.Context, portID, channelID string, seq uint64) (ibc.PacketAcknowledgment, error) {
+func (c *PenumbraChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (ibc.PacketAcknowledgement, error) {
 	panic("not implemented")
 }
 

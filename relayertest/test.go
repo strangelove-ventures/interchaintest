@@ -320,7 +320,7 @@ func testPacketRelaySuccess(
 
 	seq, err := srcChain.GetPacketSequence(ctx, srcTxHash)
 	req.NoError(err)
-	_, err = srcChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	_, err = srcChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
 	req.NoError(err)
 
 	// [END] assert on source to destination transfer
@@ -355,7 +355,7 @@ func testPacketRelaySuccess(
 
 	seq, err = dstChain.GetPacketSequence(ctx, dstTxHash)
 	req.NoError(err)
-	_, err = dstChain.GetPacketAcknowledgment(ctx, channels[0].PortID, channels[0].ChannelID, seq)
+	_, err = dstChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
 	req.NoError(err)
 
 	//[END] assert on destination to source transfer
