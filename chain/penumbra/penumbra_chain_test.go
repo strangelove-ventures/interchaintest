@@ -18,6 +18,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	t.Parallel()
 
 	pool, network := ibctest.DockerSetup(t)
+	home := t.TempDir() // Must be before chain cleanup to avoid test error during cleanup.
 
 	log := zap.NewNop()
 	chain, err := ibctest.GetChain(t.Name(), "penumbra", "015-ersa-v2,v0.35.4", "penumbra-1", 4, 1, log)
@@ -30,7 +31,6 @@ func TestPenumbraChainStart(t *testing.T) {
 		}
 	})
 
-	home := t.TempDir()
 	err = chain.Initialize(t.Name(), home, pool, network)
 	require.NoError(t, err, "failed to initialize penumbra chain")
 
