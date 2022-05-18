@@ -6,19 +6,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ChainHeighter fetches the current chain block height
+// ChainHeighter fetches the current chain block height.
 type ChainHeighter interface {
 	Height(ctx context.Context) (uint64, error)
 }
 
-// WaitForBlocks blocks until all chains reach a block height delta equal to or greater than the delta argument
-func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) error {
-	var (
-		done  = make(chan struct{})
-		errCh = make(chan error)
-	)
-
-	var eg errgroup.Group
+// WaitForBlocks blocks until all chains reach a block height delta equal to or greater than the delta argument.
+func WaitForBlocks(parent context.Context, delta int, chains ...ChainHeighter) error {
+	if len(chains) == 0 {
+		panic("missing chains")
+	}
+	eg, ctx := errgroup.WithContext(parent)
 	for i := range chains {
 		chain := chains[i]
 		eg.Go(func() error {
@@ -33,25 +31,7 @@ func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) erro
 			return nil
 		})
 	}
-
-	go func() {
-		if err := eg.Wait(); err != nil {
-			errCh <- err
-			return
-		}
-		close(done)
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-errCh:
-			return err
-		case <-done:
-			return nil
-		}
-	}
+	return eg.Wait()
 }
 
 type height struct {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,15 +12,11 @@ import (
 type mockChainHeighter struct {
 	CurHeight uint64
 	Err       error
-	Sleep     time.Duration
 }
 
 func (m *mockChainHeighter) Height(ctx context.Context) (uint64, error) {
 	if ctx == nil {
 		panic("nil context")
-	}
-	if m.Sleep > 0 {
-		time.Sleep(m.Sleep)
 	}
 	atomic.AddUint64(&m.CurHeight, 1)
 	return m.CurHeight, m.Err
@@ -46,11 +41,9 @@ func TestWaitForBlocks(t *testing.T) {
 	})
 
 	t.Run("zero state", func(t *testing.T) {
-		err := WaitForBlocks(context.Background(), 100)
-		require.NoError(t, err)
-
-		err = WaitForBlocks(context.Background(), 0, &mockChainHeighter{CurHeight: 1})
-		require.NoError(t, err)
+		require.Panics(t, func() {
+			_ = WaitForBlocks(context.Background(), 100)
+		})
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -60,15 +53,5 @@ func TestWaitForBlocks(t *testing.T) {
 
 		require.Error(t, err)
 		require.EqualError(t, err, "boom")
-	})
-
-	t.Run("context done", func(t *testing.T) {
-		const delta = 100
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		err := WaitForBlocks(ctx, delta, &mockChainHeighter{Sleep: time.Minute}, &mockChainHeighter{})
-
-		require.Error(t, err)
-		require.ErrorIs(t, err, context.Canceled)
 	})
 }
