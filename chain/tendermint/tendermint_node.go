@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +23,6 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
-	"golang.org/x/sync/errgroup"
 )
 
 // TendermintNode represents a node in the test network that is being created
@@ -52,7 +50,9 @@ type ContainerPort struct {
 type Hosts []ContainerPort
 
 const (
-	blockTime   = 2 // seconds
+	// BlockTimeSeconds (in seconds) is approx time to create a block
+	BlockTimeSeconds = 2
+
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -156,7 +156,7 @@ func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", blockTime)
+	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", BlockTimeSeconds)
 	cmds := []string{
 		tn.sedCommandForConfigFile("timeout-commit", timeoutCommitPropose),
 		tn.sedCommandForConfigFile("timeout-propose", timeoutCommitPropose),
@@ -168,44 +168,12 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, cmd))
 }
 
-// Wait until we have signed n blocks in a row
-func (tn *TendermintNode) WaitForBlocks(blocks int64) (int64, error) {
-	stat, err := tn.Client.Status(context.Background())
+func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
+	stat, err := tn.Client.Status(ctx)
 	if err != nil {
-		return -1, err
+		return 0, fmt.Errorf("tendermint client status: %w", err)
 	}
-
-	startingBlock := stat.SyncInfo.LatestBlockHeight
-	mostRecentBlock := startingBlock
-	fmt.Printf("{WaitForBlocks-%s} Initial Height: %d\n", tn.Chain.Config().ChainID, startingBlock)
-	// timeout after ~1 minute plus block time
-	timeoutSeconds := blocks*int64(blockTime) + int64(60)
-	for i := int64(0); i < timeoutSeconds; i++ {
-		time.Sleep(1 * time.Second)
-
-		stat, err := tn.Client.Status(context.Background())
-		if err != nil {
-			return mostRecentBlock, err
-		}
-
-		mostRecentBlock = stat.SyncInfo.LatestBlockHeight
-
-		deltaBlocks := mostRecentBlock - startingBlock
-
-		if deltaBlocks >= blocks {
-			fmt.Printf("{WaitForBlocks-%s} Time (sec) waiting for %d blocks: %d\n", tn.Chain.Config().ChainID, blocks, i+1)
-			return mostRecentBlock, nil // done waiting for consecutive signed blocks
-		}
-	}
-	return mostRecentBlock, errors.New("timed out waiting for blocks")
-}
-
-func (tn *TendermintNode) Height() (int64, error) {
-	stat, err := tn.Client.Status(context.Background())
-	if err != nil {
-		return -1, err
-	}
-	return stat.SyncInfo.LatestBlockHeight, nil
+	return uint64(stat.SyncInfo.LatestBlockHeight), nil
 }
 
 // InitHomeFolder initializes a home folder for the given node
@@ -341,30 +309,6 @@ func (tn TendermintNodes) LogGenesisHashes() error {
 		fmt.Printf("{%s} genesis hash %x\n", n.Name(), sha256.Sum256(gen))
 	}
 	return nil
-}
-
-func (tn TendermintNodes) WaitForHeight(height int64) error {
-	var eg errgroup.Group
-	fmt.Printf("Waiting For Nodes To Reach Block Height %d...\n", height)
-	for _, n := range tn {
-		n := n
-		eg.Go(func() error {
-			return retry.Do(func() error {
-				stat, err := n.Client.Status(context.Background())
-				if err != nil {
-					return err
-				}
-
-				if stat.SyncInfo.CatchingUp || stat.SyncInfo.LatestBlockHeight < height {
-					return fmt.Errorf("node still under block %d: %d", height, stat.SyncInfo.LatestBlockHeight)
-				}
-				fmt.Printf("{%s} => reached block %d\n", n.Name(), height)
-				return nil
-				// TODO: setup backup delay here
-			}, retry.DelayType(retry.BackOffDelay), retry.Attempts(15))
-		})
-	}
-	return eg.Wait()
 }
 
 // NodeJob run a container for a specific job and block until the container exits

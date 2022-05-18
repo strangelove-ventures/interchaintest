@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +45,7 @@ func GetAndFundTestUsers(
 	amount int64,
 	chains ...ibc.Chain,
 ) []*User {
-	users := []*User{}
+	var users []*User
 	for _, chain := range chains {
 		chainCfg := chain.Config()
 		keyName := fmt.Sprintf("%s-%s-%s", keyNamePrefix, chainCfg.ChainID, dockerutil.RandLowerCaseLetterString(3))
@@ -61,7 +62,13 @@ func GetAndFundTestUsers(
 		require.NoError(t, err, "failed to get funds from faucet")
 	}
 
-	require.NoError(t, WaitForBlocks(5, chains...), "failed to wait for blocks")
+	// TODO(nix 05-17-2022): Map with generics once using go 1.18
+	chainHeights := make([]test.ChainHeighter, len(chains))
+	for i := range chains {
+		chainHeights[i] = chains[i]
+	}
+
+	require.NoError(t, test.WaitForBlocks(ctx, 5, chainHeights...), "failed to wait for blocks")
 
 	return users
 }
