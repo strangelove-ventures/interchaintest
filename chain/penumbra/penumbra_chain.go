@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -144,7 +143,7 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
+func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
 	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
@@ -184,11 +183,6 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	return -1, errors.New("not yet implemented")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
-	return nil, errors.New("not yet implemented")
 }
 
 // Implements Chain interface

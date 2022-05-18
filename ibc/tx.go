@@ -8,7 +8,7 @@ type Tx struct {
 	Height uint64
 	// The transaction hash.
 	TxHash string
-	// Amount of gas spent by transaction.
+	// Amount of gas charged to the account.
 	GasSpent int64
 
 	Packet Packet

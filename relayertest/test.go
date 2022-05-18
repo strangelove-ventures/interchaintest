@@ -56,7 +56,7 @@ type RelayerTestCase struct {
 	// user on source chain
 	Users []*ibctest.User
 	// temp storage in between test phases
-	Cache []string
+	TxCache []ibc.Tx
 }
 
 type RelayerTestCaseConfig struct {
@@ -151,15 +151,15 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	}
 
 	var (
-		eg        errgroup.Group
-		txHashSrc string
-		txHashDst string
+		eg    errgroup.Group
+		srcTx ibc.Tx
+		dstTx ibc.Tx
 	)
 
 	eg.Go(func() error {
 		var err error
 		srcChannelID := channels[0].ChannelID
-		txHashSrc, err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+		srcTx, err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 		}
@@ -169,7 +169,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() error {
 		var err error
 		dstChannelID := channels[0].Counterparty.ChannelID
-		txHashDst, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+		dstTx, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 		}
@@ -177,8 +177,10 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	})
 
 	require.NoError(t, eg.Wait())
+	require.NoError(t, srcTx.Validate())
+	require.NoError(t, dstTx.Validate())
 
-	testCase.Cache = []string{txHashSrc, txHashDst}
+	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
 }
 
 // TestRelayer is the stable API exposed by the relayertest package.
@@ -298,9 +300,7 @@ func testPacketRelaySuccess(
 	dstInitialBalance := int64(0)
 
 	// fetch src ibc transfer tx
-	srcTxHash := testCase.Cache[0]
-	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
-	req.NoError(err, "failed to get ibc transaction")
+	srcTx := testCase.TxCache[0]
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
@@ -312,13 +312,13 @@ func testPacketRelaySuccess(
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
 	req.NoError(err, "failed to get balance from dest chain")
 
-	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
+	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 	expectedDifference := testCoinAmount + totalFees
 
 	req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
 	req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
 
-	seq, err := srcChain.GetPacketSequence(ctx, srcTxHash)
+	seq, err := srcChain.GetPacketSequence(ctx, srcTx.TxHash)
 	req.NoError(err)
 	_, err = srcChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
 	req.NoError(err)
@@ -333,9 +333,7 @@ func testPacketRelaySuccess(
 	srcInitialBalance = int64(0)
 	dstInitialBalance = userFaucetFund
 	// fetch src ibc transfer tx
-	dstTxHash := testCase.Cache[1]
-	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
-	req.NoError(err, "failed to get ibc transaction")
+	dstTx := testCase.TxCache[1]
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
@@ -347,13 +345,13 @@ func testPacketRelaySuccess(
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
 	req.NoError(err, "failed to get balance from dest chain")
 
-	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
+	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 	expectedDifference = testCoinAmount + totalFees
 
 	req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
 	req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
 
-	seq, err = dstChain.GetPacketSequence(ctx, dstTxHash)
+	seq, err = dstChain.GetPacketSequence(ctx, dstTx.TxHash)
 	req.NoError(err)
 	_, err = dstChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
 	req.NoError(err)
@@ -387,9 +385,7 @@ func testPacketRelayFail(
 	dstInitialBalance := int64(0)
 
 	// fetch src ibc transfer tx
-	srcTxHash := testCase.Cache[0]
-	srcTx, err := srcChain.GetTransaction(ctx, srcTxHash)
-	req.NoError(err, "failed to get ibc transaction")
+	srcTx := testCase.TxCache[0]
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
@@ -401,7 +397,7 @@ func testPacketRelayFail(
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
 	req.NoError(err, "failed to get balance from dest chain")
 
-	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasWanted)
+	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
 	req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
 	req.Equal(dstInitialBalance, dstFinalBalance)
@@ -412,9 +408,7 @@ func testPacketRelayFail(
 	srcInitialBalance = int64(0)
 	dstInitialBalance = userFaucetFund
 	// fetch src ibc transfer tx
-	dstTxHash := testCase.Cache[1]
-	dstTx, err := dstChain.GetTransaction(ctx, dstTxHash)
-	req.NoError(err, "failed to get ibc transaction")
+	dstTx := testCase.TxCache[1]
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
@@ -426,7 +420,7 @@ func testPacketRelayFail(
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
 	req.NoError(err, "failed to get balance from dest chain")
 
-	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasWanted)
+	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
 	req.Equal(srcInitialBalance, srcFinalBalance)
 	req.Equal(dstInitialBalance-totalFees, dstFinalBalance)

@@ -145,7 +145,7 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.GetTransaction(ctx, txHash)
+	txResp, err := c.getTransaction(ctx, txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -154,32 +154,30 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
 
-	events := txResp.Events
-
 	const evType = "send_packet"
+	events := txResp.Events
 
 	tx.Packet.SourcePort = tendermint.AttributeValue(events, evType, "packet_src_port")
 	tx.Packet.SourceChannel = tendermint.AttributeValue(events, evType, "packet_src_channel")
 	tx.Packet.DestPort = tendermint.AttributeValue(events, evType, "packet_dst_port")
 	tx.Packet.DestChannel = tendermint.AttributeValue(events, evType, "packet_dst_channel")
 	tx.Packet.TimeoutHeight = tendermint.AttributeValue(events, evType, "packet_timeout_height")
+	tx.Packet.Data = []byte(tendermint.AttributeValue(events, evType, "packet_data"))
 
 	var (
 		seq       = tendermint.AttributeValue(events, evType, "packet_sequence")
-		data      = tendermint.AttributeValue(events, evType, "packet_data")
 		timeoutTs = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
 	)
-	tx.Packet.Data = []byte(data)
 
 	seqNum, err := strconv.Atoi(seq)
 	if err != nil {
-		return tx, fmt.Errorf("invalid sequence from events %s: %w", seq, err)
+		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
 	}
 	tx.Packet.Sequence = uint64(seqNum)
 
 	timeoutNano, err := strconv.ParseInt(timeoutTs, 10, 64)
 	if err != nil {
-		return tx, fmt.Errorf("invalid timestamp timeout %s: %w", timeoutTs, err)
+		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
 	}
 	tx.Packet.TimeoutTimestamp = time.Duration(timeoutNano)
 
@@ -232,38 +230,17 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 }
 
 func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
-	panic("DELETE ME")
-	//txResp, err := c.GetTransaction(ctx, txHash)
-	//if err != nil {
-	//	return 0, err
-	//}
-	//seqData, ok := tendermint.AttributeValue(txResp.Events, "send_packet", []byte("packet_sequence"))
-	//if !ok {
-	//	return 0, fmt.Errorf("packet sequence not found for %s", txHash)
-	//}
-	//seq, err := strconv.Atoi(string(seqData))
-	//return uint64(seq), err
-}
-
-func (c *CosmosChain) LatestPacketAcknowledgment(ctx context.Context) (ack ibc.PacketAcknowledgement, _ error) {
-	panic("TODO")
-	//height, err := c.Height(ctx)
-	//if err != nil {
-	//	return ack, err
-	//}
-	//_, txs, err := c.getFullNode().findBlock(ctx, int64(height))
-	//if err != nil {
-	//	return ack, err
-	//}
-	//return ack, errors.New("TODO")
-}
-
-func (c *CosmosChain) LatestPacketTimeout(ctx context.Context) (timeout ibc.PacketTimeout, _ error) {
-	return timeout, errors.New("TODO")
+	txResp, err := c.getTransaction(ctx, txHash)
+	if err != nil {
+		return 0, err
+	}
+	seqStr := tendermint.AttributeValue(txResp.Events, "send_packet", "packet_sequence")
+	seq, err := strconv.Atoi(seqStr)
+	return uint64(seq), err
 }
 
 func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgement, _ error) {
-	panic("DELETE ME")
+	return found, errors.New("TODO")
 	//grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 	//conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	//if err != nil {
@@ -283,7 +260,7 @@ func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, chan
 	//return ibc.PacketAcknowledgement{}, nil
 }
 
-func (c *CosmosChain) GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
+func (c *CosmosChain) getTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
 	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 }
 

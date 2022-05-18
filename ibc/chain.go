@@ -3,7 +3,6 @@ package ibc
 import (
 	"context"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest/v3"
 )
 
@@ -46,9 +45,8 @@ type Chain interface {
 	// send funds to wallet from user account
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
 
-	// sends an IBC transfer from a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
-	// returns tx hash
-	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (string, error)
+	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
+	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
 
 	// takes file path to smart contract and initialization message. returns contract address
 	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
@@ -70,9 +68,6 @@ type Chain interface {
 
 	// get the fees in native denom for an amount of spent gas
 	GetGasFeesInNativeDenom(gasPaid int64) int64
-
-	// fetch transaction
-	GetTransaction(ctx context.Context, txHash string) (*types.TxResponse, error)
 
 	// GetPacketAcknowledgement fetches ibc packet ack or an error if not found
 	GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (PacketAcknowledgement, error)
