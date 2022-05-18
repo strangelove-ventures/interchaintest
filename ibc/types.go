@@ -11,6 +11,7 @@ type ChainConfig struct {
 	GasPrices      string
 	GasAdjustment  float64
 	TrustingPeriod string
+	NoHostMount    bool
 }
 
 type ChainDockerImage struct {

@@ -3,12 +3,52 @@
 
   "ChainSets": [
     [
-      {"Name": "gaia", "Version": "latest", "ChainID": "cosmoshub-1004", "NumValidators": 2, "NumFullNodes": 1},
-      {"Name": "osmosis", "Version": "latest", "ChainID": "osmosis-1001", "NumValidators": 2, "NumFullNodes": 1}
+      {
+        "Name": "gaia",
+        "Version": "latest",
+        "ChainID": "cosmoshub-1004",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      },
+      {
+        "Name": "osmosis",
+        "Version": "latest",
+        "ChainID": "osmosis-1001",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      }
     ],
     [
-      {"Name": "gaia", "Version": "latest", "ChainID": "cosmoshub-1004", "NumValidators": 2, "NumFullNodes": 1},
-      {"Name": "juno", "Version": "latest", "ChainID": "juno-1003", "NumValidators": 2, "NumFullNodes": 1}
+      {
+        "Name": "gaia",
+        "Version": "latest",
+        "ChainID": "cosmoshub-1004",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      },
+      {
+        "Name": "juno",
+        "Version": "latest",
+        "ChainID": "juno-1003",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      }
+    ],
+    [
+      {
+        "Name": "gaia",
+        "Version": "latest",
+        "ChainID": "cosmoshub-1004",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      },
+      {
+        "Name": "agoric",
+        "Version": "latest",
+        "ChainID": "agoric-1001",
+        "NumValidators": 2,
+        "NumFullNodes": 1
+      }
     ]
   ]
 }
