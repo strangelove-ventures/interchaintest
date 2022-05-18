@@ -6,18 +6,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func validPacket() Packet {
+	return Packet{
+		Sequence:         1,
+		TimeoutHeight:    "100",
+		TimeoutTimestamp: 0,
+		SourcePort:       "transfer",
+		SourceChannel:    "channel-0",
+		DestPort:         "transfer",
+		DestChannel:      "channel-1",
+		Data:             []byte(`fake data`),
+	}
+}
+
 func TestPacket_Validate(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		packet := &Packet{
-			Sequence:         1,
-			TimeoutHeight:    "100",
-			TimeoutTimestamp: 0,
-			SourcePort:       "transfer",
-			SourceChannel:    "channel-0",
-			DestPort:         "transfer",
-			DestChannel:      "channel-1",
-			Data:             []byte(`fake data`),
-		}
+		packet := validPacket()
 
 		require.NoError(t, packet.Validate())
 
@@ -38,35 +42,35 @@ func TestPacket_Validate(t *testing.T) {
 			},
 			{
 				Packet{Sequence: 1},
-				"invalid source port:",
+				"invalid packet source port:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "@"},
-				"invalid source port:",
+				"invalid packet source port:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer"},
-				"invalid source channel:",
+				"invalid packet source channel:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "@"},
-				"invalid source channel:",
+				"invalid packet source channel:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "channel-0"},
-				"invalid destination port:",
+				"invalid packet destination port:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "channel-0", DestPort: "@"},
-				"invalid destination port:",
+				"invalid packet destination port:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "channel-0", DestPort: "transfer"},
-				"invalid destination channel:",
+				"invalid packet destination channel:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "channel-0", DestPort: "transfer", DestChannel: "@"},
-				"invalid destination channel:",
+				"invalid packet destination channel:",
 			},
 			{
 				Packet{Sequence: 1, SourcePort: "transfer", SourceChannel: "channel-0", DestPort: "transfer", DestChannel: "channel-0"},
@@ -81,5 +85,24 @@ func TestPacket_Validate(t *testing.T) {
 			require.Error(t, err, tt)
 			require.Contains(t, err.Error(), tt.WantErr, tt)
 		}
+	})
+}
+
+func TestPacketAcknowledgement_Validate(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		ack := PacketAcknowledgement{
+			Packet:          validPacket(),
+			Acknowledgement: []byte(`fake ack data`),
+		}
+		require.NoError(t, ack.Validate())
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		require.Error(t, PacketAcknowledgement{}.Validate())
+
+		err := PacketAcknowledgement{Packet: validPacket()}.Validate()
+
+		require.Error(t, err)
+		require.EqualError(t, err, "packet acknowledgement bytes cannot be empty")
 	})
 }
