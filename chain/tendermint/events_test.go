@@ -19,20 +19,18 @@ func TestAttributeValue(t *testing.T) {
 		}},
 	}
 
-	_, ok := AttributeValue(nil, "test", nil)
-	require.False(t, ok)
+	found := AttributeValue(nil, "test", "")
+	require.Empty(t, found)
 
-	_, ok = AttributeValue(events, "key_not_there", []byte("ignored"))
-	require.False(t, ok)
+	found = AttributeValue(events, "key_not_there", "ignored")
+	require.Empty(t, found)
 
-	_, ok = AttributeValue(events, "1", []byte("attribute not there"))
-	require.False(t, ok)
+	found = AttributeValue(events, "1", "attribute not there")
+	require.Empty(t, found)
 
-	got, ok := AttributeValue(events, "1", []byte("key1"))
-	require.True(t, ok)
-	require.Equal(t, "found me 1", string(got))
+	found = AttributeValue(events, "1", "key1")
+	require.Equal(t, "found me 1", found)
 
-	got, ok = AttributeValue(events, "2", []byte("key2"))
-	require.True(t, ok)
-	require.Equal(t, "found me 2", string(got))
+	found = AttributeValue(events, "2", "key2")
+	require.Equal(t, "found me 2", found)
 }
