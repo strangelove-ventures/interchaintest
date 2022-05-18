@@ -632,7 +632,7 @@ func (node *ChainNode) CreateNodeContainer() error {
 	chainCfg := node.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", node.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	if chainCfg.NoHostMount {
-		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.NodeHome(), tn.NodeHome(), chainCfg.Bin, tn.NodeHome())}
+		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", node.NodeHome(), node.NodeHome(), chainCfg.Bin, node.NodeHome())}
 	}
 	node.logger().
 		Info("Running command",
