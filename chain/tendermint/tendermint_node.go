@@ -50,8 +50,8 @@ type ContainerPort struct {
 type Hosts []ContainerPort
 
 const (
-	// BlockTime is approx time to create a block
-	BlockTime = 2
+	// BlockTimeSeconds (in seconds) is approx time to create a block
+	BlockTimeSeconds = 2
 
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
@@ -156,7 +156,7 @@ func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", BlockTime)
+	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", BlockTimeSeconds)
 	cmds := []string{
 		tn.sedCommandForConfigFile("timeout-commit", timeoutCommitPropose),
 		tn.sedCommandForConfigFile("timeout-propose", timeoutCommitPropose),
