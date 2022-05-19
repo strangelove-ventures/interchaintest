@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/multierr"
 )
 
 func TestTx_Validate(t *testing.T) {
@@ -19,28 +20,14 @@ func TestTx_Validate(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		for _, tt := range []struct {
-			Tx      Tx
-			WantErr string
-		}{
-			{
-				Tx{},
-				"tx height cannot be 0",
-			},
-			{
-				Tx{Height: 1},
-				"tx hash cannot be empty",
-			},
-			{
-				Tx{Height: 1, TxHash: "123"},
-				"tx gas spent cannot be 0",
-			},
-		} {
-			err := tt.Tx.Validate()
+		var empty Tx
+		err := empty.Validate()
+		require.Greater(t, len(multierr.Errors(err)), 1)
 
-			require.Error(t, err, tt)
-			require.EqualError(t, err, tt.WantErr, tt)
-		}
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "tx height cannot be 0")
+		require.Contains(t, err.Error(), "tx hash cannot be empty")
+		require.Contains(t, err.Error(), "tx gas spent cannot be 0")
 
 		tx := Tx{
 			Height:   1,

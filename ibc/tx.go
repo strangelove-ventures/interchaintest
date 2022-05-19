@@ -1,6 +1,10 @@
 package ibc
 
-import "errors"
+import (
+	"errors"
+
+	"go.uber.org/multierr"
+)
 
 // Tx is a generalized IBC transaction.
 type Tx struct {
@@ -16,14 +20,15 @@ type Tx struct {
 
 // Validate returns an error if the transaction is not well-formed.
 func (tx Tx) Validate() error {
+	var err error
 	if tx.Height == 0 {
-		return errors.New("tx height cannot be 0")
+		err = multierr.Append(err, errors.New("tx height cannot be 0"))
 	}
 	if len(tx.TxHash) == 0 {
-		return errors.New("tx hash cannot be empty")
+		err = multierr.Append(err, errors.New("tx hash cannot be empty"))
 	}
 	if tx.GasSpent == 0 {
-		return errors.New("tx gas spent cannot be 0")
+		err = multierr.Append(err, errors.New("tx gas spent cannot be 0"))
 	}
-	return tx.Packet.Validate()
+	return multierr.Append(err, tx.Packet.Validate())
 }
