@@ -229,8 +229,8 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
 	home := t.TempDir()
-	_, channels, err := ibctest.StartChainsAndRelayerFromFactory(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
-	req.NoError(err, "failed to StartChainsAndRelayerFromFactory")
+	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
+	req.NoError(err, "failed to StartChainPairAndRelayer")
 
 	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
 	// Wait for both chains to produce 10 blocks per test case.
