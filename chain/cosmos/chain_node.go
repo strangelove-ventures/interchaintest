@@ -18,14 +18,11 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -106,21 +103,19 @@ func (tn *ChainNode) NewClient(addr string) error {
 	return nil
 }
 
+var defaultEncoding = NewTestEncoding()
+
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
-	encoding := simapp.MakeTestEncodingConfig()
-	bankTypes.RegisterInterfaces(encoding.InterfaceRegistry)
-	ibctypes.RegisterInterfaces(encoding.InterfaceRegistry)
-	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	return client.Context{
 		Client:            tn.Client,
 		ChainID:           tn.Chain.Config().ChainID,
-		InterfaceRegistry: encoding.InterfaceRegistry,
+		InterfaceRegistry: defaultEncoding.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
 		OutputFormat:      "json",
-		LegacyAmino:       encoding.Amino,
-		TxConfig:          encoding.TxConfig,
+		LegacyAmino:       defaultEncoding.Amino,
+		TxConfig:          defaultEncoding.TxConfig,
 	}
 }
 
@@ -229,6 +224,15 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
+
+	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+	decoder := authTx.DefaultTxDecoder(cdc)
+	tx, err := decoder(txs[0])
+	if err != nil {
+		panic(err)
+	}
+	panic(fmt.Sprintf("GOT TX: %+v", tx))
+
 	buf := new(bytes.Buffer)
 	buf.WriteString("BLOCK INFO\n")
 	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
