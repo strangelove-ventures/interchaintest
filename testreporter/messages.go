@@ -107,6 +107,18 @@ func (m TestErrorMessage) typ() string {
 	return "TestError"
 }
 
+// TestSkipMessage is tracked when a Reporter's TrackSkip method is called.
+// This allows the report to track the reason a test was skipped.
+type TestSkipMessage struct {
+	Name    string
+	When    time.Time
+	Message string
+}
+
+func (m TestSkipMessage) typ() string {
+	return "TestSkip"
+}
+
 // RelayerExecMessage is the result of executing a relayer command.
 // This message is populated through the RelayerExecReporter type,
 // which is returned by the Reporter's RelayerExecReporter method.
@@ -186,6 +198,10 @@ func (m *WrappedMessage) UnmarshalJSON(b []byte) error {
 		msg = x
 	case "TestError":
 		x := TestErrorMessage{}
+		err = json.Unmarshal(raw, &x)
+		msg = x
+	case "TestSkip":
+		x := TestSkipMessage{}
 		err = json.Unmarshal(raw, &x)
 		msg = x
 	case "RelayerExec":

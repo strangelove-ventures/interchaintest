@@ -101,13 +101,14 @@ var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 	},
 }
 
-func requireCapabilities(t *testing.T, rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) {
+// requireCapabilities tracks skipping t, if the relayer factory cannot satisfy the required capabilities.
+func requireCapabilities(t *testing.T, rep *testreporter.Reporter, rf ibctest.RelayerFactory, reqCaps ...relayer.Capability) {
 	t.Helper()
 
 	missing := missingCapabilities(rf, reqCaps...)
 
 	if len(missing) > 0 {
-		t.Skipf("skipping due to missing capabilities +%s", missing)
+		rep.TrackSkip(t, "skipping due to missing relayer capabilities +%s", missing)
 	}
 }
 
@@ -241,7 +242,7 @@ func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactor
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
 			rep.TrackTest(t, testCase.Config.TestLabels...)
-			requireCapabilities(t, rf, testCase.Config.RequiredRelayerCapabilities...)
+			requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
 			rep.TrackParallel(t)
 			testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
 		})

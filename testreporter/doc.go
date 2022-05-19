@@ -44,6 +44,17 @@
 //       // Normal test usage continues...
 //     }
 //
+// If a test needs to be skipped, the TrackSkip method will track the skip reason.
+// Like the other Track methods, calling t.Skip directly will still cause the test to be skipped,
+// and the reporter will note that the test was skipped,
+// but the reporter would not track the specific skip reason.
+//
+//     func TestFooSkip(t *testing.T) {
+//       if someReason() {
+//         reporter.TrackSkip(t, "skipping due to %s", whySkipped())
+//       }
+//     }
+//
 // Lastly, and perhaps most importantly, the reporter is designed to integrate
 // with testify's require and assert packages.
 // Plain "go test" runs simply have a stream of log lines and a failure/skip state.

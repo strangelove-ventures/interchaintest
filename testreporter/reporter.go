@@ -15,6 +15,8 @@ type T interface {
 	Name() string
 	Cleanup(func())
 
+	Skip(...interface{})
+
 	Parallel()
 
 	Failed() bool
@@ -131,6 +133,21 @@ func (r *Reporter) TrackParallel(t T) {
 		Name: name,
 		When: time.Now(),
 	}
+}
+
+// TrackSkip records a the reason for a test being skipped,
+// and calls t.Skip.
+func (r *Reporter) TrackSkip(t T, format string, args ...interface{}) {
+	now := time.Now()
+	msg := fmt.Sprintf(format, args...)
+
+	r.in <- TestSkipMessage{
+		Name:    t.Name(),
+		When:    now,
+		Message: msg,
+	}
+
+	t.Skip(msg)
 }
 
 // RelayerExecReporter returns a RelayerExecReporter associated with t.
