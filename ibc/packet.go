@@ -20,7 +20,7 @@ type Packet struct {
 	DestChannel      string        // the channel end on the receiving chain
 	Data             []byte        // an opaque value which can be defined by the application logic of the associated modules
 	TimeoutHeight    string        // a consensus height on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out
-	TimeoutTimestamp time.Duration // indicates a timestamp on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out
+	TimeoutTimestamp time.Duration // (nanoseconds) indicates a timestamp on the destination chain after which the packet will no longer be processed, and will instead count as having timed-out
 }
 
 // Validate returns an error if the packet is not well-formed.
