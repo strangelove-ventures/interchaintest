@@ -87,22 +87,3 @@ func TestPacket_Validate(t *testing.T) {
 		}
 	})
 }
-
-func TestPacketAcknowledgement_Validate(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		ack := PacketAcknowledgement{
-			Packet:          validPacket(),
-			Acknowledgement: []byte(`fake ack data`),
-		}
-		require.NoError(t, ack.Validate())
-	})
-
-	t.Run("invalid", func(t *testing.T) {
-		require.Error(t, PacketAcknowledgement{}.Validate())
-
-		err := PacketAcknowledgement{Packet: validPacket()}.Validate()
-
-		require.Error(t, err)
-		require.EqualError(t, err, "packet acknowledgement bytes cannot be empty")
-	})
-}
