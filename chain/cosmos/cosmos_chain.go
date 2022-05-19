@@ -604,6 +604,48 @@ func (c *CosmosChain) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// Height implements ibc.Chain
 func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)
+}
+
+// AcknowledgementPacket implements ibc.Chain
+func (c *CosmosChain) AcknowledgementPacket(ctx context.Context, height uint64) (zero ibc.PacketAcknowledgment, _ error) {
+	msg, err := findMsgFromBlock[*chanTypes.MsgAcknowledgement](ctx, c.getFullNode().Client, height)
+	if err != nil {
+		return zero, fmt.Errorf("get acknowledgement packet at height %d: %w", height, err)
+	}
+	return ibc.PacketAcknowledgment{
+		Acknowledgement: msg.Acknowledgement,
+		Packet: ibc.Packet{
+			Sequence:         msg.Packet.Sequence,
+			SourcePort:       msg.Packet.SourcePort,
+			SourceChannel:    msg.Packet.SourceChannel,
+			DestPort:         msg.Packet.DestinationPort,
+			DestChannel:      msg.Packet.DestinationChannel,
+			Data:             msg.Packet.Data,
+			TimeoutHeight:    msg.Packet.TimeoutHeight.String(),
+			TimeoutTimestamp: ibc.Nanoseconds(msg.Packet.TimeoutTimestamp),
+		},
+	}, nil
+}
+
+// TimeoutPacket implements ibc.Chain
+func (c *CosmosChain) TimeoutPacket(ctx context.Context, height uint64) (zero ibc.PacketTimeout, _ error) {
+	msg, err := findMsgFromBlock[*chanTypes.MsgTimeout](ctx, c.getFullNode().Client, height)
+	if err != nil {
+		return zero, fmt.Errorf("get timeout packet at height %d: %w", height, err)
+	}
+	return ibc.PacketTimeout{
+		Packet: ibc.Packet{
+			Sequence:         msg.Packet.Sequence,
+			SourcePort:       msg.Packet.SourcePort,
+			SourceChannel:    msg.Packet.SourceChannel,
+			DestPort:         msg.Packet.DestinationPort,
+			DestChannel:      msg.Packet.DestinationChannel,
+			Data:             msg.Packet.Data,
+			TimeoutHeight:    msg.Packet.TimeoutHeight.String(),
+			TimeoutTimestamp: ibc.Nanoseconds(msg.Packet.TimeoutTimestamp),
+		},
+	}, nil
 }

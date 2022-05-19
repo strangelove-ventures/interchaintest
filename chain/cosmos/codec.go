@@ -30,8 +30,9 @@ func newTestEncoding() simappparams.EncodingConfig {
 
 var (
 	defaultEncoding = newTestEncoding()
-	defaultDecoder  = func() sdk.TxDecoder {
-		cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
-		return authTx.DefaultTxDecoder(cdc)
-	}()
 )
+
+func decodeTX(txbz []byte) (sdk.Tx, error) {
+	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+	return authTx.DefaultTxDecoder(cdc)(txbz)
+}
