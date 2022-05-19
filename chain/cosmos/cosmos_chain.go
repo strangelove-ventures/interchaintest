@@ -157,17 +157,22 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	const evType = "send_packet"
 	events := txResp.Events
 
-	tx.Packet.SourcePort = tendermint.AttributeValue(events, evType, "packet_src_port")
-	tx.Packet.SourceChannel = tendermint.AttributeValue(events, evType, "packet_src_channel")
-	tx.Packet.DestPort = tendermint.AttributeValue(events, evType, "packet_dst_port")
-	tx.Packet.DestChannel = tendermint.AttributeValue(events, evType, "packet_dst_channel")
-	tx.Packet.TimeoutHeight = tendermint.AttributeValue(events, evType, "packet_timeout_height")
-	tx.Packet.Data = []byte(tendermint.AttributeValue(events, evType, "packet_data"))
-
 	var (
-		seq       = tendermint.AttributeValue(events, evType, "packet_sequence")
-		timeoutTs = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
+		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
+		srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
+		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
+		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
+		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
+		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		data, _          = tendermint.AttributeValue(events, evType, "packet_data")
 	)
+	tx.Packet.SourcePort = srcPort
+	tx.Packet.SourceChannel = srcChan
+	tx.Packet.DestPort = dstPort
+	tx.Packet.DestChannel = dstChan
+	tx.Packet.TimeoutHeight = timeoutHeight
+	tx.Packet.Data = []byte(data)
 
 	seqNum, err := strconv.Atoi(seq)
 	if err != nil {
