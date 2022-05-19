@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -19,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/chain/tendermint"
@@ -145,7 +145,7 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.getTransaction(ctx, txHash)
+	txResp, err := c.getTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -234,38 +234,42 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
-	txResp, err := c.getTransaction(ctx, txHash)
+func (c *CosmosChain) GetPacketSequence(_ context.Context, txHash string) (uint64, error) {
+	txResp, err := c.getTransaction(txHash)
 	if err != nil {
 		return 0, err
 	}
-	seqStr := tendermint.AttributeValue(txResp.Events, "send_packet", "packet_sequence")
+	seqStr, ok := tendermint.AttributeValue(txResp.Events, "send_packet", "packet_sequence")
+	if !ok {
+		return 0, fmt.Errorf("attribute value does not exist for %s", txHash)
+	}
 	seq, err := strconv.Atoi(seqStr)
 	return uint64(seq), err
 }
 
 func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgement, _ error) {
-	return found, errors.New("TODO")
-	//grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
-	//conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	//if err != nil {
-	//	return found, err
-	//}
-	//defer conn.Close()
-	//
-	//client := chantypes.NewQueryClient(conn)
-	//resp, err := client.PacketAcknowledgement(ctx, &chantypes.QueryPacketAcknowledgementRequest{
-	//	PortId:    portID,
-	//	ChannelId: channelID,
-	//	Sequence:  seq,
-	//})
-	//if err != nil {
-	//	return found, err
-	//}
-	//return ibc.PacketAcknowledgement{}, nil
+	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
+	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return found, err
+	}
+	defer conn.Close()
+
+	client := chanTypes.NewQueryClient(conn)
+	resp, err := client.PacketAcknowledgement(ctx, &chanTypes.QueryPacketAcknowledgementRequest{
+		PortId:    portID,
+		ChannelId: channelID,
+		Sequence:  seq,
+	})
+	if err != nil {
+		return found, err
+	}
+	found.Data = resp.Acknowledgement
+	found.Sequence = seq
+	return found, nil
 }
 
-func (c *CosmosChain) getTransaction(ctx context.Context, txHash string) (*types.TxResponse, error) {
+func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
 	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 }
 
