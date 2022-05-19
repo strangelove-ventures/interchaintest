@@ -92,6 +92,9 @@ func StartChainPairAndRelayer(
 
 	// Create addresses out of band, because the chain genesis needs to know where to send initial funds.
 	addresses, mnemonics, err := cs.CreateKeys()
+	if err != nil {
+		return errResponse(err)
+	}
 
 	// Fund relayer account on src chain
 	srcRelayerWalletAmount := ibc.WalletAmount{
