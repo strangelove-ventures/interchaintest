@@ -9,15 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/testreporter"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -68,7 +64,7 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 // funds relayer src and dst wallets on respective chain in genesis
 // creates a faucet account on the both chains (separate fullnode)
 // funds faucet accounts in genesis
-func StartChainsAndRelayerFromFactory(
+func StartChainPairAndRelayer(
 	t *testing.T,
 	ctx context.Context,
 	rep *testreporter.Reporter,
@@ -86,107 +82,54 @@ func StartChainsAndRelayerFromFactory(
 	}
 
 	testName := t.Name()
-	if err := srcChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(fmt.Errorf("failed to initialize source chain: %w", err))
-	}
-	if err := dstChain.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(fmt.Errorf("failed to initialize dest chain: %w", err))
+	cs := chainSet{srcChain, dstChain}
+	if err := cs.Initialize(testName, home, pool, networkID); err != nil {
+		return errResponse(err)
 	}
 
 	srcChainCfg := srcChain.Config()
 	dstChainCfg := dstChain.Config()
 
-	kr := keyring.NewInMemory()
-
-	// NOTE: this is hardcoded to the cosmos coin type.
-	// We will need to choose other coin types for non-cosmos IBC once that happens.
-	const coinType = types.CoinType
-
-	// Create accounts out of band, because the chain genesis needs to know where to send initial funds.
-	srcInfo, srcMnemonic, err := kr.NewMnemonic(srcAccountKeyName, keyring.English, hd.CreateHDPath(coinType, 0, 0).String(), "", hd.Secp256k1)
-	if err != nil {
-		return errResponse(fmt.Errorf("failed to create source account: %w", err))
-	}
-	srcAccount := types.MustBech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcInfo.GetAddress().Bytes())
-
-	dstInfo, dstMnemonic, err := kr.NewMnemonic(dstAccountKeyName, keyring.English, hd.CreateHDPath(coinType, 0, 0).String(), "", hd.Secp256k1)
-	if err != nil {
-		return errResponse(fmt.Errorf("failed to create dest account: %w", err))
-	}
-	dstAccount := types.MustBech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstInfo.GetAddress().Bytes())
+	// Create addresses out of band, because the chain genesis needs to know where to send initial funds.
+	addresses, mnemonics, err := cs.CreateKeys()
 
 	// Fund relayer account on src chain
 	srcRelayerWalletAmount := ibc.WalletAmount{
-		Address: srcAccount,
+		Address: addresses[0],
 		Denom:   srcChainCfg.Denom,
 		Amount:  10_000_000,
 	}
 
 	// Fund relayer account on dst chain
 	dstRelayerWalletAmount := ibc.WalletAmount{
-		Address: dstAccount,
+		Address: addresses[1],
 		Denom:   dstChainCfg.Denom,
 		Amount:  10_000_000,
 	}
 
 	// create faucets on both chains
-
-	if err := srcChain.CreateKey(ctx, faucetAccountKeyName); err != nil {
-		return errResponse(fmt.Errorf("failed to create faucet key on source chain: %w", err))
-	}
-
-	srcFaucetAccountAddressBytes, err := srcChain.GetAddress(ctx, faucetAccountKeyName)
-	if err != nil {
-		return errResponse(fmt.Errorf("failed to get source faucet account address: %w", err))
-	}
-
-	srcFaucetAccount, err := types.Bech32ifyAddressBytes(srcChainCfg.Bech32Prefix, srcFaucetAccountAddressBytes)
-	if err != nil {
-		return errResponse(err)
-	}
-
-	if err := dstChain.CreateKey(ctx, faucetAccountKeyName); err != nil {
-		return errResponse(fmt.Errorf("failed to create faucet key on destination chain: %w", err))
-	}
-
-	dstFaucetAccountAddressBytes, err := dstChain.GetAddress(ctx, faucetAccountKeyName)
-	if err != nil {
-		return errResponse(fmt.Errorf("failed to get destination faucet account address: %w", err))
-	}
-
-	dstFaucetAccount, err := types.Bech32ifyAddressBytes(dstChainCfg.Bech32Prefix, dstFaucetAccountAddressBytes)
+	faucetAccounts, err := cs.CreateCommonAccount(ctx, faucetAccountKeyName)
 	if err != nil {
 		return errResponse(err)
 	}
 
 	srcFaucetWalletAmount := ibc.WalletAmount{
-		Address: srcFaucetAccount,
+		Address: faucetAccounts[0],
 		Denom:   srcChainCfg.Denom,
 		Amount:  10_000_000_000_000,
 	}
 
 	dstFaucetWalletAmount := ibc.WalletAmount{
-		Address: dstFaucetAccount,
+		Address: faucetAccounts[1],
 		Denom:   dstChainCfg.Denom,
 		Amount:  10_000_000_000_000,
 	}
 
 	// start chains from genesis, wait until they are producing blocks
-	chainsGenesisWaitGroup := errgroup.Group{}
-	chainsGenesisWaitGroup.Go(func() error {
-		if err := srcChain.Start(testName, ctx, srcRelayerWalletAmount, srcFaucetWalletAmount); err != nil {
-			return fmt.Errorf("failed to start source chain: %w", err)
-		}
-		return nil
-	})
-	chainsGenesisWaitGroup.Go(func() error {
-		if err := dstChain.Start(testName, ctx, dstRelayerWalletAmount, dstFaucetWalletAmount); err != nil {
-			return fmt.Errorf("failed to start dest chain: %w", err)
-		}
-		return nil
-	})
-
-	if err := chainsGenesisWaitGroup.Wait(); err != nil {
+	if err := cs.Start(ctx, testName, [][]ibc.WalletAmount{
+		{srcRelayerWalletAmount, srcFaucetWalletAmount},
+		{dstRelayerWalletAmount, dstFaucetWalletAmount},
+	}); err != nil {
 		return errResponse(err)
 	}
 
@@ -218,10 +161,10 @@ func StartChainsAndRelayerFromFactory(
 		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
 	}
 
-	if err := relayerImpl.RestoreKey(ctx, eRep, srcChain.Config().ChainID, srcAccountKeyName, srcMnemonic); err != nil {
+	if err := relayerImpl.RestoreKey(ctx, eRep, srcChain.Config().ChainID, srcAccountKeyName, mnemonics[0]); err != nil {
 		return errResponse(fmt.Errorf("failed to restore key to source chain: %w", err))
 	}
-	if err := relayerImpl.RestoreKey(ctx, eRep, dstChain.Config().ChainID, dstAccountKeyName, dstMnemonic); err != nil {
+	if err := relayerImpl.RestoreKey(ctx, eRep, dstChain.Config().ChainID, dstAccountKeyName, mnemonics[1]); err != nil {
 		return errResponse(fmt.Errorf("failed to restore key to dest chain: %w", err))
 	}
 
