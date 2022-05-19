@@ -94,3 +94,26 @@ func TestPacket_Validate(t *testing.T) {
 		}
 	})
 }
+
+func TestPacketAcknowledgment_Validate(t *testing.T) {
+	var ack PacketAcknowledgment
+	err := ack.Validate()
+	require.Error(t, err)
+
+	ack.Packet = validPacket()
+	err = ack.Validate()
+	require.Error(t, err)
+	require.EqualError(t, err, "packet acknowledgement cannot be empty")
+
+	ack.Acknowledgement = []byte(`ack`)
+	err = ack.Validate()
+	require.NoError(t, err)
+}
+
+func TestPacketTimeout_Validate(t *testing.T) {
+	var timeout PacketTimeout
+	require.Error(t, timeout.Validate())
+
+	timeout.Packet = validPacket()
+	require.NoError(t, timeout.Validate())
+}
