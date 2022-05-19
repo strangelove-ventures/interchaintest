@@ -29,7 +29,7 @@ type mockT struct {
 	cleanups        []func()
 	failed, skipped bool
 
-	errorfs []string
+	errors, skips []string
 
 	parallelDelay time.Duration
 }
@@ -53,7 +53,12 @@ func (t *mockT) RunCleanups() {
 }
 
 func (t *mockT) Errorf(format string, args ...interface{}) {
-	t.errorfs = append(t.errorfs, fmt.Sprintf(format, args...))
+	t.errors = append(t.errors, fmt.Sprintf(format, args...))
+}
+
+func (t *mockT) Skip(args ...interface{}) {
+	t.skips = append(t.skips, fmt.Sprint(args...))
+	t.skipped = true
 }
 
 // FailNow just marks t as failed without any control flow influences.
@@ -211,6 +216,43 @@ func TestReporter_TrackParallel(t *testing.T) {
 	require.Equal(t, finishTestMsg.Name, "my_test")
 }
 
+// Check that TrackSkip skips the underlying test.
+func TestReporter_TrackSkip(t *testing.T) {
+	t.Parallel()
+
+	buf := new(bytes.Buffer)
+	r := testreporter.NewReporter(nopCloser{Writer: buf})
+
+	mt := &mockT{name: "my_test"}
+
+	r.TrackTest(mt)
+
+	beforeSkip := time.Now()
+	time.Sleep(5 * time.Millisecond)
+	r.TrackSkip(mt, "skipping %s", "for reasons")
+	time.Sleep(5 * time.Millisecond)
+	afterSkip := time.Now()
+
+	mt.RunCleanups()
+	require.NoError(t, r.Close())
+
+	msgs := ReporterMessages(t, buf)
+	require.Len(t, msgs, 5)
+
+	testSkipMsg := msgs[2].(testreporter.TestSkipMessage)
+	require.Equal(t, testSkipMsg.Name, "my_test")
+	require.Equal(t, testSkipMsg.Message, "skipping for reasons")
+	requireTimeInRange(t, testSkipMsg.When, beforeSkip, afterSkip)
+
+	finishTestMsg := msgs[3].(testreporter.FinishTestMessage)
+	require.Equal(t, finishTestMsg.Name, "my_test")
+	require.False(t, finishTestMsg.Failed)
+	require.True(t, finishTestMsg.Skipped)
+
+	require.Equal(t, mt.skips, []string{"skipping for reasons"})
+	require.True(t, mt.skipped)
+}
+
 // Check that calling (*Reporter).TestifyT(t).Errorf
 // actually calls Errorf on t.
 func TestReporter_Errorf(t *testing.T) {
@@ -223,7 +265,7 @@ func TestReporter_Errorf(t *testing.T) {
 	mt.RunCleanups()
 	require.NoError(t, r.Close())
 
-	require.Equal(t, mt.errorfs, []string{"failed? true"})
+	require.Equal(t, mt.errors, []string{"failed? true"})
 }
 
 func TestReporter_RelayerExec(t *testing.T) {

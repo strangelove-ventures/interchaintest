@@ -32,6 +32,7 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 		{Message: testreporter.ContinueTestMessage{Name: "foo", When: time.Now()}},
 		{Message: testreporter.FinishTestMessage{Name: "foo", FinishedAt: time.Now(), Skipped: true, Failed: true}},
 		{Message: testreporter.TestErrorMessage{Name: "foo", When: time.Now(), Message: "something failed"}},
+		{Message: testreporter.TestSkipMessage{Name: "foo", When: time.Now(), Message: "skipped for reasons"}},
 		{
 			Message: testreporter.RelayerExecMessage{
 				Name:          "foo",
