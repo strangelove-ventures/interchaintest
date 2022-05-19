@@ -175,11 +175,11 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	}
 	tx.Packet.Sequence = uint64(seqNum)
 
-	timeoutNano, err := strconv.ParseInt(timeoutTs, 10, 64)
+	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
 	if err != nil {
 		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
 	}
-	tx.Packet.TimeoutTimestamp = time.Duration(timeoutNano)
+	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return tx, nil
 }
