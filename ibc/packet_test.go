@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/multierr"
 )
 
 func validPacket() Packet {
@@ -32,6 +33,12 @@ func TestPacket_Validate(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
+		var empty Packet
+		merr := empty.Validate()
+
+		require.Error(t, merr)
+		require.Greater(t, len(multierr.Errors(merr)), 1)
+
 		for _, tt := range []struct {
 			Packet  Packet
 			WantErr string
