@@ -18,7 +18,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -102,8 +101,6 @@ func (tn *ChainNode) NewClient(addr string) error {
 	tn.Client = rpcClient
 	return nil
 }
-
-var defaultEncoding = NewTestEncoding()
 
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
@@ -206,15 +203,14 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	tn.maybeLogBlock(height)
+	tn.maybeLogBlock(ctx, height)
 	return uint64(height), nil
 }
 
-func (tn *ChainNode) maybeLogBlock(height int64) {
+func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
 	if !tn.logger().Core().Enabled(zap.DebugLevel) {
 		return
 	}
-	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
 		tn.logger().Info("Failed to get block", zap.Error(err))
@@ -224,14 +220,6 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
-
-	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
-	decoder := authTx.DefaultTxDecoder(cdc)
-	tx, err := decoder(txs[0])
-	if err != nil {
-		panic(err)
-	}
-	panic(fmt.Sprintf("GOT TX: %+v", tx))
 
 	buf := new(bytes.Buffer)
 	buf.WriteString("BLOCK INFO\n")
