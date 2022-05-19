@@ -11,28 +11,28 @@ func TestAttributeValue(t *testing.T) {
 	events := []abcitypes.Event{
 		{Type: "1", Attributes: []abcitypes.EventAttribute{
 			{Key: []byte("ignore"), Value: []byte("should not see me")},
-			{Key: []byte("key1"), Value: []byte("found me 1")},
+			{Key: []byte("key1"), Value: []byte("found1")},
 		}},
 		{Type: "2", Attributes: []abcitypes.EventAttribute{
-			{Key: []byte("key2"), Value: []byte("found me 2")},
+			{Key: []byte("key2"), Value: []byte("found2")},
 			{Key: []byte("ignore"), Value: []byte("should not see me")},
 		}},
 	}
 
-	_, ok := AttributeValue(nil, "test", nil)
+	_, ok := AttributeValue(nil, "test", "")
 	require.False(t, ok)
 
-	_, ok = AttributeValue(events, "key_not_there", []byte("ignored"))
+	_, ok = AttributeValue(events, "key_not_there", "ignored")
 	require.False(t, ok)
 
-	_, ok = AttributeValue(events, "1", []byte("attribute not there"))
+	_, ok = AttributeValue(events, "1", "attribute not there")
 	require.False(t, ok)
 
-	got, ok := AttributeValue(events, "1", []byte("key1"))
+	found, ok := AttributeValue(events, "1", "key1")
 	require.True(t, ok)
-	require.Equal(t, "found me 1", string(got))
+	require.Equal(t, "found1", found)
 
-	got, ok = AttributeValue(events, "2", []byte("key2"))
+	found, ok = AttributeValue(events, "2", "key2")
 	require.True(t, ok)
-	require.Equal(t, "found me 2", string(got))
+	require.Equal(t, "found2", found)
 }

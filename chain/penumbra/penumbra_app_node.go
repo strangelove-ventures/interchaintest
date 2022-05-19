@@ -209,8 +209,8 @@ func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount 
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
-	return "", errors.New("not yet implemented")
+func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer() error {

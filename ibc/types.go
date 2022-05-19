@@ -66,7 +66,7 @@ const (
 	Hermes
 )
 
-type PacketAcknowledgment struct {
+type PacketAcknowledgement struct {
 	Data     []byte
 	Sequence uint64
 }
