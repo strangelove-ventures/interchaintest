@@ -186,16 +186,62 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 
 // TestRelayer is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
-func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	// Record the labels for this outer test.
-	rep.TrackParameters(t, rf.Labels(), cf.Labels())
+//
+// This function accepts the full set of chain factories and relayer factories to use,
+// so that it can properly group subtests in a single invocation.
+// If this does not meet your needs, you can directly call e.g. TestRelayer_Pair.
+func TestRelayerChainCombinations(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
+	// Validate chain factory counts up front.
+	counts := make(map[int]bool)
+	for _, cf := range cfs {
+		switch count := cf.Count(); count {
+		case 2:
+			counts[count] = true
+		default:
+			panic(fmt.Errorf("cannot accept chain factory with count=%d", cf.Count()))
+		}
+	}
 
-	req := require.New(rep.TestifyT(t))
+	// Any chain pairs present?
+	if counts[2] {
+		t.Run("chain pairs", func(t *testing.T) {
+			for _, cf := range cfs {
+				cf := cf
+				if cf.Count() != 2 {
+					continue
+				}
 
+				t.Run(cf.Name(), func(t *testing.T) {
+					for _, rf := range rfs {
+						rf := rf
+
+						t.Run(rf.Name(), func(t *testing.T) {
+							// Record the labels for this nested test.
+							rep.TrackParameters(t, rf.Labels(), cf.Labels())
+							rep.TrackParallel(t)
+
+							TestRelayer_Pair(t, cf, rf, rep)
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestRelayer_Pair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	pool, network := ibctest.DockerSetup(t)
 
-	srcChain, dstChain, err := cf.Pair(t.Name())
-	req.NoError(err, "failed to get chain pair")
+	req := require.New(rep.TestifyT(t))
+	chains, err := cf.Chains(t.Name())
+	req.NoError(err, "failed to get chains")
+
+	if len(chains) != 2 {
+		panic(fmt.Errorf("expected 2 chains, got %d", len(chains)))
+	}
+
+	srcChain := chains[0]
+	dstChain := chains[1]
 
 	var (
 		preRelayerStartFuncs []func([]ibc.ChannelOutput)

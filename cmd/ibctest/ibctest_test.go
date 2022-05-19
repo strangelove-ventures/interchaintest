@@ -179,44 +179,37 @@ func TestRelayer(t *testing.T) {
 
 	zlogger := logger.Logger
 
-	// One layer of subtests for each relayer to be tested.
-	for _, r := range testMatrix.Relayers {
+	// Collect all the chain factories from both the builtins and the customs.
+	chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
+	for _, cs := range testMatrix.ChainSets {
+		cf, err := getChainFactory(cs, zlogger)
+		if err != nil {
+			panic(err)
+		}
+		chainFactories = append(chainFactories, cf)
+	}
+	for _, ccs := range testMatrix.CustomChainSets {
+		ccf, err := getCustomChainFactory(ccs, zlogger)
+		if err != nil {
+			panic(err)
+		}
+		chainFactories = append(chainFactories, ccf)
+	}
+
+	// Materialize all the relayer factories.
+	relayerFactories := make([]ibctest.RelayerFactory, len(testMatrix.Relayers))
+	for i, r := range testMatrix.Relayers {
 		rf, err := getRelayerFactory(r, zlogger)
 		if err != nil {
 			// This error should have been validated before running tests.
 			panic(err)
 		}
 
-		t.Run(rf.Name(), func(t *testing.T) {
-			t.Parallel()
-
-			// Collect all the chain factories from both the builtins and the customs.
-			chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
-			for _, cs := range testMatrix.ChainSets {
-				cf, err := getChainFactory(cs, zlogger)
-				if err != nil {
-					panic(err)
-				}
-				chainFactories = append(chainFactories, cf)
-			}
-			for _, ccs := range testMatrix.CustomChainSets {
-				ccf, err := getCustomChainFactory(ccs, zlogger)
-				if err != nil {
-					panic(err)
-				}
-				chainFactories = append(chainFactories, ccf)
-			}
-
-			for _, cf := range chainFactories {
-				t.Run(cf.Name(), func(t *testing.T) {
-					t.Parallel()
-
-					// Finally, the relayertest suite.
-					relayertest.TestRelayer(t, cf, rf, reporter)
-				})
-			}
-		})
+		relayerFactories[i] = rf
 	}
+
+	// Begin test execution, which will spawn many parallel subtests.
+	relayertest.TestRelayerChainCombinations(t, chainFactories, relayerFactories, reporter)
 }
 
 // addFlags configures additional flags beyond the default testing flags.
