@@ -177,8 +177,8 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	})
 
 	require.NoError(t, eg.Wait())
-	require.NoError(t, srcTx.Validate())
-	require.NoError(t, dstTx.Validate())
+	require.NoError(t, srcTx.Validate(), "source ibc transfer tx is invalid")
+	require.NoError(t, dstTx.Validate(), "destination ibc transfer tx is invalid")
 
 	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
 }
