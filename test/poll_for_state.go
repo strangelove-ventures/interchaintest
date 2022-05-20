@@ -9,10 +9,10 @@ import (
 
 type ChainAcker interface {
 	ChainHeighter
-	AcknowledgementPacket(ctx context.Context, height uint64) (ibc.PacketAcknowledgment, error)
+	Acknowledgement(ctx context.Context, height uint64) (ibc.PacketAcknowledgement, error)
 }
 
-func PollForAcks(ctx context.Context, heightTimeout int, chain ChainAcker, cb func(ibc.PacketAcknowledgment) bool) error {
+func PollForAcks(ctx context.Context, heightTimeout int, chain ChainAcker, cb func(ibc.PacketAcknowledgement) bool) error {
 	var (
 		height  = &height{Chain: chain}
 		lastErr error
@@ -28,7 +28,7 @@ func PollForAcks(ctx context.Context, heightTimeout int, chain ChainAcker, cb fu
 				return fmt.Errorf("height timeout %d reached", heightTimeout)
 			}
 		}
-		ack, err := chain.AcknowledgementPacket(ctx, height.Current())
+		ack, err := chain.Acknowledgement(ctx, height.Current())
 		if err != nil {
 			lastErr = err
 			continue

@@ -96,7 +96,7 @@ func TestPacket_Validate(t *testing.T) {
 }
 
 func TestPacketAcknowledgment_Validate(t *testing.T) {
-	var ack PacketAcknowledgment
+	var ack PacketAcknowledgement
 	err := ack.Validate()
 	require.Error(t, err)
 

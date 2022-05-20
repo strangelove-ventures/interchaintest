@@ -69,11 +69,9 @@ type Chain interface {
 	// get the fees in native denom for an amount of spent gas
 	GetGasFeesInNativeDenom(gasPaid int64) int64
 
-	// GetPacketAcknowledgement fetches ibc packet ack or an error if not found
-	GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (PacketAcknowledgement, error)
-
-	// GetPacketSequence returns the packet sequence given the transaction's hash
-	GetPacketSequence(ctx context.Context, txHash string) (uint64, error)
+	// Acknowledgement returns the first acknowledgement at the given block height
+	// TODO: may need to be an array of acks
+	Acknowledgement(ctx context.Context, height uint64) (PacketAcknowledgement, error)
 
 	// cleanup any resources that won't be cleaned up by container and test file teardown
 	// for example if containers use a different user, and need the files to be deleted inside the container

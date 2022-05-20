@@ -15,7 +15,7 @@ type mockAcker struct {
 	CurrentHeight   int
 
 	GotAckHeight uint64
-	Packet       ibc.PacketAcknowledgment
+	Packet       ibc.PacketAcknowledgement
 	AckErr       error
 }
 
@@ -28,7 +28,7 @@ func (m *mockAcker) Height(ctx context.Context) (uint64, error) {
 	return uint64(m.CurrentHeight), m.HeightErr
 }
 
-func (m *mockAcker) AcknowledgementPacket(ctx context.Context, height uint64) (ibc.PacketAcknowledgment, error) {
+func (m *mockAcker) Acknowledgement(ctx context.Context, height uint64) (ibc.PacketAcknowledgement, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
@@ -40,9 +40,9 @@ func TestPollForAcks(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("happy path", func(t *testing.T) {
-		acker := mockAcker{Packet: ibc.PacketAcknowledgment{Acknowledgement: []byte(`test`)}}
+		acker := mockAcker{Packet: ibc.PacketAcknowledgement{Acknowledgement: []byte(`test`)}}
 		var cbCalled bool
-		err := PollForAcks(ctx, 10, &acker, func(ack ibc.PacketAcknowledgment) bool {
+		err := PollForAcks(ctx, 10, &acker, func(ack ibc.PacketAcknowledgement) bool {
 			require.Equal(t, acker.Packet, ack)
 			cbCalled = true
 			return true
@@ -55,7 +55,7 @@ func TestPollForAcks(t *testing.T) {
 
 	t.Run("height error", func(t *testing.T) {
 		acker := mockAcker{HeightErr: errors.New("height go boom")}
-		err := PollForAcks(ctx, 10, &acker, func(ibc.PacketAcknowledgment) bool {
+		err := PollForAcks(ctx, 10, &acker, func(ibc.PacketAcknowledgement) bool {
 			panic("should not be called")
 		})
 
@@ -68,7 +68,7 @@ func TestPollForAcks(t *testing.T) {
 		acker := mockAcker{
 			CurrentHeight: 10,
 		}
-		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgment) bool {
+		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
 			return false
 		})
 
@@ -82,7 +82,7 @@ func TestPollForAcks(t *testing.T) {
 			CurrentHeight: 10,
 			AckErr:        errors.New("ack go boom"),
 		}
-		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgment) bool {
+		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
 			panic("should not be called")
 		})
 

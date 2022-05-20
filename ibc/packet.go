@@ -54,15 +54,15 @@ func (packet Packet) Validate() error {
 	return merr
 }
 
-// PacketAcknowledgment signals the packet was processed and accepted by the counterparty chain.
+// PacketAcknowledgement signals the packet was processed and accepted by the counterparty chain.
 // See: https://github.com/cosmos/ibc/blob/52a9094a5bc8c5275e25c19d0b2d9e6fd80ba31c/spec/core/ics-004-channel-and-packet-semantics/README.md#writing-acknowledgements
-type PacketAcknowledgment struct {
+type PacketAcknowledgement struct {
 	Packet          Packet
 	Acknowledgement []byte // an opaque value defined by the application logic
 }
 
 // Validate returns an error if the acknowledgement is not well-formed.
-func (ack PacketAcknowledgment) Validate() error {
+func (ack PacketAcknowledgement) Validate() error {
 	var err error
 	if len(ack.Acknowledgement) == 0 {
 		multierr.AppendInto(&err, errors.New("packet acknowledgement cannot be empty"))

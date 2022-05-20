@@ -234,41 +234,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) GetPacketSequence(_ context.Context, txHash string) (uint64, error) {
-	txResp, err := c.getTransaction(txHash)
-	if err != nil {
-		return 0, err
-	}
-	seqStr, ok := tendermint.AttributeValue(txResp.Events, "send_packet", "packet_sequence")
-	if !ok {
-		return 0, fmt.Errorf("attribute value does not exist for %s", txHash)
-	}
-	seq, err := strconv.Atoi(seqStr)
-	return uint64(seq), err
-}
-
-func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgement, _ error) {
-	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return found, err
-	}
-	defer conn.Close()
-
-	client := chanTypes.NewQueryClient(conn)
-	resp, err := client.PacketAcknowledgement(ctx, &chanTypes.QueryPacketAcknowledgementRequest{
-		PortId:    portID,
-		ChannelId: channelID,
-		Sequence:  seq,
-	})
-	if err != nil {
-		return found, err
-	}
-	found.Data = resp.Acknowledgement
-	found.Sequence = seq
-	return found, nil
-}
-
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
 	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 }
@@ -609,8 +574,8 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
-// AcknowledgementPacket implements ibc.Chain
-func (c *CosmosChain) AcknowledgementPacket(ctx context.Context, height uint64) (zero ibc.PacketAcknowledgment, _ error) {
+// Acknowledgement implements ibc.Chain
+func (c *CosmosChain) Acknowledgement(ctx context.Context, height uint64) (zero ibc.PacketAcknowledgement, _ error) {
 	var ack *chanTypes.MsgAcknowledgement
 	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		a, ok := msg.(*chanTypes.MsgAcknowledgement)
@@ -622,7 +587,7 @@ func (c *CosmosChain) AcknowledgementPacket(ctx context.Context, height uint64) 
 	if err != nil {
 		return zero, fmt.Errorf("acknowledgement packet at height %d: %w", height, err)
 	}
-	return ibc.PacketAcknowledgment{
+	return ibc.PacketAcknowledgement{
 		Acknowledgement: ack.Acknowledgement,
 		Packet: ibc.Packet{
 			Sequence:         ack.Packet.Sequence,
