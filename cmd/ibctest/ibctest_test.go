@@ -163,11 +163,11 @@ func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, log
 	return ibctest.NewCustomChainFactory(customChainSet, logger), nil
 }
 
-// TestRelayer is the root test for the relayer.
-// It runs each subtest in parallel;
+// TestConformance is the root test for the ibc conformance tests.
+// It runs many subtests in parallel;
 // if this is too taxing on a system, the -test.parallel flag
 // can be used to reduce how many tests actively run at once.
-func TestRelayer(t *testing.T) {
+func TestConformance(t *testing.T) {
 	t.Parallel()
 
 	logger, err := extraFlags.Logger()
@@ -209,7 +209,7 @@ func TestRelayer(t *testing.T) {
 	}
 
 	// Begin test execution, which will spawn many parallel subtests.
-	relayertest.TestRelayerChainCombinations(t, chainFactories, relayerFactories, reporter)
+	relayertest.TestConformance(t, chainFactories, relayerFactories, reporter)
 }
 
 // addFlags configures additional flags beyond the default testing flags.

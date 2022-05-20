@@ -184,13 +184,14 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
 }
 
-// TestRelayer is the stable API exposed by the relayertest package.
+// TestConformance is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
 //
 // This function accepts the full set of chain factories and relayer factories to use,
 // so that it can properly group subtests in a single invocation.
-// If this does not meet your needs, you can directly call e.g. TestRelayer_Pair.
-func TestRelayerChainCombinations(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
+// If the subtest configuration does not meet your needs,
+// you can directly call one of the other exported Test functions, such as TestChainPair.
+func TestConformance(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	// Validate chain factory counts up front.
 	counts := make(map[int]bool)
 	for _, cf := range cfs {
@@ -220,7 +221,7 @@ func TestRelayerChainCombinations(t *testing.T, cfs []ibctest.ChainFactory, rfs 
 							rep.TrackParameters(t, rf.Labels(), cf.Labels())
 							rep.TrackParallel(t)
 
-							TestRelayer_Pair(t, cf, rf, rep)
+							TestChainPair(t, cf, rf, rep)
 						})
 					}
 				})
@@ -229,7 +230,11 @@ func TestRelayerChainCombinations(t *testing.T, cfs []ibctest.ChainFactory, rfs 
 	}
 }
 
-func TestRelayer_Pair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+// TestChainPair runs the conformance tests for two chains and one relayer.
+// This function is exported in case there is a third party that needs to run this test
+// without the parallel subtests structure from TestConformance,
+// but the stability of this API and even the existence of this function is not guaranteed.
+func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	pool, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
