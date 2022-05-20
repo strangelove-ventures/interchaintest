@@ -400,12 +400,8 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	return err
 }
 
-func (c *PenumbraChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (ibc.PacketAcknowledgement, error) {
-	panic("not implemented")
-}
-
-func (c *PenumbraChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
-	panic("not implemented")
+func (c *PenumbraChain) Acknowledgement(ctx context.Context, height uint64) (ibc.PacketAcknowledgement, error) {
+	panic("implement me")
 }
 
 func (c *PenumbraChain) Cleanup(ctx context.Context) error {
