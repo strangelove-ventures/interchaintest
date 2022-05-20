@@ -184,18 +184,69 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
 }
 
-// TestRelayer is the stable API exposed by the relayertest package.
+// TestConformance is the stable API exposed by the relayertest package.
 // This is intended to be used by Go unit tests.
-func TestRelayer(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	// Record the labels for this outer test.
-	rep.TrackParameters(t, rf.Labels(), cf.Labels())
+//
+// This function accepts the full set of chain factories and relayer factories to use,
+// so that it can properly group subtests in a single invocation.
+// If the subtest configuration does not meet your needs,
+// you can directly call one of the other exported Test functions, such as TestChainPair.
+func TestConformance(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
+	// Validate chain factory counts up front.
+	counts := make(map[int]bool)
+	for _, cf := range cfs {
+		switch count := cf.Count(); count {
+		case 2:
+			counts[count] = true
+		default:
+			panic(fmt.Errorf("cannot accept chain factory with count=%d", cf.Count()))
+		}
+	}
 
-	req := require.New(rep.TestifyT(t))
+	// Any chain pairs present?
+	if counts[2] {
+		t.Run("chain pairs", func(t *testing.T) {
+			for _, cf := range cfs {
+				cf := cf
+				if cf.Count() != 2 {
+					continue
+				}
 
+				t.Run(cf.Name(), func(t *testing.T) {
+					for _, rf := range rfs {
+						rf := rf
+
+						t.Run(rf.Name(), func(t *testing.T) {
+							// Record the labels for this nested test.
+							rep.TrackParameters(t, rf.Labels(), cf.Labels())
+							rep.TrackParallel(t)
+
+							TestChainPair(t, cf, rf, rep)
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+// TestChainPair runs the conformance tests for two chains and one relayer.
+// This function is exported in case there is a third party that needs to run this test
+// without the parallel subtests structure from TestConformance,
+// but the stability of this API and even the existence of this function is not guaranteed.
+func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	pool, network := ibctest.DockerSetup(t)
 
-	srcChain, dstChain, err := cf.Pair(t.Name())
-	req.NoError(err, "failed to get chain pair")
+	req := require.New(rep.TestifyT(t))
+	chains, err := cf.Chains(t.Name())
+	req.NoError(err, "failed to get chains")
+
+	if len(chains) != 2 {
+		panic(fmt.Errorf("expected 2 chains, got %d", len(chains)))
+	}
+
+	srcChain := chains[0]
+	dstChain := chains[1]
 
 	var (
 		preRelayerStartFuncs []func([]ibc.ChannelOutput)
