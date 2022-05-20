@@ -1,8 +1,8 @@
-// Package relayertest exposes a TestRelayer function
+// Package conformance exposes a Test function
 // that can be imported into other packages' tests.
 //
-// The exported TestRelayer function is intended to be a stable API
-// that calls the other TestRelayer_* functions, which are not guaranteed
+// The exported Test function is intended to be a stable API
+// that calls other Test* functions, which are not guaranteed
 // to remain a stable API.
 //
 // External packages that intend to run IBC tests against their relayer implementation
@@ -14,19 +14,19 @@
 //     import (
 //       "testing"
 //
+//       "github.com/strangelove-ventures/ibctest/conformance"
 //       "github.com/strangelove-ventures/ibctest/ibc"
-//       "github.com/strangelove-ventures/ibctest/relayertest"
 //     )
 //
 //     func TestMyRelayer(t *testing.T) {
-//       relayertest.TestRelayer(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
+//       conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
 //         {Name: "foo_bar" /* ... */},
-//       }, MyRelayerFactory())
+//       }, MyRelayerFactory(), getTestReporter())
 //     }
 //
-// Although the relayertest package is made available as a convenience for other projects,
+// Although the conformance package is made available as a convenience for other projects,
 // the ibctest project should be considered the canonical definition of tests and configuration.
-package relayertest
+package conformance
 
 import (
 	"context"
@@ -184,14 +184,14 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
 }
 
-// TestConformance is the stable API exposed by the relayertest package.
+// Test is the stable API exposed by the conformance package.
 // This is intended to be used by Go unit tests.
 //
 // This function accepts the full set of chain factories and relayer factories to use,
 // so that it can properly group subtests in a single invocation.
 // If the subtest configuration does not meet your needs,
 // you can directly call one of the other exported Test functions, such as TestChainPair.
-func TestConformance(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	// Validate chain factory counts up front.
 	counts := make(map[int]bool)
 	for _, cf := range cfs {

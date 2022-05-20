@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/conformance"
 	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/relayertest"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"go.uber.org/zap"
 )
@@ -209,7 +209,7 @@ func TestConformance(t *testing.T) {
 	}
 
 	// Begin test execution, which will spawn many parallel subtests.
-	relayertest.TestConformance(t, chainFactories, relayerFactories, reporter)
+	conformance.Test(t, chainFactories, relayerFactories, reporter)
 }
 
 // addFlags configures additional flags beyond the default testing flags.
