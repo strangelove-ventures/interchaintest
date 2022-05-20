@@ -81,105 +81,30 @@ func StartChainPairAndRelayer(
 		return nil, []ibc.ChannelOutput{}, err
 	}
 
-	testName := t.Name()
-	cs := chainSet{srcChain, dstChain}
-	if err := cs.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
-	}
-
-	srcChainCfg := srcChain.Config()
-	dstChainCfg := dstChain.Config()
-
-	// Create addresses out of band, because the chain genesis needs to know where to send initial funds.
-	addresses, mnemonics, err := cs.CreateKeys()
-	if err != nil {
-		return errResponse(err)
-	}
-
-	// Fund relayer account on src chain
-	srcRelayerWalletAmount := ibc.WalletAmount{
-		Address: addresses[0],
-		Denom:   srcChainCfg.Denom,
-		Amount:  10_000_000,
-	}
-
-	// Fund relayer account on dst chain
-	dstRelayerWalletAmount := ibc.WalletAmount{
-		Address: addresses[1],
-		Denom:   dstChainCfg.Denom,
-		Amount:  10_000_000,
-	}
-
-	// create faucets on both chains
-	faucetAccounts, err := cs.CreateCommonAccount(ctx, faucetAccountKeyName)
-	if err != nil {
-		return errResponse(err)
-	}
-
-	srcFaucetWalletAmount := ibc.WalletAmount{
-		Address: faucetAccounts[0],
-		Denom:   srcChainCfg.Denom,
-		Amount:  10_000_000_000_000,
-	}
-
-	dstFaucetWalletAmount := ibc.WalletAmount{
-		Address: faucetAccounts[1],
-		Denom:   dstChainCfg.Denom,
-		Amount:  10_000_000_000_000,
-	}
-
-	// start chains from genesis, wait until they are producing blocks
-	if err := cs.Start(ctx, testName, [][]ibc.WalletAmount{
-		{srcRelayerWalletAmount, srcFaucetWalletAmount},
-		{dstRelayerWalletAmount, dstFaucetWalletAmount},
-	}); err != nil {
-		return errResponse(err)
-	}
-
-	// Now that the chains are running, we can start the relayer.
-	// (We couldn't do this earlier,
-	// because a non-docker relayer would not have had an address for the nodes.)
-	srcRPCAddr, srcGRPCAddr := srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()
-	dstRPCAddr, dstGRPCAddr := dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()
-	if !f.UseDockerNetwork() {
-		srcRPCAddr, srcGRPCAddr = srcChain.GetHostRPCAddress(), srcChain.GetHostGRPCAddress()
-		dstRPCAddr, dstGRPCAddr = dstChain.GetHostRPCAddress(), dstChain.GetHostGRPCAddress()
-	}
+	w := NewWorld().
+		AddChain("src", srcChain).
+		AddChain("dst", dstChain).
+		AddRelayer("r", relayerImpl).
+		AddLink(WorldLink{
+			Chain1:  "src",
+			Chain2:  "dst",
+			Relayer: "r",
+			Path:    testPathName,
+		})
 
 	eRep := rep.RelayerExecReporter(t)
-
-	if err := relayerImpl.AddChainConfiguration(ctx,
-		eRep,
-		srcChainCfg, srcAccountKeyName,
-		srcRPCAddr, srcGRPCAddr,
-	); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
+	res, err := w.Build(ctx, eRep, WorldBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: networkID,
+	})
+	if err != nil {
+		return errResponse(err)
 	}
+	_ = res // Probably need to pass the result addresses somewhere.
 
-	if err := relayerImpl.AddChainConfiguration(ctx,
-		eRep,
-		dstChainCfg, dstAccountKeyName,
-		dstRPCAddr, dstGRPCAddr,
-	); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
-	}
-
-	if err := relayerImpl.RestoreKey(ctx, eRep, srcChain.Config().ChainID, srcAccountKeyName, mnemonics[0]); err != nil {
-		return errResponse(fmt.Errorf("failed to restore key to source chain: %w", err))
-	}
-	if err := relayerImpl.RestoreKey(ctx, eRep, dstChain.Config().ChainID, dstAccountKeyName, mnemonics[1]); err != nil {
-		return errResponse(fmt.Errorf("failed to restore key to dest chain: %w", err))
-	}
-
-	if err := relayerImpl.GeneratePath(ctx, eRep, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to generate path: %w", err))
-	}
-
-	if err := relayerImpl.LinkPath(ctx, eRep, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to create link in relayer: %w", err))
-	}
-
-	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChainCfg.ChainID)
+	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChain.Config().ChainID)
 	if err != nil {
 		return errResponse(fmt.Errorf("failed to get channels: %w", err))
 	}
