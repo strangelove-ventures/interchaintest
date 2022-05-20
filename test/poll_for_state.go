@@ -12,7 +12,7 @@ type ChainAcker interface {
 	Acknowledgement(ctx context.Context, height uint64) (ibc.PacketAcknowledgement, error)
 }
 
-func PollForAcks(ctx context.Context, heightTimeout int, chain ChainAcker, cb func(ibc.PacketAcknowledgement) bool) error {
+func PollForAck(ctx context.Context, heightTimeout int, chain ChainAcker, cb func(ibc.PacketAcknowledgement) bool) error {
 	var (
 		height  = &height{Chain: chain}
 		lastErr error

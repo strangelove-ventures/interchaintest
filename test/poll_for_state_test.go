@@ -42,7 +42,7 @@ func TestPollForAcks(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		acker := mockAcker{Packet: ibc.PacketAcknowledgement{Acknowledgement: []byte(`test`)}}
 		var cbCalled bool
-		err := PollForAcks(ctx, 10, &acker, func(ack ibc.PacketAcknowledgement) bool {
+		err := PollForAck(ctx, 10, &acker, func(ack ibc.PacketAcknowledgement) bool {
 			require.Equal(t, acker.Packet, ack)
 			cbCalled = true
 			return true
@@ -55,7 +55,7 @@ func TestPollForAcks(t *testing.T) {
 
 	t.Run("height error", func(t *testing.T) {
 		acker := mockAcker{HeightErr: errors.New("height go boom")}
-		err := PollForAcks(ctx, 10, &acker, func(ibc.PacketAcknowledgement) bool {
+		err := PollForAck(ctx, 10, &acker, func(ibc.PacketAcknowledgement) bool {
 			panic("should not be called")
 		})
 
@@ -68,7 +68,7 @@ func TestPollForAcks(t *testing.T) {
 		acker := mockAcker{
 			CurrentHeight: 10,
 		}
-		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
+		err := PollForAck(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
 			return false
 		})
 
@@ -82,7 +82,7 @@ func TestPollForAcks(t *testing.T) {
 			CurrentHeight: 10,
 			AckErr:        errors.New("ack go boom"),
 		}
-		err := PollForAcks(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
+		err := PollForAck(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
 			panic("should not be called")
 		})
 

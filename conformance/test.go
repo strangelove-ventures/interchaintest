@@ -164,6 +164,13 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 		}
+		err = test.PollForAck(ctx, 10, dstChain, func(ack ibc.PacketAcknowledgement) bool {
+			// TODO: test ack validity
+			return ack.Packet.Sequence == srcTx.Packet.Sequence
+		})
+		if err != nil {
+			return fmt.Errorf("failed to find acknowledgement: %w", err)
+		}
 		return nil
 	})
 
@@ -173,6 +180,13 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 		dstTx, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
+		}
+		err = test.PollForAck(ctx, 10, dstChain, func(ack ibc.PacketAcknowledgement) bool {
+			// TODO: test ack validity
+			return ack.Packet.Sequence == dstTx.Packet.Sequence
+		})
+		if err != nil {
+			return fmt.Errorf("failed to find acknowledgement: %w", err)
 		}
 		return nil
 	})
@@ -284,11 +298,6 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 
-	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
-	// Wait for both chains to produce 10 blocks per test case.
-	// This is long to allow for intermittent retries inside the relayer.
-	req.NoError(test.WaitForBlocks(ctx, 10*len(testCases), srcChain, dstChain), "failed to wait for blocks")
-
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
@@ -370,11 +379,6 @@ func testPacketRelaySuccess(
 	req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
 	req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
 
-	seq, err := srcChain.GetPacketSequence(ctx, srcTx.TxHash)
-	req.NoError(err)
-	_, err = srcChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	req.NoError(err)
-
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
@@ -402,11 +406,6 @@ func testPacketRelaySuccess(
 
 	req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
 	req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
-
-	seq, err = dstChain.GetPacketSequence(ctx, dstTx.TxHash)
-	req.NoError(err)
-	_, err = dstChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	req.NoError(err)
 
 	//[END] assert on destination to source transfer
 }
