@@ -611,41 +611,55 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 
 // AcknowledgementPacket implements ibc.Chain
 func (c *CosmosChain) AcknowledgementPacket(ctx context.Context, height uint64) (zero ibc.PacketAcknowledgment, _ error) {
-	msg, err := findMsgFromBlock[*chanTypes.MsgAcknowledgement](ctx, c.getFullNode().Client, height)
+	var ack *chanTypes.MsgAcknowledgement
+	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
+		a, ok := msg.(*chanTypes.MsgAcknowledgement)
+		if ok {
+			ack = a
+		}
+		return ok
+	})
 	if err != nil {
-		return zero, fmt.Errorf("get acknowledgement packet at height %d: %w", height, err)
+		return zero, fmt.Errorf("acknowledgement packet at height %d: %w", height, err)
 	}
 	return ibc.PacketAcknowledgment{
-		Acknowledgement: msg.Acknowledgement,
+		Acknowledgement: ack.Acknowledgement,
 		Packet: ibc.Packet{
-			Sequence:         msg.Packet.Sequence,
-			SourcePort:       msg.Packet.SourcePort,
-			SourceChannel:    msg.Packet.SourceChannel,
-			DestPort:         msg.Packet.DestinationPort,
-			DestChannel:      msg.Packet.DestinationChannel,
-			Data:             msg.Packet.Data,
-			TimeoutHeight:    msg.Packet.TimeoutHeight.String(),
-			TimeoutTimestamp: ibc.Nanoseconds(msg.Packet.TimeoutTimestamp),
+			Sequence:         ack.Packet.Sequence,
+			SourcePort:       ack.Packet.SourcePort,
+			SourceChannel:    ack.Packet.SourceChannel,
+			DestPort:         ack.Packet.DestinationPort,
+			DestChannel:      ack.Packet.DestinationChannel,
+			Data:             ack.Packet.Data,
+			TimeoutHeight:    ack.Packet.TimeoutHeight.String(),
+			TimeoutTimestamp: ibc.Nanoseconds(ack.Packet.TimeoutTimestamp),
 		},
 	}, nil
 }
 
 // TimeoutPacket implements ibc.Chain
 func (c *CosmosChain) TimeoutPacket(ctx context.Context, height uint64) (zero ibc.PacketTimeout, _ error) {
-	msg, err := findMsgFromBlock[*chanTypes.MsgTimeout](ctx, c.getFullNode().Client, height)
+	var timeout *chanTypes.MsgTimeout
+	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
+		t, ok := msg.(*chanTypes.MsgTimeout)
+		if ok {
+			timeout = t
+		}
+		return ok
+	})
 	if err != nil {
-		return zero, fmt.Errorf("get timeout packet at height %d: %w", height, err)
+		return zero, fmt.Errorf("timeout packet at height %d: %w", height, err)
 	}
 	return ibc.PacketTimeout{
 		Packet: ibc.Packet{
-			Sequence:         msg.Packet.Sequence,
-			SourcePort:       msg.Packet.SourcePort,
-			SourceChannel:    msg.Packet.SourceChannel,
-			DestPort:         msg.Packet.DestinationPort,
-			DestChannel:      msg.Packet.DestinationChannel,
-			Data:             msg.Packet.Data,
-			TimeoutHeight:    msg.Packet.TimeoutHeight.String(),
-			TimeoutTimestamp: ibc.Nanoseconds(msg.Packet.TimeoutTimestamp),
+			Sequence:         timeout.Packet.Sequence,
+			SourcePort:       timeout.Packet.SourcePort,
+			SourceChannel:    timeout.Packet.SourceChannel,
+			DestPort:         timeout.Packet.DestinationPort,
+			DestChannel:      timeout.Packet.DestinationChannel,
+			Data:             timeout.Packet.Data,
+			TimeoutHeight:    timeout.Packet.TimeoutHeight.String(),
+			TimeoutTimestamp: ibc.Nanoseconds(timeout.Packet.TimeoutTimestamp),
 		},
 	}, nil
 }
