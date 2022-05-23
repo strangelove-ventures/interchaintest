@@ -69,9 +69,8 @@ type Chain interface {
 	// get the fees in native denom for an amount of spent gas
 	GetGasFeesInNativeDenom(gasPaid int64) int64
 
-	// Acknowledgement returns the first acknowledgement at the given block height
-	// TODO: may need to be an array of acks
-	Acknowledgement(ctx context.Context, height uint64) (PacketAcknowledgement, error)
+	// Acknowledgements returns all acknowledgements in a block at height
+	Acknowledgements(ctx context.Context, height uint64) ([]PacketAcknowledgement, error)
 
 	// cleanup any resources that won't be cleaned up by container and test file teardown
 	// for example if containers use a different user, and need the files to be deleted inside the container

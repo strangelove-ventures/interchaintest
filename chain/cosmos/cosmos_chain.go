@@ -574,30 +574,35 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
-// Acknowledgement implements ibc.Chain
-func (c *CosmosChain) Acknowledgement(ctx context.Context, height uint64) (zero ibc.PacketAcknowledgement, _ error) {
-	var ack *chanTypes.MsgAcknowledgement
+// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
+func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+	var acks []*chanTypes.MsgAcknowledgement
 	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
-		a, ok := msg.(*chanTypes.MsgAcknowledgement)
+		found, ok := msg.(*chanTypes.MsgAcknowledgement)
 		if ok {
-			ack = a
+			acks = append(acks, found)
 		}
-		return ok
+		return false
 	})
 	if err != nil {
-		return zero, fmt.Errorf("acknowledgement at height %d: %w", height, err)
+		return nil, fmt.Errorf("find acknowledgements at height %d: %w", height, err)
 	}
-	return ibc.PacketAcknowledgement{
-		Acknowledgement: ack.Acknowledgement,
-		Packet: ibc.Packet{
-			Sequence:         ack.Packet.Sequence,
-			SourcePort:       ack.Packet.SourcePort,
-			SourceChannel:    ack.Packet.SourceChannel,
-			DestPort:         ack.Packet.DestinationPort,
-			DestChannel:      ack.Packet.DestinationChannel,
-			Data:             ack.Packet.Data,
-			TimeoutHeight:    ack.Packet.TimeoutHeight.String(),
-			TimeoutTimestamp: ibc.Nanoseconds(ack.Packet.TimeoutTimestamp),
-		},
-	}, nil
+	ibcAcks := make([]ibc.PacketAcknowledgement, len(acks))
+	for i, ack := range acks {
+		ack := ack
+		ibcAcks[i] = ibc.PacketAcknowledgement{
+			Acknowledgement: ack.Acknowledgement,
+			Packet: ibc.Packet{
+				Sequence:         ack.Packet.Sequence,
+				SourcePort:       ack.Packet.SourcePort,
+				SourceChannel:    ack.Packet.SourceChannel,
+				DestPort:         ack.Packet.DestinationPort,
+				DestChannel:      ack.Packet.DestinationChannel,
+				Data:             ack.Packet.Data,
+				TimeoutHeight:    ack.Packet.TimeoutHeight.String(),
+				TimeoutTimestamp: ibc.Nanoseconds(ack.Packet.TimeoutTimestamp),
+			},
+		}
+	}
+	return ibcAcks, nil
 }

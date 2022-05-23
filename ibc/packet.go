@@ -75,8 +75,3 @@ func (ack PacketAcknowledgement) Validate() error {
 	}
 	return multierr.Append(err, ack.Packet.Validate())
 }
-
-// Equal returns true if both acknowledgments are equal.
-func (ack PacketAcknowledgement) Equal(other PacketAcknowledgement) bool {
-	return reflect.DeepEqual(ack, other)
-}

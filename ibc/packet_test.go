@@ -105,13 +105,13 @@ func TestPacket_Equal(t *testing.T) {
 
 		{validPacket(), Packet{}, false},
 		{Packet{Data: []byte(`left`)}, Packet{Data: []byte(`two`)}, false},
+		{Packet{Sequence: 1}, Packet{Sequence: 2}, false},
 	} {
 		require.Equal(t, tt.WantEqual, tt.Left.Equal(tt.Right), tt)
 		require.Equal(t, tt.WantEqual, tt.Right.Equal(tt.Left), tt)
 
 		require.True(t, tt.Left.Equal(tt.Left))
 		require.True(t, tt.Right.Equal(tt.Right))
-
 	}
 }
 
@@ -128,18 +128,4 @@ func TestPacketAcknowledgment_Validate(t *testing.T) {
 	ack.Acknowledgement = []byte(`ack`)
 	err = ack.Validate()
 	require.NoError(t, err)
-}
-
-func TestPacketAcknowledgement_Equal(t *testing.T) {
-	var (
-		left  = PacketAcknowledgement{Acknowledgement: []byte(`left`), Packet: validPacket()}
-		right = PacketAcknowledgement{Acknowledgement: []byte(`right`), Packet: validPacket()}
-	)
-	require.False(t, left.Equal(right))
-
-	left.Acknowledgement = right.Acknowledgement
-	require.True(t, left.Equal(right))
-
-	left.Packet = Packet{}
-	require.False(t, left.Equal(right))
 }
