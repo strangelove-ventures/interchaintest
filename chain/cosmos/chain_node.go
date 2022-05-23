@@ -225,6 +225,7 @@ func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
 	separator := strings.Repeat("*", 30) + "\n"
 	buf.WriteString("\n" + separator)
 	buf.WriteString(separator)
+	buf.WriteString(tn.Chain.Config().ChainID + "\n")
 	buf.WriteString("BLOCK INFO\n")
 	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
 	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))

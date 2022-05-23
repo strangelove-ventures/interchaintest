@@ -2,7 +2,6 @@ package cosmos
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -32,5 +31,5 @@ func rangeBlockMessages(ctx context.Context, client blockClient, height uint64, 
 			}
 		}
 	}
-	return errors.New("msg not found")
+	return nil
 }
