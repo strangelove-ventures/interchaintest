@@ -286,7 +286,7 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 
 	// Wait for both chains to produce 10 blocks per test case.
 	// This is long to allow for intermittent retries inside the relayer.
-	// TODO(nix 05-23-2022): Remove once we poll for timeouts
+	// TODO(nix 05-23-2022): Remove once we poll for timeouts, otherwise timeout tests fail
 	req.NoError(test.WaitForBlocks(ctx, 10*len(testCases), srcChain, dstChain), "failed to wait for blocks")
 
 	for _, testCase := range testCases {
