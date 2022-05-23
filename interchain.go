@@ -136,6 +136,8 @@ type InterchainBuildOptions struct {
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
 // It is the caller's responsibility to directly call StartRelayer on the relayer implementations.
+//
+// Calling Build more than once will cause a panic.
 func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecReporter, opts InterchainBuildOptions) error {
 	if ic.built {
 		panic(fmt.Errorf("Build called more than once"))
@@ -163,34 +165,14 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to start chains: %w", err)
 	}
 
-	// Every relayer needs configured to be aware of its chains.
-	for r, chains := range ic.relayerChains() {
-		for _, c := range chains {
-			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
-			if !r.UseDockerNetwork() {
-				rpcAddr, grpcAddr = c.GetHostRPCAddress(), c.GetHostGRPCAddress()
-			}
-
-			chainName := ic.chains[c]
-			if err := r.AddChainConfiguration(ctx,
-				rep,
-				c.Config(), chainName,
-				rpcAddr, grpcAddr,
-			); err != nil {
-				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
-			}
-
-			if err := r.RestoreKey(ctx,
-				rep,
-				c.Config().ChainID, chainName,
-				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic,
-			); err != nil {
-				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
-			}
-		}
+	if err := ic.configureRelayerKeys(ctx, rep); err != nil {
+		// Error already wrapped with appropriate detail.
+		return err
 	}
 
 	// For every relayer link, teach the relayer about the link and create the link.
+	// TODO: this could be skipped with an appropriate flag on InterchainBuildOptions,
+	// if a test wanted to exercise a relayer from a lower level than LinkPath.
 	for rp, chains := range ic.links {
 		c0 := chains[0]
 		c1 := chains[1]
@@ -265,6 +247,41 @@ func (ic *Interchain) generateRelayerWallets() {
 			ic.relayerWallets[relayerChain{R: r, C: c}] = buildWallet(kr, accountName, c.Config())
 		}
 	}
+}
+
+// configureRelayerKeys adds the chain configuration for each relayer
+// and adds the preconfigured key to the relayer for each relayer-chain.
+func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporter.RelayerExecReporter) error {
+	// Possible optimization: each relayer could be configured concurrently.
+	// But we are only testing with a single relayer so far, so we don't need this yet.
+
+	for r, chains := range ic.relayerChains() {
+		for _, c := range chains {
+			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
+			if !r.UseDockerNetwork() {
+				rpcAddr, grpcAddr = c.GetHostRPCAddress(), c.GetHostGRPCAddress()
+			}
+
+			chainName := ic.chains[c]
+			if err := r.AddChainConfiguration(ctx,
+				rep,
+				c.Config(), chainName,
+				rpcAddr, grpcAddr,
+			); err != nil {
+				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
+			}
+
+			if err := r.RestoreKey(ctx,
+				rep,
+				c.Config().ChainID, chainName,
+				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic,
+			); err != nil {
+				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // relayerChain is a tuple of a Relayer and a Chain.
