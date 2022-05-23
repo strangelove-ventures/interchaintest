@@ -585,7 +585,7 @@ func (c *CosmosChain) Acknowledgement(ctx context.Context, height uint64) (zero 
 		return ok
 	})
 	if err != nil {
-		return zero, fmt.Errorf("acknowledgement packet at height %d: %w", height, err)
+		return zero, fmt.Errorf("acknowledgement at height %d: %w", height, err)
 	}
 	return ibc.PacketAcknowledgement{
 		Acknowledgement: ack.Acknowledgement,
@@ -613,7 +613,7 @@ func (c *CosmosChain) TimeoutPacket(ctx context.Context, height uint64) (zero ib
 		return ok
 	})
 	if err != nil {
-		return zero, fmt.Errorf("timeout packet at height %d: %w", height, err)
+		return zero, fmt.Errorf("timeout at height %d: %w", height, err)
 	}
 	return ibc.PacketTimeout{
 		Packet: ibc.Packet{
