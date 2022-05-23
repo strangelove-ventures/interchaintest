@@ -7,7 +7,7 @@ func HandleNodeJobError(exitCode int, _, _ string, err error) error {
 		return err
 	}
 	if exitCode != 0 {
-		return fmt.Errorf("container returned non-zero error code: %d\n", exitCode)
+		return fmt.Errorf("container returned non-zero error code: %d", exitCode)
 	}
 	return nil
 }
