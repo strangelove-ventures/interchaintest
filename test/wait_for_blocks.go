@@ -35,35 +35,24 @@ type height struct {
 }
 
 func (h *height) WaitForDelta(ctx context.Context, delta int) error {
-	for h.Delta() < delta {
-		if err := h.UpdateOnce(ctx); err != nil {
+	for h.delta() < delta {
+		cur, err := h.Chain.Height(ctx)
+		if err != nil {
 			return err
 		}
+		if cur == 0 {
+			panic("height cannot be zero")
+		}
+		h.update(cur)
 	}
 	return nil
 }
 
-func (h *height) UpdateOnce(ctx context.Context) error {
-	cur, err := h.Chain.Height(ctx)
-	if err != nil {
-		return err
-	}
-	if cur == 0 {
-		panic("height cannot be zero")
-	}
-	h.update(cur)
-	return nil
-}
-
-func (h *height) Delta() int {
+func (h *height) delta() int {
 	if h.starting == 0 {
 		return 0
 	}
 	return int(h.current - h.starting)
-}
-
-func (h *height) Current() uint64 {
-	return h.current
 }
 
 func (h *height) update(height uint64) {
