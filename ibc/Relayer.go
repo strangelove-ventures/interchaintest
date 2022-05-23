@@ -39,6 +39,9 @@ type Relayer interface {
 	// get channel IDs for chain
 	GetChannels(ctx context.Context, rep RelayerExecReporter, chainID string) ([]ChannelOutput, error)
 
+	// GetConnections returns a slice of IBC connection details composed of the details for each connection on a specified chain.
+	GetConnections(ctx context.Context, rep RelayerExecReporter, chainID string) (ConnectionOutputs, error)
+
 	// After configuration is initialized, begin relaying.
 	// This method is intended to create a background worker that runs the relayer.
 	// You must call StopRelayer to cleanly stop the relaying.
@@ -49,6 +52,14 @@ type Relayer interface {
 
 	// relay queue until it is empty
 	ClearQueue(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
+
+	// CreateClients performs the client handshake steps necessary for creating a light client
+	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
+	CreateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
+
+	// CreateConnections performs the connection handshake steps necessary for creating a connection
+	// between the src and dst chains.
+	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string) error
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.
