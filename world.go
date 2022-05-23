@@ -139,19 +139,31 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 		return nil, fmt.Errorf("failed to initialize chains: %w", err)
 	}
 
+	// Faucet addresses are created separately because they need to be explicitly added to the chains.
+	faucetAddresses, err := cs.CreateCommonAccount(ctx, faucetAccountKeyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create faucet accounts: %w", err)
+	}
+
 	// Start chains from genesis.
 	// This would also be considerably simpler if the chain set was aware of the name->chain mapping.
 	walletsByChain := res.walletsByChain()
 	walletAmounts := make([][]ibc.WalletAmount, len(cs))
 	for name, c := range w.chains {
 		wallets := walletsByChain[name]
-		amounts := make([]ibc.WalletAmount, len(wallets))
+		amounts := make([]ibc.WalletAmount, len(wallets)+1) // +1 for separate faucet configuration later.
 		for i, w := range wallets {
 			amounts[i] = ibc.WalletAmount{
 				Address: w.Address,
 				Denom:   c.Config().Denom,
 				Amount:  10_000_000_000_000, // Every wallet gets 10b units of denom.
 			}
+		}
+		// Put faucet wallet last.
+		amounts[len(amounts)-1] = ibc.WalletAmount{
+			Address: faucetAddresses[chainIndices[name]],
+			Denom:   c.Config().Denom,
+			Amount:  10_000_000_000_000, // Faucet wallet gets 10b units of denom.
 		}
 		walletAmounts[chainIndices[name]] = amounts
 	}
@@ -213,11 +225,8 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 }
 
 // WorldResult describes the addresses and mnemonics
-// of the faucet and relayer wallets created during (*World).Build.
+// of the relayer wallets created during (*World).Build.
 type WorldResult struct {
-	// Keyed by chain name.
-	FaucetWallets map[string]ibc.RelayerWallet
-
 	// Keyed by [relayer name, chain name].
 	RelayerWallets map[[2]string]ibc.RelayerWallet
 }
@@ -226,15 +235,6 @@ type WorldResult struct {
 // and a wallet on each chain for each relayer.
 func (r *WorldResult) generateWallets(chains map[string]ibc.Chain, relayerChains map[string][]string) {
 	kr := keyring.NewInMemory()
-
-	r.FaucetWallets = make(map[string]ibc.RelayerWallet, len(chains))
-	for name, c := range chains {
-		// The account name doesn't matter because the keyring is ephemeral,
-		// but within the keyring's lifecycle, the name must be unique.
-		accountName := "faucet-" + name
-
-		r.FaucetWallets[name] = buildWallet(kr, accountName, c.Config())
-	}
 
 	r.RelayerWallets = make(map[[2]string]ibc.RelayerWallet, len(relayerChains))
 	for relayer, cs := range relayerChains {
@@ -249,16 +249,12 @@ func (r *WorldResult) generateWallets(chains map[string]ibc.Chain, relayerChains
 
 // walletsByChain returns a mapping of chain names to a slice of wallets to create.
 func (r *WorldResult) walletsByChain() map[string][]ibc.RelayerWallet {
-	wallets := make(map[string][]ibc.RelayerWallet, len(r.FaucetWallets))
+	wallets := make(map[string][]ibc.RelayerWallet, len(r.RelayerWallets))
 
 	// Every chain has a faucet wallet, so this is a new slice for each chain.
-	for c, w := range r.FaucetWallets {
-		wallets[c] = []ibc.RelayerWallet{w}
-	}
-
 	for rc, w := range r.RelayerWallets {
 		c := rc[1]
-		wallets[c] = append(wallets[c], w)
+		wallets[c] = []ibc.RelayerWallet{w}
 	}
 
 	return wallets
