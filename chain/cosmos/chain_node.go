@@ -222,6 +222,9 @@ func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
 	}
 
 	buf := new(bytes.Buffer)
+	separator := strings.Repeat("*", 30) + "\n"
+	buf.WriteString("\n" + separator)
+	buf.WriteString(separator)
 	buf.WriteString("BLOCK INFO\n")
 	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
 	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))
@@ -242,6 +245,8 @@ func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
 
 		spew.Fprint(buf, txResp)
 	}
+	buf.WriteString(separator)
+	buf.WriteString(separator)
 
 	tn.logger().Debug(buf.String())
 }
