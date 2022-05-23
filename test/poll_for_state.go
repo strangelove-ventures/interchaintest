@@ -2,7 +2,7 @@ package test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/strangelove-ventures/ibctest/ibc"
 )
@@ -13,23 +13,27 @@ type ChainAcker interface {
 }
 
 func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight uint64, packet ibc.Packet) (zero ibc.PacketAcknowledgement, _ error) {
-	heightIdx := startHeight
-	for heightIdx <= maxHeight {
+	if maxHeight < startHeight {
+		panic("maxHeight must be greater than or equal to startHeight")
+	}
+	var (
+		cursor  = startHeight
+		lastErr error
+	)
+
+	for cursor <= maxHeight {
 		curHeight, err := chain.Height(ctx)
 		if err != nil {
-			// TODO
-			panic(err)
+			return zero, err
 		}
-		if heightIdx > curHeight {
+		if cursor > curHeight {
 			continue
 		}
 
-		fmt.Println("searching block", heightIdx) // TODO: delete me
-		acks, err := chain.Acknowledgements(ctx, heightIdx)
+		acks, err := chain.Acknowledgements(ctx, cursor)
 		if err != nil {
-			// TODO: capture error
-			fmt.Println("ERR:", err)
-			heightIdx++
+			lastErr = err
+			cursor++
 			continue
 		}
 		for _, ack := range acks {
@@ -37,7 +41,11 @@ func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight ui
 				return ack, nil
 			}
 		}
-		heightIdx++
+		cursor++
 	}
-	return zero, fmt.Errorf("packet %d not found", packet.Sequence)
+
+	if err := lastErr; err != nil {
+		return zero, err
+	}
+	return zero, errors.New("acknowledgement not found")
 }

@@ -2,8 +2,11 @@ package test
 
 import (
 	"context"
+	"errors"
+	"testing"
 
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/stretchr/testify/require"
 )
 
 type mockAcker struct {
@@ -11,9 +14,9 @@ type mockAcker struct {
 	HeightCallCount int
 	CurrentHeight   int
 
-	GotAckHeight uint64
-	Packet       ibc.PacketAcknowledgement
-	AckErr       error
+	GotAckHeights []uint64
+	Acks          []ibc.PacketAcknowledgement
+	AckErr        error
 }
 
 func (m *mockAcker) Height(ctx context.Context) (uint64, error) {
@@ -21,71 +24,66 @@ func (m *mockAcker) Height(ctx context.Context) (uint64, error) {
 		panic("nil context")
 	}
 	m.HeightCallCount++
-	m.CurrentHeight++
+	defer func() { m.CurrentHeight++ }()
 	return uint64(m.CurrentHeight), m.HeightErr
 }
 
-func (m *mockAcker) Acknowledgement(ctx context.Context, height uint64) (ibc.PacketAcknowledgement, error) {
+func (m *mockAcker) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
-	m.GotAckHeight = height
-	return m.Packet, m.AckErr
+	m.GotAckHeights = append(m.GotAckHeights, height)
+	return m.Acks, m.AckErr
 }
 
-//func TestPollForAck(t *testing.T) {
-//	ctx := context.Background()
-//
-//	t.Run("happy path", func(t *testing.T) {
-//		acker := mockAcker{Packet: ibc.PacketAcknowledgement{Acknowledgement: []byte(`test`)}}
-//		var cbCalled bool
-//		err := PollForAck(ctx, 10, &acker, func(ack ibc.PacketAcknowledgement) bool {
-//			require.Equal(t, acker.Packet, ack)
-//			cbCalled = true
-//			return true
-//		})
-//
-//		require.NoError(t, err)
-//		require.True(t, cbCalled)
-//		require.EqualValues(t, 1, acker.GotAckHeight)
-//	})
-//
-//	t.Run("height error", func(t *testing.T) {
-//		acker := mockAcker{HeightErr: errors.New("height go boom")}
-//		err := PollForAck(ctx, 10, &acker, func(ibc.PacketAcknowledgement) bool {
-//			panic("should not be called")
-//		})
-//
-//		require.Error(t, err)
-//		require.EqualError(t, err, "height go boom")
-//		require.Equal(t, 1, acker.HeightCallCount)
-//	})
-//
-//	t.Run("height timeout", func(t *testing.T) {
-//		acker := mockAcker{
-//			CurrentHeight: 10,
-//		}
-//		err := PollForAck(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
-//			return false
-//		})
-//
-//		require.Error(t, err)
-//		require.EqualError(t, err, "height timeout 4 reached")
-//		require.Equal(t, 5, acker.HeightCallCount)
-//	})
-//
-//	t.Run("height timeout with error", func(t *testing.T) {
-//		acker := mockAcker{
-//			CurrentHeight: 10,
-//			AckErr:        errors.New("ack go boom"),
-//		}
-//		err := PollForAck(ctx, 4, &acker, func(ibc.PacketAcknowledgement) bool {
-//			panic("should not be called")
-//		})
-//
-//		require.Error(t, err)
-//		require.EqualError(t, err, "height timeout 4 reached: ack go boom")
-//		require.Greater(t, acker.CurrentHeight, 10)
-//		require.Equal(t, 5, acker.HeightCallCount)
-//	})
-//}
+func TestPollForAck(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("happy path", func(t *testing.T) {
+		chain := mockAcker{CurrentHeight: 1, Acks: []ibc.PacketAcknowledgement{
+			{Packet: ibc.Packet{Sequence: 44, SourceChannel: "other"}},
+			{Packet: ibc.Packet{Sequence: 33, SourceChannel: "found"}},
+			{Packet: ibc.Packet{Sequence: 33, SourceChannel: "ignore"}},
+		}}
+		got, err := PollForAck(ctx, &chain, 3, 5, ibc.Packet{Sequence: 33, SourceChannel: "found"})
+
+		require.NoError(t, err)
+		require.Equal(t, "found", got.Packet.SourceChannel)
+		require.EqualValues(t, 33, got.Packet.Sequence)
+
+		require.Equal(t, []uint64{3}, chain.GotAckHeights)
+		require.Equal(t, 3, chain.HeightCallCount)
+	})
+
+	t.Run("height error", func(t *testing.T) {
+		chain := mockAcker{HeightErr: errors.New("height go boom")}
+		_, err := PollForAck(ctx, &chain, 3, 5, ibc.Packet{})
+
+		require.Error(t, err)
+		require.EqualError(t, err, "height go boom")
+	})
+
+	t.Run("find acks error", func(t *testing.T) {
+		chain := mockAcker{CurrentHeight: 1, AckErr: errors.New("ack go boom")}
+		_, err := PollForAck(ctx, &chain, 1, 10, ibc.Packet{})
+
+		require.Error(t, err)
+		require.EqualError(t, err, "ack go boom")
+		require.Len(t, chain.GotAckHeights, 10)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		chain := mockAcker{CurrentHeight: 1}
+		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{})
+
+		require.Error(t, err)
+		require.EqualError(t, err, "acknowledgement not found")
+		require.Equal(t, []uint64{1, 2, 3}, chain.GotAckHeights)
+	})
+
+	t.Run("invalid args", func(t *testing.T) {
+		require.Panics(t, func() {
+			_, _ = PollForAck(ctx, &mockAcker{}, 10, 1, ibc.Packet{})
+		})
+	})
+}
