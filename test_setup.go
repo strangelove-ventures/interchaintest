@@ -82,8 +82,8 @@ func StartChainPairAndRelayer(
 	}
 
 	w := NewWorld().
-		AddChain(srcChain, "src").
-		AddChain(dstChain, "dst").
+		AddChain(srcChain).
+		AddChain(dstChain).
 		AddRelayer(relayerImpl, "r").
 		AddLink(WorldLink{
 			Chain1:  srcChain,

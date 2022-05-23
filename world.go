@@ -38,9 +38,11 @@ type relayerPath struct {
 	Path    string
 }
 
-// AddChain adds the given chain with the given name to the World.
-// If the given chain or name already exists, AddChain panics.
-func (w *World) AddChain(chain ibc.Chain, name string) *World {
+// AddChain adds the given chain to the world.
+// If the given chain already exists,
+// or if another chain with the same configured name exists, AddChain panics.
+func (w *World) AddChain(chain ibc.Chain) *World {
+	name := chain.Config().Name
 	for c, n := range w.chains {
 		if c == chain {
 			panic(fmt.Errorf("chain %v was already added", c))
@@ -87,10 +89,10 @@ type WorldLink struct {
 // If any validation fails, AddLink panics.
 func (w *World) AddLink(link WorldLink) *World {
 	if _, exists := w.chains[link.Chain1]; !exists {
-		panic(fmt.Errorf("chain %v was never added to World", link.Chain1))
+		panic(fmt.Errorf("chain %s was never added to World", link.Chain1.Config().Name))
 	}
 	if _, exists := w.chains[link.Chain2]; !exists {
-		panic(fmt.Errorf("chain %v was never added to World", link.Chain2))
+		panic(fmt.Errorf("chain %s was never added to World", link.Chain2.Config().Name))
 	}
 	if _, exists := w.relayers[link.Relayer]; !exists {
 		panic(fmt.Errorf("relayer %v was never added to World", link.Relayer))
