@@ -601,30 +601,3 @@ func (c *CosmosChain) Acknowledgement(ctx context.Context, height uint64) (zero 
 		},
 	}, nil
 }
-
-// TimeoutPacket implements ibc.Chain
-func (c *CosmosChain) TimeoutPacket(ctx context.Context, height uint64) (zero ibc.PacketTimeout, _ error) {
-	var timeout *chanTypes.MsgTimeout
-	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
-		t, ok := msg.(*chanTypes.MsgTimeout)
-		if ok {
-			timeout = t
-		}
-		return ok
-	})
-	if err != nil {
-		return zero, fmt.Errorf("timeout at height %d: %w", height, err)
-	}
-	return ibc.PacketTimeout{
-		Packet: ibc.Packet{
-			Sequence:         timeout.Packet.Sequence,
-			SourcePort:       timeout.Packet.SourcePort,
-			SourceChannel:    timeout.Packet.SourceChannel,
-			DestPort:         timeout.Packet.DestinationPort,
-			DestChannel:      timeout.Packet.DestinationChannel,
-			Data:             timeout.Packet.Data,
-			TimeoutHeight:    timeout.Packet.TimeoutHeight.String(),
-			TimeoutTimestamp: ibc.Nanoseconds(timeout.Packet.TimeoutTimestamp),
-		},
-	}, nil
-}

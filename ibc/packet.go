@@ -3,6 +3,7 @@ package ibc
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"go.uber.org/multierr"
@@ -54,6 +55,11 @@ func (packet Packet) Validate() error {
 	return merr
 }
 
+// Equal returns true if both packets are equal.
+func (packet Packet) Equal(other Packet) bool {
+	return reflect.DeepEqual(packet, other)
+}
+
 // PacketAcknowledgement signals the packet was processed and accepted by the counterparty chain.
 // See: https://github.com/cosmos/ibc/blob/52a9094a5bc8c5275e25c19d0b2d9e6fd80ba31c/spec/core/ics-004-channel-and-packet-semantics/README.md#writing-acknowledgements
 type PacketAcknowledgement struct {
@@ -70,13 +76,7 @@ func (ack PacketAcknowledgement) Validate() error {
 	return multierr.Append(err, ack.Packet.Validate())
 }
 
-// PacketTimeout signals the packet timed out, via timestamp or height, on the counterparty chain.
-// Therefore, the packet was not successfully processed by the counterparty.
-type PacketTimeout struct {
-	Packet Packet
-}
-
-// Validate returns an error if the timeout is not well-formed.
-func (timeout PacketTimeout) Validate() error {
-	return timeout.Packet.Validate()
+// Equal returns true if both acknowledgments are equal.
+func (ack PacketAcknowledgement) Equal(other PacketAcknowledgement) bool {
+	return reflect.DeepEqual(ack, other)
 }

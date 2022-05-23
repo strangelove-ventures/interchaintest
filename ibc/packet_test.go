@@ -95,6 +95,26 @@ func TestPacket_Validate(t *testing.T) {
 	})
 }
 
+func TestPacket_Equal(t *testing.T) {
+	for _, tt := range []struct {
+		Left, Right Packet
+		WantEqual   bool
+	}{
+		{validPacket(), validPacket(), true},
+		{Packet{}, Packet{}, true},
+
+		{validPacket(), Packet{}, false},
+		{Packet{Data: []byte(`left`)}, Packet{Data: []byte(`two`)}, false},
+	} {
+		require.Equal(t, tt.WantEqual, tt.Left.Equal(tt.Right), tt)
+		require.Equal(t, tt.WantEqual, tt.Right.Equal(tt.Left), tt)
+
+		require.True(t, tt.Left.Equal(tt.Left))
+		require.True(t, tt.Right.Equal(tt.Right))
+
+	}
+}
+
 func TestPacketAcknowledgment_Validate(t *testing.T) {
 	var ack PacketAcknowledgement
 	err := ack.Validate()
@@ -110,10 +130,16 @@ func TestPacketAcknowledgment_Validate(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPacketTimeout_Validate(t *testing.T) {
-	var timeout PacketTimeout
-	require.Error(t, timeout.Validate())
+func TestPacketAcknowledgement_Equal(t *testing.T) {
+	var (
+		left  = PacketAcknowledgement{Acknowledgement: []byte(`left`), Packet: validPacket()}
+		right = PacketAcknowledgement{Acknowledgement: []byte(`right`), Packet: validPacket()}
+	)
+	require.False(t, left.Equal(right))
 
-	timeout.Packet = validPacket()
-	require.NoError(t, timeout.Validate())
+	left.Acknowledgement = right.Acknowledgement
+	require.True(t, left.Equal(right))
+
+	left.Packet = Packet{}
+	require.False(t, left.Equal(right))
 }
