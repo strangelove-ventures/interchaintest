@@ -186,8 +186,9 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	for r, chains := range ic.relayerChains() {
 		for _, c := range chains {
 			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
-			// TODO: handle relayer outside of Docker
-			// (the UseDockerNetwork() method is on the factory, not the relayer).
+			if !r.UseDockerNetwork() {
+				rpcAddr, grpcAddr = c.GetHostRPCAddress(), c.GetHostGRPCAddress()
+			}
 
 			chainName := ic.chains[c]
 			if err := r.AddChainConfiguration(ctx,
