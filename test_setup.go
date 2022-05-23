@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	testPathName      = "test-path"
+	testPathName = "test-path"
 
 	FaucetAccountKeyName = "faucet"
 )
@@ -92,13 +92,12 @@ func StartChainPairAndRelayer(
 		})
 
 	eRep := rep.RelayerExecReporter(t)
-	_, err := ic.Build(ctx, eRep, InterchainBuildOptions{
+	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
 		Pool:      pool,
 		NetworkID: networkID,
-	})
-	if err != nil {
+	}); err != nil {
 		return errResponse(err)
 	}
 
