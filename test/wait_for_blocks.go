@@ -45,11 +45,11 @@ func (h *height) WaitForDelta(ctx context.Context, delta int) error {
 
 func (h *height) UpdateOnce(ctx context.Context) error {
 	cur, err := h.Chain.Height(ctx)
-	if cur == 0 {
-		panic("height cannot be zero")
-	}
 	if err != nil {
 		return err
+	}
+	if cur == 0 {
+		panic("height cannot be zero")
 	}
 	h.update(cur)
 	return nil
