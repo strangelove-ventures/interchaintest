@@ -54,7 +54,7 @@ func GetAndFundTestUsers(
 
 		users = append(users, user)
 
-		err = chain.SendFunds(ctx, faucetAccountKeyName, ibc.WalletAmount{
+		err = chain.SendFunds(ctx, FaucetAccountKeyName, ibc.WalletAmount{
 			Address: user.Bech32Address(chainCfg.Bech32Prefix),
 			Amount:  amount,
 			Denom:   chainCfg.Denom,

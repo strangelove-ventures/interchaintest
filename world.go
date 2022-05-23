@@ -142,7 +142,7 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 	}
 
 	// Faucet addresses are created separately because they need to be explicitly added to the chains.
-	faucetAddresses, err := cs.CreateCommonAccount(ctx, faucetAccountKeyName)
+	faucetAddresses, err := cs.CreateCommonAccount(ctx, FaucetAccountKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create faucet accounts: %w", err)
 	}

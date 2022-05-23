@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	srcAccountKeyName    = "src-chain"
-	dstAccountKeyName    = "dst-chain"
-	faucetAccountKeyName = "faucet"
-	testPathName         = "test-path"
+	testPathName      = "test-path"
+
+	FaucetAccountKeyName = "faucet"
 )
 
 // DockerSetup sets up a new dockertest.Pool (which is a client connection
