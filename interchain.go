@@ -12,9 +12,9 @@ import (
 	"github.com/strangelove-ventures/ibctest/testreporter"
 )
 
-// World represents a full IBC network, encompassing a collection of
+// Interchain represents a full IBC network, encompassing a collection of
 // one or more chains, one or more relayer instances, and initial account configuration.
-type World struct {
+type Interchain struct {
 	chains   map[ibc.Chain]string
 	relayers map[ibc.Relayer]string
 
@@ -22,9 +22,12 @@ type World struct {
 	links map[relayerPath][2]ibc.Chain
 }
 
-// NewWorld returns a new World.
-func NewWorld() *World {
-	return &World{
+// NewInterchain returns a new Interchain.
+//
+// Typical usage involves multiple calls to AddChain, one or more calls to AddRelayer,
+// one or more calls to AddLink, and then finally a single call to Build.
+func NewInterchain() *Interchain {
+	return &Interchain{
 		chains:   make(map[ibc.Chain]string),
 		relayers: make(map[ibc.Relayer]string),
 
@@ -41,9 +44,9 @@ type relayerPath struct {
 // AddChain adds the given chain to the world.
 // If the given chain already exists,
 // or if another chain with the same configured name exists, AddChain panics.
-func (w *World) AddChain(chain ibc.Chain) *World {
+func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
 	name := chain.Config().Name
-	for c, n := range w.chains {
+	for c, n := range ic.chains {
 		if c == chain {
 			panic(fmt.Errorf("chain %v was already added", c))
 		}
@@ -52,13 +55,13 @@ func (w *World) AddChain(chain ibc.Chain) *World {
 		}
 	}
 
-	w.chains[chain] = name
-	return w
+	ic.chains[chain] = name
+	return ic
 }
 
-// AddRelayer adds the given relayer with the given name to the World.
-func (w *World) AddRelayer(relayer ibc.Relayer, name string) *World {
-	for r, n := range w.relayers {
+// AddRelayer adds the given relayer with the given name to the Interchain.
+func (ic *Interchain) AddRelayer(relayer ibc.Relayer, name string) *Interchain {
+	for r, n := range ic.relayers {
 		if r == relayer {
 			panic(fmt.Errorf("relayer %v was already added", r))
 		}
@@ -67,14 +70,14 @@ func (w *World) AddRelayer(relayer ibc.Relayer, name string) *World {
 		}
 	}
 
-	w.relayers[relayer] = name
-	return w
+	ic.relayers[relayer] = name
+	return ic
 }
 
-// WorldLink describes a link between two chains,
+// InterchainLink describes a link between two chains,
 // by specifying the chain names, the relayer name,
 // and the name of the path to create.
-type WorldLink struct {
+type InterchainLink struct {
 	// Chains involved.
 	Chain1, Chain2 ibc.Chain
 
@@ -85,17 +88,17 @@ type WorldLink struct {
 	Path string
 }
 
-// AddLink adds the given link to the World.
+// AddLink adds the given link to the Interchain.
 // If any validation fails, AddLink panics.
-func (w *World) AddLink(link WorldLink) *World {
-	if _, exists := w.chains[link.Chain1]; !exists {
-		panic(fmt.Errorf("chain %s was never added to World", link.Chain1.Config().Name))
+func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
+	if _, exists := ic.chains[link.Chain1]; !exists {
+		panic(fmt.Errorf("chain %s was never added to Interchain", link.Chain1.Config().Name))
 	}
-	if _, exists := w.chains[link.Chain2]; !exists {
-		panic(fmt.Errorf("chain %s was never added to World", link.Chain2.Config().Name))
+	if _, exists := ic.chains[link.Chain2]; !exists {
+		panic(fmt.Errorf("chain %s was never added to Interchain", link.Chain2.Config().Name))
 	}
-	if _, exists := w.relayers[link.Relayer]; !exists {
-		panic(fmt.Errorf("relayer %v was never added to World", link.Relayer))
+	if _, exists := ic.relayers[link.Relayer]; !exists {
+		panic(fmt.Errorf("relayer %v was never added to Interchain", link.Relayer))
 	}
 
 	if link.Chain1 == link.Chain2 {
@@ -107,16 +110,16 @@ func (w *World) AddLink(link WorldLink) *World {
 		Path:    link.Path,
 	}
 
-	if _, exists := w.links[key]; exists {
+	if _, exists := ic.links[key]; exists {
 		panic(fmt.Errorf("relayer %q already has a path named %q", key.Relayer, key.Path))
 	}
 
-	w.links[key] = [2]ibc.Chain{link.Chain1, link.Chain2}
-	return w
+	ic.links[key] = [2]ibc.Chain{link.Chain1, link.Chain2}
+	return ic
 }
 
-// WorldBuildOptions describes configuration for (*World).Build.
-type WorldBuildOptions struct {
+// InterchainBuildOptions describes configuration for (*Interchain).Build.
+type InterchainBuildOptions struct {
 	TestName string
 	HomeDir  string
 
@@ -124,15 +127,16 @@ type WorldBuildOptions struct {
 	NetworkID string
 }
 
-// Build creates the defined world.
-func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter, opts WorldBuildOptions) (*WorldResult, error) {
+// Build starts all the chains and configures the relayers associated with the Interchain.
+// It is the caller's responsibility to directly call StartRelayer on the relayer implementations.
+func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecReporter, opts InterchainBuildOptions) (*InterchainResult, error) {
 	// Collect the set of relayer-chain mappings.
-	relayerChains := w.relayerChains()
-	res := new(WorldResult)
-	res.generateWallets(relayerChains, w.chains, w.relayers)
+	relayerChains := ic.relayerChains()
+	res := new(InterchainResult)
+	res.generateWallets(relayerChains, ic.chains, ic.relayers)
 
-	cs := make(chainSet, len(w.chains))
-	for c := range w.chains {
+	cs := make(chainSet, len(ic.chains))
+	for c := range ic.chains {
 		cs[c] = struct{}{}
 	}
 
@@ -151,7 +155,7 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 	walletAmounts := make(map[ibc.Chain][]ibc.WalletAmount, len(cs))
 
 	// Add faucet for each chain first.
-	for c := range w.chains {
+	for c := range ic.chains {
 		// The values are nil at this point, so it is safe to directly assign the slice.
 		walletAmounts[c] = []ibc.WalletAmount{
 			{
@@ -164,10 +168,10 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 
 	// Then add all defined relayer wallets.
 	for c, wallets := range res.relayerWalletsByChain() {
-		for _, w := range wallets {
+		for _, ic := range wallets {
 			// The wallets already exist because every chain has a faucet, so append relayer wallets.
 			walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
-				Address: w.Address,
+				Address: ic.Address,
 				Denom:   c.Config().Denom,
 				Amount:  1_000_000_000_000, // Every wallet gets 1b units of denom.
 			})
@@ -179,19 +183,19 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 	}
 
 	// Every relayer needs configured to be aware of its chains.
-	for r, chains := range w.relayerChains() {
+	for r, chains := range ic.relayerChains() {
 		for _, c := range chains {
 			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
 			// TODO: handle relayer outside of Docker
 			// (the UseDockerNetwork() method is on the factory, not the relayer).
 
-			chainName := w.chains[c]
+			chainName := ic.chains[c]
 			if err := r.AddChainConfiguration(ctx,
 				rep,
 				c.Config(), chainName,
 				rpcAddr, grpcAddr,
 			); err != nil {
-				return nil, fmt.Errorf("failed to configure relayer %s for chain %s: %w", w.relayers[r], chainName, err)
+				return nil, fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}
 
 			if err := r.RestoreKey(ctx,
@@ -199,13 +203,13 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 				c.Config().ChainID, chainName,
 				res.RelayerWallets[RelayerChain{R: r, C: c}].Mnemonic,
 			); err != nil {
-				return nil, fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", w.relayers[r], chainName, err)
+				return nil, fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}
 		}
 	}
 
 	// For every relayer link, teach the relayer about the link and create the link.
-	for rp, chains := range w.links {
+	for rp, chains := range ic.links {
 		c0 := chains[0]
 		c1 := chains[1]
 		if err := rp.Relayer.GeneratePath(ctx, rep, c0.Config().ChainID, c1.Config().ChainID, rp.Path); err != nil {
@@ -226,9 +230,9 @@ func (w *World) Build(ctx context.Context, rep *testreporter.RelayerExecReporter
 	return res, nil
 }
 
-// WorldResult describes the addresses and mnemonics
-// of the relayer wallets created during (*World).Build.
-type WorldResult struct {
+// InterchainResult describes the addresses and mnemonics
+// of the relayer wallets created during (*Interchain).Build.
+type InterchainResult struct {
 	RelayerWallets map[RelayerChain]ibc.RelayerWallet
 }
 
@@ -239,7 +243,7 @@ type RelayerChain struct {
 }
 
 // generateWallets builds a wallet for each relayer-chain pairing.
-func (r *WorldResult) generateWallets(relayerChains map[ibc.Relayer][]ibc.Chain, chainNames map[ibc.Chain]string, relayerNames map[ibc.Relayer]string) {
+func (r *InterchainResult) generateWallets(relayerChains map[ibc.Relayer][]ibc.Chain, chainNames map[ibc.Chain]string, relayerNames map[ibc.Relayer]string) {
 	kr := keyring.NewInMemory()
 
 	r.RelayerWallets = make(map[RelayerChain]ibc.RelayerWallet, len(relayerChains))
@@ -255,7 +259,7 @@ func (r *WorldResult) generateWallets(relayerChains map[ibc.Relayer][]ibc.Chain,
 }
 
 // relayerWalletsByChain returns a mapping of chain names to a slice of relayer wallets to create.
-func (r *WorldResult) relayerWalletsByChain() map[ibc.Chain][]ibc.RelayerWallet {
+func (r *InterchainResult) relayerWalletsByChain() map[ibc.Chain][]ibc.RelayerWallet {
 	wallets := make(map[ibc.Chain][]ibc.RelayerWallet)
 
 	for rc, w := range r.RelayerWallets {
@@ -290,11 +294,11 @@ func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 
 // relayerChains builds a mapping of relayers to which chains they connect to.
 // The order of the chains is arbitrary.
-func (w *World) relayerChains() map[ibc.Relayer][]ibc.Chain {
+func (ic *Interchain) relayerChains() map[ibc.Relayer][]ibc.Chain {
 	// Use a Set of chain names first just to avoid deduplication.
-	uniq := make(map[ibc.Relayer]map[ibc.Chain]struct{}, len(w.relayers))
+	uniq := make(map[ibc.Relayer]map[ibc.Chain]struct{}, len(ic.relayers))
 
-	for rp, chains := range w.links {
+	for rp, chains := range ic.links {
 		r := rp.Relayer
 		if uniq[r] == nil {
 			uniq[r] = make(map[ibc.Chain]struct{}, 2) // Adding at least 2 chains on it.

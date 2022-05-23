@@ -80,11 +80,11 @@ func StartChainPairAndRelayer(
 		return nil, []ibc.ChannelOutput{}, err
 	}
 
-	w := NewWorld().
+	ic := NewInterchain().
 		AddChain(srcChain).
 		AddChain(dstChain).
 		AddRelayer(relayerImpl, "r").
-		AddLink(WorldLink{
+		AddLink(InterchainLink{
 			Chain1:  srcChain,
 			Chain2:  dstChain,
 			Relayer: relayerImpl,
@@ -92,7 +92,7 @@ func StartChainPairAndRelayer(
 		})
 
 	eRep := rep.RelayerExecReporter(t)
-	res, err := w.Build(ctx, eRep, WorldBuildOptions{
+	_, err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
 		Pool:      pool,
@@ -101,7 +101,6 @@ func StartChainPairAndRelayer(
 	if err != nil {
 		return errResponse(err)
 	}
-	_ = res // Probably need to pass the result addresses somewhere.
 
 	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChain.Config().ChainID)
 	if err != nil {
