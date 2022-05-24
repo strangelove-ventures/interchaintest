@@ -909,18 +909,22 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
 // interchain account.
 func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	msg := fmt.Sprintf(`{
-	"@type":"/cosmos.bank.v1beta1.MsgSend",
-	"from_address":"%s",
-	"to_address":"%s",
-	"amount": [
-	{
-		"denom": "%s",
-		"amount": "%d"
+	msg, err := json.Marshal(map[string]interface{}{
+		"@type":        "/cosmos.bank.v1beta1.MsgSend",
+		"from_address": fromAddr,
+		"to_address":   amount.Address,
+		"amount": []map[string]interface{}{
+			{
+				"denom":  amount.Denom,
+				"amount": amount.Amount,
+			},
+		},
+	})
+	if err != nil {
+		return err
 	}
-	]}`, fromAddr, amount.Address, amount.Denom, amount.Amount)
 
-	command := []string{tn.Chain.Config().Bin, "tx", "intertx", "submit", msg,
+	command := []string{tn.Chain.Config().Bin, "tx", "intertx", "submit", string(msg),
 		"--connection-id", connectionID,
 		"--from", fromAddr,
 		"--chain-id", tn.Chain.Config().ChainID,
