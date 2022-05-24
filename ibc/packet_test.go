@@ -129,3 +129,11 @@ func TestPacketAcknowledgment_Validate(t *testing.T) {
 	err = ack.Validate()
 	require.NoError(t, err)
 }
+
+func TestPacketTimeout_Validate(t *testing.T) {
+	var timeout PacketTimeout
+	require.Error(t, timeout.Validate())
+
+	timeout.Packet = validPacket()
+	require.NoError(t, timeout.Validate())
+}

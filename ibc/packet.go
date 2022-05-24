@@ -75,3 +75,15 @@ func (ack PacketAcknowledgement) Validate() error {
 	}
 	return multierr.Append(err, ack.Packet.Validate())
 }
+
+// PacketTimeout signals a packet was not processed by the counterparty chain.
+// Timeout conditions are height and timestamp.
+// See: https://github.com/cosmos/ibc/blob/52a9094a5bc8c5275e25c19d0b2d9e6fd80ba31c/spec/core/ics-004-channel-and-packet-semantics/README.md#timeouts
+type PacketTimeout struct {
+	Packet Packet
+}
+
+// Validate returns an error if the timeout is not well-formed.
+func (timeout PacketTimeout) Validate() error {
+	return timeout.Packet.Validate()
+}
