@@ -72,6 +72,9 @@ type Chain interface {
 	// Acknowledgements returns all acknowledgements in a block at height
 	Acknowledgements(ctx context.Context, height uint64) ([]PacketAcknowledgement, error)
 
+	// Timeouts returns all timeouts in a block at height
+	Timeouts(ctx context.Context, height uint64) ([]PacketTimeout, error)
+
 	// cleanup any resources that won't be cleaned up by container and test file teardown
 	// for example if containers use a different user, and need the files to be deleted inside the container
 	Cleanup(ctx context.Context) error
