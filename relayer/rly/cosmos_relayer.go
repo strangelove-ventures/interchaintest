@@ -111,6 +111,26 @@ func (relayer *CosmosRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecR
 	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
 }
 
+// CreateClients performs the client handshake steps necessary for creating a light client
+// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
+func (relayer *CosmosRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
+	command := []string{"rly", "tx", "clients", pathName,
+		"--home", relayer.NodeHome(),
+	}
+
+	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
+}
+
+// CreateConnections performs the connection handshake steps necessary for creating a connection
+// between the src and dst chains.
+func (relayer *CosmosRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
+	command := []string{"rly", "tx", "connection", pathName,
+		"--home", relayer.NodeHome(),
+	}
+
+	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
+}
+
 func (relayer *CosmosRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
 	command := []string{"rly", "q", "channels", chainID,
 		"--home", relayer.NodeHome(),
@@ -135,6 +155,38 @@ func (relayer *CosmosRelayer) GetChannels(ctx context.Context, rep ibc.RelayerEx
 	}
 
 	return channels, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+}
+
+// GetConnections returns a slice of IBC connection details composed of the details for each connection on a specified chain.
+func (relayer *CosmosRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ConnectionOutputs, error) {
+	command := []string{"rly", "q", "connections", chainID,
+		"--home", relayer.NodeHome(),
+	}
+	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, rep, command)
+	if err != nil {
+		return ibc.ConnectionOutputs{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	var connections ibc.ConnectionOutputs
+	for _, connection := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(connection) == "" {
+			continue
+		}
+
+		connectionOutput := ibc.ConnectionOutput{}
+		err := json.Unmarshal([]byte(connection), &connectionOutput)
+		if err != nil {
+			relayer.log.Error(
+				"Error parsing connection json",
+				zap.Error(err),
+			)
+
+			continue
+		}
+		connections = append(connections, &connectionOutput)
+	}
+
+	return connections, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 }
 
 // Implements Relayer interface

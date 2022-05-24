@@ -75,4 +75,14 @@ type Chain interface {
 	// cleanup any resources that won't be cleaned up by container and test file teardown
 	// for example if containers use a different user, and need the files to be deleted inside the container
 	Cleanup(ctx context.Context) error
+
+	// RegisterInterchainAccount will register an interchain account on behalf of the calling chain (controller chain)
+	// on the counterparty chain (the host chain).
+	RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error)
+
+	// SendICABankTransfer will send a bank transfer msg from the fromAddr to the specified address for the given amount and denom.
+	SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount WalletAmount) error
+
+	// QueryInterchainAccount will query the interchain account that was created on behalf of the specified address.
+	QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error)
 }
