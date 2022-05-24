@@ -60,6 +60,14 @@ type Relayer interface {
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.
 	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string) error
+
+	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
+	//
+	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
+	//
+	// Relayer implementations provided by the ibctest module will report true,
+	// but custom implementations may report false.
+	UseDockerNetwork() bool
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.

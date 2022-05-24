@@ -37,11 +37,6 @@ type RelayerFactory interface {
 	// Capabilities is an indication of the features this relayer supports.
 	// Tests for any unsupported features will be skipped rather than failed.
 	Capabilities() map[relayer.Capability]bool
-
-	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
-	//
-	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
-	UseDockerNetwork() bool
 }
 
 // builtinRelayerFactory is the built-in relayer factory that understands
@@ -106,9 +101,4 @@ func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
-}
-
-// UseDockerNetwork reports true.
-func (f builtinRelayerFactory) UseDockerNetwork() bool {
-	return true
 }

@@ -19,13 +19,9 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/simapp"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -109,19 +105,15 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
-	encoding := simapp.MakeTestEncodingConfig()
-	bankTypes.RegisterInterfaces(encoding.InterfaceRegistry)
-	ibctypes.RegisterInterfaces(encoding.InterfaceRegistry)
-	transfertypes.RegisterInterfaces(encoding.InterfaceRegistry)
 	return client.Context{
 		Client:            tn.Client,
 		ChainID:           tn.Chain.Config().ChainID,
-		InterfaceRegistry: encoding.InterfaceRegistry,
+		InterfaceRegistry: defaultEncoding.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
 		OutputFormat:      "json",
-		LegacyAmino:       encoding.Amino,
-		TxConfig:          encoding.TxConfig,
+		LegacyAmino:       defaultEncoding.Amino,
+		TxConfig:          defaultEncoding.TxConfig,
 	}
 }
 
@@ -212,15 +204,14 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	tn.maybeLogBlock(height)
+	tn.maybeLogBlock(ctx, height)
 	return uint64(height), nil
 }
 
-func (tn *ChainNode) maybeLogBlock(height int64) {
+func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
 	if !tn.logger().Core().Enabled(zap.DebugLevel) {
 		return
 	}
-	ctx := context.Background()
 	blockRes, err := tn.Client.Block(ctx, &height)
 	if err != nil {
 		tn.logger().Info("Failed to get block", zap.Error(err))
@@ -230,7 +221,12 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 	if len(txs) == 0 {
 		return
 	}
+
 	buf := new(bytes.Buffer)
+	separator := strings.Repeat("*", 30) + "\n"
+	buf.WriteString("\n" + separator)
+	buf.WriteString(separator)
+	buf.WriteString(tn.Chain.Config().ChainID + "\n")
 	buf.WriteString("BLOCK INFO\n")
 	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
 	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))
@@ -251,6 +247,8 @@ func (tn *ChainNode) maybeLogBlock(height int64) {
 
 		spew.Fprint(buf, txResp)
 	}
+	buf.WriteString(separator)
+	buf.WriteString(separator)
 
 	tn.logger().Debug(buf.String())
 }

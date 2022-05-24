@@ -459,3 +459,8 @@ func (relayer *CosmosRelayer) Bind() []string {
 func (relayer *CosmosRelayer) stopContainer() error {
 	return relayer.pool.Client.StopContainer(relayer.container.ID, uint(time.Second*30))
 }
+
+// UseDockerNetwork reports true because the cosmos relayer runs in docker.
+func (relayer *CosmosRelayer) UseDockerNetwork() bool {
+	return true
+}

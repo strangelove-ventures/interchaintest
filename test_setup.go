@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	srcAccountKeyName    = "src-chain"
-	dstAccountKeyName    = "dst-chain"
-	faucetAccountKeyName = "faucet"
-	testPathName         = "test-path"
+	testPathName = "test-path"
+
+	FaucetAccountKeyName = "faucet"
 )
 
 // DockerSetup sets up a new dockertest.Pool (which is a client connection
@@ -81,105 +80,28 @@ func StartChainPairAndRelayer(
 		return nil, []ibc.ChannelOutput{}, err
 	}
 
-	testName := t.Name()
-	cs := chainSet{srcChain, dstChain}
-	if err := cs.Initialize(testName, home, pool, networkID); err != nil {
-		return errResponse(err)
-	}
+	ic := NewInterchain().
+		AddChain(srcChain).
+		AddChain(dstChain).
+		AddRelayer(relayerImpl, "r").
+		AddLink(InterchainLink{
+			Chain1:  srcChain,
+			Chain2:  dstChain,
+			Relayer: relayerImpl,
+			Path:    testPathName,
+		})
 
-	srcChainCfg := srcChain.Config()
-	dstChainCfg := dstChain.Config()
-
-	// Create addresses out of band, because the chain genesis needs to know where to send initial funds.
-	addresses, mnemonics, err := cs.CreateKeys()
-	if err != nil {
-		return errResponse(err)
-	}
-
-	// Fund relayer account on src chain
-	srcRelayerWalletAmount := ibc.WalletAmount{
-		Address: addresses[0],
-		Denom:   srcChainCfg.Denom,
-		Amount:  10_000_000,
-	}
-
-	// Fund relayer account on dst chain
-	dstRelayerWalletAmount := ibc.WalletAmount{
-		Address: addresses[1],
-		Denom:   dstChainCfg.Denom,
-		Amount:  10_000_000,
-	}
-
-	// create faucets on both chains
-	faucetAccounts, err := cs.CreateCommonAccount(ctx, faucetAccountKeyName)
-	if err != nil {
-		return errResponse(err)
-	}
-
-	srcFaucetWalletAmount := ibc.WalletAmount{
-		Address: faucetAccounts[0],
-		Denom:   srcChainCfg.Denom,
-		Amount:  10_000_000_000_000,
-	}
-
-	dstFaucetWalletAmount := ibc.WalletAmount{
-		Address: faucetAccounts[1],
-		Denom:   dstChainCfg.Denom,
-		Amount:  10_000_000_000_000,
-	}
-
-	// start chains from genesis, wait until they are producing blocks
-	if err := cs.Start(ctx, testName, [][]ibc.WalletAmount{
-		{srcRelayerWalletAmount, srcFaucetWalletAmount},
-		{dstRelayerWalletAmount, dstFaucetWalletAmount},
+	eRep := rep.RelayerExecReporter(t)
+	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: networkID,
 	}); err != nil {
 		return errResponse(err)
 	}
 
-	// Now that the chains are running, we can start the relayer.
-	// (We couldn't do this earlier,
-	// because a non-docker relayer would not have had an address for the nodes.)
-	srcRPCAddr, srcGRPCAddr := srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()
-	dstRPCAddr, dstGRPCAddr := dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()
-	if !f.UseDockerNetwork() {
-		srcRPCAddr, srcGRPCAddr = srcChain.GetHostRPCAddress(), srcChain.GetHostGRPCAddress()
-		dstRPCAddr, dstGRPCAddr = dstChain.GetHostRPCAddress(), dstChain.GetHostGRPCAddress()
-	}
-
-	eRep := rep.RelayerExecReporter(t)
-
-	if err := relayerImpl.AddChainConfiguration(ctx,
-		eRep,
-		srcChainCfg, srcAccountKeyName,
-		srcRPCAddr, srcGRPCAddr,
-	); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for source chain: %w", err))
-	}
-
-	if err := relayerImpl.AddChainConfiguration(ctx,
-		eRep,
-		dstChainCfg, dstAccountKeyName,
-		dstRPCAddr, dstGRPCAddr,
-	); err != nil {
-		return errResponse(fmt.Errorf("failed to configure relayer for dest chain: %w", err))
-	}
-
-	if err := relayerImpl.RestoreKey(ctx, eRep, srcChain.Config().ChainID, srcAccountKeyName, mnemonics[0]); err != nil {
-		return errResponse(fmt.Errorf("failed to restore key to source chain: %w", err))
-	}
-	if err := relayerImpl.RestoreKey(ctx, eRep, dstChain.Config().ChainID, dstAccountKeyName, mnemonics[1]); err != nil {
-		return errResponse(fmt.Errorf("failed to restore key to dest chain: %w", err))
-	}
-
-	if err := relayerImpl.GeneratePath(ctx, eRep, srcChainCfg.ChainID, dstChainCfg.ChainID, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to generate path: %w", err))
-	}
-
-	if err := relayerImpl.LinkPath(ctx, eRep, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to create link in relayer: %w", err))
-	}
-
-	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChainCfg.ChainID)
+	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChain.Config().ChainID)
 	if err != nil {
 		return errResponse(fmt.Errorf("failed to get channels: %w", err))
 	}

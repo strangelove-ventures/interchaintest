@@ -85,6 +85,10 @@ func NewPenumbraChain(testName string, chainConfig ibc.ChainConfig, numValidator
 	}
 }
 
+func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+	panic("implement me")
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) Config() ibc.ChainConfig {
 	return c.cfg
@@ -398,14 +402,6 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	// Wait for 5 blocks before considering the chains "started"
 	err := test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 	return err
-}
-
-func (c *PenumbraChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (ibc.PacketAcknowledgement, error) {
-	panic("not implemented")
-}
-
-func (c *PenumbraChain) GetPacketSequence(ctx context.Context, txHash string) (uint64, error) {
-	panic("not implemented")
 }
 
 func (c *PenumbraChain) Cleanup(ctx context.Context) error {
