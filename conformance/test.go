@@ -49,6 +49,7 @@ import (
 const (
 	userFaucetFund = int64(10_000_000_000)
 	testCoinAmount = int64(1_000_000)
+	pollHeightMax  = uint64(100)
 )
 
 type RelayerTestCase struct {
@@ -349,7 +350,7 @@ func testPacketRelaySuccess(
 	// fetch src ibc transfer tx
 	srcTx := testCase.TxCache[0]
 
-	srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
+	srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 	req.NoError(err, "failed to get acknowledgement on source chain")
 	req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
@@ -381,7 +382,7 @@ func testPacketRelaySuccess(
 	// fetch src ibc transfer tx
 	dstTx := testCase.TxCache[1]
 
-	dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
+	dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 	req.NoError(err, "failed to get acknowledgement on destination chain")
 	req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
@@ -432,7 +433,7 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	srcTx := testCase.TxCache[0]
 
-	timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
+	timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 	req.NoError(err, "failed to get timeout packet on source chain")
 	req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
@@ -459,7 +460,7 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	dstTx := testCase.TxCache[1]
 
-	timeout, err = test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
+	timeout, err = test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 	req.NoError(err, "failed to get timeout packet on destination chain")
 	req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
 
