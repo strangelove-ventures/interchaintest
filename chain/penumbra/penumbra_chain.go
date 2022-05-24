@@ -89,6 +89,10 @@ func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]
 	panic("implement me")
 }
 
+func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+	panic("implement me")
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) Config() ibc.ChainConfig {
 	return c.cfg

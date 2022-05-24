@@ -14,7 +14,7 @@ type blockClient interface {
 
 // rangeBlockMessages iterates through all a block's transactions and each transaction's messages yielding to f.
 // Return true from f to stop iteration.
-func rangeBlockMessages(ctx context.Context, client blockClient, height uint64, f func(sdk.Msg) bool) error {
+func rangeBlockMessages(ctx context.Context, client blockClient, height uint64, done func(sdk.Msg) bool) error {
 	h := int64(height)
 	block, err := client.Block(ctx, &h)
 	if err != nil {
@@ -26,7 +26,7 @@ func rangeBlockMessages(ctx context.Context, client blockClient, height uint64, 
 			return fmt.Errorf("decode tendermint tx: %w", err)
 		}
 		for _, m := range tx.GetMsgs() {
-			if ok := f(m); ok {
+			if ok := done(m); ok {
 				return nil
 			}
 		}

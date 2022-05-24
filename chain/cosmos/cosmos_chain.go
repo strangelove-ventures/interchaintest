@@ -622,3 +622,35 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 	}
 	return ibcAcks, nil
 }
+
+// Timeouts implements ibc.Chain, returning all timeouts in block at height
+func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+	var timeouts []*chanTypes.MsgTimeout
+	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
+		found, ok := msg.(*chanTypes.MsgTimeout)
+		if ok {
+			timeouts = append(timeouts, found)
+		}
+		return false
+	})
+	if err != nil {
+		return nil, fmt.Errorf("find timeouts at height %d: %w", height, err)
+	}
+	ibcTimeouts := make([]ibc.PacketTimeout, len(timeouts))
+	for i, ack := range timeouts {
+		ack := ack
+		ibcTimeouts[i] = ibc.PacketTimeout{
+			Packet: ibc.Packet{
+				Sequence:         ack.Packet.Sequence,
+				SourcePort:       ack.Packet.SourcePort,
+				SourceChannel:    ack.Packet.SourceChannel,
+				DestPort:         ack.Packet.DestinationPort,
+				DestChannel:      ack.Packet.DestinationChannel,
+				Data:             ack.Packet.Data,
+				TimeoutHeight:    ack.Packet.TimeoutHeight.String(),
+				TimeoutTimestamp: ibc.Nanoseconds(ack.Packet.TimeoutTimestamp),
+			},
+		}
+	}
+	return ibcTimeouts, nil
+}

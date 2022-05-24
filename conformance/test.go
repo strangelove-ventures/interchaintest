@@ -284,11 +284,6 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 
-	// Wait for both chains to produce 10 blocks per test case.
-	// This is long to allow for intermittent retries inside the relayer.
-	// TODO(nix 05-23-2022): Remove once we poll for timeouts, otherwise timeout tests fail
-	req.NoError(test.WaitForBlocks(ctx, 10*len(testCases), srcChain, dstChain), "failed to wait for blocks")
-
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run(testCase.Config.Name, func(t *testing.T) {
@@ -355,8 +350,8 @@ func testPacketRelaySuccess(
 	srcTx := testCase.TxCache[0]
 
 	srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
-	req.NoError(err, "failed to get acknowledgement from source chain")
-	req.NoError(srcAck.Validate(), "invalid source acknowledgement")
+	req.NoError(err, "failed to get acknowledgement on source chain")
+	req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
@@ -387,8 +382,8 @@ func testPacketRelaySuccess(
 	dstTx := testCase.TxCache[1]
 
 	dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
-	req.NoError(err, "failed to get acknowledgement from destination chain")
-	req.NoError(dstAck.Validate(), "invalid destination acknowledgement")
+	req.NoError(err, "failed to get acknowledgement on destination chain")
+	req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
@@ -437,6 +432,10 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	srcTx := testCase.TxCache[0]
 
+	timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
+	req.NoError(err, "failed to get timeout packet on source chain")
+	req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
+
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
@@ -445,7 +444,7 @@ func testPacketRelayFail(
 	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
-	req.NoError(err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from destination chain")
 
 	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
@@ -460,6 +459,10 @@ func testPacketRelayFail(
 	// fetch src ibc transfer tx
 	dstTx := testCase.TxCache[1]
 
+	timeout, err = test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
+	req.NoError(err, "failed to get timeout packet on destination chain")
+	req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
+
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
 	srcIbcDenom := dstDenomTrace.IBCDenom()
@@ -468,7 +471,7 @@ func testPacketRelayFail(
 	req.NoError(err, "failed to get balance from source chain")
 
 	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
-	req.NoError(err, "failed to get balance from dest chain")
+	req.NoError(err, "failed to get balance from destination chain")
 
 	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
