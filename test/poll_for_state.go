@@ -20,42 +20,12 @@ type ChainAcker interface {
 // the chain has yet to produce blocks for the target min/max height range. Polling delays until heights exist
 // on the chain. Returns an error if acknowledgement not found or problems getting height or acknowledgements.
 func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight uint64, packet ibc.Packet) (ibc.PacketAcknowledgement, error) {
-	if maxHeight < startHeight {
-		panic("maxHeight must be greater than or equal to startHeight")
+	poller := blockPoller{CurrentHeight: chain.Height, Acker: chain}
+	found, err := poller.doPoll(ctx, startHeight, maxHeight, packet)
+	if err != nil {
+		return ibc.PacketAcknowledgement{}, err
 	}
-	var (
-		cursor  = startHeight
-		lastErr error
-		zero    ibc.PacketAcknowledgement
-	)
-
-	for cursor <= maxHeight {
-		curHeight, err := chain.Height(ctx)
-		if err != nil {
-			return zero, err
-		}
-		if cursor > curHeight {
-			continue
-		}
-
-		acks, err := chain.Acknowledgements(ctx, cursor)
-		if err != nil {
-			lastErr = err
-			cursor++
-			continue
-		}
-		for _, ack := range acks {
-			if packet.Equal(ack.Packet) {
-				return ack, nil
-			}
-		}
-		cursor++
-	}
-
-	if err := lastErr; err != nil {
-		return zero, err
-	}
-	return zero, ErrNotFound
+	return found.(ibc.PacketAcknowledgement), nil
 }
 
 // ChainTimeouter is a chain that can get its timeouts at a specified height
@@ -64,41 +34,84 @@ type ChainTimeouter interface {
 	Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error)
 }
 
+// PollForTimeout attempts to find a timeout containing a packet equal to the packet argument.
+// Otherwise, works identically to PollForAck.
 func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxHeight uint64, packet ibc.Packet) (ibc.PacketTimeout, error) {
+	poller := blockPoller{CurrentHeight: chain.Height, Timeouter: chain}
+	found, err := poller.doPoll(ctx, startHeight, maxHeight, packet)
+	if err != nil {
+		return ibc.PacketTimeout{}, err
+	}
+	return found.(ibc.PacketTimeout), nil
+}
+
+type blockPoller struct {
+	CurrentHeight func(ctx context.Context) (uint64, error)
+	Acker         ChainAcker
+	Timeouter     ChainTimeouter
+}
+
+func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, packet ibc.Packet) (interface{}, error) {
 	if maxHeight < startHeight {
 		panic("maxHeight must be greater than or equal to startHeight")
 	}
 	var (
 		cursor  = startHeight
-		lastErr error
-		zero    ibc.PacketTimeout
+		findErr error
+		found   interface{}
 	)
-
 	for cursor <= maxHeight {
-		curHeight, err := chain.Height(ctx)
+		curHeight, err := p.CurrentHeight(ctx)
 		if err != nil {
-			return zero, err
+			return nil, err
 		}
 		if cursor > curHeight {
 			continue
 		}
 
-		timeouts, err := chain.Timeouts(ctx, cursor)
-		if err != nil {
-			lastErr = err
+		switch {
+		case p.Acker != nil:
+			found, findErr = p.findAck(ctx, cursor, packet)
+		case p.Timeouter != nil:
+			found, findErr = p.findTimeout(ctx, cursor, packet)
+		default:
+			panic("poller misconfiguration")
+		}
+
+		if findErr != nil {
 			cursor++
 			continue
 		}
-		for _, t := range timeouts {
-			if packet.Equal(t.Packet) {
-				return t, nil
-			}
-		}
-		cursor++
-	}
 
-	if err := lastErr; err != nil {
+		return found, nil
+	}
+	return nil, findErr
+}
+
+func (p blockPoller) findAck(ctx context.Context, height uint64, packet ibc.Packet) (ibc.PacketAcknowledgement, error) {
+	var zero ibc.PacketAcknowledgement
+	acks, err := p.Acker.Acknowledgements(ctx, height)
+	if err != nil {
 		return zero, err
+	}
+	for _, ack := range acks {
+		if ack.Packet.Equal(packet) {
+			return ack, nil
+		}
+	}
+	return zero, ErrNotFound
+}
+
+func (p blockPoller) findTimeout(ctx context.Context, height uint64, packet ibc.Packet) (ibc.PacketTimeout, error) {
+	var zero ibc.PacketTimeout
+	timeouts, err := p.Timeouter.Timeouts(ctx, height)
+	if err != nil {
+		return zero, err
+	}
+	for _, t := range timeouts {
+		if t.Packet.Equal(packet) {
+			return t, nil
+		}
 	}
 	return zero, ErrNotFound
 }
