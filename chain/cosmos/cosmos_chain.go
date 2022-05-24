@@ -618,7 +618,7 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 		return false
 	})
 	if err != nil {
-		return nil, fmt.Errorf("find acknowledgements at height %d: %w", height, err)
+		return nil, fmt.Errorf("find timeouts at height %d: %w", height, err)
 	}
 	ibcTimeouts := make([]ibc.PacketTimeout, len(timeouts))
 	for i, ack := range timeouts {
