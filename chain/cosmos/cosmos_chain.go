@@ -234,41 +234,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) GetPacketSequence(_ context.Context, txHash string) (uint64, error) {
-	txResp, err := c.getTransaction(txHash)
-	if err != nil {
-		return 0, err
-	}
-	seqStr, ok := tendermint.AttributeValue(txResp.Events, "send_packet", "packet_sequence")
-	if !ok {
-		return 0, fmt.Errorf("attribute value does not exist for %s", txHash)
-	}
-	seq, err := strconv.Atoi(seqStr)
-	return uint64(seq), err
-}
-
-func (c *CosmosChain) GetPacketAcknowledgement(ctx context.Context, portID, channelID string, seq uint64) (found ibc.PacketAcknowledgement, _ error) {
-	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return found, err
-	}
-	defer conn.Close()
-
-	client := chanTypes.NewQueryClient(conn)
-	resp, err := client.PacketAcknowledgement(ctx, &chanTypes.QueryPacketAcknowledgementRequest{
-		PortId:    portID,
-		ChannelId: channelID,
-		Sequence:  seq,
-	})
-	if err != nil {
-		return found, err
-	}
-	found.Data = resp.Acknowledgement
-	found.Sequence = seq
-	return found, nil
-}
-
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
 	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 }
@@ -604,6 +569,40 @@ func (c *CosmosChain) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// Height implements ibc.Chain
 func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)
+}
+
+// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
+func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+	var acks []*chanTypes.MsgAcknowledgement
+	err := rangeBlockMessages(ctx, c.getFullNode().Client, height, func(msg types.Msg) bool {
+		found, ok := msg.(*chanTypes.MsgAcknowledgement)
+		if ok {
+			acks = append(acks, found)
+		}
+		return false
+	})
+	if err != nil {
+		return nil, fmt.Errorf("find acknowledgements at height %d: %w", height, err)
+	}
+	ibcAcks := make([]ibc.PacketAcknowledgement, len(acks))
+	for i, ack := range acks {
+		ack := ack
+		ibcAcks[i] = ibc.PacketAcknowledgement{
+			Acknowledgement: ack.Acknowledgement,
+			Packet: ibc.Packet{
+				Sequence:         ack.Packet.Sequence,
+				SourcePort:       ack.Packet.SourcePort,
+				SourceChannel:    ack.Packet.SourceChannel,
+				DestPort:         ack.Packet.DestinationPort,
+				DestChannel:      ack.Packet.DestinationChannel,
+				Data:             ack.Packet.Data,
+				TimeoutHeight:    ack.Packet.TimeoutHeight.String(),
+				TimeoutTimestamp: ibc.Nanoseconds(ack.Packet.TimeoutTimestamp),
+			},
+		}
+	}
+	return ibcAcks, nil
 }

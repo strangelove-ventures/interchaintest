@@ -65,8 +65,3 @@ const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
 )
-
-type PacketAcknowledgement struct {
-	Data     []byte
-	Sequence uint64
-}

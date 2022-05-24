@@ -3,6 +3,7 @@ package ibc
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"go.uber.org/multierr"
@@ -30,29 +31,47 @@ type Packet struct {
 // Validate returns an error if the packet is not well-formed.
 func (packet Packet) Validate() error {
 	var merr error
-	addErr := func(err error) {
-		merr = multierr.Append(merr, err)
-	}
 	if packet.Sequence == 0 {
-		addErr(errors.New("packet sequence cannot be 0"))
+		multierr.AppendInto(&merr, errors.New("packet sequence cannot be 0"))
 	}
 	if err := host.PortIdentifierValidator(packet.SourcePort); err != nil {
-		addErr(fmt.Errorf("invalid packet source port: %w", err))
+		multierr.AppendInto(&merr, fmt.Errorf("invalid packet source port: %w", err))
 	}
 	if err := host.ChannelIdentifierValidator(packet.SourceChannel); err != nil {
-		addErr(fmt.Errorf("invalid packet source channel: %w", err))
+		multierr.AppendInto(&merr, fmt.Errorf("invalid packet source channel: %w", err))
 	}
 	if err := host.PortIdentifierValidator(packet.DestPort); err != nil {
-		addErr(fmt.Errorf("invalid packet destination port: %w", err))
+		multierr.AppendInto(&merr, fmt.Errorf("invalid packet destination port: %w", err))
 	}
 	if err := host.ChannelIdentifierValidator(packet.DestChannel); err != nil {
-		addErr(fmt.Errorf("invalid packet destination channel: %w", err))
+		multierr.AppendInto(&merr, fmt.Errorf("invalid packet destination channel: %w", err))
 	}
 	if len(packet.TimeoutHeight) == 0 && packet.TimeoutTimestamp <= 0 {
-		addErr(errors.New("packet timeout height and packet timeout timestamp cannot both be 0"))
+		multierr.AppendInto(&merr, errors.New("packet timeout height and packet timeout timestamp cannot both be 0"))
 	}
 	if len(packet.Data) == 0 {
-		addErr(errors.New("packet data bytes cannot be empty"))
+		multierr.AppendInto(&merr, errors.New("packet data bytes cannot be empty"))
 	}
 	return merr
+}
+
+// Equal returns true if both packets are equal.
+func (packet Packet) Equal(other Packet) bool {
+	return reflect.DeepEqual(packet, other)
+}
+
+// PacketAcknowledgement signals the packet was processed and accepted by the counterparty chain.
+// See: https://github.com/cosmos/ibc/blob/52a9094a5bc8c5275e25c19d0b2d9e6fd80ba31c/spec/core/ics-004-channel-and-packet-semantics/README.md#writing-acknowledgements
+type PacketAcknowledgement struct {
+	Packet          Packet
+	Acknowledgement []byte // an opaque value defined by the application logic
+}
+
+// Validate returns an error if the acknowledgement is not well-formed.
+func (ack PacketAcknowledgement) Validate() error {
+	var err error
+	if len(ack.Acknowledgement) == 0 {
+		multierr.AppendInto(&err, errors.New("packet acknowledgement cannot be empty"))
+	}
+	return multierr.Append(err, ack.Packet.Validate())
 }

@@ -284,9 +284,9 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 
-	// TODO poll for acks inside of each testCase `.Config.Test` method instead of just waiting for blocks here
 	// Wait for both chains to produce 10 blocks per test case.
 	// This is long to allow for intermittent retries inside the relayer.
+	// TODO(nix 05-23-2022): Remove once we poll for timeouts, otherwise timeout tests fail
 	req.NoError(test.WaitForBlocks(ctx, 10*len(testCases), srcChain, dstChain), "failed to wait for blocks")
 
 	for _, testCase := range testCases {
@@ -354,6 +354,10 @@ func testPacketRelaySuccess(
 	// fetch src ibc transfer tx
 	srcTx := testCase.TxCache[0]
 
+	srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
+	req.NoError(err, "failed to get acknowledgement from source chain")
+	req.NoError(srcAck.Validate(), "invalid source acknowledgement")
+
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
@@ -370,11 +374,6 @@ func testPacketRelaySuccess(
 	req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
 	req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
 
-	seq, err := srcChain.GetPacketSequence(ctx, srcTx.TxHash)
-	req.NoError(err)
-	_, err = srcChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	req.NoError(err)
-
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
@@ -386,6 +385,10 @@ func testPacketRelaySuccess(
 	dstInitialBalance = userFaucetFund
 	// fetch src ibc transfer tx
 	dstTx := testCase.TxCache[1]
+
+	dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
+	req.NoError(err, "failed to get acknowledgement from destination chain")
+	req.NoError(dstAck.Validate(), "invalid destination acknowledgement")
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
@@ -402,11 +405,6 @@ func testPacketRelaySuccess(
 
 	req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
 	req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
-
-	seq, err = dstChain.GetPacketSequence(ctx, dstTx.TxHash)
-	req.NoError(err)
-	_, err = dstChain.GetPacketAcknowledgement(ctx, channels[0].PortID, channels[0].ChannelID, seq)
-	req.NoError(err)
 
 	//[END] assert on destination to source transfer
 }
