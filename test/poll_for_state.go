@@ -7,6 +7,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/ibc"
 )
 
+var ErrNotFound = errors.New("not found")
+
 // ChainAcker is a chain that can get its acknowledgements at a specified height
 type ChainAcker interface {
 	ChainHeighter
@@ -53,5 +55,50 @@ func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight ui
 	if err := lastErr; err != nil {
 		return zero, err
 	}
-	return zero, errors.New("acknowledgement not found")
+	return zero, ErrNotFound
+}
+
+// ChainTimeouter is a chain that can get its timeouts at a specified height
+type ChainTimeouter interface {
+	ChainHeighter
+	Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error)
+}
+
+func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxHeight uint64, packet ibc.Packet) (ibc.PacketTimeout, error) {
+	if maxHeight < startHeight {
+		panic("maxHeight must be greater than or equal to startHeight")
+	}
+	var (
+		cursor  = startHeight
+		lastErr error
+		zero    ibc.PacketTimeout
+	)
+
+	for cursor <= maxHeight {
+		curHeight, err := chain.Height(ctx)
+		if err != nil {
+			return zero, err
+		}
+		if cursor > curHeight {
+			continue
+		}
+
+		timeouts, err := chain.Timeouts(ctx, cursor)
+		if err != nil {
+			lastErr = err
+			cursor++
+			continue
+		}
+		for _, t := range timeouts {
+			if packet.Equal(t.Packet) {
+				return t, nil
+			}
+		}
+		cursor++
+	}
+
+	if err := lastErr; err != nil {
+		return zero, err
+	}
+	return zero, ErrNotFound
 }
