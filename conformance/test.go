@@ -434,7 +434,7 @@ func testPacketRelayFail(
 
 	timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+50, srcTx.Packet)
 	req.NoError(err, "failed to get timeout packet on source chain")
-	req.NoError(timeout.Validate(), "invalid timeout packet for source chain")
+	req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
@@ -461,7 +461,7 @@ func testPacketRelayFail(
 
 	timeout, err = test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+50, dstTx.Packet)
 	req.NoError(err, "failed to get timeout packet on destination chain")
-	req.NoError(timeout.Validate(), "invalid timeout packet for destination chain")
+	req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
 
 	// get ibc denom for dst denom on src chain
 	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
