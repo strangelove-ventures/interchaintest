@@ -102,7 +102,7 @@ func (p blockPoller) findAck(ctx context.Context, height uint64, packet ibc.Pack
 		return zero, err
 	}
 	for _, ack := range acks {
-		p.pollErr.pushSearched(ack)
+		p.pollErr.PushSearched(ack)
 		if ack.Packet.Equal(packet) {
 			return ack, nil
 		}
@@ -117,7 +117,7 @@ func (p blockPoller) findTimeout(ctx context.Context, height uint64, packet ibc.
 		return zero, err
 	}
 	for _, t := range timeouts {
-		p.pollErr.pushSearched(t)
+		p.pollErr.PushSearched(t)
 		if t.Packet.Equal(packet) {
 			return t, nil
 		}
@@ -135,7 +135,7 @@ func (pe *pollError) SetErr(err error) {
 	pe.error = err
 }
 
-func (pe *pollError) pushSearched(packet interface{}) {
+func (pe *pollError) PushSearched(packet interface{}) {
 	pe.searchedPackets = append(pe.searchedPackets, spew.Sdump(packet))
 }
 
