@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
@@ -131,14 +132,6 @@ type pollError struct {
 	searchedPackets []string
 }
 
-func (pe *pollError) Error() string {
-	searched := strings.Join(pe.searchedPackets, "\n")
-	if len(searched) == 0 {
-		searched = "(none)"
-	}
-	target := spew.Sdump(pe.targetPacket)
-	return fmt.Sprintf("%s\n- target packet:\n%s\n- searched:\n%+v", pe.error, target, searched)
-}
 func (pe *pollError) SetErr(err error) {
 	pe.error = err
 }
@@ -149,4 +142,19 @@ func (pe *pollError) pushSearched(packet interface{}) {
 
 func (pe *pollError) Unwrap() error {
 	return pe.error
+}
+
+func (pe *pollError) Format(s fmt.State, verb rune) {
+	if verb != 'v' && !s.Flag('+') {
+		io.WriteString(s, pe.error.Error())
+		return
+	}
+
+	searched := strings.Join(pe.searchedPackets, "\n")
+	if len(searched) == 0 {
+		searched = "(none)"
+	}
+	target := spew.Sdump(pe.targetPacket)
+	final := fmt.Sprintf("%s\n- target packet:\n%s\n- searched:\n%+v", pe.error, target, searched)
+	io.WriteString(s, final)
 }

@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -91,11 +92,14 @@ func TestPollForAck(t *testing.T) {
 		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{Sequence: 5})
 
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "not found")
-		require.Regexp(t, `(?s)target packet:.*Sequence.*5`, err.Error())
-		require.Contains(t, err.Error(), "searched:")
+		require.EqualError(t, err, "not found")
 		require.ErrorIs(t, err, ErrNotFound)
 		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
+
+		longErr := fmt.Sprintf("%+v", err)
+		require.Contains(t, longErr, "not found")
+		require.Regexp(t, `(?s)target packet:.*Sequence.*5`, longErr)
+		require.Contains(t, longErr, "searched:")
 	})
 
 	t.Run("invalid args", func(t *testing.T) {
