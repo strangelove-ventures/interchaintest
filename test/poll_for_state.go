@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
@@ -146,7 +145,7 @@ func (pe *pollError) Unwrap() error {
 
 func (pe *pollError) Format(s fmt.State, verb rune) {
 	if verb != 'v' && !s.Flag('+') {
-		io.WriteString(s, pe.error.Error())
+		fmt.Fprint(s, pe.error.Error())
 		return
 	}
 
@@ -156,5 +155,5 @@ func (pe *pollError) Format(s fmt.State, verb rune) {
 	}
 	target := spew.Sdump(pe.targetPacket)
 	final := fmt.Sprintf("%s\n- target packet:\n%s\n- searched:\n%+v", pe.error, target, searched)
-	io.WriteString(s, final)
+	fmt.Fprint(s, final)
 }
