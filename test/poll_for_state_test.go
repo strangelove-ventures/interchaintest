@@ -92,7 +92,7 @@ func TestPollForAck(t *testing.T) {
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not found")
-		require.Regexp(t, `target packet:.*Sequence.*5`, err.Error())
+		require.Regexp(t, `(?s)target packet:.*Sequence.*5`, err.Error())
 		require.Contains(t, err.Error(), "searched:")
 		require.ErrorIs(t, err, ErrNotFound)
 		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)

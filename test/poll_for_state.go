@@ -137,7 +137,7 @@ func (pe *pollError) Error() string {
 		searched = "(none)"
 	}
 	target := spew.Sdump(pe.targetPacket)
-	return fmt.Sprintf("error: %s\n- target packet: %s\n- searched:\n%+v", pe.error, target, searched)
+	return fmt.Sprintf("%s\n- target packet:\n%s\n- searched:\n%+v", pe.error, target, searched)
 }
 func (pe *pollError) SetErr(err error) {
 	pe.error = err
