@@ -1,32 +1,36 @@
 package rly
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
-	"testing"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"go.uber.org/zap"
 )
 
+// CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
-	container *docker.Container
-	home      string
-	log       *zap.Logger
-	networkID string
-	pool      *dockertest.Pool
-	testName  string
+	// Embedded DockerRelayer so commands just work.
+	*relayer.DockerRelayer
+}
+
+func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string) *CosmosRelayer {
+	c := commander{log: log}
+	r := &CosmosRelayer{
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c),
+	}
+
+	if err := os.MkdirAll(r.Dir(), 0755); err != nil {
+		panic(fmt.Errorf("failed to initialize directory for relayer: %w", err))
+	}
+
+	return r
 }
 
 type CosmosRelayerChainConfigValue struct {
@@ -84,99 +88,151 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	}
 }
 
-func NewCosmosRelayerFromChains(t *testing.T, pool *dockertest.Pool, networkID string, home string, logger *zap.Logger) *CosmosRelayer {
-	rly := &CosmosRelayer{
-		pool:      pool,
-		networkID: networkID,
-		home:      home,
-		testName:  t.Name(),
-		log:       logger.With(zap.String("test", t.Name()), zap.String("image", ContainerImage+":"+ContainerVersion)),
+// commander satisfies relayer.RelayerCommander.
+type commander struct {
+	log *zap.Logger
+}
+
+func (commander) Name() string {
+	return "rly"
+}
+
+func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
+	return []string{
+		"rly", "chains", "add", "-f", containerFilePath,
+		"--home", homeDir,
 	}
-	rly.MkDir()
-	return rly
 }
 
-func (relayer *CosmosRelayer) Name() string {
-	return fmt.Sprintf("rly-%s", dockerutil.SanitizeContainerName(relayer.testName))
-}
-
-func (relayer *CosmosRelayer) HostName(pathName string) string {
-	return dockerutil.CondenseHostName(fmt.Sprintf("%s-%s", relayer.Name(), pathName))
-}
-
-func (relayer *CosmosRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	command := []string{"rly", "tx", "link", pathName,
-		"--home", relayer.NodeHome(),
+func (commander) AddKey(chainID, keyName, homeDir string) []string {
+	return []string{
+		"rly", "keys", "add", chainID, keyName,
+		"--home", homeDir,
 	}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
 }
 
-// CreateClients performs the client handshake steps necessary for creating a light client
-// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
-func (relayer *CosmosRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	command := []string{"rly", "tx", "clients", pathName,
-		"--home", relayer.NodeHome(),
+func (commander) ClearQueue(pathName, channelID, homeDir string) []string {
+	return []string{
+		"rly", "tx", "relay-pkts", pathName, channelID,
+		"--home", homeDir,
 	}
-
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
 }
 
-// CreateConnections performs the connection handshake steps necessary for creating a connection
-// between the src and dst chains.
-func (relayer *CosmosRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	command := []string{"rly", "tx", "connection", pathName,
-		"--home", relayer.NodeHome(),
+func (commander) CreateClients(pathName, homeDir string) []string {
+	return []string{
+		"rly", "tx", "clients", pathName,
+		"--home", homeDir,
 	}
-
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
 }
 
-func (relayer *CosmosRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
-	command := []string{"rly", "q", "channels", chainID,
-		"--home", relayer.NodeHome(),
+func (commander) CreateConnections(pathName, homeDir string) []string {
+	return []string{
+		"rly", "tx", "connection", pathName,
+		"--home", homeDir,
 	}
-	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, rep, command)
+}
+
+func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+	return []string{
+		"rly", "paths", "new", srcChainID, dstChainID, pathName,
+		"--home", homeDir,
+	}
+}
+
+func (commander) GetChannels(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "channels", chainID,
+		"--home", homeDir,
+	}
+}
+
+func (commander) GetConnections(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "connections", chainID,
+		"--home", homeDir,
+	}
+}
+
+func (commander) LinkPath(pathName, homeDir string) []string {
+	return []string{
+		"rly", "tx", "link", pathName,
+		"--home", homeDir,
+	}
+}
+
+func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string {
+	return []string{
+		"rly", "keys", "restore", chainID, keyName, mnemonic,
+		"--home", homeDir,
+	}
+}
+
+func (commander) StartRelayer(pathName, homeDir string) []string {
+	return []string{
+		"rly", "start", pathName, "--debug",
+		"--home", homeDir,
+	}
+}
+
+func (commander) UpdateClients(pathName, homeDir string) []string {
+	return []string{
+		"rly", "tx", "update-clients", pathName,
+		"--home", homeDir,
+	}
+}
+
+func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {
-		return []ibc.ChannelOutput{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return nil, err
 	}
-	channels := []ibc.ChannelOutput{}
+	return jsonBytes, nil
+}
+
+func (commander) ContainerImage() string {
+	return ContainerImage
+}
+
+func (commander) ContainerVersion() string {
+	return ContainerVersion
+}
+
+func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error) {
+	var wallet ibc.RelayerWallet
+	err := json.Unmarshal([]byte(stdout), &wallet)
+	return wallet, err
+}
+
+func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
+	var channels []ibc.ChannelOutput
 	channelSplit := strings.Split(stdout, "\n")
 	for _, channel := range channelSplit {
 		if strings.TrimSpace(channel) == "" {
 			continue
 		}
-		channelOutput := ibc.ChannelOutput{}
+		var channelOutput ibc.ChannelOutput
 		err := json.Unmarshal([]byte(channel), &channelOutput)
 		if err != nil {
-			relayer.log.Error("Parse channels json", zap.Error(err))
+			c.log.Error("Failed to parse channels json", zap.Error(err))
 			continue
 		}
 		channels = append(channels, channelOutput)
 	}
 
-	return channels, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	return channels, nil
 }
 
-// GetConnections returns a slice of IBC connection details composed of the details for each connection on a specified chain.
-func (relayer *CosmosRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ConnectionOutputs, error) {
-	command := []string{"rly", "q", "connections", chainID,
-		"--home", relayer.NodeHome(),
-	}
-	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, rep, command)
-	if err != nil {
-		return ibc.ConnectionOutputs{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
-	}
-
+func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
 	var connections ibc.ConnectionOutputs
 	for _, connection := range strings.Split(stdout, "\n") {
 		if strings.TrimSpace(connection) == "" {
 			continue
 		}
 
-		connectionOutput := ibc.ConnectionOutput{}
-		err := json.Unmarshal([]byte(connection), &connectionOutput)
-		if err != nil {
-			relayer.log.Error(
+		var connectionOutput ibc.ConnectionOutput
+		if err := json.Unmarshal([]byte(connection), &connectionOutput); err != nil {
+			c.log.Error(
 				"Error parsing connection json",
 				zap.Error(err),
 			)
@@ -186,281 +242,12 @@ func (relayer *CosmosRelayer) GetConnections(ctx context.Context, rep ibc.Relaye
 		connections = append(connections, &connectionOutput)
 	}
 
-	return connections, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	return connections, nil
 }
 
-// Implements Relayer interface
-func (relayer *CosmosRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	return relayer.createNodeContainer(pathName)
-}
-
-// Implements Relayer interface
-func (relayer *CosmosRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecReporter) error {
-	if err := relayer.stopContainer(); err != nil {
-		return err
+func (commander) Init(homeDir string) []string {
+	return []string{
+		"rly", "config", "init",
+		"--home", homeDir,
 	}
-	finishedAt := time.Now()
-
-	stdoutBuf := new(bytes.Buffer)
-	stderrBuf := new(bytes.Buffer)
-	_ = relayer.pool.Client.Logs(docker.LogsOptions{
-		Context:      ctx,
-		Container:    relayer.container.ID,
-		OutputStream: stdoutBuf,
-		ErrorStream:  stderrBuf,
-		Stdout:       true,
-		Stderr:       true,
-		Tail:         "50",
-		Follow:       false,
-		Timestamps:   false,
-	})
-
-	stdout := stdoutBuf.String()
-	stderr := stderrBuf.String()
-
-	rep.TrackRelayerExec(
-		relayer.container.Name,
-		relayer.container.Args, // Is this correct for the command?
-		stdout, stderr,
-		relayer.container.State.ExitCode, // Is this accurate?
-		relayer.container.Created,
-		finishedAt,
-		nil,
-	)
-
-	relayer.log.
-		Debug(fmt.Sprintf("Stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout, stderr),
-			zap.String("container_id", relayer.container.ID),
-			zap.String("container", relayer.container.Name),
-		)
-
-	return relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: relayer.container.ID})
-}
-
-// Implements Relayer interface
-func (relayer *CosmosRelayer) ClearQueue(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelID string) error {
-	command := []string{"rly", "tx", "relay-pkts", pathName, channelID, "--home", relayer.NodeHome()}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
-}
-
-// Implements Relayer interface
-func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
-	if _, err := os.Stat(fmt.Sprintf("%s/config", relayer.Dir())); os.IsNotExist(err) {
-		command := []string{"rly", "config", "init",
-			"--home", relayer.NodeHome(),
-		}
-		exitCode, stdout, stderr, err := relayer.NodeJob(ctx, rep, command)
-		if err != nil {
-			return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
-		}
-	}
-
-	chainConfigFile := fmt.Sprintf("%s.json", chainConfig.ChainID)
-
-	chainConfigLocalFilePath := fmt.Sprintf("%s/%s", relayer.Dir(), chainConfigFile)
-	chainConfigContainerFilePath := fmt.Sprintf("%s/%s", relayer.NodeHome(), chainConfigFile)
-
-	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(chainConfig, keyName, rpcAddr, grpcAddr)
-	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
-	if err != nil {
-		return err
-	}
-
-	if err := os.WriteFile(chainConfigLocalFilePath, jsonBytes, 0644); err != nil { //nolint
-		return err
-	}
-
-	command := []string{"rly", "chains", "add", "-f", chainConfigContainerFilePath,
-		"--home", relayer.NodeHome(),
-	}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
-}
-
-// Implements Relayer interface
-func (relayer *CosmosRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
-	command := []string{"rly", "paths", "new", srcChainID, dstChainID, pathName,
-		"--home", relayer.NodeHome(),
-	}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
-}
-
-func (relayer *CosmosRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	command := []string{"rly", "tx", "update-clients", pathName,
-		"--home", relayer.NodeHome(),
-	}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
-}
-
-func (relayer *CosmosRelayer) createNodeContainer(pathName string) error {
-	err := relayer.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: ContainerImage,
-		Tag:        ContainerVersion,
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		return err
-	}
-	containerName := fmt.Sprintf("%s-%s", relayer.Name(), pathName)
-	cmd := []string{"rly", "start", pathName, "--home", relayer.NodeHome(), "--debug"}
-	relayer.log.
-		Info("Running command", zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", containerName),
-		)
-	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: containerName,
-		Config: &docker.Config{
-			User:       dockerutil.GetDockerUserString(),
-			Cmd:        cmd,
-			Entrypoint: []string{},
-			Hostname:   relayer.HostName(pathName),
-			Image:      fmt.Sprintf("%s:%s", ContainerImage, ContainerVersion),
-			Labels:     map[string]string{"ibc-test": relayer.testName},
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				relayer.networkID: {},
-			},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:      relayer.Bind(),
-			AutoRemove: false,
-		},
-	})
-	if err != nil {
-		return err
-	}
-	relayer.container = cont
-	return relayer.pool.Client.StartContainer(relayer.container.ID, nil)
-}
-
-// NodeJob run a container for a specific job and block until the container exits
-// NOTE: on job containers generate random name
-func (relayer *CosmosRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string) (exitCode int, stdout, stderr string, err error) {
-	startedAt := time.Now()
-	var container string
-	defer func() {
-		rep.TrackRelayerExec(
-			container,
-			cmd,
-			stdout, stderr,
-			exitCode,
-			startedAt, time.Now(),
-			err,
-		)
-	}()
-
-	err = relayer.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: ContainerImage,
-		Tag:        ContainerVersion,
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		return 1, "", "", err
-	}
-	counter, _, _, _ := runtime.Caller(1)
-	caller := runtime.FuncForPC(counter).Name()
-	funcName := strings.Split(caller, ".")
-	container = fmt.Sprintf("%s-%s-%s", relayer.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
-
-	relayer.log.
-		Info("Running command", zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", container),
-		)
-
-	cont, err := relayer.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: container,
-		Config: &docker.Config{
-			User: dockerutil.GetDockerUserString(),
-			// random hostname is fine here, just for setup
-			Hostname:   dockerutil.CondenseHostName(container),
-			Image:      fmt.Sprintf("%s:%s", ContainerImage, ContainerVersion),
-			Cmd:        cmd,
-			Entrypoint: []string{},
-			Labels:     map[string]string{"ibc-test": relayer.testName},
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				relayer.networkID: {},
-			},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:      relayer.Bind(),
-			AutoRemove: false,
-		},
-	})
-	if err != nil {
-		return 1, "", "", err
-	}
-	if err = relayer.pool.Client.StartContainer(cont.ID, nil); err != nil {
-		return 1, "", "", err
-	}
-	exitCode, err = relayer.pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	stdoutBuf := new(bytes.Buffer)
-	stderrBuf := new(bytes.Buffer)
-	_ = relayer.pool.Client.Logs(docker.LogsOptions{
-		Context:      ctx,
-		Container:    cont.ID,
-		OutputStream: stdoutBuf,
-		ErrorStream:  stderrBuf,
-		Stdout:       true, Stderr: true,
-		Tail: "50", Follow: false,
-		Timestamps: false,
-	})
-	stdout = stdoutBuf.String()
-	stderr = stderrBuf.String()
-	_ = relayer.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
-	relayer.log.
-		Debug(fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout, stderr),
-			zap.String("container", container),
-		)
-	return exitCode, stdout, stderr, err
-}
-
-// CreateKey creates a key in the keyring backend test for the given node
-func (relayer *CosmosRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
-	command := []string{"rly", "keys", "restore", chainID, keyName, mnemonic,
-		"--home", relayer.NodeHome(),
-	}
-	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
-}
-
-func (relayer *CosmosRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.RelayerWallet, error) {
-	command := []string{"rly", "keys", "add", chainID, keyName,
-		"--home", relayer.NodeHome(),
-	}
-	exitCode, stdout, stderr, err := relayer.NodeJob(ctx, rep, command)
-	wallet := ibc.RelayerWallet{}
-	if err != nil {
-		return wallet, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
-	}
-	err = json.Unmarshal([]byte(stdout), &wallet)
-	return wallet, err
-}
-
-// Dir is the directory where the test node files are stored
-func (relayer *CosmosRelayer) Dir() string {
-	return fmt.Sprintf("%s/%s/", relayer.home, relayer.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (relayer *CosmosRelayer) MkDir() {
-	if err := os.MkdirAll(relayer.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
-func (relayer *CosmosRelayer) NodeHome() string {
-	return "/tmp/relayer"
-}
-
-// Bind returns the home folder bind point for running the node
-func (relayer *CosmosRelayer) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", relayer.Dir(), relayer.NodeHome())}
-}
-
-func (relayer *CosmosRelayer) stopContainer() error {
-	return relayer.pool.Client.StopContainer(relayer.container.ID, uint(time.Second*30))
-}
-
-// UseDockerNetwork reports true because the cosmos relayer runs in docker.
-func (relayer *CosmosRelayer) UseDockerNetwork() bool {
-	return true
 }
