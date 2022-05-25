@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/strangelove-ventures/ibctest/ibc"
 )
 
@@ -58,9 +59,9 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 	if maxHeight < startHeight {
 		panic("maxHeight must be greater than or equal to startHeight")
 	}
-	p.pollErr = &pollError{}
-	cursor := startHeight
+	p.pollErr = &pollError{targetPacket: packet}
 
+	cursor := startHeight
 	for cursor <= maxHeight {
 		curHeight, err := p.CurrentHeight(ctx)
 		if err != nil {
@@ -135,14 +136,15 @@ func (pe *pollError) Error() string {
 	if len(searched) == 0 {
 		searched = "(none)"
 	}
-	return fmt.Sprintf("error: %v\n- target packet: %+v\n- searched:\n%+v", pe.error, pe.targetPacket, searched)
+	target := spew.Sdump(pe.targetPacket)
+	return fmt.Sprintf("error: %s\n- target packet: %s\n- searched:\n%+v", pe.error, target, searched)
 }
 func (pe *pollError) SetErr(err error) {
 	pe.error = err
 }
 
 func (pe *pollError) pushSearched(packet interface{}) {
-	pe.searchedPackets = append(pe.searchedPackets, fmt.Sprintf("%+v", packet))
+	pe.searchedPackets = append(pe.searchedPackets, spew.Sdump(packet))
 }
 
 func (pe *pollError) Unwrap() error {

@@ -88,11 +88,11 @@ func TestPollForAck(t *testing.T) {
 		chain := mockChain{CurrentHeight: 1, FoundAcks: []ibc.PacketAcknowledgement{
 			{Packet: ibc.Packet{Sequence: 10}},
 		}}
-		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{Sequence: 1})
+		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{Sequence: 5})
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not found")
-		require.Contains(t, err.Error(), "target packet: ")
+		require.Regexp(t, `target packet:.*Sequence.*5`, err.Error())
 		require.Contains(t, err.Error(), "searched:")
 		require.ErrorIs(t, err, ErrNotFound)
 		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
