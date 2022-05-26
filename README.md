@@ -10,16 +10,16 @@ ibctest orchestrates Go tests that utilize Docker containers for multiple
 You may focus on a specific tests using the `-test.run=<regex>` flag.
 
 ```shell
-ibctest -test.run=/<test category>/<chain combination>/<relayer>/<test name>
+ibctest -test.run=/<test category>/<chain combination>/<relayer>/<test subcategory>/<test name>
 ```
 
 If you want to focus on a specific test:
 
 ```shell
-ibctest -test.run=////relay_packet
-ibctest -test.run=////no_timeout
-ibctest -test.run=////height_timeout
-ibctest -test.run=////timestamp_timeout
+ibctest -test.run=/////relay_packet
+ibctest -test.run=/////no_timeout
+ibctest -test.run=/////height_timeout
+ibctest -test.run=/////timestamp_timeout
 ```
 
 Example of narrowing your focus even more:
@@ -32,7 +32,7 @@ ibctest -test.run=///rly/
 ibctest -test.run=//gaia/rly/
 
 # only run no_timeout test for Go relayer and gaia chains
-ibctest -test.run=//gaia/rly/no_timeout
+ibctest -test.run=//gaia/rly/conformance/no_timeout
 ```
 
 ## Contributing
