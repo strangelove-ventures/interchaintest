@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"

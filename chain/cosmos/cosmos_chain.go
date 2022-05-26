@@ -21,7 +21,7 @@ import (
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/strangelove-ventures/ibctest/chain/tendermint"
+	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
