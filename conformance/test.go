@@ -229,7 +229,12 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 								TestRelayerSetup(t, cf, rf, rep)
 							})
 
-							TestChainPair(t, cf, rf, rep)
+							t.Run("conformance", func(t *testing.T) {
+								rep.TrackTest(t)
+								rep.TrackParallel(t)
+
+								TestChainPair(t, cf, rf, rep)
+							})
 						})
 					}
 				})
