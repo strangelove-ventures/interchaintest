@@ -7,7 +7,7 @@ import (
 )
 
 func TestMigrate(t *testing.T) {
-	db := connectDB()
+	db := emptyDB()
 	defer db.Close()
 
 	err := Migrate(db)
