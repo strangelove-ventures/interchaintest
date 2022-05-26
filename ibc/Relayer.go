@@ -61,6 +61,9 @@ type Relayer interface {
 	// between the src and dst chains.
 	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string) error
 
+	// CreateChannel creates a channel on the given path with the provided options.
+	CreateChannel(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
+
 	// UseDockerNetwork reports whether the relayer is run in the same docker network as the other chains.
 	//
 	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
@@ -68,6 +71,16 @@ type Relayer interface {
 	// Relayer implementations provided by the ibctest module will report true,
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
+}
+
+// CreateChannelOptions contains the configuration for creating a channel.
+type CreateChannelOptions struct {
+	SourcePortName string
+	DestPortName   string
+
+	Order string
+
+	Version string
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.
