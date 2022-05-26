@@ -1,3 +1,4 @@
+// Package rly provides an interface to the cosmos relayer running in a Docker container.
 package rly
 
 import (
@@ -14,8 +15,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"go.uber.org/zap"
 )

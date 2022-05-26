@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 )

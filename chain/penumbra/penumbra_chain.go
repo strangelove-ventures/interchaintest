@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/strangelove-ventures/ibctest/chain/tendermint"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
+	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 
 	"github.com/ory/dockertest/v3"

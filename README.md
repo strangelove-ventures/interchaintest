@@ -1,5 +1,7 @@
 # ibctest
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/ibctest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/ibctest@main)
+
 ibctest orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
