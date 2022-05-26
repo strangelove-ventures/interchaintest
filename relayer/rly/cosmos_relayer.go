@@ -1,3 +1,4 @@
+// Package rly provides an interface to the cosmos relayer running in a Docker container.
 package rly
 
 import (
