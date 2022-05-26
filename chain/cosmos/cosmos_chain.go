@@ -22,8 +22,8 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/chain/tendermint"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -588,7 +588,7 @@ func (c *CosmosChain) SendICABankTransfer(ctx context.Context, connectionID, fro
 // QueryInterchainAccount will query the interchain account that was created on behalf of the specified address.
 func (c *CosmosChain) QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error) {
 	return c.getFullNode().QueryICA(ctx, connectionID, address)
-}  
+}
 
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
