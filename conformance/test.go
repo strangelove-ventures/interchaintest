@@ -222,6 +222,13 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 							rep.TrackParameters(t, rf.Labels(), cf.Labels())
 							rep.TrackParallel(t)
 
+							t.Run("relayer setup", func(t *testing.T) {
+								rep.TrackTest(t)
+								rep.TrackParallel(t)
+
+								TestRelayerSetup(t, cf, rf, rep)
+							})
+
 							TestChainPair(t, cf, rf, rep)
 						})
 					}

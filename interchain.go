@@ -132,6 +132,11 @@ type InterchainBuildOptions struct {
 
 	Pool      *dockertest.Pool
 	NetworkID string
+
+	// If set, ic.Build does not create paths or links in the relayer,
+	// but it does still configure keys and wallets for declared relayer-chain links.
+	// This is useful for tests that need lower-level access to configuring relayers.
+	SkipPathCreation bool
 }
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
@@ -170,9 +175,13 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return err
 	}
 
+	// Some tests may want to configure the relayer from a lower level,
+	// but still have wallets configured.
+	if opts.SkipPathCreation {
+		return nil
+	}
+
 	// For every relayer link, teach the relayer about the link and create the link.
-	// TODO: this could be skipped with an appropriate flag on InterchainBuildOptions,
-	// if a test wanted to exercise a relayer from a lower level than LinkPath.
 	for rp, chains := range ic.links {
 		c0 := chains[0]
 		c1 := chains[1]
