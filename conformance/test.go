@@ -49,7 +49,7 @@ import (
 const (
 	userFaucetFund = int64(10_000_000_000)
 	testCoinAmount = int64(1_000_000)
-	pollHeightMax  = uint64(100)
+	pollHeightMax  = uint64(50)
 )
 
 type RelayerTestCase struct {

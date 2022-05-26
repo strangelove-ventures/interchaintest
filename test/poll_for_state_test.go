@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -80,18 +81,25 @@ func TestPollForAck(t *testing.T) {
 		_, err := PollForAck(ctx, &chain, 1, 10, ibc.Packet{})
 
 		require.Error(t, err)
-		require.EqualError(t, err, "ack go boom")
+		require.Contains(t, err.Error(), "ack go boom")
 		require.Len(t, chain.GotHeights, 10)
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		chain := mockChain{CurrentHeight: 1}
-		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{})
+		chain := mockChain{CurrentHeight: 1, FoundAcks: []ibc.PacketAcknowledgement{
+			{Packet: ibc.Packet{Sequence: 10}},
+		}}
+		_, err := PollForAck(ctx, &chain, 1, 3, ibc.Packet{Sequence: 5})
 
 		require.Error(t, err)
 		require.EqualError(t, err, "not found")
 		require.ErrorIs(t, err, ErrNotFound)
 		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
+
+		longErr := fmt.Sprintf("%+v", err)
+		require.Contains(t, longErr, "not found")
+		require.Regexp(t, `(?s)target packet:.*Sequence.*5`, longErr)
+		require.Contains(t, longErr, "searched:")
 	})
 
 	t.Run("invalid args", func(t *testing.T) {
@@ -133,7 +141,7 @@ func TestPollForTimeout(t *testing.T) {
 		_, err := PollForTimeout(ctx, &chain, 1, 10, ibc.Packet{})
 
 		require.Error(t, err)
-		require.EqualError(t, err, "timeout go boom")
+		require.Contains(t, err.Error(), "timeout go boom")
 		require.Len(t, chain.GotHeights, 10)
 	})
 
@@ -142,7 +150,6 @@ func TestPollForTimeout(t *testing.T) {
 		_, err := PollForTimeout(ctx, &chain, 1, 3, ibc.Packet{})
 
 		require.Error(t, err)
-		require.EqualError(t, err, "not found")
 		require.ErrorIs(t, err, ErrNotFound)
 		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
 	})
