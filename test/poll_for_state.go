@@ -143,6 +143,7 @@ func (pe *pollError) Unwrap() error {
 	return pe.error
 }
 
+// Format is expected to be used by testify/require which prints errors via %+v
 func (pe *pollError) Format(s fmt.State, verb rune) {
 	if verb != 'v' && !s.Flag('+') {
 		fmt.Fprint(s, pe.error.Error())
