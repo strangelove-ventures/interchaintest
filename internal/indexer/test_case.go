@@ -7,24 +7,13 @@ import (
 )
 
 type TestCase struct {
-	db      *sql.DB
-	name    string
-	created time.Time
+	db *sql.DB
+	id int64
 }
 
-func NewTestCase(db *sql.DB, testName string) *TestCase {
-	return &TestCase{
-		created: time.Now().UTC(),
-		db:      db,
-		name:    testName,
-	}
-}
-
-// The identifier is a generalized unique id for the chain. In Cosmos, the chain id or chain name would be
-// appropriate, for example.
-func (tc *TestCase) WithChain(ctx context.Context, identifier string) (*Chain, error) {
-	now := tc.created.Format(time.RFC3339)
-	res, err := tc.db.ExecContext(ctx, `INSERT OR REPLACE INTO test_case(name, created_at) VALUES(?, ?)`, tc.name, now)
+func CreateTestCase(ctx context.Context, db *sql.DB, testName string) (*TestCase, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	res, err := db.ExecContext(ctx, `INSERT INTO test_case(name, created_at) VALUES(?, ?)`, testName, now)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +21,19 @@ func (tc *TestCase) WithChain(ctx context.Context, identifier string) (*Chain, e
 	if err != nil {
 		return nil, err
 	}
-	_, err = tc.db.ExecContext(ctx, `INSERT INTO chain(identifier,test_id) VALUES(?, ?)`, identifier, id)
+	return &TestCase{
+		db: db,
+		id: id,
+	}, nil
+}
+
+// The identifier is a generalized unique id for the chain. In Cosmos, the chain id or chain name would be
+// appropriate, for example.
+func (tc *TestCase) AddChain(ctx context.Context, identifier string) (*Chain, error) {
+	_, err := tc.db.ExecContext(ctx, `INSERT INTO chain(identifier,test_id) VALUES(?, ?)`, identifier, tc.id)
+	if err != nil {
+		return nil, err
+	}
 	return &Chain{
 		identifier: identifier,
 		db:         tc.db,
