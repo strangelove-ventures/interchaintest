@@ -1,9 +1,16 @@
 package trace
 
-import "database/sql"
+import (
+	"context"
+	"database/sql"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func emptyDB() *sql.DB {
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := ConnectDB(context.Background(), ":memory:", 3)
 	if err != nil {
 		panic(err)
 	}
@@ -16,4 +23,15 @@ func migratedDB() *sql.DB {
 		panic(err)
 	}
 	return db
+}
+
+func TestConnectDB(t *testing.T) {
+	f, err := os.CreateTemp("", t.Name())
+	require.NoError(t, err)
+	defer f.Close()
+	defer os.RemoveAll(f.Name())
+
+	db, err := ConnectDB(context.Background(), f.Name(), 10)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
 }

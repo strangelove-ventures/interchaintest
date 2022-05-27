@@ -6,16 +6,17 @@ import "database/sql"
 // Migrate migrates db in an idempotent manner.
 // If an error is returned, it's acceptable to delete the database file and start over.
 func Migrate(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
+	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK ( length(name) >0 ),
     git_sha TEXT NOT NULL CHECK ( length(git_sha) >0 ),
     created_at TEXT NOT NULL,
     UNIQUE(name,created_at)
 )`)
-	if err != nil {
-		return err
-	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS chain (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     identifier TEXT NOT NULL CHECK ( length(identifier) >0 ),
@@ -30,7 +31,8 @@ func Migrate(db *sql.DB) error {
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     height INTEGER NOT NULL CHECK (length(height > 0)),
     chain_id INTEGER,
-    FOREIGN KEY(chain_id) REFERENCES chain(id) ON DELETE CASCADE
+    FOREIGN KEY(chain_id) REFERENCES chain(id) ON DELETE CASCADE,
+    UNIQUE(height,chain_id)
 )`)
 	if err != nil {
 		return err
