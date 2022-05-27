@@ -9,6 +9,7 @@ func Migrate(db *sql.DB) error {
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK ( length(name) >0 ),
+    git_sha TEXT NOT NULL CHECK ( length(git_sha) >0 ),
     created_at TEXT NOT NULL,
     UNIQUE(name,created_at)
 )`)
