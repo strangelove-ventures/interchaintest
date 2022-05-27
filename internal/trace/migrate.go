@@ -2,10 +2,18 @@ package trace
 
 import "database/sql"
 
-// TODO: indexes?
 // Migrate migrates db in an idempotent manner.
-// If an error is returned, it's acceptable to delete the database file and start over.
+// If an error is returned, it's acceptable to delete the database and start over.
+// The basic ERD is as follows:
+//  ┌────────────────────┐          ┌────────────────────┐         ┌────────────────────┐          ┌────────────────────┐
+//  │                    │          │                    │         │                    │          │                    │
+//  │                    │         ╱│                    │        ╱│                    │         ╱│                    │
+//  │     Test Case      │───────┼──│       Chain        │───────○─│       Block        │────────○─│         Tx         │
+//  │                    │         ╲│                    │        ╲│                    │         ╲│                    │
+//  │                    │          │                    │         │                    │          │                    │
+//  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
 func Migrate(db *sql.DB) error {
+	// TODO(nix 05-27-2022): Appropriate indexes?
 	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
 	if err != nil {
 		return err
