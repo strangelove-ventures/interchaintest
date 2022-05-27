@@ -436,6 +436,19 @@ func (relayer *CosmosRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecRep
 	return wallet, err
 }
 
+func (relayer *CosmosRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
+	command := []string{
+		"rly", "tx", "channel", pathName,
+		"--src-port", opts.SourcePortName,
+		"--dst-port", opts.DestPortName,
+		"--order", opts.Order,
+		"--version", opts.Version,
+
+		"--home", relayer.NodeHome(),
+	}
+	return dockerutil.HandleNodeJobError(relayer.NodeJob(ctx, rep, command))
+}
+
 // Dir is the directory where the test node files are stored
 func (relayer *CosmosRelayer) Dir() string {
 	return fmt.Sprintf("%s/%s/", relayer.home, relayer.Name())

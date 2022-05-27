@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
@@ -91,14 +93,60 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		req := require.New(rep.TestifyT(t))
 
 		req.NoError(r.CreateConnections(ctx, rep.RelayerExecReporter(t), pathName))
+
+		// TODO: could make assertions against r.GetConnections here.
 	})
 	if t.Failed() {
 		return
 	}
 
-	t.Run("create channels", func(t *testing.T) {
+	t.Run("create channel", func(t *testing.T) {
 		rep.TrackTest(t)
+		req := require.New(rep.TestifyT(t))
 
-		rep.TrackSkip(t, "ibc.Relayer does not yet have a CreateChannels method")
+		eRep := rep.RelayerExecReporter(t)
+		req.NoError(r.CreateChannel(ctx, eRep, pathName, ibc.CreateChannelOptions{
+			SourcePortName: "transfer",
+			DestPortName:   "transfer",
+			Order:          "unordered",
+			Version:        "ics20-1",
+		}))
+
+		// Now validate that the channels correctly report as created.
+		// GetChannels takes around two seconds with rly,
+		// so getting the channels concurrently is a measurable speedup.
+		eg, egCtx := errgroup.WithContext(ctx)
+		var channels0, channels1 []ibc.ChannelOutput
+		eg.Go(func() error {
+			var err error
+			channels0, err = r.GetChannels(egCtx, eRep, c0.Config().ChainID)
+			return err
+		})
+		eg.Go(func() error {
+			var err error
+			channels1, err = r.GetChannels(egCtx, eRep, c1.Config().ChainID)
+			return err
+		})
+		req.NoError(eg.Wait(), "failure retrieving channels")
+
+		req.Len(channels0, 1)
+		ch0 := channels0[0]
+
+		req.Len(channels1, 1)
+		ch1 := channels1[0]
+
+		// Piecemeal assertions against each channel.
+		// Not asserting against ConnectionHops or ChannelID.
+		req.Equal(ch0.State, "STATE_OPEN")
+		req.Equal(ch0.Ordering, "ORDER_UNORDERED")
+		req.Equal(ch0.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID})
+		req.Equal(ch0.Version, "ics20-1")
+		req.Equal(ch0.PortID, "transfer")
+
+		req.Equal(ch1.State, "STATE_OPEN")
+		req.Equal(ch1.Ordering, "ORDER_UNORDERED")
+		req.Equal(ch1.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID})
+		req.Equal(ch1.Version, "ics20-1")
+		req.Equal(ch1.PortID, "transfer")
 	})
 }
