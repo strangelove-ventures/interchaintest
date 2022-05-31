@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var gitSha = "unknown"
+
 // The value of the test matrix.
 var testMatrix struct {
 	Relayers []string

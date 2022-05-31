@@ -6,7 +6,7 @@ help: ## Print this help message
 
 .PHONY: ibctest
 ibctest: ## Build ibctest binary into ./bin
-	go test -c -o ./bin/ibctest ./cmd/ibctest
+	go test -ldflags "-X github.com/strangelove-ventures/ibctest/cmd/ibctest.gitSha=$(shell git describe --always --dirty)" -c -o ./bin/ibctest ./cmd/ibctest
 
 .PHONY: test
 test: ## Run unit tests
