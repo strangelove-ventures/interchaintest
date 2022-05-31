@@ -38,7 +38,7 @@ func (chain *Chain) TraceBlock(ctx context.Context, height int, txs Txs) error {
 	if err != nil {
 		return err
 	}
-	defer dbTx.Rollback()
+	defer func() { _ = dbTx.Rollback() }()
 
 	res, err := dbTx.ExecContext(ctx, `INSERT OR REPLACE INTO block(height, chain_id) VALUES (?, ?)`, height, chain.id)
 	if err != nil {
