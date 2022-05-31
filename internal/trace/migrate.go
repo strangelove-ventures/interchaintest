@@ -1,6 +1,9 @@
 package trace
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
 
 // Migrate migrates db in an idempotent manner.
 // If an error is returned, it's acceptable to delete the database and start over.
@@ -16,7 +19,7 @@ func Migrate(db *sql.DB) error {
 	// TODO(nix 05-27-2022): Appropriate indexes?
 	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
 	if err != nil {
-		return err
+		return fmt.Errorf("pragma foreign_keys: %w", err)
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +28,9 @@ func Migrate(db *sql.DB) error {
     created_at TEXT NOT NULL,
     UNIQUE(name,created_at)
 )`)
+	if err != nil {
+		return fmt.Errorf("create table test_case: %w", err)
+	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS chain (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     identifier TEXT NOT NULL CHECK ( length(identifier) >0 ),
@@ -33,7 +39,7 @@ func Migrate(db *sql.DB) error {
     UNIQUE(identifier,test_id)
 )`)
 	if err != nil {
-		return err
+		return fmt.Errorf("create table chain: %w", err)
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS block (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +49,7 @@ func Migrate(db *sql.DB) error {
     UNIQUE(height,chain_id)
 )`)
 	if err != nil {
-		return err
+		return fmt.Errorf("create table block: %w", err)
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tx (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -51,5 +57,9 @@ func Migrate(db *sql.DB) error {
     block_id INTEGER,
     FOREIGN KEY(block_id) REFERENCES block(id) ON DELETE CASCADE
 )`)
-	return err
+	if err != nil {
+		return fmt.Errorf("create table tx: %w", err)
+	}
+
+	return nil
 }
