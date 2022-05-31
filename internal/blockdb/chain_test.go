@@ -32,7 +32,7 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 5, Txs{tx1, tx2})
+		err := chain.SaveBlock(ctx, 5, transactions{tx1, tx2})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT height, chain_id FROM block LIMIT 1`)
@@ -69,9 +69,9 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 1, Txs{tx1})
+		err := chain.SaveBlock(ctx, 1, transactions{tx1})
 		require.NoError(t, err)
-		err = chain.SaveBlock(ctx, 1, Txs{tx1})
+		err = chain.SaveBlock(ctx, 1, transactions{tx1})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT count(*) FROM block`)
@@ -91,7 +91,7 @@ func TestChain_SaveBlock(t *testing.T) {
 		defer db.Close()
 
 		chain := validChain(t, db)
-		err := chain.SaveBlock(ctx, 1, Txs{[]byte(`not valid json`)})
+		err := chain.SaveBlock(ctx, 1, transactions{[]byte(`not valid json`)})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "block 1: tx 0: malformed json")
 	})

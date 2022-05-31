@@ -18,10 +18,10 @@ type Chain struct {
 	single singleflight.Group
 }
 
-// Txs are transactions expected to be marshalled JSON.
-type Txs [][]byte
+// transactions are expected to be marshalled JSON.
+type transactions [][]byte
 
-func (txs Txs) prettyJSON() ([]string, error) {
+func (txs transactions) prettyJSON() ([]string, error) {
 	jsonTxs := make([]string, len(txs))
 	buf := new(bytes.Buffer)
 	for i, tx := range txs {
@@ -34,7 +34,7 @@ func (txs Txs) prettyJSON() ([]string, error) {
 	return jsonTxs, nil
 }
 
-func (txs Txs) hash() []byte {
+func (txs transactions) hash() []byte {
 	h := sha256.New()
 	for _, tx := range txs {
 		h.Write(tx)
@@ -44,15 +44,15 @@ func (txs Txs) hash() []byte {
 
 // SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
-func (chain *Chain) SaveBlock(ctx context.Context, height int, txs Txs) error {
-	k := fmt.Sprintf("%d-%x", height, txs.hash())
+func (chain *Chain) SaveBlock(ctx context.Context, height int, txs [][]byte) error {
+	k := fmt.Sprintf("%d-%x", height, transactions(txs).hash())
 	_, err, _ := chain.single.Do(k, func() (interface{}, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
 	})
 	return err
 }
 
-func (chain *Chain) saveBlock(ctx context.Context, height int, txs Txs) error {
+func (chain *Chain) saveBlock(ctx context.Context, height int, txs transactions) error {
 	// TODO(nix 05-27-2022): Presentation in the database layer is generally bad practice. However, the first pass
 	// of this feature requires the user to make raw sql against the database. Therefore, to ease readability
 	// we indent json here. If we have a presentation layer in the future, I suggest removing the json indent here
