@@ -3,7 +3,10 @@ package test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/strangelove-ventures/ibctest/ibc"
 )
 
@@ -49,17 +52,16 @@ type blockPoller struct {
 	CurrentHeight func(ctx context.Context) (uint64, error)
 	Acker         ChainAcker
 	Timeouter     ChainTimeouter
+	pollErr       *pollError
 }
 
 func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, packet ibc.Packet) (interface{}, error) {
 	if maxHeight < startHeight {
 		panic("maxHeight must be greater than or equal to startHeight")
 	}
-	var (
-		cursor  = startHeight
-		findErr error
-		found   interface{}
-	)
+	p.pollErr = &pollError{targetPacket: packet}
+
+	cursor := startHeight
 	for cursor <= maxHeight {
 		curHeight, err := p.CurrentHeight(ctx)
 		if err != nil {
@@ -69,6 +71,10 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 			continue
 		}
 
+		var (
+			found   interface{}
+			findErr error
+		)
 		switch {
 		case p.Acker != nil:
 			found, findErr = p.findAck(ctx, cursor, packet)
@@ -79,13 +85,14 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 		}
 
 		if findErr != nil {
+			p.pollErr.SetErr(findErr)
 			cursor++
 			continue
 		}
 
 		return found, nil
 	}
-	return nil, findErr
+	return nil, p.pollErr
 }
 
 func (p blockPoller) findAck(ctx context.Context, height uint64, packet ibc.Packet) (ibc.PacketAcknowledgement, error) {
@@ -95,6 +102,7 @@ func (p blockPoller) findAck(ctx context.Context, height uint64, packet ibc.Pack
 		return zero, err
 	}
 	for _, ack := range acks {
+		p.pollErr.PushSearched(ack)
 		if ack.Packet.Equal(packet) {
 			return ack, nil
 		}
@@ -109,9 +117,44 @@ func (p blockPoller) findTimeout(ctx context.Context, height uint64, packet ibc.
 		return zero, err
 	}
 	for _, t := range timeouts {
+		p.pollErr.PushSearched(t)
 		if t.Packet.Equal(packet) {
 			return t, nil
 		}
 	}
 	return zero, ErrNotFound
+}
+
+type pollError struct {
+	error
+	targetPacket    ibc.Packet
+	searchedPackets []string
+}
+
+func (pe *pollError) SetErr(err error) {
+	pe.error = err
+}
+
+func (pe *pollError) PushSearched(packet interface{}) {
+	pe.searchedPackets = append(pe.searchedPackets, spew.Sdump(packet))
+}
+
+func (pe *pollError) Unwrap() error {
+	return pe.error
+}
+
+// Format is expected to be used by testify/require which prints errors via %+v
+func (pe *pollError) Format(s fmt.State, verb rune) {
+	if verb != 'v' && !s.Flag('+') {
+		fmt.Fprint(s, pe.error.Error())
+		return
+	}
+
+	searched := strings.Join(pe.searchedPackets, "\n")
+	if len(searched) == 0 {
+		searched = "(none)"
+	}
+	target := spew.Sdump(pe.targetPacket)
+	final := fmt.Sprintf("%s\n- target packet:\n%s\n- searched:\n%+v", pe.error, target, searched)
+	fmt.Fprint(s, final)
 }

@@ -1,3 +1,4 @@
+// Package rly provides an interface to the cosmos relayer running in a Docker container.
 package rly
 
 import (
@@ -114,6 +115,18 @@ func (commander) AddKey(chainID, keyName, homeDir string) []string {
 func (commander) ClearQueue(pathName, channelID, homeDir string) []string {
 	return []string{
 		"rly", "tx", "relay-pkts", pathName, channelID,
+		"--home", homeDir,
+	}
+}
+
+func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
+	return []string{
+		"rly", "tx", "channel", pathName,
+		"--src-port", opts.SourcePortName,
+		"--dst-port", opts.DestPortName,
+		"--order", opts.Order,
+		"--version", opts.Version,
+
 		"--home", homeDir,
 	}
 }

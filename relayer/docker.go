@@ -12,8 +12,8 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/strangelove-ventures/ibctest/dockerutil"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -100,6 +100,11 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 
 func (r *DockerRelayer) ClearQueue(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
 	cmd := r.c.ClearQueue(pathName, channelID, r.NodeHome())
+	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
+}
+
+func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
+	cmd := r.c.CreateChannel(pathName, opts, r.NodeHome())
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
 }
 
@@ -388,6 +393,7 @@ type RelayerCommander interface {
 	AddChainConfiguration(containerFilePath, homeDir string) []string
 	AddKey(chainID, keyName, homeDir string) []string
 	ClearQueue(pathName, channelID, homeDir string) []string
+	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string

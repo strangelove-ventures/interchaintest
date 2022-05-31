@@ -49,7 +49,7 @@ import (
 const (
 	userFaucetFund = int64(10_000_000_000)
 	testCoinAmount = int64(1_000_000)
-	pollHeightMax  = uint64(100)
+	pollHeightMax  = uint64(50)
 )
 
 type RelayerTestCase struct {
@@ -222,7 +222,19 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 							rep.TrackParameters(t, rf.Labels(), cf.Labels())
 							rep.TrackParallel(t)
 
-							TestChainPair(t, cf, rf, rep)
+							t.Run("relayer setup", func(t *testing.T) {
+								rep.TrackTest(t)
+								rep.TrackParallel(t)
+
+								TestRelayerSetup(t, cf, rf, rep)
+							})
+
+							t.Run("conformance", func(t *testing.T) {
+								rep.TrackTest(t)
+								rep.TrackParallel(t)
+
+								TestChainPair(t, cf, rf, rep)
+							})
 						})
 					}
 				})
