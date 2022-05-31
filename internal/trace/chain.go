@@ -25,12 +25,13 @@ func (chain *Chain) TraceBlock(ctx context.Context, height int, txs Txs) error {
 	// we indent json here. If we have a presentation layer in the future, I suggest removing the json indent here
 	// and let the presentation layer format appropriately.
 	jsonTxs := make([]string, len(txs))
+	buf := new(bytes.Buffer)
 	for i, tx := range txs {
-		buf := new(bytes.Buffer)
 		if err := json.Indent(buf, tx, "", "  "); err != nil {
 			return fmt.Errorf("block %d: tx %d: malformed json: %w", height, i, err)
 		}
 		jsonTxs[i] = buf.String()
+		buf.Reset()
 	}
 
 	dbTx, err := chain.db.BeginTx(ctx, nil)
