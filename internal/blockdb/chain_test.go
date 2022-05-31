@@ -19,7 +19,7 @@ func validChain(t *testing.T, db *sql.DB) *Chain {
 	return c
 }
 
-func TestChain_TraceBlock(t *testing.T) {
+func TestChain_SaveBlock(t *testing.T) {
 	var (
 		ctx = context.Background()
 		tx1 = []byte(`{"test":0}`)
@@ -32,7 +32,7 @@ func TestChain_TraceBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.TraceBlock(ctx, 5, Txs{tx1, tx2})
+		err := chain.SaveBlock(ctx, 5, Txs{tx1, tx2})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT height, chain_id FROM block LIMIT 1`)
@@ -69,9 +69,9 @@ func TestChain_TraceBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.TraceBlock(ctx, 1, Txs{tx1})
+		err := chain.SaveBlock(ctx, 1, Txs{tx1})
 		require.NoError(t, err)
-		err = chain.TraceBlock(ctx, 1, Txs{tx1})
+		err = chain.SaveBlock(ctx, 1, Txs{tx1})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT count(*) FROM block`)
@@ -91,7 +91,7 @@ func TestChain_TraceBlock(t *testing.T) {
 		defer db.Close()
 
 		chain := validChain(t, db)
-		err := chain.TraceBlock(ctx, 1, Txs{[]byte(`not valid json`)})
+		err := chain.SaveBlock(ctx, 1, Txs{[]byte(`not valid json`)})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "block 1: tx 0: malformed json")
 	})

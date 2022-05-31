@@ -17,9 +17,9 @@ type Chain struct {
 // Txs are transactions expected to be marshalled JSON.
 type Txs [][]byte
 
-// TraceBlock tracks a block at height with its transactions.
+// SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
-func (chain *Chain) TraceBlock(ctx context.Context, height int, txs Txs) error {
+func (chain *Chain) SaveBlock(ctx context.Context, height int, txs Txs) error {
 	// TODO(nix 05-27-2022): Presentation in the database layer is generally bad practice. However, the first pass
 	// of this feature requires the user to make raw sql against the database. Therefore, to ease readability
 	// we indent json here. If we have a presentation layer in the future, I suggest removing the json indent here
