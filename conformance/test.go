@@ -245,7 +245,7 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 
 // TestChainPair runs the conformance tests for two chains and one relayer.
 // This function is exported in case there is a third party that needs to run this test
-// without the parallel subtests structure from TestConformance,
+// without the parallel subtests structure from Test,
 // but the stability of this API and even the existence of this function is not guaranteed.
 func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	pool, network := ibctest.DockerSetup(t)
