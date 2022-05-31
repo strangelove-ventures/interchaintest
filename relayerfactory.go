@@ -59,12 +59,12 @@ func (f builtinRelayerFactory) Build(
 ) ibc.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
-		return rly.NewCosmosRelayerFromChains(
-			t,
+		return rly.NewCosmosRelayer(
+			f.log,
+			t.Name(),
+			home,
 			pool,
 			networkID,
-			home,
-			f.log,
 		)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
