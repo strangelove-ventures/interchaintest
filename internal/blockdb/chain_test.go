@@ -14,7 +14,7 @@ func validChain(t *testing.T, db *sql.DB) *Chain {
 
 	tc, err := CreateTestCase(context.Background(), db, "TestCase", "112233")
 	require.NoError(t, err)
-	c, err := tc.AddChain(context.Background(), "chain1")
+	c, err := tc.AddChain(context.Background(), 1, "chain1")
 	require.NoError(t, err)
 	return c
 }
@@ -84,6 +84,27 @@ func TestChain_SaveBlock(t *testing.T) {
 		err = row.Scan(&count)
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
+	})
+
+	t.Run("zero state", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		chain := validChain(t, db)
+
+		err := chain.SaveBlock(ctx, 5, nil)
+		require.NoError(t, err)
+
+		row := db.QueryRow(`SELECT height FROM block LIMIT 1`)
+		var gotHeight int
+		err = row.Scan(&gotHeight)
+		require.NoError(t, err)
+
+		var count int
+		row = db.QueryRow(`SELECT count(*) FROM tx`)
+		err = row.Scan(&count)
+		require.NoError(t, err)
+		require.Zero(t, count)
 	})
 
 	t.Run("non-json tx", func(t *testing.T) {

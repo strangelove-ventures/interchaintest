@@ -31,9 +31,10 @@ func CreateTestCase(ctx context.Context, db *sql.DB, testName, gitSha string) (*
 
 // AddChain tracks and attaches a chain to the test case.
 // The identifier is a generalized id or name for the chain. In Cosmos, the chain id or chain name would be
-// appropriate, for example. The identifier must be unique.
-func (tc *TestCase) AddChain(ctx context.Context, identifier string) (*Chain, error) {
-	res, err := tc.db.ExecContext(ctx, `INSERT INTO chain(identifier, test_id) VALUES(?, ?)`, identifier, tc.id)
+// appropriate, for example.
+// The position ensures uniqueness when testing multiple of the same chain, e.g. gaia <-> gaia.
+func (tc *TestCase) AddChain(ctx context.Context, position int, identifier string) (*Chain, error) {
+	res, err := tc.db.ExecContext(ctx, `INSERT INTO chain(position, identifier, test_id) VALUES(?, ?, ?)`, position, identifier, tc.id)
 	if err != nil {
 		return nil, err
 	}

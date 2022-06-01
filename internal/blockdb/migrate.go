@@ -35,8 +35,9 @@ func Migrate(db *sql.DB) error {
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     identifier TEXT NOT NULL CHECK ( length(identifier) >0 ),
     test_id INTEGER,
+    position INTEGER NOT NULL,
     FOREIGN KEY(test_id) REFERENCES test_case(id) ON DELETE CASCADE,
-    UNIQUE(identifier,test_id)
+    UNIQUE(position,identifier,test_id)
 )`)
 	if err != nil {
 		return fmt.Errorf("create table chain: %w", err)
