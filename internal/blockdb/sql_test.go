@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -26,12 +29,9 @@ func migratedDB() *sql.DB {
 }
 
 func TestConnectDB(t *testing.T) {
-	f, err := os.CreateTemp("", t.Name())
-	require.NoError(t, err)
-	defer f.Close()
-	defer os.RemoveAll(f.Name())
-
-	db, err := ConnectDB(context.Background(), f.Name(), 10)
+	file := filepath.Join(os.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
+	defer os.RemoveAll(file)
+	db, err := ConnectDB(context.Background(), file, 10)
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 }
