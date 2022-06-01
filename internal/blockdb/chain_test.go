@@ -14,7 +14,7 @@ func validChain(t *testing.T, db *sql.DB) *Chain {
 
 	tc, err := CreateTestCase(context.Background(), db, "TestCase", "112233")
 	require.NoError(t, err)
-	c, err := tc.AddChain(context.Background(), 1, "chain1")
+	c, err := tc.AddChain(context.Background(), "chain1")
 	require.NoError(t, err)
 	return c
 }
