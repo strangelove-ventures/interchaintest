@@ -16,6 +16,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/testreporter"
 )
 
+var gitSha = "unknown"
+
 const (
 	testPathName = "test-path"
 
@@ -91,12 +93,17 @@ func StartChainPairAndRelayer(
 			Path:    testPathName,
 		})
 
+	blockSqlite := blocksSQLiteFilename()
+	t.Logf("View block history using sqlite console at %s", blockSqlite)
+
 	eRep := rep.RelayerExecReporter(t)
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
-		TestName:  t.Name(),
-		HomeDir:   home,
-		Pool:      pool,
-		NetworkID: networkID,
+		TestName:          t.Name(),
+		HomeDir:           home,
+		Pool:              pool,
+		NetworkID:         networkID,
+		GitSha:            gitSha,
+		BlockDatabaseFile: blockSqlite,
 	}); err != nil {
 		return errResponse(err)
 	}
