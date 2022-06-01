@@ -106,14 +106,4 @@ func TestChain_SaveBlock(t *testing.T) {
 		require.NoError(t, err)
 		require.Zero(t, count)
 	})
-
-	t.Run("non-json tx", func(t *testing.T) {
-		db := migratedDB()
-		defer db.Close()
-
-		chain := validChain(t, db)
-		err := chain.SaveBlock(ctx, 1, transactions{[]byte(`not valid json`)})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "block 1: tx 0: malformed json")
-	})
 }
