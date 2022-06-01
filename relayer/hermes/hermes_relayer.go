@@ -69,11 +69,11 @@ func GetGasPriceFromString(gasPrices string) HermesGasPriceConfig {
 	}
 }
 
-func ChainConfigToHermesChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) HermesChainConfig {
+func ChainConfigToHermesChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr, websocketAddr string) HermesChainConfig {
 	return HermesChainConfig{
 		ID:             chainConfig.ChainID,
 		RpcAddr:        rpcAddr,
-		WebSocketAddr:  "ws://127.0.0.1:26657/websocket", //Required
+		WebSocketAddr:  websocketAddr,
 		GRPCAddr:       gprcAddr,
 		RPCTimeout:     "10s",
 		AccountPrefix:  chainConfig.Bech32Prefix,
@@ -191,7 +191,7 @@ func (c commander) CreateConnections(pathName, homeDir string) []string {
 // FIXME GeneratePath
 func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
 	return []string{
-		"hermes", "paths", "new", srcChainID, dstChainID, "--create-new-connections",
+		"hermes", "paths", "new", srcChainID, dstChainID, "--new-client-connection",
 		"-c", filepath.Join(homeDir, "config.toml"),
 		"-j",
 	}
@@ -199,7 +199,7 @@ func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) 
 
 func (commander) GetChannels(chainID, homeDir string) []string {
 	return []string{
-		"hermes", "q", "channels", chainID,
+		"hermes", "query", "channels", chainID,
 		"-c", filepath.Join(homeDir, "config.toml"),
 		"-j",
 	}
@@ -207,7 +207,7 @@ func (commander) GetChannels(chainID, homeDir string) []string {
 
 func (commander) GetConnections(chainID, homeDir string) []string {
 	return []string{
-		"hermes", "q", "connections", chainID,
+		"hermes", "query", "connections", chainID,
 		"-c", filepath.Join(homeDir, "config.toml"),
 		"-j",
 	}
@@ -260,8 +260,8 @@ func (c commander) UpdateClients(pathName, homeDir string) []string {
 }
 
 // FIXME ConfigContent
-func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	cosmosRelayerChainConfig := ChainConfigToHermesChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr, websocketAddr string) ([]byte, error) {
+	cosmosRelayerChainConfig := ChainConfigToHermesChainConfig(cfg, keyName, rpcAddr, grpcAddr, websocketAddr)
 	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {
 		return nil, err
