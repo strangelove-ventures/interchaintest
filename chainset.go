@@ -148,7 +148,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha str
 			if err != nil {
 				return fmt.Errorf("add chain %s: %w", name, err)
 			}
-			blockdb.NewPoller(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Poll(ctx)
+			blockdb.NewCollector(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Collect(ctx)
 			return nil
 		})
 	}

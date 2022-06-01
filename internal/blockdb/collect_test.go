@@ -25,7 +25,7 @@ func (f mockBlockSaver) SaveBlock(ctx context.Context, height int, txs [][]byte)
 	return f(ctx, height, txs)
 }
 
-func TestPoller_Poll(t *testing.T) {
+func TestCollector_Collect(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
 			if height == 0 {
@@ -59,13 +59,13 @@ func TestPoller_Poll(t *testing.T) {
 			return nil
 		})
 
-		poller := NewPoller(finder, saver, time.Nanosecond, zap.NewNop())
+		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
 
 		ctx, cancel := context.WithCancel(context.Background())
 		var eg errgroup.Group
 
 		eg.Go(func() error {
-			poller.Poll(ctx)
+			collector.Collect(ctx)
 			return nil
 		})
 		eg.Go(func() error {
@@ -93,8 +93,8 @@ func TestPoller_Poll(t *testing.T) {
 		})
 		saver := mockBlockSaver(func(ctx context.Context, height int, txs [][]byte) error { return nil })
 
-		poller := NewPoller(finder, saver, time.Nanosecond, zap.NewNop())
-		go poller.Poll(context.Background())
+		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
+		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
 		require.Equal(t, 2, <-ch)
@@ -114,8 +114,8 @@ func TestPoller_Poll(t *testing.T) {
 			return errors.New("boom")
 		})
 
-		poller := NewPoller(finder, saver, time.Nanosecond, zap.NewNop())
-		go poller.Poll(context.Background())
+		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
+		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
 		require.Equal(t, 2, <-ch)

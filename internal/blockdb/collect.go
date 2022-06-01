@@ -8,25 +8,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// TxFinder finds transactions given block at height.
 type TxFinder interface {
+	// FindTxs transactions should be in a human-readable format, preferably json.
 	FindTxs(ctx context.Context, height uint64) ([][]byte, error)
 }
 
+// BlockSaver saves transactions for block at height.
 type BlockSaver interface {
 	SaveBlock(ctx context.Context, height int, txs [][]byte) error
 }
 
-// Poller saves block transactions at regular intervals.
-type Poller struct {
+// Collector saves block transactions at regular intervals.
+type Collector struct {
 	finder TxFinder
 	log    *zap.Logger
 	rate   time.Duration
 	saver  BlockSaver
 }
 
-// NewPoller creates a valid poller that polls every duration at rate.
-func NewPoller(finder TxFinder, saver BlockSaver, rate time.Duration, log *zap.Logger) *Poller {
-	return &Poller{
+// NewCollector creates a valid poller that polls every duration at rate.
+func NewCollector(finder TxFinder, saver BlockSaver, rate time.Duration, log *zap.Logger) *Collector {
+	return &Collector{
 		finder: finder,
 		log:    log,
 		rate:   rate,
@@ -34,9 +37,9 @@ func NewPoller(finder TxFinder, saver BlockSaver, rate time.Duration, log *zap.L
 	}
 }
 
-// Poll saves block transactions starting at height 1 and advancing by 1 height as long as there are
+// Collect saves block transactions starting at height 1 and advancing by 1 height as long as there are
 // no errors with finding or saving the transactions.
-func (p *Poller) Poll(ctx context.Context) {
+func (p *Collector) Collect(ctx context.Context) {
 	tick := time.NewTicker(p.rate)
 	defer tick.Stop()
 	var height uint64 = 1
@@ -54,7 +57,7 @@ func (p *Poller) Poll(ctx context.Context) {
 	}
 }
 
-func (p *Poller) saveTxsForHeight(ctx context.Context, height uint64) error {
+func (p *Collector) saveTxsForHeight(ctx context.Context, height uint64) error {
 	txs, err := p.finder.FindTxs(ctx, height)
 	if err != nil {
 		return fmt.Errorf("find txs: %w", err)
