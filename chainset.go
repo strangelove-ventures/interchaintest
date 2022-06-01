@@ -3,9 +3,7 @@ package ibctest
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -108,37 +106,58 @@ func (cs chainSet) Start(ctx context.Context, testName string, additionalGenesis
 }
 
 // TrackBlocks initializes database tables and polls for transactions to be saved in the database.
+// This method is a nop if dbFile is blank.
 // Expected to be called after Start.
-func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha string) (io.Closer, error) {
+func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha string) error {
 	if len(dbFile) == 0 {
-		return io.NopCloser(strings.NewReader("nop")), nil
+		// nop
+		return nil
 	}
 
 	db, err := blockdb.ConnectDB(ctx, dbFile, 10)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to sqlite database at %s: %w", dbFile, err)
+		return fmt.Errorf("connect to sqlite database %s: %w", dbFile, err)
+	}
+
+	if err := blockdb.Migrate(db); err != nil {
+		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbFile, err)
+	}
+
+	if len(gitSha) == 0 {
+		gitSha = "unknown"
 	}
 
 	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
 	if err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("failed to create test case in sqlite database: %w", err)
+		return fmt.Errorf("create test case in sqlite database: %w", err)
 	}
 
+	var eg errgroup.Group
 	for c := range cs {
+		c := c
 		name := c.Config().Name
 		finder, ok := c.(blockdb.TxFinder)
 		if !ok {
-			// TODO: Use a logger here.
-			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`, name)
-			continue
+			// TODO (nix - 6/1/22) Use logger here?
+			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", name)
+			return nil
 		}
-		chaindb, err := testCase.AddChain(ctx, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed track chain %s: %w", name, err)
-		}
-		go blockdb.NewPoller(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Poll(ctx)
+		eg.Go(func() error {
+			chaindb, err := testCase.AddChain(ctx, name)
+			if err != nil {
+				return fmt.Errorf("add chain %s: %w", name, err)
+			}
+			blockdb.NewPoller(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Poll(ctx)
+			return nil
+		})
 	}
 
-	return db, nil
+	go func() {
+		// TODO (nix - 6/1/22) May leak file descriptor. Interchain may need a Close() method.
+		_ = eg.Wait()
+		_ = db.Close()
+	}()
+
+	return nil
 }
