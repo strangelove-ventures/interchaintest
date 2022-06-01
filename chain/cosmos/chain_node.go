@@ -219,7 +219,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, erro
 			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		b, err := json.MarshalIndent(sdkTx, "", "  ")
+		b, err := encodeTxToJSON(sdkTx)
 		if err != nil {
 			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
 			continue

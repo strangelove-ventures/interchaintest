@@ -36,3 +36,8 @@ func decodeTX(txbz []byte) (sdk.Tx, error) {
 	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
 	return authTx.DefaultTxDecoder(cdc)(txbz)
 }
+
+func encodeTxToJSON(tx sdk.Tx) ([]byte, error) {
+	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+	return authTx.DefaultJSONTxEncoder(cdc)(tx)
+}
