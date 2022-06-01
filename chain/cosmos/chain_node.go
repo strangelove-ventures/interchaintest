@@ -358,7 +358,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
-type IBCTransferTx struct {
+type IbcTx struct {
 	TxHash string `json:"txhash"`
 }
 
@@ -392,7 +392,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
-	output := IBCTransferTx{}
+	output := IbcTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
 	return output.TxHash, err
 }
@@ -877,7 +877,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
-	output := IBCTransferTx{}
+	output := IbcTx{}
 	err = yaml.Unmarshal([]byte(stdout), &output)
 	if err != nil {
 		return "", err

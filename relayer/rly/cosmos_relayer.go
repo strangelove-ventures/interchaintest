@@ -245,6 +245,7 @@ func (relayer *CosmosRelayer) ClearQueue(ctx context.Context, rep ibc.RelayerExe
 
 // Implements Relayer interface
 func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
+	fmt.Println("IN ADD CHAIN CONFIG")
 	if _, err := os.Stat(fmt.Sprintf("%s/config", relayer.Dir())); os.IsNotExist(err) {
 		command := []string{"rly", "config", "init",
 			"--home", relayer.NodeHome(),
@@ -257,18 +258,23 @@ func (relayer *CosmosRelayer) AddChainConfiguration(ctx context.Context, rep ibc
 
 	chainConfigFile := fmt.Sprintf("%s.json", chainConfig.ChainID)
 
+	fmt.Println("BAHBAH")
 	chainConfigLocalFilePath := fmt.Sprintf("%s/%s", relayer.Dir(), chainConfigFile)
 	chainConfigContainerFilePath := fmt.Sprintf("%s/%s", relayer.NodeHome(), chainConfigFile)
+	fmt.Println("ROWROWROW")
 
 	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(chainConfig, keyName, rpcAddr, grpcAddr)
 	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {
 		return err
 	}
+	fmt.Println("JAAAAAAAAH")
 
 	if err := os.WriteFile(chainConfigLocalFilePath, jsonBytes, 0644); err != nil { //nolint
 		return err
 	}
+
+	fmt.Println("REEEEEEE")
 
 	command := []string{"rly", "chains", "add", "-f", chainConfigContainerFilePath,
 		"--home", relayer.NodeHome(),

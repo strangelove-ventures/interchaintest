@@ -132,6 +132,8 @@ type InterchainBuildOptions struct {
 
 	Pool      *dockertest.Pool
 	NetworkID string
+
+	LinkPaths bool
 }
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
@@ -170,9 +172,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return err
 	}
 
+	if !opts.LinkPaths {
+		return nil
+	}
+
 	// For every relayer link, teach the relayer about the link and create the link.
-	// TODO: this could be skipped with an appropriate flag on InterchainBuildOptions,
-	// if a test wanted to exercise a relayer from a lower level than LinkPath.
 	for rp, chains := range ic.links {
 		c0 := chains[0]
 		c1 := chains[1]
