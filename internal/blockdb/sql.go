@@ -10,11 +10,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// ConnectDB connects to the sqlite database at filePath with max connections set to maxConns.
+// ConnectDB connects to the sqlite database at databaseFile.
 // Pings database once to ensure connection.
 // Creates directory path via MkdirAll.
-// Pass :memory: as filePath for in-memory database.
-func ConnectDB(ctx context.Context, databaseFile string, maxConns int) (*sql.DB, error) {
+// Pass :memory: as databaseFile for in-memory database.
+func ConnectDB(ctx context.Context, databaseFile string) (*sql.DB, error) {
 	if databaseFile != ":memory:" {
 		if err := os.MkdirAll(filepath.Dir(databaseFile), 0755); err != nil {
 			return nil, err
@@ -24,7 +24,7 @@ func ConnectDB(ctx context.Context, databaseFile string, maxConns int) (*sql.DB,
 	if err != nil {
 		return nil, fmt.Errorf("open db %s: %w", databaseFile, err)
 	}
-	db.SetMaxOpenConns(maxConns)
+	db.SetMaxOpenConns(1)
 	err = db.PingContext(ctx)
 	if err != nil {
 		_ = db.Close()

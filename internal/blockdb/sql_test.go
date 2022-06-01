@@ -13,7 +13,7 @@ import (
 )
 
 func emptyDB() *sql.DB {
-	db, err := ConnectDB(context.Background(), ":memory:", 3)
+	db, err := ConnectDB(context.Background(), ":memory:")
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +31,7 @@ func migratedDB() *sql.DB {
 func TestConnectDB(t *testing.T) {
 	file := filepath.Join(os.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
 	defer os.RemoveAll(file)
-	db, err := ConnectDB(context.Background(), file, 10)
+	db, err := ConnectDB(context.Background(), file)
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 }

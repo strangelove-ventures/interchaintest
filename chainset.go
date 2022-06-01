@@ -114,7 +114,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha str
 		return nil
 	}
 
-	db, err := blockdb.ConnectDB(ctx, dbFile, 10)
+	db, err := blockdb.ConnectDB(ctx, dbFile)
 	if err != nil {
 		return fmt.Errorf("connect to sqlite database %s: %w", dbFile, err)
 	}
@@ -133,20 +133,21 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha str
 		return fmt.Errorf("create test case in sqlite database: %w", err)
 	}
 
+	// TODO (nix - 6/1/22) Need logger instead of fmt.Fprint
 	var eg errgroup.Group
 	for c := range cs {
 		c := c
 		name := c.Config().Name
 		finder, ok := c.(blockdb.TxFinder)
 		if !ok {
-			// TODO (nix - 6/1/22) Use logger here?
 			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", name)
 			return nil
 		}
 		eg.Go(func() error {
 			chaindb, err := testCase.AddChain(ctx, name)
 			if err != nil {
-				return fmt.Errorf("add chain %s: %w", name, err)
+				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", name, err)
+				return nil
 			}
 			blockdb.NewCollector(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Collect(ctx)
 			return nil
