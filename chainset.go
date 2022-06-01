@@ -3,11 +3,17 @@ package ibctest
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -99,4 +105,40 @@ func (cs chainSet) Start(ctx context.Context, testName string, additionalGenesis
 	}
 
 	return eg.Wait()
+}
+
+// TrackBlocks initializes database tables and polls for transactions to be saved in the database.
+// Expected to be called after Start.
+func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha string) (io.Closer, error) {
+	if len(dbFile) == 0 {
+		return io.NopCloser(strings.NewReader("nop")), nil
+	}
+
+	db, err := blockdb.ConnectDB(ctx, dbFile, 10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to sqlite database at %s: %w", dbFile, err)
+	}
+
+	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("failed to create test case in sqlite database: %w", err)
+	}
+
+	for c := range cs {
+		name := c.Config().Name
+		finder, ok := c.(blockdb.TxFinder)
+		if !ok {
+			// TODO: Use a logger here.
+			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`, name)
+			continue
+		}
+		chaindb, err := testCase.AddChain(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed track chain %s: %w", name, err)
+		}
+		go blockdb.NewPoller(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Poll(ctx)
+	}
+
+	return db, nil
 }
