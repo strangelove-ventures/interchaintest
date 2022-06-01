@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
@@ -92,9 +93,33 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
-		req.NoError(r.CreateConnections(ctx, rep.RelayerExecReporter(t), pathName))
+		eRep := rep.RelayerExecReporter(t)
+		req.NoError(r.CreateConnections(ctx, eRep, pathName))
 
-		// TODO: could make assertions against r.GetConnections here.
+		// Assert against the singly created connections individually.
+		conns0, err := r.GetConnections(ctx, eRep, c0.Config().ChainID)
+		req.NoError(err)
+
+		req.Len(conns0, 1)
+		conn0 := conns0[0]
+		req.NotEmpty(conn0.ID)
+		req.NotEmpty(conn0.ClientID)
+		req.Equal(conn0.State, conntypes.OPEN.String())
+
+		conns1, err := r.GetConnections(ctx, eRep, c1.Config().ChainID)
+		req.NoError(err)
+
+		req.Len(conns1, 1)
+		conn1 := conns1[0]
+		req.NotEmpty(conn1.ID)
+		req.NotEmpty(conn1.ClientID)
+		req.Equal(conn1.State, conntypes.OPEN.String())
+
+		// Now validate counterparties.
+		req.Equal(conn0.Counterparty.ClientId, conn1.ClientID)
+		req.Equal(conn0.Counterparty.ConnectionId, conn1.ID)
+		req.Equal(conn1.Counterparty.ClientId, conn0.ClientID)
+		req.Equal(conn1.Counterparty.ConnectionId, conn0.ID)
 	})
 	if t.Failed() {
 		return
