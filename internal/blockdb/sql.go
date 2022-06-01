@@ -24,6 +24,8 @@ func ConnectDB(ctx context.Context, databaseFile string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open db %s: %w", databaseFile, err)
 	}
+	// Sqlite does not handle >1 open connections per process well,
+	// otherwise "database is locked" errors frequently occur.
 	db.SetMaxOpenConns(1)
 	err = db.PingContext(ctx)
 	if err != nil {
