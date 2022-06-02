@@ -1,7 +1,9 @@
 package ibctest
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
@@ -49,6 +51,48 @@ type BuiltinChainFactoryEntry struct {
 	NumFullNodes  int
 }
 
+func (e BuiltinChainFactoryEntry) GetChain(log *zap.Logger, testName string) (ibc.Chain, error) {
+	chainConfig, exists := builtinChainConfigs[e.Name]
+	if !exists {
+		availableChains := make([]string, 0, len(builtinChainConfigs))
+		for k := range builtinChainConfigs {
+			availableChains = append(availableChains, k)
+		}
+		sort.Strings(availableChains)
+
+		return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", e.Name, strings.Join(availableChains, ", "))
+	}
+
+	chainConfig.ChainID = e.ChainID
+
+	switch chainConfig.Type {
+	case "cosmos":
+		chainConfig.Images[0].Version = e.Version
+		return cosmos.NewCosmosChain(testName, chainConfig, e.NumValidators, e.NumFullNodes, log), nil
+	case "penumbra":
+		versionSplit := strings.Split(e.Version, ",")
+		if len(versionSplit) != 2 {
+			return nil, errors.New("penumbra version should be comma separated penumbra_version,tendermint_version")
+		}
+		chainConfig.Images[0].Version = versionSplit[1]
+		chainConfig.Images[1].Version = versionSplit[0]
+		return penumbra.NewPenumbraChain(testName, chainConfig, e.NumValidators, e.NumFullNodes), nil
+	default:
+		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", chainConfig.Type, e.Name)
+	}
+}
+
+// builtinChainConfigs is a mapping of valid builtin chain names
+// to their predefined ibc.ChainConfig.
+var builtinChainConfigs = map[string]ibc.ChainConfig{
+	"gaia":     cosmos.NewCosmosHeighlinerChainConfig("gaia", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h", false),
+	"osmosis":  cosmos.NewCosmosHeighlinerChainConfig("osmosis", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h", false),
+	"juno":     cosmos.NewCosmosHeighlinerChainConfig("juno", "junod", "juno", "ujuno", "0.0025ujuno", 1.3, "672h", false),
+	"agoric":   cosmos.NewCosmosHeighlinerChainConfig("agoric", "agd", "agoric", "urun", "0.01urun", 1.3, "672h", true),
+	"icad":     cosmos.NewCosmosHeighlinerChainConfig("icad", "icad", "cosmos", "photon", "0.00photon", 1.2, "504h", false),
+	"penumbra": penumbra.NewPenumbraChainConfig(),
+}
+
 // NewBuiltinChainFactory returns a BuiltinChainFactory that returns chains defined by entries.
 func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry, logger *zap.Logger) *BuiltinChainFactory {
 	return &BuiltinChainFactory{entries: entries, log: logger}
@@ -61,7 +105,7 @@ func (f *BuiltinChainFactory) Count() int {
 func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 	chains := make([]ibc.Chain, len(f.entries))
 	for i, e := range f.entries {
-		chain, err := GetChain(testName, e.Name, e.Version, e.ChainID, e.NumValidators, e.NumFullNodes, f.log)
+		chain, err := e.GetChain(f.log, testName)
 		if err != nil {
 			return nil, err
 		}

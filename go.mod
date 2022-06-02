@@ -17,6 +17,7 @@ require (
 	golang.org/x/tools v0.1.10
 	google.golang.org/grpc v1.44.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	modernc.org/sqlite v1.17.3
 )
 
 require (
@@ -28,6 +29,7 @@ require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
+	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
@@ -139,7 +141,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	lukechampine.com/uint128 v1.1.1 // indirect
 	modernc.org/cc/v3 v3.36.0 // indirect
 	modernc.org/ccgo/v3 v3.16.6 // indirect
@@ -147,7 +148,6 @@ require (
 	modernc.org/mathutil v1.4.1 // indirect
 	modernc.org/memory v1.1.1 // indirect
 	modernc.org/opt v0.1.1 // indirect
-	modernc.org/sqlite v1.17.3 // indirect
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 )

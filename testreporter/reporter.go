@@ -232,3 +232,22 @@ func (r *TestifyReporter) Errorf(format string, args ...interface{}) {
 func (r *TestifyReporter) FailNow() {
 	r.t.FailNow()
 }
+
+// NewNopReporter returns a reporter that does not write anywhere.
+func NewNopReporter() *Reporter {
+	return NewReporter(newNopWriteCloser())
+}
+
+// nopWriteCloser is a no-op io.WriteCloser used to satisfy the ibctest TestReporter type.
+// Because the relayer is used in-process, all logs are simply streamed to the test log.
+type nopWriteCloser struct {
+	io.Writer
+}
+
+func (nopWriteCloser) Close() error {
+	return nil
+}
+
+func newNopWriteCloser() io.WriteCloser {
+	return nopWriteCloser{Writer: io.Discard}
+}
