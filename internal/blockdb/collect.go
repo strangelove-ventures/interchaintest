@@ -27,7 +27,9 @@ type Collector struct {
 	saver  BlockSaver
 }
 
-// NewCollector creates a valid poller that polls every duration at rate.
+// NewCollector creates a valid Collector that polls every duration at rate.
+// The rate should be less than the time it takes to produce a block.
+// Typically, a rate that will collect a few times a second is sufficient such as 100-200ms.
 func NewCollector(log *zap.Logger, finder TxFinder, saver BlockSaver, rate time.Duration) *Collector {
 	return &Collector{
 		finder: finder,
