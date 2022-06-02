@@ -21,10 +21,10 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c),
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options...),
 	}
 
 	if err := os.MkdirAll(r.Dir(), 0755); err != nil {
@@ -55,8 +55,8 @@ type CosmosRelayerChainConfig struct {
 }
 
 const (
-	ContainerImage   = "ghcr.io/cosmos/relayer"
-	ContainerVersion = "v2.0.0-beta4"
+	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
+	DefaultContainerVersion = "v2.0.0-beta4"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -203,12 +203,12 @@ func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName
 	return jsonBytes, nil
 }
 
-func (commander) ContainerImage() string {
-	return ContainerImage
+func (commander) DefaultContainerImage() string {
+	return DefaultContainerImage
 }
 
-func (commander) ContainerVersion() string {
-	return ContainerVersion
+func (commander) DefaultContainerVersion() string {
+	return DefaultContainerVersion
 }
 
 func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error) {

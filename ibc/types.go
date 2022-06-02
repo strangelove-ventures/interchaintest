@@ -6,7 +6,7 @@ type ChainConfig struct {
 	Type           string
 	Name           string
 	ChainID        string
-	Images         []ChainDockerImage
+	Images         []DockerImage
 	Bin            string
 	Bech32Prefix   string
 	Denom          string
@@ -16,7 +16,7 @@ type ChainConfig struct {
 	NoHostMount    bool
 }
 
-type ChainDockerImage struct {
+type DockerImage struct {
 	Repository string
 	Version    string
 }

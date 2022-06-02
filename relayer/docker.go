@@ -31,6 +31,9 @@ type DockerRelayer struct {
 
 	testName string
 
+	customImage *ibc.DockerImage
+	pullImage   bool
+
 	// The container created by StartRelayer.
 	container *docker.Container
 
@@ -40,8 +43,8 @@ type DockerRelayer struct {
 var _ ibc.Relayer = (*DockerRelayer)(nil)
 
 // NewDockerRelayer returns a new DockerRelayer.
-func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, c RelayerCommander) *DockerRelayer {
-	return &DockerRelayer{
+func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, c RelayerCommander, options ...RelayerOption) *DockerRelayer {
+	relayer := DockerRelayer{
 		log: log,
 
 		c: c,
@@ -50,8 +53,27 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.P
 		pool:      pool,
 		networkID: networkID,
 
+		// pull true by default, can be overridden with options
+		pullImage: true,
+
 		testName: testName,
 	}
+
+	for _, opt := range options {
+		switch typedOpt := opt.(type) {
+		case RelayerOptionDockerImage:
+			relayer.customImage = &typedOpt.DockerImage
+		case RelayerOptionImagePull:
+			relayer.pullImage = typedOpt.Pull
+		}
+	}
+
+	containerImage := relayer.containerImage()
+	if err := relayer.pullContainerImageIfNecessary(containerImage); err != nil {
+		log.Error("Error pulling container image", zap.String("repository", containerImage.Repository), zap.String("version", containerImage.Version), zap.Error(err))
+	}
+
+	return &relayer
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
@@ -204,14 +226,28 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	return r.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: r.container.ID})
 }
 
-func (r *DockerRelayer) createNodeContainer(pathName string) error {
-	err := r.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: r.c.ContainerImage(),
-		Tag:        r.c.ContainerVersion(),
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		return err
+func (r *DockerRelayer) containerImage() ibc.DockerImage {
+	if r.customImage != nil {
+		return *r.customImage
 	}
+	return ibc.DockerImage{
+		Repository: r.c.DefaultContainerImage(),
+		Version:    r.c.DefaultContainerVersion(),
+	}
+}
+
+func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerImage) error {
+	if !r.pullImage {
+		return nil
+	}
+	return r.pool.Client.PullImage(docker.PullImageOptions{
+		Repository: containerImage.Repository,
+		Tag:        containerImage.Version,
+	}, docker.AuthConfiguration{})
+}
+
+func (r *DockerRelayer) createNodeContainer(pathName string) error {
+	containerImage := r.containerImage()
 	containerName := fmt.Sprintf("%s-%s", r.c.Name(), pathName)
 	cmd := r.c.StartRelayer(pathName, r.NodeHome())
 	r.log.Info(
@@ -226,7 +262,7 @@ func (r *DockerRelayer) createNodeContainer(pathName string) error {
 			Cmd:        cmd,
 			Entrypoint: []string{},
 			Hostname:   r.HostName(pathName),
-			Image:      fmt.Sprintf("%s:%s", r.c.ContainerImage(), r.c.ContainerVersion()),
+			Image:      fmt.Sprintf("%s:%s", containerImage.Repository, containerImage.Version),
 			Labels:     map[string]string{"ibc-test": r.testName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
@@ -263,14 +299,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 			err,
 		)
 	}()
-
-	err = r.pool.Client.PullImage(docker.PullImageOptions{
-		Repository: r.c.ContainerImage(),
-		Tag:        r.c.ContainerVersion(),
-	}, docker.AuthConfiguration{})
-	if err != nil {
-		return 1, "", "", err
-	}
+	containerImage := r.containerImage()
 	counter, _, _, _ := runtime.Caller(1)
 	caller := runtime.FuncForPC(counter).Name()
 	funcName := strings.Split(caller, ".")
@@ -288,7 +317,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 			User: dockerutil.GetDockerUserString(),
 			// random hostname is fine here, just for setup
 			Hostname:   dockerutil.CondenseHostName(container),
-			Image:      r.c.ContainerImage() + ":" + r.c.ContainerVersion(),
+			Image:      containerImage.Repository + ":" + containerImage.Version,
 			Cmd:        cmd,
 			Entrypoint: []string{},
 			Labels:     map[string]string{"ibc-test": r.testName},
@@ -366,8 +395,8 @@ type RelayerCommander interface {
 	// Name is the name of the relayer, e.g. "rly" or "hermes".
 	Name() string
 
-	ContainerImage() string
-	ContainerVersion() string
+	DefaultContainerImage() string
+	DefaultContainerVersion() string
 
 	// ConfigContent generates the content of the config file that will be passed to AddChainConfiguration.
 	ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error)

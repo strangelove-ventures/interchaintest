@@ -58,7 +58,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 		GasAdjustment:  gasAdjustment,
 		TrustingPeriod: trustingPeriod,
 		NoHostMount:    noHostMount,
-		Images: []ibc.ChainDockerImage{
+		Images: []ibc.DockerImage{
 			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
 			},
