@@ -576,8 +576,8 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 
 // RegisterInterchainAccount will register an interchain account on behalf of the calling chain (controller chain)
 // on the counterparty chain (the host chain).
-func (c *CosmosChain) RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error) {
-	return c.getFullNode().RegisterICA(ctx, keyName, connectionID)
+func (c *CosmosChain) RegisterInterchainAccount(ctx context.Context, address, connectionID string) (string, error) {
+	return c.getFullNode().RegisterICA(ctx, address, connectionID)
 }
 
 // SendICABankTransfer will send a bank transfer msg from the fromAddr to the specified address for the given amount and denom.

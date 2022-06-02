@@ -55,8 +55,10 @@ type CosmosRelayerChainConfig struct {
 }
 
 const (
+	// TODO using this branch right now because main branch on relayer doesnt have ica support
+	// change this back before merging this into main on ibctest
 	ContainerImage   = "ghcr.io/cosmos/relayer"
-	ContainerVersion = "v2.0.0-beta4"
+	ContainerVersion = "justin-ibctest-ica"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.

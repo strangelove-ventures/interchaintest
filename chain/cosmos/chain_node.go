@@ -868,7 +868,8 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 		"--connection-id", connectionID,
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
@@ -890,18 +891,22 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	command := []string{tn.Chain.Config().Bin, "query", "intertx", "interchainaccounts", connectionID, address,
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name())}
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName())}
 
 	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
+	if stdout == "" {
+		return "", fmt.Errorf(stderr)
+	}
+
 	// at this point stdout should look like this:
 	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(stdout, ":", 2)
-	return strings.TrimSpace(parts[1]), nil
+	return parts[1], nil
 }
 
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
@@ -927,7 +932,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"--from", fromAddr,
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}

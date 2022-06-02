@@ -29,6 +29,13 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 	rep := new(testreporter.Reporter)
 	eRep := rep.RelayerExecReporter(t)
 
+	// Get both chains
+	srcChain, err := GetChain(t.Name(), "icad", "master", "icad-1", 4, 0, log)
+	require.NoError(t, err)
+
+	dstChain, err := GetChain(t.Name(), "icad", "master", "icad-2", 4, 0, log)
+	require.NoError(t, err)
+
 	// Setup relayer key store
 	kr := keyring.NewInMemory()
 	const coinType = types.CoinType
@@ -41,18 +48,6 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 		"",
 		hd.Secp256k1,
 	)
-
-	//entropy, err := bip39.NewEntropy(256)
-	//require.NoError(t, err)
-	//
-	//mnemonic, err := bip39.NewMnemonic(entropy)
-	//require.NoError(t, err)
-
-	// Get both chains
-	srcChain, err := GetChain(t.Name(), "icad", "master", "icad-1", 4, 1, log)
-	require.NoError(t, err)
-
-	dstChain, err := GetChain(t.Name(), "icad", "master", "icad-2", 4, 1, log)
 	require.NoError(t, err)
 
 	relayerSrcChain := types.MustBech32ifyAddressBytes(srcChain.Config().Bech32Prefix, info.GetAddress())
@@ -68,17 +63,35 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 	err = dstChain.Initialize(t.Name(), home, pool, network)
 	require.NoError(t, err)
 
-	err = srcChain.CreateKey(ctx, "icad-1")
+	const srcKeyName = "icad-1"
+	err = srcChain.CreateKey(ctx, srcKeyName)
 	require.NoError(t, err)
 
-	err = dstChain.CreateKey(ctx, "icad-2")
+	const srcUserKeyName = "user"
+	err = srcChain.CreateKey(ctx, srcUserKeyName)
 	require.NoError(t, err)
 
-	err = srcChain.Start(t.Name(), ctx, ibc.WalletAmount{
-		Address: relayerSrcChain,
-		Denom:   srcChain.Config().Denom,
-		Amount:  1000000,
-	})
+	const dstKeyName = "icad-2"
+	err = dstChain.CreateKey(ctx, dstKeyName)
+	require.NoError(t, err)
+
+	addrBz, err := srcChain.GetAddress(ctx, srcUserKeyName)
+	require.NoError(t, err)
+
+	srcUser := types.MustBech32ifyAddressBytes(srcChain.Config().Bech32Prefix, addrBz)
+
+	err = srcChain.Start(t.Name(), ctx,
+		ibc.WalletAmount{
+			Address: relayerSrcChain,
+			Denom:   srcChain.Config().Denom,
+			Amount:  1000000,
+		},
+		ibc.WalletAmount{
+			Address: srcUser,
+			Denom:   srcChain.Config().Denom,
+			Amount:  1000000,
+		},
+	)
 	require.NoError(t, err)
 
 	err = dstChain.Start(t.Name(), ctx, ibc.WalletAmount{
@@ -89,10 +102,8 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 	require.NoError(t, err)
 
 	// Wait for chains to produce blocks
-	err = test.WaitForBlocks(ctx, 5, srcChain)
+	err = test.WaitForBlocks(ctx, 5, srcChain, dstChain)
 	require.NoError(t, err)
-
-	t.Log("Chains Started")
 
 	// Configure chains in the relayer
 	rpcAddr, grpcAddr := srcChain.GetRPCAddress(), srcChain.GetGRPCAddress()
@@ -104,13 +115,11 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 		ctx,
 		eRep,
 		srcChain.Config(),
-		"default",
+		relayerKeyName,
 		rpcAddr,
 		grpcAddr,
 	)
 	require.NoError(t, err)
-
-	t.Log("Added Config 1")
 
 	rpcAddr, grpcAddr = dstChain.GetRPCAddress(), dstChain.GetGRPCAddress()
 	if !relayerImpl.UseDockerNetwork() {
@@ -121,64 +130,75 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 		ctx,
 		eRep,
 		dstChain.Config(),
-		"default",
+		relayerKeyName,
 		rpcAddr,
 		grpcAddr,
 	)
 	require.NoError(t, err)
 
-	t.Log("Added Config 2")
-
-	// Restore keys for both chains
+	// Restore keys for both chains in the relayer
 	err = relayerImpl.RestoreKey(
 		ctx,
 		eRep,
 		srcChain.Config().ChainID,
-		"default",
+		relayerKeyName,
 		mnemonic,
 	)
 	require.NoError(t, err)
-
-	t.Log("Restore Key 1")
 
 	err = relayerImpl.RestoreKey(
 		ctx,
 		eRep,
 		dstChain.Config().ChainID,
-		"default",
+		relayerKeyName,
 		mnemonic,
 	)
 	require.NoError(t, err)
-
-	t.Log("Restore Key 2")
 
 	// Generate path
 	pathName := "ica-path"
 	err = relayerImpl.GeneratePath(ctx, eRep, srcChain.Config().ChainID, dstChain.Config().ChainID, pathName)
 	require.NoError(t, err)
-	t.Log("After gen path")
 
-	// Clients handshake
+	// Create new clients
+	t.Log("Creating new clients")
+
 	err = relayerImpl.CreateClients(ctx, eRep, pathName)
 	require.NoError(t, err)
-	t.Log("After create clients")
 
-	test.WaitForBlocks(ctx, 5, srcChain, dstChain)
+	err = test.WaitForBlocks(ctx, 5, srcChain, dstChain)
+	require.NoError(t, err)
 
-	// Connections handshake
+	// Create a new connection
+	t.Log("Creating a new connection")
+
 	err = relayerImpl.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
-	t.Log("After create connections")
 
-	// Start relayer
+	err = test.WaitForBlocks(ctx, 5, srcChain)
+	require.NoError(t, err)
+
+	// Query for the newly created connection
+	connections, err := relayerImpl.GetConnections(ctx, eRep, srcChain.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(connections))
+
+	// Register a new interchain account
+	t.Log("Registering a new interchain account")
+
+	_, err = srcChain.RegisterInterchainAccount(ctx, srcUser, connections[0].ID)
+	require.NoError(t, err)
+
+	err = test.WaitForBlocks(ctx, 5, srcChain)
+	require.NoError(t, err)
+
+	// Start the relayer
+	t.Log("Starting the relayer")
+
 	err = relayerImpl.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
-	t.Log("After relayer start")
 
 	t.Cleanup(func() {
-		if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
-			t.Logf("error stopping relayer: %v", err)
-		}
 		if err := srcChain.Cleanup(ctx); err != nil {
 			log.Warn("Chain cleanup failed", zap.String("chain", srcChain.Config().ChainID), zap.Error(err))
 		}
@@ -187,26 +207,24 @@ func TestInterchainAccounts(t *testing.T, relayF RelayerFactory) {
 		}
 	})
 
-	// Wait for relayer to start up
-	err = test.WaitForBlocks(ctx, 5, srcChain)
+	// Wait for relayer to start up and finish channel handshake
+	err = test.WaitForBlocks(ctx, 15, srcChain)
 	require.NoError(t, err)
 
-	// Query connections
-	connections, err := relayerImpl.GetConnections(ctx, eRep, srcChain.Config().ChainID)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(connections))
+	// Stop the relayer
+	t.Log("Stopping the relayer")
 
-	// Register interchain account
-	_, err = srcChain.RegisterInterchainAccount(ctx, "icad-1", connections[0].ID)
-
-	// Query interchain account
-	address, err := srcChain.GetAddress(ctx, "icad-1")
+	err = relayerImpl.StopRelayer(ctx, eRep)
 	require.NoError(t, err)
 
-	icaAddress, err := srcChain.QueryInterchainAccount(ctx, connections[0].ID, string(address))
+	// Query for the new interchain account
+	t.Log("Querying for the new interchain account address")
+
+	icaAddress, err := srcChain.QueryInterchainAccount(ctx, connections[0].ID, srcUser)
 	require.NoError(t, err)
 
 	log.Info(icaAddress)
+	require.NotEqual(t, "", icaAddress)
 }
 
 func newLogger() *zap.Logger {

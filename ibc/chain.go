@@ -81,7 +81,7 @@ type Chain interface {
 
 	// RegisterInterchainAccount will register an interchain account on behalf of the calling chain (controller chain)
 	// on the counterparty chain (the host chain).
-	RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error)
+	RegisterInterchainAccount(ctx context.Context, address, connectionID string) (string, error)
 
 	// SendICABankTransfer will send a bank transfer msg from the fromAddr to the specified address for the given amount and denom.
 	SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount WalletAmount) error
