@@ -42,12 +42,13 @@ type RelayerFactory interface {
 // builtinRelayerFactory is the built-in relayer factory that understands
 // how to start the cosmos relayer in a docker container.
 type builtinRelayerFactory struct {
-	impl ibc.RelayerImplementation
-	log  *zap.Logger
+	impl    ibc.RelayerImplementation
+	log     *zap.Logger
+	options relayer.RelayerOptions
 }
 
-func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger) RelayerFactory {
-	return builtinRelayerFactory{impl: impl, log: logger}
+func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger, options ...relayer.RelayerOption) RelayerFactory {
+	return builtinRelayerFactory{impl: impl, log: logger, options: options}
 }
 
 // Build returns a relayer chosen depending on f.impl.
@@ -65,6 +66,7 @@ func (f builtinRelayerFactory) Build(
 			home,
 			pool,
 			networkID,
+			f.options,
 		)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
@@ -77,7 +79,13 @@ func (f builtinRelayerFactory) Name() string {
 		// This is using the string "rly" instead of rly.ContainerImage
 		// so that the slashes in the image repository don't add ambiguity
 		// to subtest paths, when the factory name is used in calls to t.Run.
-		return "rly@" + rly.ContainerVersion
+		for _, opt := range f.options {
+			switch typedOpt := opt.(type) {
+			case relayer.RelayerOptionDockerImage:
+				return "rly@" + typedOpt.DockerImage.Version
+			}
+		}
+		return "rly@" + rly.DefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
