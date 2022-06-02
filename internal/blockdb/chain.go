@@ -54,7 +54,7 @@ func (chain *Chain) saveBlock(ctx context.Context, height int, txs transactions)
 		return err
 	}
 	for _, tx := range txs {
-		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(json, block_id) VALUES (?, ?)`, tx, blockID)
+		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, block_id) VALUES (?, ?)`, tx, blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
 		}

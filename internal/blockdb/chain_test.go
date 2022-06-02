@@ -46,18 +46,18 @@ func TestChain_SaveBlock(t *testing.T) {
 		require.Equal(t, 5, gotHeight)
 		require.Equal(t, 1, gotChainID)
 
-		rows, err := db.Query(`SELECT json, block_id FROM tx`)
+		rows, err := db.Query(`SELECT data, block_id FROM tx`)
 		require.NoError(t, err)
 		defer rows.Close()
 		var i int
 		for rows.Next() {
 			var (
-				gotJSON    string
+				gotData    string
 				gotBlockID int
 			)
-			require.NoError(t, rows.Scan(&gotJSON, &gotBlockID))
+			require.NoError(t, rows.Scan(&gotData, &gotBlockID))
 			require.Equal(t, 1, gotBlockID)
-			require.JSONEq(t, fmt.Sprintf(`{"test":%d}`, i), gotJSON)
+			require.JSONEq(t, fmt.Sprintf(`{"test":%d}`, i), gotData)
 			i++
 		}
 		require.Equal(t, 2, i)

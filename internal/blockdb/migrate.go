@@ -53,7 +53,7 @@ func Migrate(db *sql.DB) error {
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tx (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    json TEXT NOT NULL CHECK (length(json > 0)),
+    data TEXT NOT NULL CHECK (length(data > 0)),
     block_id INTEGER,
     FOREIGN KEY(block_id) REFERENCES block(id) ON DELETE CASCADE
 )`)
