@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"time"
 
 	"golang.org/x/sync/singleflight"
 )
@@ -64,7 +65,8 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 	}
 	defer func() { _ = dbTx.Rollback() }()
 
-	res, err := dbTx.ExecContext(ctx, `INSERT OR REPLACE INTO block(height, chain_id) VALUES (?, ?)`, height, chain.id)
+	now := time.Now().UTC().Format(time.RFC3339)
+	res, err := dbTx.ExecContext(ctx, `INSERT OR REPLACE INTO block(height, chain_id, created_at) VALUES (?, ?, ?)`, height, chain.id, now)
 	if err != nil {
 		return fmt.Errorf("insert into block: %w", err)
 	}

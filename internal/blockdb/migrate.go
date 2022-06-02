@@ -25,7 +25,7 @@ func Migrate(db *sql.DB) error {
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK ( length(name) > 0 ),
     git_sha TEXT NOT NULL CHECK ( length(git_sha) > 0 ),
-    created_at TEXT NOT NULL,
+    created_at TEXT NOT NULL CHECK (length(created_at) > 0),
     UNIQUE(name,created_at)
 )`)
 	if err != nil {
@@ -45,6 +45,7 @@ func Migrate(db *sql.DB) error {
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     height INTEGER NOT NULL CHECK (length(height > 0)),
     chain_id INTEGER,
+    created_at TEXT NOT NULL CHECK (length(created_at) > 0),
     FOREIGN KEY(chain_id) REFERENCES chain(id) ON DELETE CASCADE,
     UNIQUE(height,chain_id)
 )`)

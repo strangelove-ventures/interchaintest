@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -37,16 +38,21 @@ func TestChain_SaveBlock(t *testing.T) {
 		err := chain.SaveBlock(ctx, 5, [][]byte{tx1, tx2})
 		require.NoError(t, err)
 
-		row := db.QueryRow(`SELECT height, chain_id FROM block LIMIT 1`)
+		row := db.QueryRow(`SELECT height, chain_id, created_at FROM block LIMIT 1`)
 		var (
-			gotHeight  int
-			gotChainID int
+			gotHeight    int
+			gotChainID   int
+			gotCreatedAt string
 		)
-		err = row.Scan(&gotHeight, &gotChainID)
+		err = row.Scan(&gotHeight, &gotChainID, &gotCreatedAt)
 		require.NoError(t, err)
 
 		require.Equal(t, 5, gotHeight)
 		require.Equal(t, 1, gotChainID)
+
+		ts, err := time.Parse(time.RFC3339, gotCreatedAt)
+		require.NoError(t, err)
+		require.WithinDuration(t, ts, time.Now(), 10*time.Second)
 
 		rows, err := db.Query(`SELECT data, block_id FROM tx`)
 		require.NoError(t, err)
