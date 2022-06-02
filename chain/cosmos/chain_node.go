@@ -49,7 +49,7 @@ type ChainNode struct {
 	Client       rpcclient.Client
 	Container    *docker.Container
 	TestName     string
-	Image        ibc.ChainDockerImage
+	Image        ibc.DockerImage
 
 	lock sync.Mutex
 	log  *zap.Logger

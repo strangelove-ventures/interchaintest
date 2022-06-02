@@ -34,7 +34,7 @@ type TendermintNode struct {
 	Client    rpcclient.Client
 	Container *docker.Container
 	TestName  string
-	Image     ibc.ChainDockerImage
+	Image     ibc.DockerImage
 }
 
 // TendermintNodes is a collection of TendermintNode

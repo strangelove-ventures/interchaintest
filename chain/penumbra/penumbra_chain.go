@@ -64,7 +64,7 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 		GasPrices:      "0.0upenumbra",
 		GasAdjustment:  1.3,
 		TrustingPeriod: "672h",
-		Images: []ibc.ChainDockerImage{
+		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
 			},

@@ -26,7 +26,7 @@ type PenumbraAppNode struct {
 	NetworkID string
 	Pool      *dockertest.Pool
 	Container *docker.Container
-	Image     ibc.ChainDockerImage
+	Image     ibc.DockerImage
 }
 
 const (
