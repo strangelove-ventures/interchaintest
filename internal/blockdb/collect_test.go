@@ -19,9 +19,9 @@ func (f mockTxFinder) FindTxs(ctx context.Context, height uint64) ([][]byte, err
 	return f(ctx, height)
 }
 
-type mockBlockSaver func(ctx context.Context, height int, txs [][]byte) error
+type mockBlockSaver func(ctx context.Context, height uint64, txs [][]byte) error
 
-func (f mockBlockSaver) SaveBlock(ctx context.Context, height int, txs [][]byte) error {
+func (f mockBlockSaver) SaveBlock(ctx context.Context, height uint64, txs [][]byte) error {
 	return f(ctx, height, txs)
 }
 
@@ -47,12 +47,12 @@ func TestCollector_Collect(t *testing.T) {
 			savedHeights  []int
 			savedTxs      [][][]byte
 		)
-		saver := mockBlockSaver(func(ctx context.Context, height int, txs [][]byte) error {
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
-				savedHeights = append(savedHeights, height)
+				savedHeights = append(savedHeights, int(height))
 				savedTxs = append(savedTxs, txs)
 			}
 			atomic.SwapInt64(&currentHeight, int64(height))
@@ -91,7 +91,7 @@ func TestCollector_Collect(t *testing.T) {
 			}
 			return nil, errors.New("boom")
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height int, txs [][]byte) error { return nil })
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
 
 		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
 		go collector.Collect(context.Background())
@@ -107,7 +107,7 @@ func TestCollector_Collect(t *testing.T) {
 			defer func() { ch <- int(height) }()
 			return nil, nil
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height int, txs [][]byte) error {
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error {
 			if height == 1 {
 				return nil
 			}

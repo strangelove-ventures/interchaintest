@@ -16,7 +16,7 @@ type TxFinder interface {
 
 // BlockSaver saves transactions for block at height.
 type BlockSaver interface {
-	SaveBlock(ctx context.Context, height int, txs [][]byte) error
+	SaveBlock(ctx context.Context, height uint64, txs [][]byte) error
 }
 
 // Collector saves block transactions at regular intervals.
@@ -62,7 +62,7 @@ func (p *Collector) saveTxsForHeight(ctx context.Context, height uint64) error {
 	if err != nil {
 		return fmt.Errorf("find txs: %w", err)
 	}
-	err = p.saver.SaveBlock(ctx, int(height), txs)
+	err = p.saver.SaveBlock(ctx, height, txs)
 	if err != nil {
 		return fmt.Errorf("save block: %w", err)
 	}

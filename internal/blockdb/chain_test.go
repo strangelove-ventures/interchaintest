@@ -32,7 +32,7 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 5, transactions{tx1, tx2})
+		err := chain.SaveBlock(ctx, 5, [][]byte{tx1, tx2})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT height, chain_id FROM block LIMIT 1`)
@@ -69,9 +69,9 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 1, transactions{tx1})
+		err := chain.SaveBlock(ctx, 1, [][]byte{tx1})
 		require.NoError(t, err)
-		err = chain.SaveBlock(ctx, 1, transactions{tx1})
+		err = chain.SaveBlock(ctx, 1, [][]byte{tx1})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT count(*) FROM block`)
@@ -99,6 +99,7 @@ func TestChain_SaveBlock(t *testing.T) {
 		var gotHeight int
 		err = row.Scan(&gotHeight)
 		require.NoError(t, err)
+		require.Equal(t, 5, gotHeight)
 
 		var count int
 		row = db.QueryRow(`SELECT count(*) FROM tx`)

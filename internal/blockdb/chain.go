@@ -3,10 +3,10 @@ package blockdb
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 
 	"golang.org/x/sync/singleflight"
 )
@@ -21,7 +21,7 @@ type Chain struct {
 type transactions [][]byte
 
 func (txs transactions) Hash() []byte {
-	h := sha256.New()
+	h := fnv.New32()
 	for _, tx := range txs {
 		h.Write(tx)
 	}
@@ -49,7 +49,7 @@ func (txs transactions) PrettyJSON() []string {
 // SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
 // The txs should be human-readable.
-func (chain *Chain) SaveBlock(ctx context.Context, height int, txs [][]byte) error {
+func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs [][]byte) error {
 	k := fmt.Sprintf("%d-%x", height, transactions(txs).Hash())
 	_, err, _ := chain.single.Do(k, func() (interface{}, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
@@ -57,7 +57,7 @@ func (chain *Chain) SaveBlock(ctx context.Context, height int, txs [][]byte) err
 	return err
 }
 
-func (chain *Chain) saveBlock(ctx context.Context, height int, txs transactions) error {
+func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactions) error {
 	dbTx, err := chain.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
