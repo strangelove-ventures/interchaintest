@@ -151,7 +151,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", id, err)
 				return nil
 			}
-			blockdb.NewCollector(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Collect(ctx)
+			blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond).Collect(ctx)
 			return nil
 		})
 	}

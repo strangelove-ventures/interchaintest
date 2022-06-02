@@ -28,7 +28,7 @@ type Collector struct {
 }
 
 // NewCollector creates a valid poller that polls every duration at rate.
-func NewCollector(finder TxFinder, saver BlockSaver, rate time.Duration, log *zap.Logger) *Collector {
+func NewCollector(log *zap.Logger, finder TxFinder, saver BlockSaver, rate time.Duration) *Collector {
 	return &Collector{
 		finder: finder,
 		log:    log,

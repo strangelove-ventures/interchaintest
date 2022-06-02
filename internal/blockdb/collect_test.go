@@ -26,6 +26,8 @@ func (f mockBlockSaver) SaveBlock(ctx context.Context, height uint64, txs [][]by
 }
 
 func TestCollector_Collect(t *testing.T) {
+	nopLog := zap.NewNop()
+
 	t.Run("happy path", func(t *testing.T) {
 		finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
 			if height == 0 {
@@ -59,7 +61,7 @@ func TestCollector_Collect(t *testing.T) {
 			return nil
 		})
 
-		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		var eg errgroup.Group
@@ -93,7 +95,7 @@ func TestCollector_Collect(t *testing.T) {
 		})
 		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
 
-		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
 		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
@@ -114,7 +116,7 @@ func TestCollector_Collect(t *testing.T) {
 			return errors.New("boom")
 		})
 
-		collector := NewCollector(finder, saver, time.Nanosecond, zap.NewNop())
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
 		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
