@@ -15,7 +15,10 @@ import (
 // Interchain represents a full IBC network, encompassing a collection of
 // one or more chains, one or more relayer instances, and initial account configuration.
 type Interchain struct {
-	chains   map[ibc.Chain]string
+	// Map of chain reference to chain ID.
+	chains map[ibc.Chain]string
+
+	// Map of relayer reference to user-supplied instance name.
 	relayers map[ibc.Relayer]string
 
 	// Key: relayer and path name; Value: the two chains being linked.
@@ -48,21 +51,23 @@ type relayerPath struct {
 	Path    string
 }
 
-// AddChain adds the given chain to the world.
+// AddChain adds the given chain to the Interchain,
+// using the chain ID reported by the chain's config.
 // If the given chain already exists,
-// or if another chain with the same configured name exists, AddChain panics.
+// or if another chain with the same configured chain ID exists, AddChain panics.
 func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
-	name := chain.Config().Name
-	for c, n := range ic.chains {
+	newID := chain.Config().ChainID
+
+	for c, id := range ic.chains {
 		if c == chain {
 			panic(fmt.Errorf("chain %v was already added", c))
 		}
-		if n == name {
-			panic(fmt.Errorf("a chain with name %s already exists", n))
+		if id == newID {
+			panic(fmt.Errorf("a chain with ID %s already exists", id))
 		}
 	}
 
-	ic.chains[chain] = name
+	ic.chains[chain] = newID
 	return ic
 }
 
@@ -99,10 +104,12 @@ type InterchainLink struct {
 // If any validation fails, AddLink panics.
 func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 	if _, exists := ic.chains[link.Chain1]; !exists {
-		panic(fmt.Errorf("chain %s was never added to Interchain", link.Chain1.Config().Name))
+		cfg := link.Chain1.Config()
+		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
 	}
 	if _, exists := ic.chains[link.Chain2]; !exists {
-		panic(fmt.Errorf("chain %s was never added to Interchain", link.Chain2.Config().Name))
+		cfg := link.Chain2.Config()
+		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
 	}
 	if _, exists := ic.relayers[link.Relayer]; !exists {
 		panic(fmt.Errorf("relayer %v was never added to Interchain", link.Relayer))

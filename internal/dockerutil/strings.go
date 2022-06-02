@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/ory/dockertest/v3/docker"
 )
@@ -27,6 +28,16 @@ func GetHostPort(cont *docker.Container, portID string) string {
 		ip = "localhost"
 	}
 	return net.JoinHostPort(ip, m[0].HostPort)
+}
+
+// Ensure that the global RNG is seeded when this package is imported.
+// Otherwise, each importer would need to seed explicitly on their own.
+//
+// Without pre-seeding, it is possible for two independent test binaries
+// to attempt to create a Docker network with the same random suffix
+// due to unintentionally both using the default seed.
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")

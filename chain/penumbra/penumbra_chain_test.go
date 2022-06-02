@@ -21,7 +21,13 @@ func TestPenumbraChainStart(t *testing.T) {
 	home := t.TempDir() // Must be before chain cleanup to avoid test error during cleanup.
 
 	log := zap.NewNop()
-	chain, err := ibctest.GetChain(t.Name(), "penumbra", "015-ersa-v2,v0.35.4", "penumbra-1", 4, 1, log)
+	chain, err := ibctest.BuiltinChainFactoryEntry{
+		Name:          "penumbra",
+		Version:       "015-ersa-v2,v0.35.4",
+		ChainID:       "penumbra-1",
+		NumValidators: 4,
+		NumFullNodes:  1,
+	}.GetChain(log, t.Name())
 	require.NoError(t, err, "failed to get penumbra chain")
 
 	ctx := context.Background()
