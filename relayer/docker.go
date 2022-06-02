@@ -226,7 +226,7 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	return r.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: r.container.ID})
 }
 
-func (r *DockerRelayer) containerImage() (res ibc.DockerImage) {
+func (r *DockerRelayer) containerImage() ibc.DockerImage {
 	if r.customImage != nil {
 		return *r.customImage
 	}
