@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,9 @@ func validChain(t *testing.T, db *sql.DB) *Chain {
 	return c
 }
 
-func TestChain_TraceBlock(t *testing.T) {
+func TestChain_SaveBlock(t *testing.T) {
+	t.Parallel()
+
 	var (
 		ctx = context.Background()
 		tx1 = []byte(`{"test":0}`)
@@ -32,32 +35,37 @@ func TestChain_TraceBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.TraceBlock(ctx, 5, Txs{tx1, tx2})
+		err := chain.SaveBlock(ctx, 5, [][]byte{tx1, tx2})
 		require.NoError(t, err)
 
-		row := db.QueryRow(`SELECT height, chain_id FROM block LIMIT 1`)
+		row := db.QueryRow(`SELECT height, fk_chain_id, created_at FROM block LIMIT 1`)
 		var (
-			gotHeight  int
-			gotChainID int
+			gotHeight    int
+			gotChainID   int
+			gotCreatedAt string
 		)
-		err = row.Scan(&gotHeight, &gotChainID)
+		err = row.Scan(&gotHeight, &gotChainID, &gotCreatedAt)
 		require.NoError(t, err)
 
 		require.Equal(t, 5, gotHeight)
 		require.Equal(t, 1, gotChainID)
 
-		rows, err := db.Query(`SELECT json, block_id FROM tx`)
+		ts, err := time.Parse(time.RFC3339, gotCreatedAt)
+		require.NoError(t, err)
+		require.WithinDuration(t, ts, time.Now(), 10*time.Second)
+
+		rows, err := db.Query(`SELECT data, fk_block_id FROM tx`)
 		require.NoError(t, err)
 		defer rows.Close()
 		var i int
 		for rows.Next() {
 			var (
-				gotJSON    string
+				gotData    string
 				gotBlockID int
 			)
-			require.NoError(t, rows.Scan(&gotJSON, &gotBlockID))
+			require.NoError(t, rows.Scan(&gotData, &gotBlockID))
 			require.Equal(t, 1, gotBlockID)
-			require.JSONEq(t, fmt.Sprintf(`{"test":%d}`, i), gotJSON)
+			require.JSONEq(t, fmt.Sprintf(`{"test":%d}`, i), gotData)
 			i++
 		}
 		require.Equal(t, 2, i)
@@ -69,9 +77,9 @@ func TestChain_TraceBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.TraceBlock(ctx, 1, Txs{tx1})
+		err := chain.SaveBlock(ctx, 1, [][]byte{tx1})
 		require.NoError(t, err)
-		err = chain.TraceBlock(ctx, 1, Txs{tx1})
+		err = chain.SaveBlock(ctx, 1, [][]byte{tx1})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT count(*) FROM block`)
@@ -86,13 +94,25 @@ func TestChain_TraceBlock(t *testing.T) {
 		require.Equal(t, 1, count)
 	})
 
-	t.Run("non-json tx", func(t *testing.T) {
+	t.Run("zero state", func(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
 		chain := validChain(t, db)
-		err := chain.TraceBlock(ctx, 1, Txs{[]byte(`not valid json`)})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "block 1: tx 0: malformed json")
+
+		err := chain.SaveBlock(ctx, 5, nil)
+		require.NoError(t, err)
+
+		row := db.QueryRow(`SELECT height FROM block LIMIT 1`)
+		var gotHeight int
+		err = row.Scan(&gotHeight)
+		require.NoError(t, err)
+		require.Equal(t, 5, gotHeight)
+
+		var count int
+		row = db.QueryRow(`SELECT count(*) FROM tx`)
+		err = row.Scan(&count)
+		require.NoError(t, err)
+		require.Zero(t, count)
 	})
 }

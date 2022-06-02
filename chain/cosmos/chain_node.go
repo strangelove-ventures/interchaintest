@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -20,9 +19,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -204,53 +201,32 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	tn.maybeLogBlock(ctx, height)
 	return uint64(height), nil
 }
 
-func (tn *ChainNode) maybeLogBlock(ctx context.Context, height int64) {
-	if !tn.logger().Core().Enabled(zap.DebugLevel) {
-		return
-	}
-	blockRes, err := tn.Client.Block(ctx, &height)
+// FindTxs implements blockdb.BlockSaver.
+func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+	h := int64(height)
+	blockRes, err := tn.Client.Block(ctx, &h)
 	if err != nil {
-		tn.logger().Info("Failed to get block", zap.Error(err))
-		return
+		return nil, err
 	}
-	txs := blockRes.Block.Txs
-	if len(txs) == 0 {
-		return
-	}
-
-	buf := new(bytes.Buffer)
-	separator := strings.Repeat("*", 30) + "\n"
-	buf.WriteString("\n" + separator)
-	buf.WriteString(separator)
-	buf.WriteString(tn.Chain.Config().ChainID + "\n")
-	buf.WriteString("BLOCK INFO\n")
-	fmt.Fprintf(buf, "BLOCK HEIGHT: %d\n", height)
-	fmt.Fprintf(buf, "TOTAL TXs: %d\n", len(blockRes.Block.Txs))
-
+	txs := make([][]byte, len(blockRes.Block.Txs))
 	for i, tx := range blockRes.Block.Txs {
-		fmt.Fprintf(buf, "TX #%d\n", i)
-		txResp, err := authTx.QueryTx(tn.CliContext(), hex.EncodeToString(tx.Hash()))
+		txs[i] = tx
+		sdkTx, err := decodeTX(tx)
 		if err != nil {
-			fmt.Fprintf(buf, "(Failed to query tx: %v)", err)
+			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		fmt.Fprintf(buf, "TX TYPE: %s\n", txResp.Tx.TypeUrl)
-
-		// Purposefully zero out fields to make spew's output less verbose
-		txResp.Data = "[redacted]"
-		txResp.RawLog = "[redacted]"
-		txResp.Events = nil // already present in TxResponse.Logs
-
-		spew.Fprint(buf, txResp)
+		b, err := encodeTxToJSON(sdkTx)
+		if err != nil {
+			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
+			continue
+		}
+		txs[i] = b
 	}
-	buf.WriteString(separator)
-	buf.WriteString(separator)
-
-	tn.logger().Debug(buf.String())
+	return txs, nil
 }
 
 func applyConfigChanges(cfg *tmconfig.Config, peers string) {

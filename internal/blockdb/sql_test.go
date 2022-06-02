@@ -3,14 +3,16 @@ package blockdb
 import (
 	"context"
 	"database/sql"
-	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 func emptyDB() *sql.DB {
-	db, err := ConnectDB(context.Background(), ":memory:", 3)
+	db, err := ConnectDB(context.Background(), ":memory:")
 	if err != nil {
 		panic(err)
 	}
@@ -26,12 +28,9 @@ func migratedDB() *sql.DB {
 }
 
 func TestConnectDB(t *testing.T) {
-	f, err := os.CreateTemp("", t.Name())
-	require.NoError(t, err)
-	defer f.Close()
-	defer os.RemoveAll(f.Name())
+	file := filepath.Join(t.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
+	db, err := ConnectDB(context.Background(), file)
 
-	db, err := ConnectDB(context.Background(), f.Name(), 10)
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 }

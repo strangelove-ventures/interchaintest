@@ -19,3 +19,11 @@ func CreateLogFile(name string) (*os.File, error) {
 	}
 	return os.Create(filepath.Join(fpath, name))
 }
+
+func blocksSQLiteFilename() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(home, ".ibctest", "databases", "block.db")
+}

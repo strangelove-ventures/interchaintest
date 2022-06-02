@@ -654,3 +654,8 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 	}
 	return ibcTimeouts, nil
 }
+
+// FindTxs implements blockdb.BlockSaver.
+func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+	return c.getFullNode().FindTxs(ctx, height)
+}

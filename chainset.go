@@ -3,11 +3,15 @@ package ibctest
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -99,4 +103,64 @@ func (cs chainSet) Start(ctx context.Context, testName string, additionalGenesis
 	}
 
 	return eg.Wait()
+}
+
+// TrackBlocks initializes database tables and polls for transactions to be saved in the database.
+// This method is a nop if dbPath is blank.
+// The gitSha is used to pin a git commit to a test invocation. Thus, when a user is looking at historical
+// data they are able to determine which version of the code produced the results.
+// Expected to be called after Start.
+func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha string) error {
+	if len(dbPath) == 0 {
+		// nop
+		return nil
+	}
+
+	db, err := blockdb.ConnectDB(ctx, dbPath)
+	if err != nil {
+		return fmt.Errorf("connect to sqlite database %s: %w", dbPath, err)
+	}
+
+	if err := blockdb.Migrate(db); err != nil {
+		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbPath, err)
+	}
+
+	if len(gitSha) == 0 {
+		gitSha = "unknown"
+	}
+
+	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
+	if err != nil {
+		_ = db.Close()
+		return fmt.Errorf("create test case in sqlite database: %w", err)
+	}
+
+	// TODO (nix - 6/1/22) Need logger instead of fmt.Fprint
+	var eg errgroup.Group
+	for c := range cs {
+		c := c
+		id := c.Config().ChainID
+		finder, ok := c.(blockdb.TxFinder)
+		if !ok {
+			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", id)
+			return nil
+		}
+		eg.Go(func() error {
+			chaindb, err := testCase.AddChain(ctx, id)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", id, err)
+				return nil
+			}
+			blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond).Collect(ctx)
+			return nil
+		})
+	}
+
+	go func() {
+		// TODO (nix - 6/1/22) May leak file descriptor. Interchain may need a Close() method.
+		_ = eg.Wait()
+		_ = db.Close()
+	}()
+
+	return nil
 }

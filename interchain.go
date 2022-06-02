@@ -144,6 +144,13 @@ type InterchainBuildOptions struct {
 	// but it does still configure keys and wallets for declared relayer-chain links.
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
+
+	// Optional. Git sha for test invocation. Once Go 1.18 supported,
+	// may be deprecated in favor of runtime/debug.ReadBuildInfo.
+	GitSha string
+
+	// If set, saves block history to a sqlite3 database to aid debugging.
+	BlockDatabaseFile string
 }
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
@@ -152,7 +159,7 @@ type InterchainBuildOptions struct {
 // Calling Build more than once will cause a panic.
 func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecReporter, opts InterchainBuildOptions) error {
 	if ic.built {
-		panic(fmt.Errorf("Build called more than once"))
+		panic(fmt.Errorf("Interchain.Build called more than once"))
 	}
 	ic.built = true
 
@@ -175,6 +182,10 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 
 	if err := cs.Start(ctx, opts.TestName, walletAmounts); err != nil {
 		return fmt.Errorf("failed to start chains: %w", err)
+	}
+
+	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
+		return fmt.Errorf("failed to track blocks: %w", err)
 	}
 
 	if err := ic.configureRelayerKeys(ctx, rep); err != nil {
