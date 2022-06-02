@@ -38,7 +38,7 @@ func TestChain_SaveBlock(t *testing.T) {
 		err := chain.SaveBlock(ctx, 5, [][]byte{tx1, tx2})
 		require.NoError(t, err)
 
-		row := db.QueryRow(`SELECT height, chain_id, created_at FROM block LIMIT 1`)
+		row := db.QueryRow(`SELECT height, fk_chain_id, created_at FROM block LIMIT 1`)
 		var (
 			gotHeight    int
 			gotChainID   int
@@ -54,7 +54,7 @@ func TestChain_SaveBlock(t *testing.T) {
 		require.NoError(t, err)
 		require.WithinDuration(t, ts, time.Now(), 10*time.Second)
 
-		rows, err := db.Query(`SELECT data, block_id FROM tx`)
+		rows, err := db.Query(`SELECT data, fk_block_id FROM tx`)
 		require.NoError(t, err)
 		defer rows.Close()
 		var i int

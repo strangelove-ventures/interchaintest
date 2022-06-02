@@ -61,7 +61,7 @@ func TestTestCase_WithChain(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, chain)
 
-		row := db.QueryRow(`SELECT chain_id, test_id, id FROM chain`)
+		row := db.QueryRow(`SELECT chain_id, fk_test_id, id FROM chain`)
 		var (
 			gotChainID    string
 			gotTestID     int

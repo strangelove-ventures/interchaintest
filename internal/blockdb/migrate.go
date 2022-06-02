@@ -34,9 +34,9 @@ func Migrate(db *sql.DB) error {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS chain (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     chain_id TEXT NOT NULL CHECK ( length(chain_id) > 0 ),
-    test_id INTEGER,
-    FOREIGN KEY(test_id) REFERENCES test_case(id) ON DELETE CASCADE,
-    UNIQUE(chain_id,test_id)
+    fk_test_id INTEGER,
+    FOREIGN KEY(fk_test_id) REFERENCES test_case(id) ON DELETE CASCADE,
+    UNIQUE(chain_id,fk_test_id)
 )`)
 	if err != nil {
 		return fmt.Errorf("create table chain: %w", err)
@@ -44,10 +44,10 @@ func Migrate(db *sql.DB) error {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS block (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     height INTEGER NOT NULL CHECK (length(height > 0)),
-    chain_id INTEGER,
+    fk_chain_id INTEGER,
     created_at TEXT NOT NULL CHECK (length(created_at) > 0),
-    FOREIGN KEY(chain_id) REFERENCES chain(id) ON DELETE CASCADE,
-    UNIQUE(height,chain_id)
+    FOREIGN KEY(fk_chain_id) REFERENCES chain(id) ON DELETE CASCADE,
+    UNIQUE(height,fk_chain_id)
 )`)
 	if err != nil {
 		return fmt.Errorf("create table block: %w", err)
@@ -55,8 +55,8 @@ func Migrate(db *sql.DB) error {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tx (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     data TEXT NOT NULL CHECK (length(data > 0)),
-    block_id INTEGER,
-    FOREIGN KEY(block_id) REFERENCES block(id) ON DELETE CASCADE
+    fk_block_id INTEGER,
+    FOREIGN KEY(fk_block_id) REFERENCES block(id) ON DELETE CASCADE
 )`)
 	if err != nil {
 		return fmt.Errorf("create table tx: %w", err)

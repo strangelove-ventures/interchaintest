@@ -66,7 +66,7 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 	defer func() { _ = dbTx.Rollback() }()
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	res, err := dbTx.ExecContext(ctx, `INSERT OR REPLACE INTO block(height, chain_id, created_at) VALUES (?, ?, ?)`, height, chain.id, now)
+	res, err := dbTx.ExecContext(ctx, `INSERT OR REPLACE INTO block(height, fk_chain_id, created_at) VALUES (?, ?, ?)`, height, chain.id, now)
 	if err != nil {
 		return fmt.Errorf("insert into block: %w", err)
 	}
@@ -76,7 +76,7 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 		return err
 	}
 	for _, tx := range txs.PrettyJSON() {
-		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, block_id) VALUES (?, ?)`, tx, blockID)
+		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, tx, blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
 		}
