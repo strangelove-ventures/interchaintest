@@ -106,21 +106,23 @@ func (cs chainSet) Start(ctx context.Context, testName string, additionalGenesis
 }
 
 // TrackBlocks initializes database tables and polls for transactions to be saved in the database.
-// This method is a nop if dbFile is blank.
+// This method is a nop if dbPath is blank.
+// The gitSha is used to pin a git commit to a test invocation. Thus, when a user is looking at historical
+// data they are able to determine which version of the code produced the results.
 // Expected to be called after Start.
-func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha string) error {
-	if len(dbFile) == 0 {
+func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha string) error {
+	if len(dbPath) == 0 {
 		// nop
 		return nil
 	}
 
-	db, err := blockdb.ConnectDB(ctx, dbFile)
+	db, err := blockdb.ConnectDB(ctx, dbPath)
 	if err != nil {
-		return fmt.Errorf("connect to sqlite database %s: %w", dbFile, err)
+		return fmt.Errorf("connect to sqlite database %s: %w", dbPath, err)
 	}
 
 	if err := blockdb.Migrate(db); err != nil {
-		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbFile, err)
+		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbPath, err)
 	}
 
 	if len(gitSha) == 0 {

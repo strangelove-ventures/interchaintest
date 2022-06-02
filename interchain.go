@@ -143,7 +143,7 @@ type InterchainBuildOptions struct {
 	GitSha string
 
 	// If set, saves block history to a sqlite3 database to aid debugging.
-	BlocksDatabaseFile string
+	BlockDatabaseFile string
 }
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
@@ -152,7 +152,7 @@ type InterchainBuildOptions struct {
 // Calling Build more than once will cause a panic.
 func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecReporter, opts InterchainBuildOptions) error {
 	if ic.built {
-		panic(fmt.Errorf("build called more than once"))
+		panic(fmt.Errorf("Interchain.Build called more than once"))
 	}
 	ic.built = true
 
@@ -177,7 +177,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to start chains: %w", err)
 	}
 
-	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlocksDatabaseFile, opts.GitSha); err != nil {
+	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
 		return fmt.Errorf("failed to track blocks: %w", err)
 	}
 

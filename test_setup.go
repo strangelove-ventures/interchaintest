@@ -98,12 +98,12 @@ func StartChainPairAndRelayer(
 
 	eRep := rep.RelayerExecReporter(t)
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
-		TestName:           t.Name(),
-		HomeDir:            home,
-		Pool:               pool,
-		NetworkID:          networkID,
-		GitSha:             gitSha,
-		BlocksDatabaseFile: blockSqlite,
+		TestName:          t.Name(),
+		HomeDir:           home,
+		Pool:              pool,
+		NetworkID:         networkID,
+		GitSha:            gitSha,
+		BlockDatabaseFile: blockSqlite,
 	}); err != nil {
 		return errResponse(err)
 	}

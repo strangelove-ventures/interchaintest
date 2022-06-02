@@ -25,5 +25,5 @@ func blocksSQLiteFilename() string {
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(home, ".ibctest", "databases", "blocks.db")
+	return filepath.Join(home, ".ibctest", "databases", "block.db")
 }
