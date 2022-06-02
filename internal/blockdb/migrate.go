@@ -23,8 +23,8 @@ func Migrate(db *sql.DB) error {
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL CHECK ( length(name) >0 ),
-    git_sha TEXT NOT NULL CHECK ( length(git_sha) >0 ),
+    name TEXT NOT NULL CHECK ( length(name) > 0 ),
+    git_sha TEXT NOT NULL CHECK ( length(git_sha) > 0 ),
     created_at TEXT NOT NULL,
     UNIQUE(name,created_at)
 )`)
@@ -33,10 +33,10 @@ func Migrate(db *sql.DB) error {
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS chain (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    identifier TEXT NOT NULL CHECK ( length(identifier) >0 ),
+    chain_id TEXT NOT NULL CHECK ( length(chain_id) > 0 ),
     test_id INTEGER,
     FOREIGN KEY(test_id) REFERENCES test_case(id) ON DELETE CASCADE,
-    UNIQUE(identifier,test_id)
+    UNIQUE(chain_id,test_id)
 )`)
 	if err != nil {
 		return fmt.Errorf("create table chain: %w", err)

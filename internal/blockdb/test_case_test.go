@@ -61,17 +61,17 @@ func TestTestCase_WithChain(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, chain)
 
-		row := db.QueryRow(`SELECT identifier, test_id, id FROM chain`)
+		row := db.QueryRow(`SELECT chain_id, test_id, id FROM chain`)
 		var (
-			gotChain   string
-			gotTestID  int
-			gotChainID int64
+			gotChainID    string
+			gotTestID     int
+			gotPrimaryKey int64
 		)
-		err = row.Scan(&gotChain, &gotTestID, &gotChainID)
+		err = row.Scan(&gotChainID, &gotTestID, &gotPrimaryKey)
 		require.NoError(t, err)
-		require.Equal(t, "my-chain1", gotChain)
+		require.Equal(t, "my-chain1", gotChainID)
 		require.Equal(t, 1, gotTestID)
-		require.EqualValues(t, 1, gotChainID)
+		require.EqualValues(t, 1, gotPrimaryKey)
 
 		_, err = tc.AddChain(ctx, "my-chain2")
 		require.NoError(t, err)
