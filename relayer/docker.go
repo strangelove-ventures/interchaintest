@@ -68,7 +68,10 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.P
 		}
 	}
 
-	relayer.pullContainerImageIfNecessary(relayer.containerImage())
+	containerImage := relayer.containerImage()
+	if err := relayer.pullContainerImageIfNecessary(containerImage); err != nil {
+		log.Error("Error pulling container image", zap.String("repository", containerImage.Repository), zap.String("version", containerImage.Version), zap.Error(err))
+	}
 
 	return &relayer
 }
