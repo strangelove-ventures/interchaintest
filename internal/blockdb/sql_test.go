@@ -3,7 +3,6 @@ package blockdb
 import (
 	"context"
 	"database/sql"
-	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -29,9 +28,9 @@ func migratedDB() *sql.DB {
 }
 
 func TestConnectDB(t *testing.T) {
-	file := filepath.Join(os.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
-	defer os.RemoveAll(file)
+	file := filepath.Join(t.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
 	db, err := ConnectDB(context.Background(), file)
+
 	require.NoError(t, err)
 	require.NoError(t, db.Close())
 }

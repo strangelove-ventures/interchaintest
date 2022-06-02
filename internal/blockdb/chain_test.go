@@ -20,6 +20,8 @@ func validChain(t *testing.T, db *sql.DB) *Chain {
 }
 
 func TestChain_SaveBlock(t *testing.T) {
+	t.Parallel()
+
 	var (
 		ctx = context.Background()
 		tx1 = []byte(`{"test":0}`)
