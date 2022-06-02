@@ -26,6 +26,8 @@ func TestMigrate(t *testing.T) {
 	require.Equal(t, 1, count)
 
 	err = Migrate(db, "new-sha")
+	require.NoError(t, err)
+
 	row = db.QueryRow(`select count(*) from schema_version`)
 	err = row.Scan(&count)
 
