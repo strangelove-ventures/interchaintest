@@ -1,9 +1,11 @@
 package blockdb
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"golang.org/x/sync/singleflight"
@@ -18,7 +20,7 @@ type Chain struct {
 
 type transactions [][]byte
 
-func (txs transactions) hash() []byte {
+func (txs transactions) Hash() []byte {
 	h := sha256.New()
 	for _, tx := range txs {
 		h.Write(tx)
@@ -26,11 +28,29 @@ func (txs transactions) hash() []byte {
 	return h.Sum(nil)
 }
 
+func (txs transactions) PrettyJSON() []string {
+	// TODO(nix 05-27-2022): Presentation in the database layer is generally bad practice. However, the first pass
+	// of this feature requires the user to make raw sql against the database. Therefore, to ease readability
+	// we indent json here. If we have a presentation layer in the future, I suggest removing the json indent here
+	// and let the presentation layer format appropriately.
+	jsonTxs := make([]string, len(txs))
+	buf := new(bytes.Buffer)
+	for i, tx := range txs {
+		if err := json.Indent(buf, tx, "", "  "); err != nil {
+			jsonTxs[i] = string(tx)
+			continue
+		}
+		jsonTxs[i] = buf.String()
+		buf.Reset()
+	}
+	return jsonTxs
+}
+
 // SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
 // The txs should be human-readable.
 func (chain *Chain) SaveBlock(ctx context.Context, height int, txs [][]byte) error {
-	k := fmt.Sprintf("%d-%x", height, transactions(txs).hash())
+	k := fmt.Sprintf("%d-%x", height, transactions(txs).Hash())
 	_, err, _ := chain.single.Do(k, func() (interface{}, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
 	})
@@ -53,7 +73,7 @@ func (chain *Chain) saveBlock(ctx context.Context, height int, txs transactions)
 	if err != nil {
 		return err
 	}
-	for _, tx := range txs {
+	for _, tx := range txs.PrettyJSON() {
 		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, block_id) VALUES (?, ?)`, tx, blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
