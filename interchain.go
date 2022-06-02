@@ -143,7 +143,7 @@ type InterchainBuildOptions struct {
 	GitSha string
 
 	// If set, saves block history to a sqlite3 database to aid debugging.
-	BlockDatabaseFile string
+	BlocksDatabaseFile string
 }
 
 // Build starts all the chains and configures the relayers associated with the Interchain.
@@ -177,7 +177,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to start chains: %w", err)
 	}
 
-	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
+	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlocksDatabaseFile, opts.GitSha); err != nil {
 		return fmt.Errorf("failed to track blocks: %w", err)
 	}
 
