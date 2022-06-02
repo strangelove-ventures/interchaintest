@@ -24,7 +24,7 @@ type CosmosRelayer struct {
 func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options),
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options...),
 	}
 
 	if err := os.MkdirAll(r.Dir(), 0755); err != nil {
