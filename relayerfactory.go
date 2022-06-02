@@ -66,7 +66,7 @@ func (f builtinRelayerFactory) Build(
 			home,
 			pool,
 			networkID,
-			f.options,
+			f.options...,
 		)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
