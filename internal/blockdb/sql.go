@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -33,4 +34,8 @@ func ConnectDB(ctx context.Context, databasePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping db %s: %w", databasePath, err)
 	}
 	return db, err
+}
+
+func nowRFC3339() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }

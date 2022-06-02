@@ -21,7 +21,7 @@ func emptyDB() *sql.DB {
 
 func migratedDB() *sql.DB {
 	db := emptyDB()
-	if err := Migrate(db); err != nil {
+	if err := Migrate(db, "test"); err != nil {
 		panic(err)
 	}
 	return db

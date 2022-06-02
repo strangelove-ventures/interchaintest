@@ -3,7 +3,6 @@ package blockdb
 import (
 	"context"
 	"database/sql"
-	"time"
 )
 
 // TestCase is a single test invocation.
@@ -14,8 +13,7 @@ type TestCase struct {
 
 // CreateTestCase starts tracking new test case with testName.
 func CreateTestCase(ctx context.Context, db *sql.DB, testName, gitSha string) (*TestCase, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	res, err := db.ExecContext(ctx, `INSERT INTO test_case(name, created_at, git_sha) VALUES(?, ?, ?)`, testName, now, gitSha)
+	res, err := db.ExecContext(ctx, `INSERT INTO test_case(name, created_at, git_sha) VALUES(?, ?, ?)`, testName, nowRFC3339(), gitSha)
 	if err != nil {
 		return nil, err
 	}
