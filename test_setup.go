@@ -16,6 +16,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/testreporter"
 )
 
+// gitSha is set via the project Makefile `make ibctest`
 var gitSha = "unknown"
 
 const (
