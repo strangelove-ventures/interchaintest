@@ -137,16 +137,16 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbFile, gitSha str
 	var eg errgroup.Group
 	for c := range cs {
 		c := c
-		name := c.Config().Name
+		id := c.Config().ChainID
 		finder, ok := c.(blockdb.TxFinder)
 		if !ok {
-			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", name)
+			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", id)
 			return nil
 		}
 		eg.Go(func() error {
-			chaindb, err := testCase.AddChain(ctx, name)
+			chaindb, err := testCase.AddChain(ctx, id)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", name, err)
+				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", id, err)
 				return nil
 			}
 			blockdb.NewCollector(finder, chaindb, 100*time.Millisecond, zap.NewNop()).Collect(ctx)
