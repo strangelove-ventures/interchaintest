@@ -44,7 +44,18 @@ type BuiltinChainFactory struct {
 
 // BuiltinChainFactoryEntry describes a chain to be returned from an instance of BuiltinChainFactory.
 type BuiltinChainFactoryEntry struct {
-	Name          string
+	// Name refers to the keys in builtinChainConfigs.
+	// If the Name does not reference an existing chain config,
+	// retrieving the chain will result in an error
+	// including details of the available builtin names.
+	Name string
+
+	// Interchain structs require each chain name to be unique.
+	// In normal use this is not an issue,
+	// but in some tests it can be desirable to have two independent instances of the same chain.
+	// Set the NameOverride (and the ChainID) to distinguish multiple instances.
+	NameOverride string
+
 	Version       string
 	ChainID       string
 	NumValidators int
@@ -64,6 +75,9 @@ func (e BuiltinChainFactoryEntry) GetChain(log *zap.Logger, testName string) (ib
 	}
 
 	chainConfig.ChainID = e.ChainID
+	if e.NameOverride != "" {
+		chainConfig.Name = e.NameOverride
+	}
 
 	switch chainConfig.Type {
 	case "cosmos":

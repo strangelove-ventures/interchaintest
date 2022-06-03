@@ -56,7 +56,12 @@ type relayerPath struct {
 // If the given chain already exists,
 // or if another chain with the same configured chain ID exists, AddChain panics.
 func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
+	if chain == nil {
+		panic(fmt.Errorf("cannot add nil chain"))
+	}
+
 	newID := chain.Config().ChainID
+	newName := chain.Config().Name
 
 	for c, id := range ic.chains {
 		if c == chain {
@@ -64,6 +69,9 @@ func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
 		}
 		if id == newID {
 			panic(fmt.Errorf("a chain with ID %s already exists", id))
+		}
+		if c.Config().Name == newName {
+			panic(fmt.Errorf("a chain with name %s already exists", newName))
 		}
 	}
 
@@ -73,6 +81,10 @@ func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
 
 // AddRelayer adds the given relayer with the given name to the Interchain.
 func (ic *Interchain) AddRelayer(relayer ibc.Relayer, name string) *Interchain {
+	if relayer == nil {
+		panic(fmt.Errorf("cannot add nil relayer"))
+	}
+
 	for r, n := range ic.relayers {
 		if r == relayer {
 			panic(fmt.Errorf("relayer %v was already added", r))
