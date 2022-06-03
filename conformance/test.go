@@ -449,6 +449,10 @@ func testPacketRelayFail(
 	req.NoError(err, "failed to get timeout packet on source chain")
 	req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
+	// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
+	// So we have a small buffer here.
+	require.NoError(t, test.WaitForBlocks(ctx, 2, srcChain, dstChain))
+
 	// get ibc denom for src denom on dst chain
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
