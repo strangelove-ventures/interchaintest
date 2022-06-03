@@ -15,12 +15,30 @@ import (
 //  │                    │         ╲│                    │        ╲│                    │         ╲│                    │
 //  │                    │          │                    │         │                    │          │                    │
 //  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
-func Migrate(db *sql.DB) error {
+// The gitSha ensures we can trace back to the version of the codebase that produced the schema.
+func Migrate(db *sql.DB, gitSha string) error {
 	// TODO(nix 05-27-2022): Appropriate indexes?
 	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
 	if err != nil {
 		return fmt.Errorf("pragma foreign_keys: %w", err)
 	}
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS schema_version(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL CHECK (length(created_at) > 0),
+    git_sha TEXT NOT NULL CHECK (length(git_sha) > 0),
+    UNIQUE(git_sha)
+)`)
+	if err != nil {
+		return fmt.Errorf("create table schema_version: %w", err)
+	}
+
+	_, err = db.Exec(`INSERT INTO schema_version(created_at, git_sha) VALUES (?, ?) 
+ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
+	if err != nil {
+		return fmt.Errorf("upsert schema_version with git sha %s: %w", gitSha, err)
+	}
+
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_case (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK ( length(name) > 0 ),
