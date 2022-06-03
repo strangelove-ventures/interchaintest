@@ -39,3 +39,11 @@ func ConnectDB(ctx context.Context, databasePath string) (*sql.DB, error) {
 func nowRFC3339() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
+
+func timeToLocal(timeStr string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("time.Parse RFC3339: %w", err)
+	}
+	return t.In(time.Local), nil
+}
