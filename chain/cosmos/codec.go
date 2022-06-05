@@ -12,6 +12,10 @@ import (
 	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
 )
 
+func TestCodec() codec.Codec {
+	return codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+}
+
 func newTestEncoding() simappparams.EncodingConfig {
 	// core modules
 	cfg := simappparams.MakeTestEncodingConfig()

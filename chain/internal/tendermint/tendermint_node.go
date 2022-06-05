@@ -18,10 +18,10 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
-	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"github.com/tendermint/tendermint/types"
 )
 
 // TendermintNode represents a node in the test network that is being created
@@ -77,7 +77,7 @@ func (tn *TendermintNode) NewClient(addr string) error {
 	}
 
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
+	rpcClient, err := rpchttp.NewWithClient(fmt.Sprintf("%s/websocket", addr), httpClient)
 	if err != nil {
 		return err
 	}
@@ -269,11 +269,11 @@ func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
 
 // NodeID returns the node of a given node
 func (tn *TendermintNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+	nodeKey, err := types.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
 	if err != nil {
 		return "", err
 	}
-	return string(nodeKey.ID()), nil
+	return string(nodeKey.ID), nil
 }
 
 // PeerString returns the string for connecting the nodes passed in

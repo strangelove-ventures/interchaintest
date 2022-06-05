@@ -130,8 +130,11 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	if err != nil {
 		return []byte{}, err
 	}
-
-	return keyInfo.GetAddress().Bytes(), nil
+	addr, err := keyInfo.GetAddress()
+	if err != nil {
+		return []byte{}, err
+	}
+	return addr.Bytes(), nil
 }
 
 // Implements Chain interface
@@ -492,7 +495,12 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		bech32, err := types.Bech32ifyAddressBytes(chainCfg.Bech32Prefix, n0key.GetAddress().Bytes())
+		addr, err := n0key.GetAddress()
+		if err != nil {
+			return err
+		}
+
+		bech32, err := types.Bech32ifyAddressBytes(chainCfg.Bech32Prefix, addr.Bytes())
 		if err != nil {
 			return err
 		}

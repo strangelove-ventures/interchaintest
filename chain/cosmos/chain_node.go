@@ -26,10 +26,10 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	tmtypes "github.com/tendermint/tendermint/types"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -91,7 +91,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
+	rpcClient, err := rpchttp.NewWithClient(fmt.Sprintf("%s/websocket", addr), httpClient)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (tn *ChainNode) NodeHome() string {
 
 // Keybase returns the keyring for a given node
 func (tn *ChainNode) Keybase() keyring.Keyring {
-	kr, err := keyring.New("", keyring.BackendTest, tn.Dir(), os.Stdin)
+	kr, err := keyring.New("", keyring.BackendTest, tn.Dir(), os.Stdin, TestCodec())
 	if err != nil {
 		panic(err)
 	}
@@ -701,7 +701,11 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err != nil {
 		return err
 	}
-	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, key.GetAddress().Bytes())
+	addr, err := key.GetAddress()
+	if err != nil {
+		return err
+	}
+	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, addr.Bytes())
 	if err != nil {
 		return err
 	}
@@ -717,17 +721,18 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 
 // NodeID returns the node of a given node
 func (tn *ChainNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+	nodeKey, err := tmtypes.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
 	if err != nil {
 		return "", err
 	}
-	return string(nodeKey.ID()), nil
+	return string(nodeKey.ID), nil
 }
 
 // GetKey gets a key, waiting until it is available
-func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
+func (tn *ChainNode) GetKey(name string) (info *keyring.Record, err error) {
 	return info, retry.Do(func() (err error) {
-		info, err = tn.Keybase().Key(name)
+		keybase := tn.Keybase()
+		info, err = keybase.Key(name)
 		return err
 	})
 }

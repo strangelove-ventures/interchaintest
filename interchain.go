@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/ory/dockertest/v3"
+	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 )
@@ -274,7 +275,7 @@ func (ic *Interchain) generateRelayerWallets() {
 		panic(fmt.Errorf("cannot call generateRelayerWallets more than once"))
 	}
 
-	kr := keyring.NewInMemory()
+	kr := keyring.NewInMemory(cosmos.TestCodec())
 
 	relayerChains := ic.relayerChains()
 	ic.relayerWallets = make(map[relayerChain]ibc.RelayerWallet, len(relayerChains))
@@ -345,9 +346,13 @@ func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 		panic(fmt.Errorf("failed to create mnemonic: %w", err))
 	}
 
-	return ibc.RelayerWallet{
-		Address: types.MustBech32ifyAddressBytes(config.Bech32Prefix, info.GetAddress().Bytes()),
+	addr, err := info.GetAddress()
+	if err != nil {
+		panic(fmt.Errorf("failed to get AccAddress for new key record: %w", err))
+	}
 
+	return ibc.RelayerWallet{
+		Address:  types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
 		Mnemonic: mnemonic,
 	}
 }
