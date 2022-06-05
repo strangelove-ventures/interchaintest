@@ -10,12 +10,12 @@ import (
 func TestAttributeValue(t *testing.T) {
 	events := []abcitypes.Event{
 		{Type: "1", Attributes: []abcitypes.EventAttribute{
-			{Key: []byte("ignore"), Value: []byte("should not see me")},
-			{Key: []byte("key1"), Value: []byte("found1")},
+			{Key: "ignore", Value: "should not see me"},
+			{Key: "key1", Value: "found1"},
 		}},
 		{Type: "2", Attributes: []abcitypes.EventAttribute{
-			{Key: []byte("key2"), Value: []byte("found2")},
-			{Key: []byte("ignore"), Value: []byte("should not see me")},
+			{Key: "key2", Value: "found2"},
+			{Key: "ignore", Value: "should not see me"},
 		}},
 	}
 
