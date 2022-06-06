@@ -50,6 +50,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 
 		require.Equal(t, "test3", results[0].Name)
 		require.Equal(t, "sha3", results[0].GitSha)
+		require.Equal(t, 3, results[0].ID)
 		require.NotEmpty(t, results[0].CreatedAt)
 
 		results, err = NewQuery(db).RecentTestCases(ctx, 1)

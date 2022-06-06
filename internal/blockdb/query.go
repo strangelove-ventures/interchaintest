@@ -40,13 +40,14 @@ func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, 
 }
 
 type TestCaseResult struct {
+	ID        int
 	Name      string
 	GitSha    string
 	CreatedAt time.Time
 }
 
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
-	rows, err := q.db.Query(`SELECT name, git_sha, created_at FROM test_case ORDER BY ID DESC LIMIT ?`, limit)
+	rows, err := q.db.Query(`SELECT id, name, git_sha, created_at FROM test_case ORDER BY ID DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 			res       TestCaseResult
 			createdAt string
 		)
-		if err := rows.Scan(&res.Name, &res.GitSha, &createdAt); err != nil {
+		if err := rows.Scan(&res.ID, &res.Name, &res.GitSha, &createdAt); err != nil {
 			return nil, err
 		}
 		t, err := timeToLocal(createdAt)
