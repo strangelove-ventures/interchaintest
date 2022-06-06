@@ -40,7 +40,7 @@ func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, 
 }
 
 type TestCaseResult struct {
-	ID        int
+	ID        int64
 	Name      string
 	GitSha    string
 	CreatedAt time.Time
@@ -68,6 +68,35 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 			return nil, err
 		}
 		res.CreatedAt = t
+		results = append(results, res)
+	}
+
+	return results, nil
+}
+
+type ChainResult struct {
+	ID      int64
+	ChainID string
+	Height  int
+}
+
+func (q *Query) Chains(ctx context.Context, testCaseID int64) ([]ChainResult, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT chain.id, chain.chain_id, MAX(COALESCE(block.height, 0)) FROM chain 
+    LEFT JOIN block ON block.fk_chain_id = chain.id
+    WHERE chain.fk_test_id = ?
+    GROUP BY chain.id
+    ORDER BY chain.chain_id ASC`, testCaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []ChainResult
+	for rows.Next() {
+		var res ChainResult
+		if err := rows.Scan(&res.ID, &res.ChainID, &res.Height); err != nil {
+			return nil, err
+		}
 		results = append(results, res)
 	}
 

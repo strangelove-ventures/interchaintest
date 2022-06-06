@@ -69,3 +69,30 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.Zero(t, results)
 	})
 }
+
+func TestQuery_Chains(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("happy path", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		require.NoError(t, err)
+		_, err = tc.AddChain(ctx, "chain-b")
+		require.NoError(t, err)
+		chain, err := tc.AddChain(ctx, "chain-a")
+		require.NoError(t, err)
+
+		require.NoError(t, chain.SaveBlock(ctx, 10, nil))
+		require.NoError(t, chain.SaveBlock(ctx, 15, nil))
+
+		results, err := NewQuery(db).Chains(ctx, tc.id)
+		require.NoError(t, err)
+
+		require.Len(t, results, 2)
+		require.Equal(t, "chain-a", results[0].ChainID)
+		require.Equal(t, 15, results[0].Height)
+		require.EqualValues(t, 2, results[0].ID)
+	})
+}
