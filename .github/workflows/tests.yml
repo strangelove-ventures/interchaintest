@@ -31,6 +31,11 @@ jobs:
       #     docker rm -f $(docker ps -a -q) || true
       #     docker network prune -f || true
 
+      # cleanup environment on self-hosted test runner
+      - name: clean
+        run: -|
+          rm -f $HOME/.ibctest/databases/block.db
+
       # run tests
       - name: run all tests
         # show cosmos chain and relayer logs on test failure
