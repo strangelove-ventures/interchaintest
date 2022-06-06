@@ -38,13 +38,13 @@ func NewModel(
 	schemaGitSha string,
 	testCases []blockdb.TestCaseResult) *Model {
 	if querySvc == nil {
-		panic(errors.New("querySvc required"))
+		panic(errors.New("querySvc missing"))
 	}
 	if dbFilePath == "" {
-		panic(errors.New("dbFilePath required"))
+		panic(errors.New("dbFilePath missing"))
 	}
 	if schemaGitSha == "" {
-		panic(errors.New("schemaGitSha required"))
+		panic(errors.New("schemaGitSha missing"))
 	}
 	return &Model{
 		ctx:          ctx,
@@ -55,12 +55,8 @@ func NewModel(
 	}
 }
 
-// Init implements tea.Model.
-// Init panics if any exported field is not set.
-func (m *Model) Init() tea.Cmd {
-	m.testCaseList = newListModel("Select Test Case", testCasesToItems(m.testCases))
-	return nil
-}
+// Init implements tea.Model. Currently, a nop.
+func (m *Model) Init() tea.Cmd { return nil }
 
 // View implements tea.Model.
 func (m *Model) View() string {

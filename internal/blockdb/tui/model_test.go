@@ -61,7 +61,7 @@ func TestModel_View(t *testing.T) {
 
 	t.Run("initial test cases", func(t *testing.T) {
 		tc := []blockdb.TestCaseResult{
-			{Name: "test1", GitSha: "sha1"},
+			{Name: "test1", GitSha: "sha1", Chains: []string{"osmosis", "gaia"}},
 			{Name: "test2", GitSha: "sha2"},
 		}
 		m := NewModel(ctx, &mockQueryService{}, "path", "sha", tc)
@@ -71,6 +71,7 @@ func TestModel_View(t *testing.T) {
 		view := m.View()
 
 		require.Contains(t, view, "test1 (git: sha1)")
+		require.Contains(t, view, "[osmosis, gaia]")
 		require.Contains(t, view, "test2 (git: sha2)")
 	})
 }
