@@ -15,7 +15,7 @@ func TestModel_Init(t *testing.T) {
 
 	require.NotPanics(t, func() {
 		(&Model{
-			QueryService:    &mockQueryService{},
+			//QueryService:    &mockQueryService{},
 			SchemaCreatedAt: time.Now(),
 			SchemaGitSha:    "sha",
 		}).Init()

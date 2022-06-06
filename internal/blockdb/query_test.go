@@ -9,6 +9,8 @@ import (
 )
 
 func TestQuery_CurrentSchemaVersion(t *testing.T) {
+	t.Parallel()
+
 	db := emptyDB()
 	defer db.Close()
 
@@ -23,6 +25,10 @@ func TestQuery_CurrentSchemaVersion(t *testing.T) {
 }
 
 func TestQuery_RecentTestCases(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
 	t.Run("happy path", func(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
@@ -37,7 +43,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 			"test3", "sha3", now)
 		require.NoError(t, err)
 
-		results, err := NewQuery(db).RecentTestCases(context.Background(), 10)
+		results, err := NewQuery(db).RecentTestCases(ctx, 10)
 
 		require.NoError(t, err)
 		require.Len(t, results, 3)
@@ -46,7 +52,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.Equal(t, "sha3", results[0].GitSha)
 		require.NotEmpty(t, results[0].CreatedAt)
 
-		results, err = NewQuery(db).RecentTestCases(context.Background(), 1)
+		results, err = NewQuery(db).RecentTestCases(ctx, 1)
 
 		require.NoError(t, err)
 		require.Len(t, results, 1)
@@ -56,7 +62,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
-		results, err := NewQuery(db).RecentTestCases(context.Background(), 1)
+		results, err := NewQuery(db).RecentTestCases(ctx, 1)
 
 		require.NoError(t, err)
 		require.Zero(t, results)
