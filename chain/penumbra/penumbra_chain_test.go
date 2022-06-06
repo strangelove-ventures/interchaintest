@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -20,20 +21,27 @@ func TestPenumbraChainStart(t *testing.T) {
 	pool, network := ibctest.DockerSetup(t)
 	home := t.TempDir() // Must be before chain cleanup to avoid test error during cleanup.
 
-	log := zap.NewNop()
-	chain, err := ibctest.BuiltinChainFactoryEntry{
-		Name:          "penumbra",
-		Version:       "015-ersa-v2,v0.35.4",
-		ChainID:       "penumbra-1",
-		NumValidators: 4,
-		NumFullNodes:  1,
-	}.GetChain(log, t.Name())
+	nv := 4
+
+	chains, err := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+		{
+			Name:    "penumbra",
+			Version: "015-ersa-v2,v0.35.4",
+			ChainConfig: ibc.ChainConfig{
+				ChainID: "penumbra-1",
+			},
+			NumValidators: &nv,
+		},
+	},
+	).Chains(t.Name())
 	require.NoError(t, err, "failed to get penumbra chain")
+	require.Len(t, chains, 1)
+	chain := chains[0]
 
 	ctx := context.Background()
 	t.Cleanup(func() {
 		if err := chain.Cleanup(ctx); err != nil {
-			log.Warn("Chain cleanup failed", zap.String("chain", chain.Config().ChainID), zap.Error(err))
+			t.Logf("Chain cleanup for %s failed: %v", chain.Config().ChainID, err)
 		}
 	})
 

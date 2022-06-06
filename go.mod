@@ -9,14 +9,14 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.5.7
 	github.com/ory/dockertest/v3 v3.8.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.2
 	github.com/tendermint/tendermint v0.34.14
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/tools v0.1.10
 	google.golang.org/grpc v1.44.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.17.3
 )
 

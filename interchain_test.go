@@ -24,11 +24,11 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	home := t.TempDir()
 	pool, network := ibctest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory([]ibctest.BuiltinChainFactoryEntry{
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", NameOverride: "g1", Version: "v7.0.1", ChainID: "cosmoshub-0", NumValidators: 2, NumFullNodes: 1},
-		{Name: "gaia", NameOverride: "g2", Version: "v7.0.1", ChainID: "cosmoshub-1", NumValidators: 2, NumFullNodes: 1},
-	}, zaptest.NewLogger(t))
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1"},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1"},
+	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
@@ -65,9 +65,9 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("duplicate chain", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory([]ibctest.BuiltinChainFactoryEntry{
-			{Name: "gaia", Version: "v7.0.1", ChainID: "cosmoshub-0", NumValidators: 2, NumFullNodes: 1},
-		}, zap.NewNop())
+		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+			{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		})
 
 		chains, err := cf.Chains(t.Name())
 		require.NoError(t, err)
@@ -80,26 +80,26 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 	})
 
 	t.Run("chain name", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory([]ibctest.BuiltinChainFactoryEntry{
-			// Different ChainID, but no NameOverride supplied.
-			{Name: "gaia", Version: "v7.0.1", ChainID: "cosmoshub-0", NumValidators: 2, NumFullNodes: 1},
-			{Name: "gaia", Version: "v7.0.1", ChainID: "cosmoshub-1", NumValidators: 2, NumFullNodes: 1},
-		}, zap.NewNop())
+		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+			// Different ChainID, but explicit ChainName used twice.
+			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+		})
 
 		chains, err := cf.Chains(t.Name())
 		require.NoError(t, err)
 
-		require.PanicsWithError(t, "a chain with name gaia already exists", func() {
+		require.PanicsWithError(t, "a chain with name g already exists", func() {
 			_ = ibctest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
 		})
 	})
 
 	t.Run("chain ID", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory([]ibctest.BuiltinChainFactoryEntry{
-			// Valid NameOverride but duplicate ChainID.
-			{Name: "gaia", NameOverride: "g1", Version: "v7.0.1", ChainID: "cosmoshub-0", NumValidators: 2, NumFullNodes: 1},
-			{Name: "gaia", NameOverride: "g2", Version: "v7.0.1", ChainID: "cosmoshub-0", NumValidators: 2, NumFullNodes: 1},
-		}, zap.NewNop())
+		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+			// Valid ChainName but duplicate ChainID.
+			{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+			{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		})
 
 		chains, err := cf.Chains(t.Name())
 		require.NoError(t, err)
