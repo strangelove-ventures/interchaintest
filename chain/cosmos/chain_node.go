@@ -91,7 +91,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(fmt.Sprintf("%s/websocket", addr), httpClient)
+	rpcClient, err := rpchttp.NewWithClient(addr, httpClient)
 	if err != nil {
 		return err
 	}
@@ -697,21 +697,34 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
+
+	tn.log.Info("After creating key", zap.String("test_node", tn.Name()))
+
 	key, err := tn.GetKey(valKey)
 	if err != nil {
 		return err
 	}
+
+	tn.log.Info("After get key", zap.String("key", key.Name))
+
 	addr, err := key.GetAddress()
 	if err != nil {
 		return err
 	}
+
 	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, addr.Bytes())
 	if err != nil {
 		return err
 	}
+
+	tn.log.Info("After Bech32ify Address", zap.String("address", bech32))
+
 	if err := tn.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
 		return err
 	}
+
+	tn.log.Info("After add genesis account")
+
 	return tn.Gentx(ctx, valKey, genesisSelfDelegation)
 }
 
