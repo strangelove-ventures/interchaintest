@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"errors"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -11,29 +12,53 @@ import (
 
 // QueryService queries a database and returns results.
 type QueryService interface {
+	Chains(ctx context.Context, testCaseID int64) ([]blockdb.ChainResult, error)
 }
 
 // Model is a tea.Model.
-// The struct must be initialized with all exported fields set to non-empty values.
 type Model struct {
-	// Path to the sqlite database
-	DBFilePath   string
-	SchemaGitSha string
-	TestCases    []blockdb.TestCaseResult
+	// See NewModel godoc for rationale behind capturing context in a struct field.
+	ctx          context.Context
+	dbFilePath   string
+	schemaGitSha string
+	testCases    []blockdb.TestCaseResult
 
 	testCaseList list.Model
+	chainList    list.Model
+}
+
+// NewModel returns a valid *Model.
+// The args ctx, querySvc, dbFilePath, and schemaGitSha are required or this function panics.
+// We capture ctx into a struct field which is not idiomatic. However, the tea.Model interface does not allow
+// passing a context. Therefore, we must capture it in the constructor.
+func NewModel(
+	ctx context.Context,
+	querySvc QueryService,
+	dbFilePath string,
+	schemaGitSha string,
+	testCases []blockdb.TestCaseResult) *Model {
+	if querySvc == nil {
+		panic(errors.New("querySvc required"))
+	}
+	if dbFilePath == "" {
+		panic(errors.New("dbFilePath required"))
+	}
+	if schemaGitSha == "" {
+		panic(errors.New("schemaGitSha required"))
+	}
+	return &Model{
+		ctx:          ctx,
+		dbFilePath:   dbFilePath,
+		schemaGitSha: schemaGitSha,
+		testCases:    testCases,
+		testCaseList: newListModel("Select Test Case", testCasesToItems(testCases)),
+	}
 }
 
 // Init implements tea.Model.
 // Init panics if any exported field is not set.
 func (m *Model) Init() tea.Cmd {
-	if m.DBFilePath == "" {
-		panic(errors.New("missing DBFilePath"))
-	}
-	if m.SchemaGitSha == "" {
-		panic(errors.New("missing SchemaGitSha"))
-	}
-	m.testCaseList = newListModel("Select Test Case", testCasesToItems(m.TestCases))
+	m.testCaseList = newListModel("Select Test Case", testCasesToItems(m.testCases))
 	return nil
 }
 
@@ -41,7 +66,7 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) View() string {
 	return docStyle.Render(
 		lipgloss.JoinVertical(0,
-			schemaVersionView(m.DBFilePath, m.SchemaGitSha), m.testCaseList.View(),
+			schemaVersionView(m.dbFilePath, m.schemaGitSha), m.testCaseList.View(),
 		),
 	)
 }
