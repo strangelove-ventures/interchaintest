@@ -2,7 +2,6 @@ package tui
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -16,8 +15,8 @@ func TestModel_Init(t *testing.T) {
 	require.NotPanics(t, func() {
 		(&Model{
 			//QueryService:    &mockQueryService{},
-			SchemaCreatedAt: time.Now(),
-			SchemaGitSha:    "sha",
+			DBFilePath:   "/some/path.db",
+			SchemaGitSha: "sha",
 		}).Init()
 	})
 
@@ -30,9 +29,8 @@ func TestModel_View(t *testing.T) {
 	t.Parallel()
 
 	t.Run("schema version", func(t *testing.T) {
-		now := time.Now()
-		m := &Model{SchemaCreatedAt: now, SchemaGitSha: "git-sha-123"}
-		require.Contains(t, m.View(), now.Format(time.RFC822))
-		require.Contains(t, m.View(), "git-sha-123")
+		m := &Model{DBFilePath: "path.db", SchemaGitSha: "git-sha-123"}
+		require.Regexp(t, `Database:.*path.db`, m.View())
+		require.Regexp(t, `Schema Version:.*git-sha-123`, m.View())
 	})
 }
