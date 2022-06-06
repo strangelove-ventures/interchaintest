@@ -34,7 +34,7 @@ jobs:
       # cleanup environment on self-hosted test runner
       - name: clean
         run: -|
-          rm -f $HOME/.ibctest/databases/block.db
+          rm -rf ~/.ibctest
 
       # run tests
       - name: run all tests
