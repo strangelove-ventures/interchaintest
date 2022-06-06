@@ -148,7 +148,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 		eg.Go(func() error {
 			chaindb, err := testCase.AddChain(ctx, id)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to chain %s to database: %v", id, err)
+				fmt.Fprintf(os.Stderr, "Failed to add chain %s to database: %v", id, err)
 				return nil
 			}
 			blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond).Collect(ctx)
