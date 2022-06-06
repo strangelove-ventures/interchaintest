@@ -43,6 +43,13 @@ func TestQuery_RecentTestCases(t *testing.T) {
 			"test3", "sha3", now)
 		require.NoError(t, err)
 
+		_, err = db.Exec(`INSERT INTO chain (fk_test_id, chain_id) VALUES 
+			(?, ?),
+			(?, ?)`,
+			3, "z-chain",
+			3, "a-chain")
+		require.NoError(t, err)
+
 		results, err := NewQuery(db).RecentTestCases(ctx, 10)
 
 		require.NoError(t, err)
@@ -50,8 +57,9 @@ func TestQuery_RecentTestCases(t *testing.T) {
 
 		require.Equal(t, "test3", results[0].Name)
 		require.Equal(t, "sha3", results[0].GitSha)
-		require.Equal(t, 3, results[0].ID)
+		require.EqualValues(t, 3, results[0].ID)
 		require.NotEmpty(t, results[0].CreatedAt)
+		require.Equal(t, []string{"a-chain", "z-chain"}, results[0].Chains)
 
 		results, err = NewQuery(db).RecentTestCases(ctx, 1)
 

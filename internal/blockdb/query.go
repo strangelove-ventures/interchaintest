@@ -3,6 +3,8 @@ package blockdb
 import (
 	"context"
 	"database/sql"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -44,10 +46,14 @@ type TestCaseResult struct {
 	Name      string
 	GitSha    string
 	CreatedAt time.Time
+	Chains    []string
 }
 
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
-	rows, err := q.db.Query(`SELECT id, name, git_sha, created_at FROM test_case ORDER BY ID DESC LIMIT ?`, limit)
+	rows, err := q.db.QueryContext(ctx, `SELECT test_case.id, test_case.name, test_case.git_sha, test_case.created_at, GROUP_CONCAT(COALESCE(chain.chain_id, ''), ',') FROM test_case
+                                     LEFT JOIN chain ON chain.fk_test_id = test_case.id
+                                     GROUP BY test_case.id
+                                     ORDER BY test_case.id DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -58,9 +64,10 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 	for rows.Next() {
 		var (
 			res       TestCaseResult
+			chains    string
 			createdAt string
 		)
-		if err := rows.Scan(&res.ID, &res.Name, &res.GitSha, &createdAt); err != nil {
+		if err := rows.Scan(&res.ID, &res.Name, &res.GitSha, &createdAt, &chains); err != nil {
 			return nil, err
 		}
 		t, err := timeToLocal(createdAt)
@@ -68,6 +75,8 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 			return nil, err
 		}
 		res.CreatedAt = t
+		res.Chains = strings.Split(chains, ",")
+		sort.Strings(res.Chains)
 		results = append(results, res)
 	}
 
