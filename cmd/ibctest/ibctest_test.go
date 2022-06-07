@@ -22,9 +22,7 @@ import (
 var testMatrix struct {
 	Relayers []string
 
-	ChainSets [][]ibctest.BuiltinChainFactoryEntry
-
-	CustomChainSets [][]ibctest.CustomChainFactoryEntry
+	ChainSets [][]*ibctest.ChainSpec
 }
 
 func TestMain(m *testing.M) {
@@ -67,10 +65,10 @@ func setUpTestMatrix() error {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
 		testMatrix.Relayers = []string{"rly"}
-		testMatrix.ChainSets = [][]ibctest.BuiltinChainFactoryEntry{
+		testMatrix.ChainSets = [][]*ibctest.ChainSpec{
 			{
-				{Name: "gaia", Version: "v7.0.1", ChainID: "cosmoshub-1004", NumValidators: 2, NumFullNodes: 1},
-				{Name: "osmosis", Version: "v7.2.0", ChainID: "osmosis-1001", NumValidators: 2, NumFullNodes: 1},
+				{Name: "gaia", Version: "v7.0.1"},
+				{Name: "osmosis", Version: "v7.2.0"},
 			},
 		}
 
@@ -100,13 +98,7 @@ func validateTestMatrix() error {
 	}
 
 	for _, cs := range testMatrix.ChainSets {
-		if _, err := getChainFactory(cs, nop); err != nil {
-			return err
-		}
-	}
-
-	for _, ccs := range testMatrix.CustomChainSets {
-		if _, err := getCustomChainFactory(ccs, nop); err != nil {
+		if _, err := getChainFactory(nop, cs); err != nil {
 			return err
 		}
 	}
@@ -149,18 +141,11 @@ func getRelayerFactory(name string, logger *zap.Logger) (ibctest.RelayerFactory,
 	}
 }
 
-func getChainFactory(chainSet []ibctest.BuiltinChainFactoryEntry, logger *zap.Logger) (ibctest.ChainFactory, error) {
-	if len(chainSet) != 2 {
-		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(chainSet))
+func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.ChainFactory, error) {
+	if len(chainSpecs) != 2 {
+		return nil, fmt.Errorf("chain specs must have length 2 (found a chain set of length %d)", len(chainSpecs))
 	}
-	return ibctest.NewBuiltinChainFactory(chainSet, logger), nil
-}
-
-func getCustomChainFactory(customChainSet []ibctest.CustomChainFactoryEntry, logger *zap.Logger) (ibctest.ChainFactory, error) {
-	if len(customChainSet) != 2 {
-		return nil, fmt.Errorf("chain sets must have length 2 (found a chain set of length %d)", len(customChainSet))
-	}
-	return ibctest.NewCustomChainFactory(customChainSet, logger), nil
+	return ibctest.NewBuiltinChainFactory(log, chainSpecs), nil
 }
 
 // TestConformance is the root test for the ibc conformance tests.
@@ -177,29 +162,23 @@ func TestConformance(t *testing.T) {
 	t.Cleanup(func() { _ = logger.Close() })
 	t.Logf("View chain and relayer logs at %s", logger.FilePath)
 
-	zlogger := logger.Logger
+	log := logger.Logger
 
-	// Collect all the chain factories from both the builtins and the customs.
-	chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets)+len(testMatrix.CustomChainSets))
+	// Build a set of chain factories from the provided chain sets.
+	chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets))
 	for _, cs := range testMatrix.ChainSets {
-		cf, err := getChainFactory(cs, zlogger)
+		cf, err := getChainFactory(log, cs)
 		if err != nil {
+			// This error should have been validated before running tests.
 			panic(err)
 		}
 		chainFactories = append(chainFactories, cf)
-	}
-	for _, ccs := range testMatrix.CustomChainSets {
-		ccf, err := getCustomChainFactory(ccs, zlogger)
-		if err != nil {
-			panic(err)
-		}
-		chainFactories = append(chainFactories, ccf)
 	}
 
 	// Materialize all the relayer factories.
 	relayerFactories := make([]ibctest.RelayerFactory, len(testMatrix.Relayers))
 	for i, r := range testMatrix.Relayers {
-		rf, err := getRelayerFactory(r, zlogger)
+		rf, err := getRelayerFactory(r, log)
 		if err != nil {
 			// This error should have been validated before running tests.
 			panic(err)

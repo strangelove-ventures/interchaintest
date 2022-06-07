@@ -1,9 +1,7 @@
 package ibctest
 
 import (
-	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
@@ -38,62 +36,9 @@ type ChainFactory interface {
 // BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
 // Use NewBuiltinChainFactory to create an instance.
 type BuiltinChainFactory struct {
-	entries []BuiltinChainFactoryEntry
-	log     *zap.Logger
-}
+	log *zap.Logger
 
-// BuiltinChainFactoryEntry describes a chain to be returned from an instance of BuiltinChainFactory.
-type BuiltinChainFactoryEntry struct {
-	// Name refers to the keys in builtinChainConfigs.
-	// If the Name does not reference an existing chain config,
-	// retrieving the chain will result in an error
-	// including details of the available builtin names.
-	Name string
-
-	// Interchain structs require each chain name to be unique.
-	// In normal use this is not an issue,
-	// but in some tests it can be desirable to have two independent instances of the same chain.
-	// Set the NameOverride (and the ChainID) to distinguish multiple instances.
-	NameOverride string
-
-	Version       string
-	ChainID       string
-	NumValidators int
-	NumFullNodes  int
-}
-
-func (e BuiltinChainFactoryEntry) GetChain(log *zap.Logger, testName string) (ibc.Chain, error) {
-	chainConfig, exists := builtinChainConfigs[e.Name]
-	if !exists {
-		availableChains := make([]string, 0, len(builtinChainConfigs))
-		for k := range builtinChainConfigs {
-			availableChains = append(availableChains, k)
-		}
-		sort.Strings(availableChains)
-
-		return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", e.Name, strings.Join(availableChains, ", "))
-	}
-
-	chainConfig.ChainID = e.ChainID
-	if e.NameOverride != "" {
-		chainConfig.Name = e.NameOverride
-	}
-
-	switch chainConfig.Type {
-	case "cosmos":
-		chainConfig.Images[0].Version = e.Version
-		return cosmos.NewCosmosChain(testName, chainConfig, e.NumValidators, e.NumFullNodes, log), nil
-	case "penumbra":
-		versionSplit := strings.Split(e.Version, ",")
-		if len(versionSplit) != 2 {
-			return nil, errors.New("penumbra version should be comma separated penumbra_version,tendermint_version")
-		}
-		chainConfig.Images[0].Version = versionSplit[1]
-		chainConfig.Images[1].Version = versionSplit[0]
-		return penumbra.NewPenumbraChain(testName, chainConfig, e.NumValidators, e.NumFullNodes), nil
-	default:
-		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", chainConfig.Type, e.Name)
-	}
+	specs []*ChainSpec
 }
 
 // builtinChainConfigs is a mapping of valid builtin chain names
@@ -108,107 +53,89 @@ var builtinChainConfigs = map[string]ibc.ChainConfig{
 }
 
 // NewBuiltinChainFactory returns a BuiltinChainFactory that returns chains defined by entries.
-func NewBuiltinChainFactory(entries []BuiltinChainFactoryEntry, logger *zap.Logger) *BuiltinChainFactory {
-	return &BuiltinChainFactory{entries: entries, log: logger}
+func NewBuiltinChainFactory(log *zap.Logger, specs []*ChainSpec) *BuiltinChainFactory {
+	return &BuiltinChainFactory{log: log, specs: specs}
 }
 
 func (f *BuiltinChainFactory) Count() int {
-	return len(f.entries)
+	return len(f.specs)
 }
 
 func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
-	chains := make([]ibc.Chain, len(f.entries))
-	for i, e := range f.entries {
-		chain, err := e.GetChain(f.log, testName)
+	chains := make([]ibc.Chain, len(f.specs))
+	for i, s := range f.specs {
+		cfg, err := s.Config()
+		if err != nil {
+			// Prefer to wrap the error with the chain name if possible.
+			if s.Name != "" {
+				return nil, fmt.Errorf("failed to build chain config %s: %w", s.Name, err)
+			}
+
+			return nil, fmt.Errorf("failed to build chain config at index %d: %w", i, err)
+		}
+
+		chain, err := buildChain(f.log, testName, *cfg, s.NumValidators, s.NumFullNodes)
 		if err != nil {
 			return nil, err
 		}
 		chains[i] = chain
 	}
+
 	return chains, nil
 }
 
+const (
+	defaultNumValidators = 2
+	defaultNumFullNodes  = 1
+)
+
+func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValidators, numFullNodes *int) (ibc.Chain, error) {
+	nv := defaultNumValidators
+	if numValidators != nil {
+		nv = *numValidators
+	}
+	nf := defaultNumFullNodes
+	if numFullNodes != nil {
+		nf = *numFullNodes
+	}
+
+	switch cfg.Type {
+	case "cosmos":
+		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
+	case "penumbra":
+		return penumbra.NewPenumbraChain(testName, cfg, nv, nf), nil
+	default:
+		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
+	}
+}
+
 func (f *BuiltinChainFactory) Name() string {
-	parts := make([]string, len(f.entries))
-	for i, e := range f.entries {
-		parts[i] = e.Name + "@" + e.Version
+	parts := make([]string, len(f.specs))
+	for i, s := range f.specs {
+		// Ignoring error here because if we fail to generate the config,
+		// another part of the factory stack should have failed properly before we got here.
+		cfg, _ := s.Config()
+
+		v := s.Version
+		if v == "" {
+			v = cfg.Images[0].Version
+		}
+
+		parts[i] = cfg.Name + "@" + v
 	}
 	return strings.Join(parts, "+")
 }
 
 func (f *BuiltinChainFactory) Labels() []label.Chain {
-	labels := make([]label.Chain, len(f.entries))
-	for i, e := range f.entries {
-		label := label.Chain(e.Name)
+	labels := make([]label.Chain, len(f.specs))
+	for i, s := range f.specs {
+		label := label.Chain(s.Name)
 		if !label.IsKnown() {
 			// The label must be known (i.e. registered),
 			// otherwise filtering from the command line will be broken.
-			panic(fmt.Errorf("chain name %s is not a known label", e.Name))
+			panic(fmt.Errorf("chain name %s is not a known label", s.Name))
 		}
 		labels[i] = label
-	}
-	return labels
-}
-
-// CustomChainFactory is a ChainFactory that supports returning chains that are defined by ChainConfig values.
-type CustomChainFactory struct {
-	entries []CustomChainFactoryEntry
-	log     *zap.Logger
-}
-
-// CustomChainFactoryEntry describes a chain to be returned by a CustomChainFactory.
-type CustomChainFactoryEntry struct {
-	Config        ibc.ChainConfig
-	NumValidators int
-	NumFullNodes  int
-}
-
-// NewCustomChainFactory returns a CustomChainFactory that returns chains defined by entries.
-func NewCustomChainFactory(entries []CustomChainFactoryEntry, logger *zap.Logger) *CustomChainFactory {
-	return &CustomChainFactory{entries: entries, log: logger}
-}
-
-func (e CustomChainFactoryEntry) GetChain(testName string, log *zap.Logger) (ibc.Chain, error) {
-	switch e.Config.Type {
-	case "cosmos":
-		return cosmos.NewCosmosChain(testName, e.Config, e.NumValidators, e.NumFullNodes, log), nil
-	case "penumbra":
-		return penumbra.NewPenumbraChain(testName, e.Config, e.NumValidators, e.NumFullNodes), nil
-	default:
-		return nil, fmt.Errorf("only (cosmos, penumbra) type chains are currently supported (got %q)", e.Config.Type)
-	}
-}
-
-func (f *CustomChainFactory) Count() int {
-	return len(f.entries)
-}
-
-func (f *CustomChainFactory) Chains(testName string) ([]ibc.Chain, error) {
-	chains := make([]ibc.Chain, len(f.entries))
-	for i, e := range f.entries {
-		chain, err := e.GetChain(testName, f.log)
-		if err != nil {
-			return nil, err
-		}
-		chains[i] = chain
-	}
-	return chains, nil
-}
-
-func (f *CustomChainFactory) Name() string {
-	parts := make([]string, len(f.entries))
-	for i, e := range f.entries {
-		parts[i] = e.Config.Name + "@" + e.Config.Images[0].Version
-	}
-	return strings.Join(parts, "+")
-}
-
-func (f *CustomChainFactory) Labels() []label.Chain {
-	labels := make([]label.Chain, len(f.entries))
-	for i, e := range f.entries {
-		// Although the builtin chains panic if a label is unknown,
-		// we don't apply that check on custom chain factories.
-		labels[i] = label.Chain(e.Config.Name)
 	}
 	return labels
 }
