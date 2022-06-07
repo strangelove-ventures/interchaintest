@@ -113,3 +113,33 @@ func (q *Query) Chains(ctx context.Context, testCaseID int64) ([]ChainResult, er
 
 	return results, nil
 }
+
+type TxResult struct {
+	Height int
+	Tx     []byte
+}
+
+// BlocksWithTx returns TxResults only for blocks with transactions present.
+// chainID is the chain primary key "chain.id", not to be confused with the column "chain_id".
+func (q *Query) BlocksWithTx(ctx context.Context, chainID int64) ([]TxResult, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT block.height, tx.data FROM tx 
+    INNER JOIN block on tx.fk_block_id = block.id
+    INNER JOIN chain on block.fk_chain_id = chain.id
+	WHERE chain.id = ?
+	ORDER BY block.height ASC, tx.id ASC`, chainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []TxResult
+	for rows.Next() {
+		var res TxResult
+		if err := rows.Scan(&res.Height, &res.Tx); err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+
+	return results, nil
+}
