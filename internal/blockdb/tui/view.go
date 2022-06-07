@@ -18,19 +18,16 @@ func schemaVersionView(dbFilePath, gitSha string) string {
 		Render(s)
 }
 
-func newListModel(title string, listItems []list.DefaultItem) list.Model {
+func newListModel(title string) list.Model {
 	delegate := list.NewDefaultDelegate()
 	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
 		Foreground(selected).
 		BorderForeground(selected)
-	delegate.Styles.SelectedDesc = delegate.Styles.SelectedTitle.Foreground(selected)
+	delegate.Styles.SelectedDesc = delegate.Styles.SelectedTitle.Copy()
 
-	items := make([]list.Item, len(listItems))
-	for i := range listItems {
-		items[i] = listItems[i]
-	}
-
-	l := list.New(items, delegate, 0, 0)
+	l := list.New(nil, delegate, 0, 0)
 	l.Title = title
+	l.Styles.Title = lipgloss.NewStyle().
+		Foreground(text)
 	return l
 }

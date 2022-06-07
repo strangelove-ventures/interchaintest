@@ -17,14 +17,13 @@ type QueryService interface {
 
 // Model is a tea.Model.
 type Model struct {
-	// See NewModel godoc for rationale behind capturing context in a struct field.
-	ctx          context.Context
-	dbFilePath   string
-	schemaGitSha string
-	testCases    []blockdb.TestCaseResult
+	// See NewModel for rationale behind capturing context in a struct field.
+	ctx        context.Context
+	headerView string
+	testCases  []blockdb.TestCaseResult
 
-	testCaseList list.Model
-	chainList    list.Model
+	currentFocus int
+	list         list.Model
 }
 
 // NewModel returns a valid *Model.
@@ -46,12 +45,15 @@ func NewModel(
 	if schemaGitSha == "" {
 		panic(errors.New("schemaGitSha missing"))
 	}
+
+	lm := newListModel("Select Test Case:")
+	lm.SetItems(testCasesToItems(testCases))
+
 	return &Model{
-		ctx:          ctx,
-		dbFilePath:   dbFilePath,
-		schemaGitSha: schemaGitSha,
-		testCases:    testCases,
-		testCaseList: newListModel("Select Test Case", testCasesToItems(testCases)),
+		ctx:        ctx,
+		headerView: schemaVersionView(dbFilePath, schemaGitSha),
+		testCases:  testCases,
+		list:       lm,
 	}
 }
 
@@ -60,9 +62,12 @@ func (m *Model) Init() tea.Cmd { return nil }
 
 // View implements tea.Model.
 func (m *Model) View() string {
+	if m.currentFocus == focusBlocks {
+		panic("TODO")
+	}
 	return docStyle.Render(
 		lipgloss.JoinVertical(0,
-			schemaVersionView(m.dbFilePath, m.schemaGitSha), m.testCaseList.View(),
+			m.headerView, m.list.View(),
 		),
 	)
 }
@@ -77,9 +82,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
-		m.testCaseList.SetSize(msg.Width-h, msg.Height-v-4) // TODO: the 4 is the header view height
+		m.list.SetSize(msg.Width-h, msg.Height-v-4) // TODO: the 4 is the header view height
 	}
+
+	if m.currentFocus == focusBlocks {
+		return m, nil
+	}
+
 	var cmd tea.Cmd
-	m.testCaseList, cmd = m.testCaseList.Update(msg)
+	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
+
+const (
+	focusTestCases = iota
+	focusChains
+	focusBlocks
+)

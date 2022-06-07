@@ -28,8 +28,8 @@ func (i testCasePresenter) Description() string {
 	return fmt.Sprintf("%s [%s]", t, chains)
 }
 
-func testCasesToItems(cases []blockdb.TestCaseResult) []list.DefaultItem {
-	items := make([]list.DefaultItem, len(cases))
+func testCasesToItems(cases []blockdb.TestCaseResult) []list.Item {
+	items := make([]list.Item, len(cases))
 	for i := range cases {
 		items[i] = testCasePresenter{cases[i]}
 	}

@@ -7,16 +7,15 @@ import (
 )
 
 const (
-	background lipgloss.Color = "#000000"
-	selected   lipgloss.Color = "#0096FF"
-	border     lipgloss.Color = "#7393B3"
-	text       lipgloss.Color = "#FFFFFF"
-
-	hotPink lipgloss.Color = "#FF69B4"
+	selected lipgloss.Color = "#0096FF"
+	hotPink  lipgloss.Color = "#FF69B4"
 )
 
-var docStyle = lipgloss.NewStyle().
-	Background(background)
+var (
+	text = lipgloss.AdaptiveColor{Dark: "#FFFFFF", Light: "#000000"}
+)
+
+var docStyle = lipgloss.NewStyle()
 
 func formatTime(t time.Time) string {
 	return t.Format("2006-01-02 03:04PM MST")
