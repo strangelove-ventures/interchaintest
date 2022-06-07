@@ -3,10 +3,10 @@ package tui
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
@@ -26,11 +26,12 @@ type Model struct {
 
 	currentScreen int
 
-	headerView string
+	schemaView string
 
 	testCaseList list.Model
 	chainList    list.Model
 	help         help.Model
+	blockModel   viewport.Model
 }
 
 // NewModel returns a valid *Model.
@@ -61,7 +62,7 @@ func NewModel(
 	return &Model{
 		ctx:          ctx,
 		querySvc:     querySvc,
-		headerView:   schemaVersionView(dbFilePath, schemaGitSha),
+		schemaView:   schemaVersionView(dbFilePath, schemaGitSha),
 		testCases:    testCases,
 		testCaseList: tcList,
 		chainList:    newListModel("Select Chain:"),
@@ -76,8 +77,7 @@ func (m *Model) Init() tea.Cmd { return nil }
 func (m *Model) View() string {
 	return docStyle.Render(
 		lipgloss.JoinVertical(0,
-			m.headerView,
-			m.helpView(),
+			m.headerView(),
 			m.mainView(),
 		),
 	)
@@ -135,30 +135,9 @@ func (m *Model) decrementScreen() {
 func (m *Model) updateLayout(msg tea.WindowSizeMsg) {
 	m.help.Width = msg.Width
 	h, v := docStyle.GetFrameSize()
-	headerHeight := lipgloss.Height(m.headerView)
-	footerHeight := lipgloss.Height(m.helpView())
-	m.testCaseList.SetSize(msg.Width-h, msg.Height-v-headerHeight-footerHeight)
-	m.chainList.SetSize(msg.Width-h, msg.Height-v-headerHeight-footerHeight)
-}
-
-func (m *Model) mainView() string {
-	switch m.currentScreen {
-	case screenTestCases:
-		return m.testCaseList.View()
-	case screenChains:
-		return m.chainList.View()
-	}
-	panic(fmt.Errorf("unknown screen %d", m.currentScreen))
-}
-
-var helpStyle = lipgloss.NewStyle().Margin(0, 0, 1, 2)
-
-func (m *Model) helpView() string {
-	switch m.currentScreen {
-	case screenTestCases, screenChains:
-		return helpStyle.Render(m.help.FullHelpView(defaultKeys.FullHelp()))
-	}
-	panic(fmt.Errorf("unknown screen %d", m.currentScreen))
+	headerHeight := lipgloss.Height(m.headerView())
+	m.testCaseList.SetSize(msg.Width-h, msg.Height-v-headerHeight)
+	m.chainList.SetSize(msg.Width-h, msg.Height-v-headerHeight)
 }
 
 const (

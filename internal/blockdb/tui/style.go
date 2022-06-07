@@ -9,6 +9,7 @@ import (
 var (
 	selectedColor = lipgloss.AdaptiveColor{Dark: "#0096FF", Light: "#1F51FF"} // blues
 	textColor     = lipgloss.AdaptiveColor{Dark: "#FFFFFF", Light: "#000000"}
+	borderColor   = lipgloss.Color("#7f7f7f")
 
 	docStyle = lipgloss.NewStyle()
 )

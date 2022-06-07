@@ -3,9 +3,54 @@ package tui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
+
+func (m *Model) mainView() string {
+	switch m.currentScreen {
+	case screenTestCases:
+		return m.testCaseList.View()
+	case screenChains:
+		return m.chainList.View()
+	case screenBlocks:
+		return m.blockDetailView()
+	default:
+		panic(fmt.Errorf("unknown screen %d", m.currentScreen))
+	}
+}
+
+var helpStyle = lipgloss.NewStyle().Margin(0, 0, 1, 2)
+
+func (m *Model) headerView() string {
+	var groups [][]key.Binding
+	switch m.currentScreen {
+	case screenTestCases, screenChains:
+		groups = listKeys
+	case screenBlocks:
+		groups = viewportKeys
+	default:
+		panic(fmt.Errorf("unknown screen %d", m.currentScreen))
+	}
+	return lipgloss.JoinHorizontal(0, helpStyle.Render(m.help.FullHelpView(groups)), m.schemaView)
+}
+
+func (m *Model) blockDetailView() string {
+	var (
+		tc    = m.testCases[m.testCaseList.Index()]
+		chain = m.chainList.SelectedItem().(list.DefaultItem)
+	)
+	title := fmt.Sprintf("%s/%s", formatTime(tc.CreatedAt), chain.Title())
+	title = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, true, false).
+		MarginLeft(2).
+		BorderForeground(borderColor).
+		Foreground(textColor).
+		Align(lipgloss.Center).
+		Render(title)
+	return title
+}
 
 func schemaVersionView(dbFilePath, gitSha string) string {
 	bold := func(s string) string {

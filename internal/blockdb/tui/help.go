@@ -1,46 +1,60 @@
 package tui
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/viewport"
+)
 
-type defaultKeyMap struct {
-	GoToEnd    key.Binding
-	GoToStart  key.Binding
-	NextItem   key.Binding
-	PrevItem   key.Binding
-	PrevScreen key.Binding
-	Quit       key.Binding
-}
-
-func (k defaultKeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.NextItem, k.PrevItem, k.PrevScreen},
-		{k.GoToStart, k.GoToEnd, k.Quit},
-	}
-}
-
-var defaultKeys = defaultKeyMap{
-	GoToStart: key.NewBinding(
-		key.WithKeys("home", "g"),
-		key.WithHelp("g/home", "go to start"),
-	),
-	GoToEnd: key.NewBinding(
-		key.WithKeys("end", "G"),
-		key.WithHelp("G/end", "go to end"),
-	),
-	NextItem: key.NewBinding(
-		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "next item"),
-	),
-	PrevItem: key.NewBinding(
-		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "previous item"),
-	),
-	PrevScreen: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "previous screen"),
-	),
-	Quit: key.NewBinding(
+var (
+	quitKey = key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
 		key.WithHelp("q", "quit"),
-	),
-}
+	)
+	prevScreenKey = key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "go to prev screen"),
+	)
+)
+
+var listKeys = func() [][]key.Binding {
+	defaults := list.DefaultKeyMap()
+	return [][]key.Binding{
+		{
+			defaults.CursorUp,
+			defaults.CursorDown,
+			defaults.GoToStart,
+			defaults.GoToEnd,
+		},
+		{
+			prevScreenKey,
+			quitKey,
+		},
+	}
+}()
+
+var viewportKeys = func() [][]key.Binding {
+	defaults := viewport.DefaultKeyMap()
+	return [][]key.Binding{
+		{
+			defaults.Up,
+			defaults.Down,
+			defaults.PageUp,
+			defaults.PageDown,
+			defaults.HalfPageUp,
+			defaults.HalfPageDown,
+		},
+		{
+			key.NewBinding(
+				key.WithKeys("["),
+				key.WithHelp("[", "go to prev block"),
+			),
+			key.NewBinding(
+				key.WithKeys("]"),
+				key.WithHelp("]", "go to next block"),
+			),
+			prevScreenKey,
+			quitKey,
+		},
+	}
+}()
