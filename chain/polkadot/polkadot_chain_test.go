@@ -22,7 +22,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:    "polkadot",
+			Name:    "composable",
 			Version: "polkadot:v0.9.19,composable:v2.1.9",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "rococo-local",

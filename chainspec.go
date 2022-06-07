@@ -122,6 +122,29 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		}
 		cfg.Images[0].Version = versionSplit[1]
 		cfg.Images[1].Version = versionSplit[0]
+	case "composable":
+		versionSplit := strings.Split(s.Version, ",")
+		relayChainImageSplit := strings.Split(versionSplit[0], ":")
+		var relayChainVersion string
+		if len(relayChainImageSplit) > 1 {
+			if relayChainImageSplit[0] != "polkadot" {
+				return nil, fmt.Errorf("only polkadot is supported as the relay chain node. got: %s", relayChainImageSplit[0])
+			}
+			relayChainVersion = relayChainImageSplit[1]
+		} else {
+			relayChainVersion = relayChainImageSplit[0]
+		}
+		cfg.Images[0].Version = relayChainVersion
+		for i := 1; i < len(versionSplit); i++ {
+			imageSplit := strings.Split(versionSplit[i], ":")
+			if len(imageSplit) != 2 {
+				return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[i])
+			}
+			if !strings.Contains(cfg.Images[i].Repository, imageSplit[0]) {
+				return nil, fmt.Errorf("unexpected parachain: %s", imageSplit[0])
+			}
+			cfg.Images[i].Version = imageSplit[1]
+		}
 	}
 
 	return &cfg, nil

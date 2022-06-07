@@ -60,10 +60,10 @@ type ParachainConfig struct {
 
 var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
 
-func NewPolkadotChainConfig() ibc.ChainConfig {
+func NewComposableChainConfig() ibc.ChainConfig {
 	return ibc.ChainConfig{
 		Type:         "polkadot",
-		Name:         "polkadot",
+		Name:         "composable",
 		Bech32Prefix: "",
 		Denom:        "uDOT",
 		// TODO maybe use these params for the weight-based fee model
@@ -73,6 +73,9 @@ func NewPolkadotChainConfig() ibc.ChainConfig {
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/polkadot",
+			},
+			{
+				Repository: "ghcr.io/strangelove-ventures/heighliner/composable",
 			},
 		},
 		Bin: "polkadot",
