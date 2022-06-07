@@ -35,3 +35,24 @@ func testCasesToItems(cases []blockdb.TestCaseResult) []list.Item {
 	}
 	return items
 }
+
+var _ list.DefaultItem = chainPresenter{}
+
+type chainPresenter struct {
+	blockdb.ChainResult
+}
+
+func (p chainPresenter) FilterValue() string { return p.ChainID }
+func (p chainPresenter) Title() string       { return p.ChainID }
+
+func (p chainPresenter) Description() string {
+	return fmt.Sprintf("Height %d", p.Height)
+}
+
+func chainsToItems(chains []blockdb.ChainResult) []list.Item {
+	items := make([]list.Item, len(chains))
+	for i := range chains {
+		items[i] = chainPresenter{chains[i]}
+	}
+	return items
+}

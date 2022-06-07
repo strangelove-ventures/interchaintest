@@ -29,5 +29,8 @@ func newListModel(title string) list.Model {
 	l.Title = title
 	l.Styles.Title = lipgloss.NewStyle().
 		Foreground(textColor)
+	l.SetFilteringEnabled(false)
+	l.SetShowHelp(false)
+	l.DisableQuitKeybindings()
 	return l
 }

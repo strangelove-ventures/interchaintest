@@ -3,7 +3,9 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,12 +20,17 @@ type QueryService interface {
 // Model is a tea.Model.
 type Model struct {
 	// See NewModel for rationale behind capturing context in a struct field.
-	ctx        context.Context
-	headerView string
-	testCases  []blockdb.TestCaseResult
+	ctx       context.Context
+	testCases []blockdb.TestCaseResult
+	querySvc  QueryService
 
-	currentFocus int
-	list         list.Model
+	currentScreen int
+
+	headerView string
+
+	testCaseList list.Model
+	chainList    list.Model
+	help         help.Model
 }
 
 // NewModel returns a valid *Model.
@@ -46,14 +53,19 @@ func NewModel(
 		panic(errors.New("schemaGitSha missing"))
 	}
 
-	lm := newListModel("Select Test Case:")
-	lm.SetItems(testCasesToItems(testCases))
+	tcList := newListModel("Select Test Case:")
+	tcList.SetItems(testCasesToItems(testCases))
+
+	helpModel := help.New()
 
 	return &Model{
-		ctx:        ctx,
-		headerView: schemaVersionView(dbFilePath, schemaGitSha),
-		testCases:  testCases,
-		list:       lm,
+		ctx:          ctx,
+		querySvc:     querySvc,
+		headerView:   schemaVersionView(dbFilePath, schemaGitSha),
+		testCases:    testCases,
+		testCaseList: tcList,
+		chainList:    newListModel("Select Chain:"),
+		help:         helpModel,
 	}
 }
 
@@ -62,12 +74,11 @@ func (m *Model) Init() tea.Cmd { return nil }
 
 // View implements tea.Model.
 func (m *Model) View() string {
-	if m.currentFocus == focusBlocks {
-		panic("TODO")
-	}
 	return docStyle.Render(
 		lipgloss.JoinVertical(0,
-			m.headerView, m.list.View(),
+			m.headerView,
+			m.helpView(),
+			m.mainView(),
 		),
 	)
 }
@@ -79,23 +90,79 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "enter":
+			m.incrementScreen()
+		case "esc":
+			m.decrementScreen()
 		}
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v-4) // TODO: the 4 is the header view height
-	}
-
-	if m.currentFocus == focusBlocks {
-		return m, nil
+		m.updateLayout(msg)
 	}
 
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	switch m.currentScreen {
+
+	case screenTestCases:
+		m.testCaseList, cmd = m.testCaseList.Update(msg)
+
+	case screenChains:
+		tc := m.testCases[m.testCaseList.Index()]
+		chains, err := m.querySvc.Chains(m.ctx, tc.ID)
+		if err != nil {
+			panic(err)
+		}
+		m.chainList.SetItems(chainsToItems(chains))
+		m.chainList, cmd = m.chainList.Update(msg)
+	}
+
 	return m, cmd
 }
 
+func (m *Model) incrementScreen() {
+	if m.currentScreen == screenBlocks {
+		return
+	}
+	m.currentScreen++
+}
+
+func (m *Model) decrementScreen() {
+	if m.currentScreen == 0 {
+		return
+	}
+	m.currentScreen--
+}
+
+func (m *Model) updateLayout(msg tea.WindowSizeMsg) {
+	m.help.Width = msg.Width
+	h, v := docStyle.GetFrameSize()
+	headerHeight := lipgloss.Height(m.headerView)
+	footerHeight := lipgloss.Height(m.helpView())
+	m.testCaseList.SetSize(msg.Width-h, msg.Height-v-headerHeight-footerHeight)
+	m.chainList.SetSize(msg.Width-h, msg.Height-v-headerHeight-footerHeight)
+}
+
+func (m *Model) mainView() string {
+	switch m.currentScreen {
+	case screenTestCases:
+		return m.testCaseList.View()
+	case screenChains:
+		return m.chainList.View()
+	}
+	panic(fmt.Errorf("unknown screen %d", m.currentScreen))
+}
+
+var helpStyle = lipgloss.NewStyle().Margin(0, 0, 1, 2)
+
+func (m *Model) helpView() string {
+	switch m.currentScreen {
+	case screenTestCases, screenChains:
+		return helpStyle.Render(m.help.FullHelpView(defaultKeys.FullHelp()))
+	}
+	panic(fmt.Errorf("unknown screen %d", m.currentScreen))
+}
+
 const (
-	focusTestCases = iota
-	focusChains
-	focusBlocks
+	screenTestCases = iota
+	screenChains
+	screenBlocks
 )
