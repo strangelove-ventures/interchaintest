@@ -9,7 +9,7 @@ import (
 
 func schemaVersionView(dbFilePath, gitSha string) string {
 	bold := func(s string) string {
-		return lipgloss.NewStyle().Foreground(hotPink).Bold(true).Render(s)
+		return lipgloss.NewStyle().Bold(true).Render(s)
 	}
 	s := fmt.Sprintf("%s %s\n%s %s", bold("Database:"), dbFilePath, bold("Schema Version:"), gitSha)
 	return lipgloss.NewStyle().
@@ -21,13 +21,13 @@ func schemaVersionView(dbFilePath, gitSha string) string {
 func newListModel(title string) list.Model {
 	delegate := list.NewDefaultDelegate()
 	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
-		Foreground(selected).
-		BorderForeground(selected)
+		Foreground(selectedColor).
+		BorderForeground(selectedColor)
 	delegate.Styles.SelectedDesc = delegate.Styles.SelectedTitle.Copy()
 
 	l := list.New(nil, delegate, 0, 0)
 	l.Title = title
 	l.Styles.Title = lipgloss.NewStyle().
-		Foreground(text)
+		Foreground(textColor)
 	return l
 }

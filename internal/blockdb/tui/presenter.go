@@ -8,24 +8,24 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 )
 
+var _ list.DefaultItem = testCasePresenter{}
+
 type testCasePresenter struct {
 	blockdb.TestCaseResult
 }
 
-func (i testCasePresenter) FilterValue() string {
-	return i.Name + i.GitSha + strings.Join(i.Chains, " ")
+func (p testCasePresenter) FilterValue() string {
+	return strings.Join(append([]string{p.Name, p.GitSha}, p.Chains...), " ")
 }
 
-func (i testCasePresenter) Title() string {
-	return fmt.Sprintf("%s (git: %s)", i.Name, i.GitSha)
+func (p testCasePresenter) Title() string {
+	return fmt.Sprintf("%s (git: %s)", p.Name, p.GitSha)
 }
 
-func (i testCasePresenter) Description() string {
-	var (
-		t      = formatTime(i.CreatedAt)
-		chains = strings.Join(i.Chains, ", ")
-	)
-	return fmt.Sprintf("%s [%s]", t, chains)
+func (p testCasePresenter) Description() string {
+	t := formatTime(p.CreatedAt)
+	chains := strings.Join(p.Chains, " + ")
+	return fmt.Sprintf("%s | %s", t, chains)
 }
 
 func testCasesToItems(cases []blockdb.TestCaseResult) []list.Item {
