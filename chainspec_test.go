@@ -22,6 +22,30 @@ func TestChainSpec_Config(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("omit name when all other fields provided", func(t *testing.T) {
+		s := ibctest.ChainSpec{
+			ChainName: "mychain",
+
+			ChainConfig: ibc.ChainConfig{
+				Type: "cosmos",
+				// Skip Name, as that is intended to be inherited from ChainName.
+				ChainID: "mychain-123",
+				Images: []ibc.DockerImage{
+					{Repository: "docker.example.com", Version: "latest"},
+				},
+				Bin:            "/bin/true",
+				Bech32Prefix:   "foo",
+				Denom:          "bar",
+				GasPrices:      "1bar",
+				GasAdjustment:  2,
+				TrustingPeriod: "24h",
+			},
+		}
+
+		_, err := s.Config()
+		require.NoError(t, err)
+	})
+
 	t.Run("consistently generated config", func(t *testing.T) {
 		s := ibctest.ChainSpec{
 			Name: "gaia",
