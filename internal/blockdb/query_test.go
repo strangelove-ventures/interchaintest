@@ -92,8 +92,8 @@ func TestQuery_Chains(t *testing.T) {
 		chain, err := tc.AddChain(ctx, "chain-a")
 		require.NoError(t, err)
 
-		require.NoError(t, chain.SaveBlock(ctx, 10, nil))
-		require.NoError(t, chain.SaveBlock(ctx, 15, nil))
+		require.NoError(t, chain.SaveBlock(ctx, 10, [][]byte{[]byte(`{}`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 15, [][]byte{[]byte(`{}`), []byte(`{}`)}))
 
 		results, err := NewQuery(db).Chains(ctx, tc.id)
 		require.NoError(t, err)
@@ -102,5 +102,6 @@ func TestQuery_Chains(t *testing.T) {
 		require.Equal(t, "chain-a", results[0].ChainID)
 		require.Equal(t, 15, results[0].Height)
 		require.EqualValues(t, 2, results[0].ID)
+		require.EqualValues(t, 3, results[0].NumTxs)
 	})
 }

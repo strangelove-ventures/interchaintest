@@ -87,11 +87,13 @@ type ChainResult struct {
 	ID      int64
 	ChainID string
 	Height  int
+	NumTxs  int
 }
 
 func (q *Query) Chains(ctx context.Context, testCaseID int64) ([]ChainResult, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT chain.id, chain.chain_id, MAX(COALESCE(block.height, 0)) FROM chain 
+	rows, err := q.db.QueryContext(ctx, `SELECT chain.id, chain.chain_id, MAX(COALESCE(block.height, 0)), COUNT(tx.id) FROM chain 
     LEFT JOIN block ON block.fk_chain_id = chain.id
+    LEFT JOIN tx on tx.fk_block_id = block.id
     WHERE chain.fk_test_id = ?
     GROUP BY chain.id
     ORDER BY chain.chain_id ASC`, testCaseID)
@@ -103,7 +105,7 @@ func (q *Query) Chains(ctx context.Context, testCaseID int64) ([]ChainResult, er
 	var results []ChainResult
 	for rows.Next() {
 		var res ChainResult
-		if err := rows.Scan(&res.ID, &res.ChainID, &res.Height); err != nil {
+		if err := rows.Scan(&res.ID, &res.ChainID, &res.Height, &res.NumTxs); err != nil {
 			return nil, err
 		}
 		results = append(results, res)
