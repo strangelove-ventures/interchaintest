@@ -84,12 +84,17 @@ func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 	return chains, nil
 }
 
+const (
+	defaultNumValidators = 2
+	defaultNumFullNodes  = 1
+)
+
 func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValidators, numFullNodes *int) (ibc.Chain, error) {
-	nv := 2
+	nv := defaultNumValidators
 	if numValidators != nil {
 		nv = *numValidators
 	}
-	nf := 1
+	nf := defaultNumFullNodes
 	if numFullNodes != nil {
 		nf = *numFullNodes
 	}
