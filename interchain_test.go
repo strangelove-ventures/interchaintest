@@ -63,6 +63,44 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	}))
 }
 
+// An external package that imports ibctest may not provide a GitSha when they provide a BlockDatabaseFile.
+// The GitSha field is documented as optional, so this should succeed.
+func TestInterchain_OmitGitSHA(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
+	home := t.TempDir()
+	pool, network := ibctest.DockerSetup(t)
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		{Name: "gaia", Version: "v7.0.1"},
+	})
+
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
+	gaia := chains[0]
+
+	ic := ibctest.NewInterchain().
+		AddChain(gaia)
+
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+	ctx := context.Background()
+	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: network,
+
+		SkipPathCreation: true,
+
+		BlockDatabaseFile: ":memory:",
+	}))
+}
+
 func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("duplicate chain", func(t *testing.T) {
 		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{

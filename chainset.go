@@ -121,12 +121,12 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 		return fmt.Errorf("connect to sqlite database %s: %w", dbPath, err)
 	}
 
-	if err := blockdb.Migrate(db, gitSha); err != nil {
-		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbPath, err)
-	}
-
 	if len(gitSha) == 0 {
 		gitSha = "unknown"
+	}
+
+	if err := blockdb.Migrate(db, gitSha); err != nil {
+		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbPath, err)
 	}
 
 	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
