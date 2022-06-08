@@ -14,15 +14,19 @@ import (
 
 // QueryService queries a database and returns results.
 type QueryService interface {
+	BlocksWithTx(ctx context.Context, chainID int64) ([]blockdb.TxResult, error)
 	Chains(ctx context.Context, testCaseID int64) ([]blockdb.ChainResult, error)
 }
 
 // Model is a tea.Model.
 type Model struct {
 	// See NewModel for rationale behind capturing context in a struct field.
-	ctx       context.Context
+	ctx      context.Context
+	querySvc QueryService
+
 	testCases []blockdb.TestCaseResult
-	querySvc  QueryService
+	chains    []blockdb.ChainResult
+	txs       []blockdb.TxResult
 
 	currentScreen int
 
@@ -67,6 +71,7 @@ func NewModel(
 		testCaseList: tcList,
 		chainList:    newListModel("Select Chain:"),
 		help:         helpModel,
+		blockModel:   viewport.New(20, 20),
 	}
 }
 
@@ -109,14 +114,33 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		tc := m.testCases[m.testCaseList.Index()]
 		chains, err := m.querySvc.Chains(m.ctx, tc.ID)
 		if err != nil {
+			// If error here, something is wrong with the db.
 			panic(err)
 		}
+		m.chains = chains
 		m.chainList.SetItems(chainsToItems(chains))
 		m.chainList, cmd = m.chainList.Update(msg)
+
+	case screenBlocks:
+		txs, err := m.querySvc.BlocksWithTx(m.ctx, m.chains[m.chainList.Index()].ID)
+		if err != nil {
+			// If error here, something is wrong with the db.
+			panic(err)
+		}
+		m.txs = txs
+		m.blockModel.SetContent(txPresenter(txs[0].Tx).String())
+		m.blockModel, cmd = m.blockModel.Update(msg)
 	}
 
 	return m, cmd
 }
+
+// screen stack
+const (
+	screenTestCases = iota
+	screenChains
+	screenBlocks
+)
 
 func (m *Model) incrementScreen() {
 	if m.currentScreen == screenBlocks {
@@ -133,15 +157,14 @@ func (m *Model) decrementScreen() {
 }
 
 func (m *Model) updateLayout(msg tea.WindowSizeMsg) {
+	// List views requires special layout handling.
 	m.help.Width = msg.Width
-	h, v := docStyle.GetFrameSize()
-	headerHeight := lipgloss.Height(m.headerView())
-	m.testCaseList.SetSize(msg.Width-h, msg.Height-v-headerHeight)
-	m.chainList.SetSize(msg.Width-h, msg.Height-v-headerHeight)
+	x, y := docStyle.GetFrameSize()
+	adjustedW := msg.Width - x
+	adjustedH := msg.Height - y - lipgloss.Height(m.headerView())
+	m.testCaseList.SetSize(adjustedW, adjustedH)
+	m.chainList.SetSize(adjustedW, adjustedH)
+	m.blockModel.Width = adjustedW
+	m.blockModel.Height = adjustedH
+	m.blockModel.YPosition = lipgloss.Height(m.headerView()) + 1
 }
-
-const (
-	screenTestCases = iota
-	screenChains
-	screenBlocks
-)

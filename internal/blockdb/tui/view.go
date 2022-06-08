@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -39,17 +40,28 @@ func (m *Model) headerView() string {
 func (m *Model) blockDetailView() string {
 	var (
 		tc    = m.testCases[m.testCaseList.Index()]
-		chain = m.chainList.SelectedItem().(list.DefaultItem)
+		chain = m.chains[m.chainList.Index()]
 	)
-	title := fmt.Sprintf("%s/%s", formatTime(tc.CreatedAt), chain.Title())
-	title = lipgloss.NewStyle().
+
+	title := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, true, false).
 		MarginLeft(2).
 		BorderForeground(borderColor).
 		Foreground(textColor).
 		Align(lipgloss.Center).
-		Render(title)
-	return title
+		Render(fmt.Sprintf("%s %s", formatTime(tc.CreatedAt), chain.ChainID))
+
+	height := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(borderColor).
+		Foreground(textColor).
+		Align(lipgloss.Center).
+		// TODO: update tx index
+		Render(strconv.Itoa(m.txs[0].Height))
+
+	title = lipgloss.JoinHorizontal(0, title, height)
+
+	return lipgloss.JoinVertical(0, title, m.blockModel.View())
 }
 
 func schemaVersionView(dbFilePath, gitSha string) string {

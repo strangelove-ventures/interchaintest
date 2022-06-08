@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -46,7 +48,7 @@ func (p chainPresenter) FilterValue() string { return p.ChainID }
 func (p chainPresenter) Title() string       { return p.ChainID }
 
 func (p chainPresenter) Description() string {
-	return fmt.Sprintf("Height %d", p.Height)
+	return fmt.Sprintf("Height: %d | Tx Total: %d", p.Height, p.NumTxs)
 }
 
 func chainsToItems(chains []blockdb.ChainResult) []list.Item {
@@ -55,4 +57,15 @@ func chainsToItems(chains []blockdb.ChainResult) []list.Item {
 		items[i] = chainPresenter{chains[i]}
 	}
 	return items
+}
+
+type txPresenter []byte
+
+func (p txPresenter) String() string {
+	buf := new(bytes.Buffer)
+	if err := json.Indent(buf, p, "", "  "); err != nil {
+		buf.Reset()
+		buf.Write(p)
+	}
+	return buf.String()
 }
