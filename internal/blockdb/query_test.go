@@ -33,80 +33,70 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
-		now := nowRFC3339()
-		_, err := db.Exec(`INSERT INTO test_case (name, git_sha, created_at) VALUES 
-			(?, ?, ?),
-			(?, ?, ?),
-			(?, ?, ?)`,
-			"test1", "sha1", now,
-			"test2", "sha2", now,
-			"test3", "sha3", now)
+		tc, err := CreateTestCase(ctx, db, "test1", "sha1")
+		require.NoError(t, err)
+		c, err := tc.AddChain(ctx, "chain-b")
+		require.NoError(t, err)
+		require.NoError(t, c.SaveBlock(ctx, 10, [][]byte{[]byte("tx1"), []byte("tx2")}))
+		require.NoError(t, c.SaveBlock(ctx, 11, [][]byte{[]byte("tx3")}))
+
+		_, err = tc.AddChain(ctx, "chain-a")
 		require.NoError(t, err)
 
-		_, err = db.Exec(`INSERT INTO chain (fk_test_id, chain_id) VALUES 
-			(?, ?),
-			(?, ?)`,
-			3, "z-chain",
-			3, "a-chain")
+		_, err = CreateTestCase(ctx, db, "empty", "empty-test")
 		require.NoError(t, err)
 
 		results, err := NewQuery(db).RecentTestCases(ctx, 10)
-
 		require.NoError(t, err)
+
 		require.Len(t, results, 3)
 
-		require.Equal(t, "test3", results[0].Name)
-		require.Equal(t, "sha3", results[0].GitSha)
-		require.EqualValues(t, 3, results[0].ID)
-		require.NotEmpty(t, results[0].CreatedAt)
-		require.Equal(t, []string{"a-chain", "z-chain"}, results[0].Chains)
+		// No chains
+		got := results[0]
+		require.Equal(t, "empty", got.Name)
+		require.Equal(t, "empty-test", got.GitSha)
+		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
+		require.Zero(t, got.ChainID.String)
+		require.Zero(t, got.ChainPKey.Int64)
+		require.Zero(t, got.ChainHeight.Int64)
+		require.Zero(t, got.TxTotal.Int64)
 
-		results, err = NewQuery(db).RecentTestCases(ctx, 1)
+		// No blocks or txs
+		got = results[1]
+		require.EqualValues(t, 1, got.ID)
+		require.Equal(t, "test1", got.Name)
+		require.Equal(t, "sha1", got.GitSha)
+		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
+		require.Equal(t, "chain-a", got.ChainID.String)
+		require.EqualValues(t, 2, got.ChainPKey.Int64)
+		require.Zero(t, got.ChainHeight.Int64)
+		require.Zero(t, got.TxTotal.Int64)
 
-		require.NoError(t, err)
-		require.Len(t, results, 1)
+		// With blocks and txs
+		got = results[2]
+		require.EqualValues(t, 1, got.ID)
+		require.Equal(t, "test1", got.Name)
+		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
+		require.Equal(t, "chain-b", got.ChainID.String)
+		require.EqualValues(t, 1, got.ChainPKey.Int64)
+		require.EqualValues(t, 11, got.ChainHeight.Int64)
+		require.EqualValues(t, 3, got.TxTotal.Int64)
 	})
 
 	t.Run("no test cases", func(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
-		results, err := NewQuery(db).RecentTestCases(ctx, 1)
+		got, err := NewQuery(db).RecentTestCases(ctx, 1)
 
 		require.NoError(t, err)
-		require.Zero(t, results)
-	})
-}
-
-func TestQuery_Chains(t *testing.T) {
-	ctx := context.Background()
-
-	t.Run("happy path", func(t *testing.T) {
-		db := migratedDB()
-		defer db.Close()
-
-		tc, err := CreateTestCase(ctx, db, "test", "abc123")
-		require.NoError(t, err)
-		_, err = tc.AddChain(ctx, "chain-b")
-		require.NoError(t, err)
-		chain, err := tc.AddChain(ctx, "chain-a")
-		require.NoError(t, err)
-
-		require.NoError(t, chain.SaveBlock(ctx, 10, [][]byte{[]byte(`{}`)}))
-		require.NoError(t, chain.SaveBlock(ctx, 15, [][]byte{[]byte(`{}`), []byte(`{}`)}))
-
-		results, err := NewQuery(db).Chains(ctx, tc.id)
-		require.NoError(t, err)
-
-		require.Len(t, results, 2)
-		require.Equal(t, "chain-a", results[0].ChainID)
-		require.Equal(t, 15, results[0].Height)
-		require.EqualValues(t, 2, results[0].ID)
-		require.EqualValues(t, 3, results[0].NumTxs)
+		require.Empty(t, got)
 	})
 }
 
 func TestQuery_BlocksWithTx(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("happy path", func(t *testing.T) {

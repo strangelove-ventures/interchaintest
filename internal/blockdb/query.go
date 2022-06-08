@@ -3,6 +3,7 @@ package blockdb
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -21,6 +22,14 @@ type SchemaVersionResult struct {
 	CreatedAt time.Time
 }
 
+func timeToLocal(timeStr string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("time.Parse RFC3339: %w", err)
+	}
+	return t.In(time.Local), nil
+}
+
 // CurrentSchemaVersion returns the latest git sha and time that produced the sqlite schema.
 func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, error) {
 	row := q.db.QueryRowContext(ctx, `SELECT git_sha, created_at FROM schema_version ORDER BY id DESC limit 1`)
@@ -33,18 +42,58 @@ func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, 
 	}
 	t, err := timeToLocal(createAt)
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("parse createdAt: %w", err)
 	}
 	res.CreatedAt = t
 	return res, nil
 }
 
 type TestCaseResult struct {
-	ID        int64
-	Name      string
-	GitSha    string
-	CreatedAt time.Time
-	Chains    []string
+	ID          int64
+	Name        string
+	GitSha      string // Git commit that ran the test.
+	CreatedAt   time.Time
+	ChainPKey   sql.NullInt64  // Integer primary key.
+	ChainID     sql.NullString // E.g. osmosis-1001
+	ChainHeight sql.NullInt64
+	TxTotal     sql.NullInt64
+}
+
+func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
+	rows, err := q.db.QueryContext(ctx, `
+	SELECT 
+    	test_case_id, test_case_created_at, test_case_name, test_case_git_sha, chain_kid, chain_id, chain_height, tx_total
+	FROM v_tx_agg ORDER BY test_case_id DESC, chain_id ASC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []TestCaseResult
+	for rows.Next() {
+		var (
+			res       TestCaseResult
+			createdAt string
+		)
+		if err = rows.Scan(
+			&res.ID,
+			&createdAt,
+			&res.Name,
+			&res.GitSha,
+			&res.ChainPKey,
+			&res.ChainID,
+			&res.ChainHeight,
+			&res.TxTotal,
+		); err != nil {
+			return nil, err
+		}
+		t, err := timeToLocal(createdAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse createdAt: %w", err)
+		}
+		res.CreatedAt = t
+		results = append(results, res)
+	}
+	return results, nil
 }
 
 type TxResult struct {
