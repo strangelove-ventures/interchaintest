@@ -83,6 +83,22 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.EqualValues(t, 3, got.TxTotal.Int64)
 	})
 
+	t.Run("limit", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "1", "1")
+		require.NoError(t, err)
+		_, err = tc.AddChain(ctx, "chain1")
+		require.NoError(t, err)
+		_, err = tc.AddChain(ctx, "chain2")
+		require.NoError(t, err)
+
+		got, err := NewQuery(db).RecentTestCases(ctx, 1)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+	})
+
 	t.Run("no test cases", func(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
