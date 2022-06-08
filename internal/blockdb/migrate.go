@@ -198,7 +198,6 @@ FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
 	LEFT JOIN block ON block.fk_chain_id = chain.id
 	LEFT JOIN tx ON tx.fk_block_id = block.id
 	GROUP BY test_case.id, chain.id
-	ORDER BY test_case.id DESC, chain.chain_id ASC
 `)
 	if err != nil {
 		return fmt.Errorf("create v_tx_agg view: %w", err)
