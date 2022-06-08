@@ -188,6 +188,7 @@ FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
         test_case.id AS test_case_id
 	  , test_case.created_at AS test_case_created_at
 	  , test_case.name AS test_case_name
+      , test_case.git_sha AS test_case_git_sha
 	  , chain.chain_id AS chain_id
 	  , MAX(COALESCE(block.height, 0)) AS chain_height
 	  , COUNT(tx.data) AS tx_total
