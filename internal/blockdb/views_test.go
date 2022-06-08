@@ -53,7 +53,7 @@ func TestTxFlattenedView(t *testing.T) {
   chain_kid, chain_id,
   block_id, block_created_at, block_height,
   tx_id, tx
-FROM tx_flattened
+FROM v_tx_flattened
 ORDER BY test_case_id, chain_kid, block_id, tx_id
 `)
 	require.NoError(t, err)
