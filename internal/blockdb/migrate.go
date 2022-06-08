@@ -104,7 +104,57 @@ LEFT JOIN test_case ON chain.fk_test_id = test_case.id
 `)
 
 	if err != nil {
-		return fmt.Errorf("create tx_flattened view: %w", err)
+		return fmt.Errorf("create v_tx_flattened view: %w", err)
+	}
+
+	_, err = db.Exec(`DROP VIEW IF EXISTS v_messages`)
+	if err != nil {
+		return fmt.Errorf("drop old v_messages view: %w", err)
+	}
+	_, err = db.Exec(`CREATE VIEW v_messages AS
+SELECT
+  test_case_id
+  , test_case_name
+  , chain_kid
+  , chain_id
+  , block_id
+  , block_height
+  , tx_id
+  , key as msg_n
+  , json_extract(value, "$.@type") as type
+  , json_extract(value, "$.client_state.chain_id") as client_chain_id
+  , json_extract(value, "$.client_id") as client_id
+  , json_extract(value, "$.counterparty.client_id") as counterparty_client_id
+  , json_extract(value, "$.connection_id") as conn_id
+  , COALESCE(
+      json_extract(value, "$.counterparty_connection_id"), -- ConnectionOpenAck
+      json_extract(value, "$.counterparty.connection_id")  -- ConnectionOpenTry
+    ) as counterparty_conn_id
+  , COALESCE(
+      json_extract(value, "$.port_id"),           -- ChannelOpen*
+      json_extract(value, "$.source_port"),       -- MsgTransfer
+      json_extract(value, "$.packet.source_port") -- MsgRecvPacket (might be backwards)
+    ) as port_id
+  , COALESCE(
+      json_extract(value, "$.channel.counterparty.port_id"), -- ChannelOpenTry
+      json_extract(value, "$.packet.destination_port")       -- MsgRecvPacket (might be backwards)
+    ) as counterparty_port_id
+  , COALESCE(
+      json_extract(value, "$.channel_id"),           -- ChannelOpen*
+      json_extract(value, "$.source_channel"),       -- MsgTransfer
+      json_extract(value, "$.packet.source_channel") -- MsgRecvPacket (might be backwards)
+    ) as channel_id
+  , COALESCE(
+      json_extract(value, "$.counterparty_channel_id"),         -- ChannelOpenAck
+      json_extract(value, "$.channel.counterparty.channel_id"), -- ChannelOpenTry
+      json_extract(value, "$.packet.destination_channel")       -- MsgRecvPacket (might be backwards)
+    ) as counterparty_channel_id
+  , value as raw
+FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
+`)
+
+	if err != nil {
+		return fmt.Errorf("create v_messages view: %w", err)
 	}
 
 	return nil
