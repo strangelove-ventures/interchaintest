@@ -80,5 +80,27 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 		return fmt.Errorf("create table tx: %w", err)
 	}
 
+	_, err = db.Exec(`CREATE VIEW IF NOT EXISTS tx_flattened AS
+SELECT
+  test_case.id as test_case_id
+  , test_case.created_at as test_case_created_at
+  , test_case.name as test_case_name
+  , chain.id as chain_kid
+  , chain.chain_id as chain_id
+	, block.id as block_id
+  , block.created_at as block_created_at
+  , block.height as block_height
+  , tx.id as tx_id
+  , tx.data as tx
+ FROM tx
+ LEFT JOIN block ON tx.fk_block_id = block.id
+ LEFT JOIN chain ON block.fk_chain_id = chain.id
+ LEFT JOIN test_case ON chain.fk_test_id = test_case.id
+`)
+
+	if err != nil {
+		return fmt.Errorf("create tx_flattened view: %w", err)
+	}
+
 	return nil
 }
