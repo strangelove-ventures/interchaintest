@@ -146,7 +146,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 			return nil
 		}
 		eg.Go(func() error {
-			chaindb, err := testCase.AddChain(ctx, id)
+			chaindb, err := testCase.AddChain(ctx, id, c.Config().Type)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to add chain %s to database: %v", id, err)
 				return nil

@@ -45,7 +45,7 @@ func TestCreateTestCase(t *testing.T) {
 	})
 }
 
-func TestTestCase_WithChain(t *testing.T) {
+func TestTestCase_AddChain(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -57,23 +57,25 @@ func TestTestCase_WithChain(t *testing.T) {
 		tc, err := CreateTestCase(ctx, db, "SomeTest", "abc")
 		require.NoError(t, err)
 
-		chain, err := tc.AddChain(ctx, "my-chain1")
+		chain, err := tc.AddChain(ctx, "my-chain1", "penumbra")
 		require.NoError(t, err)
 		require.NotNil(t, chain)
 
-		row := db.QueryRow(`SELECT chain_id, fk_test_id, id FROM chain`)
+		row := db.QueryRow(`SELECT chain_id, chain_type, fk_test_id, id FROM chain`)
 		var (
 			gotChainID    string
+			gotChainType  string
 			gotTestID     int
 			gotPrimaryKey int64
 		)
-		err = row.Scan(&gotChainID, &gotTestID, &gotPrimaryKey)
+		err = row.Scan(&gotChainID, &gotChainType, &gotTestID, &gotPrimaryKey)
 		require.NoError(t, err)
 		require.Equal(t, "my-chain1", gotChainID)
+		require.Equal(t, "penumbra", gotChainType)
 		require.Equal(t, 1, gotTestID)
 		require.EqualValues(t, 1, gotPrimaryKey)
 
-		_, err = tc.AddChain(ctx, "my-chain2")
+		_, err = tc.AddChain(ctx, "my-chain2", "test")
 		require.NoError(t, err)
 	})
 
@@ -84,10 +86,10 @@ func TestTestCase_WithChain(t *testing.T) {
 		tc, err := CreateTestCase(ctx, db, "SomeTest", "abc")
 		require.NoError(t, err)
 
-		_, err = tc.AddChain(ctx, "my-chain")
+		_, err = tc.AddChain(ctx, "my-chain", "cosmos")
 		require.NoError(t, err)
 
-		_, err = tc.AddChain(ctx, "my-chain")
+		_, err = tc.AddChain(ctx, "my-chain", "cosmos")
 		require.Error(t, err)
 	})
 }

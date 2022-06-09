@@ -2,7 +2,11 @@ package blockdb
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
+
+	"modernc.org/sqlite"
 )
 
 // Migrate migrates db in an idempotent manner.
@@ -16,6 +20,8 @@ import (
 //  │                    │          │                    │         │                    │          │                    │
 //  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
 // The gitSha ensures we can trace back to the version of the codebase that produced the schema.
+// Warning: Typical best practice wraps each migration step into its own transaction. For simplicity given
+// this is an embedded database, we omit transactions.
 func Migrate(db *sql.DB, gitSha string) error {
 	// TODO(nix 05-27-2022): Appropriate indexes?
 	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
@@ -80,7 +86,21 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 		return fmt.Errorf("create table tx: %w", err)
 	}
 
-	_, err = db.Exec(`DROP VIEW IF EXISTS v_tx_flattened`)
+	_, err = db.Exec(`ALTER TABLE chain ADD COLUMN chain_type TEXT NOT NULL check(length(chain_type) > 0) DEFAULT "unknown"`)
+	if errIgnoreDuplicateColumn(err, "chain_type") != nil {
+		return fmt.Errorf("alter table chain add chain_type: %w", err)
+	}
+
+	// Creating views should be last migration step.
+	// Error already wrapped.
+	return upsertViews(db)
+}
+
+// upsertViews should be idempotent by dropping/re-creating the view. The drop/re-create makes view authoring simpler
+// in case table columns are altered, added, or dropped.
+// Performance impact is negligible since views are essentially stored queries.
+func upsertViews(db *sql.DB) error {
+	_, err := db.Exec(`DROP VIEW IF EXISTS v_tx_flattened`)
 	if err != nil {
 		return fmt.Errorf("drop old v_tx_flattened view: %w", err)
 	}
@@ -92,7 +112,8 @@ SELECT
   , test_case.name as test_case_name
   , chain.id as chain_kid
   , chain.chain_id as chain_id
-	, block.id as block_id
+  , chain.chain_type as chain_type
+  , block.id as block_id
   , block.created_at as block_created_at
   , block.height as block_height
   , tx.id as tx_id
@@ -158,4 +179,13 @@ FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
 	}
 
 	return nil
+}
+
+func errIgnoreDuplicateColumn(err error, col string) error {
+	var serr *sqlite.Error
+	if errors.As(err, &serr) &&
+		strings.Contains(serr.Error(), fmt.Sprintf("duplicate column name: %s", col)) {
+		return nil
+	}
+	return err
 }

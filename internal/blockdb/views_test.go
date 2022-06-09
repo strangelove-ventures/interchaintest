@@ -20,7 +20,7 @@ func TestTxFlattenedView(t *testing.T) {
 	tc, err := CreateTestCase(ctx, db, "mytest", "abc123")
 	require.NoError(t, err)
 
-	chain, err := tc.AddChain(ctx, "chain1")
+	chain, err := tc.AddChain(ctx, "chain1", "cosmos")
 	require.NoError(t, err)
 
 	beforeBlocksCreated := time.Now().UTC().Format(time.RFC3339)
@@ -40,6 +40,7 @@ func TestTxFlattenedView(t *testing.T) {
 
 		chainKeyID int64
 		chainID    string
+		chainType  string
 
 		blockID        int
 		blockCreatedAt string
@@ -50,7 +51,7 @@ func TestTxFlattenedView(t *testing.T) {
 	)
 	rows, err := db.Query(`SELECT
   test_case_id, test_case_created_at, test_case_name,
-  chain_kid, chain_id,
+  chain_kid, chain_id, chain_type,
   block_id, block_created_at, block_height,
   tx_id, tx
 FROM v_tx_flattened
@@ -63,7 +64,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(
 		&tcID, &tcCreatedAt, &tcName,
-		&chainKeyID, &chainID,
+		&chainKeyID, &chainID, &chainType,
 		&blockID, &blockCreatedAt, &blockHeight,
 		&txID, &tx,
 	))
@@ -75,6 +76,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 
 	require.Equal(t, chainKeyID, chain.id)
 	require.Equal(t, chainID, "chain1")
+	require.Equal(t, chainType, "cosmos")
 
 	require.GreaterOrEqual(t, blockCreatedAt, beforeBlocksCreated)
 	require.LessOrEqual(t, blockCreatedAt, afterBlocksCreated)
@@ -90,7 +92,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(
 		&tcID, &tcCreatedAt, &tcName,
-		&chainKeyID, &chainID,
+		&chainKeyID, &chainID, &chainType,
 		&blockID, &blockCreatedAt, &blockHeight,
 		&txID, &tx,
 	))
@@ -114,7 +116,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Scan(
 		&tcID, &tcCreatedAt, &tcName,
-		&chainKeyID, &chainID,
+		&chainKeyID, &chainID, &chainType,
 		&blockID, &blockCreatedAt, &blockHeight,
 		&txID, &tx,
 	))

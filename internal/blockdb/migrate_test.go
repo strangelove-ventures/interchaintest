@@ -7,6 +7,8 @@ import (
 )
 
 func TestMigrate(t *testing.T) {
+	t.Parallel()
+
 	db := emptyDB()
 	defer db.Close()
 
@@ -14,7 +16,7 @@ func TestMigrate(t *testing.T) {
 	err := Migrate(db, gitSha)
 	require.NoError(t, err)
 
-	// idempotent
+	// Tests idempotency.
 	err = Migrate(db, gitSha)
 	require.NoError(t, err)
 
