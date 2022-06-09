@@ -84,7 +84,7 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 		return fmt.Errorf("create table tx: %w", err)
 	}
 
-	_, err = db.Exec(`ALTER TABLE chain ADD COLUMN chain_type TEXT NOT NULL check(length(chain_type) > 0) DEFAULT "cosmos"`)
+	_, err = db.Exec(`ALTER TABLE chain ADD COLUMN chain_type TEXT NOT NULL check(length(chain_type) > 0) DEFAULT "unknown"`)
 	if errIgnoreDuplicateColumn(err, "chain_type") != nil {
 		return fmt.Errorf("alter table chain add chain_type: %w", err)
 	}
