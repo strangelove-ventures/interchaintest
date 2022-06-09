@@ -53,8 +53,9 @@ type TestCaseResult struct {
 	Name        string
 	GitSha      string // Git commit that ran the test.
 	CreatedAt   time.Time
-	ChainPKey   sql.NullInt64  // Integer primary key.
-	ChainID     sql.NullString // E.g. osmosis-1001
+	ChainPKey   int64  // Integer primary key.
+	ChainID     string // E.g. osmosis-1001
+	ChainType   string // E.g. cosmos, penumbra
 	ChainHeight sql.NullInt64
 	TxTotal     sql.NullInt64
 }
@@ -62,8 +63,10 @@ type TestCaseResult struct {
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
 	rows, err := q.db.QueryContext(ctx, `
 	SELECT 
-    	test_case_id, test_case_created_at, test_case_name, test_case_git_sha, chain_kid, chain_id, chain_height, tx_total
-	FROM v_tx_agg ORDER BY test_case_id DESC, chain_id ASC LIMIT ?`, limit)
+    	test_case_id, test_case_created_at, test_case_name, test_case_git_sha, chain_kid, chain_id, chain_type, chain_height, tx_total
+	FROM v_tx_agg 
+	WHERE chain_kid IS NOT NULL
+	ORDER BY test_case_id DESC, chain_id ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +84,7 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 			&res.GitSha,
 			&res.ChainPKey,
 			&res.ChainID,
+			&res.ChainType,
 			&res.ChainHeight,
 			&res.TxTotal,
 		); err != nil {

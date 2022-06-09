@@ -35,12 +35,12 @@ func TestQuery_RecentTestCases(t *testing.T) {
 
 		tc, err := CreateTestCase(ctx, db, "test1", "sha1")
 		require.NoError(t, err)
-		c, err := tc.AddChain(ctx, "chain-b")
+		c, err := tc.AddChain(ctx, "chain-b", "cosmos")
 		require.NoError(t, err)
 		require.NoError(t, c.SaveBlock(ctx, 10, [][]byte{[]byte("tx1"), []byte("tx2")}))
 		require.NoError(t, c.SaveBlock(ctx, 11, [][]byte{[]byte("tx3")}))
 
-		_, err = tc.AddChain(ctx, "chain-a")
+		_, err = tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
 		_, err = CreateTestCase(ctx, db, "empty", "empty-test")
@@ -49,36 +49,28 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		results, err := NewQuery(db).RecentTestCases(ctx, 10)
 		require.NoError(t, err)
 
-		require.Len(t, results, 3)
+		require.Len(t, results, 2)
 
-		// No chains
+		// No blocks or txs.
 		got := results[0]
-		require.Equal(t, "empty", got.Name)
-		require.Equal(t, "empty-test", got.GitSha)
-		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
-		require.Zero(t, got.ChainID.String)
-		require.Zero(t, got.ChainPKey.Int64)
-		require.Zero(t, got.ChainHeight.Int64)
-		require.Zero(t, got.TxTotal.Int64)
-
-		// No blocks or txs
-		got = results[1]
 		require.EqualValues(t, 1, got.ID)
 		require.Equal(t, "test1", got.Name)
 		require.Equal(t, "sha1", got.GitSha)
 		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
-		require.Equal(t, "chain-a", got.ChainID.String)
-		require.EqualValues(t, 2, got.ChainPKey.Int64)
+		require.Equal(t, "chain-a", got.ChainID)
+		require.Equal(t, "cosmos", got.ChainType)
+		require.EqualValues(t, 2, got.ChainPKey)
 		require.Zero(t, got.ChainHeight.Int64)
 		require.Zero(t, got.TxTotal.Int64)
 
-		// With blocks and txs
-		got = results[2]
+		// With blocks and txs.
+		got = results[1]
 		require.EqualValues(t, 1, got.ID)
 		require.Equal(t, "test1", got.Name)
 		require.WithinDuration(t, time.Now(), got.CreatedAt, 10*time.Second)
-		require.Equal(t, "chain-b", got.ChainID.String)
-		require.EqualValues(t, 1, got.ChainPKey.Int64)
+		require.Equal(t, "chain-b", got.ChainID)
+		require.Equal(t, "cosmos", got.ChainType)
+		require.EqualValues(t, 1, got.ChainPKey)
 		require.EqualValues(t, 11, got.ChainHeight.Int64)
 		require.EqualValues(t, 3, got.TxTotal.Int64)
 	})
@@ -89,9 +81,9 @@ func TestQuery_RecentTestCases(t *testing.T) {
 
 		tc, err := CreateTestCase(ctx, db, "1", "1")
 		require.NoError(t, err)
-		_, err = tc.AddChain(ctx, "chain1")
+		_, err = tc.AddChain(ctx, "chain1", "cosmos")
 		require.NoError(t, err)
-		_, err = tc.AddChain(ctx, "chain2")
+		_, err = tc.AddChain(ctx, "chain2", "cosmos")
 		require.NoError(t, err)
 
 		got, err := NewQuery(db).RecentTestCases(ctx, 1)
@@ -120,7 +112,7 @@ func TestQuery_BlocksWithTx(t *testing.T) {
 		defer db.Close()
 
 		tc, err := CreateTestCase(ctx, db, "test", "abc123")
-		chain, err := tc.AddChain(ctx, "chain-a")
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
 		require.NoError(t, chain.SaveBlock(ctx, 2, [][]byte{[]byte(`1`)}))
@@ -146,7 +138,7 @@ func TestQuery_BlocksWithTx(t *testing.T) {
 		defer db.Close()
 
 		tc, err := CreateTestCase(ctx, db, "test", "abc123")
-		chain, err := tc.AddChain(ctx, "chain-a")
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
 		results, err := NewQuery(db).BlocksWithTx(ctx, chain.id)
