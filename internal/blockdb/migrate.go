@@ -20,6 +20,8 @@ import (
 //  │                    │          │                    │         │                    │          │                    │
 //  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
 // The gitSha ensures we can trace back to the version of the codebase that produced the schema.
+// Warning: Typical best practice wraps each migration step into its own transaction. For simplicity given
+// this is an embedded database, we omit transactions.
 func Migrate(db *sql.DB, gitSha string) error {
 	// TODO(nix 05-27-2022): Appropriate indexes?
 	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
