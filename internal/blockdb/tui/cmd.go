@@ -20,6 +20,12 @@ func RunUI(ctx context.Context, databasePath string, gitSha string) error {
 	}
 
 	querySvc := blockdb.NewQuery(db)
+
+	schemaInfo, err := querySvc.CurrentSchemaVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("query schema version: %w", err)
+	}
+
 	testCases, err := querySvc.RecentTestCases(ctx, 100)
 	if err != nil {
 		return fmt.Errorf("query recent test cases: %w", err)
@@ -28,11 +34,10 @@ func RunUI(ctx context.Context, databasePath string, gitSha string) error {
 		return fmt.Errorf("no test cases found in database %s", databasePath)
 	}
 
-	box := tview.NewBox().SetBorder(true).SetTitle("Hello, world!")
 	app := tview.NewApplication()
-	app.QueueUpdateDraw()
-	return tview.NewApplication().
-		SetFocus(box).
-		SetRoot(box, true).
+	model := NewModel(schemaInfo.GitSha, schemaInfo.CreatedAt, testCases)
+
+	return app.
+		SetRoot(RootView(model), true).
 		Run()
 }

@@ -16,18 +16,18 @@ func NewQuery(db *sql.DB) *Query {
 	return &Query{db: db}
 }
 
-type SchemaVersionResult struct {
-	GitSha string
-	// Always set to user's local time zone.
-	CreatedAt time.Time
-}
-
 func timeToLocal(timeStr string) (time.Time, error) {
 	t, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("time.Parse RFC3339: %w", err)
 	}
 	return t.In(time.Local), nil
+}
+
+type SchemaVersionResult struct {
+	GitSha string
+	// Always set to user's local time zone.
+	CreatedAt time.Time
 }
 
 // CurrentSchemaVersion returns the latest git sha and time that produced the sqlite schema.
