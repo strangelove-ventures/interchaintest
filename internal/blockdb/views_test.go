@@ -135,3 +135,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	// No more rows.
 	require.False(t, rows.Next())
 }
+
+func TestTxAggView(t *testing.T) {
+	// Nop. Tested as part of QueryService.
+}
