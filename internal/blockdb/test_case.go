@@ -28,7 +28,7 @@ func CreateTestCase(ctx context.Context, db *sql.DB, testName, gitSha string) (*
 }
 
 // AddChain tracks and attaches a chain to the test case.
-// The chainID must be globally unique. E.g. osmosis-1001, cosmos-1004
+// The chainID must be unique per test case. E.g. osmosis-1001, cosmos-1004
 // The chainType denotes which ecosystem the chain belongs to. E.g. cosmos, penumbra, composable, etc.
 func (tc *TestCase) AddChain(ctx context.Context, chainID, chainType string) (*Chain, error) {
 	res, err := tc.db.ExecContext(ctx, `INSERT INTO chain(chain_id, chain_type, fk_test_id) VALUES(?, ?, ?)`, chainID, chainType, tc.id)
