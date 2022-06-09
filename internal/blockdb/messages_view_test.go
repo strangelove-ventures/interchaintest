@@ -6,7 +6,6 @@ package blockdb_test
 import (
 	"context"
 	"database/sql"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -58,12 +57,6 @@ func TestMessagesView(t *testing.T) {
 	dbDir := t.TempDir()
 	dbPath := filepath.Join(dbDir, "blocks.db")
 
-	const debugging = true // TODO: remove before finalizing this change.
-	if debugging {
-		dbPath = "/tmp/blocks.db"
-		os.RemoveAll(dbPath)
-	}
-
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
@@ -86,7 +79,7 @@ func TestMessagesView(t *testing.T) {
 	defer db.Close()
 
 	var count int
-	row := db.QueryRow(`SELECT COUNT(*) FROM v_messages`)
+	row := db.QueryRow(`SELECT COUNT(*) FROM v_cosmos_messages`)
 	require.NoError(t, row.Scan(&count))
 	require.Equal(t, count, 0)
 
@@ -102,7 +95,7 @@ func TestMessagesView(t *testing.T) {
 		// MsgCreateClient should match the opposite chain IDs.
 		const qCreateClient = `SELECT
 client_chain_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 		var clientChainID string
 		require.NoError(t, db.QueryRow(qCreateClient, gaia0ChainID).Scan(&clientChainID))
@@ -134,7 +127,7 @@ WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 		// OpenInit happens on first chain.
 		const qConnectionOpenInit = `SELECT
 client_id, counterparty_client_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenInit" AND chain_id = ?
 `
 		var clientID, counterpartyClientID string
@@ -145,7 +138,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenInit" AND chain_id = ?
 		// OpenTry happens on second chain.
 		const qConnectionOpenTry = `SELECT
 counterparty_client_id, counterparty_conn_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenTry" AND chain_id = ?
 `
 		var counterpartyConnID string
@@ -156,7 +149,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenTry" AND chain_id = ?
 		// OpenAck happens on first chain again.
 		const qConnectionOpenAck = `SELECT
 conn_id, counterparty_conn_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenAck" AND chain_id = ?
 `
 		var connID string
@@ -167,7 +160,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenAck" AND chain_id = ?
 		// OpenConfirm happens on second chain again.
 		const qConnectionOpenConfirm = `SELECT
 conn_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 `
 		require.NoError(t, db.QueryRow(qConnectionOpenConfirm, gaia1ChainID).Scan(&connID))
@@ -200,7 +193,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		// OpenInit happens on first chain.
 		const qChannelOpenInit = `SELECT
 port_id, counterparty_port_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenInit" AND chain_id = ?
 `
 		var portID, counterpartyPortID string
@@ -211,7 +204,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenInit" AND chain_id = ?
 		// OpenTry happens on second chain.
 		const qChannelOpenTry = `SELECT
 port_id, counterparty_port_id, counterparty_channel_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenTry" AND chain_id = ?
 `
 		var counterpartyChannelID string
@@ -223,7 +216,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenTry" AND chain_id = ?
 		// OpenAck happens on first chain again.
 		const qChannelOpenAck = `SELECT
 port_id, channel_id, counterparty_channel_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenAck" AND chain_id = ?
 `
 		var channelID string
@@ -235,7 +228,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenAck" AND chain_id = ?
 		// OpenConfirm happens on second chain again.
 		const qChannelOpenConfirm = `SELECT
 port_id, channel_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 `
 		require.NoError(t, db.QueryRow(qChannelOpenConfirm, gaia1ChainID).Scan(&portID, &channelID))
@@ -265,7 +258,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 
 		const qMsgTransfer = `SELECT
 port_id, channel_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 `
 		var portID, channelID string
@@ -282,7 +275,7 @@ WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 
 		const qMsgRecvPacket = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id
-FROM v_messages
+FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 `
 		var portID, channelID, counterpartyPortID, counterpartyChannelID string

@@ -107,11 +107,11 @@ LEFT JOIN test_case ON chain.fk_test_id = test_case.id
 		return fmt.Errorf("create v_tx_flattened view: %w", err)
 	}
 
-	_, err = db.Exec(`DROP VIEW IF EXISTS v_messages`)
+	_, err = db.Exec(`DROP VIEW IF EXISTS v_cosmos_messages`)
 	if err != nil {
-		return fmt.Errorf("drop old v_messages view: %w", err)
+		return fmt.Errorf("drop old v_cosmos_messages view: %w", err)
 	}
-	_, err = db.Exec(`CREATE VIEW v_messages AS
+	_, err = db.Exec(`CREATE VIEW v_cosmos_messages AS
 SELECT
   test_case_id
   , test_case_name
@@ -154,7 +154,7 @@ FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
 `)
 
 	if err != nil {
-		return fmt.Errorf("create v_messages view: %w", err)
+		return fmt.Errorf("create v_cosmos_messages view: %w", err)
 	}
 
 	return nil
