@@ -110,7 +110,8 @@ SELECT
   , test_case.name as test_case_name
   , chain.id as chain_kid
   , chain.chain_id as chain_id
-	, block.id as block_id
+  , chain.chain_type as chain_type
+  , block.id as block_id
   , block.created_at as block_created_at
   , block.height as block_height
   , tx.id as tx_id
