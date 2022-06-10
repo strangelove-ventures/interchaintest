@@ -31,11 +31,11 @@ func init() {
 		flag.PrintDefaults()
 		fmt.Fprint(out, `Subcommands:
 
-  debug  Open UI to debug blocks and transactions
+  debug  Open UI to debug blocks and transactions.
 `)
 		debugFlagSet.PrintDefaults()
 		fmt.Fprint(out, `
-  version  Prints executable version.
+  version  Prints git commit that produced executable.
 `)
 	}
 }
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	switch subcommand() {
 	case "debug":
 		if err := runDebugTerminalUI(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to run debug: %v\n", err)
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -229,12 +229,6 @@ func TestConformance(t *testing.T) {
 	conformance.Test(t, chainFactories, relayerFactories, reporter)
 }
 
-func parseFlags() {
-	flag.Parse()
-	// Ignore errors; set for ExitOnError.
-	_ = debugFlagSet.Parse(os.Args)
-}
-
 // addFlags configures additional flags beyond the default testing flags.
 // Although pflag would have been slightly more developer friendly,
 // I ran out of time to spend on getting pflag to cooperate with the
@@ -250,6 +244,15 @@ func addFlags() {
 	debugFlagSet.StringVar(&extraFlags.BlockDatabaseFile, "block-db", ibctest.DefaultBlockDatabaseFilepath(), "Path to database sqlite file that tracks blocks and transactions.")
 }
 
+func parseFlags() {
+	flag.Parse()
+	switch subcommand() {
+	case "debug":
+		// Ignore errors because configured with flag.ExitOnError.
+		_ = debugFlagSet.Parse(os.Args[2:])
+	}
+}
+
 func subcommand() string {
 	if len(flag.Args()) == 0 {
 		return ""
@@ -259,6 +262,12 @@ func subcommand() string {
 
 func runDebugTerminalUI(ctx context.Context) error {
 	dbPath := extraFlags.BlockDatabaseFile
+
+	// Explicitly check for file existence otherwise blockdb.ConnectDB implicitly creates and migrates a sqlite file.
+	if _, err := os.Stat(dbPath); err != nil {
+		return err
+	}
+
 	db, err := blockdb.ConnectDB(ctx, dbPath)
 	if err != nil {
 		return fmt.Errorf("connect to database %s: %w", dbPath, err)
