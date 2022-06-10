@@ -48,6 +48,7 @@ func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, 
 	return res, nil
 }
 
+// TestCaseResult is a combination of a single test case and single chain associated with the test case.
 type TestCaseResult struct {
 	ID          int64
 	Name        string
@@ -60,6 +61,7 @@ type TestCaseResult struct {
 	TxTotal     sql.NullInt64
 }
 
+// RecentTestCases returns aggregated data for each test case and chain combination.
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
 	rows, err := q.db.QueryContext(ctx, `
 	SELECT 
@@ -98,9 +100,4 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 		results = append(results, res)
 	}
 	return results, nil
-}
-
-type TxResult struct {
-	Height int
-	Tx     []byte
 }
