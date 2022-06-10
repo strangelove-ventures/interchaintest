@@ -14,6 +14,10 @@ type Capability int
 const (
 	TimestampTimeout Capability = iota
 	HeightTimeout
+
+	// Whether the relayer supports a one-off flush packets or flush acknowledgements command.
+	FlushPackets
+	FlushAcknowledgements
 )
 
 // FullCapabilities returns a mapping of all known relayer features to true,
@@ -24,5 +28,8 @@ func FullCapabilities() map[Capability]bool {
 	return map[Capability]bool{
 		TimestampTimeout: true,
 		HeightTimeout:    true,
+
+		FlushPackets:          true,
+		FlushAcknowledgements: true,
 	}
 }

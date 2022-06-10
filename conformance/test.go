@@ -235,6 +235,13 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 
 								TestChainPair(t, cf, rf, rep)
 							})
+
+							t.Run("flushing", func(t *testing.T) {
+								rep.TrackTest(t)
+								rep.TrackParallel(t)
+
+								TestRelayerFlushing(t, cf, rf, rep)
+							})
 						})
 					}
 				})

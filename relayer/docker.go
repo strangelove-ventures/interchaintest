@@ -120,11 +120,6 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 	return r.c.ParseAddKeyOutput(stdout, stderr)
 }
 
-func (r *DockerRelayer) ClearQueue(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.ClearQueue(pathName, channelID, r.NodeHome())
-	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
-}
-
 func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	cmd := r.c.CreateChannel(pathName, opts, r.NodeHome())
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
@@ -137,6 +132,16 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.NodeHome())
+	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
+}
+
+func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.NodeHome())
+	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
+}
+
+func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.FlushPackets(pathName, channelID, r.NodeHome())
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
 }
 
@@ -421,10 +426,11 @@ type RelayerCommander interface {
 
 	AddChainConfiguration(containerFilePath, homeDir string) []string
 	AddKey(chainID, keyName, homeDir string) []string
-	ClearQueue(pathName, channelID, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
+	FlushAcknowledgements(pathName, channelID, homeDir string) []string
+	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string

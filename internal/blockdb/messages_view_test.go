@@ -187,9 +187,6 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		gaia0ChannelID = channels[0].ChannelID
 		gaia1ChannelID = channels[0].Counterparty.ChannelID
 
-		_ = gaia0ChannelID
-		_ = gaia1ChannelID
-
 		// OpenInit happens on first chain.
 		const qChannelOpenInit = `SELECT
 port_id, counterparty_port_id
@@ -271,7 +268,7 @@ WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 	}
 
 	t.Run("relay packet", func(t *testing.T) {
-		require.NoError(t, r.ClearQueue(ctx, eRep, pathName, gaia0ChannelID))
+		require.NoError(t, r.FlushPackets(ctx, eRep, pathName, gaia0ChannelID))
 
 		const qMsgRecvPacket = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id
@@ -286,5 +283,6 @@ WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 	})
 
 	// TODO: relay acknowledgement.
-	// Blocked on ibc.Relayer.ClearQueue needing replaced with RelayPackets, RelayAcks.
+	// Waiting for next relayer release candidate,
+	// so that this test doesn't need to conditionally skip based on whether FlushAcknowledgements is supported.
 }

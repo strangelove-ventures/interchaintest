@@ -65,7 +65,12 @@ const (
 // to distinguish between multiple rly versions.
 func Capabilities() map[relayer.Capability]bool {
 	m := relayer.FullCapabilities()
+
+	// These two capabilities are not supported in the 2.0.0-beta4 tag,
+	// but they do work on the current main branch of relayer.
+	// The first 2.0 release candidate should be able to have full capabilities.
 	m[relayer.TimestampTimeout] = false
+	m[relayer.FlushAcknowledgements] = false
 	return m
 }
 
@@ -112,13 +117,6 @@ func (commander) AddKey(chainID, keyName, homeDir string) []string {
 	}
 }
 
-func (commander) ClearQueue(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-pkts", pathName, channelID,
-		"--home", homeDir,
-	}
-}
-
 func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	return []string{
 		"rly", "tx", "channel", pathName,
@@ -141,6 +139,20 @@ func (commander) CreateClients(pathName, homeDir string) []string {
 func (commander) CreateConnections(pathName, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
+		"--home", homeDir,
+	}
+}
+
+func (commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
+	return []string{
+		"rly", "tx", "relay-acks", pathName, channelID,
+		"--home", homeDir,
+	}
+}
+
+func (commander) FlushPackets(pathName, channelID, homeDir string) []string {
+	return []string{
+		"rly", "tx", "relay-pkts", pathName, channelID,
 		"--home", homeDir,
 	}
 }
