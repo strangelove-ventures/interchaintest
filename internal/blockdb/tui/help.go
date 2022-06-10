@@ -10,7 +10,7 @@ import (
 // First element is the key. Second element is the help text.
 type keyMap [][]string
 
-var defaultHelpKeys = [][]string{
+var defaultHelpKeys = keyMap{
 	{fmt.Sprintf("%c/k", tcell.RuneUArrow), "move up"},
 	{fmt.Sprintf("%c/j", tcell.RuneDArrow), "move down"},
 	{"esc", "go back"},

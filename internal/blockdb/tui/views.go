@@ -39,7 +39,7 @@ func schemaVersionView(m *Model) *tview.Table {
 	return tbl
 }
 
-func helpView(keys [][]string) *tview.Table {
+func helpView(keys keyMap) *tview.Table {
 	tbl := tview.NewTable().SetBorders(false)
 	tbl.SetBorder(false)
 
