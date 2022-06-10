@@ -12,6 +12,7 @@ type ChainHeighter interface {
 }
 
 // WaitForBlocks blocks until all chains reach a block height delta equal to or greater than the delta argument.
+// If a ChainHeighter does not monotonically increase the height, this function may block program execution indefinitely.
 func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) error {
 	if len(chains) == 0 {
 		panic("missing chains")
@@ -40,8 +41,10 @@ func (h *height) WaitForDelta(ctx context.Context, delta int) error {
 		if err != nil {
 			return err
 		}
+		// We assume the chain will eventually return a non-zero height, otherwise
+		// this may block indefinitely.
 		if cur == 0 {
-			panic("height cannot be zero")
+			continue
 		}
 		h.update(cur)
 	}
