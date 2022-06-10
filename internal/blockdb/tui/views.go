@@ -51,9 +51,9 @@ func helpView(keys keyMap) *tview.Table {
 		return tview.NewTableCell(s).
 			SetStyle(textStyle.Attributes(tcell.AttrDim))
 	}
-	for row, keymap := range keys {
-		tbl.SetCell(row, 0, keyCell(keymap[0]))
-		tbl.SetCell(row, 1, textCell(keymap[1]))
+	for row, binding := range keys {
+		tbl.SetCell(row, 0, keyCell(binding.Key))
+		tbl.SetCell(row, 1, textCell(binding.Help))
 	}
 	return tbl
 }

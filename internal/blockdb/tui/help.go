@@ -6,9 +6,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// keyMap inner slice be exactly 2 elements.
-// First element is the key. Second element is the help text.
-type keyMap [][]string
+type keyBinding struct {
+	Key  string // Single key or combination of keys.
+	Help string // Very short help text describing the key's action.
+}
+
+type keyMap []keyBinding
 
 var defaultHelpKeys = keyMap{
 	{fmt.Sprintf("%c/k", tcell.RuneUArrow), "move up"},
