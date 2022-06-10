@@ -254,10 +254,7 @@ func parseFlags() {
 }
 
 func subcommand() string {
-	if len(flag.Args()) == 0 {
-		return ""
-	}
-	return flag.Args()[0]
+	return flag.Arg(0)
 }
 
 func runDebugTerminalUI(ctx context.Context) error {
