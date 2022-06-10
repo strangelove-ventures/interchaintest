@@ -40,6 +40,8 @@ func (h *height) WaitForDelta(ctx context.Context, delta int) error {
 		if err != nil {
 			return err
 		}
+		// We assume the chain will eventually return a non-zero height, otherwise
+		// this may block indefinitely.
 		if cur == 0 {
 			continue
 		}
