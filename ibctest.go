@@ -20,7 +20,8 @@ func CreateLogFile(name string) (*os.File, error) {
 	return os.Create(filepath.Join(fpath, name))
 }
 
-func blocksSQLiteFilename() string {
+// DefaultBlockDatabaseFilepath is the default filepath to the sqlite database for tracking blocks and transactions.
+func DefaultBlockDatabaseFilepath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)

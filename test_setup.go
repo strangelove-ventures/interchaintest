@@ -13,11 +13,9 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/internal/version"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 )
-
-// gitSha is set via the project Makefile `make ibctest`
-var gitSha = "unknown"
 
 const (
 	testPathName = "test-path"
@@ -94,7 +92,7 @@ func StartChainPairAndRelayer(
 			Path:    testPathName,
 		})
 
-	blockSqlite := blocksSQLiteFilename()
+	blockSqlite := DefaultBlockDatabaseFilepath()
 	t.Logf("View block history using sqlite console at %s", blockSqlite)
 
 	eRep := rep.RelayerExecReporter(t)
@@ -103,7 +101,7 @@ func StartChainPairAndRelayer(
 		HomeDir:           home,
 		Pool:              pool,
 		NetworkID:         networkID,
-		GitSha:            gitSha,
+		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,
 	}); err != nil {
 		return errResponse(err)

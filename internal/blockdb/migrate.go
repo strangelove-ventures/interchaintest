@@ -100,6 +100,8 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 // in case table columns are altered, added, or dropped.
 // Performance impact is negligible since views are essentially stored queries.
 func upsertViews(db *sql.DB) error {
+	// Drop and recreate views because it's performant and allows changing columns in earlier migration steps.
+
 	_, err := db.Exec(`DROP VIEW IF EXISTS v_tx_flattened`)
 	if err != nil {
 		return fmt.Errorf("drop old v_tx_flattened view: %w", err)
@@ -123,7 +125,6 @@ LEFT JOIN block ON tx.fk_block_id = block.id
 LEFT JOIN chain ON block.fk_chain_id = chain.id
 LEFT JOIN test_case ON chain.fk_test_id = test_case.id
 `)
-
 	if err != nil {
 		return fmt.Errorf("create v_tx_flattened view: %w", err)
 	}
@@ -173,9 +174,34 @@ SELECT
   , value as raw
 FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
 `)
-
 	if err != nil {
 		return fmt.Errorf("create v_cosmos_messages view: %w", err)
+	}
+
+	_, err = db.Exec(`DROP VIEW IF EXISTS v_tx_agg`)
+	if err != nil {
+		return fmt.Errorf("drop old v_tx_agg view: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE VIEW v_tx_agg AS
+    SELECT 
+       test_case.id AS test_case_id
+     , test_case.created_at AS test_case_created_at
+     , test_case.name AS test_case_name
+     , test_case.git_sha AS test_case_git_sha
+     , chain.id AS chain_kid
+     , chain.chain_id AS chain_id
+     , chain.chain_type AS chain_type
+     , MAX(COALESCE(block.height, 0)) AS chain_height
+     , COUNT(tx.data) AS tx_total
+    FROM test_case
+	LEFT JOIN chain ON chain.fk_test_id = test_case.id
+	LEFT JOIN block ON block.fk_chain_id = chain.id
+	LEFT JOIN tx ON tx.fk_block_id = block.id
+	GROUP BY test_case.id, chain.id
+`)
+	if err != nil {
+		return fmt.Errorf("create v_tx_agg view: %w", err)
 	}
 
 	return nil
