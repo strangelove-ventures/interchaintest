@@ -41,7 +41,7 @@ func (h *height) WaitForDelta(ctx context.Context, delta int) error {
 			return err
 		}
 		if cur == 0 {
-			panic("height cannot be zero")
+			continue
 		}
 		h.update(cur)
 	}
