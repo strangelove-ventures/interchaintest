@@ -28,6 +28,6 @@ func (m *Model) RootView() *tview.Flex {
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)
 	flex.SetBackgroundColor(backgroundColor).SetBorder(false)
 	flex.AddItem(headerView(m), 0, 1, false)
-	flex.AddItem(testCasesView(m), 0, 9, true)
+	flex.AddItem(testCasesView(m), 0, 10, true)
 	return flex
 }
