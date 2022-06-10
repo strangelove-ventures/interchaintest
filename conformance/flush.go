@@ -94,7 +94,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 		// Should trigger MsgRecvPacket.
 		req.NoError(r.FlushPackets(ctx, eRep, pathName, c0ChannelID))
 
-		test.WaitForBlocks(ctx, 3, c0, c1)
+		req.NoError(test.WaitForBlocks(ctx, 3, c0, c1))
 
 		req.NoError(r.FlushPackets(ctx, eRep, pathName, c1ChannelID))
 
