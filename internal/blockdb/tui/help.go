@@ -19,3 +19,7 @@ var defaultHelpKeys = keyMap{
 	{"esc", "go back"},
 	{"ctl+c", "exit"},
 }
+
+func testCaseHelpKeys() keyMap {
+	return append(defaultHelpKeys, keyBinding{"s", "cosmos summary"})
+}

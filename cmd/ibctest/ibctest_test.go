@@ -293,6 +293,7 @@ func runDebugTerminalUI(ctx context.Context) error {
 	app := tview.NewApplication()
 	model := blockdbtui.NewModel(dbPath, schemaInfo.GitSha, schemaInfo.CreatedAt, testCases)
 	return app.
+		SetInputCapture(model.HandleInput(app)).
 		SetRoot(model.RootView(), true).
 		Run()
 }

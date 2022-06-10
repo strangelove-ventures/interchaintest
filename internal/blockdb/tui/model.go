@@ -13,6 +13,9 @@ type Model struct {
 	schemaVersion string
 	schemaDate    time.Time
 	testCases     []blockdb.TestCaseResult
+
+	layout *tview.Flex
+	stack  []tview.Primitive
 }
 
 // NewModel returns a valid *Model.
@@ -22,19 +25,24 @@ func NewModel(
 	schemaDate time.Time,
 	testCases []blockdb.TestCaseResult,
 ) *Model {
-	return &Model{
+	m := &Model{
 		databasePath:  databasePath,
 		schemaVersion: schemaVersion,
 		schemaDate:    schemaDate,
 		testCases:     testCases,
 	}
-}
 
-// RootView is a root view for a tview.Application.
-func (m *Model) RootView() *tview.Flex {
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)
 	flex.SetBackgroundColor(backgroundColor).SetBorder(false)
 	flex.AddItem(headerView(m), 0, 1, false)
 	flex.AddItem(testCasesView(m), 0, 10, true)
-	return flex
+
+	m.layout = flex
+
+	return m
+}
+
+// RootView is a root view for a tview.Application.
+func (m *Model) RootView() *tview.Flex {
+	return m.layout
 }

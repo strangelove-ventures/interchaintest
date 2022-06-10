@@ -12,7 +12,7 @@ func headerView(m *Model) *tview.Flex {
 	flex.SetBorder(false)
 	flex.SetBorderPadding(0, 0, 1, 1)
 
-	flex.AddItem(helpView(defaultHelpKeys), 0, 3, false)
+	flex.AddItem(helpView(testCaseHelpKeys()), 0, 2, false)
 	flex.AddItem(schemaVersionView(m), 0, 1, false)
 	return flex
 }
