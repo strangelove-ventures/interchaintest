@@ -13,11 +13,12 @@ import (
 
 // The value of the extra flags this test supports.
 type mainFlags struct {
-	LogFile    string
-	LogFormat  string
-	LogLevel   string
-	MatrixFile string
-	ReportFile string
+	LogFile           string
+	LogFormat         string
+	LogLevel          string
+	MatrixFile        string
+	ReportFile        string
+	BlockDatabaseFile string
 }
 
 func (f mainFlags) Logger() (lc LoggerCloser, _ error) {

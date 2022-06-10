@@ -2,6 +2,7 @@
 package ibctest
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,12 +12,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rivo/tview"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/conformance"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	blockdbtui "github.com/strangelove-ventures/ibctest/internal/blockdb/tui"
+	"github.com/strangelove-ventures/ibctest/internal/version"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"go.uber.org/zap"
 )
+
+func init() {
+	// Because we use the test binary, we use this hack to customize the help usage.
+	flag.Usage = func() {
+		out := flag.CommandLine.Output()
+		fmt.Fprintf(out, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprint(out, `Subcommands:
+
+  debug  Open UI to debug blocks and transactions
+`)
+		debugFlagSet.PrintDefaults()
+		fmt.Fprint(out, `
+  version  Prints executable version.
+`)
+	}
+}
 
 // The value of the test matrix.
 var testMatrix struct {
@@ -25,10 +47,26 @@ var testMatrix struct {
 	ChainSets [][]*ibctest.ChainSpec
 }
 
+var debugFlagSet = flag.NewFlagSet("debug", flag.ExitOnError)
+
 func TestMain(m *testing.M) {
 	rand.Seed(time.Now().UnixNano())
 	addFlags()
-	flag.Parse()
+	parseFlags()
+
+	ctx := context.Background()
+
+	switch subcommand() {
+	case "debug":
+		if err := runDebugTerminalUI(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	case "version":
+		fmt.Fprintln(os.Stderr, version.GitSha)
+		os.Exit(0)
+	}
 
 	if err := setUpTestMatrix(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to build test matrix: %v\n", err)
@@ -191,6 +229,12 @@ func TestConformance(t *testing.T) {
 	conformance.Test(t, chainFactories, relayerFactories, reporter)
 }
 
+func parseFlags() {
+	flag.Parse()
+	// Ignore errors; set for ExitOnError.
+	_ = debugFlagSet.Parse(os.Args)
+}
+
 // addFlags configures additional flags beyond the default testing flags.
 // Although pflag would have been slightly more developer friendly,
 // I ran out of time to spend on getting pflag to cooperate with the
@@ -202,4 +246,47 @@ func addFlags() {
 	flag.StringVar(&extraFlags.LogFormat, "log-format", "console", "Chain and relayer log format: console|json")
 	flag.StringVar(&extraFlags.LogLevel, "log-level", "info", "Chain and relayer log level: debug|info|error")
 	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where test report will be stored. Defaults to $HOME/.ibctest/reports/$TIMESTAMP.json")
+
+	debugFlagSet.StringVar(&extraFlags.BlockDatabaseFile, "block-db", ibctest.DefaultBlockDatabaseFilepath(), "Path to database sqlite file that tracks blocks and transactions.")
+}
+
+func subcommand() string {
+	if len(flag.Args()) == 0 {
+		return ""
+	}
+	return flag.Args()[0]
+}
+
+func runDebugTerminalUI(ctx context.Context) error {
+	dbPath := extraFlags.BlockDatabaseFile
+	db, err := blockdb.ConnectDB(ctx, dbPath)
+	if err != nil {
+		return fmt.Errorf("connect to database %s: %w", dbPath, err)
+	}
+	defer db.Close()
+
+	if err = blockdb.Migrate(db, version.GitSha); err != nil {
+		return fmt.Errorf("migrate database %s: %w", dbPath, err)
+	}
+
+	querySvc := blockdb.NewQuery(db)
+
+	schemaInfo, err := querySvc.CurrentSchemaVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("query schema version: %w", err)
+	}
+
+	testCases, err := querySvc.RecentTestCases(ctx, 100)
+	if err != nil {
+		return fmt.Errorf("query recent test cases: %w", err)
+	}
+	if len(testCases) == 0 {
+		return fmt.Errorf("no test cases found in database %s", dbPath)
+	}
+
+	app := tview.NewApplication()
+	model := blockdbtui.NewModel(schemaInfo.GitSha, schemaInfo.CreatedAt, testCases)
+	return app.
+		SetRoot(model.RootView(), true).
+		Run()
 }
