@@ -38,6 +38,6 @@ func RunUI(ctx context.Context, databasePath string, gitSha string) error {
 	model := NewModel(schemaInfo.GitSha, schemaInfo.CreatedAt, testCases)
 
 	return app.
-		SetRoot(RootView(model), true).
+		SetRoot(model.RootView(), true).
 		Run()
 }

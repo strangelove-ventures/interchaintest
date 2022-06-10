@@ -8,19 +8,13 @@ import (
 	"github.com/rivo/tview"
 )
 
-func RootView(m *Model) tview.Primitive {
-	flex := tview.NewFlex().SetDirection(tview.FlexRow)
-	flex.SetBackgroundColor(backgroundColor).SetBorder(false)
-	flex.AddItem(headerView(m), 0, 1, false)
-	flex.AddItem(testCasesView(m), 0, 9, true)
-	return flex
-}
-
 func headerView(m *Model) *tview.Flex {
 	flex := tview.NewFlex().SetDirection(tview.FlexColumn)
-	flex.AddItem(schemaVersionView(m.schemaVersion, m.schemaDate), 0, 1, false)
 	flex.SetBorder(false)
 	flex.SetBorderPadding(0, 0, 1, 1)
+
+	flex.AddItem(helpView(defaultHelpKeys), 0, 3, false)
+	flex.AddItem(schemaVersionView(m.schemaVersion, m.schemaDate), 0, 1, false)
 	return flex
 }
 
@@ -29,7 +23,8 @@ func schemaVersionView(schemaVersion string, schemaDate time.Time) *tview.Table 
 	tbl.SetBorder(false)
 
 	titleCell := func(s string) *tview.TableCell {
-		return tview.NewTableCell(s).SetStyle(textStyle.Bold(true).Foreground(tcell.ColorDarkOrange))
+		return tview.NewTableCell(s).
+			SetStyle(textStyle.Bold(true).Foreground(tcell.ColorDarkOrange))
 	}
 	tbl.SetCell(0, 0, titleCell("Schema Version:"))
 	tbl.SetCell(1, 0, titleCell("Schema Date:"))
@@ -40,6 +35,25 @@ func schemaVersionView(schemaVersion string, schemaDate time.Time) *tview.Table 
 	tbl.SetCell(0, 1, valCell(schemaVersion))
 	tbl.SetCell(1, 1, valCell(formatTime(schemaDate)))
 
+	return tbl
+}
+
+func helpView(keys [][]string) *tview.Table {
+	tbl := tview.NewTable().SetBorders(false)
+	tbl.SetBorder(false)
+
+	keyCell := func(s string) *tview.TableCell {
+		return tview.NewTableCell("<" + s + ">").
+			SetTextColor(tcell.ColorBlue)
+	}
+	textCell := func(s string) *tview.TableCell {
+		return tview.NewTableCell(s).
+			SetStyle(textStyle.Attributes(tcell.AttrDim))
+	}
+	for row, keymap := range keys {
+		tbl.SetCell(row, 0, keyCell(keymap[0]))
+		tbl.SetCell(row, 1, textCell(keymap[1]))
+	}
 	return tbl
 }
 
@@ -83,8 +97,8 @@ func testCasesView(m *Model) *tview.Table {
 		tbl.SetCell(row, 1, contentCell(pres.Name()))
 		tbl.SetCell(row, 2, contentCell(pres.GitSha()))
 		tbl.SetCell(row, 3, contentCell(pres.ChainID()))
-		tbl.SetCell(row, 4, contentCell(pres.Height()))
-		tbl.SetCell(row, 5, contentCell(pres.TxTotal()))
+		tbl.SetCell(row, 4, contentCell(pres.Height()).SetAlign(tview.AlignRight))
+		tbl.SetCell(row, 5, contentCell(pres.TxTotal()).SetAlign(tview.AlignRight))
 	}
 	return tbl
 }
