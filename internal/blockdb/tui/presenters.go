@@ -15,6 +15,7 @@ type testCasePresenter struct {
 	tc blockdb.TestCaseResult
 }
 
+func (p testCasePresenter) ID() string      { return strconv.FormatInt(p.tc.ID, 10) }
 func (p testCasePresenter) Date() string    { return formatTime(p.tc.CreatedAt) }
 func (p testCasePresenter) Name() string    { return p.tc.Name }
 func (p testCasePresenter) GitSha() string  { return p.tc.GitSha }

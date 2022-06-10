@@ -75,7 +75,9 @@ func testCasesView(m *Model) *tview.Table {
 			SetExpansion(1).
 			SetSelectable(false)
 	}
+
 	for col, title := range []string{
+		"ID",
 		"Date",
 		"Name",
 		"Git Sha",
@@ -93,12 +95,17 @@ func testCasesView(m *Model) *tview.Table {
 	for i, tc := range m.testCases {
 		row := i + 1 // 1 offsets header row
 		pres := testCasePresenter{tc}
-		tbl.SetCell(row, 0, contentCell(pres.Date()))
-		tbl.SetCell(row, 1, contentCell(pres.Name()))
-		tbl.SetCell(row, 2, contentCell(pres.GitSha()))
-		tbl.SetCell(row, 3, contentCell(pres.ChainID()))
-		tbl.SetCell(row, 4, contentCell(pres.Height()).SetAlign(tview.AlignRight))
-		tbl.SetCell(row, 5, contentCell(pres.TxTotal()).SetAlign(tview.AlignRight))
+		for col, content := range []string{
+			pres.ID(),
+			pres.Date(),
+			pres.Name(),
+			pres.GitSha(),
+			pres.ChainID(),
+			pres.Height(),
+			pres.TxTotal(),
+		} {
+			tbl.SetCell(row, col, contentCell(content))
+		}
 	}
 	return tbl
 }
