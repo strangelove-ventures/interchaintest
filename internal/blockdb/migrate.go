@@ -185,17 +185,17 @@ FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
 
 	_, err = db.Exec(`CREATE VIEW v_tx_agg AS
     SELECT 
-        test_case.id AS test_case_id
+	    test_case.id AS test_case_id
 	  , test_case.created_at AS test_case_created_at
 	  , test_case.name AS test_case_name
-      , test_case.git_sha AS test_case_git_sha
-      , chain.id AS chain_kid
+	  , test_case.git_sha AS test_case_git_sha
+	  , chain.id AS chain_kid
 	  , chain.chain_id AS chain_id
 	  , chain.chain_type AS chain_type
 	  , MAX(COALESCE(block.height, 0)) AS chain_height
 	  , COUNT(tx.data) AS tx_total
     FROM test_case
-    LEFT JOIN chain ON chain.fk_test_id = test_case.id
+	LEFT JOIN chain ON chain.fk_test_id = test_case.id
 	LEFT JOIN block ON block.fk_chain_id = chain.id
 	LEFT JOIN tx ON tx.fk_block_id = block.id
 	GROUP BY test_case.id, chain.id
