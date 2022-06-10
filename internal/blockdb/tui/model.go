@@ -9,14 +9,21 @@ import (
 
 // Model encapsulates state that updates a view.
 type Model struct {
+	databasePath  string
 	schemaVersion string
 	schemaDate    time.Time
 	testCases     []blockdb.TestCaseResult
 }
 
 // NewModel returns a valid *Model.
-func NewModel(schemaVersion string, schemaDate time.Time, testCases []blockdb.TestCaseResult) *Model {
+func NewModel(
+	databasePath string,
+	schemaVersion string,
+	schemaDate time.Time,
+	testCases []blockdb.TestCaseResult,
+) *Model {
 	return &Model{
+		databasePath:  databasePath,
 		schemaVersion: schemaVersion,
 		schemaDate:    schemaDate,
 		testCases:     testCases,

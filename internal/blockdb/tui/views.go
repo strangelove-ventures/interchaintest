@@ -2,7 +2,6 @@ package tui
 
 import (
 	"strings"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -14,11 +13,11 @@ func headerView(m *Model) *tview.Flex {
 	flex.SetBorderPadding(0, 0, 1, 1)
 
 	flex.AddItem(helpView(defaultHelpKeys), 0, 3, false)
-	flex.AddItem(schemaVersionView(m.schemaVersion, m.schemaDate), 0, 1, false)
+	flex.AddItem(schemaVersionView(m), 0, 1, false)
 	return flex
 }
 
-func schemaVersionView(schemaVersion string, schemaDate time.Time) *tview.Table {
+func schemaVersionView(m *Model) *tview.Table {
 	tbl := tview.NewTable().SetBorders(false)
 	tbl.SetBorder(false)
 
@@ -26,14 +25,16 @@ func schemaVersionView(schemaVersion string, schemaDate time.Time) *tview.Table 
 		return tview.NewTableCell(s).
 			SetStyle(textStyle.Bold(true).Foreground(tcell.ColorDarkOrange))
 	}
-	tbl.SetCell(0, 0, titleCell("Schema Version:"))
-	tbl.SetCell(1, 0, titleCell("Schema Date:"))
+	tbl.SetCell(0, 0, titleCell("Database:"))
+	tbl.SetCell(1, 0, titleCell("Schema Version:"))
+	tbl.SetCell(2, 0, titleCell("Schema Date:"))
 
 	valCell := func(s string) *tview.TableCell {
 		return tview.NewTableCell(s).SetStyle(textStyle)
 	}
-	tbl.SetCell(0, 1, valCell(schemaVersion))
-	tbl.SetCell(1, 1, valCell(formatTime(schemaDate)))
+	tbl.SetCell(0, 1, valCell(m.databasePath))
+	tbl.SetCell(1, 1, valCell(m.schemaVersion))
+	tbl.SetCell(2, 1, valCell(formatTime(m.schemaDate)))
 
 	return tbl
 }
