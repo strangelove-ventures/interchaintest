@@ -63,8 +63,7 @@ type TestCaseResult struct {
 
 // RecentTestCases returns aggregated data for each test case and chain combination.
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
-	rows, err := q.db.QueryContext(ctx, `
-    SELECT 
+	rows, err := q.db.QueryContext(ctx, `SELECT 
         test_case_id, test_case_created_at, test_case_name, test_case_git_sha, chain_kid, chain_id, chain_type, chain_height, tx_total
     FROM v_tx_agg 
     WHERE chain_kid IS NOT NULL
@@ -97,6 +96,69 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 			return nil, fmt.Errorf("parse createdAt: %w", err)
 		}
 		res.CreatedAt = t
+		results = append(results, res)
+	}
+	return results, nil
+}
+
+type CosmosMessageResult struct {
+	Height                int64
+	Pos                   int
+	Type                  string
+	ClientChainID         sql.NullString
+	ClientID              sql.NullString
+	CounterpartyClientID  sql.NullString
+	ConnID                sql.NullString
+	CounterpartyConnID    sql.NullString
+	PortID                sql.NullString
+	CounterpartyPortID    sql.NullString
+	ChannelID             sql.NullString
+	CounterpartyChannelID sql.NullString
+}
+
+// CosmosMessages returns a summary of Cosmos messages for the chainID. In Cosmos, a transaction may have 1 or more
+// associated messaged.
+// The "chainID" is the database primary key, not the chain id as present in the Cosmos Chain Registry.
+func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMessageResult, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT 
+        block_height
+    	, msg_n -- tx position
+		, type
+		, client_chain_id
+		, client_id
+		, counterparty_client_id
+		, conn_id
+		, counterparty_conn_id
+		, port_id
+		, counterparty_port_id
+		, channel_id
+		, counterparty_channel_id
+    FROM v_cosmos_messages
+    WHERE chain_kid = ?
+    ORDER BY block_height ASC , msg_n ASC`, chainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []CosmosMessageResult
+	for rows.Next() {
+		var res CosmosMessageResult
+		if err = rows.Scan(
+			&res.Height,
+			&res.Pos,
+			&res.Type,
+			&res.ClientChainID,
+			&res.ClientID,
+			&res.CounterpartyClientID,
+			&res.ConnID,
+			&res.CounterpartyConnID,
+			&res.PortID,
+			&res.CounterpartyPortID,
+			&res.ChannelID,
+			&res.CounterpartyChannelID,
+		); err != nil {
+			return nil, err
+		}
 		results = append(results, res)
 	}
 	return results, nil

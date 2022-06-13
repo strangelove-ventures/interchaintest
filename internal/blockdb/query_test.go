@@ -2,10 +2,18 @@ package blockdb
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	//go:embed testdata/sample_txs.json
+	txsFixture []byte
 )
 
 func TestQuery_CurrentSchemaVersion(t *testing.T) {
@@ -100,4 +108,61 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, got)
 	})
+}
+
+func TestQuery_CosmosMessages(t *testing.T) {
+	ctx := context.Background()
+
+	db := migratedDB()
+	defer db.Close()
+
+	tc, err := CreateTestCase(ctx, db, "test", "sha")
+	require.NoError(t, err)
+	chain, err := tc.AddChain(ctx, "chain1", "cosmos")
+	require.NoError(t, err)
+
+	var txs []struct {
+		Raw string `json:"tx"`
+	}
+
+	err = json.Unmarshal(txsFixture, &txs)
+	require.NoError(t, err)
+	require.NotEmpty(t, txs)
+
+	for i, tx := range txs {
+		require.NotEmpty(t, tx.Raw)
+		err = chain.SaveBlock(ctx, uint64(i+1), [][]byte{[]byte(tx.Raw)})
+		require.NoError(t, err)
+	}
+
+	results, err := NewQuery(db).CosmosMessages(ctx, chain.id)
+	require.NoError(t, err)
+	require.NotEmpty(t, results)
+
+	first := results[0]
+	require.EqualValues(t, 1, first.Height)
+	require.EqualValues(t, 0, first.Pos)
+	require.Equal(t, "/ibc.core.client.v1.MsgCreateClient", first.Type)
+
+	second := results[1]
+	require.EqualValues(t, 2, second.Height)
+	require.EqualValues(t, 0, second.Pos)
+	require.Equal(t, "/ibc.core.client.v1.MsgUpdateClient", second.Type)
+
+	third := results[2]
+	require.EqualValues(t, 2, third.Height)
+	require.EqualValues(t, 1, third.Pos)
+	require.Equal(t, "/ibc.core.connection.v1.MsgConnectionOpenInit", third.Type)
+
+	for _, res := range results {
+		if !strings.HasPrefix(res.Type, "/ibc") {
+			continue
+		}
+		atLeastOnePresent := res.ClientChainID.Valid ||
+			res.ClientID.Valid || res.CounterpartyClientID.Valid ||
+			res.ConnID.Valid || res.CounterpartyConnID.Valid ||
+			res.PortID.Valid || res.CounterpartyPortID.Valid ||
+			res.ChannelID.Valid || res.CounterpartyChannelID.Valid
+		require.Truef(t, atLeastOnePresent, "IBC messages must contain valid IBC info for %+v", res)
+	}
 }
