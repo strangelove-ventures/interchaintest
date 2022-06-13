@@ -45,10 +45,7 @@ func schemaVersionView(m *Model) *tview.Table {
 
 func detailTableView(title string, headers []string, rows [][]string) *tview.Table {
 	if len(headers) == 0 {
-		panic(errors.New("defaultTableView headers are required"))
-	}
-	if len(rows) == 0 {
-		panic(errors.New("defaultTableView rows is required"))
+		panic(errors.New("detailTableView headers are required"))
 	}
 	tbl := tview.NewTable().
 		SetBorders(false).
