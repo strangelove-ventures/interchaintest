@@ -111,6 +111,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 }
 
 func TestQuery_CosmosMessages(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	db := migratedDB()
@@ -140,16 +142,19 @@ func TestQuery_CosmosMessages(t *testing.T) {
 	require.NotEmpty(t, results)
 
 	first := results[0]
+	require.EqualValues(t, 1, first.ChainPkey)
 	require.EqualValues(t, 1, first.Height)
 	require.EqualValues(t, 0, first.Index)
 	require.Equal(t, "/ibc.core.client.v1.MsgCreateClient", first.Type)
 
 	second := results[1]
+	require.EqualValues(t, 1, second.ChainPkey)
 	require.EqualValues(t, 2, second.Height)
 	require.EqualValues(t, 0, second.Index)
 	require.Equal(t, "/ibc.core.client.v1.MsgUpdateClient", second.Type)
 
 	third := results[2]
+	require.EqualValues(t, 1, third.ChainPkey)
 	require.EqualValues(t, 2, third.Height)
 	require.EqualValues(t, 1, third.Index)
 	require.Equal(t, "/ibc.core.connection.v1.MsgConnectionOpenInit", third.Type)
@@ -165,4 +170,50 @@ func TestQuery_CosmosMessages(t *testing.T) {
 			res.ChannelID.Valid || res.CounterpartyChannelID.Valid
 		require.Truef(t, atLeastOnePresent, "IBC messages must contain valid IBC info for %+v", res)
 	}
+}
+
+func TestQuery_Transactions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("happy path", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
+		require.NoError(t, err)
+
+		require.NoError(t, chain.SaveBlock(ctx, 2, [][]byte{[]byte(`1`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 4, [][]byte{[]byte(`2`), []byte(`3`)}))
+
+		results, err := NewQuery(db).Transactions(ctx, chain.id)
+		require.NoError(t, err)
+
+		require.Len(t, results, 3)
+
+		require.Equal(t, 2, results[0].Height)
+		require.Equal(t, "1", string(results[0].Tx))
+
+		require.Equal(t, 4, results[1].Height)
+		require.Equal(t, "2", string(results[1].Tx))
+
+		require.Equal(t, 4, results[2].Height)
+		require.Equal(t, "3", string(results[2].Tx))
+	})
+
+	t.Run("no txs", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
+		require.NoError(t, err)
+
+		results, err := NewQuery(db).Transactions(ctx, chain.id)
+		require.NoError(t, err)
+
+		require.Len(t, results, 0)
+	})
 }
