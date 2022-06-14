@@ -102,16 +102,21 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 }
 
 type CosmosMessageResult struct {
-	Height                int64
-	Pos                   int
-	Type                  string
-	ClientChainID         sql.NullString
-	ClientID              sql.NullString
-	CounterpartyClientID  sql.NullString
-	ConnID                sql.NullString
-	CounterpartyConnID    sql.NullString
-	PortID                sql.NullString
-	CounterpartyPortID    sql.NullString
+	Height int64
+	Index  int
+	Type   string // URI for proto definition, e.g. /ibc.core.client.v1.MsgCreateClient
+
+	ClientChainID sql.NullString
+
+	ClientID             sql.NullString
+	CounterpartyClientID sql.NullString
+
+	ConnID             sql.NullString
+	CounterpartyConnID sql.NullString
+
+	PortID             sql.NullString
+	CounterpartyPortID sql.NullString
+
 	ChannelID             sql.NullString
 	CounterpartyChannelID sql.NullString
 }
@@ -122,7 +127,7 @@ type CosmosMessageResult struct {
 func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMessageResult, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT 
         block_height
-    	, msg_n -- tx position
+    	, msg_n -- message index or position within the tx
 		, type
 		, client_chain_id
 		, client_id
@@ -145,7 +150,7 @@ func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMess
 		var res CosmosMessageResult
 		if err = rows.Scan(
 			&res.Height,
-			&res.Pos,
+			&res.Index,
 			&res.Type,
 			&res.ClientChainID,
 			&res.ClientID,

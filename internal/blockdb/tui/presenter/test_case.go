@@ -6,7 +6,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 )
 
-// TestCase presents a blockdb.TestCaseResult
+// TestCase presents a blockdb.TestCaseResult.
 type TestCase struct {
 	Result blockdb.TestCaseResult
 }
