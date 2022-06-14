@@ -155,21 +155,21 @@ SELECT
   , COALESCE(
       json_extract(value, "$.port_id"),           -- ChannelOpen*
       json_extract(value, "$.source_port"),       -- MsgTransfer
-      json_extract(value, "$.packet.source_port") -- MsgRecvPacket (might be backwards)
+      json_extract(value, "$.packet.source_port") -- MsgRecvPacket and MsgAcknowledgement (might be backwards)
     ) as port_id
   , COALESCE(
       json_extract(value, "$.channel.counterparty.port_id"), -- ChannelOpenTry
-      json_extract(value, "$.packet.destination_port")       -- MsgRecvPacket (might be backwards)
+      json_extract(value, "$.packet.destination_port")       -- MsgRecvPacket and MsgAcknowledgement (might be backwards)
     ) as counterparty_port_id
   , COALESCE(
       json_extract(value, "$.channel_id"),           -- ChannelOpen*
       json_extract(value, "$.source_channel"),       -- MsgTransfer
-      json_extract(value, "$.packet.source_channel") -- MsgRecvPacket (might be backwards)
+      json_extract(value, "$.packet.source_channel") -- MsgRecvPacket and MsgAcknowledgement (might be backwards)
     ) as channel_id
   , COALESCE(
       json_extract(value, "$.counterparty_channel_id"),         -- ChannelOpenAck
       json_extract(value, "$.channel.counterparty.channel_id"), -- ChannelOpenTry
-      json_extract(value, "$.packet.destination_channel")       -- MsgRecvPacket (might be backwards)
+      json_extract(value, "$.packet.destination_channel")       -- MsgRecvPacket and MsgAcknowledgement (might be backwards)
     ) as counterparty_channel_id
   , value as raw
 FROM v_tx_flattened, json_each(v_tx_flattened.tx, "$.body.messages")
