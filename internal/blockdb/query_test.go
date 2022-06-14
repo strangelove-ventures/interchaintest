@@ -142,7 +142,7 @@ func TestQuery_CosmosMessages(t *testing.T) {
 	first := results[0]
 	require.EqualValues(t, 1, first.Height)
 	require.EqualValues(t, 0, first.Index)
-	require.Equal(t, "/ibc.core.client.v2.MsgCreateClient", first.Type)
+	require.Equal(t, "/ibc.core.client.v1.MsgCreateClient", first.Type)
 
 	second := results[1]
 	require.EqualValues(t, 2, second.Height)
