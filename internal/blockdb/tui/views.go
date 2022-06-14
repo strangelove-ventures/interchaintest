@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb/tui/presenter"
 )
 
 func headerView(m *Model) *tview.Flex {
@@ -38,7 +39,7 @@ func schemaVersionView(m *Model) *tview.Table {
 	}
 	tbl.SetCell(0, 1, valCell(m.databasePath))
 	tbl.SetCell(1, 1, valCell(m.schemaVersion))
-	tbl.SetCell(2, 1, valCell(formatTime(m.schemaDate)))
+	tbl.SetCell(2, 1, valCell(presenter.FormatTime(m.schemaDate)))
 
 	return tbl
 }
@@ -102,7 +103,7 @@ func testCasesView(m *Model) *tview.Table {
 
 	rows := make([][]string, len(m.testCases))
 	for i, tc := range m.testCases {
-		pres := testCasePresenter{tc}
+		pres := presenter.TestCase{Result: tc}
 		rows[i] = []string{
 			pres.ID(),
 			pres.Date(),
