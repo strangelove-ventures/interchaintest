@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	escKey   = tcell.NewEventKey(tcell.KeyESC, ' ', 0)
+	enterKey = tcell.NewEventKey(tcell.KeyEnter, ' ', 0)
+)
+
 type mockQueryService struct {
 	GotChainID int64
 	Messages   []blockdb.CosmosMessageResult
@@ -33,7 +38,7 @@ func TestModel_Update(t *testing.T) {
 		require.Equal(t, 1, model.mainContentView().GetPageCount())
 
 		update := model.Update(ctx)
-		update(tcell.NewEventKey(tcell.KeyESC, ' ', 0))
+		update(escKey)
 
 		require.Equal(t, 1, model.mainContentView().GetPageCount())
 	})
@@ -55,7 +60,7 @@ func TestModel_Update(t *testing.T) {
 		model.RootView().Draw(tcell.NewSimulationScreen(""))
 
 		update := model.Update(ctx)
-		update(tcell.NewEventKey(tcell.KeyRune, 's', 0))
+		update(enterKey)
 
 		// By default, first row is selected in a rendered table.
 		require.EqualValues(t, 5, querySvc.GotChainID)
@@ -67,8 +72,12 @@ func TestModel_Update(t *testing.T) {
 		require.Equal(t, 4, table.(*tview.Table).GetRowCount())
 		require.Contains(t, table.(*tview.Table).GetTitle(), "my-chain1")
 
-		update(tcell.NewEventKey(tcell.KeyRune, 's', 0))
+		update(enterKey)
 		// Assert page count unchanged with duplicate key presses.
 		require.Equal(t, 2, model.mainContentView().GetPageCount())
+	})
+
+	t.Run("cosmos summary view on non-cosmos chain", func(t *testing.T) {
+		t.Skip("TODO - need tx detail views first")
 	})
 }

@@ -13,17 +13,14 @@ import (
 // Per tview documentation, return nil to stop event propagation.
 func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.EventKey {
 	return func(event *tcell.EventKey) *tcell.EventKey {
-		defer m.updateHelp()
-
-		if event.Key() == tcell.KeyESC {
+		switch {
+		case event.Key() == tcell.KeyESC:
 			if len(m.stack) > 1 { // Stack must be at least 1, so we don't remove all main content views.
 				m.mainContentView().RemovePage(m.stack.Current().String())
 				m.stack = m.stack.Pop()
 			}
-		}
 
-		switch event.Rune() {
-		case 's':
+		case event.Key() == tcell.KeyEnter:
 			if m.stack.Current() == testCasesMain {
 				tc := m.testCases[m.selectedRow()]
 				results, err := m.querySvc.CosmosMessages(ctx, tc.ChainPKey)
@@ -53,11 +50,4 @@ func (m *Model) selectedRow() int {
 	row, _ := view.(*tview.Table).GetSelection()
 	// Offset by 1 to account for header row.
 	return row - 1
-}
-
-func (m *Model) updateHelp() {
-	header := m.layout.GetItem(0).(*tview.Flex) // header is a nested flex
-	help := header.GetItem(0).(*helpView)
-	keys := keyMap[m.stack.Current()]
-	help.Update(keys)
 }

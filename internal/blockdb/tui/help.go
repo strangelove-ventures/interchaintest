@@ -19,11 +19,6 @@ var defaultHelpKeys = []keyBinding{
 	{"ctl+c", "exit"},
 }
 
-var keyMap = map[mainContent][]keyBinding{
-	testCasesMain:     append([]keyBinding{{"s", "cosmos summary"}}, defaultHelpKeys...),
-	cosmosSummaryMain: defaultHelpKeys,
-}
-
 type helpView struct {
 	*tview.Table
 }
@@ -34,7 +29,8 @@ func newHelpView() *helpView {
 	return &helpView{tbl}
 }
 
-func (view *helpView) Update(keys []keyBinding) *helpView {
+// Replace serves as a hook to clear all keys and update the help table view with new keys.
+func (view *helpView) Replace(keys []keyBinding) *helpView {
 	view.Table.Clear()
 	keyCell := func(s string) *tview.TableCell {
 		return tview.NewTableCell("<" + s + ">").
