@@ -1,30 +1,37 @@
 package tui
 
 import (
+	"context"
 	"time"
 
 	"github.com/rivo/tview"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=main
+//go:generate go run golang.org/x/tools/cmd/stringer -type=mainContent
 
-// main is the primary content for user interaction in the UI akin to html <main>.
-type main int
+// mainContent is the primary content for user interaction in the UI akin to html <main>.
+type mainContent int
 
 const (
-	testCasesMain main = iota
+	testCasesMain mainContent = iota
 	cosmosSummaryMain
 )
 
-type mainStack []main
+type mainStack []mainContent
 
-func (stack mainStack) Push(s main) []main { return append(stack, s) }
-func (stack mainStack) Current() main      { return stack[len(stack)-1] }
-func (stack mainStack) Pop() []main        { return stack[:len(stack)-1] }
+func (stack mainStack) Push(s mainContent) []mainContent { return append(stack, s) }
+func (stack mainStack) Current() mainContent             { return stack[len(stack)-1] }
+func (stack mainStack) Pop() []mainContent               { return stack[:len(stack)-1] }
+
+// QueryService fetches data from a database.
+type QueryService interface {
+	CosmosMessages(ctx context.Context, chainID int64) ([]blockdb.CosmosMessageResult, error)
+}
 
 // Model encapsulates state that updates a view.
 type Model struct {
+	querySvc      QueryService
 	databasePath  string
 	schemaVersion string
 	schemaDate    time.Time
@@ -38,12 +45,14 @@ type Model struct {
 
 // NewModel returns a valid *Model.
 func NewModel(
+	querySvc QueryService,
 	databasePath string,
 	schemaVersion string,
 	schemaDate time.Time,
 	testCases []blockdb.TestCaseResult,
 ) *Model {
 	m := &Model{
+		querySvc:      querySvc,
 		databasePath:  databasePath,
 		schemaVersion: schemaVersion,
 		schemaDate:    schemaDate,

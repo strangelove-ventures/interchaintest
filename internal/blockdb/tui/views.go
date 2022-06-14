@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb/tui/presenter"
 )
 
@@ -51,7 +52,8 @@ func detailTableView(title string, headers []string, rows [][]string) *tview.Tab
 	tbl := tview.NewTable().
 		SetBorders(false).
 		SetSelectable(true, false).
-		SetSelectedStyle(tcell.Style{}.Foreground(backgroundColor).Background(textColor))
+		SetSelectedStyle(tcell.Style{}.Foreground(backgroundColor).Background(textColor)).
+		SetFixed(1, 0)
 	tbl.
 		SetBorder(true).
 		SetBorderPadding(0, 0, 1, 1).
@@ -116,4 +118,33 @@ func testCasesView(m *Model) *tview.Table {
 	}
 
 	return detailTableView("Test Cases", headers, rows)
+}
+
+func cosmosSummaryView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageResult) *tview.Table {
+	headers := []string{
+		"Height",
+		"Index",
+		"Type",
+		"Client Chain",
+		"Client",
+		"Connection",
+		"Channel:Port",
+	}
+
+	rows := make([][]string, len(msgs))
+	for i, msg := range msgs {
+		pres := presenter.CosmosMessage{Result: msg}
+		rows[i] = []string{
+			pres.Height(),
+			pres.Index(),
+			pres.Type(),
+			pres.ClientChain(),
+			pres.Clients(),
+			pres.Connections(),
+			pres.Channels(),
+		}
+	}
+
+	title := fmt.Sprintf("%s [%s]", tc.ChainID, presenter.FormatTime(tc.CreatedAt))
+	return detailTableView(title, headers, rows)
 }

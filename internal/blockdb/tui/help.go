@@ -19,7 +19,7 @@ var defaultHelpKeys = []keyBinding{
 	{"ctl+c", "exit"},
 }
 
-var keyMap = map[main][]keyBinding{
+var keyMap = map[mainContent][]keyBinding{
 	testCasesMain:     append([]keyBinding{{"s", "cosmos summary"}}, defaultHelpKeys...),
 	cosmosSummaryMain: defaultHelpKeys,
 }
