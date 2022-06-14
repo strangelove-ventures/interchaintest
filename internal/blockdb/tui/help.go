@@ -15,6 +15,7 @@ type keyBinding struct {
 var defaultHelpKeys = []keyBinding{
 	{fmt.Sprintf("%c/k", tcell.RuneUArrow), "move up"},
 	{fmt.Sprintf("%c/j", tcell.RuneDArrow), "move down"},
+	{"enter", "select row"},
 	{"esc", "go back"},
 	{"ctl+c", "exit"},
 }
