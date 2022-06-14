@@ -52,34 +52,3 @@ func (msg CosmosMessage) srcCounterpartyPair(source, counterparty string) string
 	}
 	return strings.TrimSpace(source + " " + counterparty)
 }
-
-// IBCDetails varies based on the presence of IBC data within the message.
-//func (msg CosmosMessage) IBCDetails() string {
-//	res := msg.Result
-//	var parts []string
-//	for _, field := range []struct {
-//		Label string
-//		Val   sql.NullString
-//	}{
-//
-//		{"ClientChain", res.ClientChainID},
-//
-//		{"Client", res.ClientID},
-//
-//		{"Counterparty Client", res.CounterpartyClientID},
-//
-//		{"Connection", res.ConnID},
-//		{"Counterparty Connection", res.CounterpartyConnID},
-//
-//		{"Channel", res.ChannelID},
-//		{"Port", res.PortID},
-//		{"Counterparty Channel", res.CounterpartyChannelID},
-//		{"Counterparty Port", res.CounterpartyPortID},
-//	} {
-//		if !field.Val.Valid {
-//			continue
-//		}
-//		parts = append(parts, fmt.Sprintf("%s: %s", field.Label, field.Val.String))
-//	}
-//	return strings.Join(parts, "\n")
-//}
