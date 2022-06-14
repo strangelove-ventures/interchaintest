@@ -16,6 +16,12 @@ var (
 	enterKey = tcell.NewEventKey(tcell.KeyEnter, ' ', 0)
 )
 
+// draw is necessary for some of the below tests to get default behavior such as selecting the first available
+// row in a *tview.Table.
+func draw(view tview.Primitive) {
+	view.Draw(tcell.NewSimulationScreen(""))
+}
+
 type mockQueryService struct {
 	GotChainID int64
 	Messages   []blockdb.CosmosMessageResult
@@ -37,6 +43,8 @@ func TestModel_Update(t *testing.T) {
 		model := NewModel(&mockQueryService{}, "", "", time.Now(), nil)
 		require.Equal(t, 1, model.mainContentView().GetPageCount())
 
+		draw(model.RootView())
+
 		update := model.Update(ctx)
 		update(escKey)
 
@@ -56,8 +64,7 @@ func TestModel_Update(t *testing.T) {
 			{ChainPKey: 6},
 		})
 
-		// Must draw screen first to get default behavior.
-		model.RootView().Draw(tcell.NewSimulationScreen(""))
+		draw(model.RootView())
 
 		update := model.Update(ctx)
 		update(enterKey)
@@ -71,10 +78,6 @@ func TestModel_Update(t *testing.T) {
 		// 4 rows: 1 header + 3 blockdb.CosmosMessageResult
 		require.Equal(t, 4, table.(*tview.Table).GetRowCount())
 		require.Contains(t, table.(*tview.Table).GetTitle(), "my-chain1")
-
-		update(enterKey)
-		// Assert page count unchanged with duplicate key presses.
-		require.Equal(t, 2, model.mainContentView().GetPageCount())
 	})
 
 	t.Run("cosmos summary view on non-cosmos chain", func(t *testing.T) {
