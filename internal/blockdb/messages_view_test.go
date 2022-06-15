@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
@@ -40,9 +41,8 @@ func TestMessagesView(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, pool, network, home,
-	)
+	rf := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
+	r := rf.Build(t, pool, network, home)
 
 	ic := ibctest.NewInterchain().
 		AddChain(gaia0).
@@ -267,6 +267,10 @@ WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 		return
 	}
 
+	if !rf.Capabilities()[relayer.FlushPackets] {
+		t.Skip("cannot continue due to missing capability FlushPackets")
+	}
+
 	t.Run("relay packet", func(t *testing.T) {
 		require.NoError(t, r.FlushPackets(ctx, eRep, pathName, gaia0ChannelID))
 
@@ -280,9 +284,31 @@ WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 
 		require.Equal(t, portID, gaia0Port)
 		require.Equal(t, channelID, gaia0ChannelID)
+		require.Equal(t, counterpartyPortID, gaia1Port)
+		require.Equal(t, counterpartyChannelID, gaia1ChannelID)
 	})
+	if t.Failed() {
+		return
+	}
 
-	// TODO: relay acknowledgement.
-	// Waiting for next relayer release candidate,
-	// so that this test doesn't need to conditionally skip based on whether FlushAcknowledgements is supported.
+	if !rf.Capabilities()[relayer.FlushAcknowledgements] {
+		t.Skip("cannot continue due to missing capability FlushAcknowledgements")
+	}
+
+	t.Run("relay acknowledgement", func(t *testing.T) {
+		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, pathName, gaia1ChannelID))
+
+		const qMsgAck = `SELECT
+port_id, channel_id, counterparty_port_id, counterparty_channel_id
+FROM v_cosmos_messages
+WHERE type = "/ibc.core.channel.v1.MsgAcknowledgement" AND chain_id = ?
+`
+		var portID, channelID, counterpartyPortID, counterpartyChannelID string
+		require.NoError(t, db.QueryRow(qMsgAck, gaia0ChainID).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
+
+		require.Equal(t, portID, gaia0Port)
+		require.Equal(t, channelID, gaia0ChannelID)
+		require.Equal(t, counterpartyPortID, gaia1Port)
+		require.Equal(t, counterpartyChannelID, gaia1ChannelID)
+	})
 }
