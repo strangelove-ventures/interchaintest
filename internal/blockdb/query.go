@@ -122,22 +122,22 @@ type CosmosMessageResult struct {
 }
 
 // CosmosMessages returns a summary of Cosmos messages for the chainID. In Cosmos, a transaction may have 1 or more
-// associated messaged.
+// associated messages.
 // The "chainID" is the database primary key, not the chain id as present in the Cosmos Chain Registry.
 func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMessageResult, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT 
         block_height
-    	, msg_n -- message index or position within the tx
-		, type
-		, client_chain_id
-		, client_id
-		, counterparty_client_id
-		, conn_id
-		, counterparty_conn_id
-		, port_id
-		, counterparty_port_id
-		, channel_id
-		, counterparty_channel_id
+        , msg_n -- message index or position within the tx
+        , type
+        , client_chain_id
+        , client_id
+        , counterparty_client_id
+        , conn_id
+        , counterparty_conn_id
+        , port_id
+        , counterparty_port_id
+        , channel_id
+        , counterparty_channel_id
     FROM v_cosmos_messages
     WHERE chain_kid = ?
     ORDER BY block_height ASC , msg_n ASC`, chainID)
