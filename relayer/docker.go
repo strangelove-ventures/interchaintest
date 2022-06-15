@@ -81,6 +81,11 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	// This might be a better fit for NewDockerRelayer, but that would considerably change the function signature.
 	if !r.didInit {
 		if init := r.c.Init(r.NodeHome()); len(init) > 0 {
+			// Initialization should complete immediately,
+			// but add a 1-minute timeout in case Docker hangs on a developer workstation.
+			ctx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+
 			exitCode, stdout, stderr, err := r.NodeJob(ctx, rep, init)
 			if err != nil {
 				return fmt.Errorf("relayer initialization failed: %w", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err))
@@ -107,11 +112,23 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	}
 
 	cmd := r.c.AddChainConfiguration(chainConfigContainerFilePath, r.NodeHome())
+
+	// Adding the chain configuration simply reads from a file on disk,
+	// so this should also complete immediately.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
 }
 
 func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.RelayerWallet, error) {
 	cmd := r.c.AddKey(chainID, keyName, r.NodeHome())
+
+	// Adding a key should be near-instantaneous, so add a 1-minute timeout
+	// to detect if Docker has hung.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	exitCode, stdout, stderr, err := r.NodeJob(ctx, rep, cmd)
 	if err != nil {
 		return ibc.RelayerWallet{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -152,6 +169,11 @@ func (r *DockerRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecRep
 
 func (r *DockerRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
 	cmd := r.c.GetChannels(chainID, r.NodeHome())
+
+	// Getting channels should be very quick, but go up to a 3-minute timeout just in case.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+
 	exitCode, stdout, stderr, err := r.NodeJob(ctx, rep, cmd)
 	if err != nil {
 		return nil, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
@@ -177,6 +199,12 @@ func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporte
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
 	cmd := r.c.RestoreKey(chainID, keyName, mnemonic, r.NodeHome())
+
+	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
+	// to detect if Docker has hung.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
 }
 
@@ -317,7 +345,8 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 	)
 
 	cont, err := r.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: container,
+		Context: ctx,
+		Name:    container,
 		Config: &docker.Config{
 			User: dockerutil.GetDockerUserString(),
 			// random hostname is fine here, just for setup
@@ -340,7 +369,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 	if err != nil {
 		return 1, "", "", err
 	}
-	if err = r.pool.Client.StartContainer(cont.ID, nil); err != nil {
+	if err = r.pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
 		return 1, "", "", err
 	}
 	exitCode, err = r.pool.Client.WaitContainerWithContext(cont.ID, ctx)
@@ -357,7 +386,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 	})
 	stdout = stdoutBuf.String()
 	stderr = stderrBuf.String()
-	_ = r.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
+	_ = r.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
 	r.log.Debug(
 		fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout, stderr),
 		zap.String("container", container),

@@ -309,6 +309,12 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
+
+	// Adding a genesis account should complete instantly,
+	// so use a 1-minute timeout to more quickly detect if Docker has locked up.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
