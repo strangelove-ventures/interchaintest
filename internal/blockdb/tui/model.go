@@ -43,9 +43,6 @@ type Model struct {
 
 	// stack keeps tracks of primary content pushed and popped
 	stack mainStack
-
-	// keeps track of current page index for a tview.Pages
-	pageIndex int
 }
 
 // NewModel returns a valid *Model.

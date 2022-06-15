@@ -179,6 +179,7 @@ func TestQuery_Transactions(t *testing.T) {
 		defer db.Close()
 
 		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		require.NoError(t, err)
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
@@ -205,6 +206,7 @@ func TestQuery_Transactions(t *testing.T) {
 		defer db.Close()
 
 		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		require.NoError(t, err)
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
