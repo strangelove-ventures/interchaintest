@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -13,7 +14,9 @@ import (
 // Per tview documentation, return nil to stop event propagation.
 func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.EventKey {
 	return func(event *tcell.EventKey) *tcell.EventKey {
-		defer m.updateHelp()
+		oldMain := m.stack.Current()
+		defer m.updateHelp(oldMain)
+
 		switch {
 		case event.Key() == tcell.KeyESC:
 			if len(m.stack) > 1 { // Stack must be at least 1, so we don't remove all main content views.
@@ -23,7 +26,6 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			}
 
 		case event.Key() == tcell.KeyEnter && m.stack.Current() == testCasesMain:
-			if m.stack.Current() == testCasesMain {
 			// Show tx detail.
 			tc := m.testCases[m.selectedRow()]
 			results, err := m.querySvc.Transactions(ctx, tc.ChainPKey)
@@ -31,7 +33,15 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 				// TODO (nix - 6/14/22) Display error instead of panic.
 				panic(err)
 			}
-			m.pushMainView(txDetailMain, txDetailView(tc.ChainID, m.selectedRow(), results))
+			m.pushMainView(txDetailMain, txDetailView(tc.ChainID, results))
+			return nil
+
+		case event.Rune() == '[' && m.stack.Current() == txDetailMain:
+			goToPrevPage(m.txDetailPages())
+			return nil
+
+		case event.Rune() == ']' && m.stack.Current() == txDetailMain:
+			gotToNextPage(m.txDetailPages())
 			return nil
 
 		case event.Rune() == 'm' && m.stack.Current() == testCasesMain:
@@ -44,14 +54,18 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			}
 			m.pushMainView(cosmosMessagesMain, cosmosMessagesView(tc, results))
 			return nil
+
 		}
 
 		return event
 	}
 }
 
-func (m *Model) updateHelp() {
-	help := m.layout.GetItem(0).(*helpView)
+func (m *Model) updateHelp(oldMainContent mainContent) {
+	if oldMainContent == m.stack.Current() {
+		return
+	}
+	help := m.layout.GetItem(0).(*tview.Flex).GetItem(0).(*helpView)
 	help.Replace(keyMap[m.stack.Current()])
 }
 
@@ -69,4 +83,36 @@ func (m *Model) selectedRow() int {
 	row, _ := view.(*tview.Table).GetSelection()
 	// Offset by 1 to account for header row.
 	return row - 1
+}
+
+func (m *Model) txDetailPages() *tview.Pages {
+	_, prim := m.mainContentView().GetFrontPage()
+	// Tx details is a nested pages.
+	return prim.(*tview.Pages)
+}
+
+// gotToNextPage assumes a convention where the page name is equal to its index. e.g. "0", "1", "2", etc.
+func gotToNextPage(pages *tview.Pages) {
+	idxStr, _ := pages.GetFrontPage()
+	idx, err := strconv.Atoi(idxStr)
+	if err != nil {
+		panic(err)
+	}
+	if idx == pages.GetPageCount()-1 {
+		return
+	}
+	pages.SwitchToPage(strconv.Itoa(idx + 1))
+}
+
+// goToPrevPage assumes a convention where the page name is equal to its index. e.g. "0", "1", "2", etc.
+func goToPrevPage(pages *tview.Pages) {
+	idxStr, _ := pages.GetFrontPage()
+	idx, err := strconv.Atoi(idxStr)
+	if err != nil {
+		panic(err)
+	}
+	if idx == 0 {
+		return
+	}
+	pages.SwitchToPage(strconv.Itoa(idx - 1))
 }

@@ -102,9 +102,6 @@ func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResul
 }
 
 type CosmosMessageResult struct {
-	ChainID   string // e.g. osmosis-1001
-	ChainPkey int64  // chain primary key
-
 	Height int64
 	Index  int
 	Type   string // URI for proto definition, e.g. /ibc.core.client.v1.MsgCreateClient
@@ -130,8 +127,6 @@ type CosmosMessageResult struct {
 func (q *Query) CosmosMessages(ctx context.Context, chainPkey int64) ([]CosmosMessageResult, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT 
         block_height
-        , chain_id
-        , block_height
         , msg_n -- message index or position within the tx
         , type
         , client_chain_id
@@ -154,8 +149,6 @@ func (q *Query) CosmosMessages(ctx context.Context, chainPkey int64) ([]CosmosMe
 	for rows.Next() {
 		var res CosmosMessageResult
 		if err = rows.Scan(
-			&res.ChainPkey,
-			&res.ChainID,
 			&res.Height,
 			&res.Index,
 			&res.Type,

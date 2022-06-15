@@ -12,26 +12,25 @@ type keyBinding struct {
 	Help string // Very short help text describing the key's action.
 }
 
-type keyBindings []keyBinding
+var baseHelpKeys = []keyBinding{
+	{"esc", "go back"},
+	{"ctl+c", "exit"},
+}
 
-func (b keyBindings) Prepend(bindings ...keyBindings) keyBindings {
-	var altered keyBindings
+func bindingsWithBase(bindings ...[]keyBinding) []keyBinding {
+	var all []keyBinding
 	for i := range bindings {
-		altered = append(altered, bindings[i]...)
+		all = append(all, bindings[i]...)
 	}
-	return append(altered, b...)
+	return append(all, baseHelpKeys...)
 }
 
 var (
-	baseHelpKeys = keyBindings{
-		{"esc", "go back"},
-		{"ctl+c", "exit"},
-	}
-	tableHelpKeys = keyBindings{
+	tableNavKeys = []keyBinding{
 		{fmt.Sprintf("%c/k", tcell.RuneUArrow), "move up"},
 		{fmt.Sprintf("%c/j", tcell.RuneDArrow), "move down"},
 	}
-	textViewHelpKeys = keyBindings{
+	textNavKeys = []keyBinding{
 		{fmt.Sprintf("%c/k", tcell.RuneUArrow), "scroll up"},
 		{fmt.Sprintf("%c/j", tcell.RuneDArrow), "scroll down"},
 		{"g", "go to top"},
@@ -40,10 +39,10 @@ var (
 		{"ctrl+f", "page down"},
 	}
 
-	keyMap = map[mainContent]keyBindings{
-		testCasesMain:      baseHelpKeys.Prepend(tableHelpKeys, keyBindings{{"m", "cosmos messages"}, {"enter", "view txs"}}),
-		cosmosMessagesMain: baseHelpKeys.Prepend(tableHelpKeys),
-		txDetailMain:       baseHelpKeys.Prepend(textViewHelpKeys, keyBindings{{"[", "previous tx"}, {"]", "next tx"}}),
+	keyMap = map[mainContent][]keyBinding{
+		testCasesMain:      bindingsWithBase([]keyBinding{{"m", "cosmos messages"}, {"enter", "view txs"}}, tableNavKeys),
+		cosmosMessagesMain: bindingsWithBase(tableNavKeys),
+		txDetailMain:       bindingsWithBase([]keyBinding{{"[", "previous tx"}, {"]", "next tx"}}, textNavKeys),
 	}
 )
 
@@ -68,14 +67,19 @@ func (view *helpView) Replace(keys []keyBinding) *helpView {
 		return tview.NewTableCell(s).
 			SetStyle(textStyle.Attributes(tcell.AttrDim))
 	}
-	var colOffset int
-	for row, binding := range keys {
+	var (
+		row int
+		col int
+	)
+	for _, binding := range keys {
 		// Only allow 6 help items per row or else help items will not be visible.
 		if row > 0 && row%6 == 0 {
-			colOffset += 2
+			row = 0
+			col += 2
 		}
-		view.Table.SetCell(row, colOffset, keyCell(binding.Key))
-		view.Table.SetCell(row, colOffset+1, textCell(binding.Help))
+		view.Table.SetCell(row, col, keyCell(binding.Key))
+		view.Table.SetCell(row, col+1, textCell(binding.Help))
+		row++
 	}
 	return view
 }
