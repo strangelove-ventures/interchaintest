@@ -62,6 +62,7 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 }
 
 func (m *Model) updateHelp(oldMainContent mainContent) {
+	// Prevent redrawing if nothing has changed.
 	if oldMainContent == m.stack.Current() {
 		return
 	}
@@ -86,9 +87,9 @@ func (m *Model) selectedRow() int {
 }
 
 func (m *Model) txDetailPages() *tview.Pages {
-	_, prim := m.mainContentView().GetFrontPage()
+	_, primitive := m.mainContentView().GetFrontPage()
 	// Tx details is a nested pages.
-	return prim.(*tview.Pages)
+	return primitive.(*tview.Pages)
 }
 
 // gotToNextPage assumes a convention where the page name is equal to its index. e.g. "0", "1", "2", etc.
