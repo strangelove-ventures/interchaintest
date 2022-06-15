@@ -142,7 +142,7 @@ SELECT
   , block_id
   , block_height
   , tx_id
-  , key as msg_n
+  , key as msg_n -- message position within the tx
   , json_extract(value, "$.@type") as type
   , json_extract(value, "$.client_state.chain_id") as client_chain_id
   , json_extract(value, "$.client_id") as client_id

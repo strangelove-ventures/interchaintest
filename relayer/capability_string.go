@@ -10,11 +10,13 @@ func _() {
 	var x [1]struct{}
 	_ = x[TimestampTimeout-0]
 	_ = x[HeightTimeout-1]
+	_ = x[FlushPackets-2]
+	_ = x[FlushAcknowledgements-3]
 }
 
-const _Capability_name = "TimestampTimeoutHeightTimeout"
+const _Capability_name = "TimestampTimeoutHeightTimeoutFlushPacketsFlushAcknowledgements"
 
-var _Capability_index = [...]uint8{0, 16, 29}
+var _Capability_index = [...]uint8{0, 16, 29, 41, 62}
 
 func (i Capability) String() string {
 	if i < 0 || i >= Capability(len(_Capability_index)-1) {
