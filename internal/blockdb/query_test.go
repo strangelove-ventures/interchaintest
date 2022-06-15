@@ -182,21 +182,21 @@ func TestQuery_Transactions(t *testing.T) {
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
-		require.NoError(t, chain.SaveBlock(ctx, 2, [][]byte{[]byte(`1`)}))
-		require.NoError(t, chain.SaveBlock(ctx, 4, [][]byte{[]byte(`2`), []byte(`3`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 12, [][]byte{[]byte(`1`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 14, [][]byte{[]byte(`2`), []byte(`3`)}))
 
 		results, err := NewQuery(db).Transactions(ctx, chain.id)
 		require.NoError(t, err)
 
 		require.Len(t, results, 3)
 
-		require.Equal(t, 2, results[0].Height)
+		require.EqualValues(t, 12, results[0].Height)
 		require.Equal(t, "1", string(results[0].Tx))
 
-		require.Equal(t, 4, results[1].Height)
+		require.EqualValues(t, 14, results[1].Height)
 		require.Equal(t, "2", string(results[1].Tx))
 
-		require.Equal(t, 4, results[2].Height)
+		require.EqualValues(t, 14, results[2].Height)
 		require.Equal(t, "3", string(results[2].Tx))
 	})
 
