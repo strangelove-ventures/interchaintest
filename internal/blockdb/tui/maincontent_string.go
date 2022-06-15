@@ -9,12 +9,13 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[testCasesMain-0]
-	_ = x[cosmosSummaryMain-1]
+	_ = x[cosmosMessagesMain-1]
+	_ = x[txDetailMain-2]
 }
 
-const _mainContent_name = "testCasesMaincosmosSummaryMain"
+const _mainContent_name = "testCasesMaincosmosMessagesMaintxDetailMain"
 
-var _mainContent_index = [...]uint8{0, 13, 30}
+var _mainContent_index = [...]uint8{0, 13, 31, 43}
 
 func (i mainContent) String() string {
 	if i < 0 || i >= mainContent(len(_mainContent_index)-1) {

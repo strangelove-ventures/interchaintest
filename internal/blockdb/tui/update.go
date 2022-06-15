@@ -13,27 +13,45 @@ import (
 // Per tview documentation, return nil to stop event propagation.
 func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.EventKey {
 	return func(event *tcell.EventKey) *tcell.EventKey {
+		defer m.updateHelp()
 		switch {
 		case event.Key() == tcell.KeyESC:
 			if len(m.stack) > 1 { // Stack must be at least 1, so we don't remove all main content views.
 				m.mainContentView().RemovePage(m.stack.Current().String())
 				m.stack = m.stack.Pop()
+				return nil
 			}
 
-		case event.Key() == tcell.KeyEnter:
-			if m.stack.Current() == testCasesMain {
-				tc := m.testCases[m.selectedRow()]
-				results, err := m.querySvc.CosmosMessages(ctx, tc.ChainPKey)
-				if err != nil {
-					// TODO (nix - 6/14/22) Display error instead of panic.
-					panic(err)
-				}
-				m.pushMainView(cosmosSummaryMain, cosmosSummaryView(tc, results))
+		case event.Key() == tcell.KeyEnter && m.stack.Current() == testCasesMain:
+			// Show tx detail.
+			tc := m.testCases[m.selectedRow()]
+			results, err := m.querySvc.Transactions(ctx, tc.ChainPKey)
+			if err != nil {
+				// TODO (nix - 6/14/22) Display error instead of panic.
+				panic(err)
 			}
+			m.pushMainView(txDetailMain, txDetailView(tc.ChainID, m.selectedRow(), results))
+			return nil
+
+		case event.Rune() == 'm' && m.stack.Current() == testCasesMain:
+			// Show cosmos messages.
+			tc := m.testCases[m.selectedRow()]
+			results, err := m.querySvc.CosmosMessages(ctx, tc.ChainPKey)
+			if err != nil {
+				// TODO (nix - 6/14/22) Display error instead of panic.
+				panic(err)
+			}
+			m.pushMainView(cosmosMessagesMain, cosmosMessagesView(tc, results))
+			return nil
 		}
 
 		return event
 	}
+}
+
+func (m *Model) updateHelp() {
+	help := m.layout.GetItem(0).(*helpView)
+	help.Replace(keyMap[m.stack.Current()])
 }
 
 func (m *Model) mainContentView() *tview.Pages {

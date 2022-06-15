@@ -23,16 +23,25 @@ func draw(view tview.Primitive) {
 }
 
 type mockQueryService struct {
-	GotChainID int64
-	Messages   []blockdb.CosmosMessageResult
-	Err        error
+	GotChainPkey int64
+	Messages     []blockdb.CosmosMessageResult
+	Txs          []blockdb.TxResult
+	Err          error
+}
+
+func (m *mockQueryService) Transactions(ctx context.Context, chainPkey int64) ([]blockdb.TxResult, error) {
+	if ctx == nil {
+		panic("nil context")
+	}
+	m.GotChainPkey = chainPkey
+	return m.Txs, m.Err
 }
 
 func (m *mockQueryService) CosmosMessages(ctx context.Context, chainID int64) ([]blockdb.CosmosMessageResult, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
-	m.GotChainID = chainID
+	m.GotChainPkey = chainID
 	return m.Messages, m.Err
 }
 
@@ -70,7 +79,7 @@ func TestModel_Update(t *testing.T) {
 		update(enterKey)
 
 		// By default, first row is selected in a rendered table.
-		require.EqualValues(t, 5, querySvc.GotChainID)
+		require.EqualValues(t, 5, querySvc.GotChainPkey)
 
 		require.Equal(t, 2, model.mainContentView().GetPageCount())
 		_, table := model.mainContentView().GetFrontPage()

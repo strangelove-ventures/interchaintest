@@ -3,6 +3,7 @@ package tui
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -120,7 +121,7 @@ func testCasesView(m *Model) *tview.Table {
 	return detailTableView("Test Cases", headers, rows)
 }
 
-func cosmosSummaryView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageResult) *tview.Table {
+func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageResult) *tview.Table {
 	headers := []string{
 		"Height",
 		"Index",
@@ -147,4 +148,30 @@ func cosmosSummaryView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageRe
 
 	title := fmt.Sprintf("%s [%s]", tc.ChainID, presenter.FormatTime(tc.CreatedAt))
 	return detailTableView(title, headers, rows)
+}
+
+func txDetailView(chainID string, viewIndex int, txs []blockdb.TxResult) *tview.Pages {
+	pages := tview.NewPages()
+
+	for i, tx := range txs {
+		pres := presenter.Tx{Result: tx}
+		textView := tview.NewTextView().
+			SetText(pres.Data()).
+			SetTextColor(textColor).
+			SetWrap(true).
+			SetWordWrap(true).
+			SetTextAlign(tview.AlignLeft).
+			SetScrollable(true)
+
+		textView.SetBorder(true).
+			SetBorderPadding(0, 0, 1, 1).
+			SetBorderAttributes(tcell.AttrDim)
+
+		textView.SetTitle(fmt.Sprintf("%s @ Height %d [%d of %d]", chainID, tx.Height, i+1, len(txs)))
+
+		pages.AddPage(strconv.Itoa(i), textView, true, false)
+	}
+
+	pages.SwitchToPage(strconv.Itoa(viewIndex))
+	return pages
 }
