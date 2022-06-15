@@ -132,6 +132,12 @@ func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
 
 func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
 	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
+
+	// Cleanup should complete instantly,
+	// so add a 1-minute timeout in case Docker hangs.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
 }
 
