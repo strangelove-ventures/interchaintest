@@ -158,15 +158,21 @@ const (
 type txDetailView struct {
 	*tview.Flex
 
-	txs []blockdb.TxResult
+	chainID string
+	txs     []blockdb.TxResult
 
 	Pages  *tview.Pages
 	Search *tview.InputField
 }
 
 func newTxDetailView(chainID string, txs []blockdb.TxResult) *txDetailView {
-	detail := &txDetailView{txs: txs}
-	detail.Pages = detail.buildPages(chainID, txs)
+	detail := &txDetailView{
+		chainID: chainID,
+		txs:     txs,
+	}
+
+	detail.Pages = tview.NewPages()
+	detail.replacePages("", "0")
 	detail.Search = detail.buildSearchInput()
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)
@@ -180,13 +186,21 @@ func newTxDetailView(chainID string, txs []blockdb.TxResult) *txDetailView {
 
 func (detail *txDetailView) ToggleSearch() {
 	if detail.Search.HasFocus() {
-		detail.Search.SetBorderColor(searchInactiveColor)
-		detail.Search.SetFieldTextColor(searchInactiveColor)
-		detail.Search.SetTitleColor(searchInactiveColor)
-		detail.Search.Blur()
-		detail.Pages.Focus(nil)
+		detail.deactivateSearch()
 		return
 	}
+	detail.activateSearch()
+}
+
+func (detail *txDetailView) deactivateSearch() {
+	detail.Search.SetBorderColor(searchInactiveColor)
+	detail.Search.SetFieldTextColor(searchInactiveColor)
+	detail.Search.SetTitleColor(searchInactiveColor)
+	detail.Search.Blur()
+	detail.Pages.Focus(nil)
+}
+
+func (detail *txDetailView) activateSearch() {
 	detail.Search.SetBorderColor(searchActiveColor)
 	detail.Search.SetFieldTextColor(searchActiveColor)
 	detail.Search.SetTitleColor(searchActiveColor)
@@ -194,13 +208,25 @@ func (detail *txDetailView) ToggleSearch() {
 	detail.Pages.Blur()
 }
 
-func (*txDetailView) buildPages(chainID string, txs []blockdb.TxResult) *tview.Pages {
-	pages := tview.NewPages()
+// DoSearch re-renders the text views with highlighted text.
+func (detail *txDetailView) DoSearch() {
+	detail.deactivateSearch()
+	term := detail.Search.GetText()
+	idx, _ := detail.Pages.GetFrontPage()
+	detail.replacePages(term, idx)
+}
 
-	for i, tx := range txs {
+// "pageIdx" is an integer string, e.g. "0", "1".
+func (detail *txDetailView) replacePages(searchTerm, pageIdx string) {
+	highlight := presenter.NewHighlight(searchTerm)
+	for i, tx := range detail.txs {
+		idx := strconv.Itoa(i)
+		detail.Pages.RemovePage(idx)
+
 		pres := presenter.Tx{Result: tx}
+		text, regions := highlight.Text(pres.Data())
 		textView := tview.NewTextView().
-			SetText(pres.Data()).
+			SetText(text).
 			SetTextColor(textColor).
 			SetWrap(true).
 			SetWordWrap(true).
@@ -209,27 +235,24 @@ func (*txDetailView) buildPages(chainID string, txs []blockdb.TxResult) *tview.P
 
 		// Support highlighting text.
 		textView.SetDynamicColors(true).SetRegions(true)
+		textView.Highlight(regions...).ScrollToHighlight()
 
 		textView.SetBorder(true).
 			SetBorderPadding(0, 0, 1, 1).
 			SetBorderAttributes(tcell.AttrDim)
 
-		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", chainID, tx.Height, i+1, len(txs)))
+		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", detail.chainID, tx.Height, i+1, len(detail.txs)))
 
-		pages.AddPage(strconv.Itoa(i), textView, true, false)
+		detail.Pages.AddPage(idx, textView, true, false)
 	}
 
-	pages.SwitchToPage("0")
-	return pages
+	detail.Pages.SwitchToPage(pageIdx)
 }
 
 func (*txDetailView) buildSearchInput() *tview.InputField {
 	input := tview.NewInputField().
 		SetFieldTextColor(searchInactiveColor).
 		SetFieldBackgroundColor(backgroundColor)
-
-	style := tcell.Style{}.Foreground(tcell.ColorDimGray).Background(backgroundColor)
-	input.SetPlaceholder("case insensitive regex").SetPlaceholderStyle(style)
 
 	input.SetTitle("Search").
 		SetTitleColor(searchInactiveColor).

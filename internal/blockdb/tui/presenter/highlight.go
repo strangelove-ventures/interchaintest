@@ -4,38 +4,39 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Highlight struct {
-	regionText string
-	regions    []string
+	rx *regexp.Regexp
 }
 
 // NewHighlight returns a presenter that adds regions around text that matches searchTerm.
-func NewHighlight(fullText string, searchTerm string) *Highlight {
-	r, err := regexp.Compile(fmt.Sprintf(`(?is)(%s)`, regexp.QuoteMeta(searchTerm)))
-	if err != nil {
-		// Should always be valid given regexp.QuoteMeta above.
-		panic(err)
+func NewHighlight(searchTerm string) *Highlight {
+	searchTerm = strings.TrimSpace(searchTerm)
+	if searchTerm == "" {
+		return &Highlight{}
 	}
-	h := &Highlight{}
-	var i int
-	text := r.ReplaceAllStringFunc(fullText, func(s string) string {
-		region := strconv.Itoa(i)
-		h.regions = append(h.regions, region)
-		s = fmt.Sprintf(`["%s"]%s[""]`, region, s)
-		i++
-		return s
-	})
-	h.regionText = text
-
-	return h
+	// Should always be valid given regexp.QuoteMeta above.
+	return &Highlight{rx: regexp.MustCompile(fmt.Sprintf(`(?is)(%s)`, regexp.QuoteMeta(searchTerm)))}
 }
 
 // Text returns the text decorated with tview.TextView regions given the "searchTerm" from NewHighlight.
-func (h *Highlight) Text() string { return h.regionText }
-
-// Regions returns all region ids.
-// Meant to pair with (*tview.TextView).Highlight and ScrollToHighlight
-// See https://github.com/rivo/tview/wiki/TextView for an example.
-func (h *Highlight) Regions() []string { return h.regions }
+// The second return value is the highlighted region ids for use with *(tview.TextView).Highlight.
+func (h *Highlight) Text(text string) (string, []string) {
+	if h.rx == nil {
+		return text, nil
+	}
+	var (
+		region    int
+		regionIDs []string
+	)
+	final := h.rx.ReplaceAllStringFunc(text, func(s string) string {
+		id := strconv.Itoa(region)
+		regionIDs = append(regionIDs, id)
+		s = fmt.Sprintf(`["%s"]%s[""]`, id, s)
+		region++
+		return s
+	})
+	return final, regionIDs
+}

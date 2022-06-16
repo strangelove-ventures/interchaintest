@@ -58,6 +58,11 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 		case event.Rune() == '/' && m.stack.Current() == txDetailMain:
 			m.txDetailView().ToggleSearch()
 			return nil
+
+		case event.Key() == tcell.KeyEnter && m.stack.Current() == txDetailMain:
+			// Search tx detail.
+			m.txDetailView().DoSearch()
+			return nil
 		}
 
 		return event
