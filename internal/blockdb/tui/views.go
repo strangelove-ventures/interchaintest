@@ -151,7 +151,7 @@ func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageR
 }
 
 const (
-	searchActiveColor   = tcell.ColorYellow
+	searchActiveColor   = tcell.ColorPaleGreen
 	searchInactiveColor = tcell.ColorBlue
 )
 
