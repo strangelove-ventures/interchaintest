@@ -15,7 +15,8 @@ type mainContent int
 
 const (
 	testCasesMain mainContent = iota
-	cosmosSummaryMain
+	cosmosMessagesMain
+	txDetailMain
 )
 
 type mainStack []mainContent
@@ -26,7 +27,8 @@ func (stack mainStack) Pop() []mainContent               { return stack[:len(sta
 
 // QueryService fetches data from a database.
 type QueryService interface {
-	CosmosMessages(ctx context.Context, chainID int64) ([]blockdb.CosmosMessageResult, error)
+	CosmosMessages(ctx context.Context, chainPkey int64) ([]blockdb.CosmosMessageResult, error)
+	Transactions(ctx context.Context, chainPkey int64) ([]blockdb.TxResult, error)
 }
 
 // Model encapsulates state that updates a view.

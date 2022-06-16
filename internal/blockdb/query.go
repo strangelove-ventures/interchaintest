@@ -54,7 +54,7 @@ type TestCaseResult struct {
 	Name        string
 	GitSha      string // Git commit that ran the test.
 	CreatedAt   time.Time
-	ChainPKey   int64  // Integer primary key.
+	ChainPKey   int64  // chain primary key
 	ChainID     string // E.g. osmosis-1001
 	ChainType   string // E.g. cosmos, penumbra
 	ChainHeight sql.NullInt64
@@ -123,8 +123,8 @@ type CosmosMessageResult struct {
 
 // CosmosMessages returns a summary of Cosmos messages for the chainID. In Cosmos, a transaction may have 1 or more
 // associated messages.
-// The "chainID" is the database primary key, not the chain id as present in the Cosmos Chain Registry.
-func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMessageResult, error) {
+// chainPkey is the chain primary key "chain.id", not to be confused with the column "chain_id".
+func (q *Query) CosmosMessages(ctx context.Context, chainPkey int64) ([]CosmosMessageResult, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT 
         block_height
         , msg_n -- message index or position within the tx
@@ -140,7 +140,7 @@ func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMess
         , counterparty_channel_id
     FROM v_cosmos_messages
     WHERE chain_kid = ?
-    ORDER BY block_height ASC , msg_n ASC`, chainID)
+    ORDER BY block_height ASC , msg_n ASC`, chainPkey)
 	if err != nil {
 		return nil, err
 	}
@@ -166,5 +166,35 @@ func (q *Query) CosmosMessages(ctx context.Context, chainID int64) ([]CosmosMess
 		}
 		results = append(results, res)
 	}
+	return results, nil
+}
+
+type TxResult struct {
+	Height int64
+	Tx     []byte
+}
+
+// Transactions returns TxResults only for blocks with transactions present.
+// chainPkey is the chain primary key "chain.id", not to be confused with the column "chain_id".
+func (q *Query) Transactions(ctx context.Context, chainPkey int64) ([]TxResult, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT block.height, tx.data FROM tx 
+    INNER JOIN block on tx.fk_block_id = block.id
+    INNER JOIN chain on block.fk_chain_id = chain.id
+    WHERE chain.id = ?
+    ORDER BY block.height ASC, tx.id ASC`, chainPkey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []TxResult
+	for rows.Next() {
+		var res TxResult
+		if err := rows.Scan(&res.Height, &res.Tx); err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+
 	return results, nil
 }

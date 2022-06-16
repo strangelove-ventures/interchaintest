@@ -111,6 +111,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 }
 
 func TestQuery_CosmosMessages(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	db := migratedDB()
@@ -165,4 +167,52 @@ func TestQuery_CosmosMessages(t *testing.T) {
 			res.ChannelID.Valid || res.CounterpartyChannelID.Valid
 		require.Truef(t, atLeastOnePresent, "IBC messages must contain valid IBC info for %+v", res)
 	}
+}
+
+func TestQuery_Transactions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("happy path", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		require.NoError(t, err)
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
+		require.NoError(t, err)
+
+		require.NoError(t, chain.SaveBlock(ctx, 12, [][]byte{[]byte(`1`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 14, [][]byte{[]byte(`2`), []byte(`3`)}))
+
+		results, err := NewQuery(db).Transactions(ctx, chain.id)
+		require.NoError(t, err)
+
+		require.Len(t, results, 3)
+
+		require.EqualValues(t, 12, results[0].Height)
+		require.Equal(t, "1", string(results[0].Tx))
+
+		require.EqualValues(t, 14, results[1].Height)
+		require.Equal(t, "2", string(results[1].Tx))
+
+		require.EqualValues(t, 14, results[2].Height)
+		require.Equal(t, "3", string(results[2].Tx))
+	})
+
+	t.Run("no txs", func(t *testing.T) {
+		db := migratedDB()
+		defer db.Close()
+
+		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		require.NoError(t, err)
+		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
+		require.NoError(t, err)
+
+		results, err := NewQuery(db).Transactions(ctx, chain.id)
+		require.NoError(t, err)
+
+		require.Len(t, results, 0)
+	})
 }

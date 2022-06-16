@@ -1,10 +1,8 @@
 package blockdb
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 
@@ -26,24 +24,6 @@ func (txs transactions) Hash() []byte {
 		h.Write(tx)
 	}
 	return h.Sum(nil)
-}
-
-func (txs transactions) PrettyJSON() []string {
-	// TODO(nix 05-27-2022): Presentation in the database layer is generally bad practice. However, the first pass
-	// of this feature requires the user to make raw sql against the database. Therefore, to ease readability
-	// we indent json here. If we have a presentation layer in the future, I suggest removing the json indent here
-	// and let the presentation layer format appropriately.
-	jsonTxs := make([]string, len(txs))
-	buf := new(bytes.Buffer)
-	for i, tx := range txs {
-		if err := json.Indent(buf, tx, "", "  "); err != nil {
-			jsonTxs[i] = string(tx)
-			continue
-		}
-		jsonTxs[i] = buf.String()
-		buf.Reset()
-	}
-	return jsonTxs
 }
 
 // SaveBlock tracks a block at height with its transactions.
@@ -73,8 +53,8 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 	if err != nil {
 		return err
 	}
-	for _, tx := range txs.PrettyJSON() {
-		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, tx, blockID)
+	for _, tx := range txs {
+		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, string(tx), blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
 		}
