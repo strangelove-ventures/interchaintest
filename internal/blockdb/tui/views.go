@@ -150,7 +150,54 @@ func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageR
 	return detailTableView(title, headers, rows)
 }
 
-func txDetailView(chainID string, txs []blockdb.TxResult) *tview.Pages {
+const (
+	searchActiveColor   = tcell.ColorYellow
+	searchInactiveColor = tcell.ColorBlue
+)
+
+type txDetailView struct {
+	*tview.Flex
+
+	txs []blockdb.TxResult
+
+	Pages  *tview.Pages
+	Search *tview.InputField
+}
+
+func newTxDetailView(chainID string, txs []blockdb.TxResult) *txDetailView {
+	detail := &txDetailView{txs: txs}
+	detail.Pages = detail.buildPages(chainID, txs)
+	detail.Search = detail.buildSearchInput()
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.SetBorder(false)
+	flex.AddItem(detail.Search, 3, 1, false)
+	flex.AddItem(detail.Pages, 0, 9, true)
+
+	detail.Flex = flex
+	return detail
+}
+
+func (detail *txDetailView) ToggleSearch() {
+	if detail.Search.HasFocus() {
+		detail.Search.SetBorderColor(searchInactiveColor)
+		detail.Search.SetFieldTextColor(searchInactiveColor)
+		detail.Search.SetTitleColor(searchInactiveColor)
+		detail.Search.Blur()
+		detail.Pages.Focus(nil)
+		return
+	}
+	detail.Search.SetBorderColor(searchActiveColor)
+	detail.Search.SetFieldTextColor(searchActiveColor)
+	detail.Search.SetTitleColor(searchActiveColor)
+	detail.Search.Focus(nil)
+	detail.Pages.Blur()
+}
+
+func (detail *txDetailView) DoSearch() {
+}
+
+func (*txDetailView) buildPages(chainID string, txs []blockdb.TxResult) *tview.Pages {
 	pages := tview.NewPages()
 
 	for i, tx := range txs {
@@ -163,6 +210,9 @@ func txDetailView(chainID string, txs []blockdb.TxResult) *tview.Pages {
 			SetTextAlign(tview.AlignLeft).
 			SetScrollable(true)
 
+		// Support highlighting text.
+		textView.SetDynamicColors(true).SetRegions(true)
+
 		textView.SetBorder(true).
 			SetBorderPadding(0, 0, 1, 1).
 			SetBorderAttributes(tcell.AttrDim)
@@ -174,4 +224,18 @@ func txDetailView(chainID string, txs []blockdb.TxResult) *tview.Pages {
 
 	pages.SwitchToPage("0")
 	return pages
+}
+
+func (*txDetailView) buildSearchInput() *tview.InputField {
+	input := tview.NewInputField().
+		SetFieldTextColor(searchInactiveColor).
+		SetFieldBackgroundColor(backgroundColor)
+
+	input.SetTitle("Search").
+		SetTitleColor(searchInactiveColor).
+		SetTitleAlign(tview.AlignLeft).
+		SetBorder(true).
+		SetBorderAttributes(tcell.AttrDim).
+		SetBorderColor(searchInactiveColor)
+	return input
 }
