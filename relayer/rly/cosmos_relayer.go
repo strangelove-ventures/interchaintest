@@ -56,7 +56,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.0.0-beta4"
+	DefaultContainerVersion = "v2.0.0-rc1"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -64,14 +64,8 @@ const (
 // Note, this API may change if the rly package eventually needs
 // to distinguish between multiple rly versions.
 func Capabilities() map[relayer.Capability]bool {
-	m := relayer.FullCapabilities()
-
-	// These two capabilities are not supported in the 2.0.0-beta4 tag,
-	// but they do work on the current main branch of relayer.
-	// The first 2.0 release candidate should be able to have full capabilities.
-	m[relayer.TimestampTimeout] = false
-	m[relayer.FlushAcknowledgements] = false
-	return m
+	// RC1 matches the full set of capabilities as of writing.
+	return relayer.FullCapabilities()
 }
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
