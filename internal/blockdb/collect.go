@@ -8,15 +8,34 @@ import (
 	"go.uber.org/zap"
 )
 
+type Tx struct {
+	// For Tendermint transactions, this should be encoded as JSON.
+	// Otherwise, this should be a human-readable format if possible.
+	Data []byte
+
+	// Events associated with the transaction, if applicable.
+	Events []Event
+}
+
+// Event is an alternative representation of tendermint/abci/types.Event,
+// so that the blockdb package does not depend directly on tendermint.
+type Event struct {
+	Type       string
+	Attributes []EventAttribute
+}
+
+type EventAttribute struct {
+	Key, Value string
+}
+
 // TxFinder finds transactions given block at height.
 type TxFinder interface {
-	// FindTxs transactions should be in a human-readable format, preferably json.
-	FindTxs(ctx context.Context, height uint64) ([][]byte, error)
+	FindTxs(ctx context.Context, height uint64) ([]Tx, error)
 }
 
 // BlockSaver saves transactions for block at height.
 type BlockSaver interface {
-	SaveBlock(ctx context.Context, height uint64, txs [][]byte) error
+	SaveBlock(ctx context.Context, height uint64, txs []Tx) error
 }
 
 // Collector saves block transactions at regular intervals.

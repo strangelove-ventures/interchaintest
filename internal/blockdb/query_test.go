@@ -45,8 +45,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.NoError(t, err)
 		c, err := tc.AddChain(ctx, "chain-b", "cosmos")
 		require.NoError(t, err)
-		require.NoError(t, c.SaveBlock(ctx, 10, [][]byte{[]byte("tx1"), []byte("tx2")}))
-		require.NoError(t, c.SaveBlock(ctx, 11, [][]byte{[]byte("tx3")}))
+		require.NoError(t, c.SaveBlock(ctx, 10, []Tx{{Data: []byte("tx1")}, {Data: []byte("tx2")}}))
+		require.NoError(t, c.SaveBlock(ctx, 11, []Tx{{Data: []byte("tx3")}}))
 
 		_, err = tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestQuery_CosmosMessages(t *testing.T) {
 
 	for i, tx := range txs {
 		require.NotEmpty(t, tx.Raw)
-		err = chain.SaveBlock(ctx, uint64(i+1), [][]byte{[]byte(tx.Raw)})
+		err = chain.SaveBlock(ctx, uint64(i+1), []Tx{{Data: []byte(tx.Raw)}})
 		require.NoError(t, err)
 	}
 
@@ -183,8 +183,8 @@ func TestQuery_Transactions(t *testing.T) {
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
-		require.NoError(t, chain.SaveBlock(ctx, 12, [][]byte{[]byte(`1`)}))
-		require.NoError(t, chain.SaveBlock(ctx, 14, [][]byte{[]byte(`2`), []byte(`3`)}))
+		require.NoError(t, chain.SaveBlock(ctx, 12, []Tx{{Data: []byte(`1`)}}))
+		require.NoError(t, chain.SaveBlock(ctx, 14, []Tx{{Data: []byte(`2`)}, {Data: []byte(`3`)}}))
 
 		results, err := NewQuery(db).Transactions(ctx, chain.id)
 		require.NoError(t, err)

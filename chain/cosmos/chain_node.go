@@ -23,6 +23,7 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
@@ -205,15 +206,17 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	h := int64(height)
 	blockRes, err := tn.Client.Block(ctx, &h)
 	if err != nil {
 		return nil, err
 	}
-	txs := make([][]byte, len(blockRes.Block.Txs))
+	txs := make([]blockdb.Tx, len(blockRes.Block.Txs))
 	for i, tx := range blockRes.Block.Txs {
-		txs[i] = tx
+		// Store the raw transaction data first, in case decoding/encoding fails.
+		txs[i].Data = tx
+
 		sdkTx, err := decodeTX(tx)
 		if err != nil {
 			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
@@ -224,8 +227,9 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, erro
 			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		txs[i] = b
+		txs[i].Data = b
 	}
+
 	return txs, nil
 }
 

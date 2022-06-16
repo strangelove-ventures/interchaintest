@@ -24,12 +24,12 @@ func TestTxFlattenedView(t *testing.T) {
 	require.NoError(t, err)
 
 	beforeBlocksCreated := time.Now().UTC().Format(time.RFC3339)
-	require.NoError(t, chain.SaveBlock(ctx, 1, [][]byte{
-		[]byte("tx1.0"),
+	require.NoError(t, chain.SaveBlock(ctx, 1, []Tx{
+		{Data: []byte("tx1.0")},
 	}))
-	require.NoError(t, chain.SaveBlock(ctx, 2, [][]byte{
-		[]byte("tx2.0"),
-		[]byte("tx2.1"),
+	require.NoError(t, chain.SaveBlock(ctx, 2, []Tx{
+		{Data: []byte("tx2.0")},
+		{Data: []byte("tx2.1")},
 	}))
 	afterBlocksCreated := time.Now().UTC().Format(time.RFC3339)
 

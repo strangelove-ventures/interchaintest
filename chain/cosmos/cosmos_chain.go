@@ -23,6 +23,7 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
@@ -656,6 +657,6 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return c.getFullNode().FindTxs(ctx, height)
 }

@@ -25,8 +25,8 @@ func TestChain_SaveBlock(t *testing.T) {
 
 	var (
 		ctx = context.Background()
-		tx1 = []byte(`{"test":0}`)
-		tx2 = []byte(`{"test":1}`)
+		tx1 = Tx{Data: []byte(`{"test":0}`)}
+		tx2 = Tx{Data: []byte(`{"test":1}`)}
 	)
 
 	t.Run("happy path", func(t *testing.T) {
@@ -35,7 +35,7 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 5, [][]byte{tx1, tx2})
+		err := chain.SaveBlock(ctx, 5, []Tx{tx1, tx2})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT height, fk_chain_id, created_at FROM block LIMIT 1`)
@@ -77,9 +77,9 @@ func TestChain_SaveBlock(t *testing.T) {
 
 		chain := validChain(t, db)
 
-		err := chain.SaveBlock(ctx, 1, [][]byte{tx1})
+		err := chain.SaveBlock(ctx, 1, []Tx{tx1})
 		require.NoError(t, err)
-		err = chain.SaveBlock(ctx, 1, [][]byte{tx1})
+		err = chain.SaveBlock(ctx, 1, []Tx{tx1})
 		require.NoError(t, err)
 
 		row := db.QueryRow(`SELECT count(*) FROM block`)
