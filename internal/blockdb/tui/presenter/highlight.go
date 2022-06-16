@@ -17,12 +17,13 @@ func NewHighlight(searchTerm string) *Highlight {
 	if searchTerm == "" {
 		return &Highlight{}
 	}
-	// Should always be valid given regexp.QuoteMeta above.
+	// Should always be valid with regexp.QuoteMeta.
 	return &Highlight{rx: regexp.MustCompile(fmt.Sprintf(`(?is)(%s)`, regexp.QuoteMeta(searchTerm)))}
 }
 
 // Text returns the text decorated with tview.TextView regions given the "searchTerm" from NewHighlight.
 // The second return value is the highlighted region ids for use with *(tview.TextView).Highlight.
+// See https://github.com/rivo/tview/wiki/TextView for more info about regions.
 func (h *Highlight) Text(text string) (string, []string) {
 	if h.rx == nil {
 		return text, nil
