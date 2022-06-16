@@ -194,9 +194,6 @@ func (detail *txDetailView) ToggleSearch() {
 	detail.Pages.Blur()
 }
 
-func (detail *txDetailView) DoSearch() {
-}
-
 func (*txDetailView) buildPages(chainID string, txs []blockdb.TxResult) *tview.Pages {
 	pages := tview.NewPages()
 
@@ -230,6 +227,9 @@ func (*txDetailView) buildSearchInput() *tview.InputField {
 	input := tview.NewInputField().
 		SetFieldTextColor(searchInactiveColor).
 		SetFieldBackgroundColor(backgroundColor)
+
+	style := tcell.Style{}.Foreground(tcell.ColorDimGray).Background(backgroundColor)
+	input.SetPlaceholder("case insensitive regex").SetPlaceholderStyle(style)
 
 	input.SetTitle("Search").
 		SetTitleColor(searchInactiveColor).
