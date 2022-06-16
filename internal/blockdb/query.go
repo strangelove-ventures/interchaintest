@@ -180,8 +180,8 @@ func (q *Query) Transactions(ctx context.Context, chainPkey int64) ([]TxResult, 
 	rows, err := q.db.QueryContext(ctx, `SELECT block.height, tx.data FROM tx 
     INNER JOIN block on tx.fk_block_id = block.id
     INNER JOIN chain on block.fk_chain_id = chain.id
-	WHERE chain.id = ?
-	ORDER BY block.height ASC, tx.id ASC`, chainPkey)
+    WHERE chain.id = ?
+    ORDER BY block.height ASC, tx.id ASC`, chainPkey)
 	if err != nil {
 		return nil, err
 	}
