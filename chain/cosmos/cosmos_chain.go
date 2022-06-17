@@ -409,12 +409,12 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 		return err
 	}
 
-	var eg errgroup.Group
+	eg, egCtx := errgroup.WithContext(ctx)
 
 	for _, n := range c.ChainNodes {
 		n := n
 		eg.Go(func() error {
-			return n.CreateNodeContainer()
+			return n.CreateNodeContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -442,8 +442,6 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	var eg errgroup.Group
-
 	chainCfg := c.Config()
 
 	genesisAmount := types.Coin{
@@ -466,6 +464,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	validators := c.ChainNodes[:c.numValidators]
 	fullnodes := c.ChainNodes[c.numValidators:]
 
+	eg := new(errgroup.Group)
 	// sign gentx for each validator
 	for _, v := range validators {
 		v := v
@@ -537,10 +536,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.ChainNodes {
 		n := n
 		eg.Go(func() error {
-			return n.CreateNodeContainer()
+			return n.CreateNodeContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {

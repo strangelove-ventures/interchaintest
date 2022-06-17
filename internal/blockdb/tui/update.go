@@ -33,15 +33,7 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 				// TODO (nix - 6/14/22) Display error instead of panic.
 				panic(err)
 			}
-			m.pushMainView(txDetailMain, txDetailView(tc.ChainID, results))
-			return nil
-
-		case event.Rune() == '[' && m.stack.Current() == txDetailMain:
-			goToPrevPage(m.txDetailPages())
-			return nil
-
-		case event.Rune() == ']' && m.stack.Current() == txDetailMain:
-			gotToNextPage(m.txDetailPages())
+			m.pushMainView(txDetailMain, newTxDetailView(tc.ChainID, results))
 			return nil
 
 		case event.Rune() == 'm' && m.stack.Current() == testCasesMain:
@@ -55,6 +47,22 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			m.pushMainView(cosmosMessagesMain, cosmosMessagesView(tc, results))
 			return nil
 
+		case event.Rune() == '[' && m.stack.Current() == txDetailMain:
+			goToPrevPage(m.txDetailView().Pages)
+			return nil
+
+		case event.Rune() == ']' && m.stack.Current() == txDetailMain:
+			gotToNextPage(m.txDetailView().Pages)
+			return nil
+
+		case event.Rune() == '/' && m.stack.Current() == txDetailMain:
+			m.txDetailView().ToggleSearch()
+			return nil
+
+		case event.Key() == tcell.KeyEnter && m.stack.Current() == txDetailMain:
+			// Search tx detail.
+			m.txDetailView().DoSearch()
+			return nil
 		}
 
 		return event
@@ -86,10 +94,9 @@ func (m *Model) selectedRow() int {
 	return row - 1
 }
 
-func (m *Model) txDetailPages() *tview.Pages {
+func (m *Model) txDetailView() *txDetailView {
 	_, primitive := m.mainContentView().GetFrontPage()
-	// Tx details is a nested pages.
-	return primitive.(*tview.Pages)
+	return primitive.(*txDetailView)
 }
 
 // gotToNextPage assumes a convention where the page name is equal to its index. e.g. "0", "1", "2", etc.

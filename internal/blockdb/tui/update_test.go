@@ -116,12 +116,14 @@ func TestModel_Update(t *testing.T) {
 		require.EqualValues(t, 5, querySvc.GotChainPkey)
 
 		require.Equal(t, 2, model.mainContentView().GetPageCount())
-		_, primitive := model.mainContentView().GetFrontPage()
-		innerPages := primitive.(*tview.Pages)
+		txDetail := model.txDetailView()
 
-		require.Equal(t, 3, innerPages.GetPageCount())
+		// Search and text view
+		require.Equal(t, 2, txDetail.Flex.GetItemCount())
 
-		_, primitive = innerPages.GetFrontPage()
+		require.Equal(t, 3, txDetail.Pages.GetPageCount())
+
+		_, primitive := txDetail.Pages.GetFrontPage()
 		textView := primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 1 of 3")
@@ -134,7 +136,7 @@ func TestModel_Update(t *testing.T) {
 		// Move to the next page.
 		update(runKey(']'))
 
-		_, primitive = innerPages.GetFrontPage()
+		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 2 of 3")
@@ -149,7 +151,7 @@ func TestModel_Update(t *testing.T) {
 		update(runKey(']'))
 		update(runKey(']'))
 
-		_, primitive = innerPages.GetFrontPage()
+		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 3 of 3")
@@ -160,7 +162,7 @@ func TestModel_Update(t *testing.T) {
 		update(runKey('['))
 		update(runKey('['))
 
-		_, primitive = innerPages.GetFrontPage()
+		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 1 of 3")

@@ -352,7 +352,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 // Bootstraps the chain and starts it from genesis
 func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFilePath string) error {
-	var eg errgroup.Group
 
 	var tendermintNodes []*tendermint.TendermintNode
 	for _, node := range c.PenumbraNodes {
@@ -368,10 +367,12 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 		return err
 	}
 
+	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
+				egCtx,
 				fmt.Sprintf("--proxy-app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
@@ -384,19 +385,20 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 		return err
 	}
 
+	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
 		fmt.Printf("{%s} => starting container...\n", n.TendermintNode.Name())
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(n.TendermintNode)
-			if err := n.TendermintNode.SetConfigAndPeers(ctx, peers); err != nil {
+			if err := n.TendermintNode.SetConfigAndPeers(egCtx, peers); err != nil {
 				return err
 			}
-			return n.TendermintNode.StartContainer(ctx)
+			return n.TendermintNode.StartContainer(egCtx)
 		})
 		fmt.Printf("{%s} => starting container...\n", n.PenumbraAppNode.Name())
 		eg.Go(func() error {
-			return n.PenumbraAppNode.StartContainer(ctx)
+			return n.PenumbraAppNode.StartContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
