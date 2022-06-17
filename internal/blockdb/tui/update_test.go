@@ -116,7 +116,6 @@ func TestModel_Update(t *testing.T) {
 		require.EqualValues(t, 5, querySvc.GotChainPkey)
 
 		require.Equal(t, 2, model.mainContentView().GetPageCount())
-		_, primitive := model.mainContentView().GetFrontPage()
 		txDetail := model.txDetailView()
 
 		// Search and text view
@@ -124,7 +123,7 @@ func TestModel_Update(t *testing.T) {
 
 		require.Equal(t, 3, txDetail.Pages.GetPageCount())
 
-		_, primitive = txDetail.Pages.GetFrontPage()
+		_, primitive := txDetail.Pages.GetFrontPage()
 		textView := primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 1 of 3")
