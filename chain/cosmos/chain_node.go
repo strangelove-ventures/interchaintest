@@ -228,6 +228,28 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 			continue
 		}
 		txs[i].Data = b
+
+		// Request the transaction directly in order to get the tendermint events.
+		txRes, err := tn.Client.Tx(ctx, tx.Hash(), false)
+		if err != nil {
+			tn.logger().Info("Failed to retrieve tx", zap.Uint64("height", height), zap.Error(err))
+			continue
+		}
+
+		txs[i].Events = make([]blockdb.Event, len(txRes.TxResult.Events))
+		for j, e := range txRes.TxResult.Events {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for k, attr := range e.Attributes {
+				attrs[k] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			txs[i].Events[j] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
 	}
 
 	return txs, nil

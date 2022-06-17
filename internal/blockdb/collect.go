@@ -22,6 +22,11 @@ type Tx struct {
 type Event struct {
 	Type       string
 	Attributes []EventAttribute
+
+	// Notably, not including the Index field from the tendermint event.
+	// The ABCI docs state:
+	//
+	// "The index flag notifies the Tendermint indexer to index the attribute. The value of the index flag is non-deterministic and may vary across different nodes in the network."
 }
 
 type EventAttribute struct {

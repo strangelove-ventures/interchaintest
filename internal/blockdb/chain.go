@@ -54,9 +54,32 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 		return err
 	}
 	for _, tx := range txs {
-		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, string(tx.Data), blockID)
+		txRes, err := dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, string(tx.Data), blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
+		}
+		txID, err := txRes.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		for _, e := range tx.Events {
+			eventRes, err := dbTx.ExecContext(ctx, `INSERT INTO tendermint_events(type, fk_tx_id) VALUES (?, ?)`, e.Type, txID)
+			if err != nil {
+				return fmt.Errorf("insert into tendermint_events: %w", err)
+			}
+
+			eventID, err := eventRes.LastInsertId()
+			if err != nil {
+				return err
+			}
+
+			for _, attr := range e.Attributes {
+				_, err := dbTx.ExecContext(ctx, `INSERT INTO tendermint_event_attrs(key, value, fk_event_id) VALUES (?, ?, ?)`, attr.Key, attr.Value, eventID)
+				if err != nil {
+					return fmt.Errorf("insert into tendermint_event_attrs: %w", err)
+				}
+			}
 		}
 	}
 
