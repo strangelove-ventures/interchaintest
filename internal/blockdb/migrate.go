@@ -91,25 +91,25 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 		return fmt.Errorf("alter table chain add chain_type: %w", err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tendermint_events (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tendermint_event (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL CHECK (length(type) > 0),
     fk_tx_id INTEGER,
     FOREIGN KEY(fk_tx_id) REFERENCES tx(id) ON DELETE CASCADE
 )`)
 	if err != nil {
-		return fmt.Errorf("create table tendermint_events: %w", err)
+		return fmt.Errorf("create table tendermint_event: %w", err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tendermint_event_attrs (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tendermint_event_attr (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL CHECK (length(key) > 0),
     value TEXT NOT NULL CHECK (length(value) > 0),
     fk_event_id INTEGER,
-    FOREIGN KEY(fk_event_id) REFERENCES tendermint_events(id) ON DELETE CASCADE
+    FOREIGN KEY(fk_event_id) REFERENCES tendermint_event(id) ON DELETE CASCADE
 )`)
 	if err != nil {
-		return fmt.Errorf("create table tendermint_events: %w", err)
+		return fmt.Errorf("create table tendermint_event: %w", err)
 	}
 
 	// Creating views should be last migration step.

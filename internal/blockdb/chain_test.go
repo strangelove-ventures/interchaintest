@@ -88,11 +88,11 @@ func TestChain_SaveBlock(t *testing.T) {
 		require.Equal(t, 2, i)
 
 		rows, err = db.Query(`SELECT
-tx.data, tendermint_events.type, key, value
-FROM tendermint_event_attrs
-LEFT JOIN tendermint_events ON tendermint_events.id = fk_event_id
-LEFT JOIN tx ON tx.id = tendermint_events.fk_tx_id
-ORDER BY tendermint_event_attrs.id`)
+tx.data, tendermint_event.type, key, value
+FROM tendermint_event_attr
+LEFT JOIN tendermint_event ON tendermint_event.id = fk_event_id
+LEFT JOIN tx ON tx.id = tendermint_event.fk_tx_id
+ORDER BY tendermint_event_attr.id`)
 		require.NoError(t, err)
 		defer rows.Close()
 		for i = 0; rows.Next(); i++ {
@@ -140,12 +140,12 @@ ORDER BY tendermint_event_attrs.id`)
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
 
-		row = db.QueryRow(`SELECT count(*) FROM tendermint_events`)
+		row = db.QueryRow(`SELECT count(*) FROM tendermint_event`)
 		err = row.Scan(&count)
 		require.NoError(t, err)
 		require.Equal(t, 2, count)
 
-		row = db.QueryRow(`SELECT count(*) FROM tendermint_event_attrs`)
+		row = db.QueryRow(`SELECT count(*) FROM tendermint_event_attr`)
 		err = row.Scan(&count)
 		require.NoError(t, err)
 		require.Equal(t, 3, count)
@@ -172,12 +172,12 @@ ORDER BY tendermint_event_attrs.id`)
 		require.NoError(t, err)
 		require.Zero(t, count)
 
-		row = db.QueryRow(`SELECT count(*) FROM tendermint_events`)
+		row = db.QueryRow(`SELECT count(*) FROM tendermint_event`)
 		err = row.Scan(&count)
 		require.NoError(t, err)
 		require.Zero(t, count)
 
-		row = db.QueryRow(`SELECT count(*) FROM tendermint_event_attrs`)
+		row = db.QueryRow(`SELECT count(*) FROM tendermint_event_attr`)
 		err = row.Scan(&count)
 		require.NoError(t, err)
 		require.Zero(t, count)
