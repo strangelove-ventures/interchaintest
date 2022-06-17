@@ -18,7 +18,7 @@ func NewHighlight(searchTerm string) *Highlight {
 		return &Highlight{}
 	}
 	// Should always be valid with regexp.QuoteMeta.
-	return &Highlight{rx: regexp.MustCompile(fmt.Sprintf(`(?is)(%s)`, regexp.QuoteMeta(searchTerm)))}
+	return &Highlight{rx: regexp.MustCompile(fmt.Sprintf(`(?i)(%s)`, regexp.QuoteMeta(searchTerm)))}
 }
 
 // Text returns the text decorated with tview.TextView regions given the "searchTerm" from NewHighlight.
