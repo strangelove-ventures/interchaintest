@@ -654,7 +654,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
 	const timeoutSeconds = 30 // StopContainer expects a timeout in seconds, not a time.Duration.
-	return tn.Pool.Client.StopContainerWithContext(tn.Container.ID, 30, ctx)
+	return tn.Pool.Client.StopContainerWithContext(tn.Container.ID, timeoutSeconds, ctx)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
