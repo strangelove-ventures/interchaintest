@@ -255,15 +255,16 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 }
 
 func (p *PenumbraAppNode) StopContainer() error {
-	return p.Pool.Client.StopContainer(p.Container.ID, uint(time.Second*30))
+	const timeoutSeconds = 30 // StopContainer expects whole seconds as a uint.
+	return p.Pool.Client.StopContainer(p.Container.ID, timeoutSeconds)
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := p.Pool.Client.StartContainer(p.Container.ID, nil); err != nil {
+	if err := p.Pool.Client.StartContainerWithContext(p.Container.ID, nil, ctx); err != nil {
 		return err
 	}
 
-	c, err := p.Pool.Client.InspectContainer(p.Container.ID)
+	c, err := p.Pool.Client.InspectContainerWithContext(p.Container.ID, ctx)
 	if err != nil {
 		return err
 	}
@@ -302,12 +303,12 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 				p.NetworkID: {},
 			},
 		},
-		Context: nil,
+		Context: ctx,
 	})
 	if err != nil {
 		return 1, "", "", err
 	}
-	if err := p.Pool.Client.StartContainer(cont.ID, nil); err != nil {
+	if err := p.Pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
 		return 1, "", "", err
 	}
 
