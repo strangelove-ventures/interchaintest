@@ -609,7 +609,7 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 	return tn.NodeJobThenWaitForBlocksLocked(ctx, command)
 }
 
-func (tn *ChainNode) CreateNodeContainer() error {
+func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	if chainCfg.NoHostMount {
@@ -643,7 +643,7 @@ func (tn *ChainNode) CreateNodeContainer() error {
 				tn.NetworkID: {},
 			},
 		},
-		Context: nil,
+		Context: ctx,
 	})
 	if err != nil {
 		return err
@@ -652,16 +652,17 @@ func (tn *ChainNode) CreateNodeContainer() error {
 	return nil
 }
 
-func (tn *ChainNode) StopContainer() error {
-	return tn.Pool.Client.StopContainer(tn.Container.ID, 30)
+func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	const timeoutSeconds = 30 // StopContainer expects a timeout in seconds, not a time.Duration.
+	return tn.Pool.Client.StopContainerWithContext(tn.Container.ID, 30, ctx)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := tn.Pool.Client.StartContainer(tn.Container.ID, nil); err != nil {
+	if err := tn.Pool.Client.StartContainerWithContext(tn.Container.ID, nil, ctx); err != nil {
 		return err
 	}
 
-	c, err := tn.Pool.Client.InspectContainer(tn.Container.ID)
+	c, err := tn.Pool.Client.InspectContainerWithContext(tn.Container.ID, ctx)
 	if err != nil {
 		return err
 	}
@@ -814,12 +815,12 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 				tn.NetworkID: {},
 			},
 		},
-		Context: nil,
+		Context: ctx,
 	})
 	if err != nil {
 		return 1, "", "", err
 	}
-	if err := tn.Pool.Client.StartContainer(cont.ID, nil); err != nil {
+	if err := tn.Pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
 		return 1, "", "", err
 	}
 
@@ -827,7 +828,7 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
+	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
 	tn.logger().
 		Debug(
 			fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
