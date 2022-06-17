@@ -42,7 +42,11 @@ var (
 	keyMap = map[mainContent][]keyBinding{
 		testCasesMain:      bindingsWithBase([]keyBinding{{"m", "cosmos messages"}, {"enter", "view txs"}}, tableNavKeys),
 		cosmosMessagesMain: bindingsWithBase(tableNavKeys),
-		txDetailMain:       bindingsWithBase([]keyBinding{{"[", "previous tx"}, {"]", "next tx"}}, textNavKeys),
+		txDetailMain: bindingsWithBase([]keyBinding{
+			{"[", "previous tx"},
+			{"]", "next tx"},
+			{"/", "toggle search"},
+		}, textNavKeys),
 	}
 )
 

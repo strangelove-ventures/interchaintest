@@ -150,28 +150,115 @@ func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageR
 	return detailTableView(title, headers, rows)
 }
 
-func txDetailView(chainID string, txs []blockdb.TxResult) *tview.Pages {
-	pages := tview.NewPages()
+const (
+	searchActiveColor   = tcell.ColorPaleGreen
+	searchInactiveColor = tcell.ColorBlue
+)
 
-	for i, tx := range txs {
+type txDetailView struct {
+	*tview.Flex
+
+	chainID string
+	txs     []blockdb.TxResult
+
+	Pages  *tview.Pages
+	Search *tview.InputField
+}
+
+func newTxDetailView(chainID string, txs []blockdb.TxResult) *txDetailView {
+	detail := &txDetailView{
+		chainID: chainID,
+		txs:     txs,
+	}
+
+	detail.Pages = tview.NewPages()
+	detail.replacePages("", "0")
+	detail.Search = detail.buildSearchInput()
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.SetBorder(false)
+	flex.AddItem(detail.Search, 3, 1, false)
+	flex.AddItem(detail.Pages, 0, 9, true)
+
+	detail.Flex = flex
+	return detail
+}
+
+func (detail *txDetailView) ToggleSearch() {
+	if detail.Search.HasFocus() {
+		detail.deactivateSearch()
+		return
+	}
+	detail.activateSearch()
+}
+
+func (detail *txDetailView) deactivateSearch() {
+	detail.Search.SetBorderColor(searchInactiveColor)
+	detail.Search.SetFieldTextColor(searchInactiveColor)
+	detail.Search.SetTitleColor(searchInactiveColor)
+	detail.Search.Blur()
+	detail.Pages.Focus(nil)
+}
+
+func (detail *txDetailView) activateSearch() {
+	detail.Search.SetBorderColor(searchActiveColor)
+	detail.Search.SetFieldTextColor(searchActiveColor)
+	detail.Search.SetTitleColor(searchActiveColor)
+	detail.Search.Focus(nil)
+	detail.Pages.Blur()
+}
+
+// DoSearch re-renders the text views with highlighted text.
+func (detail *txDetailView) DoSearch() {
+	detail.deactivateSearch()
+	term := detail.Search.GetText()
+	idx, _ := detail.Pages.GetFrontPage()
+	detail.replacePages(term, idx)
+}
+
+// "pageIdx" is an integer string, e.g. "0", "1".
+func (detail *txDetailView) replacePages(searchTerm, pageIdx string) {
+	highlight := presenter.NewHighlight(searchTerm)
+	for i, tx := range detail.txs {
+		idx := strconv.Itoa(i)
+		detail.Pages.RemovePage(idx)
+
 		pres := presenter.Tx{Result: tx}
+		text, regions := highlight.Text(pres.Data())
 		textView := tview.NewTextView().
-			SetText(pres.Data()).
+			SetText(text).
 			SetTextColor(textColor).
 			SetWrap(true).
 			SetWordWrap(true).
 			SetTextAlign(tview.AlignLeft).
 			SetScrollable(true)
 
+		// Support highlighting text.
+		textView.SetDynamicColors(true).SetRegions(true)
+		textView.Highlight(regions...).ScrollToHighlight()
+
 		textView.SetBorder(true).
 			SetBorderPadding(0, 0, 1, 1).
 			SetBorderAttributes(tcell.AttrDim)
 
-		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", chainID, tx.Height, i+1, len(txs)))
+		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", detail.chainID, tx.Height, i+1, len(detail.txs)))
 
-		pages.AddPage(strconv.Itoa(i), textView, true, false)
+		detail.Pages.AddPage(idx, textView, true, false)
 	}
 
-	pages.SwitchToPage("0")
-	return pages
+	detail.Pages.SwitchToPage(pageIdx)
+}
+
+func (*txDetailView) buildSearchInput() *tview.InputField {
+	input := tview.NewInputField().
+		SetFieldTextColor(searchInactiveColor).
+		SetFieldBackgroundColor(backgroundColor)
+
+	input.SetTitle("Search").
+		SetTitleColor(searchInactiveColor).
+		SetTitleAlign(tview.AlignLeft).
+		SetBorder(true).
+		SetBorderAttributes(tcell.AttrDim).
+		SetBorderColor(searchInactiveColor)
+	return input
 }
