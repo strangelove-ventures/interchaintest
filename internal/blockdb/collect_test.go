@@ -139,13 +139,13 @@ func TestCollector_Stop(t *testing.T) {
 	// Ensures the finder only unlocks the mutex once.
 	var foundOnce sync.Once
 
-	finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+	finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
 		foundOnce.Do(func() {
 			foundMu.Unlock()
 		})
 		return nil, nil
 	})
-	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
+	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
 	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond)
 	defer c.Stop() // Will be stopped explicitly in a few lines, but defer anyway for cleanup just in case.
