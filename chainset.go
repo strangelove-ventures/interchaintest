@@ -2,6 +2,7 @@ package ibctest
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -19,15 +21,34 @@ import (
 // to group methods that apply actions against all chains in the set.
 //
 // The main purpose of the chainSet is to unify test setup when working with any number of chains.
-type chainSet map[ibc.Chain]struct{}
+type chainSet struct {
+	chains map[ibc.Chain]struct{}
+
+	// The following fields are set during TrackBlocks, and used in Close.
+	trackerEg  *errgroup.Group
+	db         *sql.DB
+	collectors []*blockdb.Collector
+}
+
+func newChainSet(chains []ibc.Chain) *chainSet {
+	cs := &chainSet{
+		chains: make(map[ibc.Chain]struct{}, len(chains)),
+	}
+
+	for _, chain := range chains {
+		cs.chains[chain] = struct{}{}
+	}
+
+	return cs
+}
 
 // Initialize concurrently calls Initialize against each chain in the set.
 // Each chain may run a docker pull command,
 // so with a cold image cache, running concurrently may save some time.
-func (cs chainSet) Initialize(testName string, homeDir string, pool *dockertest.Pool, networkID string) error {
+func (cs *chainSet) Initialize(testName string, homeDir string, pool *dockertest.Pool, networkID string) error {
 	var eg errgroup.Group
 
-	for c := range cs {
+	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
 			if err := c.Initialize(testName, homeDir, pool, networkID); err != nil {
@@ -47,13 +68,13 @@ func (cs chainSet) Initialize(testName string, homeDir string, pool *dockertest.
 //
 // The keys are created concurrently because creating keys on one chain
 // should have no effect on any other chain.
-func (cs chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bech32 map[ibc.Chain]string, err error) {
+func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bech32 map[ibc.Chain]string, err error) {
 	var mu sync.Mutex
-	bech32 = make(map[ibc.Chain]string, len(cs))
+	bech32 = make(map[ibc.Chain]string, len(cs.chains))
 
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	for c := range cs {
+	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
 			config := c.Config()
@@ -88,10 +109,10 @@ func (cs chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bec
 }
 
 // Start concurrently calls Start against each chain in the set.
-func (cs chainSet) Start(ctx context.Context, testName string, additionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount) error {
+func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	for c := range cs {
+	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
 			if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
@@ -120,6 +141,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 	if err != nil {
 		return fmt.Errorf("connect to sqlite database %s: %w", dbPath, err)
 	}
+	cs.db = db
 
 	if len(gitSha) == 0 {
 		gitSha = "unknown"
@@ -136,8 +158,10 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 	}
 
 	// TODO (nix - 6/1/22) Need logger instead of fmt.Fprint
-	var eg errgroup.Group
-	for c := range cs {
+	cs.trackerEg = new(errgroup.Group)
+	cs.collectors = make([]*blockdb.Collector, len(cs.chains))
+	i := 0
+	for c := range cs.chains {
 		c := c
 		id := c.Config().ChainID
 		finder, ok := c.(blockdb.TxFinder)
@@ -145,22 +169,41 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", id)
 			return nil
 		}
-		eg.Go(func() error {
+		j := i // Avoid closure on loop variable.
+		cs.trackerEg.Go(func() error {
 			chaindb, err := testCase.AddChain(ctx, id, c.Config().Type)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to add chain %s to database: %v", id, err)
 				return nil
 			}
-			blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond).Collect(ctx)
+			collector := blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond)
+			cs.collectors[j] = collector
+			collector.Collect(ctx)
 			return nil
 		})
+		i++
 	}
 
-	go func() {
-		// TODO (nix - 6/1/22) May leak file descriptor. Interchain may need a Close() method.
-		_ = eg.Wait()
-		_ = db.Close()
-	}()
-
 	return nil
+}
+
+// Close frees any resources associated with the chainSet.
+//
+// Currently, it only frees resources from TrackBlocks.
+// Close is safe to call even if TrackBlocks was not called.
+func (cs *chainSet) Close() error {
+	for _, c := range cs.collectors {
+		if c != nil {
+			c.Stop()
+		}
+	}
+
+	var err error
+	if cs.trackerEg != nil {
+		multierr.AppendInto(&err, cs.trackerEg.Wait())
+	}
+	if cs.db != nil {
+		multierr.AppendInto(&err, cs.db.Close())
+	}
+	return err
 }

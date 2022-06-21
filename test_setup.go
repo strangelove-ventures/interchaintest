@@ -53,7 +53,6 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 	})
 	if err != nil {
 		t.Fatalf("failed to create docker network: %v", err)
-
 	}
 
 	return pool, network.ID
@@ -106,6 +105,9 @@ func StartChainPairAndRelayer(
 	}); err != nil {
 		return errResponse(err)
 	}
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChain.Config().ChainID)
 	if err != nil {
