@@ -61,6 +61,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 		SkipPathCreation: true,
 	}))
+	_ = ic.Close()
 }
 
 // An external package that imports ibctest may not provide a GitSha when they provide a BlockDatabaseFile.
@@ -99,6 +100,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 		BlockDatabaseFile: ":memory:",
 	}))
+	_ = ic.Close()
 }
 
 func TestInterchain_ConflictRejection(t *testing.T) {

@@ -30,6 +30,9 @@ type Interchain struct {
 	// Map of relayer-chain pairs to address and mnemonic, set during Build().
 	// Not yet exposed through any exported API.
 	relayerWallets map[relayerChain]ibc.RelayerWallet
+
+	// Set during Build and cleaned up in the Close method.
+	cs *chainSet
 }
 
 // NewInterchain returns a new Interchain.
@@ -175,28 +178,29 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	}
 	ic.built = true
 
-	cs := make(chainSet, len(ic.chains))
-	for c := range ic.chains {
-		cs[c] = struct{}{}
+	chains := make([]ibc.Chain, 0, len(ic.chains))
+	for chain := range ic.chains {
+		chains = append(chains, chain)
 	}
+	ic.cs = newChainSet(chains)
 
 	// Initialize the chains (pull docker images, etc.).
-	if err := cs.Initialize(opts.TestName, opts.HomeDir, opts.Pool, opts.NetworkID); err != nil {
+	if err := ic.cs.Initialize(opts.TestName, opts.HomeDir, opts.Pool, opts.NetworkID); err != nil {
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 
 	ic.generateRelayerWallets() // Build the relayer wallet mapping.
-	walletAmounts, err := ic.genesisWalletAmounts(ctx, cs)
+	walletAmounts, err := ic.genesisWalletAmounts(ctx)
 	if err != nil {
 		// Error already wrapped with appropriate detail.
 		return err
 	}
 
-	if err := cs.Start(ctx, opts.TestName, walletAmounts); err != nil {
+	if err := ic.cs.Start(ctx, opts.TestName, walletAmounts); err != nil {
 		return fmt.Errorf("failed to start chains: %w", err)
 	}
 
-	if err := cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
+	if err := ic.cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
 		return fmt.Errorf("failed to track blocks: %w", err)
 	}
 
@@ -233,15 +237,21 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	return nil
 }
 
-func (ic *Interchain) genesisWalletAmounts(ctx context.Context, cs chainSet) (map[ibc.Chain][]ibc.WalletAmount, error) {
+// Close cleans up any resources created during Build,
+// and returns any relevant errors.
+func (ic *Interchain) Close() error {
+	return ic.cs.Close()
+}
+
+func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][]ibc.WalletAmount, error) {
 	// Faucet addresses are created separately because they need to be explicitly added to the chains.
-	faucetAddresses, err := cs.CreateCommonAccount(ctx, FaucetAccountKeyName)
+	faucetAddresses, err := ic.cs.CreateCommonAccount(ctx, FaucetAccountKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create faucet accounts: %w", err)
 	}
 
 	// Wallet amounts for genesis.
-	walletAmounts := make(map[ibc.Chain][]ibc.WalletAmount, len(cs))
+	walletAmounts := make(map[ibc.Chain][]ibc.WalletAmount, len(ic.cs.chains))
 
 	// Add faucet for each chain first.
 	for c := range ic.chains {

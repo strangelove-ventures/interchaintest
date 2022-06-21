@@ -3,7 +3,9 @@ package blockdb
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -62,6 +64,7 @@ func TestCollector_Collect(t *testing.T) {
 		})
 
 		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		defer collector.Stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
 		var eg errgroup.Group
@@ -96,6 +99,7 @@ func TestCollector_Collect(t *testing.T) {
 		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
 		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		defer collector.Stop()
 		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
@@ -117,10 +121,55 @@ func TestCollector_Collect(t *testing.T) {
 		})
 
 		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		defer collector.Stop()
 		go collector.Collect(context.Background())
 
 		require.Equal(t, 1, <-ch)
 		require.Equal(t, 2, <-ch)
 		require.Equal(t, 2, <-ch) // assert height stops advancing
 	})
+}
+
+func TestCollector_Stop(t *testing.T) {
+	// Synchronization control to allow test to progress without a data race.
+	// Begins locked, unlocks from the finder, and the test blocks trying to re-lock it.
+	var foundMu sync.Mutex
+	foundMu.Lock()
+
+	// Ensures the finder only unlocks the mutex once.
+	var foundOnce sync.Once
+
+	finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+		foundOnce.Do(func() {
+			foundMu.Unlock()
+		})
+		return nil, nil
+	})
+	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
+
+	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond)
+	defer c.Stop() // Will be stopped explicitly in a few lines, but defer anyway for cleanup just in case.
+
+	n := runtime.NumGoroutine()
+	go c.Collect(context.Background())
+
+	// Block until the finder was called at least once.
+	foundMu.Lock()
+
+	// At least one goroutine was created.
+	require.Greater(t, runtime.NumGoroutine(), n)
+
+	c.Stop()
+
+	// require.Eventually would be nice here, but that starts its own goroutine,
+	// which defeats the purpose of this test.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if runtime.NumGoroutine() == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	require.Failf(t, "goroutine count did not drop after stopping collector", "want %d, got %d", n, runtime.NumGoroutine())
 }

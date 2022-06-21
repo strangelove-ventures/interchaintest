@@ -58,6 +58,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 		Pool:      pool,
 		NetworkID: network,
 	}))
+	defer ic.Close()
 
 	// Get faucet address on destination chain for ibc transfer.
 	c1FaucetAddrBytes, err := c1.GetAddress(ctx, ibctest.FaucetAccountKeyName)
