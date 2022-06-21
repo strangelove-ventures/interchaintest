@@ -28,3 +28,36 @@ func (tx Tx) Data() string {
 	}
 	return buf.String()
 }
+
+type Txs []blockdb.TxResult
+
+func (txs Txs) ToJSON() []byte {
+	type jsonObj struct {
+		Height int64
+		Tx     json.RawMessage
+	}
+	type jsonBytes struct {
+		Height int64
+		Tx     []byte
+	}
+	objs := make([]interface{}, len(txs))
+	for i, tx := range txs {
+		if !json.Valid(tx.Tx) {
+			objs[i] = jsonBytes{
+				Height: tx.Height,
+				Tx:     tx.Tx,
+			}
+			continue
+		}
+		objs[i] = jsonObj{
+			Height: tx.Height,
+			Tx:     tx.Tx,
+		}
+	}
+	b, err := json.Marshal(objs)
+	if err != nil {
+		// json.Valid check above should prevent an error here.
+		panic(err)
+	}
+	return b
+}
