@@ -23,8 +23,31 @@ import (
 // Warning: Typical best practice wraps each migration step into its own transaction. For simplicity given
 // this is an embedded database, we omit transactions.
 func Migrate(db *sql.DB, gitSha string) error {
+	// If a timeout is encountered, sleep and try again,
+	// up until the provided number of milliseconds.
+	//
+	// Setting this makes it practical to have multiple test instances
+	// writing to the same database file.
+	//
+	// https://www.sqlite.org/pragma.html#pragma_busy_timeout
+	_, err := db.Exec(`PRAGMA busy_timeout = 3000`)
+	if err != nil {
+		return fmt.Errorf("pragma busy_timeout: %w", err)
+	}
+
+	// Only setting the busy_timeout pragma is insufficient to get the concurrency test to pass.
+	// The WAL journal mode, supported by SQLite version 3.7.0 (2010-07-21) or later,
+	// is more forgiving about concurrent reads and writes:
+	// "WAL provides more concurrency as readers do not block writers and a writer does not block readers."
+	//
+	// https://www.sqlite.org/pragma.html#pragma_journal_mode
+	_, err = db.Exec(`PRAGMA journal_mode = WAL`)
+	if err != nil {
+		return fmt.Errorf("pragma journal_mode: %w", err)
+	}
+
 	// TODO(nix 05-27-2022): Appropriate indexes?
-	_, err := db.Exec(`PRAGMA foreign_keys = ON`)
+	_, err = db.Exec(`PRAGMA foreign_keys = ON`)
 	if err != nil {
 		return fmt.Errorf("pragma foreign_keys: %w", err)
 	}

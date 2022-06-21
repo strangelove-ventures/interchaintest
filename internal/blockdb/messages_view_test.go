@@ -78,6 +78,11 @@ func TestMessagesView(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
+	// Copy the busy timeout from the migration.
+	// The journal_mode pragma should be persisted on disk, so we should not need to set that here.
+	_, err = db.Exec(`PRAGMA busy_timeout = 3000`)
+	require.NoError(t, err)
+
 	var count int
 	row := db.QueryRow(`SELECT COUNT(*) FROM v_cosmos_messages`)
 	require.NoError(t, row.Scan(&count))
