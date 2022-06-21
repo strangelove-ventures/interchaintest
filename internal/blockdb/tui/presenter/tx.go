@@ -31,6 +31,8 @@ func (tx Tx) Data() string {
 
 type Txs []blockdb.TxResult
 
+// ToJSON always renders valid JSON given the blockdb.TxResult.
+// If the tx data is not valid JSON, the tx data is represented as a base64 encoded string.
 func (txs Txs) ToJSON() []byte {
 	type jsonObj struct {
 		Height int64
