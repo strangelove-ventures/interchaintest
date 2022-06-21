@@ -16,12 +16,12 @@ type Chain struct {
 	single singleflight.Group
 }
 
-type transactions [][]byte
+type transactions []Tx
 
 func (txs transactions) Hash() []byte {
 	h := fnv.New32()
 	for _, tx := range txs {
-		h.Write(tx)
+		h.Write(tx.Data)
 	}
 	return h.Sum(nil)
 }
@@ -29,7 +29,7 @@ func (txs transactions) Hash() []byte {
 // SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
 // The txs should be human-readable.
-func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs [][]byte) error {
+func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs []Tx) error {
 	k := fmt.Sprintf("%d-%x", height, transactions(txs).Hash())
 	_, err, _ := chain.single.Do(k, func() (interface{}, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
@@ -54,9 +54,32 @@ func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactio
 		return err
 	}
 	for _, tx := range txs {
-		_, err = dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, string(tx), blockID)
+		txRes, err := dbTx.ExecContext(ctx, `INSERT INTO tx(data, fk_block_id) VALUES (?, ?)`, string(tx.Data), blockID)
 		if err != nil {
 			return fmt.Errorf("insert into tx: %w", err)
+		}
+		txID, err := txRes.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		for _, e := range tx.Events {
+			eventRes, err := dbTx.ExecContext(ctx, `INSERT INTO tendermint_event(type, fk_tx_id) VALUES (?, ?)`, e.Type, txID)
+			if err != nil {
+				return fmt.Errorf("insert into tendermint_event: %w", err)
+			}
+
+			eventID, err := eventRes.LastInsertId()
+			if err != nil {
+				return err
+			}
+
+			for _, attr := range e.Attributes {
+				_, err := dbTx.ExecContext(ctx, `INSERT INTO tendermint_event_attr(key, value, fk_event_id) VALUES (?, ?, ?)`, attr.Key, attr.Value, eventID)
+				if err != nil {
+					return fmt.Errorf("insert into tendermint_event_attr: %w", err)
+				}
+			}
 		}
 	}
 

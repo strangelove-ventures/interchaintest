@@ -15,15 +15,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type mockTxFinder func(ctx context.Context, height uint64) ([][]byte, error)
+type mockTxFinder func(ctx context.Context, height uint64) ([]Tx, error)
 
-func (f mockTxFinder) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+func (f mockTxFinder) FindTxs(ctx context.Context, height uint64) ([]Tx, error) {
 	return f(ctx, height)
 }
 
-type mockBlockSaver func(ctx context.Context, height uint64, txs [][]byte) error
+type mockBlockSaver func(ctx context.Context, height uint64, txs []Tx) error
 
-func (f mockBlockSaver) SaveBlock(ctx context.Context, height uint64, txs [][]byte) error {
+func (f mockBlockSaver) SaveBlock(ctx context.Context, height uint64, txs []Tx) error {
 	return f(ctx, height, txs)
 }
 
@@ -31,7 +31,7 @@ func TestCollector_Collect(t *testing.T) {
 	nopLog := zap.NewNop()
 
 	t.Run("happy path", func(t *testing.T) {
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
 			if height == 0 {
 				panic("zero height")
 			}
@@ -42,16 +42,16 @@ func TestCollector_Collect(t *testing.T) {
 				if height > 3 {
 					return nil, nil
 				}
-				return [][]byte{[]byte(strconv.FormatUint(height, 10))}, nil
+				return []Tx{{Data: []byte(strconv.FormatUint(height, 10))}}, nil
 			}
 		})
 
 		var (
 			currentHeight int64
 			savedHeights  []int
-			savedTxs      [][][]byte
+			savedTxs      [][]Tx
 		)
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error {
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -82,21 +82,21 @@ func TestCollector_Collect(t *testing.T) {
 
 		require.NoError(t, eg.Wait())
 		require.Equal(t, []int{1, 2, 3}, savedHeights[:3])
-		require.Equal(t, "1", string(savedTxs[0][0]))
-		require.Equal(t, "2", string(savedTxs[1][0]))
-		require.Equal(t, "3", string(savedTxs[2][0]))
+		require.Equal(t, "1", string(savedTxs[0][0].Data))
+		require.Equal(t, "2", string(savedTxs[1][0].Data))
+		require.Equal(t, "3", string(savedTxs[2][0].Data))
 	})
 
 	t.Run("find error", func(t *testing.T) {
 		ch := make(chan int)
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
 			defer func() { ch <- int(height) }()
 			if height == 1 {
 				return nil, nil
 			}
 			return nil, errors.New("boom")
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
 		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
 		defer collector.Stop()
@@ -109,11 +109,11 @@ func TestCollector_Collect(t *testing.T) {
 
 	t.Run("save error", func(t *testing.T) {
 		ch := make(chan int)
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
 			defer func() { ch <- int(height) }()
 			return nil, nil
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error {
+		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error {
 			if height == 1 {
 				return nil
 			}
@@ -139,13 +139,13 @@ func TestCollector_Stop(t *testing.T) {
 	// Ensures the finder only unlocks the mutex once.
 	var foundOnce sync.Once
 
-	finder := mockTxFinder(func(ctx context.Context, height uint64) ([][]byte, error) {
+	finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
 		foundOnce.Do(func() {
 			foundMu.Unlock()
 		})
 		return nil, nil
 	})
-	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs [][]byte) error { return nil })
+	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
 	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond)
 	defer c.Stop() // Will be stopped explicitly in a few lines, but defer anyway for cleanup just in case.

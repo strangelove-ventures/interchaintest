@@ -23,6 +23,7 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
@@ -205,15 +206,17 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, error) {
+func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	h := int64(height)
 	blockRes, err := tn.Client.Block(ctx, &h)
 	if err != nil {
 		return nil, err
 	}
-	txs := make([][]byte, len(blockRes.Block.Txs))
+	txs := make([]blockdb.Tx, len(blockRes.Block.Txs))
 	for i, tx := range blockRes.Block.Txs {
-		txs[i] = tx
+		// Store the raw transaction data first, in case decoding/encoding fails.
+		txs[i].Data = tx
+
 		sdkTx, err := decodeTX(tx)
 		if err != nil {
 			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
@@ -224,8 +227,31 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([][]byte, erro
 			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		txs[i] = b
+		txs[i].Data = b
+
+		// Request the transaction directly in order to get the tendermint events.
+		txRes, err := tn.Client.Tx(ctx, tx.Hash(), false)
+		if err != nil {
+			tn.logger().Info("Failed to retrieve tx", zap.Uint64("height", height), zap.Error(err))
+			continue
+		}
+
+		txs[i].Events = make([]blockdb.Event, len(txRes.TxResult.Events))
+		for j, e := range txRes.TxResult.Events {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for k, attr := range e.Attributes {
+				attrs[k] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			txs[i].Events[j] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
 	}
+
 	return txs, nil
 }
 
