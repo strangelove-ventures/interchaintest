@@ -46,6 +46,7 @@ var (
 			{"[", "previous tx"},
 			{"]", "next tx"},
 			{"/", "toggle search"},
+			{"c", "copy all txs"},
 		}, textNavKeys),
 	}
 )
