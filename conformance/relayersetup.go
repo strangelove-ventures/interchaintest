@@ -61,6 +61,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		// since that is what we are about to test.
 		SkipPathCreation: true,
 	}))
+	defer ic.Close()
 
 	// Now handle each creation step as a subtest in sequence.
 	// After each subtest, check t.Failed, which will be true if a subtest failed,

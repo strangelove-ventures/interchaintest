@@ -25,6 +25,7 @@ type Collector struct {
 	log    *zap.Logger
 	rate   time.Duration
 	saver  BlockSaver
+	cancel context.CancelFunc
 }
 
 // NewCollector creates a valid Collector that polls every duration at rate.
@@ -42,6 +43,9 @@ func NewCollector(log *zap.Logger, finder TxFinder, saver BlockSaver, rate time.
 // Collect saves block transactions starting at height 1 and advancing by 1 height as long as there are
 // no errors with finding or saving the transactions.
 func (p *Collector) Collect(ctx context.Context) {
+	ctx, p.cancel = context.WithCancel(ctx)
+	defer p.cancel()
+
 	tick := time.NewTicker(p.rate)
 	defer tick.Stop()
 	var height uint64 = 1
@@ -57,6 +61,14 @@ func (p *Collector) Collect(ctx context.Context) {
 			height++
 		}
 	}
+}
+
+// Stop terminates the Collect loop.
+// Stop is safe to be called concurrently and is safe to be called multiple times.
+//
+// If Collect has not been called, Stop panics.
+func (p *Collector) Stop() {
+	p.cancel()
 }
 
 func (p *Collector) saveTxsForHeight(ctx context.Context, height uint64) error {
