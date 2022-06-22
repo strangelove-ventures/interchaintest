@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/rivo/tview"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 )
@@ -43,6 +44,9 @@ type Model struct {
 
 	// stack keeps tracks of primary content pushed and popped
 	stack mainStack
+
+	// write to the system clipboard
+	clipboard func(text string) error
 }
 
 // NewModel returns a valid *Model.
@@ -60,6 +64,7 @@ func NewModel(
 		schemaDate:    schemaDate,
 		testCases:     testCases,
 		stack:         mainStack{testCasesMain},
+		clipboard:     clipboard.WriteAll,
 	}
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)

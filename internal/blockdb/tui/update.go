@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb/tui/presenter"
@@ -62,10 +61,9 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			return nil
 
 		case event.Rune() == 'c' && m.stack.Current() == txDetailMain:
-			if err := clipboard.WriteAll(string(presenter.Txs(m.txDetailView().Txs).ToJSON())); err != nil {
+			if err := m.clipboard(string(presenter.Txs(m.txDetailView().Txs).ToJSON())); err != nil {
 				panic(err)
 			}
-
 			return nil
 
 		case event.Key() == tcell.KeyEnter && m.stack.Current() == txDetailMain:
