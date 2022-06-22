@@ -11,11 +11,12 @@ func _() {
 	_ = x[testCasesMain-0]
 	_ = x[cosmosMessagesMain-1]
 	_ = x[txDetailMain-2]
+	_ = x[errorModalMain-3]
 }
 
-const _mainContent_name = "testCasesMaincosmosMessagesMaintxDetailMain"
+const _mainContent_name = "testCasesMaincosmosMessagesMaintxDetailMainerrorModalMain"
 
-var _mainContent_index = [...]uint8{0, 13, 31, 43}
+var _mainContent_index = [...]uint8{0, 13, 31, 43, 57}
 
 func (i mainContent) String() string {
 	if i < 0 || i >= mainContent(len(_mainContent_index)-1) {

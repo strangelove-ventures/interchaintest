@@ -150,6 +150,22 @@ func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageR
 	return detailTableView(title, headers, rows)
 }
 
+func errorModalView(err error) *tview.Flex {
+	modal := tview.NewModal().
+		SetText(fmt.Sprintf("Error: %v", err)).
+		SetTextColor(errorTextColor).
+		SetBackgroundColor(backgroundColor)
+
+	// Flex centers the modal. See: https://github.com/rivo/tview/wiki/Modal
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(modal, 0, 1, true).
+			AddItem(nil, 0, 1, false), 0, 1, true).
+		AddItem(nil, 0, 1, false)
+}
+
 const (
 	searchActiveColor   = tcell.ColorPaleGreen
 	searchInactiveColor = tcell.ColorBlue

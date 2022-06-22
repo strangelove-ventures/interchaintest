@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -200,5 +201,17 @@ func TestModel_Update(t *testing.T) {
 		var gotTxs []interface{}
 		require.NoError(t, json.Unmarshal([]byte(gotText), &gotTxs))
 		require.Len(t, gotTxs, 2)
+
+		// Simulate clipboard failure.
+		model.clipboard = func(string) error {
+			return errors.New("boom")
+		}
+
+		update(runeKey('c'))
+
+		_, primative := model.mainContentView().GetFrontPage()
+		// TODO (nix - 6/22/22) Can't get text from a tview.Modal. We could use a tview.TextView but it does not render
+		// properly with the nest flex views.
+		require.IsType(t, &tview.Modal{}, primative.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1))
 	})
 }

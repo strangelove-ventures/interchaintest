@@ -18,6 +18,7 @@ const (
 	testCasesMain mainContent = iota
 	cosmosMessagesMain
 	txDetailMain
+	errorModalMain
 )
 
 type mainStack []mainContent

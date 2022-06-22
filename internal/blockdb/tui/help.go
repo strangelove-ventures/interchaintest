@@ -48,6 +48,7 @@ var (
 			{"/", "toggle search"},
 			{"c", "copy all txs"},
 		}, textNavKeys),
+		errorModalMain: bindingsWithBase(nil),
 	}
 )
 
