@@ -82,11 +82,13 @@ func TestDB_Concurrency(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("writer %d failed to create test case %d/%d: %w", i, j+1, nTestCases, err)
 				}
+				time.Sleep(time.Millisecond)
 
 				_, err = tc.AddChain(egCtx, fmt.Sprintf("chain-%d-%d", i, j), "cosmos")
 				if err != nil {
 					return fmt.Errorf("writer %d failed to add chain to test case %d/%d: %w", i, j+1, nTestCases, err)
 				}
+				time.Sleep(time.Millisecond)
 			}
 
 			return nil

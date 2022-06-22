@@ -25,12 +25,13 @@ import (
 func Migrate(db *sql.DB, gitSha string) error {
 	// If a timeout is encountered, sleep and try again,
 	// up until the provided number of milliseconds.
+	// A 3000ms timeout worked fine on my workstation but failed the concurrency test on CI.
 	//
 	// Setting this makes it practical to have multiple test instances
 	// writing to the same database file.
 	//
 	// https://www.sqlite.org/pragma.html#pragma_busy_timeout
-	_, err := db.Exec(`PRAGMA busy_timeout = 3000`)
+	_, err := db.Exec(`PRAGMA busy_timeout = 4000`)
 	if err != nil {
 		return fmt.Errorf("pragma busy_timeout: %w", err)
 	}
