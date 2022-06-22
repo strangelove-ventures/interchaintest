@@ -2,10 +2,12 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/strangelove-ventures/ibctest/internal/blockdb/tui/presenter"
 )
 
 // Update should be the argument for *(tview.Application).SetInputCapture.
@@ -30,8 +32,8 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			tc := m.testCases[m.selectedRow()]
 			results, err := m.querySvc.Transactions(ctx, tc.ChainPKey)
 			if err != nil {
-				// TODO (nix - 6/14/22) Display error instead of panic.
-				panic(err)
+				m.pushErrorModal(fmt.Errorf("query transactions: %w", err))
+				return nil
 			}
 			m.pushMainView(txDetailMain, newTxDetailView(tc.ChainID, results))
 			return nil
@@ -41,8 +43,8 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 			tc := m.testCases[m.selectedRow()]
 			results, err := m.querySvc.CosmosMessages(ctx, tc.ChainPKey)
 			if err != nil {
-				// TODO (nix - 6/14/22) Display error instead of panic.
-				panic(err)
+				m.pushErrorModal(fmt.Errorf("query cosmos messages: %w", err))
+				return nil
 			}
 			m.pushMainView(cosmosMessagesMain, cosmosMessagesView(tc, results))
 			return nil
@@ -57,6 +59,12 @@ func (m *Model) Update(ctx context.Context) func(event *tcell.EventKey) *tcell.E
 
 		case event.Rune() == '/' && m.stack.Current() == txDetailMain:
 			m.txDetailView().ToggleSearch()
+			return nil
+
+		case event.Rune() == 'c' && m.stack.Current() == txDetailMain:
+			if err := m.clipboard(string(presenter.Txs(m.txDetailView().Txs).ToJSON())); err != nil {
+				m.pushErrorModal(fmt.Errorf("copy to clipboard: %w", err))
+			}
 			return nil
 
 		case event.Key() == tcell.KeyEnter && m.stack.Current() == txDetailMain:
@@ -85,6 +93,10 @@ func (m *Model) mainContentView() *tview.Pages {
 func (m *Model) pushMainView(main mainContent, view tview.Primitive) {
 	m.stack = m.stack.Push(main)
 	m.mainContentView().AddAndSwitchToPage(main.String(), view, true)
+}
+
+func (m *Model) pushErrorModal(err error) {
+	m.pushMainView(errorModalMain, errorModalView(err))
 }
 
 func (m *Model) selectedRow() int {

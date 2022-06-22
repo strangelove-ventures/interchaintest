@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -16,7 +18,7 @@ var (
 	enterKey = tcell.NewEventKey(tcell.KeyEnter, ' ', 0)
 )
 
-func runKey(c rune) *tcell.EventKey {
+func runeKey(c rune) *tcell.EventKey {
 	return tcell.NewEventKey(tcell.KeyRune, c, 0)
 }
 
@@ -80,7 +82,7 @@ func TestModel_Update(t *testing.T) {
 		draw(model.RootView())
 
 		update := model.Update(ctx)
-		update(runKey('m'))
+		update(runeKey('m'))
 
 		// By default, first row is selected in a rendered table.
 		require.EqualValues(t, 5, querySvc.GotChainPkey)
@@ -93,7 +95,7 @@ func TestModel_Update(t *testing.T) {
 		require.Contains(t, table.(*tview.Table).GetTitle(), "my-chain1")
 	})
 
-	t.Run("tx detail view", func(t *testing.T) {
+	t.Run("tx detail", func(t *testing.T) {
 		querySvc := &mockQueryService{
 			Txs: []blockdb.TxResult{
 				{Height: 12, Tx: []byte(`{"tx":1}`)},
@@ -134,7 +136,7 @@ func TestModel_Update(t *testing.T) {
 		require.Equal(t, wantFirstPage, textView.GetText(true))
 
 		// Move to the next page.
-		update(runKey(']'))
+		update(runeKey(']'))
 
 		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
@@ -147,9 +149,9 @@ func TestModel_Update(t *testing.T) {
 		require.Equal(t, wantSecondPage, textView.GetText(true))
 
 		// Assert does not advance past last page.
-		update(runKey(']'))
-		update(runKey(']'))
-		update(runKey(']'))
+		update(runeKey(']'))
+		update(runeKey(']'))
+		update(runeKey(']'))
 
 		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
@@ -157,14 +159,59 @@ func TestModel_Update(t *testing.T) {
 		require.Contains(t, textView.GetTitle(), "Tx 3 of 3")
 
 		// Move back to the previous page. Assert does not retreat past first page.
-		update(runKey('['))
-		update(runKey('['))
-		update(runKey('['))
-		update(runKey('['))
+		update(runeKey('['))
+		update(runeKey('['))
+		update(runeKey('['))
+		update(runeKey('['))
 
 		_, primitive = txDetail.Pages.GetFrontPage()
 		textView = primitive.(*tview.TextView)
 
 		require.Contains(t, textView.GetTitle(), "Tx 1 of 3")
+	})
+
+	t.Run("tx detail copy", func(t *testing.T) {
+		querySvc := &mockQueryService{
+			Txs: []blockdb.TxResult{
+				{Height: 12, Tx: []byte(`{"tx":1}`)},
+				{Height: 13, Tx: []byte(`{"tx":2}`)},
+			},
+		}
+		model := NewModel(querySvc, "", "", time.Now(), []blockdb.TestCaseResult{
+			{ChainPKey: 5, ChainID: "my-chain1"},
+		})
+
+		draw(model.RootView())
+
+		var gotText string
+		model.clipboard = func(text string) error {
+			gotText = text
+			return nil
+		}
+
+		update := model.Update(ctx)
+
+		// Show tx detail.
+		update(enterKey)
+		// Now copy.
+		update(runeKey('c'))
+
+		require.NotEmpty(t, gotText)
+
+		var gotTxs []interface{}
+		require.NoError(t, json.Unmarshal([]byte(gotText), &gotTxs))
+		require.Len(t, gotTxs, 2)
+
+		// Simulate clipboard failure.
+		model.clipboard = func(string) error {
+			return errors.New("boom")
+		}
+
+		update(runeKey('c'))
+
+		_, primative := model.mainContentView().GetFrontPage()
+		// TODO (nix - 6/22/22) Can't get text from a tview.Modal. We could use a tview.TextView but it does not render
+		// properly with the nested flex views.
+		require.IsType(t, &tview.Modal{}, primative.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1))
 	})
 }

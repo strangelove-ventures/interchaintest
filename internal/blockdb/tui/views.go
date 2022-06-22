@@ -150,17 +150,35 @@ func cosmosMessagesView(tc blockdb.TestCaseResult, msgs []blockdb.CosmosMessageR
 	return detailTableView(title, headers, rows)
 }
 
+func errorModalView(err error) *tview.Flex {
+	modal := tview.NewModal().
+		SetText(fmt.Sprintf("Error: %v", err)).
+		SetTextColor(errorTextColor).
+		SetBackgroundColor(backgroundColor)
+
+	// Flex centers the modal. See: https://github.com/rivo/tview/wiki/Modal
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(modal, 0, 1, true).
+			AddItem(nil, 0, 1, false), 0, 1, true).
+		AddItem(nil, 0, 1, false)
+}
+
 const (
 	searchActiveColor   = tcell.ColorPaleGreen
 	searchInactiveColor = tcell.ColorBlue
 )
 
+// txDetailView is a very stateful view that could be refactored into a model.
+// It allows a variety of interactions when viewing individual transactions.
 type txDetailView struct {
 	*tview.Flex
 
 	chainID string
-	txs     []blockdb.TxResult
 
+	Txs    []blockdb.TxResult
 	Pages  *tview.Pages
 	Search *tview.InputField
 }
@@ -168,7 +186,7 @@ type txDetailView struct {
 func newTxDetailView(chainID string, txs []blockdb.TxResult) *txDetailView {
 	detail := &txDetailView{
 		chainID: chainID,
-		txs:     txs,
+		Txs:     txs,
 	}
 
 	detail.Pages = tview.NewPages()
@@ -219,7 +237,7 @@ func (detail *txDetailView) DoSearch() {
 // "pageIdx" is an integer string, e.g. "0", "1".
 func (detail *txDetailView) replacePages(searchTerm, pageIdx string) {
 	highlight := presenter.NewHighlight(searchTerm)
-	for i, tx := range detail.txs {
+	for i, tx := range detail.Txs {
 		idx := strconv.Itoa(i)
 		detail.Pages.RemovePage(idx)
 
@@ -241,7 +259,7 @@ func (detail *txDetailView) replacePages(searchTerm, pageIdx string) {
 			SetBorderPadding(0, 0, 1, 1).
 			SetBorderAttributes(tcell.AttrDim)
 
-		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", detail.chainID, tx.Height, i+1, len(detail.txs)))
+		textView.SetTitle(fmt.Sprintf("%s @ Height %d [Tx %d of %d]", detail.chainID, tx.Height, i+1, len(detail.Txs)))
 
 		detail.Pages.AddPage(idx, textView, true, false)
 	}
