@@ -33,7 +33,7 @@ jobs:
 
       # cleanup environment on self-hosted test runner
       - name: clean
-        run: -|
+        run: |-
           rm -rf ~/.ibctest
 
       # run tests
