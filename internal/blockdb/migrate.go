@@ -104,7 +104,7 @@ ON CONFLICT(git_sha) DO UPDATE SET git_sha=git_sha`, nowRFC3339(), gitSha)
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tendermint_event_attr (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL CHECK (length(key) > 0),
-    value TEXT NOT NULL CHECK (length(value) > 0),
+    value TEXT NOT NULL,
     fk_event_id INTEGER,
     FOREIGN KEY(fk_event_id) REFERENCES tendermint_event(id) ON DELETE CASCADE
 )`)
