@@ -15,7 +15,6 @@ require (
 	github.com/tendermint/tendermint v0.34.14
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.21.0
-	golang.design/x/clipboard v0.6.2
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/tools v0.1.10
 	google.golang.org/grpc v1.44.0
@@ -32,6 +31,7 @@ require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect

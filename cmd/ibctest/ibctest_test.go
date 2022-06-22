@@ -21,7 +21,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/version"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"go.uber.org/zap"
-	"golang.design/x/clipboard"
 )
 
 func init() {
@@ -259,11 +258,6 @@ func subcommand() string {
 }
 
 func runDebugTerminalUI(ctx context.Context) error {
-	// TUI has features that copy text to your clipboard.
-	if err := clipboard.Init(); err != nil {
-		return err
-	}
-
 	dbPath := extraFlags.BlockDatabaseFile
 
 	// Explicitly check for file existence otherwise blockdb.ConnectDB implicitly creates and migrates a sqlite file.
