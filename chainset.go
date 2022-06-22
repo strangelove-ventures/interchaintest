@@ -22,6 +22,8 @@ import (
 //
 // The main purpose of the chainSet is to unify test setup when working with any number of chains.
 type chainSet struct {
+	log *zap.Logger
+
 	chains map[ibc.Chain]struct{}
 
 	// The following fields are set during TrackBlocks, and used in Close.
@@ -30,8 +32,10 @@ type chainSet struct {
 	collectors []*blockdb.Collector
 }
 
-func newChainSet(chains []ibc.Chain) *chainSet {
+func newChainSet(log *zap.Logger, chains []ibc.Chain) *chainSet {
 	cs := &chainSet{
+		log: log,
+
 		chains: make(map[ibc.Chain]struct{}, len(chains)),
 	}
 
@@ -176,7 +180,8 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 				fmt.Fprintf(os.Stderr, "Failed to add chain %s to database: %v", id, err)
 				return nil
 			}
-			collector := blockdb.NewCollector(zap.NewNop(), finder, chaindb, 100*time.Millisecond)
+			log := cs.log.With(zap.String("chain_id", id))
+			collector := blockdb.NewCollector(log, finder, chaindb, 100*time.Millisecond)
 			cs.collectors[j] = collector
 			collector.Collect(ctx)
 			return nil
