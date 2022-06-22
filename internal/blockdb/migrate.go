@@ -57,7 +57,11 @@ func Migrate(db *sql.DB, gitSha string) error {
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		// If commit succeeded, rollback will return nil;
+		// if a step failed, the returned error is more meaningful.
+		_ = tx.Rollback()
+	}()
 
 	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS schema_version(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
