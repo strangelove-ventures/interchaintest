@@ -211,7 +211,7 @@ func TestModel_Update(t *testing.T) {
 
 		_, primative := model.mainContentView().GetFrontPage()
 		// TODO (nix - 6/22/22) Can't get text from a tview.Modal. We could use a tview.TextView but it does not render
-		// properly with the nest flex views.
+		// properly with the nested flex views.
 		require.IsType(t, &tview.Modal{}, primative.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1))
 	})
 }
