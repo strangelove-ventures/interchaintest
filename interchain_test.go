@@ -64,6 +64,87 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	_ = ic.Close()
 }
 
+func TestInterchain_GetRelayerWallets(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
+	home := t.TempDir()
+	pool, network := ibctest.DockerSetup(t)
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		// Two otherwise identical chains that only differ by ChainID.
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+	})
+
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
+
+	gaia0, gaia1 := chains[0], chains[1]
+
+	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+		t, pool, network, home,
+	)
+
+	ic := ibctest.NewInterchain().
+		AddChain(gaia0).
+		AddChain(gaia1).
+		AddRelayer(r, "r").
+		AddLink(ibctest.InterchainLink{
+			Chain1:  gaia0,
+			Chain2:  gaia1,
+			Relayer: r,
+		})
+
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+
+	ctx := context.Background()
+	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: network,
+
+		SkipPathCreation: true,
+	}))
+
+	var (
+		g1Wallet    ibc.RelayerWallet
+		g2Wallet    ibc.RelayerWallet
+		walletFound bool
+	)
+
+	t.Run("Chain one wallet is returned", func(t *testing.T) {
+		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
+		require.True(t, walletFound)
+		require.NotEmpty(t, g1Wallet.Address)
+		require.NotEmpty(t, g1Wallet.Mnemonic)
+	})
+
+	t.Run("Chain two wallet is returned", func(t *testing.T) {
+		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
+		require.True(t, walletFound)
+		require.NotEmpty(t, g2Wallet.Address)
+		require.NotEmpty(t, g2Wallet.Mnemonic)
+	})
+
+	t.Run("Different wallets are returned", func(t *testing.T) {
+		require.NotEqual(t, g1Wallet.Address, g2Wallet.Address)
+		require.NotEqual(t, g1Wallet.Mnemonic, g2Wallet.Mnemonic)
+	})
+
+	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
+		_, ok := r.GetWallet("cosmoshub-does-not-exist")
+		require.False(t, ok)
+	})
+
+	_ = ic.Close()
+}
+
 // An external package that imports ibctest may not provide a GitSha when they provide a BlockDatabaseFile.
 // The GitSha field is documented as optional, so this should succeed.
 func TestInterchain_OmitGitSHA(t *testing.T) {
