@@ -160,6 +160,10 @@ type InterchainBuildOptions struct {
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
 
+	// If set, these options will be used when creating the channel in the path link step.
+	// If not set, the application will default to the options for creating an ics20 fungible token transfer.
+	CreateChannelOpts ibc.CreateChannelOptions
+
 	// Optional. Git sha for test invocation. Once Go 1.18 supported,
 	// may be deprecated in favor of runtime/debug.ReadBuildInfo.
 	GitSha string
@@ -226,7 +230,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			)
 		}
 
-		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path); err != nil {
+		// If channel creation options are not specified, default to the ics20 fungible token transfer channel options.
+		if (opts.CreateChannelOpts == ibc.CreateChannelOptions{}) {
+			opts.CreateChannelOpts = ibc.DefaultChannelOpts()
+		}
+		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,

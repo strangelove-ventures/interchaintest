@@ -172,9 +172,14 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
-func (commander) LinkPath(pathName, homeDir string) []string {
+func (commander) LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
+		"--src-port", opts.SourcePortName,
+		"--dst-port", opts.DestPortName,
+		"--order", opts.Order,
+		"--version", opts.Version,
+
 		"--home", homeDir,
 	}
 }
