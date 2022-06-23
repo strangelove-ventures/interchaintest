@@ -81,19 +81,35 @@ type CreateChannelOptions struct {
 	SourcePortName string
 	DestPortName   string
 
-	Order string
+	Order Order
 
 	Version string
 }
 
-// DefaultChannelOpts returns the default settings for creating a ics20 fungible token transfer channel.
+// Order represents an IBC channel's order.
+type Order int
+
+const (
+	Ordered Order = iota
+	Unordered
+)
+
+// DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
 func DefaultChannelOpts() CreateChannelOptions {
 	return CreateChannelOptions{
 		SourcePortName: "transfer",
 		DestPortName:   "transfer",
-		Order:          "unordered",
+		Order:          Unordered,
 		Version:        "ics20-1",
 	}
+}
+
+// IsFullyConfigured returns true if all the CreateChannelOption's fields have been specified.
+func (opts CreateChannelOptions) IsFullyConfigured() bool {
+	return opts.SourcePortName != "" &&
+		opts.DestPortName != "" &&
+		opts.Version != "" &&
+		opts.Order == Ordered || opts.Order == Unordered
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.

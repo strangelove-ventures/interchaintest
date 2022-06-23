@@ -230,10 +230,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			)
 		}
 
-		// If channel creation options are not specified, default to the ics20 fungible token transfer channel options.
-		if (opts.CreateChannelOpts == ibc.CreateChannelOptions{}) {
+		// If channel creation options are not fully specified, default to the ics20 fungible token transfer channel options.
+		if !opts.CreateChannelOpts.IsFullyConfigured() {
 			opts.CreateChannelOpts = ibc.DefaultChannelOpts()
 		}
+
 		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",
