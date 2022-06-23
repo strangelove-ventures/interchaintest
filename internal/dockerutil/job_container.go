@@ -111,7 +111,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("create container: %s:%s: %w", job.repository, job.tag, err)
+		return nil, nil, fmt.Errorf("create container %s for image %s:%s: %w", fullName, job.repository, job.tag, err)
 	}
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
 	if err != nil {
