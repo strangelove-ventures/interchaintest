@@ -41,23 +41,28 @@ func TestContainerJob_Run(t *testing.T) {
 	}
 	t.Parallel()
 
-	const busyBox = "docker.io/busybox"
+	const (
+		testImage = "busybox"
+		testTag   = "latest"
+	)
 
 	ctx := context.Background()
 	pool, networkID := DockerSetup(t)
 
+	// Ensure we have busybox.
+	require.NoError(t, NewJobContainer(pool, networkID, testImage, testTag).Pull(ctx))
+
 	t.Run("happy path", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, busyBox, "latest")
+		job := NewJobContainer(pool, networkID, testImage, testTag)
 		stdout, stderr, err := job.Run(ctx, "test@happy|path", []string{"echo", "-n", "hello"}, JobOptions{})
 
 		require.NoError(t, err)
 		require.Equal(t, "hello", string(stdout))
 		require.Empty(t, string(stderr))
-
 	})
 
 	t.Run("binds", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, busyBox, "latest")
+		job := NewJobContainer(pool, networkID, testImage, testTag)
 
 		const scriptBody = `#!/bin/sh
 echo -n hi from stderr >> /dev/stderr
@@ -77,7 +82,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, busyBox, "latest")
+		job := NewJobContainer(pool, networkID, testImage, testTag)
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
 		_, _, err := job.Run(cctx, "test context", []string{"sleep", "100"}, JobOptions{})
@@ -87,15 +92,16 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, busyBox, "latest")
+		job := NewJobContainer(pool, networkID, testImage, testTag)
 		_, _, err := job.Run(ctx, "errors", []string{"program-does-not-exist"}, JobOptions{})
 
 		require.Error(t, err)
 	})
 
 	t.Run("command does not exist", func(t *testing.T) {
-		// Using gaiad to simulate a real use case.
-		job := NewJobContainer(pool, networkID, "ghcr.io/strangelove-ventures/heighliner/gaia", "latest")
+		// Using gaia to simulate real scenario.
+		job := NewJobContainer(pool, networkID, "ghcr.io/strangelove-ventures/heighliner/gaia", "v7.0.2")
+		require.NoError(t, job.Pull(ctx))
 
 		_, _, err := job.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
 		require.Error(t, err)
@@ -104,7 +110,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("missing required args", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, busyBox, "latest")
+		job := NewJobContainer(pool, networkID, testImage, testTag)
 
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
 			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})

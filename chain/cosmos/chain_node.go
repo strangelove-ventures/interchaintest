@@ -808,11 +808,23 @@ func (nodes ChainNodes) logger() *zap.Logger {
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
 func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (string, string, error) {
+	// TODO:
+	//tn.logger().
+	//	Debug(
+	//		fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+	//		zap.String("container", container),
+	//	)
 	job := dockerutil.NewJobContainer(tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
 	opts := dockerutil.JobOptions{
 		Binds: tn.Bind(),
 	}
 	stdout, stderr, err := job.Run(ctx, tn.Name(), cmd, opts)
+	// TODO:
+	//tn.logger().
+	//	Debug(
+	//		fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
+	//		zap.String("container", container),
+	//	)
 	return string(stdout), string(stderr), err
 }
 

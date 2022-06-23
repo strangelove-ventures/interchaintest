@@ -49,6 +49,15 @@ type JobOptions struct {
 	Binds []string
 }
 
+// Pull the image. Public images only.
+func (job *JobContainer) Pull(ctx context.Context) error {
+	return job.pool.Client.PullImage(docker.PullImageOptions{
+		Repository: job.repository,
+		Tag:        job.tag,
+		Context:    ctx,
+	}, docker.AuthConfiguration{})
+}
+
 // Run runs the docker image and invokes "cmd". "cmd" is the command and any arguments.
 // A non-zero status code returns a non-nil error.
 func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, opts JobOptions) (stdout []byte, stderr []byte, err error) {
@@ -85,16 +94,16 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("Client.CreateContainer: %w", err)
+		return nil, nil, fmt.Errorf("create container: %s:%s: %w", job.repository, job.tag, err)
 	}
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Client.StartContainerWithContext for container %s: %w", cont.ID, err)
+		return nil, nil, fmt.Errorf("start containerfor container %s: %w", cont.ID, err)
 	}
 
 	exitCode, err := job.pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Client.WaitContainerWithContext: %w", err)
+		return nil, nil, fmt.Errorf("wait for container: %w", err)
 	}
 	var (
 		stdoutBuf = new(bytes.Buffer)
