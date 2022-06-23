@@ -678,11 +678,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	return nil
 }
 
-func (tn *ChainNode) StopContainer(ctx context.Context) error {
-	const timeoutSeconds = 30 // StopContainer expects a timeout in seconds, not a time.Duration.
-	return tn.Pool.Client.StopContainerWithContext(tn.Container.ID, timeoutSeconds, ctx)
-}
-
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	if err := tn.Pool.Client.StartContainerWithContext(tn.Container.ID, nil, ctx); err != nil {
 		return err
