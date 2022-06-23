@@ -3,12 +3,15 @@ module github.com/strangelove-ventures/ibctest
 go 1.17
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.0.4
 	github.com/cosmos/cosmos-sdk v0.45.1
 	github.com/cosmos/ibc-go/v3 v3.0.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/google/go-cmp v0.5.7
 	github.com/ory/dockertest/v3 v3.8.1
+	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/stretchr/testify v1.7.2
 	github.com/tendermint/tendermint v0.34.14
 	go.uber.org/multierr v1.6.0
@@ -56,7 +59,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1 // indirect
 	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
@@ -110,7 +112,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/regen-network/cosmos-proto v0.3.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
-	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rs/zerolog v1.26.1 // indirect
 	github.com/sasha-s/go-deadlock v0.2.1-0.20190427202633-1595213edefa // indirect

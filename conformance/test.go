@@ -251,9 +251,13 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 }
 
 // TestChainPair runs the conformance tests for two chains and one relayer.
-// This function is exported in case there is a third party that needs to run this test
-// without the parallel subtests structure from Test,
-// but the stability of this API and even the existence of this function is not guaranteed.
+// This test asserts bidirectional behavior between both chains.
+//
+// Given 2 chains, Chain A and Chain B, this test asserts:
+// 1. Successful IBC transfer from A -> B and B -> A.
+// 2. Proper handling of no timeout from A -> B and B -> A.
+// 3. Proper handling of height timeout from A -> B and B -> A.
+// 4. Proper handling of timestamp timeout from A -> B and B -> A.
 func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	pool, network := ibctest.DockerSetup(t)
 

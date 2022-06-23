@@ -37,3 +37,33 @@ func TestTx(t *testing.T) {
 		require.Equal(t, "some data", pres.Data())
 	})
 }
+
+func TestTxs_ToJSON(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		txs := Txs{
+			{Height: 1, Tx: []byte(`{"num":1}`)},
+			{Height: 3, Tx: []byte(`{"num":3}`)},
+			{Height: 5, Tx: []byte(`{"num":5}`)},
+		}
+
+		const want = `[
+{ "Height": 1, "Tx": { "num": 1 } },
+{ "Height": 3, "Tx": { "num": 3 } },
+{ "Height": 5, "Tx": { "num": 5 } }
+]`
+		require.JSONEq(t, want, string(txs.ToJSON()))
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		txs := Txs{
+			{Height: 1, Tx: []byte(`{"num":1}`)},
+			{Height: 2, Tx: []byte(`not valid`)},
+		}
+
+		const want = `[
+{ "Height": 1, "Tx": { "num": 1 } },
+{ "Height": 2, "Tx": "bm90IHZhbGlk" }
+]`
+		require.JSONEq(t, want, string(txs.ToJSON()))
+	})
+}

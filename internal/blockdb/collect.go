@@ -3,6 +3,7 @@ package blockdb
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -79,6 +80,12 @@ func (p *Collector) Collect(ctx context.Context) {
 			return
 		case <-tick.C:
 			if err := p.saveTxsForHeight(ctx, height); err != nil {
+				if strings.Contains(err.Error(), "must be less than or equal to the current blockchain height") {
+					// (I could not find a more precise way to match this error.)
+					// Don't log because it happens frequently and is expected.
+					continue
+				}
+
 				p.log.Info("Failed to save transactions", zap.Error(err), zap.Uint64("height", height))
 				continue
 			}

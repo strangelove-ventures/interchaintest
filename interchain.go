@@ -10,11 +10,14 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/testreporter"
+	"go.uber.org/zap"
 )
 
 // Interchain represents a full IBC network, encompassing a collection of
 // one or more chains, one or more relayer instances, and initial account configuration.
 type Interchain struct {
+	log *zap.Logger
+
 	// Map of chain reference to chain ID.
 	chains map[ibc.Chain]string
 
@@ -41,6 +44,8 @@ type Interchain struct {
 // one or more calls to AddLink, and then finally a single call to Build.
 func NewInterchain() *Interchain {
 	return &Interchain{
+		log: zap.NewNop(),
+
 		chains:   make(map[ibc.Chain]string),
 		relayers: make(map[ibc.Relayer]string),
 
@@ -182,7 +187,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	for chain := range ic.chains {
 		chains = append(chains, chain)
 	}
-	ic.cs = newChainSet(chains)
+	ic.cs = newChainSet(ic.log, chains)
 
 	// Initialize the chains (pull docker images, etc.).
 	if err := ic.cs.Initialize(opts.TestName, opts.HomeDir, opts.Pool, opts.NetworkID); err != nil {
@@ -235,6 +240,14 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	}
 
 	return nil
+}
+
+// WithLog sets the logger on the interchain object.
+// Usually the default nop logger is fine, but sometimes it can be helpful
+// to see more verbose logs, typically by passing zaptest.NewLogger(t).
+func (ic *Interchain) WithLog(log *zap.Logger) *Interchain {
+	ic.log = log
+	return ic
 }
 
 // Close cleans up any resources created during Build,

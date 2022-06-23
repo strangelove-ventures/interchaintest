@@ -223,6 +223,10 @@ func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, er
 	return wallet, err
 }
 
+func (commander) ParseRestoreKeyOutput(stdout, stderr string) string {
+	return strings.Replace(stdout, "\n", "", 1)
+}
+
 func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
 	var channels []ibc.ChannelOutput
 	channelSplit := strings.Split(stdout, "\n")

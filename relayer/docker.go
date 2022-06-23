@@ -38,6 +38,9 @@ type DockerRelayer struct {
 	container *docker.Container
 
 	didInit bool
+
+	// wallets contains a mapping of chainID to relayer wallet
+	wallets map[string]ibc.RelayerWallet
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -57,6 +60,8 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.P
 		pullImage: true,
 
 		testName: testName,
+
+		wallets: map[string]ibc.RelayerWallet{},
 	}
 
 	for _, opt := range options {
@@ -134,7 +139,17 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 		return ibc.RelayerWallet{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
 	}
 
-	return r.c.ParseAddKeyOutput(stdout, stderr)
+	wallet, err := r.c.ParseAddKeyOutput(stdout, stderr)
+	if err != nil {
+		return ibc.RelayerWallet{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	}
+	r.wallets[chainID] = wallet
+	return wallet, nil
+}
+
+func (r *DockerRelayer) GetWallet(chainID string) (ibc.RelayerWallet, bool) {
+	wallet, ok := r.wallets[chainID]
+	return wallet, ok
 }
 
 func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
@@ -205,7 +220,16 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
+	exitCode, stdout, stderr, err := r.NodeJob(ctx, rep, cmd)
+	if err != nil {
+		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	}
+
+	r.wallets[chainID] = ibc.RelayerWallet{
+		Mnemonic: mnemonic,
+		Address:  r.c.ParseRestoreKeyOutput(stdout, stdout),
+	}
+	return nil
 }
 
 func (r *DockerRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
@@ -438,6 +462,9 @@ type RelayerCommander interface {
 	// ParseAddKeyOutput processes the output of AddKey
 	// to produce the wallet that was created.
 	ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error)
+
+	// ParseRestoreKeyOutput extracts the address from the output of RestoreKey.
+	ParseRestoreKeyOutput(stdout, stderr string) string
 
 	// ParseGetChannelsOutput processes the output of GetChannels
 	// to produce the channel output values.
