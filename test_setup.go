@@ -28,34 +28,7 @@ const (
 //
 // If any part of the setup fails, t.Fatal is called.
 func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
-	t.Helper()
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("failed to create dockertest pool: %v", err)
-	}
-
-	// Clean up docker resources at end of test.
-	t.Cleanup(dockerCleanup(t.Name(), pool))
-
-	// Also eagerly clean up any leftover resources from a previous test run,
-	// e.g. if the test was interrupted.
-	dockerCleanup(t.Name(), pool)()
-
-	network, err := pool.Client.CreateNetwork(docker.CreateNetworkOptions{
-		Name:           fmt.Sprintf("ibctest-%s", dockerutil.RandLowerCaseLetterString(8)),
-		Options:        map[string]interface{}{},
-		Labels:         map[string]string{"ibc-test": t.Name()},
-		CheckDuplicate: true,
-		Internal:       false,
-		EnableIPv6:     false,
-		Context:        context.Background(),
-	})
-	if err != nil {
-		t.Fatalf("failed to create docker network: %v", err)
-	}
-
-	return pool, network.ID
+	return dockerutil.DockerSetup(t)
 }
 
 // startup both chains and relayer
@@ -155,13 +128,13 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 			for k, v := range c.Labels {
 				if k == "ibc-test" && v == testName {
 					_ = pool.Client.StopContainer(c.ID, 10)
-					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
 					defer cancelWait()
 					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctxWait)
 					if showContainerLogs != "" {
 						stdout := new(bytes.Buffer)
 						stderr := new(bytes.Buffer)
-						ctxLogs, cancelLogs := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+						ctxLogs, cancelLogs := context.WithTimeout(context.Background(), time.Second*5)
 						defer cancelLogs()
 						_ = pool.Client.Logs(docker.LogsOptions{Context: ctxLogs, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
 					}
