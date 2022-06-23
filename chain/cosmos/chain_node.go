@@ -823,13 +823,13 @@ func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, st
 		Config: &docker.Config{
 			User: dockerutil.GetDockerUserString(),
 			// random hostname is fine here since this is just for setup
-			Hostname:     dockerutil.CondenseHostName(container),
-			ExposedPorts: sentryPorts,
-			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Cmd:          cmd,
-			Labels:       map[string]string{"ibc-test": tn.TestName},
-			Entrypoint:   []string{},
+			Hostname: dockerutil.CondenseHostName(container),
+			//ExposedPorts: sentryPorts, // TODO: did this break?
+			DNS:        []string{},
+			Image:      fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
+			Cmd:        cmd,
+			Labels:     map[string]string{"ibc-test": tn.TestName},
+			Entrypoint: []string{},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
