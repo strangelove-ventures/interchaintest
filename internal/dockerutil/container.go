@@ -3,24 +3,39 @@ package dockerutil
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 )
 
-// ContainerJob loosely mimics os/exec package for running one-off docker containers.
+// JobContainer loosely mimics os/exec package for running one-off docker containers.
 // Job containers are expected to invoke commands and exit. Therefore, they are not suitable for servers or daemons.
-type ContainerJob struct {
+type JobContainer struct {
 	pool            *dockertest.Pool
 	repository, tag string
 	networkID       string
 }
 
-// NewContainerJob returns a valid ContainerJob.
+// NewJobContainer returns a valid JobContainer.
 // "networkID" is from dockertest.CreateNetwork or similar.
-func NewContainerJob(pool *dockertest.Pool, networkID string, repository, tag string) *ContainerJob {
-	return &ContainerJob{
+// All arguments must be non-zero values or this function panics.
+func NewJobContainer(pool *dockertest.Pool, networkID string, repository, tag string) *JobContainer {
+	if pool == nil {
+		panic(errors.New("pool cannot be nil"))
+	}
+	if networkID == "" {
+		panic(errors.New("networkID cannot be empty"))
+	}
+	if repository == "" {
+		panic(errors.New("repository cannot be empty"))
+	}
+	if tag == "" {
+		panic(errors.New("tag cannot be empty"))
+	}
+	return &JobContainer{
 		pool:       pool,
 		networkID:  networkID,
 		repository: repository,
@@ -28,7 +43,7 @@ func NewContainerJob(pool *dockertest.Pool, networkID string, repository, tag st
 	}
 }
 
-// JobOptions optionally configure a ContainerJob.
+// JobOptions optionally configure a JobContainer.
 type JobOptions struct {
 	// bind mounts: https://docs.docker.com/storage/bind-mounts/
 	Binds []string
@@ -36,7 +51,11 @@ type JobOptions struct {
 
 // Run runs the docker image and invokes "cmd". "cmd" is the command and any arguments.
 // A non-zero status code returns a non-nil error.
-func (job *ContainerJob) Run(ctx context.Context, jobName string, cmd []string, opts JobOptions) (stdout []byte, stderr []byte, err error) {
+func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, opts JobOptions) (stdout []byte, stderr []byte, err error) {
+	if len(cmd) == 0 {
+		panic(errors.New("cmd cannot be empty"))
+	}
+
 	fullName := fmt.Sprintf("%s-%s", jobName, RandLowerCaseLetterString(3))
 	fullName = SanitizeContainerName(fullName)
 
@@ -71,6 +90,9 @@ func (job *ContainerJob) Run(ctx context.Context, jobName string, cmd []string, 
 	}
 
 	exitCode, err := job.pool.Client.WaitContainerWithContext(cont.ID, ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Client.WaitContainerWithContext: %w", err)
+	}
 	var (
 		stdoutBuf = new(bytes.Buffer)
 		stderrBuf = new(bytes.Buffer)
@@ -79,7 +101,8 @@ func (job *ContainerJob) Run(ctx context.Context, jobName string, cmd []string, 
 	_ = job.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
 
 	if exitCode != 0 {
-		panic(stderrBuf.String())
+		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
+		return nil, nil, fmt.Errorf("status code %d: %s", exitCode, out)
 	}
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), nil
 }

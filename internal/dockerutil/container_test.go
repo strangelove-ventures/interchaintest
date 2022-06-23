@@ -6,21 +6,46 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewJobContainer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	t.Parallel()
+
+	pool, networkID := DockerSetup(t)
+
+	for _, tt := range []struct {
+		Pool       *dockertest.Pool
+		NetworkID  string
+		Repository string
+		Tag        string
+	}{
+		{nil, networkID, "repo", "tag"},
+		{pool, "", "repo", "tag"},
+		{pool, networkID, "", "tag"},
+		{pool, networkID, "repo", ""},
+	} {
+		require.Panics(t, func() {
+			NewJobContainer(tt.Pool, tt.NetworkID, tt.Repository, tt.Tag)
+		})
+	}
+}
 
 func TestContainerJob_Run(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-
 	t.Parallel()
 
 	ctx := context.Background()
 	pool, networkID := DockerSetup(t)
 
 	t.Run("happy path", func(t *testing.T) {
-		job := NewContainerJob(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, "busybox", "latest")
 		stdout, stderr, err := job.Run(ctx, "test@happy|path", []string{"echo", "-n", "hello"}, JobOptions{})
 
 		require.NoError(t, err)
@@ -30,7 +55,7 @@ func TestContainerJob_Run(t *testing.T) {
 	})
 
 	t.Run("binds", func(t *testing.T) {
-		job := NewContainerJob(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, "busybox", "latest")
 
 		const scriptBody = `#!/bin/sh
 echo -n hi from stderr >> /dev/stderr
@@ -38,8 +63,6 @@ echo -n hi from stderr >> /dev/stderr
 		tmpDir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0777)
 		require.NoError(t, err)
-
-		t.Log("temp", tmpDir)
 
 		opts := JobOptions{
 			Binds: []string{tmpDir + ":/test"},
@@ -52,7 +75,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {
-		job := NewContainerJob(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, "busybox", "latest")
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
 		_, _, err := job.Run(cctx, "test context", []string{"sleep", "100"}, JobOptions{})
@@ -62,15 +85,27 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("errors", func(t *testing.T) {
+		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		_, _, err := job.Run(ctx, "errors", []string{"program-does-not-exist"}, JobOptions{})
 
+		require.Error(t, err)
 	})
 
 	t.Run("command does not exist", func(t *testing.T) {
-		// Using gaia to simulate a real use case.
-		//job := NewContainerJob(pool, networkID, "", "latest")
+		// Using gaiad to simulate a real use case.
+		job := NewJobContainer(pool, networkID, "ghcr.io/strangelove-ventures/heighliner/gaia", "latest")
 
+		_, _, err := job.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "status code 1")
+		require.Contains(t, err.Error(), "unknown command")
 	})
-	t.Run("missing required fields", func(t *testing.T) {
-		t.Fail()
+
+	t.Run("missing required args", func(t *testing.T) {
+		job := NewJobContainer(pool, networkID, "busybox", "latest")
+
+		require.PanicsWithError(t, "cmd cannot be empty", func() {
+			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})
+		})
 	})
 }
