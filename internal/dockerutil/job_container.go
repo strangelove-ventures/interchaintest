@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/ory/dockertest/v3"
@@ -65,7 +66,10 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	fullName := fmt.Sprintf("%s-%s", jobName, RandLowerCaseLetterString(3))
+	counter, _, _, _ := runtime.Caller(1)
+	caller := runtime.FuncForPC(counter).Name()
+	funcName := strings.Split(caller, ".")
+	fullName := fmt.Sprintf("%s-%s-%s", jobName, funcName[len(funcName)-1], RandLowerCaseLetterString(3))
 	fullName = SanitizeContainerName(fullName)
 
 	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
