@@ -479,7 +479,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	stdout, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", err
 	}
@@ -497,7 +497,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	stdout, _, err = tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", err
 	}
@@ -527,7 +527,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		command = append(command, "--no-admin")
 	}
 
-	stdout, _, err = tn.NodeJob(ctx, command)
+	_, _, err = tn.NodeJob(ctx, command)
 	if err != nil {
 		return "", err
 	}
