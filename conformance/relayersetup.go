@@ -18,7 +18,7 @@ import (
 func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))

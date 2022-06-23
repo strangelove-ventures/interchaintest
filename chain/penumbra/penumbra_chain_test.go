@@ -19,7 +19,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	t.Parallel()
 
 	pool, network := ibctest.DockerSetup(t)
-	home := t.TempDir() // Must be before chain cleanup to avoid test error during cleanup.
+	home := ibctest.TempDir(t) // Must be before chain cleanup to avoid test error during cleanup.
 
 	nv := 4
 

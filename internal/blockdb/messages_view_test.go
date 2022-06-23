@@ -26,7 +26,7 @@ func TestMessagesView(t *testing.T) {
 
 	t.Parallel()
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
@@ -54,7 +54,7 @@ func TestMessagesView(t *testing.T) {
 			Relayer: r,
 		})
 
-	dbDir := t.TempDir()
+	dbDir := ibctest.TempDir(t)
 	dbPath := filepath.Join(dbDir, "blocks.db")
 
 	rep := testreporter.NewNopReporter()
