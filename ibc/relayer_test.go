@@ -3,7 +3,7 @@ package ibc
 import (
 	"testing"
 
-	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func TestChannelOptsConfigured(t *testing.T) {
 		Version:        "123",
 	}
 	require.Error(t, opts.Validate())
-	require.Equal(t, chanTypes.ErrInvalidChannelOrdering, opts.Order.Validate())
+	require.Equal(t, chantypes.ErrInvalidChannelOrdering, opts.Order.Validate())
 
 	// Test partial channel opts
 	opts = CreateChannelOptions{
