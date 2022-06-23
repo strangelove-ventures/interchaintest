@@ -1,7 +1,6 @@
 package cosmos
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -306,7 +304,8 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
 	}
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 // CreateKey creates a key in the keyring backend test for the given node
@@ -318,7 +317,8 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 // AddGenesisAccount adds a genesis account for each key
@@ -341,7 +341,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 // Gentx generates the gentx for a given node
@@ -353,7 +354,8 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 // CollectGentxs runs collect gentxs on the node's home folders
@@ -363,7 +365,8 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 type IBCTransferTx struct {
@@ -392,9 +395,9 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 	err = test.WaitForBlocks(ctx, 2, tn)
 	if err != nil {
@@ -421,9 +424,9 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 func (tn *ChainNode) NodeJobThenWaitForBlocksLocked(ctx context.Context, command []string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return err
 	}
 	return test.WaitForBlocks(ctx, 2, tn)
 }
@@ -476,9 +479,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 
 	err = test.WaitForBlocks(ctx, 5, tn.Chain)
@@ -494,9 +497,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	stdout, _, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 
 	res := CodeInfosResponse{}
@@ -524,9 +527,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		command = append(command, "--no-admin")
 	}
 
-	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	stdout, _, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 
 	err = test.WaitForBlocks(ctx, 5, tn.Chain)
@@ -542,9 +545,9 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	exitCode, stdout, stderr, err = tn.NodeJob(ctx, command)
+	stdout, _, err = tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 
 	contactsRes := QueryContractResponse{}
@@ -581,9 +584,9 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return nil, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return nil, err
 	}
 
 	res := &ibc.DumpContractStateResponse{}
@@ -599,9 +602,9 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		"--height", fmt.Sprint(height),
 		"--home", tn.NodeHome(),
 	}
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	_, stderr, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 	// output comes to stderr for some reason
 	return stderr, nil
@@ -613,7 +616,8 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 		"--home", tn.NodeHome(),
 	}
 
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.NodeJob(ctx, command)
+	return err
 }
 
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
@@ -803,58 +807,13 @@ func (nodes ChainNodes) logger() *zap.Logger {
 
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
-func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
-	counter, _, _, _ := runtime.Caller(1)
-	caller := runtime.FuncForPC(counter).Name()
-	funcName := strings.Split(caller, ".")
-	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
-	tn.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", container),
-		)
-	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: container,
-		Config: &docker.Config{
-			User: dockerutil.GetDockerUserString(),
-			// random hostname is fine here since this is just for setup
-			Hostname:   dockerutil.CondenseHostName(container),
-			DNS:        []string{},
-			Image:      fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Cmd:        cmd,
-			Labels:     map[string]string{"ibc-test": tn.TestName},
-			Entrypoint: []string{},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				tn.NetworkID: {},
-			},
-		},
-		Context: ctx,
-	})
-	if err != nil {
-		return 1, "", "", err
+func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (string, string, error) {
+	job := dockerutil.NewJobContainer(tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil.JobOptions{
+		Binds: tn.Bind(),
 	}
-	if err := tn.Pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
-		return 1, "", "", err
-	}
-
-	exitCode, err := tn.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
-	tn.logger().
-		Debug(
-			fmt.Sprintf("stdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String()),
-			zap.String("container", container),
-		)
-	return exitCode, stdout.String(), stderr.String(), err
+	stdout, stderr, err := job.Run(ctx, tn.Name(), cmd, opts)
+	return string(stdout), string(stderr), err
 }
 
 func (tn *ChainNode) logger() *zap.Logger {
@@ -876,9 +835,9 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 		"-y",
 	}
 
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 	output := IBCTransferTx{}
 	err = yaml.Unmarshal([]byte(stdout), &output)
@@ -895,9 +854,9 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 		"--home", tn.NodeHome(),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name())}
 
-	exitCode, stdout, stderr, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.NodeJob(ctx, command)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
 
 	// at this point stdout should look like this:
@@ -935,5 +894,6 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"-y",
 	}
 
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err = tn.NodeJob(ctx, command)
+	return err
 }
