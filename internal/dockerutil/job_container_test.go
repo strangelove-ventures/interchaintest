@@ -41,11 +41,13 @@ func TestContainerJob_Run(t *testing.T) {
 	}
 	t.Parallel()
 
+	const busyBox = "docker.io/busybox"
+
 	ctx := context.Background()
 	pool, networkID := DockerSetup(t)
 
 	t.Run("happy path", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, busyBox, "latest")
 		stdout, stderr, err := job.Run(ctx, "test@happy|path", []string{"echo", "-n", "hello"}, JobOptions{})
 
 		require.NoError(t, err)
@@ -55,7 +57,7 @@ func TestContainerJob_Run(t *testing.T) {
 	})
 
 	t.Run("binds", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, busyBox, "latest")
 
 		const scriptBody = `#!/bin/sh
 echo -n hi from stderr >> /dev/stderr
@@ -75,7 +77,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, busyBox, "latest")
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
 		_, _, err := job.Run(cctx, "test context", []string{"sleep", "100"}, JobOptions{})
@@ -85,7 +87,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, busyBox, "latest")
 		_, _, err := job.Run(ctx, "errors", []string{"program-does-not-exist"}, JobOptions{})
 
 		require.Error(t, err)
@@ -102,7 +104,7 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("missing required args", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, "busybox", "latest")
+		job := NewJobContainer(pool, networkID, busyBox, "latest")
 
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
 			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})
