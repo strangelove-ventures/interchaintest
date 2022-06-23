@@ -59,16 +59,19 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 	fullName := fmt.Sprintf("%s-%s", jobName, RandLowerCaseLetterString(3))
 	fullName = SanitizeContainerName(fullName)
 
+	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
+	// allow for one-off job containers in this manner. You can use a *dockertest.Resource to exec into a running
+	// container. However, this requires the container is running a long-lived process like a daemon. While it's
+	// reasonable to assume a program like "sleep" is present in the container, it is not guaranteed.
 	cont, err := job.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Context: ctx,
 		Name:    fullName,
 		Config: &docker.Config{
-			User:       GetDockerUserString(),
-			Hostname:   CondenseHostName(fullName),
-			Image:      fmt.Sprintf("%s:%s", job.repository, job.tag),
-			Cmd:        cmd,
-			Labels:     map[string]string{labelKey: jobName},
-			Entrypoint: []string{},
+			User:     GetDockerUserString(),
+			Hostname: CondenseHostName(fullName),
+			Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
+			Cmd:      cmd,
+			Labels:   map[string]string{labelKey: jobName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           opts.Binds,
