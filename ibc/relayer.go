@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	ptypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 )
@@ -111,7 +111,7 @@ func (opts CreateChannelOptions) Validate() error {
 	case opts.Version == "":
 		return fmt.Errorf("invalid channel version")
 	case opts.Order.Validate() != nil:
-		return chanTypes.ErrInvalidChannelOrdering
+		return chantypes.ErrInvalidChannelOrdering
 	}
 	return nil
 }
@@ -142,7 +142,7 @@ func (o Order) Validate() error {
 	if o == Ordered || o == Unordered {
 		return nil
 	}
-	return chanTypes.ErrInvalidChannelOrdering
+	return chantypes.ErrInvalidChannelOrdering
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.
