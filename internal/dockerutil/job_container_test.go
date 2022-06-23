@@ -50,10 +50,10 @@ func TestContainerJob_Run(t *testing.T) {
 	pool, networkID := DockerSetup(t)
 
 	// Ensure we have busybox.
-	require.NoError(t, NewJobContainer(pool, networkID, testImage, testTag).Pull(ctx))
+	job := NewJobContainer(pool, networkID, testImage, testTag)
+	require.NoError(t, job.Pull(ctx))
 
 	t.Run("happy path", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, testImage, testTag)
 		stdout, stderr, err := job.Run(ctx, "test@happy|path", []string{"echo", "-n", "hello"}, JobOptions{})
 
 		require.NoError(t, err)
@@ -62,8 +62,6 @@ func TestContainerJob_Run(t *testing.T) {
 	})
 
 	t.Run("binds", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, testImage, testTag)
-
 		const scriptBody = `#!/bin/sh
 echo -n hi from stderr >> /dev/stderr
 `
@@ -82,7 +80,6 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, testImage, testTag)
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
 		_, _, err := job.Run(cctx, "test context", []string{"sleep", "100"}, JobOptions{})
@@ -92,7 +89,6 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, testImage, testTag)
 		_, _, err := job.Run(ctx, "errors", []string{"program-does-not-exist"}, JobOptions{})
 
 		require.Error(t, err)
@@ -100,7 +96,6 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("command does not exist", func(t *testing.T) {
 		// Using gaia to simulate real scenario.
-		job := NewJobContainer(pool, networkID, "ghcr.io/strangelove-ventures/heighliner/gaia", "v7.0.2")
 		require.NoError(t, job.Pull(ctx))
 
 		_, _, err := job.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
@@ -110,8 +105,6 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("missing required args", func(t *testing.T) {
-		job := NewJobContainer(pool, networkID, testImage, testTag)
-
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
 			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})
 		})
