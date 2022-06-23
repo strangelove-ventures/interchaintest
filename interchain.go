@@ -219,6 +219,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return nil
 	}
 
+	// Check that the channel creation options are valid and fully specified.
+	if err := opts.CreateChannelOpts.Validate(); err != nil {
+		return err
+	}
+
 	// For every relayer link, teach the relayer about the link and create the link.
 	for rp, chains := range ic.links {
 		c0 := chains[0]
@@ -228,16 +233,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 				"failed to generate path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
 			)
-		}
-
-		// If channel creation options are not fully specified, default to the ics20 fungible token transfer channel options.
-		if !opts.CreateChannelOpts.IsFullyConfigured() {
-			opts.CreateChannelOpts = ibc.DefaultChannelOpts()
-		}
-
-		// Check that the channel order type is a valid value.
-		if err := opts.CreateChannelOpts.Order.Validate(); err != nil {
-			return err
 		}
 
 		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {

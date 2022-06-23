@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	ptypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.
@@ -87,7 +91,32 @@ type CreateChannelOptions struct {
 	Version string
 }
 
-// Order represents an IBC channel's order.
+// defaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
+func defaultChannelOpts() CreateChannelOptions {
+	return CreateChannelOptions{
+		SourcePortName: "transfer",
+		DestPortName:   "transfer",
+		Order:          Unordered,
+		Version:        "ics20-1",
+	}
+}
+
+// Validate will check that the specified CreateChannelOptions are valid.
+func (opts CreateChannelOptions) Validate() error {
+	switch {
+	case host.PortIdentifierValidator(opts.SourcePortName) != nil:
+		return ptypes.ErrInvalidPort
+	case host.PortIdentifierValidator(opts.DestPortName) != nil:
+		return ptypes.ErrInvalidPort
+	case opts.Version == "":
+		return fmt.Errorf("invalid channel version")
+	case opts.Order.Validate() != nil:
+		return chanTypes.ErrInvalidChannelOrdering
+	}
+	return nil
+}
+
+// Order represents an IBC channel's ordering.
 type Order int
 
 const (
@@ -108,32 +137,12 @@ func (o Order) String() string {
 	}
 }
 
-var ErrInvalidOrderType = fmt.Errorf("the specified channel order is invalid")
-
 // Validate checks that the Order type is a valid value.
 func (o Order) Validate() error {
 	if o == Ordered || o == Unordered {
 		return nil
 	}
-	return ErrInvalidOrderType
-}
-
-// DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
-func DefaultChannelOpts() CreateChannelOptions {
-	return CreateChannelOptions{
-		SourcePortName: "transfer",
-		DestPortName:   "transfer",
-		Order:          Unordered,
-		Version:        "ics20-1",
-	}
-}
-
-// IsFullyConfigured returns true if all the CreateChannelOption's fields have been specified.
-func (opts CreateChannelOptions) IsFullyConfigured() bool {
-	return opts.SourcePortName != "" &&
-		opts.DestPortName != "" &&
-		opts.Version != "" &&
-		opts.Order != Invalid
+	return chanTypes.ErrInvalidChannelOrdering
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.
