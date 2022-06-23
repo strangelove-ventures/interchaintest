@@ -8,6 +8,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestNewJobContainer(t *testing.T) {
@@ -30,7 +31,7 @@ func TestNewJobContainer(t *testing.T) {
 		{pool, networkID, "repo", ""},
 	} {
 		require.Panics(t, func() {
-			NewJobContainer(tt.Pool, tt.NetworkID, tt.Repository, tt.Tag)
+			NewJobContainer(zap.NewNop(), tt.Pool, tt.NetworkID, tt.Repository, tt.Tag)
 		})
 	}
 }
@@ -50,7 +51,7 @@ func TestContainerJob_Run(t *testing.T) {
 	pool, networkID := DockerSetup(t)
 
 	// Ensure we have busybox.
-	job := NewJobContainer(pool, networkID, testImage, testTag)
+	job := NewJobContainer(zap.NewNop(), pool, networkID, testImage, testTag)
 	require.NoError(t, job.Pull(ctx))
 
 	t.Run("happy path", func(t *testing.T) {
@@ -96,11 +97,19 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("command does not exist", func(t *testing.T) {
 		// Using gaia to simulate real scenario.
-		require.NoError(t, job.Pull(ctx))
+		gaiaJob := NewJobContainer(
+			zap.NewNop(),
+			pool,
+			networkID,
+			"ghcr.io/strangelove-ventures/heighliner/gaia",
+			"v7.0.2",
+		)
 
-		_, _, err := job.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
+		require.NoError(t, gaiaJob.Pull(ctx))
+
+		_, _, err := gaiaJob.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "status code 1")
+		require.Contains(t, err.Error(), "exit code 1")
 		require.Contains(t, err.Error(), "unknown command")
 	})
 

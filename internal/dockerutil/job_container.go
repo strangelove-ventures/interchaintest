@@ -10,11 +10,13 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"go.uber.org/zap"
 )
 
 // JobContainer loosely mimics os/exec package for running one-off docker containers.
 // Job containers are expected to invoke commands and exit. Therefore, they are not suitable for servers or daemons.
 type JobContainer struct {
+	log             *zap.Logger
 	pool            *dockertest.Pool
 	repository, tag string
 	networkID       string
@@ -22,8 +24,11 @@ type JobContainer struct {
 
 // NewJobContainer returns a valid JobContainer.
 // "networkID" is from dockertest.CreateNetwork or similar.
-// All arguments must be non-zero values or this function panics.
-func NewJobContainer(pool *dockertest.Pool, networkID string, repository, tag string) *JobContainer {
+// All arguments (except logger) must be non-zero values or this function panics.
+func NewJobContainer(logger *zap.Logger, pool *dockertest.Pool, networkID string, repository, tag string) *JobContainer {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	if pool == nil {
 		panic(errors.New("pool cannot be nil"))
 	}
@@ -37,6 +42,7 @@ func NewJobContainer(pool *dockertest.Pool, networkID string, repository, tag st
 		panic(errors.New("tag cannot be empty"))
 	}
 	return &JobContainer{
+		log:        logger,
 		pool:       pool,
 		networkID:  networkID,
 		repository: repository,
@@ -71,6 +77,13 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 	funcName := strings.Split(caller, ".")
 	fullName := fmt.Sprintf("%s-%s-%s", jobName, funcName[len(funcName)-1], RandLowerCaseLetterString(3))
 	fullName = SanitizeContainerName(fullName)
+
+	logger := job.log.With(
+		zap.String("command", strings.Join(cmd, " ")),
+		zap.String("container", fullName),
+	)
+
+	logger.Info("Running command")
 
 	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
 	// allow for one-off job containers in this manner. You can use a *dockertest.Resource to exec into a running
@@ -118,7 +131,16 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 
 	if exitCode != 0 {
 		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
-		return nil, nil, fmt.Errorf("status code %d: %s", exitCode, out)
+		err = fmt.Errorf("exit code %d: %s", exitCode, out)
+		logger.Error("Command failed",
+			zap.Int("exit_code", exitCode),
+			zap.Error(err),
+		)
+		return nil, nil, err
 	}
+	logger.Debug("Command succeeded",
+		zap.String("stdout", stdoutBuf.String()),
+		zap.String("stderr", stderrBuf.String()),
+	)
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), nil
 }
