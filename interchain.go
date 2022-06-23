@@ -235,6 +235,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			opts.CreateChannelOpts = ibc.DefaultChannelOpts()
 		}
 
+		// Check that the channel order type is a valid value.
+		if err := opts.CreateChannelOpts.Order.Validate(); err != nil {
+			return err
+		}
+
 		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",

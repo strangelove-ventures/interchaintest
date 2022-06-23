@@ -2,6 +2,7 @@ package ibc
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -90,9 +91,32 @@ type CreateChannelOptions struct {
 type Order int
 
 const (
-	Ordered Order = iota
+	Invalid Order = iota
+	Ordered
 	Unordered
 )
+
+// String returns the lowercase string representation of the Order.
+func (o Order) String() string {
+	switch o {
+	case Unordered:
+		return "unordered"
+	case Ordered:
+		return "ordered"
+	default:
+		return "invalid"
+	}
+}
+
+var ErrInvalidOrderType = fmt.Errorf("the specified channel order is invalid")
+
+// Validate checks that the Order type is a valid value.
+func (o Order) Validate() error {
+	if o == Ordered || o == Unordered {
+		return nil
+	}
+	return ErrInvalidOrderType
+}
 
 // DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
 func DefaultChannelOpts() CreateChannelOptions {
@@ -109,7 +133,7 @@ func (opts CreateChannelOptions) IsFullyConfigured() bool {
 	return opts.SourcePortName != "" &&
 		opts.DestPortName != "" &&
 		opts.Version != "" &&
-		opts.Order == Ordered || opts.Order == Unordered
+		opts.Order != Invalid
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.

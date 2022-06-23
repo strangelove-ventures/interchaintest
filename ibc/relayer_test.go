@@ -22,7 +22,8 @@ func TestChannelOptsConfigured(t *testing.T) {
 		Order:          3,
 		Version:        "123",
 	}
-	require.False(t, opts.IsFullyConfigured())
+	require.True(t, opts.IsFullyConfigured())
+	require.Equal(t, ErrInvalidOrderType, opts.Order.Validate())
 
 	// Test partial channel opts
 	opts = CreateChannelOptions{

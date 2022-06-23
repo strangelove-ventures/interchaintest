@@ -116,7 +116,7 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 		"rly", "tx", "channel", pathName,
 		"--src-port", opts.SourcePortName,
 		"--dst-port", opts.DestPortName,
-		"--order", opts.Order,
+		"--order", opts.Order.String(),
 		"--version", opts.Version,
 
 		"--home", homeDir,
@@ -177,7 +177,7 @@ func (commander) LinkPath(pathName, homeDir string, opts ibc.CreateChannelOption
 		"rly", "tx", "link", pathName,
 		"--src-port", opts.SourcePortName,
 		"--dst-port", opts.DestPortName,
-		"--order", opts.Order,
+		"--order", opts.Order.String(),
 		"--version", opts.Version,
 
 		"--home", homeDir,

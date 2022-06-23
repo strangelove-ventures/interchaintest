@@ -134,7 +134,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		req.NoError(r.CreateChannel(ctx, eRep, pathName, ibc.CreateChannelOptions{
 			SourcePortName: "transfer",
 			DestPortName:   "transfer",
-			Order:          "unordered",
+			Order:          ibc.Unordered,
 			Version:        "ics20-1",
 		}))
 
