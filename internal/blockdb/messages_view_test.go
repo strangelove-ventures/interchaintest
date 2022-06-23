@@ -121,8 +121,8 @@ WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 		// Next, create the connections.
 		require.NoError(t, r.CreateConnections(ctx, eRep, pathName))
 
-		// Wait for two more blocks before retrieving the connections and querying for them.
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0, gaia1))
+		// Wait for another block before retrieving the connections and querying for them.
+		require.NoError(t, test.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
 		conns, err := r.GetConnections(ctx, eRep, gaia0ChainID)
 		require.NoError(t, err)
@@ -189,8 +189,8 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 			Version:        "ics20-1",
 		}))
 
-		// Wait for two more blocks before retrieving the channels and querying for them.
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0, gaia1))
+		// Wait for another block before retrieving the channels and querying for them.
+		require.NoError(t, test.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
 		channels, err := r.GetChannels(ctx, eRep, gaia0ChainID)
 		require.NoError(t, err)
