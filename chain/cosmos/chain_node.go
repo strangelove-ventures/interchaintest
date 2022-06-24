@@ -714,7 +714,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(100), retry.Delay(5*time.Second), retry.DelayType(retry.FixedDelay))
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
