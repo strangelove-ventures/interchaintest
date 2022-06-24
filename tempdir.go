@@ -25,9 +25,9 @@ type TempDirTestingT interface {
 // is retained or deleted following a test failure.
 //
 // It defaults to false, but can be initialized to true by setting the
-// environment variable IBCTEST_KEEP_FAILURE_DIR to a non-empty value.
+// environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the ibctest package may set the variable to true.
-var KeepTempDirOnFailure = os.Getenv("IBCTEST_KEEP_FAILURE_DIR") != ""
+var KeepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // TempDir resembles (*testing.T).TempDir, except that it conditionally
 // keeps the temporary directory on disk, and it uses a new temporary directory
