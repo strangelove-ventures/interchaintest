@@ -93,7 +93,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 			Hostname: CondenseHostName(fullName),
 			Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
 			Cmd:      cmd,
-			Labels:   map[string]string{labelKey: jobName},
+			Labels:   map[string]string{ContainerLabel: jobName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           opts.Binds,

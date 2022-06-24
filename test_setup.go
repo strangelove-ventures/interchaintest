@@ -126,7 +126,7 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
 			for k, v := range c.Labels {
-				if k == "ibc-test" && v == testName {
+				if k == dockerutil.ContainerLabel && v == testName {
 					_ = pool.Client.StopContainer(c.ID, 10)
 					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
 					defer cancelWait()
@@ -146,7 +146,7 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 		nets, _ := pool.Client.ListNetworks()
 		for _, n := range nets {
 			for k, v := range n.Labels {
-				if k == "ibc-test" && v == testName {
+				if k == dockerutil.ContainerLabel && v == testName {
 					_ = pool.Client.RemoveNetwork(n.ID)
 					break
 				}
