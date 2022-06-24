@@ -43,7 +43,7 @@ type ChainNode struct {
 	NetworkID    string
 	Pool         *dockertest.Pool
 	Client       rpcclient.Client
-	Container    *dockerutil.Container
+	Container    *dockerutil.ContainerFactory
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -115,13 +115,13 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	// TODO: expose method on dockerutil.Container? Remove sanitization?
+	// TODO: expose method on dockerutil.ContainerFactory? Remove sanitization?
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
-	// TODO: expose method on dockerutil.Container
+	// TODO: expose method on dockerutil.ContainerFactory
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
@@ -776,11 +776,11 @@ func (nodes ChainNodes) logger() *zap.Logger {
 // NodeJob run a container for a specific job and block until the container exits
 // NOTE: on job containers generate random name
 func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (string, string, error) {
-	job := dockerutil.NewJobContainer(tn.logger(), tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
-	opts := dockerutil.JobOptions{
+	job := dockerutil.NewFactory(tn.logger(), tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil.RunOptions{
 		Binds: tn.Bind(),
 	}
-	stdout, stderr, err := job.Run(ctx, tn.Name(), cmd, opts)
+	stdout, stderr, err := job.RunJob(ctx, tn.Name(), cmd, opts)
 	return string(stdout), string(stderr), err
 }
 

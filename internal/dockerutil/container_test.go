@@ -2,41 +2,37 @@ package dockerutil
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
-func TestNewJobContainer(t *testing.T) {
+func TestNewFactory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
 	t.Parallel()
 
-	pool, networkID := DockerSetup(t)
+	pool := DockerSetup(t)
 
 	for _, tt := range []struct {
-		Pool       *dockertest.Pool
-		NetworkID  string
+		Name       string
 		Repository string
-		Tag        string
 	}{
-		{nil, networkID, "repo", "tag"},
-		{pool, "", "repo", "tag"},
-		{pool, networkID, "", "tag"},
-		{pool, networkID, "repo", ""},
+		{"", "repo"},
+		{"test", ""},
 	} {
 		require.Panics(t, func() {
-			NewJobContainer(zap.NewNop(), tt.Pool, tt.NetworkID, tt.Repository, tt.Tag)
+			NewFactory(zap.NewNop(), pool, tt.Name, tt.Repository, "")
 		})
 	}
 }
 
-func TestContainerJob_Run(t *testing.T) {
+func TestFactory_RunJob(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -48,42 +44,43 @@ func TestContainerJob_Run(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	pool, networkID := DockerSetup(t)
+	pool := DockerSetup(t)
 
 	// Ensure we have busybox.
-	job := NewJobContainer(zap.NewNop(), pool, networkID, testImage, testTag)
-	require.NoError(t, job.Pull(ctx))
+	factory := NewFactory(zap.NewNop(), pool, fmt.Sprintf("%s@?#!", t.Name()), testImage, testTag)
 
 	t.Run("happy path", func(t *testing.T) {
-		stdout, stderr, err := job.Run(ctx, "test@happy|path", []string{"echo", "-n", "hello"}, JobOptions{})
+		for i := 0; i < 3; i++ {
+			result, err := factory.RunJob(ctx, []string{"echo", "-n", "hello"}, RunOptions{})
 
-		require.NoError(t, err)
-		require.Equal(t, "hello", string(stdout))
-		require.Empty(t, string(stderr))
+			require.NoError(t, err)
+			require.Equal(t, "hello", string(result.Stdout))
+			require.Empty(t, string(result.Stderr))
+		}
 	})
 
 	t.Run("binds", func(t *testing.T) {
 		const scriptBody = `#!/bin/sh
-echo -n hi from stderr >> /dev/stderr
-`
+	echo -n hi from stderr >> /dev/stderr
+	`
 		tmpDir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0777)
 		require.NoError(t, err)
 
-		opts := JobOptions{
+		opts := RunOptions{
 			Binds: []string{tmpDir + ":/test"},
 		}
 
-		stdout, stderr, err := job.Run(ctx, "binds", []string{"/test/test.sh"}, opts)
+		res, err := factory.RunJob(ctx, []string{"/test/test.sh"}, opts)
 		require.NoError(t, err)
-		require.Empty(t, string(stdout))
-		require.Equal(t, "hi from stderr", string(stderr))
+		require.Empty(t, string(res.Stdout))
+		require.Equal(t, "hi from stderr", string(res.Stderr))
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
-		_, _, err := job.Run(cctx, "test context", []string{"sleep", "100"}, JobOptions{})
+		_, err := factory.RunJob(cctx, []string{"sleep", "100"}, RunOptions{})
 
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.Canceled)
@@ -97,7 +94,7 @@ echo -n hi from stderr >> /dev/stderr
 			{[]string{"program-does-not-exist"}, "executable file not found"},
 			{[]string{"sleep", "not-valid-arg"}, "sleep: invalid"},
 		} {
-			_, _, err := job.Run(ctx, "errors", tt.Args, JobOptions{})
+			_, err := factory.RunJob(ctx, tt.Args, RunOptions{})
 
 			require.Error(t, err, tt)
 			require.Contains(t, err.Error(), tt.WantErr, tt)
@@ -106,7 +103,7 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("missing required args", func(t *testing.T) {
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
-			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})
+			_, _ = factory.RunJob(ctx, nil, RunOptions{})
 		})
 	})
 }
