@@ -660,7 +660,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Labels:       map[string]string{dockerutil.ContainerLabel: tn.TestName},
+			Labels:       map[string]string{dockerutil.CleanupLabel: tn.TestName},
 			Entrypoint:   []string{},
 		},
 		HostConfig: &docker.HostConfig{

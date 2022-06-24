@@ -10,9 +10,12 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 )
 
-// ContainerLabel is a key for docker labels used when cleaning up docker resources.
-// If this label is not set correctly, you will see many "container already exists" errors in the test suite.
-const ContainerLabel = "ibctest"
+// CleanupLabel is a docker label key targeted by DockerSetup when it cleans up docker resources.
+//
+// "ibctest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
+// with the hyphen. Otherwise, we run the risk of causing "container already exists" errors because DockerSetup
+// is unable to clean old resources from docker engine.
+const CleanupLabel = "ibc-test"
 
 // DockerSetup sets up a new dockertest.Pool (which is a client connection
 // to a Docker engine) and configures a network associated with t.
@@ -36,7 +39,7 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 
 	name := fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8))
 	network, err := pool.CreateNetwork(name, func(cfg *docker.CreateNetworkOptions) {
-		cfg.Labels = map[string]string{ContainerLabel: t.Name()}
+		cfg.Labels = map[string]string{CleanupLabel: t.Name()}
 		cfg.CheckDuplicate = true
 		cfg.Context = context.Background() // TODO (nix - 6/24/22) Pass in context from function call.
 	})
@@ -53,7 +56,7 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
 			for k, v := range c.Labels {
-				if k == ContainerLabel && v == testName {
+				if k == CleanupLabel && v == testName {
 					_ = pool.Client.StopContainer(c.ID, 10)
 					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
 					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctxWait)
@@ -66,7 +69,7 @@ func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 		nets, _ := pool.Client.ListNetworks()
 		for _, n := range nets {
 			for k, v := range n.Labels {
-				if k == ContainerLabel && v == testName {
+				if k == CleanupLabel && v == testName {
 					_ = pool.Client.RemoveNetwork(n.ID)
 					break
 				}

@@ -233,7 +233,7 @@ func (p *PenumbraAppNode) CreateNodeContainer() error {
 			DNS:          []string{},
 			// Env:          []string{"RUST_BACKTRACE=full"},
 			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
-			Labels: map[string]string{dockerutil.ContainerLabel: p.TestName},
+			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           p.Bind(),
@@ -291,7 +291,7 @@ func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 			// Env:          []string{"RUST_BACKTRACE=full"},
 			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
 			Cmd:    cmd,
-			Labels: map[string]string{dockerutil.ContainerLabel: p.TestName},
+			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           p.Bind(),
