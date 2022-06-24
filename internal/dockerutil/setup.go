@@ -1,10 +1,8 @@
 package dockerutil
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -54,23 +52,15 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
 func dockerCleanup(testName string, pool *dockertest.Pool) func() {
 	return func() {
-		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
 			for k, v := range c.Labels {
 				if k == ContainerLabel && v == testName {
 					_ = pool.Client.StopContainer(c.ID, 10)
 					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
-					defer cancelWait()
 					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctxWait)
-					if showContainerLogs != "" {
-						stdout := new(bytes.Buffer)
-						stderr := new(bytes.Buffer)
-						ctxLogs, cancelLogs := context.WithTimeout(context.Background(), time.Second*5)
-						defer cancelLogs()
-						_ = pool.Client.Logs(docker.LogsOptions{Context: ctxLogs, Container: c.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-					}
 					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID, Force: true})
+					cancelWait() // prevent deferring in a loop
 					break
 				}
 			}
