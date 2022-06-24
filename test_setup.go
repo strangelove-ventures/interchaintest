@@ -25,6 +25,7 @@ const (
 //
 // If any part of the setup fails, t.Fatal is called.
 func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
+	t.Helper()
 	return dockerutil.DockerSetup(t)
 }
 

@@ -110,6 +110,10 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 			},
 		},
 	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("create container: %w", err)
+	}
+
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("start container %s: %w", cont.ID, err)
