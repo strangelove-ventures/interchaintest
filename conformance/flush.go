@@ -21,7 +21,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	// but check that capability first in case we can avoid setup.
 	requireCapabilities(t, rep, rf, relayer.FlushPackets)
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))

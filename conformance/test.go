@@ -304,7 +304,7 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 

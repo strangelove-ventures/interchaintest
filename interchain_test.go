@@ -21,7 +21,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	t.Parallel()
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -71,7 +71,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 
 	t.Parallel()
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -154,7 +154,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 	t.Parallel()
 
-	home := t.TempDir()
+	home := ibctest.TempDir(t)
 	pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
