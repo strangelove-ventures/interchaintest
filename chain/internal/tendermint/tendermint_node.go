@@ -320,5 +320,5 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	return job.Run(ctx, tn.Name(), cmd, opts)
+	return job.Run(ctx, tn.TestName, cmd, opts)
 }

@@ -284,5 +284,5 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		Binds: p.Bind(),
 	}
-	return job.Run(ctx, p.Name(), cmd, opts)
+	return job.Run(ctx, p.TestName, cmd, opts)
 }
