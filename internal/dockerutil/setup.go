@@ -16,6 +16,7 @@ const ContainerLabel = "ibctest"
 
 // DockerSetup sets up a new dockertest.Pool (which is a client connection
 // to a Docker engine) and configures a network associated with t.
+// Returns a pool and the network id.
 //
 // If any part of the setup fails, t.Fatal is called.
 func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
@@ -33,20 +34,17 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 	// e.g. if the test was interrupted.
 	dockerCleanup(t.Name(), pool)()
 
-	network, err := pool.Client.CreateNetwork(docker.CreateNetworkOptions{
-		Name:           fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8)),
-		Options:        map[string]interface{}{},
-		Labels:         map[string]string{ContainerLabel: t.Name()},
-		CheckDuplicate: true,
-		Internal:       false,
-		EnableIPv6:     false,
-		Context:        context.Background(),
+	name := fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8))
+	network, err := pool.CreateNetwork(name, func(cfg *docker.CreateNetworkOptions) {
+		cfg.Labels = map[string]string{ContainerLabel: t.Name()}
+		cfg.CheckDuplicate = true
+		cfg.Context = context.Background() // TODO (nix - 6/24/22) Pass in context from function call.
 	})
 	if err != nil {
 		t.Fatalf("failed to create docker network: %v", err)
 	}
 
-	return pool, network.ID
+	return pool, network.Network.ID
 }
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
