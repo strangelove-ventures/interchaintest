@@ -16,6 +16,7 @@ import (
 type Container struct {
 	log      *zap.Logger
 	resource *dockertest.Resource
+	hostName string
 }
 
 type StartOptions struct {
@@ -41,7 +42,7 @@ func StartContainer(
 ) (*Container, error) {
 	var (
 		hostName      = CondenseHostName(opts.HostName)
-		containerName = SanitizeContainerName(opts.ContainerName)
+		containerName = SanitizeContainerName(opts.ContainerName) + "-" + RandLowerCaseLetterString(6)
 		logger        = log.With(
 			zap.String("container", hostName),
 			zap.String("host", containerName),
@@ -57,6 +58,7 @@ func StartContainer(
 			ExposedPorts: nil, // TODO: is this necessary if we publish all ports anyway?
 			NetworkID:    networkID,
 			Auth:         docker.AuthConfiguration{}, // Only pull public images for now.
+			Labels:       map[string]string{ContainerLabel: containerName},
 			Privileged:   false,
 			User:         GetDockerUserString(),
 		}
@@ -84,6 +86,7 @@ func StartContainer(
 	return &Container{
 		log:      logger,
 		resource: res,
+		hostName: hostName,
 	}, nil
 }
 
@@ -122,4 +125,8 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string) (ExecR
 
 func (c *Container) HostPort(port string) string {
 	return GetHostPort(c.resource.Container, port)
+}
+
+func (c *Container) HostName() string {
+	return c.hostName
 }
