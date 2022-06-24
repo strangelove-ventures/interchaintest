@@ -90,27 +90,18 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		_, _, err := job.Run(ctx, "errors", []string{"program-does-not-exist"}, JobOptions{})
+		for _, tt := range []struct {
+			Args    []string
+			WantErr string
+		}{
+			{[]string{"program-does-not-exist"}, "executable file not found"},
+			{[]string{"sleep", "not-valid-arg"}, "sleep: invalid"},
+		} {
+			_, _, err := job.Run(ctx, "errors", tt.Args, JobOptions{})
 
-		require.Error(t, err)
-	})
-
-	t.Run("command does not exist", func(t *testing.T) {
-		// Using gaia to simulate real scenario.
-		gaiaJob := NewJobContainer(
-			zap.NewNop(),
-			pool,
-			networkID,
-			"ghcr.io/strangelove-ventures/heighliner/gaia",
-			"v7.0.2",
-		)
-
-		require.NoError(t, gaiaJob.Pull(ctx))
-
-		_, _, err := gaiaJob.Run(ctx, "gaia", []string{"gaiad", "this-subcommand-should-never-exist"}, JobOptions{})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "exit code 1")
-		require.Contains(t, err.Error(), "unknown command")
+			require.Error(t, err, tt)
+			require.Contains(t, err.Error(), tt.WantErr, tt)
+		}
 	})
 
 	t.Run("missing required args", func(t *testing.T) {

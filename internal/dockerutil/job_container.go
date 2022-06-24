@@ -115,7 +115,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 	}
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("start containerfor container %s: %w", cont.ID, err)
+		return nil, nil, fmt.Errorf("start container %s: %w", cont.ID, err)
 	}
 
 	exitCode, err := job.pool.Client.WaitContainerWithContext(cont.ID, ctx)
