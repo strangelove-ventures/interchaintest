@@ -13,7 +13,7 @@ import (
 )
 
 // labelKey is a key for docker labels. Used when cleaning up docker resources.
-const labelKey = "ibctest"
+const labelKey = "ibc-test"
 
 // DockerSetup sets up a new dockertest.Pool (which is a client connection
 // to a Docker engine) and configures a network associated with t.
