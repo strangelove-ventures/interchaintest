@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ory/dockertest/v3"
@@ -78,6 +79,15 @@ echo -n hi from stderr >> /dev/stderr
 		require.NoError(t, err)
 		require.Empty(t, string(stdout))
 		require.Equal(t, "hi from stderr", string(stderr))
+	})
+
+	t.Run("env vars", func(t *testing.T) {
+		opts := JobOptions{Env: []string{"MY_ENV_VAR=foo"}}
+		stdout, stderr, err := job.Run(ctx, "env vars", []string{"printenv", "MY_ENV_VAR"}, opts)
+
+		require.NoError(t, err)
+		require.Equal(t, "foo", strings.TrimSpace(string(stdout)))
+		require.Empty(t, string(stderr))
 	})
 
 	t.Run("context cancelled", func(t *testing.T) {

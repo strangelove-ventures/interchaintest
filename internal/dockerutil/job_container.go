@@ -53,6 +53,9 @@ func NewJobContainer(logger *zap.Logger, pool *dockertest.Pool, networkID string
 type JobOptions struct {
 	// bind mounts: https://docs.docker.com/storage/bind-mounts/
 	Binds []string
+
+	// Environment variables
+	Env []string
 }
 
 // Pull the image. Public images only.
@@ -66,7 +69,7 @@ func (job *JobContainer) Pull(ctx context.Context) error {
 
 // Run runs the docker image and invokes "cmd". "cmd" is the command and any arguments.
 // A non-zero status code returns a non-nil error.
-func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, opts JobOptions) (stdout []byte, stderr []byte, err error) {
+func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, opts JobOptions) (stdout, stderr []byte, err error) {
 	if len(cmd) == 0 {
 		panic(errors.New("cmd cannot be empty"))
 	}
@@ -93,6 +96,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 			Hostname: CondenseHostName(fullName),
 			Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
 			Cmd:      cmd,
+			Env:      opts.Env,
 			Labels:   map[string]string{CleanupLabel: jobName},
 		},
 		HostConfig: &docker.HostConfig{
@@ -106,9 +110,6 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 			},
 		},
 	})
-	if err != nil && !errors.Is(err, docker.ErrContainerAlreadyExists) {
-		return nil, nil, fmt.Errorf("create container %s for image %s:%s: %w", fullName, job.repository, job.tag, err)
-	}
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("start container %s: %w", cont.ID, err)
