@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
+	"go.uber.org/zap"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -27,6 +28,7 @@ type PenumbraNode struct {
 type PenumbraNodes []PenumbraNode
 
 type PenumbraChain struct {
+	log           *zap.Logger
 	testName      string
 	cfg           ibc.ChainConfig
 	numValidators int
@@ -76,8 +78,9 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 	}
 }
 
-func NewPenumbraChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
+func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
 	return &PenumbraChain{
+		log:           log,
 		testName:      testName,
 		cfg:           chainConfig,
 		numValidators: numValidators,
@@ -102,6 +105,11 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 func (c *PenumbraChain) Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error {
 	c.initializeChainNodes(testName, homeDirectory, dockerPool, networkID)
 	return nil
+}
+
+// Exec implements chain interface.
+func (c *PenumbraChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
+	return c.getRelayerNode().PenumbraAppNode.Exec(ctx, cmd, env)
 }
 
 func (c *PenumbraChain) getRelayerNode() PenumbraNode {
@@ -212,14 +220,14 @@ func (c *PenumbraChain) initializeChainNodes(testName, home string,
 			Tag:        image.Version,
 		}, docker.AuthConfiguration{})
 		if err != nil {
-			fmt.Printf("error pulling image: %v", err)
+			c.log.Error("Pull image", zap.Error(err))
 		}
 	}
 	for i := 0; i < count; i++ {
 		tn := &tendermint.TendermintNode{Home: home, Index: i, Chain: c,
 			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
-		pn := &PenumbraAppNode{Home: home, Index: i, Chain: c,
+		pn := &PenumbraAppNode{log: c.log, Home: home, Index: i, Chain: c,
 			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
 		pn.MkDir()
 		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
@@ -381,7 +389,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
-		fmt.Printf("{%s} => starting container...\n", n.TendermintNode.Name())
+		c.log.Info("Staring tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(n.TendermintNode)
 			if err := n.TendermintNode.SetConfigAndPeers(egCtx, peers); err != nil {
@@ -389,7 +397,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 			}
 			return n.TendermintNode.StartContainer(egCtx)
 		})
-		fmt.Printf("{%s} => starting container...\n", n.PenumbraAppNode.Name())
+		c.log.Info("Staring penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
 		eg.Go(func() error {
 			return n.PenumbraAppNode.StartContainer(egCtx)
 		})

@@ -103,7 +103,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	case "cosmos":
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
-		return penumbra.NewPenumbraChain(testName, cfg, nv, nf), nil
+		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}

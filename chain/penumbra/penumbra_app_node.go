@@ -1,14 +1,12 @@
 package penumbra
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -16,9 +14,12 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"go.uber.org/zap"
 )
 
 type PenumbraAppNode struct {
+	log *zap.Logger
+
 	Index     int
 	Home      string
 	Chain     ibc.Chain
@@ -73,13 +74,14 @@ func (p *PenumbraAppNode) NodeHome() string {
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "wallet", "generate"}
-	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
+	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
-	if err != nil && !strings.Contains(stderr, "already exists, refusing to overwrite it") {
-		return dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
+		return err
 	}
 	cmd = []string{"pcli", "-w", p.WalletPathContainer(), "addr", "new", keyName}
-	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+	_, _, err = p.Exec(ctx, cmd, nil)
+	return err
 }
 
 // initializes validator definition template file
@@ -91,7 +93,8 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 		"validator", "template-definition",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
-	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+	_, _, err := p.Exec(ctx, cmd, nil)
+	return err
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
@@ -138,7 +141,8 @@ func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+	_, _, err := p.Exec(ctx, cmd, nil)
+	return err
 }
 
 func (p *PenumbraAppNode) GenerateGenesisFile(
@@ -169,16 +173,17 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
 		"--output-dir", p.NodeHome(),
 	}
-	return dockerutil.HandleNodeJobError(p.NodeJob(ctx, cmd))
+	_, _, err = p.Exec(ctx, cmd, nil)
+	return err
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
-	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
+	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
-		return []byte{}, dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return nil, err
 	}
-	addresses := strings.Split(stdout, "\n")
+	addresses := strings.Split(string(stdout), "\n")
 	for _, address := range addresses {
 		fields := strings.Fields(address)
 		if len(fields) < 3 {
@@ -194,11 +199,11 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
 	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
-	exitCode, stdout, stderr, err := p.NodeJob(ctx, cmd)
+	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
-		return "", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err)
+		return "", err
 	}
-	addresses := strings.Split(stdout, "\n")
+	addresses := strings.Split(string(stdout), "\n")
 	for _, address := range addresses {
 		fields := strings.Fields(address)
 		if len(fields) < 3 {
@@ -272,51 +277,12 @@ func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// NodeJob run a container for a specific job and block until the container exits
-// NOTE: on job containers generate random name
-func (p *PenumbraAppNode) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
-	counter, _, _, _ := runtime.Caller(1)
-	caller := runtime.FuncForPC(counter).Name()
-	funcName := strings.Split(caller, ".")
-	container := fmt.Sprintf("%s-%s-%s", p.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
-	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: container,
-		Config: &docker.Config{
-			User: dockerutil.GetRootUserString(),
-			// random hostname is okay here
-			Hostname:     dockerutil.CondenseHostName(container),
-			ExposedPorts: exposedPorts,
-			DNS:          []string{},
-			// Env:          []string{"RUST_BACKTRACE=full"},
-			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
-			Cmd:    cmd,
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:           p.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				p.NetworkID: {},
-			},
-		},
-		Context: ctx,
-	})
-	if err != nil {
-		return 1, "", "", err
+// Exec run a container for a specific job and block until the container exits
+func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
+	job := dockerutil.NewJobContainer(p.log, p.Pool, p.NetworkID, p.Image.Repository, p.Image.Version)
+	opts := dockerutil.JobOptions{
+		Env:   env,
+		Binds: p.Bind(),
 	}
-	if err := p.Pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
-		return 1, "", "", err
-	}
-
-	exitCode, err := p.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	_ = p.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-	_ = p.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID})
-	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
-	return exitCode, stdout.String(), stderr.String(), err
+	return job.Run(ctx, p.Name(), cmd, opts)
 }
