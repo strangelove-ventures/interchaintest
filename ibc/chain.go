@@ -16,6 +16,10 @@ type Chain interface {
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
 
+	// Exec runs an arbitrary command using Chain's docker environment.
+	// "env" are environment variables in the format "MY_ENV_VAR=value"
+	Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error)
+
 	// export state at specific height
 	ExportState(ctx context.Context, height int64) (string, error)
 
