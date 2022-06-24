@@ -16,9 +16,6 @@ type Chain interface {
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
 
-	// start a chain with a provided genesis file. Will override validators for first 2/3 of voting power
-	StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error
-
 	// export state at specific height
 	ExportState(ctx context.Context, height int64) (string, error)
 

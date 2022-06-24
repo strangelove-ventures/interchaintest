@@ -247,13 +247,6 @@ type ValidatorWithIntPower struct {
 	PubKeyBase64 string
 }
 
-// Bootstraps the chain and starts it from genesis
-func (c *PenumbraChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
-	// TODO overwrite consensus keys on 2/3 voting power of validators
-
-	return c.start(testName, ctx, genesisFilePath)
-}
-
 func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	validators := c.PenumbraNodes[:c.numValidators]
 	fullnodes := c.PenumbraNodes[c.numValidators:]
