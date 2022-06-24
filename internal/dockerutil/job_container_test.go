@@ -117,8 +117,8 @@ echo -n hi from stderr >> /dev/stderr
 	})
 
 	t.Run("missing required args", func(t *testing.T) {
-		require.PanicsWithError(t, testName, func() {
-			_, _, _ = job.Run(ctx, "errors", nil, JobOptions{})
+		require.PanicsWithError(t, "cmd cannot be empty", func() {
+			_, _, _ = job.Run(ctx, testName, nil, JobOptions{})
 		})
 	})
 }
