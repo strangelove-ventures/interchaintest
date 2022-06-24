@@ -18,7 +18,7 @@ type Container struct {
 	resource *dockertest.Resource
 }
 
-type RunOptions struct {
+type StartOptions struct {
 	Repository    string   // required
 	Tag           string   // if not present, defaults to "latest"
 	Cmd           []string // required
@@ -37,30 +37,35 @@ func StartContainer(
 	log *zap.Logger,
 	pool *dockertest.Pool,
 	networkID string,
-	opts RunOptions,
+	opts StartOptions,
 ) (*Container, error) {
-	logger := log.With(
-		zap.String("container", opts.ContainerName),
-		zap.String("host", opts.HostName),
-		zap.String("image", strings.Join([]string{opts.Repository, opts.Tag}, ":")),
+	var (
+		hostName      = CondenseHostName(opts.HostName)
+		containerName = SanitizeContainerName(opts.ContainerName)
+		logger        = log.With(
+			zap.String("container", hostName),
+			zap.String("host", containerName),
+			zap.String("image", strings.Join([]string{opts.Repository, opts.Tag}, ":")),
+		)
+		runOpts = dockertest.RunOptions{
+			Hostname:     hostName,
+			Name:         containerName,
+			Repository:   opts.Repository,
+			Tag:          opts.Tag,
+			Env:          opts.Env,
+			Cmd:          opts.Cmd,
+			ExposedPorts: nil, // TODO: is this necessary if we publish all ports anyway?
+			NetworkID:    networkID,
+			Auth:         docker.AuthConfiguration{}, // Only pull public images for now.
+			Privileged:   false,
+			User:         GetDockerUserString(),
+		}
+		hostConfig = func(cfg *docker.HostConfig) {
+			cfg.PublishAllPorts = true
+			cfg.Binds = opts.Binds
+		}
 	)
-	runOpts := dockertest.RunOptions{
-		Hostname:     opts.HostName,
-		Name:         opts.ContainerName,
-		Repository:   opts.Repository,
-		Tag:          opts.Tag,
-		Env:          opts.Env,
-		Cmd:          opts.Cmd,
-		ExposedPorts: nil, // TODO: is this necessary if we publish all ports anyway?
-		NetworkID:    networkID,
-		Auth:         docker.AuthConfiguration{}, // Only pull public images for now.
-		Privileged:   false,
-		User:         GetDockerUserString(),
-	}
-	hostConfig := func(cfg *docker.HostConfig) {
-		cfg.PublishAllPorts = true
-		cfg.Binds = opts.Binds
-	}
+
 	logger.Info("Starting container", zap.String("command", strings.Join(opts.Cmd, " ")))
 	res, err := pool.RunWithOptions(&runOpts, hostConfig)
 	if err != nil {
@@ -96,19 +101,21 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string) (ExecR
 	var (
 		stdout = new(bytes.Buffer)
 		stderr = new(bytes.Buffer)
+		empty  ExecResult
 	)
 	opts := dockertest.ExecOptions{
 		Env:    env,
 		StdOut: stdout,
 		StdErr: stderr,
 	}
+	c.log.Info("Container exec", zap.String("command", strings.Join(cmd, " ")))
 	code, err := c.resource.Exec(cmd, opts)
 	if err != nil {
-		return ExecResult{}, err
+		return empty, err
 	}
 	if code != 0 {
 		out := strings.Join([]string{stdout.String(), stderr.String()}, " ")
-		return ExecResult{}, fmt.Errorf("exit code %d: %s", code, out)
+		return empty, fmt.Errorf("exit code %d: %s", code, out)
 	}
 	return ExecResult{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, nil
 }

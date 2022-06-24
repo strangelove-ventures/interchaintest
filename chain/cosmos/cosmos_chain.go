@@ -17,7 +17,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -104,13 +103,13 @@ func (c *CosmosChain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostRPCAddress() string {
-	return "http://" + dockerutil.GetHostPort(c.getFullNode().Container, rpcPort)
+	return "http://" + c.getFullNode().Container.HostPort(rpcPort)
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostGRPCAddress() string {
-	return dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
+	return c.getFullNode().Container.HostPort(grpcPort)
 }
 
 // Implements Chain interface
@@ -211,7 +210,7 @@ func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAd
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
+	grpcAddress := c.getFullNode().Container.HostPort(grpcPort)
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err
@@ -379,17 +378,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	if err := c.ChainNodes.LogGenesisHashes(); err != nil {
-		return err
-	}
-
-	eg, egCtx := errgroup.WithContext(ctx)
-	for _, n := range c.ChainNodes {
-		n := n
-		eg.Go(func() error {
-			return n.CreateNodeContainer(egCtx)
-		})
-	}
-	if err := eg.Wait(); err != nil {
 		return err
 	}
 

@@ -43,7 +43,7 @@ type ChainNode struct {
 	NetworkID    string
 	Pool         *dockertest.Pool
 	Client       rpcclient.Client
-	Container    *docker.Container
+	Container    *dockerutil.Container
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -115,11 +115,13 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
+	// TODO: expose method on dockerutil.Container? Remove sanitization?
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
+	// TODO: expose method on dockerutil.Container
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
@@ -639,64 +641,30 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 	return tn.NodeJobThenWaitForBlocksLocked(ctx, command)
 }
 
-func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
+func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
 	if chainCfg.NoHostMount {
 		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.NodeHome(), tn.NodeHome(), chainCfg.Bin, tn.NodeHome())}
 	}
-	tn.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", tn.Name()),
-		)
 
-	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: tn.Name(),
-		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
-			Cmd:          cmd,
-			Hostname:     tn.HostName(),
-			ExposedPorts: sentryPorts,
-			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Labels:       map[string]string{dockerutil.ContainerLabel: tn.TestName},
-			Entrypoint:   []string{},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				tn.NetworkID: {},
-			},
-		},
-		Context: ctx,
-	})
+	opts := dockerutil.StartOptions{
+		Repository:    tn.Image.Repository,
+		Tag:           tn.Image.Version,
+		Cmd:           cmd,
+		ContainerName: tn.Name(),
+		HostName:      tn.HostName(),
+		Binds:         tn.Bind(),
+	}
+
+	container, err := dockerutil.StartContainer(ctx, tn.logger(), tn.Pool, tn.NetworkID, opts)
 	if err != nil {
 		return err
 	}
-	tn.Container = cont
-	return nil
-}
 
-func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := tn.Pool.Client.StartContainerWithContext(tn.Container.ID, nil, ctx); err != nil {
-		return err
-	}
+	tn.Container = container
 
-	c, err := tn.Pool.Client.InspectContainerWithContext(tn.Container.ID, ctx)
-	if err != nil {
-		return err
-	}
-	tn.Container = c
-
-	port := dockerutil.GetHostPort(c, rpcPort)
-	tn.logger().Info("Rpc", zap.String("container", tn.Name()), zap.String("port", port))
-
-	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
+	err = tn.NewClient(fmt.Sprintf("tcp://%s", tn.Container.HostPort(rpcPort)))
 	if err != nil {
 		return err
 	}
