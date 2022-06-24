@@ -12,8 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// JobContainer loosely mimics os/exec package for running one-off docker containers.
-// Job containers are expected to invoke commands and exit. Therefore, they are not suitable for servers or daemons.
+// JobContainer runs docker containers to invoke commands and exit.
+// Therefore, they are not suitable for servers or daemons.
 type JobContainer struct {
 	log             *zap.Logger
 	pool            *dockertest.Pool
@@ -79,7 +79,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		zap.String("container", fullName),
 	)
 
-	logger.Info("Running command")
+	logger.Info("Running job container")
 
 	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
 	// allow for one-off job containers in this manner. You can use a *dockertest.Resource to exec into a running
@@ -106,7 +106,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 			},
 		},
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, docker.ErrContainerAlreadyExists) {
 		return nil, nil, fmt.Errorf("create container %s for image %s:%s: %w", fullName, job.repository, job.tag, err)
 	}
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
