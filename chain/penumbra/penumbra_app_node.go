@@ -281,8 +281,9 @@ func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewJobContainer(p.log, p.Pool, p.NetworkID, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.JobOptions{
-		Env:   env,
 		Binds: p.Bind(),
+		Env:   env,
+		User:  dockerutil.GetRootUserString(),
 	}
 	return job.Run(ctx, p.TestName, cmd, opts)
 }

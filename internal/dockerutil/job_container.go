@@ -56,6 +56,9 @@ type JobOptions struct {
 
 	// Environment variables
 	Env []string
+
+	// If blank, defaults to a non-root user.
+	User string
 }
 
 // Pull the image. Public images only.
@@ -84,6 +87,11 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 
 	logger.Info("Running job container")
 
+	user := GetDockerUserString()
+	if opts.User != "" {
+		user = opts.User
+	}
+
 	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
 	// allow for one-off job containers in this manner. You can use a *dockertest.Resource to exec into a running
 	// container. However, this requires the container is running a long-lived process like a daemon. While it's
@@ -92,7 +100,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		Context: ctx,
 		Name:    fullName,
 		Config: &docker.Config{
-			User:     GetDockerUserString(),
+			User:     user,
 			Hostname: CondenseHostName(fullName),
 			Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
 			Cmd:      cmd,
