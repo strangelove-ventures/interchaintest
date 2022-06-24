@@ -224,7 +224,7 @@ func (c *PenumbraChain) initializeChainNodes(testName, home string,
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &tendermint.TendermintNode{Home: home, Index: i, Chain: c,
+		tn := &tendermint.TendermintNode{Log: c.log, Home: home, Index: i, Chain: c,
 			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
 		pn := &PenumbraAppNode{log: c.log, Home: home, Index: i, Chain: c,
