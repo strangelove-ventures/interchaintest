@@ -9,7 +9,7 @@ import (
 
 func TestChannelOptsConfigured(t *testing.T) {
 	// Test the default channel opts
-	opts := defaultChannelOpts()
+	opts := DefaultChannelOpts()
 	require.NoError(t, opts.Validate())
 
 	// Test empty struct channel opts

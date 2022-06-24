@@ -91,8 +91,8 @@ type CreateChannelOptions struct {
 	Version string
 }
 
-// defaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
-func defaultChannelOpts() CreateChannelOptions {
+// DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
+func DefaultChannelOpts() CreateChannelOptions {
 	return CreateChannelOptions{
 		SourcePortName: "transfer",
 		DestPortName:   "transfer",

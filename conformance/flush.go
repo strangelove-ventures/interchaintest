@@ -53,10 +53,11 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	eRep := rep.RelayerExecReporter(t)
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		HomeDir:   home,
-		Pool:      pool,
-		NetworkID: network,
+		TestName:          t.Name(),
+		HomeDir:           home,
+		Pool:              pool,
+		NetworkID:         network,
+		CreateChannelOpts: ibc.DefaultChannelOpts(),
 	}))
 	defer ic.Close()
 
