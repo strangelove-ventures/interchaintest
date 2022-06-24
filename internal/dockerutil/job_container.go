@@ -71,7 +71,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	fullName := fmt.Sprintf("%s-%s", jobName, RandLowerCaseLetterString(6))
+	fullName := fmt.Sprintf("job-%s-%s", jobName, RandLowerCaseLetterString(6))
 	fullName = SanitizeContainerName(fullName)
 
 	logger := job.log.With(
