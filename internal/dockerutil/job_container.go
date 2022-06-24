@@ -92,10 +92,9 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		user = opts.User
 	}
 
-	// dockertest offers a higher level api via the direct "dockertest" package. However, the package does not
-	// allow for one-off job containers in this manner. You can use a *dockertest.Resource to exec into a running
-	// container. However, this requires the container is running a long-lived process like a daemon. While it's
-	// reasonable to assume a program like "sleep" is present in the container, it is not guaranteed.
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%% CONTAINER BY NAME &&&&&&&&&&&&&&&&&&&&&&&&&&&&&", fullName)
+	fmt.Println(job.pool.ContainerByName(fullName))
+
 	cont, err := job.pool.Client.CreateContainer(docker.CreateContainerOptions{
 		Context: ctx,
 		Name:    fullName,
@@ -119,7 +118,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("create container: %w", err)
+		return nil, nil, fmt.Errorf("create container %s: %w", fullName, err)
 	}
 
 	err = job.pool.Client.StartContainerWithContext(cont.ID, nil, ctx)
