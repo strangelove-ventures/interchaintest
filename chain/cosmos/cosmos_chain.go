@@ -92,6 +92,11 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 	return c.ChainNodes[0]
 }
 
+// Exec implements ibc.Chain.
+func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
+	return c.getFullNode().Exec(ctx, cmd, env)
+}
+
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
@@ -366,7 +371,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{types.Coin{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
 			return err
 		}
 	}

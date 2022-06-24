@@ -304,7 +304,7 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 		"--chain-id", tn.Chain.Config().ChainID,
 		"--home", tn.NodeHome(),
 	}
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -317,7 +317,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -341,7 +341,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -354,7 +354,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -365,7 +365,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -395,7 +395,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	stdout, _, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -418,13 +418,13 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return tn.NodeJobThenWaitForBlocksLocked(ctx, command)
+	return tn.ExecThenWaitForBlocks(ctx, command)
 }
 
-func (tn *ChainNode) NodeJobThenWaitForBlocksLocked(ctx context.Context, command []string) error {
+func (tn *ChainNode) ExecThenWaitForBlocks(ctx context.Context, command []string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return err
 	}
@@ -479,7 +479,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -497,7 +497,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	stdout, _, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -527,7 +527,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		command = append(command, "--no-admin")
 	}
 
-	_, _, err = tn.NodeJob(ctx, command)
+	_, _, err = tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -545,7 +545,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
-	stdout, _, err = tn.NodeJob(ctx, command)
+	stdout, _, err = tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -572,7 +572,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return tn.NodeJobThenWaitForBlocksLocked(ctx, command)
+	return tn.ExecThenWaitForBlocks(ctx, command)
 }
 
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
@@ -584,7 +584,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	stdout, _, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -602,12 +602,12 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		"--height", fmt.Sprint(height),
 		"--home", tn.NodeHome(),
 	}
-	_, stderr, err := tn.NodeJob(ctx, command)
+	_, stderr, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
 	// output comes to stderr for some reason
-	return stderr, nil
+	return string(stderr), nil
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
@@ -616,7 +616,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 		"--home", tn.NodeHome(),
 	}
 
-	_, _, err := tn.NodeJob(ctx, command)
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
@@ -636,7 +636,7 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 		"--home", tn.NodeHome(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
-	return tn.NodeJobThenWaitForBlocksLocked(ctx, command)
+	return tn.ExecThenWaitForBlocks(ctx, command)
 }
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
@@ -805,15 +805,13 @@ func (nodes ChainNodes) logger() *zap.Logger {
 	return nodes[0].logger()
 }
 
-// NodeJob run a container for a specific job and block until the container exits
-// NOTE: on job containers generate random name
-func (tn *ChainNode) NodeJob(ctx context.Context, cmd []string) (string, string, error) {
+func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewJobContainer(tn.logger(), tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
 	opts := dockerutil.JobOptions{
+		Env:   env,
 		Binds: tn.Bind(),
 	}
-	stdout, stderr, err := job.Run(ctx, tn.Name(), cmd, opts)
-	return string(stdout), string(stderr), err
+	return job.Run(ctx, tn.Name(), cmd, opts)
 }
 
 func (tn *ChainNode) logger() *zap.Logger {
@@ -835,7 +833,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 		"-y",
 	}
 
-	stdout, _, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -854,7 +852,7 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 		"--home", tn.NodeHome(),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name())}
 
-	stdout, _, err := tn.NodeJob(ctx, command)
+	stdout, _, err := tn.Exec(ctx, command, nil)
 	if err != nil {
 		return "", err
 	}
@@ -862,7 +860,7 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	// at this point stdout should look like this:
 	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
-	parts := strings.SplitN(stdout, ":", 2)
+	parts := strings.SplitN(string(stdout), ":", 2)
 	return strings.TrimSpace(parts[1]), nil
 }
 
@@ -894,6 +892,6 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"-y",
 	}
 
-	_, _, err = tn.NodeJob(ctx, command)
+	_, _, err = tn.Exec(ctx, command, nil)
 	return err
 }
