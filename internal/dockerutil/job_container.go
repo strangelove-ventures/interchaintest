@@ -92,31 +92,36 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		user = opts.User
 	}
 
-	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%% CONTAINER BY NAME &&&&&&&&&&&&&&&&&&&&&&&&&&&&&", fullName)
-	fmt.Println(job.pool.ContainerByName(fullName))
+	var cont *docker.Container
 
-	cont, err := job.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Context: ctx,
-		Name:    fullName,
-		Config: &docker.Config{
-			User:     user,
-			Hostname: CondenseHostName(fullName),
-			Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
-			Cmd:      cmd,
-			Env:      opts.Env,
-			Labels:   map[string]string{CleanupLabel: jobName},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:           opts.Binds,
-			PublishAllPorts: true,
-			AutoRemove:      false,
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				job.networkID: {},
+	// Although this shouldn't happen because fullName has randomness, in the test suite there seems to intermittent
+	// chances of collisions.
+	if resource, ok := job.pool.ContainerByName(fullName); ok {
+		cont = resource.Container
+	} else {
+		cont, err = job.pool.Client.CreateContainer(docker.CreateContainerOptions{
+			Context: ctx,
+			Name:    fullName,
+			Config: &docker.Config{
+				User:     user,
+				Hostname: CondenseHostName(fullName),
+				Image:    fmt.Sprintf("%s:%s", job.repository, job.tag),
+				Cmd:      cmd,
+				Env:      opts.Env,
+				Labels:   map[string]string{CleanupLabel: jobName},
 			},
-		},
-	})
+			HostConfig: &docker.HostConfig{
+				Binds:           opts.Binds,
+				PublishAllPorts: true,
+				AutoRemove:      false,
+			},
+			NetworkingConfig: &docker.NetworkingConfig{
+				EndpointsConfig: map[string]*docker.EndpointConfig{
+					job.networkID: {},
+				},
+			},
+		})
+	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("create container %s: %w", fullName, err)
 	}
