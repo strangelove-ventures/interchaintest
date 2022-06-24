@@ -198,7 +198,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Labels:       map[string]string{dockerutil.ContainerLabel: tn.TestName},
+			Labels:       map[string]string{dockerutil.CleanupLabel: tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -329,7 +329,7 @@ func (tn *TendermintNode) NodeJob(ctx context.Context, cmd []string) (int, strin
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
 			Cmd:          cmd,
-			Labels:       map[string]string{dockerutil.ContainerLabel: tn.TestName},
+			Labels:       map[string]string{dockerutil.CleanupLabel: tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
