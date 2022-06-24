@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 
 	"github.com/ory/dockertest/v3"
@@ -72,10 +71,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	counter, _, _, _ := runtime.Caller(1)
-	caller := runtime.FuncForPC(counter).Name()
-	funcName := strings.Split(caller, ".")
-	fullName := fmt.Sprintf("%s-%s-%s", jobName, funcName[len(funcName)-1], RandLowerCaseLetterString(3))
+	fullName := fmt.Sprintf("%s-%s", jobName, RandLowerCaseLetterString(6))
 	fullName = SanitizeContainerName(fullName)
 
 	logger := job.log.With(
@@ -127,7 +123,7 @@ func (job *JobContainer) Run(ctx context.Context, jobName string, cmd []string, 
 		stderrBuf = new(bytes.Buffer)
 	)
 	_ = job.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdoutBuf, ErrorStream: stderrBuf, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-	_ = job.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
+	_ = job.pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx, Force: true})
 
 	if exitCode != 0 {
 		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
