@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -229,7 +230,14 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 }
 
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
-	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
+	// Retry because sometimes the tx is not committed to state yet.
+	var txResp *types.TxResponse
+	err := retry.Do(func() error {
+		var err error
+		txResp, err = authTx.QueryTx(c.getFullNode().CliContext(), txHash)
+		return err
+	})
+	return txResp, err
 }
 
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
