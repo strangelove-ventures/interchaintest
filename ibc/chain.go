@@ -17,6 +17,9 @@ type Chain interface {
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
 
 	// Exec runs an arbitrary command using Chain's docker environment.
+	// Whether the invoked command is run in a one-off container or execing into an already running container
+	// is up to the chain implementation.
+	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
 	Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error)
 
