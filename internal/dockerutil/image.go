@@ -23,10 +23,13 @@ type Image struct {
 }
 
 // NewImage returns a valid Image.
+//
 // "pool" and "networkID" are likely from DockerSetup.
 // "testName" is from a (*testing.T).Name() and should match the t.Name() from DockerSetup to ensure proper cleanup.
+//
 // Most arguments (except tag) must be non-zero values or this function panics.
 // If tag is absent, defaults to "latest".
+// Currently, only public docker images are supported.
 func NewImage(logger *zap.Logger, pool *dockertest.Pool, networkID string, testName string, repository, tag string) *Image {
 	if logger == nil {
 		panic(errors.New("nil logger"))
@@ -244,14 +247,14 @@ func (c *Container) Stop(timeout time.Duration) error {
 	defer cancel()
 
 	var (
-		client   = c.image.pool.Client
-		notFound *docker.NoSuchContainer
-		stopErr  *docker.ContainerNotRunning
+		client     = c.image.pool.Client
+		notFound   *docker.NoSuchContainer
+		notRunning *docker.ContainerNotRunning
 	)
 
 	err := client.StopContainerWithContext(c.container.ID, 0, ctx)
 	switch {
-	case errors.As(err, &notFound) || errors.As(err, &stopErr):
+	case errors.As(err, &notFound) || errors.As(err, &notRunning):
 	// ignore
 	case err != nil:
 		return c.image.wrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
