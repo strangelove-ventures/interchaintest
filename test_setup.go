@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/ory/dockertest/v3"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
@@ -24,7 +25,7 @@ const (
 // to a Docker engine) and configures a network associated with t.
 //
 // If any part of the setup fails, t.Fatal is called.
-func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
+func DockerSetup(t *testing.T) (*client.Client, *dockertest.Pool, string) {
 	t.Helper()
 	return dockerutil.DockerSetup(t)
 }

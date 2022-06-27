@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 )
@@ -23,8 +24,13 @@ const CleanupLabel = "ibc-test"
 // Returns a pool and the network id.
 //
 // If any part of the setup fails, t.Fatal is called.
-func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
+func DockerSetup(t *testing.T) (*client.Client, *dockertest.Pool, string) {
 	t.Helper()
+
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		t.Fatalf("failed to create docker client: %v", err)
+	}
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -48,7 +54,7 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 		t.Fatalf("failed to create docker network: %v", err)
 	}
 
-	return pool, network.Network.ID
+	return cli, pool, network.Network.ID
 }
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing

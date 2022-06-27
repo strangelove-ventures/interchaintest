@@ -27,7 +27,7 @@ func TestMessagesView(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	_, pool, network := ibctest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
 	const gaia1ChainID = "g1"

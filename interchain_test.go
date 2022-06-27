@@ -25,7 +25,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	_, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -75,7 +75,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	_, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -230,7 +230,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	_, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{Name: "gaia", Version: "v7.0.1"},
