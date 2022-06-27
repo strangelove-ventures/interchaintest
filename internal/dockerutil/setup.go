@@ -2,6 +2,7 @@ package dockerutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -31,11 +32,11 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 	}
 
 	// Clean up docker resources at end of test.
-	t.Cleanup(dockerCleanup(t.Name(), pool))
+	t.Cleanup(dockerCleanup(t, pool))
 
 	// Also eagerly clean up any leftover resources from a previous test run,
 	// e.g. if the test was interrupted.
-	dockerCleanup(t.Name(), pool)()
+	dockerCleanup(t, pool)()
 
 	name := fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8))
 	network, err := pool.CreateNetwork(name, func(cfg *docker.CreateNetworkOptions) {
@@ -51,29 +52,55 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 }
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
-func dockerCleanup(testName string, pool *dockertest.Pool) func() {
+func dockerCleanup(t *testing.T, pool *dockertest.Pool) func() {
 	return func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
-			for k, v := range c.Labels {
-				if k == CleanupLabel && v == testName {
-					_ = pool.Client.StopContainer(c.ID, 10)
-					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
-					_, _ = pool.Client.WaitContainerWithContext(c.ID, ctxWait)
-					_ = pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: c.ID, Force: true})
-					cancelWait() // prevent deferring in a loop
-					break
-				}
+			if c.Labels[CleanupLabel] != t.Name() {
+				continue
 			}
+			if err := pool.Client.StopContainer(c.ID, 10); isLoggableStopError(err) {
+				t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
+			}
+			ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
+			if _, err := pool.Client.WaitContainerWithContext(c.ID, ctxWait); err != nil {
+				t.Logf("Failed to wait for container %s during docker cleanup: %v", c.ID, err)
+			}
+			if err := pool.Client.RemoveContainer(docker.RemoveContainerOptions{
+				ID:            c.ID,
+				Force:         true,
+				RemoveVolumes: true}); err != nil {
+				t.Logf("Failed to remove container %s during docker cleanup: %v", c.ID, err)
+			}
+			cancelWait() // prevent deferring in a loop
 		}
-		nets, _ := pool.Client.ListNetworks()
-		for _, n := range nets {
-			for k, v := range n.Labels {
-				if k == CleanupLabel && v == testName {
-					_ = pool.Client.RemoveNetwork(n.ID)
-					break
-				}
+
+		res, err := pool.Client.PruneNetworks(docker.PruneNetworksOptions{
+			Filters: map[string][]string{"label": {fmt.Sprintf("%s=%s", CleanupLabel, t.Name())}},
+			Context: context.Background(),
+		})
+		var dockerErr *docker.Error
+		switch {
+		case errors.As(err, &dockerErr) && dockerErr.Status == 409:
+		// Ignore prune operation already running error.
+		case err != nil:
+			t.Logf("Failed to prune networks during docker cleanup: %v", err)
+			return
+		default:
+			if len(res.NetworksDeleted) > 0 {
+				t.Logf("Pruned unused networks: %v", res.NetworksDeleted)
 			}
 		}
 	}
+}
+
+func isLoggableStopError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var (
+		notRunning *docker.ContainerNotRunning
+		notFound   *docker.NoSuchContainer
+	)
+	return !(errors.As(err, &notRunning) || errors.As(err, &notFound))
 }
