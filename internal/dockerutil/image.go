@@ -243,7 +243,8 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 
 // Stop gives the container up to timeout to stop and remove itself from the network.
 func (c *Container) Stop(timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// Use timeout*2 to give both stop and remove container operations a chance to complete.
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*2)
 	defer cancel()
 
 	var (
@@ -252,7 +253,7 @@ func (c *Container) Stop(timeout time.Duration) error {
 		notRunning *docker.ContainerNotRunning
 	)
 
-	err := client.StopContainerWithContext(c.container.ID, 0, ctx)
+	err := client.StopContainerWithContext(c.container.ID, uint(timeout.Seconds()), ctx)
 	switch {
 	case errors.As(err, &notFound) || errors.As(err, &notRunning):
 	// ignore
