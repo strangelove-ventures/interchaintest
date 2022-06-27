@@ -62,7 +62,7 @@ func NewImage(logger *zap.Logger, pool *dockertest.Pool, networkID string, testN
 	}
 }
 
-// ContainerOptions optionally configures staring a Container.
+// ContainerOptions optionally configures starting a Container.
 type ContainerOptions struct {
 	// bind mounts: https://docs.docker.com/storage/bind-mounts/
 	Binds []string

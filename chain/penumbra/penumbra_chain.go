@@ -389,7 +389,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
-		c.log.Info("Staring tendermint container", zap.String("container", n.TendermintNode.Name()))
+		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(n.TendermintNode)
 			if err := n.TendermintNode.SetConfigAndPeers(egCtx, peers); err != nil {
@@ -397,7 +397,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 			}
 			return n.TendermintNode.StartContainer(egCtx)
 		})
-		c.log.Info("Staring penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
+		c.log.Info("Starting penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
 		eg.Go(func() error {
 			return n.PenumbraAppNode.StartContainer(egCtx)
 		})
