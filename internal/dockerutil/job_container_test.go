@@ -12,7 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestNewJobContainer(t *testing.T) {
+const (
+	testDockerImage = "busybox"
+	testDockerTag   = "latest"
+)
+
+func TestNewImage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -24,41 +29,31 @@ func TestNewJobContainer(t *testing.T) {
 		Pool       *dockertest.Pool
 		NetworkID  string
 		Repository string
-		Tag        string
+		TestName   string
 	}{
-		{nil, networkID, "repo", "tag"},
-		{pool, "", "repo", "tag"},
-		{pool, networkID, "", "tag"},
+		{nil, networkID, "repo", t.Name()},
+		{pool, "", "repo", t.Name()},
+		{pool, networkID, "", t.Name()},
 		{pool, networkID, "repo", ""},
 	} {
 		require.Panics(t, func() {
-			NewJobContainer(zap.NewNop(), tt.Pool, tt.NetworkID, tt.Repository, tt.Tag)
-		})
+			NewImage(zap.NewNop(), tt.Pool, tt.NetworkID, tt.TestName, tt.Repository, "")
+		}, tt)
 	}
 }
 
-func TestContainerJob_Run(t *testing.T) {
+func TestImage_Run(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
 	t.Parallel()
 
-	const (
-		testImage = "busybox"
-		testTag   = "latest"
-	)
-
 	ctx := context.Background()
 	pool, networkID := DockerSetup(t)
-	// Capture the parent test name so DockerSetup can cleanup properly.
-	testName := t.Name()
-
-	// Ensure we have busybox.
-	job := NewJobContainer(zap.NewNop(), pool, networkID, testImage, testTag)
-	require.NoError(t, job.Pull(ctx))
+	image := NewImage(zap.NewNop(), pool, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("happy path", func(t *testing.T) {
-		stdout, stderr, err := job.Run(ctx, testName, []string{"echo", "-n", "hello"}, JobOptions{})
+		stdout, stderr, err := image.Run(ctx, []string{"echo", "-n", "hello"}, ContainerOptions{})
 
 		require.NoError(t, err)
 		require.Equal(t, "hello", string(stdout))
@@ -73,19 +68,19 @@ echo -n hi from stderr >> /dev/stderr
 		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0777)
 		require.NoError(t, err)
 
-		opts := JobOptions{
+		opts := ContainerOptions{
 			Binds: []string{tmpDir + ":/test"},
 		}
 
-		stdout, stderr, err := job.Run(ctx, testName, []string{"/test/test.sh"}, opts)
+		stdout, stderr, err := image.Run(ctx, []string{"/test/test.sh"}, opts)
 		require.NoError(t, err)
 		require.Empty(t, string(stdout))
 		require.Equal(t, "hi from stderr", string(stderr))
 	})
 
 	t.Run("env vars", func(t *testing.T) {
-		opts := JobOptions{Env: []string{"MY_ENV_VAR=foo"}}
-		stdout, stderr, err := job.Run(ctx, testName, []string{"printenv", "MY_ENV_VAR"}, opts)
+		opts := ContainerOptions{Env: []string{"MY_ENV_VAR=foo"}}
+		stdout, stderr, err := image.Run(ctx, []string{"printenv", "MY_ENV_VAR"}, opts)
 
 		require.NoError(t, err)
 		require.Equal(t, "foo", strings.TrimSpace(string(stdout)))
@@ -95,7 +90,7 @@ echo -n hi from stderr >> /dev/stderr
 	t.Run("context cancelled", func(t *testing.T) {
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
-		_, _, err := job.Run(cctx, testName, []string{"sleep", "100"}, JobOptions{})
+		_, _, err := image.Run(cctx, []string{"sleep", "100"}, ContainerOptions{})
 
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.Canceled)
@@ -109,7 +104,7 @@ echo -n hi from stderr >> /dev/stderr
 			{[]string{"program-does-not-exist"}, "executable file not found"},
 			{[]string{"sleep", "not-valid-arg"}, "sleep: invalid"},
 		} {
-			_, _, err := job.Run(ctx, testName, tt.Args, JobOptions{})
+			_, _, err := image.Run(ctx, tt.Args, ContainerOptions{})
 
 			require.Error(t, err, tt)
 			require.Contains(t, err.Error(), tt.WantErr, tt)
@@ -118,7 +113,46 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("missing required args", func(t *testing.T) {
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
-			_, _, _ = job.Run(ctx, testName, nil, JobOptions{})
+			_, _, _ = image.Run(ctx, nil, ContainerOptions{})
 		})
+	})
+}
+
+func TestContainer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	t.Parallel()
+
+	ctx := context.Background()
+	pool, networkID := DockerSetup(t)
+	image := NewImage(zap.NewNop(), pool, networkID, t.Name(), testDockerImage, testDockerTag)
+
+	t.Run("wait", func(t *testing.T) {
+		c, err := image.Start(ctx, []string{"echo", "-n", "started"}, ContainerOptions{})
+
+		require.NoError(t, err)
+		require.NotEmpty(t, c.Name)
+		require.NotEmpty(t, c.Hostname)
+
+		stdout, stderr, err := c.Wait(ctx)
+
+		require.NoError(t, err)
+		require.Equal(t, "started", string(stdout))
+		require.Empty(t, stderr)
+
+		_, ok := image.pool.ContainerByName(c.Name)
+		require.False(t, ok, "container should not have been found")
+
+		require.NoError(t, c.Stop())
+	})
+
+	t.Run("stop long running container", func(t *testing.T) {
+		c, err := image.Start(ctx, []string{"sleep", "100"}, ContainerOptions{})
+		require.NoError(t, err)
+		require.NoError(t, c.Stop())
+
+		_, ok := image.pool.ContainerByName(c.Name)
+		require.False(t, ok, "container should not have been found")
 	})
 }

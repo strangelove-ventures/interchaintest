@@ -315,8 +315,8 @@ func (tn TendermintNodes) LogGenesisHashes() error {
 }
 
 func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewJobContainer(tn.Log, tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
-	opts := dockerutil.JobOptions{
+	job := dockerutil.NewImage(tn.Log, tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}

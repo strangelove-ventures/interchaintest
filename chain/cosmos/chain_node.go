@@ -806,8 +806,8 @@ func (nodes ChainNodes) logger() *zap.Logger {
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewJobContainer(tn.logger(), tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
-	opts := dockerutil.JobOptions{
+	job := dockerutil.NewImage(tn.logger(), tn.Pool, tn.NetworkID, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}
