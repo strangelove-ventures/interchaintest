@@ -56,25 +56,23 @@ func dockerCleanup(t *testing.T, pool *dockertest.Pool) func() {
 	return func() {
 		cont, _ := pool.Client.ListContainers(docker.ListContainersOptions{All: true})
 		for _, c := range cont {
-			for k, v := range c.Labels {
-				if k == CleanupLabel && v == t.Name() {
-					if err := pool.Client.StopContainer(c.ID, 10); isLoggableStopError(err) {
-						t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
-					}
-					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
-					if _, err := pool.Client.WaitContainerWithContext(c.ID, ctxWait); err != nil {
-						t.Logf("Failed to wait for container %s during docker cleanup: %v", c.ID, err)
-					}
-					if err := pool.Client.RemoveContainer(docker.RemoveContainerOptions{
-						ID:            c.ID,
-						Force:         true,
-						RemoveVolumes: true}); err != nil {
-						t.Logf("Failed to remove container %s during docker cleanup: %v", c.ID, err)
-					}
-					cancelWait() // prevent deferring in a loop
-					break
-				}
+			if c.Labels[CleanupLabel] != t.Name() {
+				continue
 			}
+			if err := pool.Client.StopContainer(c.ID, 10); isLoggableStopError(err) {
+				t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
+			}
+			ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
+			if _, err := pool.Client.WaitContainerWithContext(c.ID, ctxWait); err != nil {
+				t.Logf("Failed to wait for container %s during docker cleanup: %v", c.ID, err)
+			}
+			if err := pool.Client.RemoveContainer(docker.RemoveContainerOptions{
+				ID:            c.ID,
+				Force:         true,
+				RemoveVolumes: true}); err != nil {
+				t.Logf("Failed to remove container %s during docker cleanup: %v", c.ID, err)
+			}
+			cancelWait() // prevent deferring in a loop
 		}
 
 		res, err := pool.Client.PruneNetworks(docker.PruneNetworksOptions{
