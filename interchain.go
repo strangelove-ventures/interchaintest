@@ -160,8 +160,7 @@ type InterchainBuildOptions struct {
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
 
-	// If set, these options will be used when creating the channel in the path link step.
-	// If not set, the application will default to the options for creating an ics20 fungible token transfer.
+	// These options will be used when creating the channel in the path link step.
 	CreateChannelOpts ibc.CreateChannelOptions
 
 	// Optional. Git sha for test invocation. Once Go 1.18 supported,
