@@ -10,6 +10,7 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -246,6 +247,8 @@ func (c *Container) Stop(timeout time.Duration) error {
 		client     = c.image.pool.Client
 		notFound   *docker.NoSuchContainer
 		notRunning *docker.ContainerNotRunning
+
+		merr error
 	)
 
 	err := client.StopContainerWithContext(c.container.ID, uint(timeout.Seconds()), ctx)
@@ -253,7 +256,8 @@ func (c *Container) Stop(timeout time.Duration) error {
 	case errors.As(err, &notFound) || errors.As(err, &notRunning):
 	// ignore
 	case err != nil:
-		return c.image.wrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
+		multierr.AppendInto(&merr, fmt.Errorf("stop container %s: %w", c.Name, err))
+		// Proceed to remove container.
 	}
 
 	// RemoveContainerOptions duplicates (*dockertest.Resource).Prune.
@@ -264,7 +268,11 @@ func (c *Container) Stop(timeout time.Duration) error {
 		RemoveVolumes: true,
 	})
 	if err != nil && !errors.As(err, &notFound) {
-		return c.image.wrapErr(fmt.Errorf("remove container %s: %w", c.Name, err))
+		multierr.AppendInto(&merr, fmt.Errorf("remove container %s: %w", c.Name, err))
+	}
+
+	if merr != nil {
+		return c.image.wrapErr(merr)
 	}
 
 	return nil
