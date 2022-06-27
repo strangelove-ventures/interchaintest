@@ -160,7 +160,9 @@ type InterchainBuildOptions struct {
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
 
-	// These options will be used when creating the channel in the path link step.
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
 	CreateChannelOpts ibc.CreateChannelOptions
 
 	// Optional. Git sha for test invocation. Once Go 1.18 supported,
@@ -216,6 +218,12 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	// but still have wallets configured.
 	if opts.SkipPathCreation {
 		return nil
+	}
+
+	// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
+	// channel options for an ics20 fungible token transfer channel.
+	if opts.CreateChannelOpts == (ibc.CreateChannelOptions{}) {
+		opts.CreateChannelOpts = ibc.DefaultChannelOpts()
 	}
 
 	// Check that the channel creation options are valid and fully specified.
