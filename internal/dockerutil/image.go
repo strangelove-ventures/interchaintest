@@ -205,6 +205,8 @@ type Container struct {
 
 // Wait blocks until the container exits. Calling wait is not suitable for daemons and servers.
 // A non-zero status code returns an error.
+//
+// Wait implicitly calls Stop.
 func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error) {
 	var (
 		image = c.image

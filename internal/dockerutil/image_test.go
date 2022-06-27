@@ -142,7 +142,7 @@ func TestContainer(t *testing.T) {
 		require.Empty(t, stderr)
 
 		_, ok := image.pool.ContainerByName(c.Name)
-		require.False(t, ok, "container should not have been found")
+		require.False(t, ok, "container was not removed")
 
 		require.NoError(t, c.Stop())
 	})
@@ -151,8 +151,23 @@ func TestContainer(t *testing.T) {
 		c, err := image.Start(ctx, []string{"sleep", "100"}, ContainerOptions{})
 		require.NoError(t, err)
 		require.NoError(t, c.Stop())
+		require.NoError(t, c.Stop()) // assert idempotent
 
 		_, ok := image.pool.ContainerByName(c.Name)
-		require.False(t, ok, "container should not have been found")
+		require.False(t, ok, "container was not removed")
+	})
+
+	t.Run("start error", func(t *testing.T) {
+		c, err := image.Start(ctx, []string{"sleep", "not valid arg"}, ContainerOptions{})
+		require.NoError(t, err)
+
+		_, _, err = c.Wait(ctx)
+		require.Error(t, err)
+	})
+
+	t.Run("missing command", func(t *testing.T) {
+		require.Panics(t, func() {
+			_, _ = image.Start(ctx, nil, ContainerOptions{})
+		})
 	})
 }
