@@ -138,15 +138,15 @@ func (tn *TendermintNode) TMConfigPath() string {
 }
 
 func (tn *TendermintNode) TMConfigPathContainer() string {
-	return filepath.Join(tn.NodeHome(), "config", "config.toml")
+	return filepath.Join(tn.GetHomeDir(), "config", "config.toml")
 }
 
 // Bind returns the home folder bind point for running the node
 func (tn *TendermintNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.GetHomeDir())}
 }
 
-func (tn *TendermintNode) NodeHome() string {
+func (tn *TendermintNode) GetHomeDir() string {
 	return filepath.Join("/tmp", tn.Chain.Config().Name)
 }
 
@@ -180,7 +180,7 @@ func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
 // InitHomeFolder initializes a home folder for the given node
 func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error {
 	command := []string{tn.Chain.Config().Bin, "init", mode,
-		"--home", tn.NodeHome(),
+		"--home", tn.GetHomeDir(),
 	}
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
@@ -188,7 +188,7 @@ func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error
 
 func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFlags ...string) error {
 	chainCfg := tn.Chain.Config()
-	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome()}
+	cmd := []string{chainCfg.Bin, "start", "--home", tn.GetHomeDir()}
 	cmd = append(cmd, additionalFlags...)
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 

@@ -143,6 +143,10 @@ func (c *PenumbraChain) GetHostGRPCAddress() string {
 	return dockerutil.GetHostPort(c.getRelayerNode().TendermintNode.Container, grpcPort)
 }
 
+func (c *PenumbraChain) GetHomeDir() string {
+	panic(errors.New("GetHomeDir not implemented yet"))
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
