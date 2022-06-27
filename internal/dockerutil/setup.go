@@ -2,6 +2,7 @@ package dockerutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -47,8 +48,6 @@ func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
 		t.Fatalf("failed to create docker network: %v", err)
 	}
 
-	t.Logf("Created docker network %s", network.Network.ID)
-
 	return pool, network.Network.ID
 }
 
@@ -59,7 +58,7 @@ func dockerCleanup(t *testing.T, pool *dockertest.Pool) func() {
 		for _, c := range cont {
 			for k, v := range c.Labels {
 				if k == CleanupLabel && v == t.Name() {
-					if err := pool.Client.StopContainer(c.ID, 10); err != nil {
+					if err := pool.Client.StopContainer(c.ID, 10); isLoggableStopError(err) {
 						t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
 					}
 					ctxWait, cancelWait := context.WithTimeout(context.Background(), time.Second*5)
@@ -79,13 +78,31 @@ func dockerCleanup(t *testing.T, pool *dockertest.Pool) func() {
 		}
 
 		res, err := pool.Client.PruneNetworks(docker.PruneNetworksOptions{
-			Filters: map[string][]string{CleanupLabel: {t.Name()}},
+			Filters: map[string][]string{"label": {fmt.Sprintf("%s=%s", CleanupLabel, t.Name())}},
 			Context: context.Background(),
 		})
-		if err != nil {
+		var dockerErr *docker.Error
+		switch {
+		case errors.As(err, &dockerErr) && dockerErr.Status == 409:
+		// Ignore prune operation already running error.
+		case err != nil:
 			t.Logf("Failed to prune networks during docker cleanup: %v", err)
 			return
+		default:
+			if len(res.NetworksDeleted) > 0 {
+				t.Logf("Pruned unused networks: %v", res.NetworksDeleted)
+			}
 		}
-		t.Logf("Pruned unused networks: %v", res.NetworksDeleted)
 	}
+}
+
+func isLoggableStopError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var (
+		notRunning *docker.ContainerNotRunning
+		notFound   *docker.NoSuchContainer
+	)
+	return !(errors.As(err, &notRunning) || errors.As(err, &notFound))
 }
