@@ -861,6 +861,9 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(string(stdout), ":", 2)
+	if len(parts) < 2 {
+		return "", fmt.Errorf("malformed stdout from command: %s", stdout)
+	}
 	return strings.TrimSpace(parts[1]), nil
 }
 

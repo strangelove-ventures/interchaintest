@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -241,7 +242,7 @@ func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
 		var err error
 		txResp, err = authTx.QueryTx(c.getFullNode().CliContext(), txHash)
 		return err
-	})
+	}, retry.Attempts(15), retry.Delay(200*time.Millisecond)) // retry for total of 3 seconds
 	return txResp, err
 }
 
