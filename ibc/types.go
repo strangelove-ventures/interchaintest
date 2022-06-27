@@ -14,6 +14,7 @@ type ChainConfig struct {
 	GasAdjustment  float64
 	TrustingPeriod string
 	NoHostMount    bool
+	Shell          string
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -60,6 +61,14 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 	// Skip NoHostMount so that false can be distinguished.
 
 	return c
+}
+
+// GetShell returns the shell that should be used when executing scripts.
+func (c ChainConfig) GetShell() string {
+	if c.Shell == "" {
+		return "sh"
+	}
+	return c.Shell
 }
 
 // IsFullyConfigured reports whether all required fields have been set on c.

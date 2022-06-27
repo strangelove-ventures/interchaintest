@@ -321,6 +321,18 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
 }
 
+// RecoverKey restores a key from a given mnemonic.
+func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	command := []string{
+		tn.Chain.Config().GetShell(),
+		"-c",
+		fmt.Sprintf(`echo "%s" | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.NodeHome()),
+	}
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+}
+
 // AddGenesisAccount adds a genesis account for each key
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []types.Coin) error {
 	amount := ""

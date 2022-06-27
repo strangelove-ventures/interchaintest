@@ -3,6 +3,9 @@ package ibctest_test
 import (
 	"context"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest"
@@ -140,6 +143,83 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
 		_, ok := r.GetWallet("cosmoshub-does-not-exist")
 		require.False(t, ok)
+	})
+
+	_ = ic.Close()
+}
+
+func TestInterchain_CreateUserWithMnemonic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
+	home := ibctest.TempDir(t)
+	pool, network := ibctest.DockerSetup(t)
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		// Two otherwise identical chains that only differ by ChainID.
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+	})
+
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
+
+	gaia0, gaia1 := chains[0], chains[1]
+
+	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+		t, pool, network, home,
+	)
+
+	ic := ibctest.NewInterchain().
+		AddChain(gaia0).
+		AddChain(gaia1).
+		AddRelayer(r, "r").
+		AddLink(ibctest.InterchainLink{
+			Chain1:  gaia0,
+			Chain2:  gaia1,
+			Relayer: r,
+		})
+
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+
+	ctx := context.Background()
+	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: network,
+	}))
+
+	t.Run("Test User creation with mnemonic", func(t *testing.T) {
+		keyName := "mnemonic-user-name"
+		kr := keyring.NewInMemory()
+		_, mnemonic, err := kr.NewMnemonic(
+			keyName,
+			keyring.English,
+			hd.CreateHDPath(types.CoinType, 0, 0).String(),
+			"", // Empty passphrase.
+			hd.Secp256k1,
+		)
+
+		require.NoError(t, err)
+		require.NotEmpty(t, mnemonic)
+
+		user := ibctest.GetAndFundTestUserWithMnemonic(t, ctx, keyName, mnemonic, 10000, gaia0)
+
+		require.NotEmpty(t, user.Address)
+		require.NotEmpty(t, user.KeyName)
+	})
+
+	t.Run("Test user creation without mnemonic", func(t *testing.T) {
+		keyName := "regular-user-name"
+		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
+		require.Len(t, users, 1)
+		require.NotEmpty(t, users[0].Address)
+		require.NotEmpty(t, users[0].KeyName)
 	})
 
 	_ = ic.Close()
