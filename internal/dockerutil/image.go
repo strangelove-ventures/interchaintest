@@ -13,8 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Image runs docker containers to invoke commands and exit.
-// Therefore, they are not suitable for servers or daemons.
+// Image is a docker image.
 type Image struct {
 	log             *zap.Logger
 	pool            *dockertest.Pool
@@ -60,7 +59,7 @@ func NewImage(logger *zap.Logger, pool *dockertest.Pool, networkID string, testN
 	}
 }
 
-// ContainerOptions optionally configure an Image.
+// ContainerOptions optionally configures staring a Container.
 type ContainerOptions struct {
 	// bind mounts: https://docs.docker.com/storage/bind-mounts/
 	Binds []string
@@ -82,14 +81,14 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 		return nil, nil, err
 	}
 	defer func() {
-		if err := c.Stop(); err != nil {
+		if err := c.Stop(10 * time.Second); err != nil {
 			c.log.Error("Failed to stop container", zap.Error(err))
 		}
 	}()
 	return c.Wait(ctx)
 }
 
-// ensurePulled only pulls public images.
+// ensurePulled can only pull public images.
 func (image *Image) ensurePulled() error {
 	client := image.pool.Client
 	_, err := client.InspectImage(fmt.Sprintf("%s:%s", image.repository, image.tag))
@@ -131,7 +130,7 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           opts.Binds,
-			PublishAllPorts: true,
+			PublishAllPorts: true, // Because we publish all ports, no need to expose specific ports.
 			AutoRemove:      false,
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
@@ -215,7 +214,7 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 
 	exitCode, err := image.pool.Client.WaitContainerWithContext(cont.ID, ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("wait for container: %w", err)
+		return nil, nil, c.image.wrapErr(fmt.Errorf("wait for container %s: %w", c.Name, err))
 	}
 
 	var (
@@ -226,32 +225,22 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 	if err != nil {
 		c.log.Info("Failed to get container logs", zap.Error(err), zap.String("container_id", cont.ID))
 	}
-	err = c.Stop()
+	err = c.Stop(10 * time.Second)
 	if err != nil {
 		c.log.Error("Failed to stop and remove container", zap.Error(err), zap.String("container_id", cont.ID))
 	}
 
 	if exitCode != 0 {
 		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
-		err = fmt.Errorf("exit code %d: %s", exitCode, out)
-		c.log.Error("Container exited with error",
-			zap.Int("exit_code", exitCode),
-			zap.Error(err),
-		)
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("exit code %d: %s", exitCode, out)
 	}
-
-	c.log.Debug("Container finished",
-		zap.String("stdout", stdoutBuf.String()),
-		zap.String("stderr", stderrBuf.String()),
-	)
 
 	return stdoutBuf.Bytes(), stderrBuf.Bytes(), nil
 }
 
-// Stop gives the container 10 seconds to stop and remove itself from the network.
-func (c *Container) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// Stop gives the container up to timeout to stop and remove itself from the network.
+func (c *Container) Stop(timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	var (

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ory/dockertest/v3"
 	"github.com/stretchr/testify/require"
@@ -144,14 +145,14 @@ func TestContainer(t *testing.T) {
 		_, ok := image.pool.ContainerByName(c.Name)
 		require.False(t, ok, "container was not removed")
 
-		require.NoError(t, c.Stop())
+		require.NoError(t, c.Stop(5*time.Second))
 	})
 
 	t.Run("stop long running container", func(t *testing.T) {
 		c, err := image.Start(ctx, []string{"sleep", "100"}, ContainerOptions{})
 		require.NoError(t, err)
-		require.NoError(t, c.Stop())
-		require.NoError(t, c.Stop()) // assert idempotent
+		require.NoError(t, c.Stop(10*time.Second))
+		require.NoError(t, c.Stop(10*time.Second)) // assert idempotent
 
 		_, ok := image.pool.ContainerByName(c.Name)
 		require.False(t, ok, "container was not removed")
