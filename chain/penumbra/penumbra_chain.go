@@ -148,6 +148,10 @@ func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
 }
 
+func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
+	return fmt.Errorf("RecoverKey not implemented for PenumbraChain")
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)

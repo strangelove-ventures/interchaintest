@@ -40,6 +40,9 @@ type Chain interface {
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error
 
+	// RecoverKey recovers an existing user from a given mnemonic.
+	RecoverKey(ctx context.Context, name, mnemonic string) error
+
 	// fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 	GetAddress(ctx context.Context, keyName string) ([]byte, error)
 

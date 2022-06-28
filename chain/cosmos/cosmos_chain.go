@@ -126,6 +126,11 @@ func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 // Implements Chain interface
+func (c *CosmosChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	return c.getFullNode().RecoverKey(ctx, keyName, mnemonic)
+}
+
+// Implements Chain interface
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyInfo, err := c.getFullNode().Keybase().Key(keyName)
 	if err != nil {

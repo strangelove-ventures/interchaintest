@@ -321,6 +321,19 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	return err
 }
 
+// RecoverKey restores a key from a given mnemonic.
+func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	command := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.NodeHome()),
+	}
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+	_, _, err := tn.Exec(ctx, command, nil)
+	return err
+}
+
 // AddGenesisAccount adds a genesis account for each key
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []types.Coin) error {
 	amount := ""
