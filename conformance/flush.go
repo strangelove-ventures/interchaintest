@@ -22,7 +22,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	requireCapabilities(t, rep, rf, relayer.FlushPackets)
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, pool, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -34,7 +34,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 
 	c0, c1 := chains[0], chains[1]
 
-	r := rf.Build(t, pool, network, home)
+	r := rf.Build(t, client, network, home)
 
 	const pathName = "p"
 	ic := ibctest.NewInterchain().

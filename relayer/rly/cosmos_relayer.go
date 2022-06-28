@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"go.uber.org/zap"
@@ -21,10 +21,10 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName, home string, client *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options...),
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, client, networkID, c, options...),
 	}
 
 	if err := os.MkdirAll(r.Dir(), 0755); err != nil {

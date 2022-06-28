@@ -3,11 +3,11 @@ package ibctest_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"testing"
-
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
@@ -25,7 +25,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -39,7 +39,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, pool, network, home,
+		t, client, network, home,
 	)
 
 	ic := ibctest.NewInterchain().
@@ -75,7 +75,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -89,7 +89,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, pool, network, home,
+		t, client, network, home,
 	)
 
 	ic := ibctest.NewInterchain().
@@ -156,7 +156,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	_, pool, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.

@@ -39,6 +39,7 @@ func StartChainPairAndRelayer(
 	t *testing.T,
 	ctx context.Context,
 	rep *testreporter.Reporter,
+	client *client.Client,
 	pool *dockertest.Pool,
 	networkID string,
 	home string,
@@ -46,7 +47,7 @@ func StartChainPairAndRelayer(
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, []ibc.ChannelOutput, error) {
-	relayerImpl := f.Build(t, pool, networkID, home)
+	relayerImpl := f.Build(t, client, networkID, home)
 
 	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
 		return nil, []ibc.ChannelOutput{}, err
@@ -70,7 +71,7 @@ func StartChainPairAndRelayer(
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:          t.Name(),
 		HomeDir:           home,
-		Pool:              pool,
+		Pool:              pool, // TODO: switch to client
 		NetworkID:         networkID,
 		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,

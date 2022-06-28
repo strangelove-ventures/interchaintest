@@ -27,7 +27,7 @@ func TestMessagesView(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, pool, network := ibctest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
 	const gaia1ChainID = "g1"
@@ -42,7 +42,7 @@ func TestMessagesView(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	rf := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
-	r := rf.Build(t, pool, network, home)
+	r := rf.Build(t, client, network, home)
 
 	ic := ibctest.NewInterchain().
 		AddChain(gaia0).
