@@ -320,7 +320,7 @@ func (r *DockerRelayer) createNodeContainer(pathName string) error {
 			Entrypoint: []string{},
 			Hostname:   r.HostName(pathName),
 			Image:      fmt.Sprintf("%s:%s", containerImage.Repository, containerImage.Version),
-			Labels:     map[string]string{"ibc-test": r.testName},
+			Labels:     map[string]string{dockerutil.CleanupLabel: r.testName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{
@@ -378,7 +378,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 			Image:      containerImage.Repository + ":" + containerImage.Version,
 			Cmd:        cmd,
 			Entrypoint: []string{},
-			Labels:     map[string]string{"ibc-test": r.testName},
+			Labels:     map[string]string{dockerutil.CleanupLabel: r.testName},
 		},
 		NetworkingConfig: &docker.NetworkingConfig{
 			EndpointsConfig: map[string]*docker.EndpointConfig{

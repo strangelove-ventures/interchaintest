@@ -1,21 +1,16 @@
 package cosmos
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
@@ -96,6 +91,11 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 	}
 	// use first validator
 	return c.ChainNodes[0]
+}
+
+// Exec implements ibc.Chain.
+func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
+	return c.getFullNode().Exec(ctx, cmd, env)
 }
 
 // Implements Chain interface
@@ -241,7 +241,14 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 }
 
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
-	return authTx.QueryTx(c.getFullNode().CliContext(), txHash)
+	// Retry because sometimes the tx is not committed to state yet.
+	var txResp *types.TxResponse
+	err := retry.Do(func() error {
+		var err error
+		txResp, err = authTx.QueryTx(c.getFullNode().CliContext(), txHash)
+		return err
+	}, retry.Attempts(15), retry.Delay(200*time.Millisecond)) // retry for total of 3 seconds
+	return txResp, err
 }
 
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
@@ -296,153 +303,6 @@ type ValidatorWithIntPower struct {
 	Address      string
 	Power        int64
 	PubKeyBase64 string
-}
-
-// Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, pool *dockertest.Pool, networkID string, genesisFilePath string) error {
-	// copy genesis file to tmp path for modification
-	genesisTmpFilePath := filepath.Join(c.getFullNode().Dir(), "genesis_tmp.json")
-	if _, err := dockerutil.CopyFile(genesisFilePath, genesisTmpFilePath); err != nil {
-		return err
-	}
-
-	chainCfg := c.Config()
-
-	genesisJsonBytes, err := os.ReadFile(genesisTmpFilePath)
-	if err != nil {
-		return err
-	}
-
-	genesisFile := GenesisFile{}
-	if err := json.Unmarshal(genesisJsonBytes, &genesisFile); err != nil {
-		return err
-	}
-
-	genesisValidators := genesisFile.Validators
-	totalPower := int64(0)
-
-	validatorsWithPower := make([]ValidatorWithIntPower, 0)
-
-	for _, genesisValidator := range genesisValidators {
-		power, err := strconv.ParseInt(genesisValidator.Power, 10, 64)
-		if err != nil {
-			return err
-		}
-		totalPower += power
-		validatorsWithPower = append(validatorsWithPower, ValidatorWithIntPower{
-			Address:      genesisValidator.Address,
-			Power:        power,
-			PubKeyBase64: genesisValidator.PubKey.Value,
-		})
-	}
-
-	sort.Slice(validatorsWithPower, func(i, j int) bool {
-		return validatorsWithPower[i].Power > validatorsWithPower[j].Power
-	})
-
-	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
-	totalConsensus := int64(0)
-
-	c.ChainNodes = []*ChainNode{}
-
-	for i, validator := range validatorsWithPower {
-		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName, log: c.log}
-		tn.MkDir()
-		c.ChainNodes = append(c.ChainNodes, tn)
-
-		// just need to get pubkey here
-		// don't care about what goes into this node's genesis file since it will be overwritten with the modified one
-		if err := tn.InitHomeFolder(ctx); err != nil {
-			return err
-		}
-
-		testNodePubKeyJsonBytes, err := os.ReadFile(tn.PrivValKeyFilePath())
-		if err != nil {
-			return err
-		}
-
-		testNodePrivValFile := PrivValidatorKeyFile{}
-		if err := json.Unmarshal(testNodePubKeyJsonBytes, &testNodePrivValFile); err != nil {
-			return err
-		}
-
-		// modify genesis file overwriting validators address with the one generated for this test node
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.Address), []byte(testNodePrivValFile.Address))
-
-		// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value))
-
-		existingValAddressBytes, err := hex.DecodeString(validator.Address)
-		if err != nil {
-			return err
-		}
-
-		testNodeAddressBytes, err := hex.DecodeString(testNodePrivValFile.Address)
-		if err != nil {
-			return err
-		}
-
-		valConsPrefix := fmt.Sprintf("%svalcons", chainCfg.Bech32Prefix)
-
-		existingValBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, existingValAddressBytes)
-		if err != nil {
-			return err
-		}
-
-		testNodeBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, testNodeAddressBytes)
-		if err != nil {
-			return err
-		}
-
-		genesisJsonBytes = bytes.ReplaceAll(genesisJsonBytes, []byte(existingValBech32ValConsAddress), []byte(testNodeBech32ValConsAddress))
-
-		totalConsensus += validator.Power
-
-		if totalConsensus > twoThirdsConsensus {
-			break
-		}
-	}
-
-	for i := 0; i < len(c.ChainNodes); i++ {
-		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genesisJsonBytes, 0644); err != nil { //nolint
-			return err
-		}
-	}
-
-	if err := c.ChainNodes.LogGenesisHashes(); err != nil {
-		return err
-	}
-
-	eg, egCtx := errgroup.WithContext(ctx)
-
-	for _, n := range c.ChainNodes {
-		n := n
-		eg.Go(func() error {
-			return n.CreateNodeContainer(egCtx)
-		})
-	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	peers := c.ChainNodes.PeerString()
-
-	for _, n := range c.ChainNodes {
-		n.SetValidatorConfigAndPeers(peers)
-	}
-
-	for _, n := range c.ChainNodes {
-		n := n
-		c.log.Info("Starting container", zap.String("container", n.Name()))
-		if err := n.StartContainer(ctx); err != nil {
-			return err
-		}
-	}
-
-	time.Sleep(2 * time.Hour) // TODO(nix 05-17-2022) why sleep here for 2 hours?
-
-	return test.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 // Bootstraps the chain and starts it from genesis
@@ -517,7 +377,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{types.Coin{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
 			return err
 		}
 	}

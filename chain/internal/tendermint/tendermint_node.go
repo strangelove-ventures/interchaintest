@@ -3,13 +3,11 @@ package tendermint
 // this package applies to chains that use tendermint >= v0.35.0, likely separate from the abci app
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -22,10 +20,13 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"go.uber.org/zap"
 )
 
 // TendermintNode represents a node in the test network that is being created
 type TendermintNode struct {
+	Log *zap.Logger
+
 	Home      string
 	Index     int
 	Chain     ibc.Chain
@@ -164,7 +165,8 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 		tn.sedCommandForConfigFile("persistent-peers", fmt.Sprintf("\\\"%s\\\"", peers)),
 	}
 	cmd := []string{"sh", "-c", strings.Join(cmds, " && ")}
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, cmd))
+	_, _, err := tn.Exec(ctx, cmd, nil)
+	return err
 }
 
 func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
@@ -180,7 +182,8 @@ func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error
 	command := []string{tn.Chain.Config().Bin, "init", mode,
 		"--home", tn.NodeHome(),
 	}
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.Exec(ctx, command, nil)
+	return err
 }
 
 func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFlags ...string) error {
@@ -198,7 +201,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 			ExposedPorts: sentryPorts,
 			DNS:          []string{},
 			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Labels:       map[string]string{"ibc-test": tn.TestName},
+			Labels:       map[string]string{dockerutil.CleanupLabel: tn.TestName},
 		},
 		HostConfig: &docker.HostConfig{
 			Binds:           tn.Bind(),
@@ -311,50 +314,11 @@ func (tn TendermintNodes) LogGenesisHashes() error {
 	return nil
 }
 
-// NodeJob run a container for a specific job and block until the container exits
-// NOTE: on job containers generate random name
-func (tn *TendermintNode) NodeJob(ctx context.Context, cmd []string) (int, string, string, error) {
-	counter, _, _, _ := runtime.Caller(1)
-	caller := runtime.FuncForPC(counter).Name()
-	funcName := strings.Split(caller, ".")
-	container := fmt.Sprintf("%s-%s-%s", tn.Name(), funcName[len(funcName)-1], dockerutil.RandLowerCaseLetterString(3))
-	fmt.Printf("{%s} -> '%s'\n", container, strings.Join(cmd, " "))
-	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: container,
-		Config: &docker.Config{
-			User: dockerutil.GetDockerUserString(),
-			// random hostname is okay here, just for setup
-			Hostname:     dockerutil.CondenseHostName(container),
-			ExposedPorts: sentryPorts,
-			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Cmd:          cmd,
-			Labels:       map[string]string{"ibc-test": tn.TestName},
-		},
-		HostConfig: &docker.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
-				tn.NetworkID: {},
-			},
-		},
-		Context: ctx,
-	})
-	if err != nil {
-		return 1, "", "", err
+func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
+	job := dockerutil.NewImage(tn.Log, tn.Pool, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil.ContainerOptions{
+		Env:   env,
+		Binds: tn.Bind(),
 	}
-	if err := tn.Pool.Client.StartContainerWithContext(cont.ID, nil, ctx); err != nil {
-		return 1, "", "", err
-	}
-
-	exitCode, err := tn.Pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	_ = tn.Pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdout, ErrorStream: stderr, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
-	_ = tn.Pool.Client.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Context: ctx})
-	fmt.Printf("{%s} - stdout:\n%s\n{%s} - stderr:\n%s\n", container, stdout.String(), container, stderr.String())
-	return exitCode, stdout.String(), stderr.String(), err
+	return job.Run(ctx, cmd, opts)
 }
