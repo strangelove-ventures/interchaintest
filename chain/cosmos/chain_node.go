@@ -330,7 +330,8 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	return dockerutil.HandleNodeJobError(tn.NodeJob(ctx, command))
+	_, _, err := tn.Exec(ctx, command, nil)
+	return err
 }
 
 // AddGenesisAccount adds a genesis account for each key
