@@ -2,7 +2,12 @@ package ibc
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	ptypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.
@@ -34,7 +39,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
 
 	// setup channels, connections, and clients
-	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string) error
+	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
 
 	// update clients, such as after new genesis
 	UpdateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
@@ -84,9 +89,63 @@ type CreateChannelOptions struct {
 	SourcePortName string
 	DestPortName   string
 
-	Order string
+	Order Order
 
 	Version string
+}
+
+// DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
+func DefaultChannelOpts() CreateChannelOptions {
+	return CreateChannelOptions{
+		SourcePortName: "transfer",
+		DestPortName:   "transfer",
+		Order:          Unordered,
+		Version:        "ics20-1",
+	}
+}
+
+// Validate will check that the specified CreateChannelOptions are valid.
+func (opts CreateChannelOptions) Validate() error {
+	switch {
+	case host.PortIdentifierValidator(opts.SourcePortName) != nil:
+		return ptypes.ErrInvalidPort
+	case host.PortIdentifierValidator(opts.DestPortName) != nil:
+		return ptypes.ErrInvalidPort
+	case opts.Version == "":
+		return fmt.Errorf("invalid channel version")
+	case opts.Order.Validate() != nil:
+		return chantypes.ErrInvalidChannelOrdering
+	}
+	return nil
+}
+
+// Order represents an IBC channel's ordering.
+type Order int
+
+const (
+	Invalid Order = iota
+	Ordered
+	Unordered
+)
+
+// String returns the lowercase string representation of the Order.
+func (o Order) String() string {
+	switch o {
+	case Unordered:
+		return "unordered"
+	case Ordered:
+		return "ordered"
+	default:
+		return "invalid"
+	}
+}
+
+// Validate checks that the Order type is a valid value.
+func (o Order) Validate() error {
+	if o == Ordered || o == Unordered {
+		return nil
+	}
+	return chantypes.ErrInvalidChannelOrdering
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.

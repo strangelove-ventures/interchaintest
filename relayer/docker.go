@@ -207,8 +207,8 @@ func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecR
 	return r.c.ParseGetConnectionsOutput(stdout, stderr)
 }
 
-func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	cmd := r.c.LinkPath(pathName, r.NodeHome())
+func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
+	cmd := r.c.LinkPath(pathName, r.NodeHome(), opts)
 	return dockerutil.HandleNodeJobError(r.NodeJob(ctx, rep, cmd))
 }
 
@@ -490,7 +490,7 @@ type RelayerCommander interface {
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
-	LinkPath(pathName, homeDir string) []string
+	LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string
 	RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
 	StartRelayer(pathName, homeDir string) []string
 	UpdateClients(pathName, homeDir string) []string

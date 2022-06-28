@@ -165,6 +165,11 @@ type InterchainBuildOptions struct {
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
 
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
+	CreateChannelOpts ibc.CreateChannelOptions
+
 	// Optional. Git sha for test invocation. Once Go 1.18 supported,
 	// may be deprecated in favor of runtime/debug.ReadBuildInfo.
 	GitSha string
@@ -220,6 +225,17 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return nil
 	}
 
+	// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
+	// channel options for an ics20 fungible token transfer channel.
+	if opts.CreateChannelOpts == (ibc.CreateChannelOptions{}) {
+		opts.CreateChannelOpts = ibc.DefaultChannelOpts()
+	}
+
+	// Check that the channel creation options are valid and fully specified.
+	if err := opts.CreateChannelOpts.Validate(); err != nil {
+		return err
+	}
+
 	// For every relayer link, teach the relayer about the link and create the link.
 	for rp, chains := range ic.links {
 		c0 := chains[0]
@@ -231,7 +247,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			)
 		}
 
-		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path); err != nil {
+		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,

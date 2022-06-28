@@ -73,6 +73,7 @@ func StartChainPairAndRelayer(
 		NetworkID:         networkID,
 		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,
+		CreateChannelOpts: ibc.DefaultChannelOpts(),
 	}); err != nil {
 		return errResponse(err)
 	}

@@ -185,7 +185,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		require.NoError(t, r.CreateChannel(ctx, eRep, pathName, ibc.CreateChannelOptions{
 			SourcePortName: gaia0Port,
 			DestPortName:   gaia1Port,
-			Order:          "unordered",
+			Order:          ibc.Unordered,
 			Version:        "ics20-1",
 		}))
 
