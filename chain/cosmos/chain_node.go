@@ -324,9 +324,9 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 // RecoverKey restores a key from a given mnemonic.
 func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	command := []string{
-		tn.Chain.Config().GetShell(),
+		"sh",
 		"-c",
-		fmt.Sprintf(`echo "%s" | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.NodeHome()),
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.NodeHome()),
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()

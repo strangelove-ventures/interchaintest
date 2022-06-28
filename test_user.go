@@ -46,6 +46,7 @@ func generateUserWallet(ctx context.Context, keyName, mnemonic string, chain ibc
 
 // GetAndFundTestUserWithMnemonic restores a user using the given mnemonic
 // and funds it with the native chain denom.
+// The caller should wait for some blocks to complete before the funds will be accessible.
 func GetAndFundTestUserWithMnemonic(
 	t *testing.T,
 	ctx context.Context,
@@ -64,12 +65,12 @@ func GetAndFundTestUserWithMnemonic(
 		Denom:   chainCfg.Denom,
 	})
 	require.NoError(t, err, "failed to get funds from faucet")
-	require.NoError(t, test.WaitForBlocks(ctx, 5, chain), "failed to wait for blocks")
 
 	return user
 }
 
-// generate and fund chain users
+// GetAndFundTestUsers generates and funds chain users with the native chain denom.
+// The caller should wait for some blocks to complete before the funds will be accessible.
 func GetAndFundTestUsers(
 	t *testing.T,
 	ctx context.Context,
@@ -88,8 +89,5 @@ func GetAndFundTestUsers(
 	for i := range chains {
 		chainHeights[i] = chains[i]
 	}
-
-	require.NoError(t, test.WaitForBlocks(ctx, 5, chainHeights...), "failed to wait for blocks")
-
 	return users
 }

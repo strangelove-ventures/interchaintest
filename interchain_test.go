@@ -148,7 +148,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	_ = ic.Close()
 }
 
-func TestInterchain_CreateUserWithMnemonic(t *testing.T) {
+func TestInterchain_CreateUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -161,27 +161,15 @@ func TestInterchain_CreateUserWithMnemonic(t *testing.T) {
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
 		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia0, gaia1 := chains[0], chains[1]
+	gaia0 := chains[0]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, pool, network, home,
-	)
-
-	ic := ibctest.NewInterchain().
-		AddChain(gaia0).
-		AddChain(gaia1).
-		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
-			Chain1:  gaia0,
-			Chain2:  gaia1,
-			Relayer: r,
-		})
+	ic := ibctest.NewInterchain().AddChain(gaia0)
+	defer ic.Close()
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -194,7 +182,7 @@ func TestInterchain_CreateUserWithMnemonic(t *testing.T) {
 		NetworkID: network,
 	}))
 
-	t.Run("Test User creation with mnemonic", func(t *testing.T) {
+	t.Run("with mnemonic", func(t *testing.T) {
 		keyName := "mnemonic-user-name"
 		kr := keyring.NewInMemory()
 		_, mnemonic, err := kr.NewMnemonic(
@@ -212,17 +200,24 @@ func TestInterchain_CreateUserWithMnemonic(t *testing.T) {
 
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
+
+		actualBalance, err := gaia0.GetBalance(ctx, user.Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		require.NoError(t, err)
+		require.Equal(t, int64(10000), actualBalance)
+
 	})
 
-	t.Run("Test user creation without mnemonic", func(t *testing.T) {
+	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
-	})
 
-	_ = ic.Close()
+		actualBalance, err := gaia0.GetBalance(ctx, users[0].Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		require.NoError(t, err)
+		require.Equal(t, int64(10000), actualBalance)
+	})
 }
 
 // An external package that imports ibctest may not provide a GitSha when they provide a BlockDatabaseFile.
