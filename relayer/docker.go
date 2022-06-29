@@ -334,6 +334,7 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 	}
 
 	_, _ = io.Copy(io.Discard, rc)
+	_ = rc.Close()
 	return nil
 }
 

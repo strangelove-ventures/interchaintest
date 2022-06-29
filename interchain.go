@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"go.uber.org/zap"
@@ -157,7 +157,7 @@ type InterchainBuildOptions struct {
 	TestName string
 	HomeDir  string
 
-	Pool      *dockertest.Pool
+	Client    *client.Client
 	NetworkID string
 
 	// If set, ic.Build does not create paths or links in the relayer,
@@ -195,7 +195,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	ic.cs = newChainSet(ic.log, chains)
 
 	// Initialize the chains (pull docker images, etc.).
-	if err := ic.cs.Initialize(opts.TestName, opts.HomeDir, opts.Pool, opts.NetworkID); err != nil {
+	if err := ic.cs.Initialize(opts.TestName, opts.HomeDir, opts.Client, opts.NetworkID); err != nil {
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 

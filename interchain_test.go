@@ -25,7 +25,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	client, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -59,7 +59,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 
 		SkipPathCreation: true,
@@ -75,7 +75,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	client, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -109,7 +109,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 
 		SkipPathCreation: true,
@@ -156,7 +156,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -178,7 +178,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 	}))
 
@@ -230,7 +230,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	_, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{Name: "gaia", Version: "v7.0.1"},
@@ -249,7 +249,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 
 		SkipPathCreation: true,

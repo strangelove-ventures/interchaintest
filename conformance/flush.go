@@ -22,7 +22,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	requireCapabilities(t, rep, rf, relayer.FlushPackets)
 
 	home := ibctest.TempDir(t)
-	client, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -55,7 +55,7 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		HomeDir:           home,
-		Pool:              pool,
+		Client:            client,
 		NetworkID:         network,
 		CreateChannelOpts: ibc.DefaultChannelOpts(),
 	}))

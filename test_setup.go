@@ -40,7 +40,6 @@ func StartChainPairAndRelayer(
 	ctx context.Context,
 	rep *testreporter.Reporter,
 	client *client.Client,
-	pool *dockertest.Pool,
 	networkID string,
 	home string,
 	srcChain, dstChain ibc.Chain,
@@ -71,7 +70,7 @@ func StartChainPairAndRelayer(
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:          t.Name(),
 		HomeDir:           home,
-		Pool:              pool, // TODO: switch to client
+		Client:            client,
 		NetworkID:         networkID,
 		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,

@@ -3,6 +3,7 @@ package cosmos
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,12 +15,11 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -79,8 +79,8 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, dockerPool, networkID)
+func (c *CosmosChain) Initialize(testName string, homeDirectory string, client *client.Client, networkID string) error {
+	c.initializeChainNodes(testName, homeDirectory, client, networkID)
 	return nil
 }
 
@@ -111,13 +111,13 @@ func (c *CosmosChain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostRPCAddress() string {
-	return "http://" + dockerutil.GetHostPort(c.getFullNode().Container, rpcPort)
+	return "http://" + c.getFullNode().hostRPCPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostGRPCAddress() string {
-	return dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
+	return c.getFullNode().hostGRPCPort
 }
 
 // Implements Chain interface
@@ -223,7 +223,7 @@ func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAd
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
+	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err
@@ -258,27 +258,43 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 }
 
 // creates the test node objects required for bootstrapping tests
-func (c *CosmosChain) initializeChainNodes(testName, home string,
-	pool *dockertest.Pool, networkID string) {
+func (c *CosmosChain) initializeChainNodes(
+	testName, home string,
+	client *client.Client,
+	networkID string,
+) {
 	var chainNodes []*ChainNode
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
-		err := pool.Client.PullImage(docker.PullImageOptions{
-			Repository: image.Repository,
-			Tag:        image.Version,
-		}, docker.AuthConfiguration{})
+		rc, err := client.ImagePull(
+			context.TODO(),
+			image.Repository+":"+image.Version,
+			dockertypes.ImagePullOptions{},
+		)
 		if err != nil {
 			c.log.Error("Failed to pull image",
 				zap.Error(err),
 				zap.String("repository", image.Repository),
 				zap.String("tag", image.Version),
 			)
+		} else {
+			_, _ = io.Copy(io.Discard, rc)
+			_ = rc.Close()
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &ChainNode{Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0], log: c.log}
+		tn := &ChainNode{
+			log: c.log,
+
+			Home:         home,
+			Index:        i,
+			Chain:        c,
+			DockerClient: client,
+			NetworkID:    networkID,
+			TestName:     testName,
+			Image:        chainCfg.Images[0],
+		}
 		tn.MkDir()
 		chainNodes = append(chainNodes, tn)
 	}

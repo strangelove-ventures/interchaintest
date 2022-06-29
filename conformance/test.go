@@ -259,7 +259,7 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 // 3. Proper handling of height timeout from A -> B and B -> A.
 // 4. Proper handling of timestamp timeout from A -> B and B -> A.
 func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	client, pool, network := ibctest.DockerSetup(t)
+	client, _, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -305,7 +305,7 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
 	home := ibctest.TempDir(t)
-	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, client, pool, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
+	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, client, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 
 	for _, testCase := range testCases {
