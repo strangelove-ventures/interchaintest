@@ -51,7 +51,7 @@ type DockerRelayer struct {
 var _ ibc.Relayer = (*DockerRelayer)(nil)
 
 // NewDockerRelayer returns a new DockerRelayer.
-func NewDockerRelayer(log *zap.Logger, testName, home string, client *client.Client, networkID string, c RelayerCommander, options ...RelayerOption) *DockerRelayer {
+func NewDockerRelayer(log *zap.Logger, testName, home string, cli *client.Client, networkID string, c RelayerCommander, options ...RelayerOption) *DockerRelayer {
 	relayer := DockerRelayer{
 		log: log,
 
@@ -59,7 +59,7 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, client *client.Cli
 
 		home:      home,
 		networkID: networkID,
-		client:    client,
+		client:    cli,
 
 		// pull true by default, can be overridden with options
 		pullImage: true,

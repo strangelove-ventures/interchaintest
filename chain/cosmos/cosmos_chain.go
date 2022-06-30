@@ -79,8 +79,8 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, homeDirectory string, client *client.Client, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, client, networkID)
+func (c *CosmosChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
+	c.initializeChainNodes(testName, homeDirectory, cli, networkID)
 	return nil
 }
 
@@ -260,14 +260,14 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 // creates the test node objects required for bootstrapping tests
 func (c *CosmosChain) initializeChainNodes(
 	testName, home string,
-	client *client.Client,
+	cli *client.Client,
 	networkID string,
 ) {
 	var chainNodes []*ChainNode
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
-		rc, err := client.ImagePull(
+		rc, err := cli.ImagePull(
 			context.TODO(),
 			image.Repository+":"+image.Version,
 			dockertypes.ImagePullOptions{},
@@ -290,7 +290,7 @@ func (c *CosmosChain) initializeChainNodes(
 			Home:         home,
 			Index:        i,
 			Chain:        c,
-			DockerClient: client,
+			DockerClient: cli,
 			NetworkID:    networkID,
 			TestName:     testName,
 			Image:        chainCfg.Images[0],

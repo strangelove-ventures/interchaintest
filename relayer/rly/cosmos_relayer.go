@@ -21,10 +21,10 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName, home string, client *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName, home string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, client, networkID, c, options...),
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, cli, networkID, c, options...),
 	}
 
 	if err := os.MkdirAll(r.Dir(), 0755); err != nil {

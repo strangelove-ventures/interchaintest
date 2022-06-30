@@ -36,11 +36,11 @@ type Image struct {
 // Most arguments (except tag) must be non-zero values or this function panics.
 // If tag is absent, defaults to "latest".
 // Currently, only public docker images are supported.
-func NewImage(logger *zap.Logger, client *client.Client, networkID string, testName string, repository, tag string) *Image {
+func NewImage(logger *zap.Logger, cli *client.Client, networkID string, testName string, repository, tag string) *Image {
 	if logger == nil {
 		panic(errors.New("nil logger"))
 	}
-	if client == nil {
+	if cli == nil {
 		panic(errors.New("client cannot be nil"))
 	}
 	if networkID == "" {
@@ -60,7 +60,7 @@ func NewImage(logger *zap.Logger, client *client.Client, networkID string, testN
 			zap.String("image", fmt.Sprintf("%s:%s", repository, tag)),
 			zap.String("test_name", testName),
 		),
-		client:     client,
+		client:     cli,
 		networkID:  networkID,
 		repository: repository,
 		tag:        tag,

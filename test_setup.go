@@ -37,14 +37,14 @@ func StartChainPairAndRelayer(
 	t *testing.T,
 	ctx context.Context,
 	rep *testreporter.Reporter,
-	client *client.Client,
+	cli *client.Client,
 	networkID string,
 	home string,
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, []ibc.ChannelOutput, error) {
-	relayerImpl := f.Build(t, client, networkID, home)
+	relayerImpl := f.Build(t, cli, networkID, home)
 
 	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
 		return nil, []ibc.ChannelOutput{}, err
@@ -68,7 +68,7 @@ func StartChainPairAndRelayer(
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:          t.Name(),
 		HomeDir:           home,
-		Client:            client,
+		Client:            cli,
 		NetworkID:         networkID,
 		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,

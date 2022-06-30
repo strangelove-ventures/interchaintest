@@ -17,7 +17,7 @@ type RelayerFactory interface {
 	// Build returns a Relayer associated with the given arguments.
 	Build(
 		t *testing.T,
-		client *client.Client,
+		cli *client.Client,
 		networkID string,
 		home string,
 	) ibc.Relayer
@@ -54,7 +54,7 @@ func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
 	t *testing.T,
-	client *client.Client,
+	cli *client.Client,
 	networkID string,
 	home string,
 ) ibc.Relayer {
@@ -64,7 +64,7 @@ func (f builtinRelayerFactory) Build(
 			f.log,
 			t.Name(),
 			home,
-			client,
+			cli,
 			networkID,
 			f.options...,
 		)

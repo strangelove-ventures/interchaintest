@@ -11,7 +11,7 @@ type Chain interface {
 	Config() ChainConfig
 
 	// initializes node structs so that things like initializing keys can be done before starting the chain
-	Initialize(testName string, homeDirectory string, client *client.Client, networkID string) error
+	Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error
 
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error

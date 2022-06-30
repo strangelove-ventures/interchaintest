@@ -53,11 +53,11 @@ func DockerSetup(t *testing.T) (*client.Client, string) {
 }
 
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
-func dockerCleanup(t *testing.T, client *client.Client) func() {
+func dockerCleanup(t *testing.T, cli *client.Client) func() {
 	return func() {
 		ctx := context.TODO()
 
-		cs, err := client.ContainerList(ctx, types.ContainerListOptions{
+		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
 			All:     true,
 			Filters: filters.NewArgs(filters.Arg("name", t.Name())),
 		})
@@ -69,12 +69,12 @@ func dockerCleanup(t *testing.T, client *client.Client) func() {
 		for _, c := range cs {
 			stopTimeout := 10 * time.Second
 			deadline := time.Now().Add(stopTimeout)
-			if err := client.ContainerStop(ctx, c.ID, &stopTimeout); isLoggableStopError(err) {
+			if err := cli.ContainerStop(ctx, c.ID, &stopTimeout); isLoggableStopError(err) {
 				t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
 			}
 
 			waitCtx, cancel := context.WithDeadline(ctx, deadline.Add(500*time.Millisecond))
-			waitCh, errCh := client.ContainerWait(waitCtx, c.ID, container.WaitConditionNotRunning)
+			waitCh, errCh := cli.ContainerWait(waitCtx, c.ID, container.WaitConditionNotRunning)
 			select {
 			case <-waitCtx.Done():
 				t.Logf("Timed out waiting for container %s", c.ID)
@@ -88,7 +88,7 @@ func dockerCleanup(t *testing.T, client *client.Client) func() {
 			}
 			cancel()
 
-			if err := client.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+			if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
 				RemoveVolumes: true,
 				Force:         true,
 			}); err != nil {
@@ -96,7 +96,7 @@ func dockerCleanup(t *testing.T, client *client.Client) func() {
 			}
 		}
 
-		pruneNetworksWithRetry(ctx, t, client)
+		pruneNetworksWithRetry(ctx, t, cli)
 	}
 }
 
