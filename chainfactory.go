@@ -85,8 +85,8 @@ func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 }
 
 const (
-	defaultNumValidators = 1
-	defaultNumFullNodes  = 0
+	defaultNumValidators = 2
+	defaultNumFullNodes  = 1
 )
 
 func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValidators, numFullNodes *int) (ibc.Chain, error) {
