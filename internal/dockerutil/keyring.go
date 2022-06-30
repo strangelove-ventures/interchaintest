@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -14,7 +13,9 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 )
 
-func NewDockerKeyring(ctx context.Context, dc *docker.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
+// NewLocalKeyringFromDockerContainer copies the contents of the given container directory into a specified local directory.
+// This allows test hosts to sign transactions on behalf of test users.
+func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *docker.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
 	var buf bytes.Buffer
 	err := dc.DownloadFromContainer(containerId, docker.DownloadFromContainerOptions{
 		OutputStream: &buf,
@@ -25,7 +26,9 @@ func NewDockerKeyring(ctx context.Context, dc *docker.Client, localDirectory, co
 		return nil, err
 	}
 
-	tarFiles := map[string][]byte{}
+	if err := os.Mkdir(fmt.Sprintf("%s/keyring-test", localDirectory), os.ModePerm); err != nil {
+		return nil, err
+	}
 
 	tr := tar.NewReader(&buf)
 	for {
@@ -42,21 +45,17 @@ func NewDockerKeyring(ctx context.Context, dc *docker.Client, localDirectory, co
 			return nil, err
 		}
 
-		if hdr.Name != "keyring-test/" {
-			tarFiles[hdr.Name] = fileBuff.Bytes()
+		name := hdr.Name
+		splitName := strings.Split(name, "/")
+
+		extractedFileName := splitName[len(splitName)-1]
+		isDirectory := extractedFileName == ""
+		if isDirectory {
+			continue
 		}
-	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/keyring-test", localDirectory), os.ModePerm); err != nil {
-		return nil, err
-	}
-
-	for k, v := range tarFiles {
-		splitName := strings.Split(k, "/")
-		name := splitName[len(splitName)-1]
-		filePath := fmt.Sprintf("%s/keyring-test/%s", localDirectory, name)
-		err := ioutil.WriteFile(filePath, v, os.ModePerm)
-		if err != nil {
+		filePath := fmt.Sprintf("%s/keyring-test/%s", localDirectory, extractedFileName)
+		if err := os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm); err != nil {
 			return nil, err
 		}
 	}
