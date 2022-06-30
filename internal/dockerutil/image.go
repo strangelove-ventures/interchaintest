@@ -98,11 +98,11 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 }
 
 // ensurePulled can only pull public images.
-func (image *Image) ensurePulled() error {
+func (image *Image) ensurePulled(ctx context.Context) error {
 	ref := image.repository + ":" + image.tag
-	_, _, err := image.client.ImageInspectWithRaw(context.TODO(), ref)
+	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
-		rc, err := image.client.ImagePull(context.TODO(), ref, types.ImagePullOptions{})
+		rc, err := image.client.ImagePull(ctx, ref, types.ImagePullOptions{})
 		if err != nil {
 			return fmt.Errorf("pull image %s: %w", ref, err)
 		}
@@ -178,7 +178,7 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	if err := image.ensurePulled(); err != nil {
+	if err := image.ensurePulled(ctx); err != nil {
 		return nil, image.wrapErr(err)
 	}
 
