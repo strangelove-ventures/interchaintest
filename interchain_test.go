@@ -3,18 +3,23 @@ package ibctest_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"testing"
-
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/broadcast"
+	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {
@@ -217,6 +222,71 @@ func TestInterchain_CreateUser(t *testing.T) {
 		actualBalance, err := gaia0.GetBalance(ctx, users[0].Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
+	})
+}
+
+func TestCosmosChain_BroadcastTx(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
+	home := ibctest.TempDir(t)
+	pool, network := ibctest.DockerSetup(t)
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		// Two otherwise identical chains that only differ by ChainID.
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+	})
+
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
+
+	gaia0, gaia1 := chains[0], chains[1]
+
+	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+		t, pool, network, home,
+	)
+
+	ic := ibctest.NewInterchain().
+		AddChain(gaia0).
+		AddChain(gaia1).
+		AddRelayer(r, "r").
+		AddLink(ibctest.InterchainLink{
+			Chain1:  gaia0,
+			Chain2:  gaia1,
+			Relayer: r,
+		})
+
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+
+	ctx := context.Background()
+	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Pool:      pool,
+		NetworkID: network,
+	}))
+
+	testUser := ibctest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
+
+	t.Run("broadcast success", func(t *testing.T) {
+		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
+		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(10000)}
+
+		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
+		resp, err := broadcast.Tx(ctx, b, testUser, msg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEqual(t, 0, resp.GasUsed)
+		require.NotEqual(t, 0, resp.GasWanted)
+		require.Equal(t, uint32(0), resp.Code)
+		require.NotEmpty(t, resp.Data)
+		require.NotEmpty(t, resp.TxHash)
+		require.NotEmpty(t, resp.Events)
 	})
 }
 
