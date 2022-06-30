@@ -10,23 +10,7 @@ import (
 
 type ClientContextOpt func(clientContext client.Context) client.Context
 
-func NewClientContext(opts ...ClientContextOpt) client.Context {
-	c := client.Context{}
-	for _, opt := range opts {
-		c = opt(c)
-	}
-	return c
-}
-
 type FactoryOpt func(factory tx.Factory) tx.Factory
-
-func NewTxFactory(opts ...FactoryOpt) tx.Factory {
-	f := tx.Factory{}
-	for _, opt := range opts {
-		f = opt(f)
-	}
-	return f
-}
 
 type User interface {
 	GetKeyName() string
@@ -34,12 +18,16 @@ type User interface {
 }
 
 type Broadcaster interface {
+	ConfigureFactoryOptions(opts ...FactoryOpt)
+	ConfigureClientContextOptions(opts ...ClientContextOpt)
 	GetFactory(ctx context.Context, user User) (tx.Factory, error)
 	GetClientContext(ctx context.Context, user User) (client.Context, error)
 	GetTxResponseBytes(ctx context.Context, user User) ([]byte, error)
 	UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error)
 }
 
+// Tx uses the provided Broadcaster to broadcast all the provided messages which will be signed
+// by the User provided. The sdk.TxResponse and an error are returned.
 func Tx(ctx context.Context, broadcaster Broadcaster, broadcastingUser User, msgs ...sdk.Msg) (sdk.TxResponse, error) {
 	for _, msg := range msgs {
 		if err := msg.ValidateBasic(); err != nil {

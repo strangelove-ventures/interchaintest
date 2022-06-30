@@ -20,8 +20,11 @@ import (
 var _ broadcast.Broadcaster = &Broadcaster{}
 
 type Broadcaster struct {
+	// buf stores the output sdk.TxResponse when broadcast.Tx is invoked.
 	buf *bytes.Buffer
-	kr  keyring.Keyring
+	// kr stores a keyring which points to a temporary test directory. The contents
+	// of this directory are copied from the node container.
+	kr keyring.Keyring
 
 	// chain is a reference to the CosmosChain instance which will be the target of the messages.
 	chain *CosmosChain
@@ -34,37 +37,30 @@ type Broadcaster struct {
 	clientContextOptions []broadcast.ClientContextOpt
 }
 
-func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user broadcast.User) ([]byte, error) {
-	if b.buf == nil || b.buf.Len() == 0 {
-		return nil, fmt.Errorf("empty buffer, transaction has not be executed yet")
-	}
-
-	return b.buf.Bytes(), nil
-}
-
-func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
-	resp := sdk.TxResponse{}
-	if err := defaultEncoding.Marshaler.UnmarshalJSON(bytes, &resp); err != nil {
-		return sdk.TxResponse{}, err
-	}
-	return resp, nil
-}
-
-func (b *Broadcaster) ConfigureFactoryOptions(opts ...broadcast.FactoryOpt) {
-	b.factoryOptions = append(b.factoryOptions, opts...)
-}
-
-func (b *Broadcaster) ConfigureClientContextOptions(opts ...broadcast.ClientContextOpt) {
-	b.clientContextOptions = append(b.clientContextOptions, opts...)
-}
-
+// NewBroadcaster returns a instance of Broadcaster which can be used with broadcast.Tx to
+// broadcast messages sdk messages.
 func NewBroadcaster(t *testing.T, chain *CosmosChain) *Broadcaster {
 	return &Broadcaster{
 		t:     t,
 		chain: chain,
+		buf:   &bytes.Buffer{},
 	}
 }
 
+// ConfigureFactoryOptions ensure the given configuration functions are run when calling GetFactory
+// after all default options have been applied.
+func (b *Broadcaster) ConfigureFactoryOptions(opts ...broadcast.FactoryOpt) {
+	b.factoryOptions = append(b.factoryOptions, opts...)
+}
+
+// ConfigureClientContextOptions ensure the given configuration functions are run when calling GetClientContext
+// after all default options have been applied.
+func (b *Broadcaster) ConfigureClientContextOptions(opts ...broadcast.ClientContextOpt) {
+	b.clientContextOptions = append(b.clientContextOptions, opts...)
+}
+
+// GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
+// and the provided user.
 func (b *Broadcaster) GetFactory(ctx context.Context, user broadcast.User) (tx.Factory, error) {
 	clientContext, err := b.GetClientContext(ctx, user)
 	if err != nil {
@@ -81,19 +77,15 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user broadcast.User) (tx.F
 		return tx.Factory{}, err
 	}
 
-	f := defaultTxFactory(clientContext, factoryOptions{
-		accNum:    accNumber.GetAccountNumber(),
-		gasAdj:    b.chain.Config().GasAdjustment,
-		memo:      "ibc-test",
-		gasPrices: b.chain.Config().GasPrices,
-	})
-
+	f := b.defaultTxFactory(clientContext, accNumber.GetAccountNumber())
 	for _, opt := range b.factoryOptions {
 		f = opt(f)
 	}
 	return f, nil
 }
 
+// GetClientContext returns a client context that is configured with this Broadcaster's CosmosChain and
+// the provided user.
 func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User) (client.Context, error) {
 	chain := b.chain
 	cn := chain.getFullNode()
@@ -113,51 +105,58 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 		return client.Context{}, err
 	}
 
-	clientContext, buf, err := defaultClientContext(chain, user, b.kr, sdkAdd)
-	b.buf = buf
+	clientContext := b.defaultClientContext(user, sdkAdd)
 	for _, opt := range b.clientContextOptions {
 		clientContext = opt(clientContext)
 	}
 	return clientContext, nil
 }
 
-type factoryOptions struct {
-	gasPrices     string
-	accNum        uint64
-	accSeq        uint64
-	gasAdj        float64
-	memo          string
-	timeoutHeight uint64
+// GetTxResponseBytes returns the sdk.TxResponse bytes which returned from broadcast.Tx.
+func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user broadcast.User) ([]byte, error) {
+	if b.buf == nil || b.buf.Len() == 0 {
+		return nil, fmt.Errorf("empty buffer, transaction has not be executed yet")
+	}
+	return b.buf.Bytes(), nil
 }
 
-func defaultClientContext(chain *CosmosChain, fromUser broadcast.User, kr keyring.Keyring, sdkAdd sdk.AccAddress) (client.Context, *bytes.Buffer, error) {
-	var buf bytes.Buffer
-	cn := chain.getFullNode()
+// UnmarshalTxResponseBytes accepts the sdk.TxResponse bytes and unmarshalls them into an
+// instance of sdk.TxResponse.
+func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
+	resp := sdk.TxResponse{}
+	if err := defaultEncoding.Marshaler.UnmarshalJSON(bytes, &resp); err != nil {
+		return sdk.TxResponse{}, err
+	}
+	return resp, nil
+}
+
+// defaultClientContext returns a default client context configured with the user as the sender.
+func (b *Broadcaster) defaultClientContext(fromUser broadcast.User, sdkAdd sdk.AccAddress) client.Context {
+	cn := b.chain.getFullNode()
 	return cn.CliContext().
-		WithOutput(&buf).
-		WithFrom(fromUser.Bech32Address(chain.Config().Bech32Prefix)).
+		WithOutput(b.buf).
+		WithFrom(fromUser.Bech32Address(b.chain.Config().Bech32Prefix)).
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.GetKeyName()).
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithKeyring(kr).
+		WithKeyring(b.kr).
 		WithBroadcastMode(flags.BroadcastBlock).
 		WithCodec(defaultEncoding.Marshaler).
-		WithHomeDir(cn.Home), &buf, nil
+		WithHomeDir(cn.Home)
+
 }
 
-// defaultTxFactory creates a new Factory.
-func defaultTxFactory(clientCtx client.Context, opts factoryOptions) tx.Factory {
-	signMode := signing.SignMode_SIGN_MODE_DIRECT
+// defaultTxFactory creates a new Factory with default configuration.
+func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber uint64) tx.Factory {
+	chainConfig := b.chain.Config()
 	return tx.Factory{}.
-		WithAccountNumber(opts.accSeq).
-		WithSequence(opts.accSeq).
-		WithSignMode(signMode).
-		WithGasAdjustment(opts.gasAdj).
+		WithAccountNumber(accountNumber).
+		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
+		WithGasAdjustment(chainConfig.GasAdjustment).
 		WithGas(flags.DefaultGasLimit).
-		WithGasPrices(opts.gasPrices).
-		WithMemo(opts.memo).
-		WithTimeoutHeight(opts.timeoutHeight).
+		WithGasPrices(chainConfig.GasPrices).
+		WithMemo("ibctest").
 		WithTxConfig(clientCtx.TxConfig).
 		WithAccountRetriever(clientCtx.AccountRetriever).
 		WithKeybase(clientCtx.Keyring).
