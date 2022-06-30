@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -95,14 +96,38 @@ func dockerCleanup(t *testing.T, client *client.Client) func() {
 			}
 		}
 
-		res, err := client.NetworksPrune(ctx, filters.NewArgs(filters.Arg("label", CleanupLabel+"="+t.Name())))
-		if err != nil {
-			// TODO: some errors should not be logged, use errdefs to check.
-			t.Logf("Failed to prune networks during docker cleanup: %v", err)
-		}
-		if len(res.NetworksDeleted) > 0 {
-			t.Logf("Pruned unused networks: %v", res.NetworksDeleted)
-		}
+		pruneNetworksWithRetry(ctx, t, client)
+	}
+}
+
+func pruneNetworksWithRetry(ctx context.Context, t *testing.T, cli *client.Client) {
+	var deleted []string
+	err := retry.Do(
+		func() error {
+			res, err := cli.NetworksPrune(ctx, filters.NewArgs(filters.Arg("label", CleanupLabel+"="+t.Name())))
+			if err != nil {
+				if errdefs.IsConflict(err) {
+					// Prune is already in progress; try again.
+					return err
+				}
+
+				return retry.Unrecoverable(err)
+			}
+
+			deleted = res.NetworksDeleted
+			return nil
+		},
+		retry.Context(ctx),
+		retry.DelayType(retry.FixedDelay),
+	)
+
+	if err != nil {
+		t.Logf("Failed to prune networks during docker cleanup: %v", err)
+		return
+	}
+
+	if len(deleted) > 0 {
+		t.Logf("Pruned unused networks: %v", deleted)
 	}
 }
 
