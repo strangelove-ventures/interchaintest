@@ -23,6 +23,12 @@ type CosmosRelayer struct {
 
 func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
+	for _, opt := range options {
+		switch typedOpt := opt.(type) {
+		case relayer.RelayerOptionStartupFlags:
+			c.startupFlags = typedOpt.Flags
+		}
+	}
 	r := &CosmosRelayer{
 		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options...),
 	}
@@ -90,7 +96,8 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 
 // commander satisfies relayer.RelayerCommander.
 type commander struct {
-	log *zap.Logger
+	log          *zap.Logger
+	startupFlags string
 }
 
 func (commander) Name() string {
@@ -191,11 +198,15 @@ func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
 	}
 }
 
-func (commander) StartRelayer(pathName, homeDir string) []string {
-	return []string{
+func (c commander) StartRelayer(pathName, homeDir string) []string {
+	cmd := []string{
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
 	}
+	if c.startupFlags != "" {
+		cmd = append(cmd, strings.Split(c.startupFlags, " ")...)
+	}
+	return cmd
 }
 
 func (commander) UpdateClients(pathName, homeDir string) []string {
