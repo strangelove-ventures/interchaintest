@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -277,7 +276,7 @@ func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := p.DockerClient.ContainerStart(ctx, p.containerID, types.ContainerStartOptions{}); err != nil {
+	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
 		return err
 	}
 

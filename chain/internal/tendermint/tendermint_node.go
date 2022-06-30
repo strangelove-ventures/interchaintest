@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
@@ -230,7 +229,7 @@ func (tn *TendermintNode) StopContainer(ctx context.Context) error {
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	if err := tn.DockerClient.ContainerStart(ctx, tn.containerID, dockertypes.ContainerStartOptions{}); err != nil {
+	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
 

@@ -18,7 +18,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
@@ -701,7 +700,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := tn.DockerClient.ContainerStart(ctx, tn.containerID, dockertypes.ContainerStartOptions{}); err != nil {
+	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
 

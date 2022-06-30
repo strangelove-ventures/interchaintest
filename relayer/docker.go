@@ -377,7 +377,7 @@ func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathName string
 	}
 
 	r.containerID = cc.ID
-	return r.client.ContainerStart(ctx, r.containerID, types.ContainerStartOptions{})
+	return dockerutil.StartContainer(ctx, r.client, r.containerID)
 }
 
 func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string) (
@@ -439,9 +439,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 		return 1, "", "", err
 	}
 
-	// TODO: sometimes this hangs.
-	// Try using a short context and wrapping in retry.Do.
-	if err := r.client.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
+	if err := dockerutil.StartContainer(ctx, r.client, cc.ID); err != nil {
 		return 1, "", "", err
 	}
 
