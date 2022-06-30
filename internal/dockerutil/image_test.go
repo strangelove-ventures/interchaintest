@@ -26,7 +26,7 @@ func TestNewImage(t *testing.T) {
 	}
 	t.Parallel()
 
-	cl, _, networkID := DockerSetup(t)
+	cl, networkID := DockerSetup(t)
 
 	for _, tt := range []struct {
 		Client     *client.Client
@@ -52,7 +52,7 @@ func TestImage_Run(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	client, _, networkID := DockerSetup(t)
+	client, networkID := DockerSetup(t)
 	image := NewImage(zap.NewNop(), client, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("happy path", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestContainer(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	cl, _, networkID := DockerSetup(t)
+	cl, networkID := DockerSetup(t)
 	image := NewImage(zap.NewNop(), cl, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("wait", func(t *testing.T) {

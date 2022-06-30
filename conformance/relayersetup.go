@@ -19,7 +19,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 	rep.TrackTest(t)
 
 	home := ibctest.TempDir(t)
-	client, _, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())

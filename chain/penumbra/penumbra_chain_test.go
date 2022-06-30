@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
-	"github.com/strangelove-ventures/ibctest"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -18,7 +18,7 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	t.Parallel()
 
-	client, _, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 	home := ibctest.TempDir(t) // Must be before chain cleanup to avoid test error during cleanup.
 
 	nv := 4

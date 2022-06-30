@@ -439,6 +439,8 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 		return 1, "", "", err
 	}
 
+	// TODO: sometimes this hangs.
+	// Try using a short context and wrapping in retry.Do.
 	if err := r.client.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
 		return 1, "", "", err
 	}

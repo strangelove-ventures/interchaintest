@@ -259,7 +259,7 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 // 3. Proper handling of height timeout from A -> B and B -> A.
 // 4. Proper handling of timestamp timeout from A -> B and B -> A.
 func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	client, _, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
