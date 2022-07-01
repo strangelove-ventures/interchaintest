@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"go.uber.org/multierr"
@@ -49,13 +49,13 @@ func newChainSet(log *zap.Logger, chains []ibc.Chain) *chainSet {
 // Initialize concurrently calls Initialize against each chain in the set.
 // Each chain may run a docker pull command,
 // so with a cold image cache, running concurrently may save some time.
-func (cs *chainSet) Initialize(testName string, homeDir string, pool *dockertest.Pool, networkID string) error {
+func (cs *chainSet) Initialize(testName string, homeDir string, cli *client.Client, networkID string) error {
 	var eg errgroup.Group
 
 	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
-			if err := c.Initialize(testName, homeDir, pool, networkID); err != nil {
+			if err := c.Initialize(testName, homeDir, cli, networkID); err != nil {
 				return fmt.Errorf("failed to initialize chain %s: %w", c.Config().Name, err)
 			}
 

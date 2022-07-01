@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/internal/version"
@@ -20,11 +20,10 @@ const (
 	FaucetAccountKeyName = "faucet"
 )
 
-// DockerSetup sets up a new dockertest.Pool (which is a client connection
-// to a Docker engine) and configures a network associated with t.
+// DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
 //
 // If any part of the setup fails, t.Fatal is called.
-func DockerSetup(t *testing.T) (*dockertest.Pool, string) {
+func DockerSetup(t *testing.T) (*client.Client, string) {
 	t.Helper()
 	return dockerutil.DockerSetup(t)
 }
@@ -38,14 +37,14 @@ func StartChainPairAndRelayer(
 	t *testing.T,
 	ctx context.Context,
 	rep *testreporter.Reporter,
-	pool *dockertest.Pool,
+	cli *client.Client,
 	networkID string,
 	home string,
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, []ibc.ChannelOutput, error) {
-	relayerImpl := f.Build(t, pool, networkID, home)
+	relayerImpl := f.Build(t, cli, networkID, home)
 
 	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
 		return nil, []ibc.ChannelOutput{}, err
@@ -69,7 +68,7 @@ func StartChainPairAndRelayer(
 	if err := ic.Build(ctx, eRep, InterchainBuildOptions{
 		TestName:          t.Name(),
 		HomeDir:           home,
-		Pool:              pool,
+		Client:            cli,
 		NetworkID:         networkID,
 		GitSha:            version.GitSha,
 		BlockDatabaseFile: blockSqlite,
