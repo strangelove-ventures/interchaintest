@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -202,7 +203,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NotEmpty(t, mnemonic)
 
 		user := ibctest.GetAndFundTestUserWithMnemonic(t, ctx, keyName, mnemonic, 10000, gaia0)
-
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
 
@@ -215,6 +216,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
