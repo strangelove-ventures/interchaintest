@@ -21,11 +21,15 @@ import (
 
 // Image is a docker image.
 type Image struct {
-	log             *zap.Logger
-	client          *client.Client
+	log    *zap.Logger
+	client *client.Client
+
+	// NOTE: it might make sense for Image to have an ibc.DockerImage field,
+	// but for now it is probably better to not have internal/dockerutil depend on ibc.
 	repository, tag string
-	networkID       string
-	testName        string
+
+	networkID string
+	testName  string
 }
 
 // NewImage returns a valid Image.
@@ -55,17 +59,20 @@ func NewImage(logger *zap.Logger, cli *client.Client, networkID string, testName
 	if tag == "" {
 		tag = "latest"
 	}
-	return &Image{
-		log: logger.With(
-			zap.String("image", fmt.Sprintf("%s:%s", repository, tag)),
-			zap.String("test_name", testName),
-		),
+
+	i := &Image{
 		client:     cli,
 		networkID:  networkID,
 		repository: repository,
 		tag:        tag,
 		testName:   testName,
 	}
+	// Assign log after creating, so the imageRef method can be used.
+	i.log = logger.With(
+		zap.String("image", i.imageRef()),
+		zap.String("test_name", testName),
+	)
+	return i
 }
 
 // ContainerOptions optionally configures starting a Container.
@@ -97,9 +104,13 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	return c.Wait(ctx)
 }
 
+func (image *Image) imageRef() string {
+	return image.repository + ":" + image.tag
+}
+
 // ensurePulled can only pull public images.
 func (image *Image) ensurePulled(ctx context.Context) error {
-	ref := image.repository + ":" + image.tag
+	ref := image.imageRef()
 	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
 		rc, err := image.client.ImagePull(ctx, ref, types.ImagePullOptions{})
@@ -141,7 +152,7 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 	cc, err := image.client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: image.repository + ":" + image.tag,
+			Image: image.imageRef(),
 
 			// Entrypoint: []string{}, // Wasn't present before?
 			Cmd: cmd,

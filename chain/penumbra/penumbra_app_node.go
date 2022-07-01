@@ -238,7 +238,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: p.Image.Repository + ":" + p.Image.Version,
+			Image: p.Image.Ref(),
 
 			Cmd: cmd,
 

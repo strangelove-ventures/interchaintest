@@ -190,7 +190,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: tn.Image.Repository + ":" + tn.Image.Version,
+			Image: tn.Image.Ref(),
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
