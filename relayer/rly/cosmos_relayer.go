@@ -24,9 +24,9 @@ type CosmosRelayer struct {
 func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	for _, opt := range options {
-		switch typedOpt := opt.(type) {
+		switch o := opt.(type) {
 		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = typedOpt.Flags
+			c.extraStartFlags = o.Flags
 		}
 	}
 	r := &CosmosRelayer{
