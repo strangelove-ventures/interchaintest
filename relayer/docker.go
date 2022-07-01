@@ -80,7 +80,7 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, cli *client.Client
 
 	containerImage := relayer.containerImage()
 	if err := relayer.pullContainerImageIfNecessary(containerImage); err != nil {
-		log.Error("Error pulling container image", zap.String("repository", containerImage.Repository), zap.String("version", containerImage.Version), zap.Error(err))
+		log.Error("Error pulling container image", zap.String("ref", containerImage.Ref()), zap.Error(err))
 	}
 
 	return &relayer
@@ -327,8 +327,7 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 		return nil
 	}
 
-	ref := containerImage.Repository + ":" + containerImage.Version
-	rc, err := r.client.ImagePull(context.TODO(), ref, types.ImagePullOptions{})
+	rc, err := r.client.ImagePull(context.TODO(), containerImage.Ref(), types.ImagePullOptions{})
 	if err != nil {
 		return err
 	}
@@ -350,7 +349,7 @@ func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathName string
 	cc, err := r.client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: fmt.Sprintf("%s:%s", containerImage.Repository, containerImage.Version),
+			Image: containerImage.Ref(),
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
@@ -412,7 +411,7 @@ func (r *DockerRelayer) NodeJob(ctx context.Context, rep ibc.RelayerExecReporter
 	cc, err := r.client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: containerImage.Repository + ":" + containerImage.Version,
+			Image: containerImage.Ref(),
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
