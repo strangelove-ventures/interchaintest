@@ -97,7 +97,7 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 // commander satisfies relayer.RelayerCommander.
 type commander struct {
 	log          *zap.Logger
-	startupFlags string
+	startupFlags []string
 }
 
 func (commander) Name() string {
@@ -203,9 +203,7 @@ func (c commander) StartRelayer(pathName, homeDir string) []string {
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
 	}
-	if c.startupFlags != "" {
-		cmd = append(cmd, strings.Split(c.startupFlags, " ")...)
-	}
+	cmd = append(cmd, c.startupFlags...)
 	return cmd
 }
 
