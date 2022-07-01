@@ -120,6 +120,11 @@ func (c *CosmosChain) GetHostGRPCAddress() string {
 	return c.getFullNode().hostGRPCPort
 }
 
+// HomeDir implements ibc.Chain.
+func (c *CosmosChain) HomeDir() string {
+	return c.getFullNode().HomeDir()
+}
+
 // Implements Chain interface
 func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getFullNode().CreateKey(ctx, keyName)

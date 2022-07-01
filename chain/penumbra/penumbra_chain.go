@@ -143,6 +143,10 @@ func (c *PenumbraChain) GetHostGRPCAddress() string {
 	return c.getRelayerNode().PenumbraAppNode.hostGRPCPort
 }
 
+func (c *PenumbraChain) HomeDir() string {
+	panic(errors.New("HomeDir not implemented yet"))
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)

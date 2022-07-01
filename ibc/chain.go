@@ -17,6 +17,9 @@ type Chain interface {
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
 
 	// Exec runs an arbitrary command using Chain's docker environment.
+	// Whether the invoked command is run in a one-off container or execing into an already running container
+	// is up to the chain implementation.
+	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
 	Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error)
 
@@ -36,6 +39,10 @@ type Chain interface {
 	// GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
 	// Note that this will not return a valid value until after Start returns.
 	GetHostGRPCAddress() string
+
+	// HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
+	// the container's filesystem (not the host).
+	HomeDir() string
 
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error
