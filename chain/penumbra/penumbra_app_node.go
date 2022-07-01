@@ -65,10 +65,10 @@ func (p *PenumbraAppNode) MkDir() {
 
 // Bind returns the home folder bind point for running the node
 func (p *PenumbraAppNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.HomeDir())}
 }
 
-func (p *PenumbraAppNode) NodeHome() string {
+func (p *PenumbraAppNode) HomeDir() string {
 	return fmt.Sprintf("/root/.%s", p.Chain.Config().Name)
 }
 
@@ -102,11 +102,11 @@ func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return filepath.Join(p.NodeHome(), "validator.json")
+	return filepath.Join(p.HomeDir(), "validator.json")
 }
 
 func (p *PenumbraAppNode) WalletPathContainer() string {
-	return filepath.Join(p.NodeHome(), "wallet")
+	return filepath.Join(p.HomeDir(), "wallet")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFile() string {
@@ -114,7 +114,7 @@ func (p *PenumbraAppNode) ValidatorsInputFile() string {
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
-	return filepath.Join(p.NodeHome(), "validators.json")
+	return filepath.Join(p.HomeDir(), "validators.json")
 }
 
 func (p *PenumbraAppNode) AllocationsInputFile() string {
@@ -122,7 +122,7 @@ func (p *PenumbraAppNode) AllocationsInputFile() string {
 }
 
 func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
-	return filepath.Join(p.NodeHome(), "allocations.csv")
+	return filepath.Join(p.HomeDir(), "allocations.csv")
 }
 
 func (p *PenumbraAppNode) GenesisFile() string {
@@ -134,7 +134,7 @@ func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
 }
 
 func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
+	cmd := []string{"find", fmt.Sprintf("%s/.", p.HomeDir()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
 
 	// Cleanup should complete instantly,
 	// so add a 1-minute timeout in case Docker hangs.
@@ -171,7 +171,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 		"--chain-id", chainID,
 		"--validators-input-file", p.ValidatorsInputFileContainer(),
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
-		"--output-dir", p.NodeHome(),
+		"--output-dir", p.HomeDir(),
 	}
 	_, _, err = p.Exec(ctx, cmd, nil)
 	return err
@@ -225,7 +225,7 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer() error {
-	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.NodeHome()}
+	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
 	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
