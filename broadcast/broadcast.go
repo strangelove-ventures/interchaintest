@@ -17,6 +17,7 @@ type User interface {
 	Bech32Address(bech32Prefix string) string
 }
 
+// Broadcaster implementations can broadcast messages as the provided user.
 type Broadcaster interface {
 	ConfigureFactoryOptions(opts ...FactoryOpt)
 	ConfigureClientContextOptions(opts ...ClientContextOpt)

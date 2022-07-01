@@ -22,9 +22,9 @@ var _ broadcast.Broadcaster = &Broadcaster{}
 type Broadcaster struct {
 	// buf stores the output sdk.TxResponse when broadcast.Tx is invoked.
 	buf *bytes.Buffer
-	// kr stores a keyring which points to a temporary test directory. The contents
-	// of this directory are copied from the node container.
-	kr keyring.Keyring
+	// keyrings is a mapping of keyrings which point to a temporary test directory. The contents
+	// of this directory are copied from the node container for the specific user.
+	keyrings map[broadcast.User]keyring.Keyring
 
 	// chain is a reference to the CosmosChain instance which will be the target of the messages.
 	chain *CosmosChain
@@ -41,9 +41,10 @@ type Broadcaster struct {
 // broadcast messages sdk messages.
 func NewBroadcaster(t *testing.T, chain *CosmosChain) *Broadcaster {
 	return &Broadcaster{
-		t:     t,
-		chain: chain,
-		buf:   &bytes.Buffer{},
+		t:        t,
+		chain:    chain,
+		buf:      &bytes.Buffer{},
+		keyrings: map[broadcast.User]keyring.Keyring{},
 	}
 }
 
@@ -90,14 +91,15 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 	chain := b.chain
 	cn := chain.getFullNode()
 
-	if b.kr == nil {
+	_, ok := b.keyrings[user]
+	if !ok {
 		localDir := b.t.TempDir()
 		containerKeyringDir := fmt.Sprintf("%s/keyring-test", cn.NodeHome())
 		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.Pool.Client, localDir, containerKeyringDir, cn.Container.ID)
 		if err != nil {
 			return client.Context{}, err
 		}
-		b.kr = kr
+		b.keyrings[user] = kr
 	}
 
 	sdkAdd, err := sdk.AccAddressFromBech32(user.Bech32Address(chain.Config().Bech32Prefix))
@@ -132,6 +134,9 @@ func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte
 
 // defaultClientContext returns a default client context configured with the user as the sender.
 func (b *Broadcaster) defaultClientContext(fromUser broadcast.User, sdkAdd sdk.AccAddress) client.Context {
+	// initialize a clean buffer each time
+	b.buf = &bytes.Buffer{}
+	kr := b.keyrings[fromUser]
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
@@ -140,7 +145,7 @@ func (b *Broadcaster) defaultClientContext(fromUser broadcast.User, sdkAdd sdk.A
 		WithFromName(fromUser.GetKeyName()).
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithKeyring(b.kr).
+		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastBlock).
 		WithCodec(defaultEncoding.Marshaler).
 		WithHomeDir(cn.Home)
