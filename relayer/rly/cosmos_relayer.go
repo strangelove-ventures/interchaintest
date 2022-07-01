@@ -25,8 +25,8 @@ func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.P
 	c := commander{log: log}
 	for _, opt := range options {
 		switch typedOpt := opt.(type) {
-		case relayer.RelayerOptionStartupFlags:
-			c.startupFlags = typedOpt.Flags
+		case relayer.RelayerOptionExtraStartFlags:
+			c.extraStartFlags = typedOpt.Flags
 		}
 	}
 	r := &CosmosRelayer{
@@ -96,8 +96,8 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 
 // commander satisfies relayer.RelayerCommander.
 type commander struct {
-	log          *zap.Logger
-	startupFlags []string
+	log             *zap.Logger
+	extraStartFlags []string
 }
 
 func (commander) Name() string {
@@ -203,7 +203,7 @@ func (c commander) StartRelayer(pathName, homeDir string) []string {
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
 	}
-	cmd = append(cmd, c.startupFlags...)
+	cmd = append(cmd, c.extraStartFlags...)
 	return cmd
 }
 

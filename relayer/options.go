@@ -39,14 +39,14 @@ func ImagePull(pull bool) RelayerOption {
 
 func (opt RelayerOptionImagePull) relayerOption() {}
 
-type RelayerOptionStartupFlags struct {
+type RelayerOptionExtraStartFlags struct {
 	Flags []string
 }
 
 func StartupFlags(flags ...string) RelayerOption {
-	return RelayerOptionStartupFlags{
+	return RelayerOptionExtraStartFlags{
 		Flags: flags,
 	}
 }
 
-func (opt RelayerOptionStartupFlags) relayerOption() {}
+func (opt RelayerOptionExtraStartFlags) relayerOption() {}
