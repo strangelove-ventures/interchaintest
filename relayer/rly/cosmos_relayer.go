@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"go.uber.org/zap"
@@ -21,10 +21,16 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName, home string, pool *dockertest.Pool, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName, home string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case relayer.RelayerOptionExtraStartFlags:
+			c.extraStartFlags = o.Flags
+		}
+	}
 	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, pool, networkID, c, options...),
+		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, cli, networkID, c, options...),
 	}
 
 	if err := os.MkdirAll(r.Dir(), 0755); err != nil {
@@ -90,7 +96,8 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 
 // commander satisfies relayer.RelayerCommander.
 type commander struct {
-	log *zap.Logger
+	log             *zap.Logger
+	extraStartFlags []string
 }
 
 func (commander) Name() string {
@@ -116,7 +123,7 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 		"rly", "tx", "channel", pathName,
 		"--src-port", opts.SourcePortName,
 		"--dst-port", opts.DestPortName,
-		"--order", opts.Order,
+		"--order", opts.Order.String(),
 		"--version", opts.Version,
 
 		"--home", homeDir,
@@ -172,9 +179,14 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
-func (commander) LinkPath(pathName, homeDir string) []string {
+func (commander) LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
+		"--src-port", opts.SourcePortName,
+		"--dst-port", opts.DestPortName,
+		"--order", opts.Order.String(),
+		"--version", opts.Version,
+
 		"--home", homeDir,
 	}
 }
@@ -186,11 +198,13 @@ func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
 	}
 }
 
-func (commander) StartRelayer(pathName, homeDir string) []string {
-	return []string{
+func (c commander) StartRelayer(pathName, homeDir string) []string {
+	cmd := []string{
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
 	}
+	cmd = append(cmd, c.extraStartFlags...)
+	return cmd
 }
 
 func (commander) UpdateClients(pathName, homeDir string) []string {

@@ -9,16 +9,18 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/go-connections/nat"
 )
 
 // GetHostPort returns a resource's published port with an address.
-func GetHostPort(cont *docker.Container, portID string) string {
-	if cont == nil || cont.NetworkSettings == nil {
+// cont is the type returned by the Docker client's ContainerInspect method.
+func GetHostPort(cont types.ContainerJSON, portID string) string {
+	if cont.NetworkSettings == nil {
 		return ""
 	}
 
-	m, ok := cont.NetworkSettings.Ports[docker.Port(portID)]
+	m, ok := cont.NetworkSettings.Ports[nat.Port(portID)]
 	if !ok || len(m) == 0 {
 		return ""
 	}

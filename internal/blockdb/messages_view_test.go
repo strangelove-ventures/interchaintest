@@ -27,7 +27,7 @@ func TestMessagesView(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
 	const gaia1ChainID = "g1"
@@ -42,7 +42,7 @@ func TestMessagesView(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	rf := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
-	r := rf.Build(t, pool, network, home)
+	r := rf.Build(t, client, network, home)
 
 	ic := ibctest.NewInterchain().
 		AddChain(gaia0).
@@ -64,7 +64,7 @@ func TestMessagesView(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 
 		SkipPathCreation: true,
@@ -185,7 +185,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		require.NoError(t, r.CreateChannel(ctx, eRep, pathName, ibc.CreateChannelOptions{
 			SourcePortName: gaia0Port,
 			DestPortName:   gaia1Port,
-			Order:          "unordered",
+			Order:          ibc.Unordered,
 			Version:        "ics20-1",
 		}))
 

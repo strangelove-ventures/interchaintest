@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/label"
 	"github.com/strangelove-ventures/ibctest/relayer"
@@ -17,7 +17,7 @@ type RelayerFactory interface {
 	// Build returns a Relayer associated with the given arguments.
 	Build(
 		t *testing.T,
-		pool *dockertest.Pool,
+		cli *client.Client,
 		networkID string,
 		home string,
 	) ibc.Relayer
@@ -54,7 +54,7 @@ func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
 	t *testing.T,
-	pool *dockertest.Pool,
+	cli *client.Client,
 	networkID string,
 	home string,
 ) ibc.Relayer {
@@ -64,7 +64,7 @@ func (f builtinRelayerFactory) Build(
 			f.log,
 			t.Name(),
 			home,
-			pool,
+			cli,
 			networkID,
 			f.options...,
 		)
@@ -80,9 +80,9 @@ func (f builtinRelayerFactory) Name() string {
 		// so that the slashes in the image repository don't add ambiguity
 		// to subtest paths, when the factory name is used in calls to t.Run.
 		for _, opt := range f.options {
-			switch typedOpt := opt.(type) {
+			switch o := opt.(type) {
 			case relayer.RelayerOptionDockerImage:
-				return "rly@" + typedOpt.DockerImage.Version
+				return "rly@" + o.DockerImage.Version
 			}
 		}
 		return "rly@" + rly.DefaultContainerVersion

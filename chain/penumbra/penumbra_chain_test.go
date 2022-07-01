@@ -8,7 +8,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestPenumbraChainStart(t *testing.T) {
@@ -18,12 +18,12 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	t.Parallel()
 
-	pool, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 	home := ibctest.TempDir(t) // Must be before chain cleanup to avoid test error during cleanup.
 
 	nv := 4
 
-	chains, err := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "penumbra",
 			Version: "015-ersa-v2,v0.35.4",
@@ -45,7 +45,7 @@ func TestPenumbraChainStart(t *testing.T) {
 		}
 	})
 
-	err = chain.Initialize(t.Name(), home, pool, network)
+	err = chain.Initialize(t.Name(), home, client, network)
 	require.NoError(t, err, "failed to initialize penumbra chain")
 
 	err = chain.Start(t.Name(), ctx)

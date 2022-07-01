@@ -19,7 +19,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 	rep.TrackTest(t)
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -31,7 +31,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 
 	c0, c1 := chains[0], chains[1]
 
-	r := rf.Build(t, pool, network, home)
+	r := rf.Build(t, client, network, home)
 
 	const pathName = "p"
 	ic := ibctest.NewInterchain().
@@ -54,7 +54,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 
 		// Create relayer keys and wallets but don't create links,
@@ -134,7 +134,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		req.NoError(r.CreateChannel(ctx, eRep, pathName, ibc.CreateChannelOptions{
 			SourcePortName: "transfer",
 			DestPortName:   "transfer",
-			Order:          "unordered",
+			Order:          ibc.Unordered,
 			Version:        "ics20-1",
 		}))
 

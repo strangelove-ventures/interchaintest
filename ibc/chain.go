@@ -3,7 +3,7 @@ package ibc
 import (
 	"context"
 
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/client"
 )
 
 type Chain interface {
@@ -11,7 +11,7 @@ type Chain interface {
 	Config() ChainConfig
 
 	// initializes node structs so that things like initializing keys can be done before starting the chain
-	Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error
+	Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error
 
 	// sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
@@ -46,6 +46,9 @@ type Chain interface {
 
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error
+
+	// RecoverKey recovers an existing user from a given mnemonic.
+	RecoverKey(ctx context.Context, name, mnemonic string) error
 
 	// fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 	GetAddress(ctx context.Context, keyName string) ([]byte, error)

@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
-
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -102,8 +102,8 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) Initialize(testName string, homeDirectory string, dockerPool *dockertest.Pool, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, dockerPool, networkID)
+func (c *PenumbraChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
+	c.initializeChainNodes(testName, homeDirectory, cli, networkID)
 	return nil
 }
 
@@ -134,13 +134,13 @@ func (c *PenumbraChain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *PenumbraChain) GetHostRPCAddress() string {
-	return "http://" + dockerutil.GetHostPort(c.getRelayerNode().TendermintNode.Container, rpcPort)
+	return "http://" + c.getRelayerNode().PenumbraAppNode.hostRPCPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *PenumbraChain) GetHostGRPCAddress() string {
-	return dockerutil.GetHostPort(c.getRelayerNode().TendermintNode.Container, grpcPort)
+	return c.getRelayerNode().PenumbraAppNode.hostGRPCPort
 }
 
 func (c *PenumbraChain) HomeDir() string {
@@ -150,6 +150,10 @@ func (c *PenumbraChain) HomeDir() string {
 // Implements Chain interface
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
+}
+
+func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
+	return fmt.Errorf("RecoverKey not implemented for PenumbraChain")
 }
 
 // Implements Chain interface
@@ -213,26 +217,37 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 }
 
 // creates the test node objects required for bootstrapping tests
-func (c *PenumbraChain) initializeChainNodes(testName, home string,
-	pool *dockertest.Pool, networkID string) {
+func (c *PenumbraChain) initializeChainNodes(
+	testName, home string,
+	cli *client.Client,
+	networkID string,
+) {
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
-		err := pool.Client.PullImage(docker.PullImageOptions{
-			Repository: image.Repository,
-			Tag:        image.Version,
-		}, docker.AuthConfiguration{})
+		rc, err := cli.ImagePull(
+			context.TODO(),
+			image.Repository+":"+image.Version,
+			types.ImagePullOptions{},
+		)
 		if err != nil {
-			c.log.Error("Pull image", zap.Error(err))
+			c.log.Error("Failed to pull image",
+				zap.Error(err),
+				zap.String("repository", image.Repository),
+				zap.String("tag", image.Version),
+			)
+		} else {
+			_, _ = io.Copy(io.Discard, rc)
+			_ = rc.Close()
 		}
 	}
 	for i := 0; i < count; i++ {
 		tn := &tendermint.TendermintNode{Log: c.log, Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
+			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
 		tn.MkDir()
 		pn := &PenumbraAppNode{log: c.log, Home: home, Index: i, Chain: c,
-			Pool: pool, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
+			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
 		pn.MkDir()
 		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
 	}
@@ -337,18 +352,18 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	if err := eg.Wait(); err != nil {
-		return err
+		return fmt.Errorf("waiting to init full nodes' files: %w", err)
 	}
 
 	firstValidator := validators[0]
 	if err := firstValidator.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
-		return err
+		return fmt.Errorf("generating genesis file: %w", err)
 	}
 
 	// penumbra generate-testnet right now overwrites new validator keys
 	for i, validator := range validators {
 		if _, err := dockerutil.CopyFile(firstValidator.PenumbraAppNode.ValidatorPrivateKeyFile(i), validator.TendermintNode.PrivValKeyFilePath()); err != nil {
-			return err
+			return fmt.Errorf("copying private key to validator %d: %w", i, err)
 		}
 	}
 
@@ -357,7 +372,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 // Bootstraps the chain and starts it from genesis
 func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFilePath string) error {
-
 	var tendermintNodes []*tendermint.TendermintNode
 	for _, node := range c.PenumbraNodes {
 		tendermintNodes = append(tendermintNodes, node.TendermintNode)
@@ -383,7 +397,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 			)
 		})
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer()
+			return n.PenumbraAppNode.CreateNodeContainer(ctx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -420,7 +434,7 @@ func (c *PenumbraChain) Cleanup(ctx context.Context) error {
 	for _, p := range c.PenumbraNodes {
 		p := p
 		eg.Go(func() error {
-			if err := p.PenumbraAppNode.StopContainer(); err != nil {
+			if err := p.PenumbraAppNode.StopContainer(ctx); err != nil {
 				return err
 			}
 			return p.PenumbraAppNode.Cleanup(ctx)
