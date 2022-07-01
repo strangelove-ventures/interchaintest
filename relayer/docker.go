@@ -65,11 +65,11 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, pool *dockertest.P
 	}
 
 	for _, opt := range options {
-		switch typedOpt := opt.(type) {
+		switch o := opt.(type) {
 		case RelayerOptionDockerImage:
-			relayer.customImage = &typedOpt.DockerImage
+			relayer.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
-			relayer.pullImage = typedOpt.Pull
+			relayer.pullImage = o.Pull
 		}
 	}
 
