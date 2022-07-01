@@ -120,7 +120,7 @@ func (c *CosmosChain) GetHostGRPCAddress() string {
 	return dockerutil.GetHostPort(c.getFullNode().Container, grpcPort)
 }
 
-// GetHomeDir implements ibc.Chain.
+// HomeDir implements ibc.Chain.
 func (c *CosmosChain) HomeDir() string {
 	return c.getFullNode().GetHomeDir()
 }
