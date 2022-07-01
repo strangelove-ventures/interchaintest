@@ -40,9 +40,9 @@ type Chain interface {
 	// Note that this will not return a valid value until after Start returns.
 	GetHostGRPCAddress() string
 
-	// GetHomeDir is the home directory of a node running in a docker container. Therefore, this maps to
+	// HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
 	// the container's filesystem (not the host).
-	GetHomeDir() string
+	HomeDir() string
 
 	// creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 	CreateKey(ctx context.Context, keyName string) error

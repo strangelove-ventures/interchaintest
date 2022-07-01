@@ -121,7 +121,7 @@ func (c *CosmosChain) GetHostGRPCAddress() string {
 }
 
 // GetHomeDir implements ibc.Chain.
-func (c *CosmosChain) GetHomeDir() string {
+func (c *CosmosChain) HomeDir() string {
 	return c.getFullNode().GetHomeDir()
 }
 
