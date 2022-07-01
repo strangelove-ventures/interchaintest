@@ -43,7 +43,7 @@ type RelayerOptionStartupFlags struct {
 	Flags []string
 }
 
-func StartupFlags(flags []string) RelayerOption {
+func StartupFlags(flags ...string) RelayerOption {
 	return RelayerOptionStartupFlags{
 		Flags: flags,
 	}
