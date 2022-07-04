@@ -94,8 +94,8 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 	_, ok := b.keyrings[user]
 	if !ok {
 		localDir := b.t.TempDir()
-		containerKeyringDir := fmt.Sprintf("%s/keyring-test", cn.NodeHome())
-		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.Pool.Client, localDir, containerKeyringDir, cn.Container.ID)
+		containerKeyringDir := fmt.Sprintf("%s/keyring-test", cn.HomeDir())
+		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.DockerClient, localDir, containerKeyringDir, cn.containerID)
 		if err != nil {
 			return client.Context{}, err
 		}

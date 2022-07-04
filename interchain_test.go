@@ -235,7 +235,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	t.Parallel()
 
 	home := ibctest.TempDir(t)
-	pool, network := ibctest.DockerSetup(t)
+	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
@@ -249,7 +249,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, pool, network, home,
+		t, client, network, home,
 	)
 
 	ic := ibctest.NewInterchain().
@@ -269,7 +269,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		HomeDir:   home,
-		Pool:      pool,
+		Client:    client,
 		NetworkID: network,
 	}))
 

@@ -7,21 +7,16 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"path"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/client"
 )
 
 // NewLocalKeyringFromDockerContainer copies the contents of the given container directory into a specified local directory.
 // This allows test hosts to sign transactions on behalf of test users.
-func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *docker.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
-	var buf bytes.Buffer
-	err := dc.DownloadFromContainer(containerId, docker.DownloadFromContainerOptions{
-		OutputStream: &buf,
-		Path:         containerKeyringDir,
-		Context:      ctx,
-	})
+func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
+	reader, _, err := dc.CopyFromContainer(ctx, containerId, containerKeyringDir)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +24,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *docker.Client, 
 	if err := os.Mkdir(fmt.Sprintf("%s/keyring-test", localDirectory), os.ModePerm); err != nil {
 		return nil, err
 	}
-
-	tr := tar.NewReader(&buf)
+	tr := tar.NewReader(reader)
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -46,9 +40,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *docker.Client, 
 		}
 
 		name := hdr.Name
-		splitName := strings.Split(name, "/")
-
-		extractedFileName := splitName[len(splitName)-1]
+		extractedFileName := path.Base(name)
 		isDirectory := extractedFileName == ""
 		if isDirectory {
 			continue
