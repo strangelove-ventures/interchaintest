@@ -5,21 +5,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
+	"github.com/docker/docker/pkg/stdcopy"
 	"go.uber.org/zap"
 )
 
 // Image is a docker image.
 type Image struct {
-	log             *zap.Logger
-	pool            *dockertest.Pool
+	log    *zap.Logger
+	client *client.Client
+
+	// NOTE: it might make sense for Image to have an ibc.DockerImage field,
+	// but for now it is probably better to not have internal/dockerutil depend on ibc.
 	repository, tag string
-	networkID       string
-	testName        string
+
+	networkID string
+	testName  string
 }
 
 // NewImage returns a valid Image.
@@ -30,12 +40,12 @@ type Image struct {
 // Most arguments (except tag) must be non-zero values or this function panics.
 // If tag is absent, defaults to "latest".
 // Currently, only public docker images are supported.
-func NewImage(logger *zap.Logger, pool *dockertest.Pool, networkID string, testName string, repository, tag string) *Image {
+func NewImage(logger *zap.Logger, cli *client.Client, networkID string, testName string, repository, tag string) *Image {
 	if logger == nil {
 		panic(errors.New("nil logger"))
 	}
-	if pool == nil {
-		panic(errors.New("pool cannot be nil"))
+	if cli == nil {
+		panic(errors.New("client cannot be nil"))
 	}
 	if networkID == "" {
 		panic(errors.New("networkID cannot be empty"))
@@ -49,17 +59,20 @@ func NewImage(logger *zap.Logger, pool *dockertest.Pool, networkID string, testN
 	if tag == "" {
 		tag = "latest"
 	}
-	return &Image{
-		log: logger.With(
-			zap.String("image", fmt.Sprintf("%s:%s", repository, tag)),
-			zap.String("test_name", testName),
-		),
-		pool:       pool,
+
+	i := &Image{
+		client:     cli,
 		networkID:  networkID,
 		repository: repository,
 		tag:        tag,
 		testName:   testName,
 	}
+	// Assign log after creating, so the imageRef method can be used.
+	i.log = logger.With(
+		zap.String("image", i.imageRef()),
+		zap.String("test_name", testName),
+	)
+	return i
 }
 
 // ContainerOptions optionally configures starting a Container.
@@ -91,27 +104,43 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	return c.Wait(ctx)
 }
 
+func (image *Image) imageRef() string {
+	return image.repository + ":" + image.tag
+}
+
 // ensurePulled can only pull public images.
-func (image *Image) ensurePulled() error {
-	client := image.pool.Client
-	_, err := client.InspectImage(fmt.Sprintf("%s:%s", image.repository, image.tag))
+func (image *Image) ensurePulled(ctx context.Context) error {
+	ref := image.imageRef()
+	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
-		if err := client.PullImage(docker.PullImageOptions{
-			Repository: image.repository,
-			Tag:        image.tag,
-		}, docker.AuthConfiguration{}); err != nil {
-			return fmt.Errorf("pull image %s:%s: %w", image.repository, image.tag, err)
+		rc, err := image.client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		if err != nil {
+			return fmt.Errorf("pull image %s: %w", ref, err)
 		}
+		_, _ = io.Copy(io.Discard, rc)
+		_ = rc.Close()
 	}
 	return nil
 }
 
-func (image *Image) createContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (*docker.Container, error) {
+func (image *Image) createContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (string, error) {
 	// Although this shouldn't happen because the name includes randomness, in reality there seems to intermittent
 	// chances of collisions.
-	if resource, ok := image.pool.ContainerByName(containerName); ok {
-		if err := image.pool.Purge(resource); err != nil {
-			return nil, fmt.Errorf("unable to purge container %s: %w", containerName, err)
+
+	containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.Arg("name", containerName)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to list containers: %w", err)
+	}
+
+	for _, c := range containers {
+		if err := image.client.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+			RemoveVolumes: true,
+			Force:         true,
+		}); err != nil {
+			return "", fmt.Errorf("unable to remove container %s: %w", containerName, err)
 		}
 	}
 
@@ -120,28 +149,38 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 		opts.User = GetDockerUserString()
 	}
 
-	return image.pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Context: ctx,
-		Name:    containerName,
-		Config: &docker.Config{
-			User:     opts.User,
+	cc, err := image.client.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: image.imageRef(),
+
+			// Entrypoint: []string{}, // Wasn't present before?
+			Cmd: cmd,
+
+			Env: opts.Env,
+
 			Hostname: hostName,
-			Image:    fmt.Sprintf("%s:%s", image.repository, image.tag),
-			Cmd:      cmd,
-			Env:      opts.Env,
-			Labels:   map[string]string{CleanupLabel: image.testName},
+			User:     opts.User,
+
+			Labels: map[string]string{CleanupLabel: image.testName},
 		},
-		HostConfig: &docker.HostConfig{
+		&container.HostConfig{
 			Binds:           opts.Binds,
 			PublishAllPorts: true, // Because we publish all ports, no need to expose specific ports.
 			AutoRemove:      false,
 		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
+		&network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
 				image.networkID: {},
 			},
 		},
-	})
+		nil,
+		containerName,
+	)
+	if err != nil {
+		return "", err
+	}
+	return cc.ID, nil
 }
 
 // Start pulls the image if not present, creates a container, and runs it.
@@ -150,7 +189,7 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	if err := image.ensurePulled(); err != nil {
+	if err := image.ensurePulled(ctx); err != nil {
 		return nil, image.wrapErr(err)
 	}
 
@@ -164,30 +203,24 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		)
 	)
 
-	c, err := image.createContainer(ctx, containerName, hostName, cmd, opts)
+	cID, err := image.createContainer(ctx, containerName, hostName, cmd, opts)
 	if err != nil {
 		return nil, image.wrapErr(fmt.Errorf("create container %s: %w", containerName, err))
 	}
 
-	logger.Info("Running container")
+	logger.Info("About to start container")
 
-	err = image.pool.Client.StartContainerWithContext(c.ID, nil, ctx)
+	err = StartContainer(ctx, image.client, cID)
 	if err != nil {
 		return nil, image.wrapErr(fmt.Errorf("start container %s: %w", containerName, err))
 	}
 
-	// Copying (*dockertest.Pool).Run logic which inspects after starting.
-	c, err = image.pool.Client.InspectContainerWithContext(c.ID, ctx)
-	if err != nil {
-		return nil, image.wrapErr(fmt.Errorf("inspect started container %s: %w", containerName, err))
-	}
-
 	return &Container{
-		Name:      containerName,
-		Hostname:  hostName,
-		log:       logger,
-		image:     image,
-		container: c,
+		Name:        containerName,
+		Hostname:    hostName,
+		log:         logger,
+		image:       image,
+		containerID: cID,
 	}, nil
 }
 
@@ -200,9 +233,9 @@ type Container struct {
 	Name     string
 	Hostname string
 
-	log       *zap.Logger
-	image     *Image
-	container *docker.Container
+	log         *zap.Logger
+	image       *Image
+	containerID string
 }
 
 // Wait blocks until the container exits. Calling wait is not suitable for daemons and servers.
@@ -210,27 +243,45 @@ type Container struct {
 //
 // Wait implicitly calls Stop.
 func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error) {
-	var (
-		image = c.image
-		cont  = c.container
-	)
-
-	exitCode, err := image.pool.Client.WaitContainerWithContext(cont.ID, ctx)
-	if err != nil {
-		return nil, nil, c.image.wrapErr(fmt.Errorf("wait for container %s: %w", c.Name, err))
+	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
+	var exitCode int
+	select {
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	case err := <-errCh:
+		return nil, nil, err
+	case res := <-waitCh:
+		exitCode = int(res.StatusCode)
+		if res.Error != nil {
+			return nil, nil, errors.New(res.Error.Message)
+		}
 	}
 
 	var (
 		stdoutBuf = new(bytes.Buffer)
 		stderrBuf = new(bytes.Buffer)
 	)
-	err = image.pool.Client.Logs(docker.LogsOptions{Context: ctx, Container: cont.ID, OutputStream: stdoutBuf, ErrorStream: stderrBuf, Stdout: true, Stderr: true, Tail: "50", Follow: false, Timestamps: false})
+
+	rc, err := c.image.client.ContainerLogs(ctx, c.containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       "50",
+	})
 	if err != nil {
-		c.log.Info("Failed to get container logs", zap.Error(err), zap.String("container_id", cont.ID))
+		return nil, nil, err
 	}
+	defer func() { _ = rc.Close() }()
+
+	// Logs are multiplexed into one stream; see docs for ContainerLogs.
+	_, err = stdcopy.StdCopy(stdoutBuf, stderrBuf, rc)
+	if err != nil {
+		return nil, nil, err
+	}
+	_ = rc.Close()
+
 	err = c.Stop(10 * time.Second)
 	if err != nil {
-		c.log.Error("Failed to stop and remove container", zap.Error(err), zap.String("container_id", cont.ID))
+		c.log.Error("Failed to stop and remove container", zap.Error(err), zap.String("container_id", c.containerID))
 	}
 
 	if exitCode != 0 {
@@ -247,28 +298,20 @@ func (c *Container) Stop(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*2)
 	defer cancel()
 
-	var (
-		client     = c.image.pool.Client
-		notFound   *docker.NoSuchContainer
-		notRunning *docker.ContainerNotRunning
-	)
-
-	err := client.StopContainerWithContext(c.container.ID, uint(timeout.Seconds()), ctx)
-	switch {
-	case errors.As(err, &notFound) || errors.As(err, &notRunning):
-	// ignore
-	case err != nil:
-		return c.image.wrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
+	err := c.image.client.ContainerStop(ctx, c.containerID, &timeout)
+	if err != nil {
+		// Only return the error if it didn't match an already stopped, or a missing container.
+		if !(errdefs.IsNotModified(err) || errdefs.IsNotFound(err)) {
+			return c.image.wrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
+		}
 	}
 
 	// RemoveContainerOptions duplicates (*dockertest.Resource).Prune.
-	err = client.RemoveContainer(docker.RemoveContainerOptions{
-		ID:            c.container.ID,
-		Context:       ctx,
+	err = c.image.client.ContainerRemove(ctx, c.containerID, types.ContainerRemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})
-	if err != nil && !errors.As(err, &notFound) {
+	if err != nil && !errdefs.IsNotFound(err) {
 		return c.image.wrapErr(fmt.Errorf("remove container %s: %w", c.Name, err))
 	}
 

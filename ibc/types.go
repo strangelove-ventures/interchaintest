@@ -82,6 +82,15 @@ type DockerImage struct {
 	Version    string
 }
 
+// Ref returns the reference to use when e.g. creating a container.
+func (i DockerImage) Ref() string {
+	if i.Version == "" {
+		return i.Repository + ":latest"
+	}
+
+	return i.Repository + ":" + i.Version
+}
+
 type WalletAmount struct {
 	Address string
 	Denom   string

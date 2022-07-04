@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"go.uber.org/zap"
@@ -20,14 +22,19 @@ import (
 type PenumbraAppNode struct {
 	log *zap.Logger
 
-	Index     int
-	Home      string
-	Chain     ibc.Chain
-	TestName  string
-	NetworkID string
-	Pool      *dockertest.Pool
-	Container *docker.Container
-	Image     ibc.DockerImage
+	Index        int
+	Home         string
+	Chain        ibc.Chain
+	TestName     string
+	NetworkID    string
+	DockerClient *client.Client
+	Image        ibc.DockerImage
+
+	containerID string
+
+	// Set during StartContainer.
+	hostRPCPort  string
+	hostGRPCPort string
 }
 
 const (
@@ -37,8 +44,8 @@ const (
 	grpcPort       = "9090/tcp"
 )
 
-var exposedPorts = map[docker.Port]struct{}{
-	docker.Port(tendermintPort): {},
+var exposedPorts = nat.PortSet{
+	nat.Port(tendermintPort): {},
 }
 
 // Name of the test node container
@@ -65,10 +72,10 @@ func (p *PenumbraAppNode) MkDir() {
 
 // Bind returns the home folder bind point for running the node
 func (p *PenumbraAppNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.HomeDir())}
 }
 
-func (p *PenumbraAppNode) NodeHome() string {
+func (p *PenumbraAppNode) HomeDir() string {
 	return fmt.Sprintf("/root/.%s", p.Chain.Config().Name)
 }
 
@@ -102,11 +109,11 @@ func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return filepath.Join(p.NodeHome(), "validator.json")
+	return filepath.Join(p.HomeDir(), "validator.json")
 }
 
 func (p *PenumbraAppNode) WalletPathContainer() string {
-	return filepath.Join(p.NodeHome(), "wallet")
+	return filepath.Join(p.HomeDir(), "wallet")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFile() string {
@@ -114,7 +121,7 @@ func (p *PenumbraAppNode) ValidatorsInputFile() string {
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
-	return filepath.Join(p.NodeHome(), "validators.json")
+	return filepath.Join(p.HomeDir(), "validators.json")
 }
 
 func (p *PenumbraAppNode) AllocationsInputFile() string {
@@ -122,7 +129,7 @@ func (p *PenumbraAppNode) AllocationsInputFile() string {
 }
 
 func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
-	return filepath.Join(p.NodeHome(), "allocations.csv")
+	return filepath.Join(p.HomeDir(), "allocations.csv")
 }
 
 func (p *PenumbraAppNode) GenesisFile() string {
@@ -134,7 +141,7 @@ func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
 }
 
 func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
+	cmd := []string{"find", fmt.Sprintf("%s/.", p.HomeDir()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
 
 	// Cleanup should complete instantly,
 	// so add a 1-minute timeout in case Docker hangs.
@@ -171,7 +178,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 		"--chain-id", chainID,
 		"--validators-input-file", p.ValidatorsInputFileContainer(),
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
-		"--output-dir", p.NodeHome(),
+		"--output-dir", p.HomeDir(),
 	}
 	_, _, err = p.Exec(ctx, cmd, nil)
 	return err
@@ -224,62 +231,69 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) CreateNodeContainer() error {
-	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.NodeHome()}
+func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
+  cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
-	cont, err := p.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: p.Name(),
-		Config: &docker.Config{
-			User:         dockerutil.GetRootUserString(),
-			Cmd:          cmd,
-			Hostname:     p.HostName(),
-			ExposedPorts: exposedPorts,
-			DNS:          []string{},
-			// Env:          []string{"RUST_BACKTRACE=full"},
-			Image:  fmt.Sprintf("%s:%s", p.Image.Repository, p.Image.Version),
+	cc, err := p.DockerClient.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: p.Image.Ref(),
+
+			Cmd: cmd,
+
+			Hostname: p.HostName(),
+			User:     dockerutil.GetRootUserString(),
+
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
+
+			ExposedPorts: exposedPorts,
 		},
-		HostConfig: &docker.HostConfig{
+		&container.HostConfig{
 			Binds:           p.Bind(),
 			PublishAllPorts: true,
 			AutoRemove:      false,
+			DNS:             []string{},
 		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
+		&network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
 				p.NetworkID: {},
 			},
 		},
-		Context: nil,
-	})
+		nil,
+		p.Name(),
+	)
 	if err != nil {
 		return err
 	}
-	p.Container = cont
+	p.containerID = cc.ID
 	return nil
 }
 
-func (p *PenumbraAppNode) StopContainer() error {
-	const timeoutSeconds = 30 // StopContainer expects whole seconds as a uint.
-	return p.Pool.Client.StopContainer(p.Container.ID, timeoutSeconds)
+func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
+	timeout := 30 * time.Second
+	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := p.Pool.Client.StartContainerWithContext(p.Container.ID, nil, ctx); err != nil {
+	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
 		return err
 	}
 
-	c, err := p.Pool.Client.InspectContainerWithContext(p.Container.ID, ctx)
+	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
 	if err != nil {
 		return err
 	}
-	p.Container = c
+
+	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
+
 	return nil
 }
 
 // Exec run a container for a specific job and block until the container exits
 func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(p.log, p.Pool, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
+	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,

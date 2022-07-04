@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest/v3"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -24,21 +26,21 @@ func TestNewImage(t *testing.T) {
 	}
 	t.Parallel()
 
-	pool, networkID := DockerSetup(t)
+	cl, networkID := DockerSetup(t)
 
 	for _, tt := range []struct {
-		Pool       *dockertest.Pool
+		Client     *client.Client
 		NetworkID  string
 		Repository string
 		TestName   string
 	}{
 		{nil, networkID, "repo", t.Name()},
-		{pool, "", "repo", t.Name()},
-		{pool, networkID, "", t.Name()},
-		{pool, networkID, "repo", ""},
+		{cl, "", "repo", t.Name()},
+		{cl, networkID, "", t.Name()},
+		{cl, networkID, "repo", ""},
 	} {
 		require.Panics(t, func() {
-			NewImage(zap.NewNop(), tt.Pool, tt.NetworkID, tt.TestName, tt.Repository, "")
+			NewImage(zap.NewNop(), tt.Client, tt.NetworkID, tt.TestName, tt.Repository, "")
 		}, tt)
 	}
 }
@@ -50,8 +52,8 @@ func TestImage_Run(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	pool, networkID := DockerSetup(t)
-	image := NewImage(zap.NewNop(), pool, networkID, t.Name(), testDockerImage, testDockerTag)
+	client, networkID := DockerSetup(t)
+	image := NewImage(zap.NewNop(), client, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("happy path", func(t *testing.T) {
 		stdout, stderr, err := image.Run(ctx, []string{"echo", "-n", "hello"}, ContainerOptions{})
@@ -126,8 +128,8 @@ func TestContainer(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	pool, networkID := DockerSetup(t)
-	image := NewImage(zap.NewNop(), pool, networkID, t.Name(), testDockerImage, testDockerTag)
+	cl, networkID := DockerSetup(t)
+	image := NewImage(zap.NewNop(), cl, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("wait", func(t *testing.T) {
 		c, err := image.Start(ctx, []string{"echo", "-n", "started"}, ContainerOptions{})
@@ -142,8 +144,12 @@ func TestContainer(t *testing.T) {
 		require.Equal(t, "started", string(stdout))
 		require.Empty(t, stderr)
 
-		_, ok := image.pool.ContainerByName(c.Name)
-		require.False(t, ok, "container was not removed")
+		containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+			All:     true,
+			Filters: filters.NewArgs(filters.Arg("name", c.Name)),
+		})
+		require.NoError(t, err)
+		require.Empty(t, containers, "container was not removed")
 
 		require.NoError(t, c.Stop(5*time.Second))
 	})
@@ -154,8 +160,12 @@ func TestContainer(t *testing.T) {
 		require.NoError(t, c.Stop(10*time.Second))
 		require.NoError(t, c.Stop(10*time.Second)) // assert idempotent
 
-		_, ok := image.pool.ContainerByName(c.Name)
-		require.False(t, ok, "container was not removed")
+		containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+			All:     true,
+			Filters: filters.NewArgs(filters.Arg("name", c.Name)),
+		})
+		require.NoError(t, err)
+		require.Empty(t, containers, "container was not removed")
 	})
 
 	t.Run("start error", func(t *testing.T) {

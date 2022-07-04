@@ -4,35 +4,47 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetHostPort(t *testing.T) {
 	for _, tt := range []struct {
-		Container *docker.Container
+		Container types.ContainerJSON
 		PortID    string
 		Want      string
 	}{
-		{&docker.Container{
-			NetworkSettings: &docker.NetworkSettings{
-				Ports: map[docker.Port][]docker.PortBinding{"test": {
-					{HostIP: "1.2.3.4", HostPort: "8080"}, {HostIP: "0.0.0.0", HostPort: "9999"}},
+		{
+			types.ContainerJSON{
+				NetworkSettings: &types.NetworkSettings{
+					NetworkSettingsBase: types.NetworkSettingsBase{
+						Ports: nat.PortMap{
+							nat.Port("test"): []nat.PortBinding{
+								{HostIP: "1.2.3.4", HostPort: "8080"},
+								{HostIP: "0.0.0.0", HostPort: "9999"},
+							},
+						},
+					},
 				},
-			},
-		}, "test", "1.2.3.4:8080"},
-
-		{&docker.Container{
-			NetworkSettings: &docker.NetworkSettings{
-				Ports: map[docker.Port][]docker.PortBinding{"test": {
-					{HostIP: "0.0.0.0", HostPort: "3000"}},
+			}, "test", "1.2.3.4:8080",
+		},
+		{
+			types.ContainerJSON{
+				NetworkSettings: &types.NetworkSettings{
+					NetworkSettingsBase: types.NetworkSettingsBase{
+						Ports: nat.PortMap{
+							nat.Port("test"): []nat.PortBinding{
+								{HostIP: "0.0.0.0", HostPort: "3000"},
+							},
+						},
+					},
 				},
-			},
-		}, "test", "localhost:3000"},
+			}, "test", "localhost:3000",
+		},
 
-		{nil, "", ""},
-		{&docker.Container{}, "", ""},
-		{&docker.Container{NetworkSettings: &docker.NetworkSettings{}}, "does-not-matter", ""},
+		{types.ContainerJSON{}, "", ""},
+		{types.ContainerJSON{NetworkSettings: &types.NetworkSettings{}}, "does-not-matter", ""},
 	} {
 		require.Equal(t, tt.Want, GetHostPort(tt.Container, tt.PortID), tt)
 	}

@@ -18,8 +18,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
@@ -41,26 +43,23 @@ type ChainNode struct {
 	GenesisCoins string
 	Validator    bool
 	NetworkID    string
-	Pool         *dockertest.Pool
+	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
-	Container    *docker.Container
 	TestName     string
 	Image        ibc.DockerImage
 
 	lock sync.Mutex
 	log  *zap.Logger
+
+	containerID string
+
+	// Ports set during StartContainer.
+	hostRPCPort  string
+	hostGRPCPort string
 }
 
 // ChainNodes is a collection of ChainNode
 type ChainNodes []*ChainNode
-
-type ContainerPort struct {
-	Name      string
-	Container *docker.Container
-	Port      docker.Port
-}
-
-type Hosts []ContainerPort
 
 const (
 	valKey      = "validator"
@@ -73,12 +72,12 @@ const (
 )
 
 var (
-	sentryPorts = map[docker.Port]struct{}{
-		docker.Port(p2pPort):     {},
-		docker.Port(rpcPort):     {},
-		docker.Port(grpcPort):    {},
-		docker.Port(apiPort):     {},
-		docker.Port(privValPort): {},
+	sentryPorts = nat.PortSet{
+		nat.Port(p2pPort):     {},
+		nat.Port(rpcPort):     {},
+		nat.Port(grpcPort):    {},
+		nat.Port(apiPort):     {},
+		nat.Port(privValPort): {},
 	}
 )
 
@@ -166,10 +165,10 @@ func (tn *ChainNode) TMConfigPath() string {
 
 // Bind returns the home folder bind point for running the node
 func (tn *ChainNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
 }
 
-func (tn *ChainNode) NodeHome() string {
+func (tn *ChainNode) HomeDir() string {
 	return filepath.Join("/tmp", tn.Chain.Config().Name)
 }
 
@@ -302,7 +301,7 @@ func CondenseMoniker(m string) string {
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin, "init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
@@ -313,7 +312,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	command := []string{tn.Chain.Config().Bin, "keys", "add", name,
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -326,7 +325,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.NodeHome()),
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.HomeDir()),
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -344,7 +343,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		amount += fmt.Sprintf("%d%s", coin.Amount.Int64(), coin.Denom)
 	}
 	command := []string{tn.Chain.Config().Bin, "add-genesis-account", address, amount,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -362,7 +361,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation types.Coin) error {
 	command := []string{tn.Chain.Config().Bin, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
 		"--keyring-backend", keyring.BackendTest,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	tn.lock.Lock()
@@ -374,7 +373,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -396,7 +395,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 		"--from", keyName,
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	if timeout != nil {
@@ -428,7 +427,7 @@ func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.W
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	return tn.ExecThenWaitForBlocks(ctx, command)
@@ -474,7 +473,7 @@ type CodeInfosResponse struct {
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	_, file := filepath.Split(fileName)
 	newFilePath := filepath.Join(tn.Dir(), file)
-	newFilePathContainer := filepath.Join(tn.NodeHome(), file)
+	newFilePathContainer := filepath.Join(tn.HomeDir(), file)
 	if _, err := dockerutil.CopyFile(fileName, newFilePath); err != nil {
 		return "", err
 	}
@@ -487,7 +486,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	tn.lock.Lock()
@@ -506,7 +505,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"query", "wasm", "list-code", "--reverse",
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
@@ -532,7 +531,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
@@ -554,7 +553,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		"query", "wasm", "list-contract-by-code", codeID,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 
@@ -582,7 +581,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	return tn.ExecThenWaitForBlocks(ctx, command)
@@ -594,7 +593,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 		"--height", fmt.Sprint(height),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	stdout, _, err := tn.Exec(ctx, command, nil)
@@ -613,7 +612,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	command := []string{tn.Chain.Config().Bin,
 		"export",
 		"--height", fmt.Sprint(height),
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 	_, stderr, err := tn.Exec(ctx, command, nil)
 	if err != nil {
@@ -626,7 +625,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin,
 		"unsafe-reset-all",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 	}
 
 	_, _, err := tn.Exec(ctx, command, nil)
@@ -646,7 +645,7 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 		"--output", "json",
 		"-y",
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	return tn.ExecThenWaitForBlocks(ctx, command)
@@ -654,9 +653,9 @@ func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAdd
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
-	cmd := []string{chainCfg.Bin, "start", "--home", tn.NodeHome(), "--x-crisis-skip-assert-invariants"}
+	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	if chainCfg.NoHostMount {
-		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.NodeHome(), tn.NodeHome(), chainCfg.Bin, tn.NodeHome())}
+		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
 	}
 	tn.logger().
 		Info("Running command",
@@ -664,52 +663,59 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("container", tn.Name()),
 		)
 
-	cont, err := tn.Pool.Client.CreateContainer(docker.CreateContainerOptions{
-		Name: tn.Name(),
-		Config: &docker.Config{
-			User:         dockerutil.GetDockerUserString(),
-			Cmd:          cmd,
-			Hostname:     tn.HostName(),
+	cc, err := tn.DockerClient.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: tn.Image.Ref(),
+
+			Entrypoint: []string{},
+			Cmd:        cmd,
+
+			Hostname: tn.HostName(),
+			User:     dockerutil.GetDockerUserString(),
+
+			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
+
 			ExposedPorts: sentryPorts,
-			DNS:          []string{},
-			Image:        fmt.Sprintf("%s:%s", tn.Image.Repository, tn.Image.Version),
-			Labels:       map[string]string{dockerutil.CleanupLabel: tn.TestName},
-			Entrypoint:   []string{},
 		},
-		HostConfig: &docker.HostConfig{
+		&container.HostConfig{
 			Binds:           tn.Bind(),
 			PublishAllPorts: true,
 			AutoRemove:      false,
+			DNS:             []string{},
 		},
-		NetworkingConfig: &docker.NetworkingConfig{
-			EndpointsConfig: map[string]*docker.EndpointConfig{
+		&network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
 				tn.NetworkID: {},
 			},
 		},
-		Context: ctx,
-	})
+		nil,
+		tn.Name(),
+	)
 	if err != nil {
 		return err
 	}
-	tn.Container = cont
+	tn.containerID = cc.ID
 	return nil
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := tn.Pool.Client.StartContainerWithContext(tn.Container.ID, nil, ctx); err != nil {
+	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
 
-	c, err := tn.Pool.Client.InspectContainerWithContext(tn.Container.ID, ctx)
+	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
 	if err != nil {
 		return err
 	}
-	tn.Container = c
 
-	port := dockerutil.GetHostPort(c, rpcPort)
-	tn.logger().Info("Rpc", zap.String("container", tn.Name()), zap.String("port", port))
+	// Set the host ports once since they will not change after the container has started.
+	tn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
+	tn.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
 
-	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
+	tn.logger().Info("Cosmos chain node started", zap.String("container", tn.Name()), zap.String("rpc_port", tn.hostRPCPort))
+
+	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
 		return err
 	}
@@ -819,7 +825,7 @@ func (nodes ChainNodes) logger() *zap.Logger {
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.logger(), tn.Pool, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	job := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
@@ -840,7 +846,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 		"--from", address,
 		"--connection-id", connectionID,
 		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
@@ -862,7 +868,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "query", "intertx", "interchainaccounts", connectionID, address,
 		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name())}
 
 	stdout, _, err := tn.Exec(ctx, command, nil)
@@ -902,7 +908,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"--connection-id", connectionID,
 		"--from", fromAddr,
 		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.NodeHome(),
+		"--home", tn.HomeDir(),
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
