@@ -561,8 +561,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	if err != nil {
 		return "", handleNodeJobError(exitCode, stdout, stderr, err)
 	}
-	// output comes to stderr for some reason
-	return stderr, nil
+	return stdout, nil
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
