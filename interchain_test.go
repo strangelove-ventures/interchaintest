@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/broadcast"
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
@@ -280,7 +279,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(10000)}
 
 		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
-		resp, err := broadcast.Tx(ctx, b, testUser, msg)
+		resp, err := ibctest.BroadcastTx(ctx, b, testUser, msg)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.NotEqual(t, 0, resp.GasUsed)
