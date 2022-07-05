@@ -135,7 +135,7 @@ func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte
 // defaultClientContext returns a default client context configured with the user as the sender.
 func (b *Broadcaster) defaultClientContext(fromUser broadcast.User, sdkAdd sdk.AccAddress) client.Context {
 	// initialize a clean buffer each time
-	b.buf = &bytes.Buffer{}
+	b.buf.Reset()
 	kr := b.keyrings[fromUser]
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
