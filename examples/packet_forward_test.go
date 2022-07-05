@@ -15,7 +15,7 @@ import (
 )
 
 func TestPacketForwardMiddleware(t *testing.T) {
-	t.Parallel()
+	t.Skip()
 
 	home := t.TempDir()
 	client, network := ibctest.DockerSetup(t)
