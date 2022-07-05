@@ -119,7 +119,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
-	err = test.WaitForBlocks(ctx, 15, gaia)
+	err = test.WaitForBlocks(ctx, 10, gaia)
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on osmosis
@@ -149,7 +149,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
-	err = test.WaitForBlocks(ctx, 15, gaia)
+	err = test.WaitForBlocks(ctx, 10, gaia)
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on juno
@@ -163,5 +163,29 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.Equal(t, osmosisBalOG, osmosisBal)
 
 	// Send a malformed packet with invalid receiver address from Osmosis->Hub->Juno
+	// This should succeed in the first hop and fail to make the second hop; funds should end up in the intermediary account.
+	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), channels[1].PortID, channels[1].ChannelID, "xyz1t8eh66t2w5k67kwurmn5gqhtq6d2ja0vp7jmmq")
+	transfer = ibc.WalletAmount{
+		Address: receiver,
+		Denom:   osmosis.Config().Denom,
+		Amount:  transferAmount,
+	}
 
+	_, err = osmosis.SendIBCTransfer(ctx, channels[0].ChannelID, osmosisUser.KeyName, transfer, nil)
+	require.NoError(t, err)
+
+	// Wait for transfer to be relayed
+	err = test.WaitForBlocks(ctx, 10, gaia)
+	require.NoError(t, err)
+
+	// Check that the funds sent are gone from the acc on osmosis
+	osmosisBal, err = osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, osmosisBalOG-transferAmount, osmosisBal)
+
+	// Check that the funds sent ended up in the acc on gaia
+	intermediaryIBCDenom := transfertypes.ParseDenomTrace(firstHopDenom)
+	gaiaBal, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), intermediaryIBCDenom.IBCDenom())
+	require.NoError(t, err)
+	require.Equal(t, transferAmount, gaiaBal)
 }
