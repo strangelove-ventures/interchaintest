@@ -76,6 +76,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	channels, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
 	require.NoError(t, err)
 
+	// Start the relayer on both paths
 	err = r.StartRelayer(ctx, eRep, pathOsmoHub)
 	require.NoError(t, err)
 
@@ -86,11 +87,11 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		func() {
 			err := r.StopRelayer(ctx, eRep)
 			if err != nil {
-				// do stuff
+				t.Logf("an error occured while stopping the relayer: %s", err)
 			}
 			for _, c := range chains {
 				if err = c.Cleanup(ctx); err != nil {
-					// do stuff
+					t.Logf("an error occured while stopping chain %s: %s", c.Config().ChainID, err)
 				}
 			}
 		},
@@ -131,11 +132,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopDenom := transfertypes.GetPrefixedDenom(channels[1].Counterparty.PortID, channels[1].Counterparty.ChannelID, firstHopDenom)
 	dstIbcDenom := transfertypes.ParseDenomTrace(secondHopDenom)
 
-	//t.Logf("First Denom - %s \n", firstHopDenom)
-	//t.Logf("Final Denom - %s \n", tmp)
-	//t.Logf("Denom Trace - %s \n", dstIbcDenom)
-	//t.Logf("Denom Trace - %s \n", dstIbcDenom.IBCDenom())
-
 	// Check that the funds sent are present in the acc on juno
 	junoBal, err := juno.GetBalance(ctx, junoUser.Bech32Address(juno.Config().Bech32Prefix), dstIbcDenom.IBCDenom())
 	require.NoError(t, err)
@@ -167,4 +163,5 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.Equal(t, osmosisBalOG, osmosisBal)
 
 	// Send a malformed packet with invalid receiver address from Osmosis->Hub->Juno
+
 }
