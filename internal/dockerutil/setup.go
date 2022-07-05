@@ -58,8 +58,10 @@ func dockerCleanup(t *testing.T, cli *client.Client) func() {
 		ctx := context.TODO()
 
 		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
-			All:     true,
-			Filters: filters.NewArgs(filters.Arg("name", t.Name())),
+			All: true,
+			Filters: filters.NewArgs(
+				filters.Arg("label", CleanupLabel+"="+t.Name()),
+			),
 		})
 		if err != nil {
 			t.Logf("Failed to list containers during docker cleanup: %v", err)
