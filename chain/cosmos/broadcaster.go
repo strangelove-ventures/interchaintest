@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -61,7 +62,8 @@ func (b *Broadcaster) ConfigureClientContextOptions(opts ...broadcast.ClientCont
 }
 
 // GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
-// and the provided user.
+// and the provided user. ConfigureFactoryOptions can be used to specify arbitrary options to configure the returned
+// factory.
 func (b *Broadcaster) GetFactory(ctx context.Context, user broadcast.User) (tx.Factory, error) {
 	clientContext, err := b.GetClientContext(ctx, user)
 	if err != nil {
@@ -86,7 +88,8 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user broadcast.User) (tx.F
 }
 
 // GetClientContext returns a client context that is configured with this Broadcaster's CosmosChain and
-// the provided user.
+// the provided user. ConfigureClientContextOptions can be used to configure arbitrary options to configure the returned
+// client.Context.
 func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User) (client.Context, error) {
 	chain := b.chain
 	cn := chain.getFullNode()
@@ -94,7 +97,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 	_, ok := b.keyrings[user]
 	if !ok {
 		localDir := b.t.TempDir()
-		containerKeyringDir := fmt.Sprintf("%s/keyring-test", cn.HomeDir())
+		containerKeyringDir := filepath.Join(cn.HomeDir(), "keyring-test")
 		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.DockerClient, localDir, containerKeyringDir, cn.containerID)
 		if err != nil {
 			return client.Context{}, err
@@ -117,7 +120,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 // GetTxResponseBytes returns the sdk.TxResponse bytes which returned from broadcast.Tx.
 func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user broadcast.User) ([]byte, error) {
 	if b.buf == nil || b.buf.Len() == 0 {
-		return nil, fmt.Errorf("empty buffer, transaction has not be executed yet")
+		return nil, fmt.Errorf("empty buffer, transaction has not been executed yet")
 	}
 	return b.buf.Bytes(), nil
 }

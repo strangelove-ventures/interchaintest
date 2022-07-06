@@ -4,10 +4,10 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
@@ -21,7 +21,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 		return nil, err
 	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/keyring-test", localDirectory), os.ModePerm); err != nil {
+	if err := os.Mkdir(filepath.Join(localDirectory, "keyring-test"), os.ModePerm); err != nil {
 		return nil, err
 	}
 	tr := tar.NewReader(reader)
@@ -46,7 +46,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 			continue
 		}
 
-		filePath := fmt.Sprintf("%s/keyring-test/%s", localDirectory, extractedFileName)
+		filePath := filepath.Join(localDirectory, "keyring-test", extractedFileName)
 		if err := os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm); err != nil {
 			return nil, err
 		}
