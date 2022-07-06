@@ -8,6 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -251,6 +252,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		t, client, network, home,
 	)
 
+	pathName := "p"
 	ic := ibctest.NewInterchain().
 		AddChain(gaia0).
 		AddChain(gaia1).
@@ -259,6 +261,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 			Chain1:  gaia0,
 			Chain2:  gaia1,
 			Relayer: r,
+			Path:    pathName,
 		})
 
 	rep := testreporter.NewNopReporter()
@@ -274,20 +277,31 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	testUser := ibctest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
 
+	sendAmount := int64(10000)
+
+	t.Run("relayer starts", func(t *testing.T) {
+		require.NoError(t, r.StartRelayer(ctx, eRep, pathName))
+	})
+
 	t.Run("broadcast success", func(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
-		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(10000)}
+		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
 
 		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
 		resp, err := ibctest.BroadcastTx(ctx, b, testUser, msg)
 		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.NotEqual(t, 0, resp.GasUsed)
-		require.NotEqual(t, 0, resp.GasWanted)
-		require.Equal(t, uint32(0), resp.Code)
-		require.NotEmpty(t, resp.Data)
-		require.NotEmpty(t, resp.TxHash)
-		require.NotEmpty(t, resp.Events)
+		assertTransactionIsValid(t, resp)
+	})
+
+	t.Run("transfer success", func(t *testing.T) {
+		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
+		dstIbcDenom := srcDenomTrace.IBCDenom()
+
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.Bech32Address(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		require.NoError(t, err, "failed to get balance from dest chain")
+		require.Equal(t, sendAmount, dstFinalBalance)
 	})
 }
 
@@ -402,4 +416,14 @@ func TestInterchain_AddNil(t *testing.T) {
 	require.PanicsWithError(t, "cannot add nil relayer", func() {
 		_ = ibctest.NewInterchain().AddRelayer(nil, "r")
 	})
+}
+
+func assertTransactionIsValid(t *testing.T, resp sdk.TxResponse) {
+	require.NotNil(t, resp)
+	require.NotEqual(t, 0, resp.GasUsed)
+	require.NotEqual(t, 0, resp.GasWanted)
+	require.Equal(t, uint32(0), resp.Code)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.TxHash)
+	require.NotEmpty(t, resp.Events)
 }
