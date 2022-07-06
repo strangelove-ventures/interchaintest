@@ -232,7 +232,7 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
-  cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.HomeDir()}
+	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
 	cc, err := p.DockerClient.ContainerCreate(
@@ -240,7 +240,8 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 		&container.Config{
 			Image: p.Image.Ref(),
 
-			Cmd: cmd,
+			Entrypoint: []string{},
+			Cmd:        cmd,
 
 			Hostname: p.HostName(),
 			User:     dockerutil.GetRootUserString(),
