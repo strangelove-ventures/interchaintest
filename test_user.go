@@ -17,6 +17,10 @@ type User struct {
 	KeyName string
 }
 
+func (u *User) GetKeyName() string {
+	return u.KeyName
+}
+
 func (u *User) Bech32Address(bech32Prefix string) string {
 	return types.MustBech32ifyAddressBytes(bech32Prefix, u.Address)
 }

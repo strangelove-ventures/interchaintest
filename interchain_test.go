@@ -8,13 +8,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {
@@ -197,7 +203,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NotEmpty(t, mnemonic)
 
 		user := ibctest.GetAndFundTestUserWithMnemonic(t, ctx, keyName, mnemonic, 10000, gaia0)
-
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
 
@@ -210,6 +216,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
@@ -217,6 +224,84 @@ func TestInterchain_CreateUser(t *testing.T) {
 		actualBalance, err := gaia0.GetBalance(ctx, users[0].Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
+	})
+}
+
+func TestCosmosChain_BroadcastTx(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
+	home := ibctest.TempDir(t)
+	client, network := ibctest.DockerSetup(t)
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		// Two otherwise identical chains that only differ by ChainID.
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+	})
+
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
+
+	gaia0, gaia1 := chains[0], chains[1]
+
+	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+		t, client, network, home,
+	)
+
+	pathName := "p"
+	ic := ibctest.NewInterchain().
+		AddChain(gaia0).
+		AddChain(gaia1).
+		AddRelayer(r, "r").
+		AddLink(ibctest.InterchainLink{
+			Chain1:  gaia0,
+			Chain2:  gaia1,
+			Relayer: r,
+			Path:    pathName,
+		})
+
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+
+	ctx := context.Background()
+	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		HomeDir:   home,
+		Client:    client,
+		NetworkID: network,
+	}))
+
+	testUser := ibctest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
+
+	sendAmount := int64(10000)
+
+	t.Run("relayer starts", func(t *testing.T) {
+		require.NoError(t, r.StartRelayer(ctx, eRep, pathName))
+	})
+
+	t.Run("broadcast success", func(t *testing.T) {
+		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
+		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
+
+		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
+		resp, err := ibctest.BroadcastTx(ctx, b, testUser, msg)
+		require.NoError(t, err)
+		assertTransactionIsValid(t, resp)
+	})
+
+	t.Run("transfer success", func(t *testing.T) {
+		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
+		dstIbcDenom := srcDenomTrace.IBCDenom()
+
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.Bech32Address(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		require.NoError(t, err, "failed to get balance from dest chain")
+		require.Equal(t, sendAmount, dstFinalBalance)
 	})
 }
 
@@ -331,4 +416,14 @@ func TestInterchain_AddNil(t *testing.T) {
 	require.PanicsWithError(t, "cannot add nil relayer", func() {
 		_ = ibctest.NewInterchain().AddRelayer(nil, "r")
 	})
+}
+
+func assertTransactionIsValid(t *testing.T, resp sdk.TxResponse) {
+	require.NotNil(t, resp)
+	require.NotEqual(t, 0, resp.GasUsed)
+	require.NotEqual(t, 0, resp.GasWanted)
+	require.Equal(t, uint32(0), resp.Code)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.TxHash)
+	require.NotEmpty(t, resp.Events)
 }
