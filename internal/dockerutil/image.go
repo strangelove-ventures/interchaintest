@@ -154,8 +154,8 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 		&container.Config{
 			Image: image.imageRef(),
 
-			// Entrypoint: []string{}, // Wasn't present before?
-			Cmd: cmd,
+			Entrypoint: []string{},
+			Cmd:        cmd,
 
 			Env: opts.Env,
 
