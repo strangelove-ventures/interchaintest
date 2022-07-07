@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
