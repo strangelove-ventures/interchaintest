@@ -6,8 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
+	"path"
 	"runtime"
 	"strings"
 	"time"
@@ -15,7 +14,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
@@ -30,9 +31,9 @@ type DockerRelayer struct {
 	// c defines all the commands to run inside the container.
 	c RelayerCommander
 
-	home      string
-	networkID string
-	client    *client.Client
+	networkID  string
+	client     *client.Client
+	volumeName string
 
 	testName string
 
@@ -42,8 +43,6 @@ type DockerRelayer struct {
 	// The ID of the container created by StartRelayer.
 	containerID string
 
-	didInit bool
-
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.RelayerWallet
 }
@@ -51,13 +50,12 @@ type DockerRelayer struct {
 var _ ibc.Relayer = (*DockerRelayer)(nil)
 
 // NewDockerRelayer returns a new DockerRelayer.
-func NewDockerRelayer(log *zap.Logger, testName, home string, cli *client.Client, networkID string, c RelayerCommander, options ...RelayerOption) *DockerRelayer {
-	relayer := DockerRelayer{
+func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli *client.Client, networkID string, c RelayerCommander, options ...RelayerOption) (*DockerRelayer, error) {
+	r := DockerRelayer{
 		log: log,
 
 		c: c,
 
-		home:      home,
 		networkID: networkID,
 		client:    cli,
 
@@ -72,53 +70,72 @@ func NewDockerRelayer(log *zap.Logger, testName, home string, cli *client.Client
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case RelayerOptionDockerImage:
-			relayer.customImage = &o.DockerImage
+			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
-			relayer.pullImage = o.Pull
+			r.pullImage = o.Pull
 		}
 	}
 
-	containerImage := relayer.containerImage()
-	if err := relayer.pullContainerImageIfNecessary(containerImage); err != nil {
-		log.Error("Error pulling container image", zap.String("ref", containerImage.Ref()), zap.Error(err))
+	containerImage := r.containerImage()
+	if err := r.pullContainerImageIfNecessary(containerImage); err != nil {
+		return nil, fmt.Errorf("pulling container image %s: %w", containerImage.Ref(), err)
 	}
 
-	return &relayer
+	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		// Have to leave Driver unspecified for Docker Desktop compatibility.
+
+		Labels: map[string]string{dockerutil.CleanupLabel: testName},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating volume: %w", err)
+	}
+	r.volumeName = v.Name
+
+	// Untar an empty tar in order to get side effect of correct permissions
+	// on node home directory.
+	emptyTar, err := archive.Generate()
+	if err != nil {
+		return nil, fmt.Errorf("generating empty tar for init: %w", err)
+	}
+	if err := r.untarIntoNodeHome(ctx, emptyTar); err != nil {
+		return nil, err // Already wrapped.
+	}
+
+	if init := r.c.Init(r.NodeHome()); len(init) > 0 {
+		// Initialization should complete immediately,
+		// but add a 1-minute timeout in case Docker hangs on a developer workstation.
+		ctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+
+		// Using a nop reporter here because it keeps the API simpler,
+		// and the init command is typically not of high interest.
+		if err := dockerutil.HandleNodeJobError(r.NodeJob(ctx, ibc.NopRelayerExecReporter{}, init)); err != nil {
+			return nil, err
+		}
+	}
+
+	return &r, nil
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
-	// rly needs to run "rly config init", and AddChainConfiguration should be the first call where it's needed.
-	// This might be a better fit for NewDockerRelayer, but that would considerably change the function signature.
-	if !r.didInit {
-		if init := r.c.Init(r.NodeHome()); len(init) > 0 {
-			// Initialization should complete immediately,
-			// but add a 1-minute timeout in case Docker hangs on a developer workstation.
-			ctx, cancel := context.WithTimeout(ctx, time.Minute)
-			defer cancel()
-
-			exitCode, stdout, stderr, err := r.NodeJob(ctx, rep, init)
-			if err != nil {
-				return fmt.Errorf("relayer initialization failed: %w", dockerutil.HandleNodeJobError(exitCode, stdout, stderr, err))
-			}
-		}
-
-		r.didInit = true
-	}
-
 	// For rly this file is json, but the file extension should not matter.
-	// Using .config to avoid implying
+	// Using .config to avoid implying any particular format.
 	chainConfigFile := chainConfig.ChainID + ".config"
 
-	chainConfigLocalFilePath := filepath.Join(r.Dir(), chainConfigFile)
-	chainConfigContainerFilePath := fmt.Sprintf("%s/%s", r.NodeHome(), chainConfigFile)
+	chainConfigContainerFilePath := path.Join(r.NodeHome(), chainConfigFile)
 
 	configContent, err := r.c.ConfigContent(ctx, chainConfig, keyName, rpcAddr, grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
 
-	if err := os.WriteFile(chainConfigLocalFilePath, configContent, 0644); err != nil {
-		return fmt.Errorf("failed to write config to host disk: %w", err)
+	tar, err := archive.Generate(chainConfigFile, string(configContent))
+	if err != nil {
+		return fmt.Errorf("generating tar for configuration: %w", err)
+	}
+
+	if err := r.untarIntoNodeHome(ctx, tar); err != nil {
+		return err // Already wrapped.
 	}
 
 	cmd := r.c.AddChainConfiguration(chainConfigContainerFilePath, r.NodeHome())
@@ -499,16 +516,13 @@ func (r *DockerRelayer) Name() string {
 
 // Bind returns the home folder bind point for running the node.
 func (r *DockerRelayer) Bind() []string {
-	return []string{r.Dir() + ":" + r.NodeHome()}
+	return []string{r.volumeName + ":" + r.NodeHome()}
 }
 
 func (r *DockerRelayer) NodeHome() string {
-	return "/tmp/relayer-" + r.c.Name()
-}
-
-// Dir is the directory where the test node files are stored.
-func (r *DockerRelayer) Dir() string {
-	return filepath.Join(r.home, r.Name())
+	// Relayer writes to these files, so /var seems like a reasonable root.
+	// https://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/var.html
+	return "/var/relayer-" + r.c.Name()
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
@@ -517,6 +531,78 @@ func (r *DockerRelayer) HostName(pathName string) string {
 
 func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
+}
+
+// untarIntoNodeHome untars the given io.Reader into r's NodeHome() directory,
+// and then sets chmod 777 recursively on NodeHome.
+//
+// There is likely a more intelligent way to create the tar archive
+// that does not require chmod, but given the scope of these containers,
+// this approach is simple enough for now.
+func (r *DockerRelayer) untarIntoNodeHome(ctx context.Context, tar io.Reader) error {
+	containerName := "untar-chmod-" + dockerutil.RandLowerCaseLetterString(5)
+	cc, err := r.client.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image: "busybox",
+
+			Cmd: []string{"chmod", "-R", "777", r.NodeHome()},
+
+			Hostname: r.HostName(containerName),
+			User:     dockerutil.GetDockerUserString(),
+
+			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
+		},
+		&container.HostConfig{
+			Binds:      r.Bind(),
+			AutoRemove: false,
+		},
+		nil, // No network config necessary.
+		nil,
+		containerName,
+	)
+	if err != nil {
+		return fmt.Errorf("creating container for untar/chmod: %w", err)
+	}
+	defer func() {
+		if err := r.client.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
+			r.log.Info(
+				"Failed to remove tar container",
+				zap.String("container_id", cc.ID),
+				zap.Error(err),
+			)
+		}
+	}()
+
+	// It is safe to copy into the container before starting it.
+	if err := r.client.CopyToContainer(
+		ctx,
+		cc.ID,
+		r.NodeHome(),
+		tar,
+		types.CopyToContainerOptions{},
+	); err != nil {
+		return fmt.Errorf("copying tar to container: %w", err)
+	}
+
+	// Start the container, which will only run chmod -R 777 against r.NodeHome().
+	if err := r.client.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
+		return fmt.Errorf("starting container: %w", err)
+	}
+
+	waitCh, errCh := r.client.ContainerWait(ctx, cc.ID, container.WaitConditionNotRunning)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errCh:
+		return err
+	case res := <-waitCh:
+		if res.Error != nil {
+			return fmt.Errorf("waiting for container: %s", res.Error.Message)
+		}
+	}
+
+	return nil
 }
 
 type RelayerCommander interface {

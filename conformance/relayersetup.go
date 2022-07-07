@@ -31,7 +31,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 
 	c0, c1 := chains[0], chains[1]
 
-	r := rf.Build(t, client, network, home)
+	r := rf.Build(t, client, network)
 
 	const pathName = "p"
 	ic := ibctest.NewInterchain().

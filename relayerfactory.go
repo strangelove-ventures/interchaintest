@@ -19,7 +19,6 @@ type RelayerFactory interface {
 		t *testing.T,
 		cli *client.Client,
 		networkID string,
-		home string,
 	) ibc.Relayer
 
 	// Name returns a descriptive name of the factory,
@@ -56,14 +55,12 @@ func (f builtinRelayerFactory) Build(
 	t *testing.T,
 	cli *client.Client,
 	networkID string,
-	home string,
 ) ibc.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.NewCosmosRelayer(
 			f.log,
 			t.Name(),
-			home,
 			cli,
 			networkID,
 			f.options...,

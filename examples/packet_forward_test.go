@@ -39,7 +39,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	gaia, osmosis, juno := chains[0], chains[1], chains[2]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network, home,
+		t, client, network,
 	)
 
 	const pathOsmoHub = "osmohub"
