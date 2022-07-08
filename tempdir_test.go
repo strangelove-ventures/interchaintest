@@ -48,11 +48,11 @@ func (t *mockTempT) RunCleanups() {
 	t.cleanups = nil
 }
 
-func (t *mockTempT) Logf(format string, args ...interface{}) {
+func (t *mockTempT) Logf(format string, args ...any) {
 	t.logs = append(t.logs, fmt.Sprintf(format, args...))
 }
 
-func (t *mockTempT) Errorf(format string, args ...interface{}) {
+func (t *mockTempT) Errorf(format string, args ...any) {
 	t.errors = append(t.errors, fmt.Sprintf(format, args...))
 }
 

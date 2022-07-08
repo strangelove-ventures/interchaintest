@@ -52,11 +52,11 @@ func (t *mockT) RunCleanups() {
 	}
 }
 
-func (t *mockT) Errorf(format string, args ...interface{}) {
+func (t *mockT) Errorf(format string, args ...any) {
 	t.errors = append(t.errors, fmt.Sprintf(format, args...))
 }
 
-func (t *mockT) Skip(args ...interface{}) {
+func (t *mockT) Skip(args ...any) {
 	t.skips = append(t.skips, fmt.Sprint(args...))
 	t.skipped = true
 }

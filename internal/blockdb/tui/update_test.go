@@ -198,7 +198,7 @@ func TestModel_Update(t *testing.T) {
 
 		require.NotEmpty(t, gotText)
 
-		var gotTxs []interface{}
+		var gotTxs []any
 		require.NoError(t, json.Unmarshal([]byte(gotText), &gotTxs))
 		require.Len(t, gotTxs, 2)
 
