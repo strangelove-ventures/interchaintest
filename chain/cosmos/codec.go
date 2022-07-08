@@ -8,7 +8,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
 	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibctypes "github.com/cosmos/ibc-go/v4/modules/core/types"
 )

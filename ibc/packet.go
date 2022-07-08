@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.uber.org/multierr"
-
 	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	"go.uber.org/multierr"
 )
 
 type Nanoseconds uint64
 
 // Packet is a packet sent over an IBC channel as defined in ICS-4.
 // See: https://github.com/cosmos/ibc/blob/52a9094a5bc8c5275e25c19d0b2d9e6fd80ba31c/spec/core/ics-004-channel-and-packet-semantics/README.md
-// Proto defined at: github.com/cosmos/ibc-go/v4@v3.0.0/proto/ibc/core/channel/v1/tx.proto
+// Proto defined at: github.com/cosmos/ibc-go/v3@v3.0.0/proto/ibc/core/channel/v1/tx.proto
 type Packet struct {
 	Sequence      uint64 // the order of sends and receives, where a packet with an earlier sequence number must be sent and received before a packet with a later sequence number
 	SourcePort    string // the port on the sending chain

@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/label"
@@ -43,8 +44,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
-
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 )
 
 const (
