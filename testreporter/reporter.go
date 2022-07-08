@@ -15,7 +15,7 @@ type T interface {
 	Name() string
 	Cleanup(func())
 
-	Skip(...interface{})
+	Skip(...any)
 
 	Parallel()
 
@@ -137,7 +137,7 @@ func (r *Reporter) TrackParallel(t T) {
 
 // TrackSkip records a the reason for a test being skipped,
 // and calls t.Skip.
-func (r *Reporter) TrackSkip(t T, format string, args ...interface{}) {
+func (r *Reporter) TrackSkip(t T, format string, args ...any) {
 	now := time.Now()
 	msg := fmt.Sprintf(format, args...)
 
@@ -201,7 +201,7 @@ func (r *Reporter) TestifyT(t TestifyT) *TestifyReporter {
 type TestifyT interface {
 	Name() string
 
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 	FailNow()
 }
 
@@ -214,7 +214,7 @@ type TestifyReporter struct {
 
 // Errorf records the error message in r's Reporter
 // and then passes through to r's underlying TestifyT.
-func (r *TestifyReporter) Errorf(format string, args ...interface{}) {
+func (r *TestifyReporter) Errorf(format string, args ...any) {
 	now := time.Now()
 
 	r.r.in <- TestErrorMessage{

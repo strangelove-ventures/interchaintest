@@ -9,7 +9,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 )
 
-var bufPool = sync.Pool{New: func() interface{} { return new(bytes.Buffer) }}
+var bufPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}
 
 type Tx struct {
 	Result blockdb.TxResult
@@ -42,7 +42,7 @@ func (txs Txs) ToJSON() []byte {
 		Height int64
 		Tx     []byte
 	}
-	objs := make([]interface{}, len(txs))
+	objs := make([]any, len(txs))
 	for i, tx := range txs {
 		if !json.Valid(tx.Tx) {
 			objs[i] = jsonBytes{

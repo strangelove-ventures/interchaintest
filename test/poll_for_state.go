@@ -55,7 +55,7 @@ type blockPoller struct {
 	pollErr       *pollError
 }
 
-func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, packet ibc.Packet) (interface{}, error) {
+func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, packet ibc.Packet) (any, error) {
 	if maxHeight < startHeight {
 		panic("maxHeight must be greater than or equal to startHeight")
 	}
@@ -72,7 +72,7 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 		}
 
 		var (
-			found   interface{}
+			found   any
 			findErr error
 		)
 		switch {
@@ -135,7 +135,7 @@ func (pe *pollError) SetErr(err error) {
 	pe.error = err
 }
 
-func (pe *pollError) PushSearched(packet interface{}) {
+func (pe *pollError) PushSearched(packet any) {
 	pe.searchedPackets = append(pe.searchedPackets, spew.Sdump(packet))
 }
 

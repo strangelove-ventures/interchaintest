@@ -31,7 +31,7 @@ func (txs transactions) Hash() []byte {
 // The txs should be human-readable.
 func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs []Tx) error {
 	k := fmt.Sprintf("%d-%x", height, transactions(txs).Hash())
-	_, err, _ := chain.single.Do(k, func() (interface{}, error) {
+	_, err, _ := chain.single.Do(k, func() (any, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
 	})
 	return err

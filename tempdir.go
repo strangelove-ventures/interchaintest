@@ -17,8 +17,8 @@ type TempDirTestingT interface {
 	Failed() bool
 	Cleanup(func())
 
-	Logf(format string, args ...interface{})
-	Errorf(format string, args ...interface{})
+	Logf(format string, args ...any)
+	Errorf(format string, args ...any)
 }
 
 // KeepTempDirOnFailure determines whether a directory created by TempDir
