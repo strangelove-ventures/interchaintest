@@ -103,6 +103,10 @@ func (commander) Name() string {
 	return "rly"
 }
 
+func (commander) DockerUser() string {
+	return "rlyuser" // The name of the user according to rly's Dockerfile.
+}
+
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	return []string{
 		"rly", "chains", "add", "-f", containerFilePath,
