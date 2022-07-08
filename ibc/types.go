@@ -1,6 +1,6 @@
 package ibc
 
-import ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+import ibcexported "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
 
 type ChainConfig struct {
 	Type           string
