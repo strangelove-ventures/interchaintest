@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
