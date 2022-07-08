@@ -45,7 +45,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network, home,
+		t, client, network,
 	)
 
 	ic := ibctest.NewInterchain().
@@ -95,7 +95,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network, home,
+		t, client, network,
 	)
 
 	ic := ibctest.NewInterchain().
@@ -249,7 +249,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network, home,
+		t, client, network,
 	)
 
 	pathName := "p"

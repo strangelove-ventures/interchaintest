@@ -44,7 +44,7 @@ func StartChainPairAndRelayer(
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, []ibc.ChannelOutput, error) {
-	relayerImpl := f.Build(t, cli, networkID, home)
+	relayerImpl := f.Build(t, cli, networkID)
 
 	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
 		return nil, []ibc.ChannelOutput{}, err

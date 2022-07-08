@@ -178,3 +178,9 @@ type RelayerExecReporter interface {
 		err error,
 	)
 }
+
+// NopRelayerExecReporter is a no-op RelayerExecReporter.
+type NopRelayerExecReporter struct{}
+
+func (NopRelayerExecReporter) TrackRelayerExec(string, []string, string, string, int, time.Time, time.Time, error) {
+}

@@ -4,8 +4,6 @@ package rly
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -21,7 +19,7 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName, home string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
 	c := commander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -29,12 +27,13 @@ func NewCosmosRelayer(log *zap.Logger, testName, home string, cli *client.Client
 			c.extraStartFlags = o.Flags
 		}
 	}
-	r := &CosmosRelayer{
-		DockerRelayer: relayer.NewDockerRelayer(log, testName, home, cli, networkID, c, options...),
+	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
+	if err != nil {
+		panic(err) // TODO: return
 	}
 
-	if err := os.MkdirAll(r.Dir(), 0755); err != nil {
-		panic(fmt.Errorf("failed to initialize directory for relayer: %w", err))
+	r := &CosmosRelayer{
+		DockerRelayer: dr,
 	}
 
 	return r
@@ -102,6 +101,10 @@ type commander struct {
 
 func (commander) Name() string {
 	return "rly"
+}
+
+func (commander) DockerUser() string {
+	return "rlyuser" // The name of the user according to rly's Dockerfile.
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {

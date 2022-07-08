@@ -42,7 +42,7 @@ func TestMessagesView(t *testing.T) {
 	gaia0, gaia1 := chains[0], chains[1]
 
 	rf := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
-	r := rf.Build(t, client, network, home)
+	r := rf.Build(t, client, network)
 
 	ic := ibctest.NewInterchain().
 		AddChain(gaia0).
