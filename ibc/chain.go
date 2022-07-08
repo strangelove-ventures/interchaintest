@@ -10,8 +10,8 @@ type Chain interface {
 	// Config fetches the chain configuration.
 	Config() ChainConfig
 
-	// Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
-	Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error
+	// Initialize initializes node structs so that things like initializing keys can be done before starting the chain
+	Initialize(ctx context.Context, testName string, cli *client.Client, networkID string, opts ...ChainOption) error
 
 	// Start sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis.
 	Start(testName string, ctx context.Context, additionalGenesisWallets ...WalletAmount) error
@@ -95,4 +95,23 @@ type Chain interface {
 
 	// QueryInterchainAccount will query the interchain account that was created on behalf of the specified address.
 	QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error)
+}
+
+// ChainOption is used to customize the chain configuration.
+type ChainOption interface {
+	chainOptionIndicator()
+}
+
+// ChainOptionHaltHeight is a ChainOption to configure a chain's halt height.
+type ChainOptionHaltHeight struct {
+	Height uint64
+}
+
+func (ChainOptionHaltHeight) chainOptionIndicator() {}
+
+// HaltHeight returns an option for configuring a chain's halt height.
+func HaltHeight(height uint64) ChainOptionHaltHeight {
+	return ChainOptionHaltHeight{
+		Height: height,
+	}
 }
