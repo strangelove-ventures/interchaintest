@@ -418,7 +418,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if err := c.ChainNodes.LogGenesisHashes(); err != nil {
+	if err := c.ChainNodes.LogGenesisHashes(ctx); err != nil {
 		return err
 	}
 
