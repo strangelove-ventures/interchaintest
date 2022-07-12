@@ -12,6 +12,10 @@ import (
 )
 
 func TestFileRetriever(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping due to short mode")
+	}
+
 	t.Parallel()
 
 	cli, network := ibctest.DockerSetup(t)
@@ -32,7 +36,7 @@ func TestFileRetriever(t *testing.T) {
 
 	_, _, err = img.Run(
 		ctx,
-		[]string{"sh", "-c", "printf 'hello world' > /mnt/test/hello.txt"},
+		[]string{"sh", "-c", "chmod 0700 /mnt/test && printf 'hello world' > /mnt/test/hello.txt"},
 		dockerutil.ContainerOptions{
 			Binds: []string{v.Name + ":/mnt/test"},
 		},
