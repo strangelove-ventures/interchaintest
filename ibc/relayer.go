@@ -82,6 +82,13 @@ type Relayer interface {
 	// Relayer implementations provided by the ibctest module will report true,
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
+
+	// Exec runs an arbitrary command using Relayer's docker environment.
+	// Whether the invoked command is run in a one-off container or execing into an already running container
+	// is up to the relayer implementation.
+	//
+	// "env" are environment variables in the format "MY_ENV_VAR=value"
+	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) (stdout, stderr []byte, err error)
 }
 
 // CreateChannelOptions contains the configuration for creating a channel.
