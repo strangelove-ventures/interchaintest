@@ -96,11 +96,6 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() {
-		if err := c.Stop(10 * time.Second); err != nil {
-			c.log.Error("Failed to stop container", zap.Error(err))
-		}
-	}()
 	return c.Wait(ctx)
 }
 
