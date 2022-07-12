@@ -39,6 +39,7 @@ func TestFileRetriever(t *testing.T) {
 		[]string{"sh", "-c", "chmod 0700 /mnt/test && printf 'hello world' > /mnt/test/hello.txt"},
 		dockerutil.ContainerOptions{
 			Binds: []string{v.Name + ":/mnt/test"},
+			User:  dockerutil.GetRootUserString(),
 		},
 	)
 	require.NoError(t, err)
@@ -47,6 +48,7 @@ func TestFileRetriever(t *testing.T) {
 		[]string{"sh", "-c", "mkdir -p /mnt/test/foo/bar/ && printf 'test' > /mnt/test/foo/bar/baz.txt"},
 		dockerutil.ContainerOptions{
 			Binds: []string{v.Name + ":/mnt/test"},
+			User:  dockerutil.GetRootUserString(),
 		},
 	)
 	require.NoError(t, err)
