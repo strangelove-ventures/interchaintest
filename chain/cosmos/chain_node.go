@@ -40,7 +40,6 @@ type ChainNode struct {
 	Home         string
 	Index        int
 	Chain        ibc.Chain
-	GenesisCoins string
 	Validator    bool
 	NetworkID    string
 	DockerClient *dockerclient.Client
@@ -806,13 +805,15 @@ func (nodes ChainNodes) PeerString() string {
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
-func (nodes ChainNodes) LogGenesisHashes() error {
+func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
+		fr := dockerutil.NewFileRetriever(n.logger(), n.DockerClient, n.TestName)
+		gen, err := fr.SingleFileContent(ctx, n.Dir(), "config/genesis.json")
 		if err != nil {
-			return err
+			return fmt.Errorf("getting genesis.json content: %w", err)
 		}
-		nodes.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
+
+		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
