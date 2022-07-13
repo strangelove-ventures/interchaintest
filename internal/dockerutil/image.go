@@ -87,9 +87,10 @@ type ContainerOptions struct {
 	User string
 }
 
-// ContainerError is a concrete error type that wraps an exit code and associated error output from stderr & stdout.
-type ContainerError struct {
-	Err            error
+// ContainerExecResult is a wrapper type that wraps an exit code and associated output from stderr & stdout, along with
+// an error in the case of some error occurring during container execution.
+type ContainerExecResult struct {
+	Err            error // Err is nil, unless some error occurs during the container lifecycle.
 	ExitCode       int
 	Stdout, Stderr []byte
 }
@@ -98,10 +99,10 @@ type ContainerError struct {
 //
 // Run blocks until the command completes. Thus, Run is not suitable for daemons or servers. Use Start instead.
 // A non-zero status code returns an error.
-func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerError {
+func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerExecResult {
 	c, err := image.Start(ctx, cmd, opts)
 	if err != nil {
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      err,
 			ExitCode: 1,
 			Stdout:   nil,
@@ -254,19 +255,19 @@ type Container struct {
 // A non-zero status code returns an error.
 //
 // Wait implicitly calls Stop.
-func (c *Container) Wait(ctx context.Context) ContainerError {
+func (c *Container) Wait(ctx context.Context) ContainerExecResult {
 	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
 	var exitCode int
 	select {
 	case <-ctx.Done():
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      ctx.Err(),
 			ExitCode: 1,
 			Stdout:   nil,
 			Stderr:   nil,
 		}
 	case err := <-errCh:
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      err,
 			ExitCode: 1,
 			Stdout:   nil,
@@ -275,7 +276,7 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 	case res := <-waitCh:
 		exitCode = int(res.StatusCode)
 		if res.Error != nil {
-			return ContainerError{
+			return ContainerExecResult{
 				Err:      errors.New(res.Error.Message),
 				ExitCode: exitCode,
 				Stdout:   nil,
@@ -295,7 +296,7 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 		Tail:       "50",
 	})
 	if err != nil {
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      err,
 			ExitCode: exitCode,
 			Stdout:   nil,
@@ -307,7 +308,7 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 	// Logs are multiplexed into one stream; see docs for ContainerLogs.
 	_, err = stdcopy.StdCopy(stdoutBuf, stderrBuf, rc)
 	if err != nil {
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      err,
 			ExitCode: exitCode,
 			Stdout:   nil,
@@ -323,7 +324,7 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 
 	if exitCode != 0 {
 		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
-		return ContainerError{
+		return ContainerExecResult{
 			Err:      fmt.Errorf("exit code %d: %s", exitCode, out),
 			ExitCode: exitCode,
 			Stdout:   nil,
@@ -331,7 +332,7 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 		}
 	}
 
-	return ContainerError{
+	return ContainerExecResult{
 		Err:      nil,
 		ExitCode: exitCode,
 		Stdout:   stdoutBuf.Bytes(),
