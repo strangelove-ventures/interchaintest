@@ -831,8 +831,8 @@ func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]by
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	err := job.Run(ctx, cmd, opts)
-	return err.Stdout, err.Stderr, err.Err
+	res := job.Run(ctx, cmd, opts)
+	return res.Stdout, res.Stderr, res.Err
 }
 
 func (tn *ChainNode) logger() *zap.Logger {

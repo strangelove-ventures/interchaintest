@@ -320,6 +320,6 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	err := job.Run(ctx, cmd, opts)
-	return err.Stdout, err.Stderr, err.Err
+	res := job.Run(ctx, cmd, opts)
+	return res.Stdout, res.Stderr, res.Err
 }
