@@ -104,7 +104,7 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	if err != nil {
 		return ContainerExecResult{
 			Err:      err,
-			ExitCode: 1,
+			ExitCode: -1,
 			Stdout:   nil,
 			Stderr:   nil,
 		}
