@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -44,6 +45,15 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 			Image: busyboxRef,
 
 			// No entrypoint or command specified because we are not starting the container.
+			Entrypoint: []string{"sh", "-c"},
+			Cmd: []string{
+				// Take the uid and gid of the mount path,
+				// and set that as the owner of the new relative path.
+				`chown "$(stat -c '%u:%g' "$1")" "$2"`,
+				"_", // Meaningless arg0 for sh -c with positional args.
+				mountPath,
+				path.Join(mountPath, relPath),
+			},
 
 			// Use root user to avoid permission issues when reading files from the volume.
 			User: GetRootUserString(),
@@ -62,7 +72,13 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		return fmt.Errorf("creating container: %w", err)
 	}
 
+	autoRemoved := false
 	defer func() {
+		if autoRemoved {
+			// No need to attempt removing the container if we successfully started and waited for it to complete.
+			return
+		}
+
 		if err := w.cli.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{
 			Force: true,
 		}); err != nil {
@@ -77,7 +93,7 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 
 		Size: int64(len(content)),
 		Mode: 0600,
-		// Omitting Uname for now; I think docker keeps existing user details for files that exist already.
+		// Not setting uname because the container will chown it anyway.
 
 		ModTime: time.Now(),
 
@@ -100,6 +116,28 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		types.CopyToContainerOptions{},
 	); err != nil {
 		return fmt.Errorf("copying tar to container: %w", err)
+	}
+
+	if err := w.cli.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
+		return fmt.Errorf("starting write-file container: %w", err)
+	}
+
+	waitCh, errCh := w.cli.ContainerWait(ctx, cc.ID, container.WaitConditionNotRunning)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errCh:
+		return err
+	case res := <-waitCh:
+		autoRemoved = true
+
+		if res.Error != nil {
+			return fmt.Errorf("waiting for write-file container: %s", res.Error.Message)
+		}
+
+		if res.StatusCode != 0 {
+			return fmt.Errorf("chown on new file exited %d", res.StatusCode)
+		}
 	}
 
 	return nil
