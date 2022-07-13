@@ -143,6 +143,25 @@ func (tn *ChainNode) GenesisFilePath() string {
 	return filepath.Join(tn.Dir(), "config", "genesis.json")
 }
 
+func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.Dir(), "config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
+	}
+
+	return gen, nil
+}
+
+func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.Dir(), "config/genesis.json", content); err != nil {
+		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
+}
+
 type PrivValidatorKey struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -807,10 +826,9 @@ func (nodes ChainNodes) PeerString() string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		fr := dockerutil.NewFileRetriever(n.logger(), n.DockerClient, n.TestName)
-		gen, err := fr.SingleFileContent(ctx, n.Dir(), "config/genesis.json")
+		gen, err := n.genesisFileContent(ctx)
 		if err != nil {
-			return fmt.Errorf("getting genesis.json content: %w", err)
+			return err
 		}
 
 		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
