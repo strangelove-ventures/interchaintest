@@ -300,5 +300,6 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		User:  dockerutil.GetRootUserString(),
 	}
-	return job.Run(ctx, cmd, opts)
+	err := job.Run(ctx, cmd, opts)
+	return err.Stdout, err.Stderr, err.Err
 }

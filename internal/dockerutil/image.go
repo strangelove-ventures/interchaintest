@@ -87,14 +87,26 @@ type ContainerOptions struct {
 	User string
 }
 
+// ContainerError is a concrete error type that wraps an exit code and associated error output from stderr & stdout.
+type ContainerError struct {
+	Err            error
+	ExitCode       int
+	Stdout, Stderr []byte
+}
+
 // Run creates and runs a container invoking "cmd". The container resources are removed after exit.
 //
 // Run blocks until the command completes. Thus, Run is not suitable for daemons or servers. Use Start instead.
 // A non-zero status code returns an error.
-func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) (stdout, stderr []byte, err error) {
+func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerError {
 	c, err := image.Start(ctx, cmd, opts)
 	if err != nil {
-		return nil, nil, err
+		return ContainerError{
+			Err:      err,
+			ExitCode: 0,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	}
 	defer func() {
 		if err := c.Stop(10 * time.Second); err != nil {
@@ -242,18 +254,33 @@ type Container struct {
 // A non-zero status code returns an error.
 //
 // Wait implicitly calls Stop.
-func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error) {
+func (c *Container) Wait(ctx context.Context) ContainerError {
 	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
 	var exitCode int
 	select {
 	case <-ctx.Done():
-		return nil, nil, ctx.Err()
+		return ContainerError{
+			Err:      ctx.Err(),
+			ExitCode: exitCode,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	case err := <-errCh:
-		return nil, nil, err
+		return ContainerError{
+			Err:      err,
+			ExitCode: exitCode,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	case res := <-waitCh:
 		exitCode = int(res.StatusCode)
 		if res.Error != nil {
-			return nil, nil, errors.New(res.Error.Message)
+			return ContainerError{
+				Err:      errors.New(res.Error.Message),
+				ExitCode: exitCode,
+				Stdout:   nil,
+				Stderr:   nil,
+			}
 		}
 	}
 
@@ -268,14 +295,24 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 		Tail:       "50",
 	})
 	if err != nil {
-		return nil, nil, err
+		return ContainerError{
+			Err:      err,
+			ExitCode: exitCode,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	}
 	defer func() { _ = rc.Close() }()
 
 	// Logs are multiplexed into one stream; see docs for ContainerLogs.
 	_, err = stdcopy.StdCopy(stdoutBuf, stderrBuf, rc)
 	if err != nil {
-		return nil, nil, err
+		return ContainerError{
+			Err:      err,
+			ExitCode: exitCode,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	}
 	_ = rc.Close()
 
@@ -286,10 +323,20 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 
 	if exitCode != 0 {
 		out := strings.Join([]string{stdoutBuf.String(), stderrBuf.String()}, " ")
-		return nil, nil, fmt.Errorf("exit code %d: %s", exitCode, out)
+		return ContainerError{
+			Err:      fmt.Errorf("exit code %d: %s", exitCode, out),
+			ExitCode: exitCode,
+			Stdout:   nil,
+			Stderr:   nil,
+		}
 	}
 
-	return stdoutBuf.Bytes(), stderrBuf.Bytes(), nil
+	return ContainerError{
+		Err:      nil,
+		ExitCode: exitCode,
+		Stdout:   stdoutBuf.Bytes(),
+		Stderr:   stderrBuf.Bytes(),
+	}
 }
 
 // Stop gives the container up to timeout to stop and remove itself from the network.

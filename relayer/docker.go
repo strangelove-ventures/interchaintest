@@ -294,25 +294,21 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 		Binds: r.Bind(),
 	}
 
-	var exitCode int
 	startedAt := time.Now()
-	stdout, stderr, err = job.Run(ctx, cmd, opts)
-	if err != nil {
-		exitCode = 1 // TODO this is possibly not correct, need some feedback on this
-	}
+	cErr := job.Run(ctx, cmd, opts)
 
 	defer func() {
 		rep.TrackRelayerExec(
 			r.Name(),
 			cmd,
-			string(stdout), string(stderr),
-			exitCode,
+			string(cErr.Stdout), string(cErr.Stderr),
+			cErr.ExitCode,
 			startedAt, time.Now(),
-			err,
+			cErr.Err,
 		)
 	}()
 
-	return stdout, stderr, err
+	return cErr.Stdout, cErr.Stderr, cErr.Err
 }
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
