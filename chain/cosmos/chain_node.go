@@ -27,6 +27,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -133,16 +134,6 @@ func (tn *ChainNode) MkDir() {
 	}
 }
 
-// GentxPath returns the path to the gentx for a node
-func (tn *ChainNode) GentxPath() (string, error) {
-	id, err := tn.NodeID()
-	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
-}
-
-func (tn *ChainNode) GenesisFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "genesis.json")
-}
-
 func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.Dir(), "config/genesis.json")
@@ -157,6 +148,28 @@ func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) e
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.Dir(), "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
+}
+
+func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
+	nid, err := tn.NodeID(ctx)
+	if err != nil {
+		return fmt.Errorf("getting node ID: %w", err)
+	}
+
+	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
+
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gentx, err := fr.SingleFileContent(ctx, tn.Dir(), relPath)
+	if err != nil {
+		return fmt.Errorf("getting gentx content: %w", err)
+	}
+
+	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
+	if err := fw.WriteFile(ctx, destVal.Dir(), relPath, gentx); err != nil {
+		return fmt.Errorf("overwriting gentx: %w", err)
 	}
 
 	return nil
@@ -785,12 +798,23 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 }
 
 // NodeID returns the node of a given node
-func (tn *ChainNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
+	// This used to call p2p.LoadNodeKey against the file on the host,
+	// but because we are transitioning to operating on Docker volumes,
+	// we only have to tmjson.Unmarshal the raw content.
+
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	j, err := fr.SingleFileContent(ctx, tn.Dir(), "config/node_key.json")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}
-	return string(nodeKey.ID()), nil
+
+	var nk p2p.NodeKey
+	if err := tmjson.Unmarshal(j, &nk); err != nil {
+		return "", fmt.Errorf("unmarshaling node_key.json: %w", err)
+	}
+
+	return string(nk.ID()), nil
 }
 
 // GetKey gets a key, waiting until it is available
@@ -802,10 +826,10 @@ func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (nodes ChainNodes) PeerString() string {
+func (nodes ChainNodes) PeerString(ctx context.Context) string {
 	addrs := make([]string, len(nodes))
 	for i, n := range nodes {
-		id, err := n.NodeID()
+		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?

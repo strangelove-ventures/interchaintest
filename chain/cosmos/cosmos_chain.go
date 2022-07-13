@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -386,13 +384,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
 			return err
 		}
-		nNid, err := validatorN.NodeID()
-		if err != nil {
-			return err
-		}
-		oldPath := filepath.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		newPath := filepath.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		if err := os.Rename(oldPath, newPath); err != nil {
+
+		if err := validatorN.copyGentx(ctx, validator0); err != nil {
 			return err
 		}
 	}
@@ -433,7 +426,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := c.ChainNodes.PeerString()
+	peers := c.ChainNodes.PeerString(ctx)
 
 	for _, n := range c.ChainNodes {
 		n := n
