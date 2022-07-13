@@ -407,13 +407,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	genbz, err := os.ReadFile(validator0.GenesisFilePath())
+	genbz, err := validator0.genesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
 
-	for i := 1; i < len(c.ChainNodes); i++ {
-		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
+	for _, cn := range c.ChainNodes[1:] {
+		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
