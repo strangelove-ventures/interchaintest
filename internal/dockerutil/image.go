@@ -103,7 +103,7 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	if err != nil {
 		return ContainerError{
 			Err:      err,
-			ExitCode: 0,
+			ExitCode: 1,
 			Stdout:   nil,
 			Stderr:   nil,
 		}
@@ -261,14 +261,14 @@ func (c *Container) Wait(ctx context.Context) ContainerError {
 	case <-ctx.Done():
 		return ContainerError{
 			Err:      ctx.Err(),
-			ExitCode: exitCode,
+			ExitCode: 1,
 			Stdout:   nil,
 			Stderr:   nil,
 		}
 	case err := <-errCh:
 		return ContainerError{
 			Err:      err,
-			ExitCode: exitCode,
+			ExitCode: 1,
 			Stdout:   nil,
 			Stderr:   nil,
 		}
