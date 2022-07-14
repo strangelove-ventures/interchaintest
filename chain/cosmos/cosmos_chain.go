@@ -140,12 +140,7 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 		return nil, err
 	}
 
-	bz, err := types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	return types.AccAddress(bz).Bytes(), nil
+	return types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
 }
 
 // Implements Chain interface
