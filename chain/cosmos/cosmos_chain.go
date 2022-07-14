@@ -428,12 +428,15 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	peers := c.ChainNodes.PeerString(ctx)
 
+	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.ChainNodes {
 		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
-			n.SetValidatorConfigAndPeers(peers)
-			return n.StartContainer(ctx)
+			if err := n.SetValidatorConfigAndPeers(egCtx, peers); err != nil {
+				return err
+			}
+			return n.StartContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
