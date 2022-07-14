@@ -797,7 +797,7 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx)
 }
 
-// NodeID returns the node of a given node
+// NodeID returns the persistent ID of a given node.
 func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
