@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -508,14 +509,18 @@ type CodeInfosResponse struct {
 }
 
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	_, file := filepath.Split(fileName)
-	newFilePath := filepath.Join(tn.Dir(), file)
-	newFilePathContainer := filepath.Join(tn.HomeDir(), file)
-	if _, err := dockerutil.CopyFile(fileName, newFilePath); err != nil {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
 		return "", err
 	}
 
-	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", newFilePathContainer,
+	_, file := filepath.Split(fileName)
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.Dir(), file, content); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", path.Join(tn.HomeDir(), file),
 		"--from", keyName,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
@@ -528,8 +533,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
+	if _, _, err := tn.Exec(ctx, command, nil); err != nil {
 		return "", err
 	}
 
