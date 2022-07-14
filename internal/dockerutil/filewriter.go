@@ -44,7 +44,6 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		&container.Config{
 			Image: busyboxRef,
 
-			// No entrypoint or command specified because we are not starting the container.
 			Entrypoint: []string{"sh", "-c"},
 			Cmd: []string{
 				// Take the uid and gid of the mount path,
