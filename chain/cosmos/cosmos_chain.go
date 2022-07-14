@@ -135,12 +135,12 @@ func (c *CosmosChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 
 // Implements Chain interface
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	keyInfo, err := c.getFullNode().Keybase().Key(keyName)
+	b32Addr, err := c.getFullNode().KeyBech32(ctx, keyName)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	return keyInfo.GetAddress().Bytes(), nil
+	return types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
 }
 
 // Implements Chain interface
@@ -371,12 +371,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	validator0 := validators[0]
 	for i := 1; i < len(validators); i++ {
 		validatorN := validators[i]
-		n0key, err := validatorN.GetKey(valKey)
-		if err != nil {
-			return err
-		}
 
-		bech32, err := types.Bech32ifyAddressBytes(chainCfg.Bech32Prefix, n0key.GetAddress().Bytes())
+		bech32, err := validatorN.KeyBech32(ctx, valKey)
 		if err != nil {
 			return err
 		}
