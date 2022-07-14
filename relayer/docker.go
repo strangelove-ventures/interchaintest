@@ -104,7 +104,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		ImageRef:   containerImage.Ref(),
 		TestName:   testName,
 	}); err != nil {
-		return nil, fmt.Errorf("chown node home: %w", err)
+		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
 
 	if init := r.c.Init(r.NodeHome()); len(init) > 0 {

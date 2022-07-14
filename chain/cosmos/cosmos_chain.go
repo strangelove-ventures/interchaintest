@@ -14,10 +14,12 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -77,9 +79,11 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, cli, networkID)
-	return nil
+func (c *CosmosChain) Initialize(testName string, _ string, cli *client.Client, networkID string) error {
+	// The Initialize interface needs to change to accept a context,
+	// but there are other implementations that still need to switch
+	// to Docker volumes first.
+	return c.initializeChainNodes(context.TODO(), testName, cli, networkID)
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
@@ -262,16 +266,16 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 // creates the test node objects required for bootstrapping tests
 func (c *CosmosChain) initializeChainNodes(
-	testName, home string,
+	ctx context.Context,
+	testName string,
 	cli *client.Client,
 	networkID string,
-) {
-	var chainNodes []*ChainNode
+) error {
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
 		rc, err := cli.ImagePull(
-			context.TODO(),
+			ctx,
 			image.Repository+":"+image.Version,
 			dockertypes.ImagePullOptions{},
 		)
@@ -286,22 +290,53 @@ func (c *CosmosChain) initializeChainNodes(
 			_ = rc.Close()
 		}
 	}
-	for i := 0; i < count; i++ {
-		tn := &ChainNode{
-			log: c.log,
 
-			Home:         home,
-			Index:        i,
-			Chain:        c,
-			DockerClient: cli,
-			NetworkID:    networkID,
-			TestName:     testName,
-			Image:        chainCfg.Images[0],
-		}
-		tn.MkDir()
-		chainNodes = append(chainNodes, tn)
+	image := chainCfg.Images[0]
+	chainNodes := make([]*ChainNode, count)
+	eg, egCtx := errgroup.WithContext(ctx)
+	for i := 0; i < count; i++ {
+		i := i
+		eg.Go(func() error {
+			v, err := cli.VolumeCreate(egCtx, volumetypes.VolumeCreateBody{
+				Labels: map[string]string{dockerutil.CleanupLabel: testName},
+			})
+			if err != nil {
+				return fmt.Errorf("creating volume for chain node: %w", err)
+			}
+
+			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+				Log: c.log,
+
+				Client: cli,
+
+				VolumeName: v.Name,
+				ImageRef:   image.Ref(),
+				TestName:   testName,
+			}); err != nil {
+				return fmt.Errorf("set volume owner: %w", err)
+			}
+
+			tn := &ChainNode{
+				log: c.log,
+
+				VolumeName:   v.Name,
+				Index:        i,
+				Chain:        c,
+				DockerClient: cli,
+				NetworkID:    networkID,
+				TestName:     testName,
+				Image:        image,
+			}
+			chainNodes[i] = tn
+
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 	c.ChainNodes = chainNodes
+	return nil
 }
 
 type GenesisValidatorPubKey struct {
