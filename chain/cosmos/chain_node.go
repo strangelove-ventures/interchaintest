@@ -1,6 +1,7 @@
 package cosmos
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -193,15 +194,6 @@ func (tn *ChainNode) Bind() []string {
 
 func (tn *ChainNode) HomeDir() string {
 	return filepath.Join("/tmp", tn.Chain.Config().Name)
-}
-
-// Keybase returns the keyring for a given node
-func (tn *ChainNode) Keybase() keyring.Keyring {
-	kr, err := keyring.New("", keyring.BackendTest, tn.Dir(), os.Stdin)
-	if err != nil {
-		panic(err)
-	}
-	return kr
 }
 
 // SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
@@ -793,11 +785,8 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	key, err := tn.GetKey(valKey)
-	if err != nil {
-		return err
-	}
-	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, key.GetAddress().Bytes())
+
+	bech32, err := tn.KeyBech32(ctx, valKey)
 	if err != nil {
 		return err
 	}
@@ -831,12 +820,19 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	return string(nk.ID()), nil
 }
 
-// GetKey gets a key, waiting until it is available
-func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
-	return info, retry.Do(func() (err error) {
-		info, err = tn.Keybase().Key(name)
-		return err
-	})
+// KeyBech32 retrieves the named key's address in bech32 format from the node.
+func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error) {
+	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
+		"--home", tn.HomeDir(),
+		"--keyring-backend", keyring.BackendTest,
+	}
+
+	stdout, stderr, err := tn.Exec(ctx, command, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
+	}
+
+	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
 }
 
 // PeerString returns the string for connecting the nodes passed in
