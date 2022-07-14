@@ -186,14 +186,6 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-func (tn *ChainNode) PrivValKeyFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
-}
-
-func (tn *ChainNode) TMConfigPath() string {
-	return filepath.Join(tn.Dir(), "config", "config.toml")
-}
-
 // Bind returns the home folder bind point for running the node
 func (tn *ChainNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
@@ -213,15 +205,37 @@ func (tn *ChainNode) Keybase() keyring.Keyring {
 }
 
 // SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
-func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
+func (tn *ChainNode) SetValidatorConfigAndPeers(ctx context.Context, peers string) error {
 	// Pull default config
 	cfg := tmconfig.DefaultConfig()
 
 	// change config to include everything needed
 	applyConfigChanges(cfg, peers)
 
-	// overwrite with the new config
-	tmconfig.WriteConfigFile(tn.TMConfigPath(), cfg)
+	// Unfortunately, the tmconfig package does not expose the config template directly.
+	// So we have to write the file to disk, then read it back and write it to the container.
+	tempF, err := os.CreateTemp("", "config-"+tn.Name()+"-*.toml")
+	if err != nil {
+		return fmt.Errorf("creating temporary config file: %w", err)
+	}
+	defer os.Remove(tempF.Name())
+	if err := tempF.Close(); err != nil {
+		return fmt.Errorf("closing temporary config file: %w", err)
+	}
+
+	tmconfig.WriteConfigFile(tempF.Name(), cfg) // Panics on error.
+
+	content, err := os.ReadFile(tempF.Name())
+	if err != nil {
+		return fmt.Errorf("reading temporary config file: %w", err)
+	}
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.Dir(), "config/config.toml", content); err != nil {
+		return fmt.Errorf("overwriting config.toml: %w", err)
+	}
+
+	return nil
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
