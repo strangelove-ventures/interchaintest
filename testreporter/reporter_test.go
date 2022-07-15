@@ -3,12 +3,12 @@ package testreporter_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/strangelove-ventures/ibctest/internal/mocktesting"
 	"github.com/strangelove-ventures/ibctest/label"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
@@ -21,56 +21,6 @@ type nopCloser struct {
 
 func (n nopCloser) Close() error {
 	return nil
-}
-
-// mockT is a stand-in testreporter.T for asserting against the reporter's behavior.
-type mockT struct {
-	name            string
-	cleanups        []func()
-	failed, skipped bool
-
-	errors, skips []string
-
-	parallelDelay time.Duration
-}
-
-func (t *mockT) Name() string {
-	return t.name
-}
-
-func (t *mockT) Cleanup(fn func()) {
-	t.cleanups = append(t.cleanups, fn)
-}
-
-func (t *mockT) Failed() bool  { return t.failed }
-func (t *mockT) Skipped() bool { return t.skipped }
-
-func (t *mockT) RunCleanups() {
-	// Cleanup calls are executed most recently first.
-	for i := len(t.cleanups) - 1; i >= 0; i-- {
-		t.cleanups[i]()
-	}
-}
-
-func (t *mockT) Errorf(format string, args ...any) {
-	t.errors = append(t.errors, fmt.Sprintf(format, args...))
-}
-
-func (t *mockT) Skip(args ...any) {
-	t.skips = append(t.skips, fmt.Sprint(args...))
-	t.skipped = true
-}
-
-// FailNow just marks t as failed without any control flow influences.
-// FailNow on a real *testing.T would call runtime.Goexit,
-// but we don't need that for these tests (yet).
-func (t *mockT) FailNow() {
-	t.failed = true
-}
-
-// Parallel blocks for the configured t.parallelDelay and then returns.
-func (t *mockT) Parallel() {
-	time.Sleep(t.parallelDelay)
 }
 
 // ReporterMessages decodes all the messages from r.
@@ -104,7 +54,7 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 	afterStartSuite := time.Now()
 
-	mt := &mockT{name: "my_test"}
+	mt := mocktesting.NewT("my_test")
 
 	beforeStartTest := time.Now()
 	r.TrackTest(mt, label.Timeout)
@@ -150,17 +100,17 @@ func TestReporter_TrackFailingSingleTest(t *testing.T) {
 	buf := new(bytes.Buffer)
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
-	mt := &mockT{name: "my_test"}
+	var beforeFailure time.Time
+	mt := mocktesting.NewT("my_test")
+	mt.Simulate(func() {
+		r.TrackTest(mt)
 
-	r.TrackTest(mt)
+		time.Sleep(10 * time.Millisecond)
 
-	time.Sleep(10 * time.Millisecond)
-
-	beforeFailure := time.Now()
-	require.Fail(r.TestifyT(mt), "forced failure")
+		beforeFailure = time.Now()
+		require.Fail(r.TestifyT(mt), "forced failure")
+	})
 	afterFailure := time.Now()
-
-	mt.RunCleanups()
 
 	require.NoError(t, r.Close())
 
@@ -188,7 +138,8 @@ func TestReporter_TrackParallel(t *testing.T) {
 
 	// The underlying call to mt.Parallel will block for this duration.
 	parallelDelay := 50 * time.Millisecond
-	mt := &mockT{name: "my_test", parallelDelay: parallelDelay}
+	mt := mocktesting.NewT("my_test")
+	mt.ParallelDelay = parallelDelay
 	r.TrackTest(mt)
 
 	beforeParallel := time.Now()
@@ -223,17 +174,17 @@ func TestReporter_TrackSkip(t *testing.T) {
 	buf := new(bytes.Buffer)
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
-	mt := &mockT{name: "my_test"}
+	var beforeSkip time.Time
+	mt := mocktesting.NewT("my_test")
+	mt.Simulate(func() {
+		r.TrackTest(mt)
 
-	r.TrackTest(mt)
-
-	beforeSkip := time.Now()
-	time.Sleep(5 * time.Millisecond)
-	r.TrackSkip(mt, "skipping %s", "for reasons")
-	time.Sleep(5 * time.Millisecond)
+		beforeSkip = time.Now()
+		time.Sleep(5 * time.Millisecond)
+		r.TrackSkip(mt, "skipping %s", "for reasons")
+	})
 	afterSkip := time.Now()
 
-	mt.RunCleanups()
 	require.NoError(t, r.Close())
 
 	msgs := ReporterMessages(t, buf)
@@ -249,8 +200,8 @@ func TestReporter_TrackSkip(t *testing.T) {
 	require.False(t, finishTestMsg.Failed)
 	require.True(t, finishTestMsg.Skipped)
 
-	require.Equal(t, mt.skips, []string{"skipping for reasons"})
-	require.True(t, mt.skipped)
+	require.Equal(t, mt.Skips, []string{"skipping for reasons"})
+	require.True(t, mt.Skipped())
 }
 
 // Check that calling (*Reporter).TestifyT(t).Errorf
@@ -259,13 +210,13 @@ func TestReporter_Errorf(t *testing.T) {
 	buf := new(bytes.Buffer)
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
-	mt := &mockT{name: "my_test"}
+	mt := mocktesting.NewT("my_test")
 	r.TrackTest(mt)
 	r.TestifyT(mt).Errorf("failed? %t", true)
 	mt.RunCleanups()
 	require.NoError(t, r.Close())
 
-	require.Equal(t, mt.errors, []string{"failed? true"})
+	require.Equal(t, mt.Errors, []string{"failed? true"})
 }
 
 func TestReporter_RelayerExec(t *testing.T) {
@@ -274,7 +225,7 @@ func TestReporter_RelayerExec(t *testing.T) {
 	buf := new(bytes.Buffer)
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
-	mt := &mockT{name: "my_test"}
+	mt := mocktesting.NewT("my_test")
 
 	r.TrackTest(mt)
 
