@@ -50,6 +50,9 @@ Test authors must use
 [`ibctest.TempDir`](https://pkg.go.dev/github.com/strangelove-ventures/ibctest#TempDir)
 instead of `(*testing.T).Cleanup` to opt in to this behavior.
 
+By default, Docker volumes associated with tests are cleaned up at the end of each test run.
+That same `IBCTEST_SKIP_FAILURE_CLEANUP` controls whether the volumes associated with failed tests are pruned.
+
 ## Contributing
 
 Running `make ibctest` will produce an `ibctest` binary into `./bin`.
