@@ -12,13 +12,13 @@ import (
 )
 
 func TestTempDir_Cleanup(t *testing.T) {
-	origKeep := ibctest.KeepTempDirOnFailure
+	origKeep := ibctest.KeepingTempDirOnFailure()
 	defer func() {
-		ibctest.KeepTempDirOnFailure = origKeep
+		ibctest.KeepTempDirOnFailure(origKeep)
 	}()
 
 	t.Run("keep=true", func(t *testing.T) {
-		ibctest.KeepTempDirOnFailure = true
+		ibctest.KeepTempDirOnFailure(true)
 
 		t.Run("test passed", func(t *testing.T) {
 			mt := mocktesting.NewT("t")
@@ -53,7 +53,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 	})
 
 	t.Run("keep=false", func(t *testing.T) {
-		ibctest.KeepTempDirOnFailure = false
+		ibctest.KeepTempDirOnFailure(false)
 
 		for name, failed := range map[string]bool{
 			"test passed": false,
