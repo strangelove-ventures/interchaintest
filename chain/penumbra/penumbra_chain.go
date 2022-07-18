@@ -367,22 +367,28 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		}
 	}
 
-	return c.start(testName, ctx, firstValidator.PenumbraAppNode.GenesisFile())
+	return c.start(ctx)
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFilePath string) error {
-	var tendermintNodes []*tendermint.TendermintNode
-	for _, node := range c.PenumbraNodes {
-		tendermintNodes = append(tendermintNodes, node.TendermintNode)
-		if _, err := dockerutil.CopyFile(genesisFilePath, node.TendermintNode.GenesisFilePath()); err != nil { //nolint
+func (c *PenumbraChain) start(ctx context.Context) error {
+	// Copy the penumbra genesis to all tendermint nodes.
+	genesisContent, err := c.PenumbraNodes[0].PenumbraAppNode.genesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	tendermintNodes := make([]*tendermint.TendermintNode, len(c.PenumbraNodes))
+	for i, node := range c.PenumbraNodes {
+		tendermintNodes[i] = node.TendermintNode
+		if err := node.TendermintNode.OverwriteGenesisFile(ctx, genesisContent); err != nil {
 			return err
 		}
 	}
 
 	tmNodes := tendermint.TendermintNodes(tendermintNodes)
 
-	if err := tmNodes.LogGenesisHashes(); err != nil {
+	if err := tmNodes.LogGenesisHashes(ctx); err != nil {
 		return err
 	}
 
@@ -397,7 +403,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 			)
 		})
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer(ctx)
+			return n.PenumbraAppNode.CreateNodeContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -425,8 +431,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	err := test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
-	return err
+	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }
 
 func (c *PenumbraChain) Cleanup(ctx context.Context) error {
