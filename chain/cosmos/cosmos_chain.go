@@ -297,12 +297,30 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := 0; i < count; i++ {
 		i := i
 		eg.Go(func() error {
+			// Construct the ChainNode first so we can access its name.
+			// The ChainNode's VolumeName cannot be set until after we create the volume.
+			tn := &ChainNode{
+				log: c.log,
+
+				Index:        i,
+				Chain:        c,
+				DockerClient: cli,
+				NetworkID:    networkID,
+				TestName:     testName,
+				Image:        image,
+			}
+
 			v, err := cli.VolumeCreate(egCtx, volumetypes.VolumeCreateBody{
-				Labels: map[string]string{dockerutil.CleanupLabel: testName},
+				Labels: map[string]string{
+					dockerutil.CleanupLabel: testName,
+
+					dockerutil.NodeOwnerLabel: tn.Name(),
+				},
 			})
 			if err != nil {
 				return fmt.Errorf("creating volume for chain node: %w", err)
 			}
+			tn.VolumeName = v.Name
 
 			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 				Log: c.log,
@@ -316,17 +334,6 @@ func (c *CosmosChain) initializeChainNodes(
 				return fmt.Errorf("set volume owner: %w", err)
 			}
 
-			tn := &ChainNode{
-				log: c.log,
-
-				VolumeName:   v.Name,
-				Index:        i,
-				Chain:        c,
-				DockerClient: cli,
-				NetworkID:    networkID,
-				TestName:     testName,
-				Image:        image,
-			}
 			chainNodes[i] = tn
 
 			return nil
