@@ -103,14 +103,23 @@ func (tn *TendermintNode) MkDir() {
 	}
 }
 
-// GentxPath returns the path to the gentx for a node
-func (tn *TendermintNode) GentxPath() (string, error) {
-	id, err := tn.NodeID()
-	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
+func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.Dir(), "config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
+	}
+
+	return gen, nil
 }
 
-func (tn *TendermintNode) GenesisFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "genesis.json")
+func (tn *TendermintNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.Dir(), "config/genesis.json", content); err != nil {
+		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
 }
 
 type PrivValidatorKey struct {
@@ -303,13 +312,13 @@ func (tn TendermintNodes) PeerString(node *TendermintNode) string {
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
-func (tn TendermintNodes) LogGenesisHashes() error {
+func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range tn {
-		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("{%s} genesis hash %x\n", n.Name(), sha256.Sum256(gen))
+		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
@@ -321,4 +330,11 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Binds: tn.Bind(),
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+func (tn *TendermintNode) logger() *zap.Logger {
+	return tn.Log.With(
+		zap.String("chain_id", tn.Chain.Config().ChainID),
+		zap.String("test", tn.TestName),
+	)
 }

@@ -132,8 +132,14 @@ func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
 	return filepath.Join(p.HomeDir(), "allocations.csv")
 }
 
-func (p *PenumbraAppNode) GenesisFile() string {
-	return filepath.Join(p.Dir(), "node0", "tendermint", "config", "genesis.json")
+func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
+	gen, err := fr.SingleFileContent(ctx, p.Dir(), "node0/tendermint/config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
+	}
+
+	return gen, nil
 }
 
 func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
