@@ -120,25 +120,49 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			}
 		}
 
-		pruneVolumes(ctx, t, cli)
-
+		pruneVolumesWithRetry(ctx, t, cli)
 		pruneNetworksWithRetry(ctx, t, cli)
 	}
 }
 
-func pruneVolumes(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
+func pruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
 	if KeepVolumesOnFailure && t.Failed() {
 		return
 	}
 
-	res, err := cli.VolumesPrune(ctx, filters.NewArgs(filters.Arg("label", CleanupLabel+"="+t.Name())))
+	var msg string
+	err := retry.Do(
+		func() error {
+			res, err := cli.VolumesPrune(ctx, filters.NewArgs(filters.Arg("label", CleanupLabel+"="+t.Name())))
+			if err != nil {
+				if errdefs.IsConflict(err) {
+					// Prune is already in progress; try again.
+					return err
+				}
+
+				// Give up on any other error.
+				return retry.Unrecoverable(err)
+			}
+
+			if len(res.VolumesDeleted) > 0 {
+				msg = fmt.Sprintf("Pruned %d volumes, reclaiming approximately %.1f MB", len(res.VolumesDeleted), float64(res.SpaceReclaimed)/(1024*1024))
+			}
+
+			return nil
+		},
+		retry.Context(ctx),
+		retry.DelayType(retry.FixedDelay),
+	)
+
 	if err != nil {
 		t.Logf("Failed to prune volumes during docker cleanup: %v", err)
 		return
 	}
 
-	if len(res.VolumesDeleted) > 0 {
-		t.Logf("Pruned %d volumes, reclaiming approximately %.1f MB", len(res.VolumesDeleted), float64(res.SpaceReclaimed)/(1024*1024))
+	if msg != "" {
+		// Odd to Logf %s, but this is a defensive way to keep the DockerSetupTestingT interface
+		// with only Logf and not need to add Log.
+		t.Logf("%s", msg)
 	}
 }
 
@@ -153,6 +177,7 @@ func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 					return err
 				}
 
+				// Give up on any other error.
 				return retry.Unrecoverable(err)
 			}
 
