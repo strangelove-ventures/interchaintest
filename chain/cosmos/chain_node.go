@@ -713,7 +713,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
