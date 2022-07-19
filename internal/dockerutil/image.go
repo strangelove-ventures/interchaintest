@@ -83,7 +83,7 @@ type ContainerOptions struct {
 	// Environment variables
 	Env []string
 
-	// If blank, defaults to a reasonable non-root user.
+	// If blank, defaults to the container's default user.
 	User string
 }
 
@@ -137,11 +137,6 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 		}); err != nil {
 			return "", fmt.Errorf("unable to remove container %s: %w", containerName, err)
 		}
-	}
-
-	// Ensure reasonable defaults.
-	if opts.User == "" {
-		opts.User = GetDockerUserString()
 	}
 
 	cc, err := image.client.ContainerCreate(
