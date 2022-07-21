@@ -168,14 +168,15 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
-	if err := os.WriteFile(p.ValidatorsInputFile(), validatorsJson, 0644); err != nil {
+	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
+	if err := fw.WriteFile(ctx, p.Dir(), "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
 		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
 	}
-	if err := os.WriteFile(p.AllocationsInputFile(), allocationsCsv, 0644); err != nil {
+	if err := fw.WriteFile(ctx, p.Dir(), "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
 	}
 	cmd := []string{

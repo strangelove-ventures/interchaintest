@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -137,25 +138,18 @@ func (tn *TendermintNode) PrivValKeyFilePath() string {
 	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
 }
 
-func (tn *TendermintNode) TMConfigPath() string {
-	return filepath.Join(tn.Dir(), "config", "config.toml")
-}
-
-func (tn *TendermintNode) TMConfigPathContainer() string {
-	return filepath.Join(tn.HomeDir(), "config", "config.toml")
-}
-
 // Bind returns the home folder bind point for running the node
 func (tn *TendermintNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
 }
 
 func (tn *TendermintNode) HomeDir() string {
-	return filepath.Join("/tmp", tn.Chain.Config().Name)
+	return path.Join("/tmp", tn.Chain.Config().Name)
 }
 
 func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
-	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, tn.TMConfigPathContainer())
+	configPath := path.Join(tn.HomeDir(), "config/config.toml")
+	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, configPath)
 }
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
