@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 
@@ -283,15 +282,16 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
 	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
 
-	var eg errgroup.Group
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
 		v := v
 		i := i
 		eg.Go(func() error {
-			if err := v.TendermintNode.InitValidatorFiles(ctx); err != nil {
+			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
 			}
-			privValKeyBytes, err := os.ReadFile(v.TendermintNode.PrivValKeyFilePath())
+			fr := dockerutil.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
+			privValKeyBytes, err := fr.SingleFileContent(egCtx, v.TendermintNode.Dir(), "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
 			}
@@ -299,13 +299,17 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
-			if err := v.PenumbraAppNode.CreateKey(ctx, valKey); err != nil {
+			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(ctx); err != nil {
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
-			validatorTemplateDefinitionFileBytes, err := os.ReadFile(v.PenumbraAppNode.ValidatorDefinitionTemplateFilePath())
+
+			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
+			// but instantiate a new FileRetriever to be defensive.
+			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
+			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.Dir(), "validator.json")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
@@ -348,23 +352,44 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	for _, n := range fullnodes {
 		n := n
-		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(ctx) })
+		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(egCtx) })
 	}
 
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("waiting to init full nodes' files: %w", err)
 	}
 
-	firstValidator := validators[0]
-	if err := firstValidator.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
+	firstVal := c.PenumbraNodes[0]
+	if err := firstVal.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
 		return fmt.Errorf("generating genesis file: %w", err)
 	}
 
 	// penumbra generate-testnet right now overwrites new validator keys
-	for i, validator := range validators {
-		if _, err := dockerutil.CopyFile(firstValidator.PenumbraAppNode.ValidatorPrivateKeyFile(i), validator.TendermintNode.PrivValKeyFilePath()); err != nil {
-			return fmt.Errorf("copying private key to validator %d: %w", i, err)
-		}
+	eg, egCtx = errgroup.WithContext(ctx)
+	for i, val := range c.PenumbraNodes[:c.numValidators] {
+		i := i
+		val := val
+		// Use an errgroup to save some time doing many concurrent copies inside containers.
+		eg.Go(func() error {
+			firstValPrivKeyRelPath := fmt.Sprintf("node%d/tendermint/config/priv_validator_key.json", i)
+
+			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
+			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.Dir(), firstValPrivKeyRelPath)
+			if err != nil {
+				return fmt.Errorf("getting validator private key content: %w", err)
+			}
+
+			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			if err := fw.WriteFile(egCtx, val.TendermintNode.Dir(), "config/priv_validator_key.json", pk); err != nil {
+				return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 
 	return c.start(ctx)
