@@ -40,7 +40,7 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	Home         string
+	VolumeName   string
 	Index        int
 	Chain        ibc.Chain
 	Validator    bool
@@ -124,21 +124,9 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (tn *ChainNode) Dir() string {
-	return filepath.Join(tn.Home, tn.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (tn *ChainNode) MkDir() {
-	if err := os.MkdirAll(tn.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
 func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.Dir(), "config/genesis.json")
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
@@ -148,7 +136,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 
 func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.Dir(), "config/genesis.json", content); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
 
@@ -164,13 +152,13 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
 
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gentx, err := fr.SingleFileContent(ctx, tn.Dir(), relPath)
+	gentx, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
 	if err != nil {
 		return fmt.Errorf("getting gentx content: %w", err)
 	}
 
 	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
-	if err := fw.WriteFile(ctx, destVal.Dir(), relPath, gentx); err != nil {
+	if err := fw.WriteFile(ctx, destVal.VolumeName, relPath, gentx); err != nil {
 		return fmt.Errorf("overwriting gentx: %w", err)
 	}
 
@@ -190,11 +178,11 @@ type PrivValidatorKeyFile struct {
 
 // Bind returns the home folder bind point for running the node
 func (tn *ChainNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
 
 func (tn *ChainNode) HomeDir() string {
-	return filepath.Join("/tmp", tn.Chain.Config().Name)
+	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
 // SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
@@ -224,7 +212,7 @@ func (tn *ChainNode) SetValidatorConfigAndPeers(ctx context.Context, peers strin
 	}
 
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.Dir(), "config/config.toml", content); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/config.toml", content); err != nil {
 		return fmt.Errorf("overwriting config.toml: %w", err)
 	}
 
@@ -516,7 +504,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 
 	_, file := filepath.Split(fileName)
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.Dir(), file, content); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
@@ -713,7 +701,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
@@ -811,7 +798,7 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	// we only have to tmjson.Unmarshal the raw content.
 
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	j, err := fr.SingleFileContent(ctx, tn.Dir(), "config/node_key.json")
+	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
 		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}

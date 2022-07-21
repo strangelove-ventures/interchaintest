@@ -33,6 +33,18 @@ type DockerSetupTestingT interface {
 // is unable to clean old resources from docker engine.
 const CleanupLabel = "ibc-test"
 
+// CleanupLabel is the "old" format.
+// Note that any new labels should follow the reverse DNS format suggested at
+// https://docs.docker.com/config/labels-custom-metadata/#key-format-recommendations.
+
+const (
+	// LabelPrefix is the reverse DNS format "namespace" for ibctest Docker labels.
+	LabelPrefix = "ventures.strangelove.ibctest."
+
+	// NodeOwnerLabel indicates the logical node owning a particular object (probably a volume).
+	NodeOwnerLabel = LabelPrefix + "node-owner"
+)
+
 // KeepVolumesOnFailure determines whether volumes associated with a test
 // using DockerSetup are retained or deleted following a test failure.
 //
