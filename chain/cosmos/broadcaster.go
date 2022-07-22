@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"path/filepath"
+	"path"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -97,7 +97,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user broadcast.User)
 	_, ok := b.keyrings[user]
 	if !ok {
 		localDir := b.t.TempDir()
-		containerKeyringDir := filepath.Join(cn.HomeDir(), "keyring-test")
+		containerKeyringDir := path.Join(cn.HomeDir(), "keyring-test")
 		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.DockerClient, localDir, containerKeyringDir, cn.containerID)
 		if err != nil {
 			return client.Context{}, err
@@ -150,9 +150,10 @@ func (b *Broadcaster) defaultClientContext(fromUser broadcast.User, sdkAdd sdk.A
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastBlock).
-		WithCodec(defaultEncoding.Marshaler).
-		WithHomeDir(cn.Home)
+		WithCodec(defaultEncoding.Marshaler)
 
+	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
+	// but that field no longer exists and the test against Broadcaster still passes without it.
 }
 
 // defaultTxFactory creates a new Factory with default configuration.

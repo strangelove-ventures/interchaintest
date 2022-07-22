@@ -6,9 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,6 +17,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -30,7 +29,7 @@ import (
 type TendermintNode struct {
 	Log *zap.Logger
 
-	Home         string
+	VolumeName   string
 	Index        int
 	Chain        ibc.Chain
 	NetworkID    string
@@ -92,21 +91,9 @@ func (tn *TendermintNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (tn *TendermintNode) Dir() string {
-	return filepath.Join(tn.Home, tn.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (tn *TendermintNode) MkDir() {
-	if err := os.MkdirAll(tn.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
 func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.Dir(), "config/genesis.json")
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
@@ -116,7 +103,7 @@ func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error
 
 func (tn *TendermintNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.Dir(), "config/genesis.json", content); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
 
@@ -134,17 +121,13 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-func (tn *TendermintNode) PrivValKeyFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
-}
-
 // Bind returns the home folder bind point for running the node
 func (tn *TendermintNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
 
 func (tn *TendermintNode) HomeDir() string {
-	return path.Join("/tmp", tn.Chain.Config().Name)
+	return path.Join("/var/tendermint", tn.Chain.Config().Name)
 }
 
 func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
@@ -199,7 +182,6 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
@@ -275,23 +257,33 @@ func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
 }
 
 // NodeID returns the node of a given node
-func (tn *TendermintNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
+	// This used to call p2p.LoadNodeKey against the file on the host,
+	// but because we are transitioning to operating on Docker volumes,
+	// we only have to tmjson.Unmarshal the raw content.
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}
-	return string(nodeKey.ID()), nil
+
+	var nk p2p.NodeKey
+	if err := tmjson.Unmarshal(j, &nk); err != nil {
+		return "", fmt.Errorf("unmarshaling node_key.json: %w", err)
+	}
+
+	return string(nk.ID()), nil
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (tn TendermintNodes) PeerString(node *TendermintNode) string {
+func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) string {
 	addrs := make([]string, len(tn))
 	for i, n := range tn {
 		if n == node {
 			// don't peer with ourself
 			continue
 		}
-		id, err := n.NodeID()
+		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?
