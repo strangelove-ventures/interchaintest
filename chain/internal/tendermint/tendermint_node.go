@@ -182,7 +182,6 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
