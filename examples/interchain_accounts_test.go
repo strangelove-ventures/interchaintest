@@ -27,8 +27,8 @@ func TestInterchainAccounts(t *testing.T) {
 
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "icad", ChainName: "icad-1", Version: "master"},
-		{Name: "icad", ChainName: "icad-2", Version: "master"},
+		{Name: "icad", Version: "master"},
+		{Name: "icad", Version: "master"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -40,7 +40,7 @@ func TestInterchainAccounts(t *testing.T) {
 		t, client, network,
 	)
 
-	const ibcPath = "test-path"
+	const pathName = "test-path"
 
 	ic := ibctest.NewInterchain().
 		AddChain(chain1).
@@ -50,7 +50,7 @@ func TestInterchainAccounts(t *testing.T) {
 			Chain1:  chain1,
 			Chain2:  chain2,
 			Relayer: r,
-			Path:    ibcPath,
+			Path:    pathName,
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
@@ -67,7 +67,6 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1User := users[0]
 
 	// Generate path
-	pathName := "ica-path"
 	err = r.GeneratePath(ctx, eRep, chain1.Config().ChainID, chain2.Config().ChainID, pathName)
 	require.NoError(t, err)
 
@@ -98,7 +97,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start the relayer on both paths
-	err = r.StartRelayer(ctx, eRep, ibcPath)
+	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
 	t.Cleanup(
