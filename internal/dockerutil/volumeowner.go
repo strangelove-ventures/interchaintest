@@ -34,6 +34,12 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 	// https://stackoverflow.com/q/36216220
 	// Assuming Config is more pertinent.
 	u := ii.Config.User
+	if u == "" {
+		// The inline script expects a real user, and some images
+		// may not have an explicit user set. When they don't,
+		// it should be safe to assume the user is root.
+		u = "root"
+	}
 
 	// Start a one-off container to chmod and chown the volume.
 
