@@ -107,8 +107,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	case "penumbra":
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
 	case "polkadot":
-		switch cfg.Name {
-		case "composable":
+		switch {
+		case strings.Contains(cfg.Name, "composable"):
 			parachains := []polkadot.ParachainConfig{{
 				Bin:             "composable",
 				ChainID:         "dali-dev",

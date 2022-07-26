@@ -87,9 +87,10 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 }
 
 func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig, error) {
-	// If ChainName provided, override.
-	if s.ChainName != "" {
-		cfg.Name = s.ChainName
+	// If no ChainName provided, generate one based on the spec name.
+	cfg.Name = s.ChainName
+	if cfg.Name == "" {
+		cfg.Name = s.Name + s.suffix()
 	}
 
 	// If no ChainID provided, generate one -- prefer chain name but fall back to spec name.
@@ -134,8 +135,8 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			relayChainVersion = relayChainImageSplit[0]
 		}
 		cfg.Images[0].Version = relayChainVersion
-		switch s.Name {
-		case "composable":
+		switch {
+		case strings.Contains(s.Name, "composable"):
 			if len(versionSplit) != 2 {
 				return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
 			}
