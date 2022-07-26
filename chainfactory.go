@@ -106,15 +106,20 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
-	case "composable":
-		parachains := []polkadot.ParachainConfig{{
-			Bin:             "composable",
-			ChainID:         "dali-dev",
-			Image:           cfg.Images[1],
-			NumNodes:        nf,
-			RelayChainFlags: []string{"--execution=wasm"},
-		}}
-		return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
+	case "polkadot":
+		switch cfg.Name {
+		case "composable":
+			parachains := []polkadot.ParachainConfig{{
+				Bin:             "composable",
+				ChainID:         "dali-dev",
+				Image:           cfg.Images[1],
+				NumNodes:        nf,
+				RelayChainFlags: []string{"--execution=wasm"},
+			}}
+			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
+		default:
+			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
+		}
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}

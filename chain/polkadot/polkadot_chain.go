@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/StirlingMarketingGroup/go-namecase"
 	"github.com/docker/docker/api/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
@@ -118,19 +118,16 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 			types.ImagePullOptions{},
 		)
 		if err != nil {
-			fmt.Printf("error pulling image %s:%s : %v", image.Repository, image.Version, err)
+			c.log.Error("Failed to pull image",
+				zap.Error(err),
+				zap.String("repository", image.Repository),
+				zap.String("tag", image.Version),
+			)
 		} else {
-			if err != nil {
-				c.log.Error("Failed to pull image",
-					zap.Error(err),
-					zap.String("repository", image.Repository),
-					zap.String("tag", image.Version),
-				)
-			} else {
-				_, _ = io.Copy(io.Discard, rc)
-				_ = rc.Close()
-			}
+			_, _ = io.Copy(io.Discard, rc)
+			_ = rc.Close()
 		}
+
 	}
 	for i := 0; i < c.numRelayChainNodes; i++ {
 		seed := make([]byte, 32)
@@ -175,7 +172,30 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 			EcdsaPrivateKey:   *ecdsaPrivKey,
 		}
 
-		pn.MkDir()
+		v, err := client.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+			Labels: map[string]string{
+				dockerutil.CleanupLabel: testName,
+
+				dockerutil.NodeOwnerLabel: pn.Name(),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("creating volume for chain node: %w", err)
+		}
+		pn.VolumeName = v.Name
+
+		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+			Log: c.log,
+
+			Client: client,
+
+			VolumeName: v.Name,
+			ImageRef:   chainCfg.Images[0].Ref(),
+			TestName:   testName,
+		}); err != nil {
+			return fmt.Errorf("set volume owner: %w", err)
+		}
+
 		relayChainNodes = append(relayChainNodes, pn)
 	}
 	c.RelayChainNodes = relayChainNodes
@@ -201,7 +221,29 @@ func (c *PolkadotChain) Initialize(testName string, home string, client *client.
 				Flags:           parachainConfig.Flags,
 				RelayChainFlags: parachainConfig.RelayChainFlags,
 			}
-			pn.MkDir()
+			v, err := client.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+				Labels: map[string]string{
+					dockerutil.CleanupLabel: testName,
+
+					dockerutil.NodeOwnerLabel: pn.Name(),
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("creating volume for chain node: %w", err)
+			}
+			pn.VolumeName = v.Name
+
+			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+				Log: c.log,
+
+				Client: client,
+
+				VolumeName: v.Name,
+				ImageRef:   parachainConfig.Image.Ref(),
+				TestName:   testName,
+			}); err != nil {
+				return fmt.Errorf("set volume owner: %w", err)
+			}
 			parachainNodes = append(parachainNodes, pn)
 		}
 		c.ParachainNodes = append(c.ParachainNodes, parachainNodes)
@@ -325,29 +367,11 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 	return fmt.Errorf("RecoverKey not implemented for PenumbraChain")
 }
 
-func (c *PolkadotChain) Cleanup(ctx context.Context) error {
-	var eg errgroup.Group
-	for _, p := range c.RelayChainNodes {
-		p := p
-		eg.Go(func() error {
-			if err := p.StopContainer(ctx); err != nil {
-				return err
-			}
-			return p.Cleanup(ctx)
-		})
-	}
-	for _, pn := range c.ParachainNodes {
-		for _, p := range pn {
-			p := p
-			eg.Go(func() error {
-				if err := p.StopContainer(ctx); err != nil {
-					return err
-				}
-				return p.Cleanup(ctx)
-			})
-		}
-	}
-	return eg.Wait()
+func (c *PolkadotChain) logger() *zap.Logger {
+	return c.log.With(
+		zap.String("chain_id", c.cfg.ChainID),
+		zap.String("test", c.testName),
+	)
 }
 
 // sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis
@@ -357,7 +381,10 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 	if err := firstNode.GenerateChainSpec(ctx); err != nil {
 		return fmt.Errorf("error generating chain spec: %w", err)
 	}
-	chainSpecBytes, err := os.ReadFile(firstNode.ChainSpecFilePath())
+	fr := dockerutil.NewFileRetriever(c.logger(), firstNode.DockerClient, c.testName)
+	fw := dockerutil.NewFileWriter(c.logger(), firstNode.DockerClient, c.testName)
+
+	chainSpecBytes, err := fr.SingleFileContent(ctx, firstNode.VolumeName, firstNode.ChainSpecFilePathContainer())
 	if err != nil {
 		return fmt.Errorf("error reading chain spec: %w", err)
 	}
@@ -375,7 +402,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 	if err != nil {
 		return fmt.Errorf("error marshaling modified chain spec: %w", err)
 	}
-	if err := os.WriteFile(firstNode.ChainSpecFilePath(), editedChainSpec, 0644); err != nil {
+
+	if err := fw.WriteFile(ctx, firstNode.VolumeName, firstNode.ChainSpecFilePathContainer(), editedChainSpec); err != nil {
 		return fmt.Errorf("error writing modified chain spec: %w", err)
 	}
 
@@ -384,7 +412,11 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return err
 	}
 
-	rawChainSpecFilePath := firstNode.RawChainSpecFilePath()
+	rawChainSpecBytes, err := fr.SingleFileContent(ctx, firstNode.VolumeName, firstNode.RawChainSpecFilePathRelative())
+	if err != nil {
+		return fmt.Errorf("error reading chain spec: %w", err)
+	}
+
 	var eg errgroup.Group
 	for i, n := range c.RelayChainNodes {
 		n := n
@@ -392,8 +424,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		eg.Go(func() error {
 			if i != 0 {
 				fmt.Printf("{%s} => copying raw chain spec...\n", n.Name())
-				if _, err := dockerutil.CopyFile(rawChainSpecFilePath, n.RawChainSpecFilePath()); err != nil {
-					return err
+				if err := fw.WriteFile(ctx, n.VolumeName, n.RawChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
+					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
 			}
 			fmt.Printf("{%s} => creating container...\n", n.Name())
@@ -413,8 +445,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 			n := n
 			eg.Go(func() error {
 				fmt.Printf("{%s} => copying raw chain spec...\n", n.Name())
-				if _, err := dockerutil.CopyFile(rawChainSpecFilePath, n.RawChainSpecFilePath()); err != nil {
-					return err
+				if err := fw.WriteFile(ctx, n.VolumeName, n.RawChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
+					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
 				fmt.Printf("{%s} => creating container...\n", n.Name())
 				if err := n.CreateNodeContainer(ctx); err != nil {

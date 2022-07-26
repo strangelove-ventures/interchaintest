@@ -87,10 +87,9 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 }
 
 func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig, error) {
-	// If no ChainName provided, generate one based on the spec name.
-	cfg.Name = s.ChainName
-	if cfg.Name == "" {
-		cfg.Name = s.Name + s.suffix()
+	// If ChainName provided, override.
+	if s.ChainName != "" {
+		cfg.Name = s.ChainName
 	}
 
 	// If no ChainID provided, generate one -- prefer chain name but fall back to spec name.
@@ -122,7 +121,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		}
 		cfg.Images[0].Version = versionSplit[1]
 		cfg.Images[1].Version = versionSplit[0]
-	case "composable":
+	case "polkadot":
 		versionSplit := strings.Split(s.Version, ",")
 		relayChainImageSplit := strings.Split(versionSplit[0], ":")
 		var relayChainVersion string
@@ -135,15 +134,21 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			relayChainVersion = relayChainImageSplit[0]
 		}
 		cfg.Images[0].Version = relayChainVersion
-		for i := 1; i < len(versionSplit); i++ {
-			imageSplit := strings.Split(versionSplit[i], ":")
-			if len(imageSplit) != 2 {
-				return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[i])
+		switch s.Name {
+		case "composable":
+			if len(versionSplit) != 2 {
+				return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
 			}
-			if !strings.Contains(cfg.Images[i].Repository, imageSplit[0]) {
+			imageSplit := strings.Split(versionSplit[1], ":")
+			if len(imageSplit) != 2 {
+				return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[1])
+			}
+			if !strings.Contains(cfg.Images[1].Repository, imageSplit[0]) {
 				return nil, fmt.Errorf("unexpected parachain: %s", imageSplit[0])
 			}
-			cfg.Images[i].Version = imageSplit[1]
+			cfg.Images[1].Version = imageSplit[1]
+		default:
+			return nil, fmt.Errorf("unexpected parachain: %s", s.Name)
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,15 +20,19 @@ import (
 )
 
 type ParachainNode struct {
-	log             *zap.Logger
-	Home            string
-	Index           int
+	log      *zap.Logger
+	TestName string
+
+	Home  string
+	Index int
+
+	NetworkID    string
+	containerID  string
+	VolumeName   string
+	DockerClient *client.Client
+	Image        ibc.DockerImage
+
 	Chain           ibc.Chain
-	NetworkID       string
-	DockerClient    *client.Client
-	containerID     string
-	TestName        string
-	Image           ibc.DockerImage
 	Bin             string
 	NodeKey         p2pCrypto.PrivKey
 	ChainID         string
@@ -49,33 +52,21 @@ func (pn *ParachainNode) HostName() string {
 	return dockerutil.CondenseHostName(pn.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (pn *ParachainNode) Dir() string {
-	return filepath.Join(pn.Home, pn.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (pn *ParachainNode) MkDir() {
-	if err := os.MkdirAll(pn.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
 // Bind returns the home folder bind point for running the node
 func (pn *ParachainNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", pn.Dir(), pn.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", pn.VolumeName, pn.NodeHome())}
 }
 
 func (pn *ParachainNode) NodeHome() string {
 	return fmt.Sprintf("/home/.%s", pn.Chain.Config().Name)
 }
 
-func (pn *ParachainNode) RawChainSpecFilePath() string {
-	return filepath.Join(pn.Dir(), fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID))
+func (pn *ParachainNode) RawChainSpecFilePathFull() string {
+	return filepath.Join(pn.NodeHome(), fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID))
 }
 
-func (pn *ParachainNode) RawChainSpecFilePathContainer() string {
-	return filepath.Join(pn.NodeHome(), fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID))
+func (pn *ParachainNode) RawChainSpecFilePathRelative() string {
+	return fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID)
 }
 
 func (pn *ParachainNode) PeerID() (string, error) {
@@ -104,7 +95,7 @@ func (pn *ParachainNode) ParachainID(ctx context.Context) (int, error) {
 		"build-spec",
 		fmt.Sprintf("--chain=%s", pn.ChainID),
 	}
-	stdout, _, err := pn.Exec(ctx, cmd, nil)
+	stdout, _, err := pn.Exec(ctx, cmd, nil, dockerutil.LogTailAll)
 	if err != nil {
 		return -1, err
 	}
@@ -121,7 +112,7 @@ func (pn *ParachainNode) ExportGenesisWasm(ctx context.Context) (string, error) 
 		"export-genesis-wasm",
 		fmt.Sprintf("--chain=%s", pn.ChainID),
 	}
-	stdout, _, err := pn.Exec(ctx, cmd, nil)
+	stdout, _, err := pn.Exec(ctx, cmd, nil, dockerutil.LogTailAll)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +125,7 @@ func (pn *ParachainNode) ExportGenesisState(ctx context.Context, parachainID int
 		"export-genesis-state",
 		fmt.Sprintf("--chain=%s", pn.ChainID),
 	}
-	stdout, _, err := pn.Exec(ctx, cmd, nil)
+	stdout, _, err := pn.Exec(ctx, cmd, nil, dockerutil.LogTailAll)
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +158,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--chain=%s", pn.ChainID),
 	}
 	cmd = append(cmd, pn.Flags...)
-	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawChainSpecFilePathContainer()))
+	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawChainSpecFilePathFull()))
 	cmd = append(cmd, pn.RelayChainFlags...)
 	fmt.Printf("{%s} -> '%s'\n", pn.Name(), strings.Join(cmd, " "))
 
@@ -217,24 +208,13 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 }
 
 // Exec run a container for a specific job and block until the container exits
-func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
+func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string, tail uint64) ([]byte, []byte, error) {
 	job := dockerutil.NewImage(pn.log, pn.DockerClient, pn.NetworkID, pn.TestName, pn.Image.Repository, pn.Image.Version)
 	opts := dockerutil.ContainerOptions{
 		Binds: pn.Bind(),
 		Env:   env,
 		User:  dockerutil.GetRootUserString(),
+		Tail:  tail,
 	}
 	return job.Run(ctx, cmd, opts)
-}
-
-func (pn *ParachainNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", pn.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
-
-	// Cleanup should complete instantly,
-	// so add a 1-minute timeout in case Docker hangs.
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-
-	_, _, err := pn.Exec(ctx, cmd, nil)
-	return err
 }

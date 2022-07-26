@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,20 +24,24 @@ import (
 )
 
 type RelayChainNode struct {
-	log               *zap.Logger
-	Home              string
-	Index             int
+	log      *zap.Logger
+	TestName string
+
+	Home  string
+	Index int
+
+	NetworkID    string
+	containerID  string
+	VolumeName   string
+	DockerClient *client.Client
+	Image        ibc.DockerImage
+
 	Chain             ibc.Chain
-	NetworkID         string
-	DockerClient      *client.Client
-	TestName          string
-	Image             ibc.DockerImage
 	NodeKey           p2pCrypto.PrivKey
 	AccountKey        *schnorrkel.MiniSecretKey
 	StashKey          *schnorrkel.MiniSecretKey
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
-	containerID       string
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -65,21 +68,9 @@ func (p *RelayChainNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (p *RelayChainNode) Dir() string {
-	return filepath.Join(p.Home, p.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (p *RelayChainNode) MkDir() {
-	if err := os.MkdirAll(p.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
 // Bind returns the home folder bind point for running the node
 func (p *RelayChainNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.NodeHome())}
+	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.NodeHome())}
 }
 
 func (p *RelayChainNode) NodeHome() string {
@@ -138,16 +129,23 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	return fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", p.HostName(), rpcPort, peerId), nil
 }
 
-func (p *RelayChainNode) ChainSpecFilePath() string {
-	return filepath.Join(p.Dir(), fmt.Sprintf("%s.json", p.Chain.Config().ChainID))
+func (c *RelayChainNode) logger() *zap.Logger {
+	return c.log.With(
+		zap.String("chain_id", c.Chain.Config().ChainID),
+		zap.String("test", c.TestName),
+	)
 }
 
-func (p *RelayChainNode) RawChainSpecFilePath() string {
-	return filepath.Join(p.Dir(), fmt.Sprintf("%s-raw.json", p.Chain.Config().ChainID))
+func (p *RelayChainNode) ChainSpecFilePathContainer() string {
+	return fmt.Sprintf("%s.json", p.Chain.Config().ChainID)
 }
 
-func (p *RelayChainNode) RawChainSpecFilePathContainer() string {
+func (p *RelayChainNode) RawChainSpecFilePathFull() string {
 	return filepath.Join(p.NodeHome(), fmt.Sprintf("%s-raw.json", p.Chain.Config().ChainID))
+}
+
+func (p *RelayChainNode) RawChainSpecFilePathRelative() string {
+	return fmt.Sprintf("%s-raw.json", p.Chain.Config().ChainID)
 }
 
 func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
@@ -162,7 +160,8 @@ func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(p.ChainSpecFilePath(), []byte(stdout), 0644)
+	fw := dockerutil.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
+	return fw.WriteFile(ctx, p.VolumeName, p.ChainSpecFilePathContainer(), stdout)
 }
 
 func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
@@ -177,7 +176,8 @@ func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(p.RawChainSpecFilePath(), []byte(stdout), 0644)
+	fw := dockerutil.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
+	return fw.WriteFile(ctx, p.VolumeName, p.RawChainSpecFilePathRelative(), stdout)
 }
 
 func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
@@ -192,7 +192,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := p.Chain.Config()
 	cmd := []string{
 		chainCfg.Bin,
-		fmt.Sprintf("--chain=%s", p.RawChainSpecFilePathContainer()),
+		fmt.Sprintf("--chain=%s", p.RawChainSpecFilePathFull()),
 		fmt.Sprintf("--ws-port=%d", wsPort),
 		fmt.Sprintf("--%s", IndexedName[p.Index]),
 		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
@@ -260,18 +260,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) (
 		Binds: p.Bind(),
 		Env:   env,
 		User:  dockerutil.GetRootUserString(),
+		Tail:  dockerutil.LogTailAll,
 	}
 	return job.Run(ctx, cmd, opts)
-}
-
-func (p *RelayChainNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", p.NodeHome()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
-
-	// Cleanup should complete instantly,
-	// so add a 1-minute timeout in case Docker hangs.
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-
-	_, _, err := p.Exec(ctx, cmd, nil)
-	return err
 }
