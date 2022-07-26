@@ -485,11 +485,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return test.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
-func (c *CosmosChain) Cleanup(ctx context.Context) error {
-	// noop
-	return nil
-}
-
 // Height implements ibc.Chain
 func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)

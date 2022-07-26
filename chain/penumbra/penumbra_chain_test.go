@@ -39,11 +39,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	chain := chains[0]
 
 	ctx := context.Background()
-	t.Cleanup(func() {
-		if err := chain.Cleanup(ctx); err != nil {
-			t.Logf("Chain cleanup for %s failed: %v", chain.Config().ChainID, err)
-		}
-	})
 
 	err = chain.Initialize(t.Name(), home, client, network)
 	require.NoError(t, err, "failed to initialize penumbra chain")
