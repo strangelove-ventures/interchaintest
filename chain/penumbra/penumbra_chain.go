@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -103,8 +103,7 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 
 // Implements Chain interface
 func (c *PenumbraChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, cli, networkID)
-	return nil
+	return c.initializeChainNodes(testName, homeDirectory, cli, networkID)
 }
 
 // Exec implements chain interface.
@@ -221,13 +220,14 @@ func (c *PenumbraChain) initializeChainNodes(
 	testName, home string,
 	cli *client.Client,
 	networkID string,
-) {
+) error {
+	ctx := context.TODO()
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
 		rc, err := cli.ImagePull(
-			context.TODO(),
+			ctx,
 			image.Repository+":"+image.Version,
 			types.ImagePullOptions{},
 		)
@@ -243,15 +243,62 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &tendermint.TendermintNode{Log: c.log, Home: home, Index: i, Chain: c,
+		tn := &tendermint.TendermintNode{Log: c.log, Index: i, Chain: c,
 			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
-		tn.MkDir()
-		pn := &PenumbraAppNode{log: c.log, Home: home, Index: i, Chain: c,
+
+		tv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+			Labels: map[string]string{
+				dockerutil.CleanupLabel: testName,
+
+				dockerutil.NodeOwnerLabel: tn.Name(),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("creating tendermint volume: %w", err)
+		}
+		tn.VolumeName = tv.Name
+		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+			Log: c.log,
+
+			Client: cli,
+
+			VolumeName: tn.VolumeName,
+			ImageRef:   tn.Image.Ref(),
+			TestName:   tn.TestName,
+		}); err != nil {
+			return fmt.Errorf("set tendermint volume owner: %w", err)
+		}
+
+		pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
 			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
-		pn.MkDir()
+		pv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+			Labels: map[string]string{
+				dockerutil.CleanupLabel: testName,
+
+				dockerutil.NodeOwnerLabel: pn.Name(),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("creating penumbra volume: %w", err)
+		}
+		pn.VolumeName = pv.Name
+		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+			Log: c.log,
+
+			Client: cli,
+
+			VolumeName: pn.VolumeName,
+			ImageRef:   pn.Image.Ref(),
+			TestName:   pn.TestName,
+		}); err != nil {
+			return fmt.Errorf("set penumbra volume owner: %w", err)
+		}
+
 		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
 	}
 	c.PenumbraNodes = penumbraNodes
+
+	return nil
 }
 
 type GenesisValidatorPubKey struct {
@@ -283,15 +330,16 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
 	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
 
-	var eg errgroup.Group
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
 		v := v
 		i := i
 		eg.Go(func() error {
-			if err := v.TendermintNode.InitValidatorFiles(ctx); err != nil {
+			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
 			}
-			privValKeyBytes, err := os.ReadFile(v.TendermintNode.PrivValKeyFilePath())
+			fr := dockerutil.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
+			privValKeyBytes, err := fr.SingleFileContent(egCtx, v.TendermintNode.VolumeName, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
 			}
@@ -299,13 +347,17 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
-			if err := v.PenumbraAppNode.CreateKey(ctx, valKey); err != nil {
+			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(ctx); err != nil {
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
-			validatorTemplateDefinitionFileBytes, err := os.ReadFile(v.PenumbraAppNode.ValidatorDefinitionTemplateFilePath())
+
+			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
+			// but instantiate a new FileRetriever to be defensive.
+			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
+			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.json")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
@@ -348,41 +400,68 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	for _, n := range fullnodes {
 		n := n
-		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(ctx) })
+		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(egCtx) })
 	}
 
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("waiting to init full nodes' files: %w", err)
 	}
 
-	firstValidator := validators[0]
-	if err := firstValidator.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
+	firstVal := c.PenumbraNodes[0]
+	if err := firstVal.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
 		return fmt.Errorf("generating genesis file: %w", err)
 	}
 
 	// penumbra generate-testnet right now overwrites new validator keys
-	for i, validator := range validators {
-		if _, err := dockerutil.CopyFile(firstValidator.PenumbraAppNode.ValidatorPrivateKeyFile(i), validator.TendermintNode.PrivValKeyFilePath()); err != nil {
-			return fmt.Errorf("copying private key to validator %d: %w", i, err)
-		}
+	eg, egCtx = errgroup.WithContext(ctx)
+	for i, val := range c.PenumbraNodes[:c.numValidators] {
+		i := i
+		val := val
+		// Use an errgroup to save some time doing many concurrent copies inside containers.
+		eg.Go(func() error {
+			firstValPrivKeyRelPath := fmt.Sprintf("node%d/tendermint/config/priv_validator_key.json", i)
+
+			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
+			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.VolumeName, firstValPrivKeyRelPath)
+			if err != nil {
+				return fmt.Errorf("getting validator private key content: %w", err)
+			}
+
+			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			if err := fw.WriteFile(egCtx, val.TendermintNode.VolumeName, "config/priv_validator_key.json", pk); err != nil {
+				return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
+			}
+
+			return nil
+		})
 	}
 
-	return c.start(testName, ctx, firstValidator.PenumbraAppNode.GenesisFile())
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	return c.start(ctx)
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFilePath string) error {
-	var tendermintNodes []*tendermint.TendermintNode
-	for _, node := range c.PenumbraNodes {
-		tendermintNodes = append(tendermintNodes, node.TendermintNode)
-		if _, err := dockerutil.CopyFile(genesisFilePath, node.TendermintNode.GenesisFilePath()); err != nil { //nolint
+func (c *PenumbraChain) start(ctx context.Context) error {
+	// Copy the penumbra genesis to all tendermint nodes.
+	genesisContent, err := c.PenumbraNodes[0].PenumbraAppNode.genesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	tendermintNodes := make([]*tendermint.TendermintNode, len(c.PenumbraNodes))
+	for i, node := range c.PenumbraNodes {
+		tendermintNodes[i] = node.TendermintNode
+		if err := node.TendermintNode.OverwriteGenesisFile(ctx, genesisContent); err != nil {
 			return err
 		}
 	}
 
 	tmNodes := tendermint.TendermintNodes(tendermintNodes)
 
-	if err := tmNodes.LogGenesisHashes(); err != nil {
+	if err := tmNodes.LogGenesisHashes(ctx); err != nil {
 		return err
 	}
 
@@ -397,7 +476,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 			)
 		})
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer(ctx)
+			return n.PenumbraAppNode.CreateNodeContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -409,7 +488,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 		n := n
 		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
-			peers := tmNodes.PeerString(n.TendermintNode)
+			peers := tmNodes.PeerString(egCtx, n.TendermintNode)
 			if err := n.TendermintNode.SetConfigAndPeers(egCtx, peers); err != nil {
 				return err
 			}
@@ -425,8 +504,7 @@ func (c *PenumbraChain) start(testName string, ctx context.Context, genesisFileP
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	err := test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
-	return err
+	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }
 
 func (c *PenumbraChain) Cleanup(ctx context.Context) error {

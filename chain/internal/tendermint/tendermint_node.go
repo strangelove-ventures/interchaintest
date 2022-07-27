@@ -6,8 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -29,7 +29,7 @@ import (
 type TendermintNode struct {
 	Log *zap.Logger
 
-	Home         string
+	VolumeName   string
 	Index        int
 	Chain        ibc.Chain
 	NetworkID    string
@@ -91,26 +91,23 @@ func (tn *TendermintNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (tn *TendermintNode) Dir() string {
-	return filepath.Join(tn.Home, tn.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (tn *TendermintNode) MkDir() {
-	if err := os.MkdirAll(tn.Dir(), 0755); err != nil {
-		panic(err)
+func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
+
+	return gen, nil
 }
 
-// GentxPath returns the path to the gentx for a node
-func (tn *TendermintNode) GentxPath() (string, error) {
-	id, err := tn.NodeID()
-	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
-}
+func (tn *TendermintNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
+		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
 
-func (tn *TendermintNode) GenesisFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "genesis.json")
+	return nil
 }
 
 type PrivValidatorKey struct {
@@ -124,29 +121,18 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-func (tn *TendermintNode) PrivValKeyFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
-}
-
-func (tn *TendermintNode) TMConfigPath() string {
-	return filepath.Join(tn.Dir(), "config", "config.toml")
-}
-
-func (tn *TendermintNode) TMConfigPathContainer() string {
-	return filepath.Join(tn.HomeDir(), "config", "config.toml")
-}
-
 // Bind returns the home folder bind point for running the node
 func (tn *TendermintNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
 
 func (tn *TendermintNode) HomeDir() string {
-	return filepath.Join("/tmp", tn.Chain.Config().Name)
+	return path.Join("/var/tendermint", tn.Chain.Config().Name)
 }
 
 func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
-	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, tn.TMConfigPathContainer())
+	configPath := path.Join(tn.HomeDir(), "config/config.toml")
+	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, configPath)
 }
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
@@ -196,7 +182,6 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
@@ -272,23 +257,33 @@ func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
 }
 
 // NodeID returns the node of a given node
-func (tn *TendermintNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
+	// This used to call p2p.LoadNodeKey against the file on the host,
+	// but because we are transitioning to operating on Docker volumes,
+	// we only have to tmjson.Unmarshal the raw content.
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}
-	return string(nodeKey.ID()), nil
+
+	var nk p2p.NodeKey
+	if err := tmjson.Unmarshal(j, &nk); err != nil {
+		return "", fmt.Errorf("unmarshaling node_key.json: %w", err)
+	}
+
+	return string(nk.ID()), nil
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (tn TendermintNodes) PeerString(node *TendermintNode) string {
+func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) string {
 	addrs := make([]string, len(tn))
 	for i, n := range tn {
 		if n == node {
 			// don't peer with ourself
 			continue
 		}
-		id, err := n.NodeID()
+		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?
@@ -303,13 +298,13 @@ func (tn TendermintNodes) PeerString(node *TendermintNode) string {
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
-func (tn TendermintNodes) LogGenesisHashes() error {
+func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range tn {
-		gen, err := os.ReadFile(filepath.Join(n.Dir(), "config", "genesis.json"))
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("{%s} genesis hash %x\n", n.Name(), sha256.Sum256(gen))
+		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
@@ -322,4 +317,11 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
+}
+
+func (tn *TendermintNode) logger() *zap.Logger {
+	return tn.Log.With(
+		zap.String("chain_id", tn.Chain.Config().ChainID),
+		zap.String("test", tn.TestName),
+	)
 }

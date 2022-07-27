@@ -21,19 +21,36 @@ type TempDirTestingT interface {
 	Errorf(format string, args ...any)
 }
 
-// KeepTempDirOnFailure determines whether a directory created by TempDir
+// keepTempDirOnFailure determines whether a directory created by TempDir
 // is retained or deleted following a test failure.
 //
-// It defaults to false, but can be initialized to true by setting the
+// The KeepTempDirOnFailure function is the public API to access this value.
+// We export the function instead of the package-level variable
+// for a consistent API in ibctest with the KeepDockerVolumesOnFailure function,
+// which references a variable in an internal package.
+var keepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
+
+// KeepTempDirOnFailure sets whether a directory created by TempDir
+// is retained or deleted following a test failure.
+//
+// The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the ibctest package may set the variable to true.
-var KeepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
+func KeepTempDirOnFailure(b bool) {
+	keepTempDirOnFailure = b
+}
+
+// KeepingTempDirOnFailure reports the current value of KeepTempDirOnFailure.
+// This function is only intended for tests.
+func KeepingTempDirOnFailure() bool {
+	return keepTempDirOnFailure
+}
 
 // TempDir resembles (*testing.T).TempDir, except that it conditionally
 // keeps the temporary directory on disk, and it uses a new temporary directory
 // on each invocation instead of adjacent directories with an incrementing numeric suffix.
 //
-// If the test passes, or if the package-level variable KeepTempDirOnFailure is false,
+// If the test passes, or if KeepTempDirOnFailure is set to false,
 // the directory will be removed.
 func TempDir(t TempDirTestingT) string {
 	t.Helper()
@@ -47,7 +64,7 @@ func TempDir(t TempDirTestingT) string {
 	}
 
 	t.Cleanup(func() {
-		if KeepTempDirOnFailure && t.Failed() {
+		if keepTempDirOnFailure && t.Failed() {
 			t.Logf("Not removing temporary directory for test at: %s", dir)
 			return
 		}

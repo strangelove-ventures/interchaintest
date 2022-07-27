@@ -1,12 +1,14 @@
 package cosmos
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,6 +29,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -37,7 +40,7 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	Home         string
+	VolumeName   string
 	Index        int
 	Chain        ibc.Chain
 	Validator    bool
@@ -121,26 +124,45 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (tn *ChainNode) Dir() string {
-	return filepath.Join(tn.Home, tn.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (tn *ChainNode) MkDir() {
-	if err := os.MkdirAll(tn.Dir(), 0755); err != nil {
-		panic(err)
+func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
+
+	return gen, nil
 }
 
-// GentxPath returns the path to the gentx for a node
-func (tn *ChainNode) GentxPath() (string, error) {
-	id, err := tn.NodeID()
-	return filepath.Join(tn.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", id)), err
+func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
+		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
 }
 
-func (tn *ChainNode) GenesisFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "genesis.json")
+func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
+	nid, err := tn.NodeID(ctx)
+	if err != nil {
+		return fmt.Errorf("getting node ID: %w", err)
+	}
+
+	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
+
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gentx, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
+	if err != nil {
+		return fmt.Errorf("getting gentx content: %w", err)
+	}
+
+	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
+	if err := fw.WriteFile(ctx, destVal.VolumeName, relPath, gentx); err != nil {
+		return fmt.Errorf("overwriting gentx: %w", err)
+	}
+
+	return nil
 }
 
 type PrivValidatorKey struct {
@@ -154,42 +176,47 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-func (tn *ChainNode) PrivValKeyFilePath() string {
-	return filepath.Join(tn.Dir(), "config", "priv_validator_key.json")
-}
-
-func (tn *ChainNode) TMConfigPath() string {
-	return filepath.Join(tn.Dir(), "config", "config.toml")
-}
-
 // Bind returns the home folder bind point for running the node
 func (tn *ChainNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", tn.Dir(), tn.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
 
 func (tn *ChainNode) HomeDir() string {
-	return filepath.Join("/tmp", tn.Chain.Config().Name)
-}
-
-// Keybase returns the keyring for a given node
-func (tn *ChainNode) Keybase() keyring.Keyring {
-	kr, err := keyring.New("", keyring.BackendTest, tn.Dir(), os.Stdin)
-	if err != nil {
-		panic(err)
-	}
-	return kr
+	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
 // SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
-func (tn *ChainNode) SetValidatorConfigAndPeers(peers string) {
+func (tn *ChainNode) SetValidatorConfigAndPeers(ctx context.Context, peers string) error {
 	// Pull default config
 	cfg := tmconfig.DefaultConfig()
 
 	// change config to include everything needed
 	applyConfigChanges(cfg, peers)
 
-	// overwrite with the new config
-	tmconfig.WriteConfigFile(tn.TMConfigPath(), cfg)
+	// Unfortunately, the tmconfig package does not expose the config template directly.
+	// So we have to write the file to disk, then read it back and write it to the container.
+	tempF, err := os.CreateTemp("", "config-"+tn.Name()+"-*.toml")
+	if err != nil {
+		return fmt.Errorf("creating temporary config file: %w", err)
+	}
+	defer os.Remove(tempF.Name())
+	if err := tempF.Close(); err != nil {
+		return fmt.Errorf("closing temporary config file: %w", err)
+	}
+
+	tmconfig.WriteConfigFile(tempF.Name(), cfg) // Panics on error.
+
+	content, err := os.ReadFile(tempF.Name())
+	if err != nil {
+		return fmt.Errorf("reading temporary config file: %w", err)
+	}
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/config.toml", content); err != nil {
+		return fmt.Errorf("overwriting config.toml: %w", err)
+	}
+
+	return nil
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
@@ -470,14 +497,18 @@ type CodeInfosResponse struct {
 }
 
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	_, file := filepath.Split(fileName)
-	newFilePath := filepath.Join(tn.Dir(), file)
-	newFilePathContainer := filepath.Join(tn.HomeDir(), file)
-	if _, err := dockerutil.CopyFile(fileName, newFilePath); err != nil {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
 		return "", err
 	}
 
-	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", newFilePathContainer,
+	_, file := filepath.Split(fileName)
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", path.Join(tn.HomeDir(), file),
 		"--from", keyName,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
@@ -490,8 +521,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
+	if _, _, err := tn.Exec(ctx, command, nil); err != nil {
 		return "", err
 	}
 
@@ -671,7 +701,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: tn.HostName(),
-			User:     dockerutil.GetDockerUserString(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
 
@@ -747,11 +776,8 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	key, err := tn.GetKey(valKey)
-	if err != nil {
-		return err
-	}
-	bech32, err := types.Bech32ifyAddressBytes(chainType.Bech32Prefix, key.GetAddress().Bytes())
+
+	bech32, err := tn.KeyBech32(ctx, valKey)
 	if err != nil {
 		return err
 	}
@@ -765,28 +791,46 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx)
 }
 
-// NodeID returns the node of a given node
-func (tn *ChainNode) NodeID() (string, error) {
-	nodeKey, err := p2p.LoadNodeKey(filepath.Join(tn.Dir(), "config", "node_key.json"))
+// NodeID returns the persistent ID of a given node.
+func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
+	// This used to call p2p.LoadNodeKey against the file on the host,
+	// but because we are transitioning to operating on Docker volumes,
+	// we only have to tmjson.Unmarshal the raw content.
+
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}
-	return string(nodeKey.ID()), nil
+
+	var nk p2p.NodeKey
+	if err := tmjson.Unmarshal(j, &nk); err != nil {
+		return "", fmt.Errorf("unmarshaling node_key.json: %w", err)
+	}
+
+	return string(nk.ID()), nil
 }
 
-// GetKey gets a key, waiting until it is available
-func (tn *ChainNode) GetKey(name string) (info keyring.Info, err error) {
-	return info, retry.Do(func() (err error) {
-		info, err = tn.Keybase().Key(name)
-		return err
-	})
+// KeyBech32 retrieves the named key's address in bech32 format from the node.
+func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error) {
+	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
+		"--home", tn.HomeDir(),
+		"--keyring-backend", keyring.BackendTest,
+	}
+
+	stdout, stderr, err := tn.Exec(ctx, command, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
+	}
+
+	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (nodes ChainNodes) PeerString() string {
+func (nodes ChainNodes) PeerString(ctx context.Context) string {
 	addrs := make([]string, len(nodes))
 	for i, n := range nodes {
-		id, err := n.NodeID()
+		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?
@@ -807,10 +851,9 @@ func (nodes ChainNodes) PeerString() string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		fr := dockerutil.NewFileRetriever(n.logger(), n.DockerClient, n.TestName)
-		gen, err := fr.SingleFileContent(ctx, n.Dir(), "config/genesis.json")
+		gen, err := n.genesisFileContent(ctx)
 		if err != nil {
-			return fmt.Errorf("getting genesis.json content: %w", err)
+			return err
 		}
 
 		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))

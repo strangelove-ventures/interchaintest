@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,10 +14,12 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -79,9 +79,11 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
-	c.initializeChainNodes(testName, homeDirectory, cli, networkID)
-	return nil
+func (c *CosmosChain) Initialize(testName string, _ string, cli *client.Client, networkID string) error {
+	// The Initialize interface needs to change to accept a context,
+	// but there are other implementations that still need to switch
+	// to Docker volumes first.
+	return c.initializeChainNodes(context.TODO(), testName, cli, networkID)
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
@@ -137,12 +139,12 @@ func (c *CosmosChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 
 // Implements Chain interface
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	keyInfo, err := c.getFullNode().Keybase().Key(keyName)
+	b32Addr, err := c.getFullNode().KeyBech32(ctx, keyName)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
-	return keyInfo.GetAddress().Bytes(), nil
+	return types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
 }
 
 // Implements Chain interface
@@ -264,16 +266,16 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 // creates the test node objects required for bootstrapping tests
 func (c *CosmosChain) initializeChainNodes(
-	testName, home string,
+	ctx context.Context,
+	testName string,
 	cli *client.Client,
 	networkID string,
-) {
-	var chainNodes []*ChainNode
+) error {
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
 		rc, err := cli.ImagePull(
-			context.TODO(),
+			ctx,
 			image.Repository+":"+image.Version,
 			dockertypes.ImagePullOptions{},
 		)
@@ -288,22 +290,60 @@ func (c *CosmosChain) initializeChainNodes(
 			_ = rc.Close()
 		}
 	}
-	for i := 0; i < count; i++ {
-		tn := &ChainNode{
-			log: c.log,
 
-			Home:         home,
-			Index:        i,
-			Chain:        c,
-			DockerClient: cli,
-			NetworkID:    networkID,
-			TestName:     testName,
-			Image:        chainCfg.Images[0],
-		}
-		tn.MkDir()
-		chainNodes = append(chainNodes, tn)
+	image := chainCfg.Images[0]
+	chainNodes := make([]*ChainNode, count)
+	eg, egCtx := errgroup.WithContext(ctx)
+	for i := 0; i < count; i++ {
+		i := i
+		eg.Go(func() error {
+			// Construct the ChainNode first so we can access its name.
+			// The ChainNode's VolumeName cannot be set until after we create the volume.
+			tn := &ChainNode{
+				log: c.log,
+
+				Index:        i,
+				Chain:        c,
+				DockerClient: cli,
+				NetworkID:    networkID,
+				TestName:     testName,
+				Image:        image,
+			}
+
+			v, err := cli.VolumeCreate(egCtx, volumetypes.VolumeCreateBody{
+				Labels: map[string]string{
+					dockerutil.CleanupLabel: testName,
+
+					dockerutil.NodeOwnerLabel: tn.Name(),
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("creating volume for chain node: %w", err)
+			}
+			tn.VolumeName = v.Name
+
+			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+				Log: c.log,
+
+				Client: cli,
+
+				VolumeName: v.Name,
+				ImageRef:   image.Ref(),
+				TestName:   testName,
+			}); err != nil {
+				return fmt.Errorf("set volume owner: %w", err)
+			}
+
+			chainNodes[i] = tn
+
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 	c.ChainNodes = chainNodes
+	return nil
 }
 
 type GenesisValidatorPubKey struct {
@@ -373,12 +413,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	validator0 := validators[0]
 	for i := 1; i < len(validators); i++ {
 		validatorN := validators[i]
-		n0key, err := validatorN.GetKey(valKey)
-		if err != nil {
-			return err
-		}
 
-		bech32, err := types.Bech32ifyAddressBytes(chainCfg.Bech32Prefix, n0key.GetAddress().Bytes())
+		bech32, err := validatorN.KeyBech32(ctx, valKey)
 		if err != nil {
 			return err
 		}
@@ -386,13 +422,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
 			return err
 		}
-		nNid, err := validatorN.NodeID()
-		if err != nil {
-			return err
-		}
-		oldPath := filepath.Join(validatorN.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		newPath := filepath.Join(validator0.Dir(), "config", "gentx", fmt.Sprintf("gentx-%s.json", nNid))
-		if err := os.Rename(oldPath, newPath); err != nil {
+
+		if err := validatorN.copyGentx(ctx, validator0); err != nil {
 			return err
 		}
 	}
@@ -407,13 +438,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	genbz, err := os.ReadFile(validator0.GenesisFilePath())
+	genbz, err := validator0.genesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
 
-	for i := 1; i < len(c.ChainNodes); i++ {
-		if err := os.WriteFile(c.ChainNodes[i].GenesisFilePath(), genbz, 0644); err != nil { //nolint
+	for _, cn := range c.ChainNodes[1:] {
+		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
@@ -433,14 +464,17 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := c.ChainNodes.PeerString()
+	peers := c.ChainNodes.PeerString(ctx)
 
+	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.ChainNodes {
 		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
-			n.SetValidatorConfigAndPeers(peers)
-			return n.StartContainer(ctx)
+			if err := n.SetValidatorConfigAndPeers(egCtx, peers); err != nil {
+				return err
+			}
+			return n.StartContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {

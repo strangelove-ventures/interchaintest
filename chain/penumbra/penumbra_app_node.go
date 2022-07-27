@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,7 +22,7 @@ type PenumbraAppNode struct {
 	log *zap.Logger
 
 	Index        int
-	Home         string
+	VolumeName   string
 	Chain        ibc.Chain
 	TestName     string
 	NetworkID    string
@@ -58,21 +57,9 @@ func (p *PenumbraAppNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Dir is the directory where the test node files are stored
-func (p *PenumbraAppNode) Dir() string {
-	return fmt.Sprintf("%s/%s/", p.Home, p.Name())
-}
-
-// MkDir creates the directory for the testnode
-func (p *PenumbraAppNode) MkDir() {
-	if err := os.MkdirAll(p.Dir(), 0755); err != nil {
-		panic(err)
-	}
-}
-
 // Bind returns the home folder bind point for running the node
 func (p *PenumbraAppNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", p.Dir(), p.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.HomeDir())}
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
@@ -104,10 +91,6 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 	return err
 }
 
-func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePath() string {
-	return filepath.Join(p.Dir(), "validator.json")
-}
-
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
 	return filepath.Join(p.HomeDir(), "validator.json")
 }
@@ -116,28 +99,22 @@ func (p *PenumbraAppNode) WalletPathContainer() string {
 	return filepath.Join(p.HomeDir(), "wallet")
 }
 
-func (p *PenumbraAppNode) ValidatorsInputFile() string {
-	return filepath.Join(p.Dir(), "validators.json")
-}
-
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
 	return filepath.Join(p.HomeDir(), "validators.json")
-}
-
-func (p *PenumbraAppNode) AllocationsInputFile() string {
-	return filepath.Join(p.Dir(), "allocations.csv")
 }
 
 func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
 	return filepath.Join(p.HomeDir(), "allocations.csv")
 }
 
-func (p *PenumbraAppNode) GenesisFile() string {
-	return filepath.Join(p.Dir(), "node0", "tendermint", "config", "genesis.json")
-}
+func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
+	gen, err := fr.SingleFileContent(ctx, p.VolumeName, "node0/tendermint/config/genesis.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
+	}
 
-func (p *PenumbraAppNode) ValidatorPrivateKeyFile(nodeNum int) string {
-	return filepath.Join(p.Dir(), fmt.Sprintf("node%d", nodeNum), "tendermint", "config", "priv_validator_key.json")
+	return gen, nil
 }
 
 func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
@@ -162,14 +139,15 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
-	if err := os.WriteFile(p.ValidatorsInputFile(), validatorsJson, 0644); err != nil {
+	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
+	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
 		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
 	}
-	if err := os.WriteFile(p.AllocationsInputFile(), allocationsCsv, 0644); err != nil {
+	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
 	}
 	cmd := []string{

@@ -93,8 +93,16 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	// but we configure the relayer to run as a non-root user,
 	// so set the node home (where the volume is mounted) to be owned
 	// by the relayer user.
-	if err := r.chownNodeHome(ctx); err != nil {
-		return nil, fmt.Errorf("chown node home: %w", err)
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: r.log,
+
+		Client: r.client,
+
+		VolumeName: r.volumeName,
+		ImageRef:   containerImage.Ref(),
+		TestName:   testName,
+	}); err != nil {
+		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
 
 	if init := r.c.Init(r.NodeHome()); len(init) > 0 {
@@ -112,20 +120,6 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	}
 
 	return &r, nil
-}
-
-func (r *DockerRelayer) chownNodeHome(ctx context.Context) error {
-	return r.runOneOff(ctx, oneOffOptions{
-		ContainerNameDetail: "chown",
-		Entrypoint:          []string{"sh", "-c"},
-		Cmd: []string{
-			fmt.Sprintf(
-				"chown -R %s %s && chmod 0700 %s",
-				r.c.DockerUser(), r.NodeHome(), r.NodeHome(),
-			),
-		},
-		User: dockerutil.GetRootUserString(),
-	})
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
