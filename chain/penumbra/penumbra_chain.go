@@ -507,20 +507,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }
 
-func (c *PenumbraChain) Cleanup(ctx context.Context) error {
-	var eg errgroup.Group
-	for _, p := range c.PenumbraNodes {
-		p := p
-		eg.Go(func() error {
-			if err := p.PenumbraAppNode.StopContainer(ctx); err != nil {
-				return err
-			}
-			return p.PenumbraAppNode.Cleanup(ctx)
-		})
-	}
-	return eg.Wait()
-}
-
 func (c *PenumbraChain) RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error) {
 	//TODO implement me
 	panic("implement me")

@@ -117,18 +117,6 @@ func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error
 	return gen, nil
 }
 
-func (p *PenumbraAppNode) Cleanup(ctx context.Context) error {
-	cmd := []string{"find", fmt.Sprintf("%s/.", p.HomeDir()), "-name", ".", "-o", "-prune", "-exec", "rm", "-rf", "--", "{}", "+"}
-
-	// Cleanup should complete instantly,
-	// so add a 1-minute timeout in case Docker hangs.
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-
-	_, _, err := p.Exec(ctx, cmd, nil)
-	return err
-}
-
 func (p *PenumbraAppNode) GenerateGenesisFile(
 	ctx context.Context,
 	chainID string,
