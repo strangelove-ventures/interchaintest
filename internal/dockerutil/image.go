@@ -250,7 +250,7 @@ type Container struct {
 //
 // Wait implicitly calls Stop.
 // If logTail is non-zero, the stdout and stderr logs will be truncated at the end to that number of lines.
-func (c *Container) Wait(ctx context.Context, logTail uint64) (stdout, stderr []byte, err error) {
+func (c *Container) Wait(ctx context.Context, logTail uint64) ContainerExecResult {
 	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
 	var exitCode int
 	select {

@@ -38,7 +38,7 @@ func TestFileWriter(t *testing.T) {
 
 	t.Run("top-level file", func(t *testing.T) {
 		require.NoError(t, fw.WriteFile(context.Background(), v.Name, "hello.txt", []byte("hello world")))
-		stdout, _, err := img.Run(
+		res := img.Run(
 			ctx,
 			[]string{"sh", "-c", "cat /mnt/test/hello.txt"},
 			dockerutil.ContainerOptions{
@@ -46,14 +46,14 @@ func TestFileWriter(t *testing.T) {
 				User:  dockerutil.GetRootUserString(),
 			},
 		)
-		require.NoError(t, err)
+		require.NoError(t, res.Err)
 
-		require.Equal(t, string(stdout), "hello world")
+		require.Equal(t, string(res.Stdout), "hello world")
 	})
 
 	t.Run("create nested file", func(t *testing.T) {
 		require.NoError(t, fw.WriteFile(context.Background(), v.Name, "a/b/c/d.txt", []byte(":D")))
-		stdout, _, err := img.Run(
+		res := img.Run(
 			ctx,
 			[]string{"sh", "-c", "cat /mnt/test/a/b/c/d.txt"},
 			dockerutil.ContainerOptions{
@@ -63,6 +63,6 @@ func TestFileWriter(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		require.Equal(t, string(stdout), ":D")
+		require.Equal(t, string(res.Stdout), ":D")
 	})
 }
