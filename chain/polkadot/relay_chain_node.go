@@ -59,8 +59,8 @@ const (
 )
 
 var (
-	RtyAtt = retry.Attempts(5)
-	RtyDel = retry.Delay(time.Second * 1)
+	RtyAtt = retry.Attempts(10)
+	RtyDel = retry.Delay(time.Second * 2)
 	RtyErr = retry.LastErrorOnly(true)
 )
 
