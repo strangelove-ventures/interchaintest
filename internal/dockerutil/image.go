@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -75,11 +76,6 @@ func NewImage(logger *zap.Logger, cli *client.Client, networkID string, testName
 	return i
 }
 
-const (
-	LogTailAll     = 0
-	LogTailDefault = 50
-)
-
 // ContainerOptions optionally configures starting a Container.
 type ContainerOptions struct {
 	// bind mounts: https://docs.docker.com/storage/bind-mounts/
@@ -91,8 +87,8 @@ type ContainerOptions struct {
 	// If blank, defaults to the container's default user.
 	User string
 
-	// If non-zero, will limit the amount of log lines returned
-	Tail uint64
+	// If non-zero, will limit the amount of log lines returned.
+	LogTail uint64
 }
 
 // Run creates and runs a container invoking "cmd". The container resources are removed after exit.
@@ -104,7 +100,7 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.Wait(ctx, opts.Tail)
+	return c.Wait(ctx, opts.LogTail)
 }
 
 func (image *Image) imageRef() string {
@@ -240,7 +236,8 @@ type Container struct {
 // A non-zero status code returns an error.
 //
 // Wait implicitly calls Stop.
-func (c *Container) Wait(ctx context.Context, tail uint64) (stdout, stderr []byte, err error) {
+// If logTail is non-zero, the stdout and stderr logs will be truncated at the end to that number of lines.
+func (c *Container) Wait(ctx context.Context, logTail uint64) (stdout, stderr []byte, err error) {
 	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
 	var exitCode int
 	select {
@@ -264,8 +261,8 @@ func (c *Container) Wait(ctx context.Context, tail uint64) (stdout, stderr []byt
 		ShowStdout: true,
 		ShowStderr: true,
 	}
-	if tail != 0 {
-		logOpts.Tail = fmt.Sprint(tail)
+	if logTail != 0 {
+		logOpts.Tail = strconv.FormatUint(logTail, 10)
 	}
 
 	rc, err := c.image.client.ContainerLogs(ctx, c.containerID, logOpts)

@@ -97,7 +97,7 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 
 // Exec implements ibc.Chain.
 func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.getFullNode().Exec(ctx, cmd, env, dockerutil.LogTailAll)
+	return c.getFullNode().Exec(ctx, cmd, env)
 }
 
 // Implements Chain interface

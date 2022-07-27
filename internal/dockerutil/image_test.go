@@ -138,7 +138,7 @@ func TestContainer(t *testing.T) {
 		require.NotEmpty(t, c.Name)
 		require.NotEmpty(t, c.Hostname)
 
-		stdout, stderr, err := c.Wait(ctx, LogTailDefault)
+		stdout, stderr, err := c.Wait(ctx, 0)
 
 		require.NoError(t, err)
 		require.Equal(t, "started", string(stdout))
@@ -172,7 +172,7 @@ func TestContainer(t *testing.T) {
 		c, err := image.Start(ctx, []string{"sleep", "not valid arg"}, ContainerOptions{})
 		require.NoError(t, err)
 
-		_, _, err = c.Wait(ctx, LogTailDefault)
+		_, _, err = c.Wait(ctx, 0)
 		require.Error(t, err)
 	})
 
