@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
+	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -42,20 +44,30 @@ type RelayChainNode struct {
 	StashKey          *schnorrkel.MiniSecretKey
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
+
+	api         *gsrpc.SubstrateAPI
+	hostWsPort  string
+	hostRpcPort string
 }
 
 type RelayChainNodes []*RelayChainNode
 
 const (
-	wsPort         = 27451
-	rpcPort        = 27452
-	prometheusPort = 27453
+	wsPort         = "27451/tcp"
+	rpcPort        = "27452/tcp"
+	prometheusPort = "27453/tcp"
+)
+
+var (
+	RtyAtt = retry.Attempts(5)
+	RtyDel = retry.Delay(time.Second * 1)
+	RtyErr = retry.LastErrorOnly(true)
 )
 
 var exposedPorts = map[nat.Port]struct{}{
-	nat.Port(fmt.Sprint(wsPort)):         {},
-	nat.Port(fmt.Sprint(rpcPort)):        {},
-	nat.Port(fmt.Sprint(prometheusPort)): {},
+	nat.Port(wsPort):         {},
+	nat.Port(rpcPort):        {},
+	nat.Port(prometheusPort): {},
 }
 
 // Name of the test node container
@@ -126,7 +138,7 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%d/p2p/%s", p.HostName(), rpcPort, peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
 }
 
 func (c *RelayChainNode) logger() *zap.Logger {
@@ -193,7 +205,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{
 		chainCfg.Bin,
 		fmt.Sprintf("--chain=%s", p.RawChainSpecFilePathFull()),
-		fmt.Sprintf("--ws-port=%d", wsPort),
+		fmt.Sprintf("--ws-port=%s", strings.Split(wsPort, "/")[0]),
 		fmt.Sprintf("--%s", IndexedName[p.Index]),
 		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
 		"--beefy",
@@ -201,12 +213,16 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
-		fmt.Sprintf("--prometheus-port=%d", prometheusPort),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%d", rpcPort),
+		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(rpcPort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
-	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
+	p.logger().
+		Info("Running command",
+			zap.String("command", strings.Join(cmd, " ")),
+			zap.String("container", p.Name()),
+		)
 
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
@@ -250,7 +266,31 @@ func (p *RelayChainNode) StopContainer(ctx context.Context) error {
 }
 
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	return dockerutil.StartContainer(ctx, p.DockerClient, p.containerID)
+	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+		return err
+	}
+
+	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	if err != nil {
+		return err
+	}
+
+	// Set the host ports once since they will not change after the container has started.
+	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
+	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+
+	var api *gsrpc.SubstrateAPI
+	if err = retry.Do(func() error {
+		var err error
+		api, err = gsrpc.NewSubstrateAPI("ws://" + p.hostWsPort)
+		return err
+	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr); err != nil {
+		return err
+	}
+
+	p.api = api
+
+	return nil
 }
 
 // Exec run a container for a specific job and block until the container exits

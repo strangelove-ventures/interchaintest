@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"time"
+	"strings"
 
 	"github.com/StirlingMarketingGroup/go-namecase"
 	"github.com/docker/docker/api/types"
@@ -407,7 +407,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return fmt.Errorf("error writing modified chain spec: %w", err)
 	}
 
-	fmt.Printf("{%s} => generating raw chain spec...\n", firstNode.Name())
+	c.logger().Info("Generating raw chain spec", zap.String("container", firstNode.Name()))
+
 	if err := firstNode.GenerateChainSpecRaw(ctx); err != nil {
 		return err
 	}
@@ -423,16 +424,16 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		i := i
 		eg.Go(func() error {
 			if i != 0 {
-				fmt.Printf("{%s} => copying raw chain spec...\n", n.Name())
+				c.logger().Info("Copying raw chain spec", zap.String("container", n.Name()))
 				if err := fw.WriteFile(ctx, n.VolumeName, n.RawChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
 					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
 			}
-			fmt.Printf("{%s} => creating container...\n", n.Name())
+			c.logger().Info("Creating container", zap.String("name", n.Name()))
 			if err := n.CreateNodeContainer(ctx); err != nil {
 				return err
 			}
-			fmt.Printf("{%s} => starting container...\n", n.Name())
+			c.logger().Info("Starting container", zap.String("name", n.Name()))
 			return n.StartContainer(ctx)
 		})
 	}
@@ -444,15 +445,15 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		for _, n := range nodes {
 			n := n
 			eg.Go(func() error {
-				fmt.Printf("{%s} => copying raw chain spec...\n", n.Name())
+				c.logger().Info("Copying raw chain spec", zap.String("container", n.Name()))
 				if err := fw.WriteFile(ctx, n.VolumeName, n.RawChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
 					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
-				fmt.Printf("{%s} => creating container...\n", n.Name())
+				c.logger().Info("Creating container", zap.String("name", n.Name()))
 				if err := n.CreateNodeContainer(ctx); err != nil {
 					return err
 				}
-				fmt.Printf("{%s} => starting container...\n", n.Name())
+				c.logger().Info("Starting container", zap.String("name", n.Name()))
 				return n.StartContainer(ctx)
 			})
 		}
@@ -469,111 +470,128 @@ func (c *PolkadotChain) Exec(ctx context.Context, cmd []string, env []string) (s
 	return c.RelayChainNodes[0].Exec(ctx, cmd, env)
 }
 
-// export state at specific height
-func (c *PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
-	return "", errors.New("not implemented yet")
-}
-
 // retrieves rpc address that can be reached by other containers in the docker network
 func (c *PolkadotChain) GetRPCAddress() string {
-	return ""
+	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+		return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
+	}
+	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
 }
 
 // retrieves grpc address that can be reached by other containers in the docker network
 func (c *PolkadotChain) GetGRPCAddress() string {
-	return ""
+	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+		return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(wsPort, "/")[0])
+	}
+	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(wsPort, "/")[0])
 }
 
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 func (c *PolkadotChain) GetHostRPCAddress() string {
-	return ""
+	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+		return c.ParachainNodes[0][0].hostRpcPort
+	}
+	return c.RelayChainNodes[0].hostRpcPort
 }
 
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 func (c *PolkadotChain) GetHostGRPCAddress() string {
-	return ""
+	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+		return c.ParachainNodes[0][0].hostWsPort
+	}
+	return c.RelayChainNodes[0].hostWsPort
 }
 
 // get current height
 func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
-	return 0, errors.New("not implemented yet")
+	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+		block, err := c.ParachainNodes[0][0].api.RPC.Chain.GetBlockLatest()
+		if err != nil {
+			return 0, err
+		}
+		return uint64(block.Block.Header.Number), nil
+	}
+	block, err := c.RelayChainNodes[0].api.RPC.Chain.GetBlockLatest()
+	if err != nil {
+		return 0, err
+	}
+	return uint64(block.Block.Header.Number), nil
+}
+
+// export state at specific height
+func (c *PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
+	panic("not implemented yet")
 }
 
 // creates a test key in the "user" node, (either the first fullnode or the first validator if no fullnodes)
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
-	return errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return []byte{}, errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // send funds to wallet from user account
 func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // sends an IBC transfer from a test key on the "user" node (either the first fullnode or the first validator if no fullnodes)
 // returns tx hash
 func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
-	return ibc.Tx{}, errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // takes file path to smart contract and initialization message. returns contract address
 func (c *PolkadotChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	return "", errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // executes a contract transaction with a message using it's address
 func (c *PolkadotChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	return errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // dump state of contract at block height
 func (c *PolkadotChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	return nil, errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // create balancer pool
 func (c *PolkadotChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	return errors.New("not implemented yet")
-}
-
-// waits for # of blocks to be produced. Returns latest height
-func (c *PolkadotChain) WaitForBlocks(number int64) (int64, error) {
-	time.Sleep(120 * time.Second)
-	return -1, errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // fetch balance for a specific account address and denom
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	return -1, errors.New("not implemented yet")
+	panic("not implemented yet")
 }
 
 // get the fees in native denom for an amount of spent gas
 func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
-	return -1
+	panic("not implemented yet")
 }
 
 func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
-	panic("implement me")
+	panic("not implemented yet")
 }
 
 func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
-	panic("implement me")
+	panic("not implemented yet")
 }
 
 func (c *PolkadotChain) RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error) {
-	panic("implement me")
+	panic("not implemented yet")
 }
 
 func (c *PolkadotChain) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	panic("implement me")
+	panic("not implemented yet")
 }
 
 func (c *PolkadotChain) QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error) {
-	panic("implement me")
+	panic("not implemented yet")
 }

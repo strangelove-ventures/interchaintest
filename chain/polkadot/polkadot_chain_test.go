@@ -3,10 +3,10 @@ package polkadot_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -45,8 +45,6 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start polkadot chain")
 
-	// TODO
-	// _, err = chain.WaitForBlocks(10)
-	// require.NoError(t, err, "polkadot chain failed to make blocks")
-	time.Sleep(2 * time.Minute)
+	err = test.WaitForBlocks(ctx, 10, chain)
+	require.NoError(t, err, "polkadot chain failed to make blocks")
 }
