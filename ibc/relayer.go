@@ -8,6 +8,7 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ptypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.
@@ -88,7 +89,7 @@ type Relayer interface {
 	// is up to the relayer implementation.
 	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
-	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) (stdout, stderr []byte, err error)
+	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) dockerutil.ContainerExecResult
 }
 
 // CreateChannelOptions contains the configuration for creating a channel.

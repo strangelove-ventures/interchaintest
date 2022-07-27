@@ -113,9 +113,9 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 
 		// Using a nop reporter here because it keeps the API simpler,
 		// and the init command is typically not of high interest.
-		_, _, err := r.Exec(ctx, ibc.NopRelayerExecReporter{}, init, nil)
-		if err != nil {
-			return nil, err
+		res := r.Exec(ctx, ibc.NopRelayerExecReporter{}, init, nil)
+		if res.Err != nil {
+			return nil, res.Err
 		}
 	}
 
@@ -150,8 +150,8 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	_, _, err = r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 // generateConfigTar returns an io.Reader containing the content of a tar archive
@@ -196,12 +196,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	stdout, stderr, err := r.Exec(ctx, rep, cmd, nil)
-	if err != nil {
-		return ibc.RelayerWallet{}, err
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return ibc.RelayerWallet{}, res.Err
 	}
 
-	wallet, err := r.c.ParseAddKeyOutput(string(stdout), string(stderr))
+	wallet, err := r.c.ParseAddKeyOutput(string(res.Stdout), string(res.Stderr))
 	if err != nil {
 		return ibc.RelayerWallet{}, err
 	}
@@ -216,38 +216,38 @@ func (r *DockerRelayer) GetWallet(chainID string) (ibc.RelayerWallet, bool) {
 
 func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	cmd := r.c.CreateChannel(pathName, opts, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateClients(pathName, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
 	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
 	cmd := r.c.FlushPackets(pathName, channelID, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
 	cmd := r.c.GeneratePath(srcChainID, dstChainID, pathName, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
@@ -257,31 +257,31 @@ func (r *DockerRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecRepo
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 
-	stdout, stderr, err := r.Exec(ctx, rep, cmd, nil)
-	if err != nil {
-		return nil, err
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
 	}
 
-	return r.c.ParseGetChannelsOutput(string(stdout), string(stderr))
+	return r.c.ParseGetChannelsOutput(string(res.Stdout), string(res.Stderr))
 }
 
 func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ConnectionOutputs, error) {
 	cmd := r.c.GetConnections(chainID, r.NodeHome())
-	stdout, stderr, err := r.Exec(ctx, rep, cmd, nil)
-	if err != nil {
-		return nil, err
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
 	}
 
-	return r.c.ParseGetConnectionsOutput(string(stdout), string(stderr))
+	return r.c.ParseGetConnectionsOutput(string(res.Stdout), string(res.Stderr))
 }
 
 func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	cmd := r.c.LinkPath(pathName, r.NodeHome(), opts)
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
-func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string, env []string) (stdout, stderr []byte, err error) {
+func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string, env []string) dockerutil.ContainerExecResult {
 	job := dockerutil.NewImage(r.log, r.client, r.networkID, r.testName, r.containerImage().Repository, r.containerImage().Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
@@ -302,7 +302,7 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 		)
 	}()
 
-	return res.Stdout, res.Stderr, res.Err
+	return res
 }
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
@@ -313,22 +313,22 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	stdout, stderr, err := r.Exec(ctx, rep, cmd, nil)
-	if err != nil {
-		return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
 	}
 
 	r.wallets[chainID] = ibc.RelayerWallet{
 		Mnemonic: mnemonic,
-		Address:  r.c.ParseRestoreKeyOutput(string(stdout), string(stderr)),
+		Address:  r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr)),
 	}
 	return nil
 }
 
 func (r *DockerRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.UpdateClients(pathName, r.NodeHome())
-	_, _, err := r.Exec(ctx, rep, cmd, nil)
-	return err
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
 }
 
 func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
