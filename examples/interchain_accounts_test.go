@@ -90,10 +90,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.Equal(t, 1, len(connections))
 
 	// Register a new interchain account
-	_, err = chain1.RegisterInterchainAccount(ctx, chain1User.KeyName, connections[0].ID)
-	require.NoError(t, err)
-
-	err = test.WaitForBlocks(ctx, 5, chain1)
+	_, err = chain1.RegisterInterchainAccount(ctx, chain1User.Bech32Address(chain1.Config().Bech32Prefix), connections[0].ID)
 	require.NoError(t, err)
 
 	// Start the relayer on both paths
@@ -121,7 +118,5 @@ func TestInterchainAccounts(t *testing.T) {
 	// Query for the new interchain account
 	icaAddress, err := chain1.QueryInterchainAccount(ctx, connections[0].ID, chain1User.Bech32Address(chain1.Config().Bech32Prefix))
 	require.NoError(t, err)
-
-	t.Log(icaAddress)
 	require.NotEqual(t, "", icaAddress)
 }

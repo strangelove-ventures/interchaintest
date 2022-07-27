@@ -205,6 +205,7 @@ func (c commander) StartRelayer(pathName, homeDir string) []string {
 	cmd := []string{
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
+		"-p", "events",
 	}
 	cmd = append(cmd, c.extraStartFlags...)
 	return cmd
