@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -85,6 +86,9 @@ type ContainerOptions struct {
 
 	// If blank, defaults to the container's default user.
 	User string
+
+	// If non-zero, will limit the amount of log lines returned.
+	LogTail uint64
 }
 
 // Run creates and runs a container invoking "cmd". The container resources are removed after exit.
@@ -96,7 +100,7 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.Wait(ctx)
+	return c.Wait(ctx, opts.LogTail)
 }
 
 func (image *Image) imageRef() string {
@@ -232,7 +236,8 @@ type Container struct {
 // A non-zero status code returns an error.
 //
 // Wait implicitly calls Stop.
-func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error) {
+// If logTail is non-zero, the stdout and stderr logs will be truncated at the end to that number of lines.
+func (c *Container) Wait(ctx context.Context, logTail uint64) (stdout, stderr []byte, err error) {
 	waitCh, errCh := c.image.client.ContainerWait(ctx, c.containerID, container.WaitConditionNotRunning)
 	var exitCode int
 	select {
@@ -252,11 +257,15 @@ func (c *Container) Wait(ctx context.Context) (stdout, stderr []byte, err error)
 		stderrBuf = new(bytes.Buffer)
 	)
 
-	rc, err := c.image.client.ContainerLogs(ctx, c.containerID, types.ContainerLogsOptions{
+	logOpts := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Tail:       "50",
-	})
+	}
+	if logTail != 0 {
+		logOpts.Tail = strconv.FormatUint(logTail, 10)
+	}
+
+	rc, err := c.image.client.ContainerLogs(ctx, c.containerID, logOpts)
 	if err != nil {
 		return nil, nil, err
 	}
