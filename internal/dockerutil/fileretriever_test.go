@@ -34,7 +34,7 @@ func TestFileRetriever(t *testing.T) {
 		"busybox", "stable",
 	)
 
-	_, _, err = img.Run(
+	res := img.Run(
 		ctx,
 		[]string{"sh", "-c", "chmod 0700 /mnt/test && printf 'hello world' > /mnt/test/hello.txt"},
 		dockerutil.ContainerOptions{
@@ -42,8 +42,8 @@ func TestFileRetriever(t *testing.T) {
 			User:  dockerutil.GetRootUserString(),
 		},
 	)
-	require.NoError(t, err)
-	_, _, err = img.Run(
+	require.NoError(t, res.Err)
+	res = img.Run(
 		ctx,
 		[]string{"sh", "-c", "mkdir -p /mnt/test/foo/bar/ && printf 'test' > /mnt/test/foo/bar/baz.txt"},
 		dockerutil.ContainerOptions{
@@ -51,7 +51,7 @@ func TestFileRetriever(t *testing.T) {
 			User:  dockerutil.GetRootUserString(),
 		},
 	)
-	require.NoError(t, err)
+	require.NoError(t, res.Err)
 
 	fr := dockerutil.NewFileRetriever(zaptest.NewLogger(t), cli, t.Name())
 

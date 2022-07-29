@@ -56,7 +56,8 @@ func TestImage_Run(t *testing.T) {
 	image := NewImage(zap.NewNop(), client, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("happy path", func(t *testing.T) {
-		stdout, stderr, err := image.Run(ctx, []string{"echo", "-n", "hello"}, ContainerOptions{})
+		res := image.Run(ctx, []string{"echo", "-n", "hello"}, ContainerOptions{})
+		stdout, stderr, err := res.Stdout, res.Stderr, res.Err
 
 		require.NoError(t, err)
 		require.Equal(t, "hello", string(stdout))
@@ -75,7 +76,9 @@ echo -n hi from stderr >> /dev/stderr
 			Binds: []string{tmpDir + ":/test"},
 		}
 
-		stdout, stderr, err := image.Run(ctx, []string{"/test/test.sh"}, opts)
+		res := image.Run(ctx, []string{"/test/test.sh"}, opts)
+		stdout, stderr, err := res.Stdout, res.Stderr, res.Err
+
 		require.NoError(t, err)
 		require.Empty(t, string(stdout))
 		require.Equal(t, "hi from stderr", string(stderr))
@@ -83,7 +86,8 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("env vars", func(t *testing.T) {
 		opts := ContainerOptions{Env: []string{"MY_ENV_VAR=foo"}}
-		stdout, stderr, err := image.Run(ctx, []string{"printenv", "MY_ENV_VAR"}, opts)
+		res := image.Run(ctx, []string{"printenv", "MY_ENV_VAR"}, opts)
+		stdout, stderr, err := res.Stdout, res.Stderr, res.Err
 
 		require.NoError(t, err)
 		require.Equal(t, "foo", strings.TrimSpace(string(stdout)))
@@ -93,7 +97,8 @@ echo -n hi from stderr >> /dev/stderr
 	t.Run("context cancelled", func(t *testing.T) {
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
-		_, _, err := image.Run(cctx, []string{"sleep", "100"}, ContainerOptions{})
+		res := image.Run(cctx, []string{"sleep", "100"}, ContainerOptions{})
+		err := res.Err
 
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.Canceled)
@@ -107,7 +112,8 @@ echo -n hi from stderr >> /dev/stderr
 			{[]string{"program-does-not-exist"}, "executable file not found"},
 			{[]string{"sleep", "not-valid-arg"}, "sleep: invalid"},
 		} {
-			_, _, err := image.Run(ctx, tt.Args, ContainerOptions{})
+			res := image.Run(ctx, tt.Args, ContainerOptions{})
+			err := res.Err
 
 			require.Error(t, err, tt)
 			require.Contains(t, err.Error(), tt.WantErr, tt)
@@ -116,7 +122,7 @@ echo -n hi from stderr >> /dev/stderr
 
 	t.Run("missing required args", func(t *testing.T) {
 		require.PanicsWithError(t, "cmd cannot be empty", func() {
-			_, _, _ = image.Run(ctx, nil, ContainerOptions{})
+			_ = image.Run(ctx, nil, ContainerOptions{})
 		})
 	})
 }
@@ -138,7 +144,8 @@ func TestContainer(t *testing.T) {
 		require.NotEmpty(t, c.Name)
 		require.NotEmpty(t, c.Hostname)
 
-		stdout, stderr, err := c.Wait(ctx, 0)
+		res := c.Wait(ctx, 0)
+		stdout, stderr, err := res.Stdout, res.Stderr, res.Err
 
 		require.NoError(t, err)
 		require.Equal(t, "started", string(stdout))
@@ -172,8 +179,8 @@ func TestContainer(t *testing.T) {
 		c, err := image.Start(ctx, []string{"sleep", "not valid arg"}, ContainerOptions{})
 		require.NoError(t, err)
 
-		_, _, err = c.Wait(ctx, 0)
-		require.Error(t, err)
+		res := c.Wait(ctx, 0)
+		require.Error(t, res.Err)
 	})
 
 	t.Run("missing command", func(t *testing.T) {

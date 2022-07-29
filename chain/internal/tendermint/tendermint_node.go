@@ -315,7 +315,8 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	return job.Run(ctx, cmd, opts)
+	res := job.Run(ctx, cmd, opts)
+	return res.Stdout, res.Stderr, res.Err
 }
 
 func (tn *TendermintNode) logger() *zap.Logger {
