@@ -123,11 +123,6 @@ func TestInterchainAccounts(t *testing.T) {
 			if err != nil {
 				t.Logf("an error occured while stopping the relayer: %s", err)
 			}
-			for _, c := range chains {
-				if err = c.Cleanup(ctx); err != nil {
-					t.Logf("an error occured while stopping chain %s: %s", c.Config().ChainID, err)
-				}
-			}
 		},
 	)
 
