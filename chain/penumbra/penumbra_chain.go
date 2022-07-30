@@ -506,4 +506,3 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	// Wait for 5 blocks before considering the chains "started"
 	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }
-}
