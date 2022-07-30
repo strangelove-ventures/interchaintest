@@ -288,7 +288,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
 
 		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
-		resp, err := ibctest.BroadcastTx(ctx, b, testUser, msg)
+		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})

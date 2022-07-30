@@ -1,9 +1,11 @@
 package dockerutil
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -89,8 +91,9 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
 func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
+		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
+		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
 		ctx := context.TODO()
-
 		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
 			All: true,
 			Filters: filters.NewArgs(
@@ -123,6 +126,25 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				// Ignoring statuscode for now.
 			}
 			cancel()
+
+			if t.Failed() || showContainerLogs {
+				logTail := "50"
+				if containerLogTail != "" {
+					logTail = containerLogTail
+				}
+				rc, err := cli.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{
+					ShowStdout: true,
+					ShowStderr: true,
+					Tail:       logTail,
+				})
+				if err == nil {
+					b := new(bytes.Buffer)
+					_, err := b.ReadFrom(rc)
+					if err == nil {
+						t.Logf("Container logs - {%s}\n%s", strings.Join(c.Names, " "), b.String())
+					}
+				}
+			}
 
 			if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
 				// Not removing volumes with the container, because we separately handle them conditionally.
