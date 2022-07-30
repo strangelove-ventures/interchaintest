@@ -520,18 +520,3 @@ func (c *PenumbraChain) Cleanup(ctx context.Context) error {
 	}
 	return eg.Wait()
 }
-
-func (c *PenumbraChain) RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *PenumbraChain) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *PenumbraChain) QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error) {
-	//TODO implement me
-	panic("implement me")
-}
