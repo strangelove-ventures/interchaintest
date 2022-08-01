@@ -96,10 +96,12 @@ func TestInterchainAccounts(t *testing.T) {
 	host := strings.Split(chain1.GetRPCAddress(), "//")[1]
 	nodeAddr := fmt.Sprintf("tcp://%s", host)
 
+	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
+
 	// Register a new interchain account
 	registerICA := []string{
 		chain1.Config().Bin, "tx", "intertx", "register",
-		"--from", chain1User.Bech32Address(chain1.Config().Bech32Prefix),
+		"--from", chain1Addr,
 		"--connection-id", connections[0].ID,
 		"--chain-id", chain1.Config().ChainID,
 		"--home", chain1.HomeDir(),
@@ -110,10 +112,7 @@ func TestInterchainAccounts(t *testing.T) {
 	_, _, err = chain1.Exec(ctx, registerICA, nil)
 	require.NoError(t, err)
 
-	// Start the relayer on both paths
-	//startRly := []string{
-	//	"rly", "start", pathName, "--debug", "--home",
-	//}
+	// Start the relayer
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
@@ -132,7 +131,7 @@ func TestInterchainAccounts(t *testing.T) {
 
 	// Query for the newly registered interchain account
 	queryICA := []string{
-		chain1.Config().Bin, "query", "intertx", "interchainaccounts", connections[0].ID, chain1User.Bech32Address(chain1.Config().Bech32Prefix),
+		chain1.Config().Bin, "query", "intertx", "interchainaccounts", connections[0].ID, chain1Addr,
 		"--chain-id", chain1.Config().ChainID,
 		"--home", chain1.HomeDir(),
 		"--node", nodeAddr,
