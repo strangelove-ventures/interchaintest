@@ -42,10 +42,9 @@ func Test_DeriveSr25519FromNameAccount(t *testing.T) {
 	privKeyAccount, err := polkadot.DeriveSr25519FromName([]string{"Alice"})
 	require.NoError(t, err, "error deriving account sr25519 private key")
 
-	pubKeyAccount := make([]byte, 32)
-	for i, mkByte := range privKeyAccount.Public().Encode() {
-		pubKeyAccount[i] = mkByte
-	}
+	b := privKeyAccount.Public().Encode()
+	pubKeyAccount := b[:]
+
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKeyAccount)
 	require.NoError(t, err, "error encoding account public key to ss58")
 

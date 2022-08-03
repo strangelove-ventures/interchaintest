@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	ss58Ed25519HDKDPrefix = "Ed25519HDKD"
-	ss58Secp256k1Prefix   = "Secp256k1HDKD"
+	ss58Ed25519Prefix   = "Ed25519HDKD"
+	ss58Secp256k1Prefix = "Secp256k1HDKD"
 )
 
 var DEV_SEED, _ = hex.DecodeString("fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e")
@@ -31,8 +31,8 @@ func DeriveEd25519FromName(name string) (*p2pCrypto.Ed25519PrivateKey, error) {
 		return nil, fmt.Errorf("error constructing hasher: %w", err)
 	}
 
-	toHash := []byte{byte(len(ss58Ed25519HDKDPrefix) << 2)}
-	toHash = append(toHash, []byte(ss58Ed25519HDKDPrefix)...)
+	toHash := []byte{byte(len(ss58Ed25519Prefix) << 2)}
+	toHash = append(toHash, []byte(ss58Ed25519Prefix)...)
 	toHash = append(toHash, DEV_SEED...)
 	toHash = append(toHash, chainCode...)
 
@@ -75,14 +75,6 @@ func DeriveSr25519FromName(path []string) (*schnorrkel.MiniSecretKey, error) {
 			return nil, fmt.Errorf("error hard deriving mini secret key")
 		}
 	}
-	privKey := make([]byte, 32)
-	for i, mkByte := range miniSecret.ExpandEd25519().Encode() {
-		privKey[i] = mkByte
-	}
-	pubKey := make([]byte, 32)
-	for i, mkByte := range miniSecret.Public().Encode() {
-		pubKey[i] = mkByte
-	}
 
 	return miniSecret, nil
 }
@@ -108,10 +100,6 @@ func DeriveSecp256k1FromName(name string) (*secp256k1.PrivateKey, error) {
 	}
 
 	newKey := hasher.Sum(nil)
-
-	if err != nil {
-		return nil, fmt.Errorf("error deriving: %w", err)
-	}
 	privKey, _ := secp256k1.PrivKeyFromBytes(newKey)
 
 	return privKey, nil
