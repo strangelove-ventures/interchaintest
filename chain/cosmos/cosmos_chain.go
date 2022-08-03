@@ -79,11 +79,11 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, _ string, cli *client.Client, networkID string) error {
+func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	// The Initialize interface needs to change to accept a context,
 	// but there are other implementations that still need to switch
 	// to Docker volumes first.
-	return c.initializeChainNodes(context.TODO(), testName, cli, networkID)
+	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
