@@ -19,7 +19,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		t.Skip()
 	}
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
@@ -65,7 +64,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 

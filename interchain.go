@@ -155,7 +155,6 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 // InterchainBuildOptions describes configuration for (*Interchain).Build.
 type InterchainBuildOptions struct {
 	TestName string
-	HomeDir  string
 
 	Client    *client.Client
 	NetworkID string
@@ -195,7 +194,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	ic.cs = newChainSet(ic.log, chains)
 
 	// Initialize the chains (pull docker images, etc.).
-	if err := ic.cs.Initialize(opts.TestName, opts.HomeDir, opts.Client, opts.NetworkID); err != nil {
+	if err := ic.cs.Initialize(ctx, opts.TestName, opts.Client, opts.NetworkID); err != nil {
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 

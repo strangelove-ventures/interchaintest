@@ -30,7 +30,6 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -64,7 +63,6 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 
@@ -80,7 +78,6 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -114,7 +111,6 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 
@@ -161,7 +157,6 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -183,7 +178,6 @@ func TestInterchain_CreateUser(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 	}))
@@ -234,7 +228,6 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -270,7 +263,6 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 	}))
@@ -314,7 +306,6 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
@@ -333,7 +324,6 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 
