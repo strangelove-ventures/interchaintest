@@ -140,6 +140,14 @@ func (commander) CreateClients(pathName, homeDir string) []string {
 	}
 }
 
+// passing a value of 0 for customeClientTrustingPeriod will use default
+func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
+	return []string{
+		"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,
+		"--home", homeDir,
+	}
+}
+
 func (commander) CreateConnections(pathName, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,

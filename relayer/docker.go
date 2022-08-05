@@ -220,7 +220,7 @@ func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
-func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
+func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, ops ibc.CreateClientOptions) error {
 	cmd := r.c.CreateClients(pathName, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
