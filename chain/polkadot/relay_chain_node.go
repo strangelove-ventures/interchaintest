@@ -120,7 +120,7 @@ func (p *RelayChainNode) AccountAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// AccountAddress returns the ss58 encoded stash address
+// StashAddress returns the ss58 encoded stash address
 func (p *RelayChainNode) StashAddress() (string, error) {
 	pubKey := make([]byte, 32)
 	for i, mkByte := range p.StashKey.Public().Encode() {
@@ -129,7 +129,7 @@ func (p *RelayChainNode) StashAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// AccountAddress returns the ss58 encoded secp256k1 address
+// EcdsaAddress returns the ss58 encoded secp256k1 address
 func (p *RelayChainNode) EcdsaAddress() (string, error) {
 	pubKey := []byte{}
 	y := p.EcdsaPrivateKey.PublicKey.Y.Bytes()
