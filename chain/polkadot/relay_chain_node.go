@@ -72,12 +72,12 @@ var exposedPorts = map[nat.Port]struct{}{
 	nat.Port(prometheusPort): {},
 }
 
-// Name of the test node container
+// Name returns the name of the test node
 func (p *RelayChainNode) Name() string {
 	return fmt.Sprintf("relaychain-%d-%s-%s", p.Index, p.Chain.Config().ChainID, dockerutil.SanitizeContainerName(p.TestName))
 }
 
-// Hostname of the test container
+// HostName returns the docker hostname of the test container
 func (p *RelayChainNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
@@ -87,10 +87,13 @@ func (p *RelayChainNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.NodeHome())}
 }
 
+// NodeHome returns the working directory within the docker image,
+// the path where the docker volume is mounted.
 func (p *RelayChainNode) NodeHome() string {
 	return fmt.Sprintf("/home/.%s", p.Chain.Config().Name)
 }
 
+// PeerID returns the public key of the node key for p2p.
 func (p *RelayChainNode) PeerID() (string, error) {
 	id, err := peer.IDFromPrivateKey(p.NodeKey)
 	if err != nil {
@@ -99,6 +102,7 @@ func (p *RelayChainNode) PeerID() (string, error) {
 	return peer.Encode(id), nil
 }
 
+// GrandpaAddress returns the ss58 encoded grandpa (consensus) address
 func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	pubKey, err := p.Ed25519PrivateKey.GetPublic().Raw()
 	if err != nil {
@@ -107,6 +111,7 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
+// AccountAddress returns the ss58 encoded account address
 func (p *RelayChainNode) AccountAddress() (string, error) {
 	pubKey := make([]byte, 32)
 	for i, mkByte := range p.AccountKey.Public().Encode() {
@@ -115,6 +120,7 @@ func (p *RelayChainNode) AccountAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
+// AccountAddress returns the ss58 encoded stash address
 func (p *RelayChainNode) StashAddress() (string, error) {
 	pubKey := make([]byte, 32)
 	for i, mkByte := range p.StashKey.Public().Encode() {
@@ -123,6 +129,7 @@ func (p *RelayChainNode) StashAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
+// AccountAddress returns the ss58 encoded secp256k1 address
 func (p *RelayChainNode) EcdsaAddress() (string, error) {
 	pubKey := []byte{}
 	y := p.EcdsaPrivateKey.PublicKey.Y.Bytes()
@@ -135,6 +142,7 @@ func (p *RelayChainNode) EcdsaAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
+// MultiAddress returns the p2p multiaddr of the node
 func (p *RelayChainNode) MultiAddress() (string, error) {
 	peerId, err := p.PeerID()
 	if err != nil {
@@ -150,18 +158,25 @@ func (c *RelayChainNode) logger() *zap.Logger {
 	)
 }
 
+// ChainSpecFilePathContainer returns the relative path to the chain spec file
+// within the container.
 func (p *RelayChainNode) ChainSpecFilePathContainer() string {
 	return fmt.Sprintf("%s.json", p.Chain.Config().ChainID)
 }
 
+// RawChainSpecFilePathFull returns the full path to the raw chain spec file
+// within the container.
 func (p *RelayChainNode) RawChainSpecFilePathFull() string {
 	return filepath.Join(p.NodeHome(), fmt.Sprintf("%s-raw.json", p.Chain.Config().ChainID))
 }
 
+// RawChainSpecFilePathRelative returns the relative path to the raw chain spec file
+// within the container.
 func (p *RelayChainNode) RawChainSpecFilePathRelative() string {
 	return fmt.Sprintf("%s-raw.json", p.Chain.Config().ChainID)
 }
 
+// GenerateChainSpec builds the chain spec for the configured chain ID.
 func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
 	chainCfg := p.Chain.Config()
 	cmd := []string{
@@ -178,6 +193,8 @@ func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
 	return fw.WriteFile(ctx, p.VolumeName, p.ChainSpecFilePathContainer(), res.Stdout)
 }
 
+// GenerateChainSpecRaw builds the raw chain spec from the generated chain spec
+// for the configured chain ID.
 func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
 	chainCfg := p.Chain.Config()
 	cmd := []string{
@@ -194,6 +211,7 @@ func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
 	return fw.WriteFile(ctx, p.VolumeName, p.RawChainSpecFilePathRelative(), res.Stdout)
 }
 
+// CreateNodeContainer assembles a relay chain node docker container ready to launch.
 func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 	nodeKey, err := p.NodeKey.Raw()
 	if err != nil {
@@ -262,11 +280,13 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 	return nil
 }
 
+// StopContainer stops the relay chain node container, waiting at most 30 seconds.
 func (p *RelayChainNode) StopContainer(ctx context.Context) error {
 	timeout := 30 * time.Second
 	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
 }
 
+// StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
 		return err
@@ -295,7 +315,7 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// Exec run a container for a specific job and block until the container exits
+// Exec runs a container for a specific job and blocks until the container exits.
 func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil.ContainerExecResult {
 	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.ContainerOptions{
