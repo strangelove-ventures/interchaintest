@@ -25,6 +25,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 )
 
+// RelayChainNode defines the properties required for running a polkadot relay chain node.
 type RelayChainNode struct {
 	log      *zap.Logger
 	TestName string
