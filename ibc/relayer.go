@@ -40,7 +40,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
 
 	// setup channels, connections, and clients
-	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
+	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
 
 	// update clients, such as after new genesis
 	UpdateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
