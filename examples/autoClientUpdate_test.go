@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
@@ -66,20 +65,22 @@ func TestAutoUpdateClient(t *testing.T) {
 
 	// log queriered client trusing period to verify tp (chain1)
 	command := []string{
-		"query", "ibc", "client", "state", gaia1ClientID,
-		"--node", fmt.Sprintf("tcp://%s:26657", gaia1.GetHostRPCAddress()),
+		"gaiad", "query", "ibc", "client", "state", gaia1ClientID,
+		"--node", gaia1.GetHostRPCAddress(),
 	}
 	out, serr, err := gaia1.Exec(ctx, command, []string{})
 	if err != nil {
 		//NEED TO FIGURE OUT HOW LOGGING WORKS
-		fmt.Println(out)
-		fmt.Println(serr)
+		t.Log(out)
+		t.Log(serr)
 	}
+	t.Log("OUT GAIA1: ", out)
+	t.Log("SERR GAIA2: ", serr)
 
 	// log queriered client trusing period to verify tp (chain2)
 	command = []string{
-		"query", "ibc", "client", "state", gaia2ClientID,
-		"--node", fmt.Sprintf("tcp://%s:26657", gaia2.GetHostRPCAddress()),
+		"gaiad", "query", "ibc", "client", "state", gaia2ClientID,
+		"--node", gaia2.GetHostRPCAddress(),
 	}
 	out, serr, err = gaia2.Exec(ctx, command, []string{})
 	if err != nil {
@@ -89,10 +90,11 @@ func TestAutoUpdateClient(t *testing.T) {
 	}
 
 	// require client state active
+
 	err = r.StartRelayer(ctx, eRep, ibcPath)
 	require.NoError(t, err)
 
-	time.Sleep(5 * time.Minute)
+	// time.Sleep(5 * time.Minute)
 
 	// require client state active
 	// Try sending an IBC tx w/ relelvant client
