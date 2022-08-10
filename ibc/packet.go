@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
 	"go.uber.org/multierr"
 )
 

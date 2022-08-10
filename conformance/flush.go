@@ -21,7 +21,6 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 	// but check that capability first in case we can avoid setup.
 	requireCapabilities(t, rep, rf, relayer.FlushPackets)
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
@@ -54,7 +53,6 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
-		HomeDir:           home,
 		Client:            client,
 		NetworkID:         network,
 		CreateChannelOpts: ibc.DefaultChannelOpts(),

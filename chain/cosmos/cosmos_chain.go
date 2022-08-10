@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -79,11 +79,11 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(testName string, _ string, cli *client.Client, networkID string) error {
+func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	// The Initialize interface needs to change to accept a context,
 	// but there are other implementations that still need to switch
 	// to Docker volumes first.
-	return c.initializeChainNodes(context.TODO(), testName, cli, networkID)
+	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {

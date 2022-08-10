@@ -102,8 +102,8 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
-	return c.initializeChainNodes(testName, homeDirectory, cli, networkID)
+func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
 // Exec implements chain interface.
@@ -217,11 +217,11 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 // creates the test node objects required for bootstrapping tests
 func (c *PenumbraChain) initializeChainNodes(
-	testName, home string,
+	ctx context.Context,
+	testName string,
 	cli *client.Client,
 	networkID string,
 ) error {
-	ctx := context.TODO()
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
