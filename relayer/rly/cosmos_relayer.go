@@ -61,7 +61,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.0.0-rc4"
+	DefaultContainerVersion = "v2.0.0"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -205,7 +205,6 @@ func (c commander) StartRelayer(pathName, homeDir string) []string {
 	cmd := []string{
 		"rly", "start", pathName, "--debug",
 		"--home", homeDir,
-		"-p", "events",
 	}
 	cmd = append(cmd, c.extraStartFlags...)
 	return cmd
