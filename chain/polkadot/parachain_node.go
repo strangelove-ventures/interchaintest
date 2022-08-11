@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
+	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
@@ -37,7 +37,7 @@ type ParachainNode struct {
 
 	Chain           ibc.Chain
 	Bin             string
-	NodeKey         p2pCrypto.PrivKey
+	NodeKey         p2pcrypto.PrivKey
 	ChainID         string
 	Flags           []string
 	RelayChainFlags []string
@@ -49,17 +49,17 @@ type ParachainNode struct {
 
 type ParachainNodes []*ParachainNode
 
-// Name of the test node container
+// Name returns the name of the test node container.
 func (pn *ParachainNode) Name() string {
 	return fmt.Sprintf("%s-%d-%s-%s", pn.Bin, pn.Index, pn.ChainID, dockerutil.SanitizeContainerName(pn.TestName))
 }
 
-// Hostname of the test container
+// HostName returns the docker hostname of the test container.
 func (pn *ParachainNode) HostName() string {
 	return dockerutil.CondenseHostName(pn.Name())
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (pn *ParachainNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", pn.VolumeName, pn.NodeHome())}
 }
@@ -91,7 +91,7 @@ func (pn *ParachainNode) PeerID() (string, error) {
 	return peer.Encode(id), nil
 }
 
-// MultiAddress returns the p2p multiaddr of the node
+// MultiAddress returns the p2p multiaddr of the node.
 func (pn *ParachainNode) MultiAddress() (string, error) {
 	peerId, err := pn.PeerID()
 	if err != nil {
@@ -262,7 +262,7 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// Exec run a container for a specific job and block until the container exits
+// Exec run a container for a specific job and block until the container exits.
 func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil.ContainerExecResult {
 	job := dockerutil.NewImage(pn.log, pn.DockerClient, pn.NetworkID, pn.TestName, pn.Image.Repository, pn.Image.Version)
 	opts := dockerutil.ContainerOptions{

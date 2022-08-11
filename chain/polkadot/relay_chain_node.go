@@ -73,17 +73,17 @@ var exposedPorts = map[nat.Port]struct{}{
 	nat.Port(prometheusPort): {},
 }
 
-// Name returns the name of the test node
+// Name returns the name of the test node.
 func (p *RelayChainNode) Name() string {
 	return fmt.Sprintf("relaychain-%d-%s-%s", p.Index, p.Chain.Config().ChainID, dockerutil.SanitizeContainerName(p.TestName))
 }
 
-// HostName returns the docker hostname of the test container
+// HostName returns the docker hostname of the test container.
 func (p *RelayChainNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (p *RelayChainNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.NodeHome())}
 }
@@ -103,7 +103,7 @@ func (p *RelayChainNode) PeerID() (string, error) {
 	return peer.Encode(id), nil
 }
 
-// GrandpaAddress returns the ss58 encoded grandpa (consensus) address
+// GrandpaAddress returns the ss58 encoded grandpa (consensus) address.
 func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	pubKey, err := p.Ed25519PrivateKey.GetPublic().Raw()
 	if err != nil {
@@ -112,7 +112,7 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// AccountAddress returns the ss58 encoded account address
+// AccountAddress returns the ss58 encoded account address.
 func (p *RelayChainNode) AccountAddress() (string, error) {
 	pubKey := make([]byte, 32)
 	for i, mkByte := range p.AccountKey.Public().Encode() {
@@ -121,7 +121,7 @@ func (p *RelayChainNode) AccountAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// StashAddress returns the ss58 encoded stash address
+// StashAddress returns the ss58 encoded stash address.
 func (p *RelayChainNode) StashAddress() (string, error) {
 	pubKey := make([]byte, 32)
 	for i, mkByte := range p.StashKey.Public().Encode() {
@@ -130,7 +130,7 @@ func (p *RelayChainNode) StashAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// EcdsaAddress returns the ss58 encoded secp256k1 address
+// EcdsaAddress returns the ss58 encoded secp256k1 address.
 func (p *RelayChainNode) EcdsaAddress() (string, error) {
 	pubKey := []byte{}
 	y := p.EcdsaPrivateKey.PublicKey.Y.Bytes()
@@ -143,7 +143,7 @@ func (p *RelayChainNode) EcdsaAddress() (string, error) {
 	return EncodeAddressSS58(pubKey)
 }
 
-// MultiAddress returns the p2p multiaddr of the node
+// MultiAddress returns the p2p multiaddr of the node.
 func (p *RelayChainNode) MultiAddress() (string, error) {
 	peerId, err := p.PeerID()
 	if err != nil {
