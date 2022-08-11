@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
@@ -23,7 +22,6 @@ func TestInterchainAccounts(t *testing.T) {
 		t.Skip()
 	}
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
@@ -33,8 +31,8 @@ func TestInterchainAccounts(t *testing.T) {
 
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "icad", Version: "master"},
-		{Name: "icad", Version: "master"},
+		{Name: "icad", Version: "damian-fix-non-determinism-e2e-tests"},
+		{Name: "icad", Version: "damian-fix-non-determinism-e2e-tests"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -42,6 +40,7 @@ func TestInterchainAccounts(t *testing.T) {
 
 	chain1, chain2 := chains[0], chains[1]
 
+	// Get a relayer instance
 	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
@@ -62,17 +61,22 @@ func TestInterchainAccounts(t *testing.T) {
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 
 		SkipPathCreation: true,
 	}))
 
-	// Fund a user account on chain1
+	// chain1
+	// "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
+	// chain2
+	// "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
+
+	// Fund a user account on chain1 and chain2
 	const userFunds = int64(10_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain1)
+	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain1, chain2)
 	chain1User := users[0]
+	chain2User := users[1]
 
 	// Generate a new path
 	err = r.GeneratePath(ctx, eRep, chain1.Config().ChainID, chain2.Config().ChainID, pathName)
@@ -101,9 +105,9 @@ func TestInterchainAccounts(t *testing.T) {
 	host := strings.Split(chain1.GetRPCAddress(), "//")[1]
 	nodeAddr := fmt.Sprintf("tcp://%s", host)
 
+	// Register a new interchain account on behalf of the user acc on chain1
 	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
 
-	// Register a new interchain account
 	registerICA := []string{
 		chain1.Config().Bin, "tx", "intertx", "register",
 		"--from", chain1Addr,
@@ -153,36 +157,58 @@ func TestInterchainAccounts(t *testing.T) {
 	icaAddr := strings.TrimSpace(parts[1])
 	require.NotEqual(t, "", icaAddr)
 
-	// Get the balance of the account on chain1
-	chain1OrigBal, err := chain1.GetBalance(ctx, chain1Addr, chain1.Config().Denom)
+	// Get initial account balances
+	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
+
+	chain2OrigBal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
 
-	// Build a bank transfer msg to send from the controller account to the ICA
+	icaOrigBal, err := chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
+	require.NoError(t, err)
+
+	// Send funds to ICA from user account on chain2
 	const transferAmount = 10000
-	jsonMsg := fmt.Sprintf(`{"@type":"/cosmos.bank.v1beta1.MsgSend","from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"%s"}]}`, chain1Addr, icaAddr, chain1.Config().Denom, strconv.Itoa(transferAmount))
-	//msg, err := json.Marshal(map[string]any{
-	//	"@type":        "/cosmos.bank.v1beta1.MsgSend",
-	//	"from_address": chain1Addr,
-	//	"to_address":   icaAddr,
-	//	"amount": []map[string]any{
-	//		{
-	//			"denom":  chain1.Config().Denom,
-	//			"amount": strconv.Itoa(transferAmount),
-	//		},
-	//	},
-	//})
-	rawMsg := json.RawMessage(jsonMsg)
-	msg, err := rawMsg.MarshalJSON()
+	transfer := ibc.WalletAmount{
+		Address: icaAddr,
+		Denom:   chain2.Config().Denom,
+		Amount:  transferAmount,
+	}
+	err = chain2.SendFunds(ctx, chain2User.KeyName, transfer)
+
+	// Wait for transfer to be complete and assert balances
+	err = test.WaitForBlocks(ctx, 5, chain2)
 	require.NoError(t, err)
 
-	t.Log()
-	t.Log(string(msg))
-	t.Log()
+	chain2Bal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, chain2OrigBal-transferAmount, chain2Bal)
 
-	// Send ICA transfer
-	t.Log("Before sending transfer")
+	icaBal, err := chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, icaOrigBal+transferAmount, icaBal)
+
+	t.Logf("User OG Bal: %d \n", chain2OrigBal)
+	t.Logf("ICA OG Bal: %d \n", icaOrigBal)
+	t.Logf("User Bal: %d \n", chain2Bal)
+	t.Logf("ICA Bal: %d \n", icaBal)
+
+	// Build bank transfer msg
+	rawMsg, err := json.Marshal(map[string]any{
+		"@type":        "/cosmos.bank.v1beta1.MsgSend",
+		"from_address": icaAddr,
+		"to_address":   chain2Addr,
+		"amount": []map[string]any{
+			{
+				"denom":  chain2.Config().Denom,
+				"amount": strconv.Itoa(transferAmount),
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	// Send bank transfer msg to ICA on chain2 from the user account on chain1
 	sendICATransfer := []string{
-		chain1.Config().Bin, "tx", "intertx", "submit", string(msg),
+		chain1.Config().Bin, "tx", "intertx", "submit", string(rawMsg),
 		"--connection-id", connections[0].ID,
 		"--from", chain1Addr,
 		"--chain-id", chain1.Config().ChainID,
@@ -191,37 +217,27 @@ func TestInterchainAccounts(t *testing.T) {
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
-	stdout, stderr, err := chain1.Exec(ctx, sendICATransfer, nil)
+	_, _, err = chain1.Exec(ctx, sendICATransfer, nil)
 	require.NoError(t, err)
-
-	t.Logf("stdout: %s\n", stdout)
-	t.Logf("stderr: %s\n", stderr)
-
-	t.Log("After sending transfer")
 
 	// Wait for tx to be relayed
 	err = test.WaitForBlocks(ctx, 10, chain2)
 	require.NoError(t, err)
 
-	t.Log("After waiting for blocks")
+	// Assert that the funds have been received by the user account on chain2
+	t.Logf("User OG Bal: %d \n", chain2Bal)
+	t.Logf("ICA OG Bal: %d \n", icaBal)
 
-	// Compose the ibc denom for the tokens sent to the ICA from chain1
-	channels, err := r.GetChannels(ctx, eRep, chain1.Config().ChainID)
+	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
 
-	t.Log("After get channels")
-
-	prefixedDenom := transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, chain1.Config().Denom)
-	ibcDenom := transfertypes.ParseDenomTrace(prefixedDenom)
-
-	t.Log("Before get balance")
-	// Assert that the account on chain1 has subtracted the funds just sent
-	chain1Bal, err := chain1.GetBalance(ctx, chain1Addr, chain1.Config().Denom)
+	// Assert that the funds have been removed from the ICA on chain2
+	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain1OrigBal-transferAmount, chain1Bal)
 
-	// Assert that the interchain account has received the funds
-	icaBal, err := chain2.GetBalance(ctx, icaAddr, ibcDenom.IBCDenom())
-	require.NoError(t, err)
-	require.Equal(t, transferAmount, icaBal)
+	t.Logf("User Bal: %d \n", chain2Bal)
+	t.Logf("ICA Bal: %d \n", icaBal)
+
+	require.Equal(t, chain2OrigBal, chain2Bal)
+	require.Equal(t, icaOrigBal, icaBal)
 }
