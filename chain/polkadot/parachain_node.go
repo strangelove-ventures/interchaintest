@@ -25,9 +25,7 @@ import (
 type ParachainNode struct {
 	log      *zap.Logger
 	TestName string
-
-	Home  string
-	Index int
+	Index    int
 
 	NetworkID    string
 	containerID  string
