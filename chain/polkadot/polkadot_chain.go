@@ -2,7 +2,7 @@ package polkadot
 
 import (
 	"context"
-	cRand "crypto/rand"
+	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -135,7 +135,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		seed := make([]byte, 32)
 		rand.Read(seed)
 
-		nodeKey, _, err := p2pcrypto.GenerateEd25519Key(cRand.Reader)
+		nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
 		if err != nil {
 			return fmt.Errorf("error generating node key: %w", err)
 		}
@@ -201,7 +201,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 	for _, parachainConfig := range c.parachainConfig {
 		parachainNodes := []*ParachainNode{}
 		for i := 0; i < parachainConfig.NumNodes; i++ {
-			nodeKey, _, err := p2pcrypto.GenerateEd25519Key(cRand.Reader)
+			nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
 			if err != nil {
 				return fmt.Errorf("error generating node key: %w", err)
 			}
