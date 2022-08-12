@@ -29,9 +29,7 @@ import (
 type RelayChainNode struct {
 	log      *zap.Logger
 	TestName string
-
-	Home  string
-	Index int
+	Index    int
 
 	NetworkID    string
 	containerID  string
@@ -60,8 +58,6 @@ const (
 )
 
 var (
-	IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-
 	RtyAtt = retry.Attempts(10)
 	RtyDel = retry.Delay(time.Second * 2)
 	RtyErr = retry.LastErrorOnly(true)
