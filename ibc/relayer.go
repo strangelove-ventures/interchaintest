@@ -165,7 +165,8 @@ type CreateClientOptions struct {
 	TrustingPeriod string
 }
 
-// DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
+// DefaultClientOpts returns the default settings for creating clients.
+// These default options are usually determined by the relayer
 func DefaultClientOpts() CreateClientOptions {
 	return CreateClientOptions{
 		TrustingPeriod: "0",
