@@ -2,7 +2,7 @@ package ibc
 
 import (
 	"github.com/cosmos/cosmos-sdk/types"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
+	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 )
 
 type ChainConfig struct {

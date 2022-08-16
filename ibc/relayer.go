@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	ptypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	chantypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
+	ptypes "github.com/cosmos/ibc-go/v5/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.
@@ -84,16 +83,35 @@ type Relayer interface {
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
 
-	// Exec runs an arbitrary command using Relayer's docker environment.
-	// Whether the invoked command is run in a one-off container or execing into an already running container
-	// is up to the relayer implementation.
+	// Exec runs an arbitrary relayer command.
+	// If the Relayer implementation runs in Docker,
+	// whether the invoked command is run in a one-off container or execing into an already running container
+	// is an implementation detail.
 	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
-	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) dockerutil.ContainerExecResult
+	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) RelayerExecResult
+}
 
-	// HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
-	// the container's filesystem (not the host).
-	HomeDir() string
+// RelyaerExecResult holds the details of a call to Relayer.Exec.
+type RelayerExecResult struct {
+	// This type is a redeclaration of dockerutil.ContainerExecResult.
+	// While most relayer implementations are in Docker,
+	// the dockerutil package is and will continue to be internal,
+	// so we need an externally importable type for third-party Relayer implementations.
+	//
+	// A type alias would be a potential fit here
+	// (i.e. type RelayerExecResult = dockerutil.ContainerExecResult)
+	// but that would be slightly misleading as not all implementations are in Docker;
+	// and the type is small enough and has no methods associated,
+	// so a redeclaration keeps things simple for external implementers.
+
+	// Err is only set when there is a failure to execute.
+	// A successful execution that exits non-zero will have a nil Err
+	// and an appropriate ExitCode.
+	Err error
+
+	ExitCode       int
+	Stdout, Stderr []byte
 }
 
 // CreateChannelOptions contains the configuration for creating a channel.

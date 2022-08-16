@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -312,7 +315,10 @@ func (ic *Interchain) generateRelayerWallets() {
 		panic(fmt.Errorf("cannot call generateRelayerWallets more than once"))
 	}
 
-	kr := keyring.NewInMemory()
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
 
 	relayerChains := ic.relayerChains()
 	ic.relayerWallets = make(map[relayerChain]ibc.Wallet, len(relayerChains))
