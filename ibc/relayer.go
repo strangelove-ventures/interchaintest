@@ -28,10 +28,10 @@ type Relayer interface {
 	RestoreKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, mnemonic string) error
 
 	// generate a new key
-	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName string) (RelayerWallet, error)
+	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName string) (Wallet, error)
 
-	// GetWallet returns a RelayerWallet for that relayer on the given chain and a boolean indicating if it was found.
-	GetWallet(chainID string) (RelayerWallet, bool)
+	// GetWallet returns a Wallet for that relayer on the given chain and a boolean indicating if it was found.
+	GetWallet(chainID string) (Wallet, bool)
 
 	// add relayer configuration for a chain
 	AddChainConfiguration(ctx context.Context, rep RelayerExecReporter, chainConfig ChainConfig, keyName, rpcAddr, grpcAddr string) error

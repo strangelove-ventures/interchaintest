@@ -55,7 +55,7 @@ const (
 type RelayerTestCase struct {
 	Config RelayerTestCaseConfig
 	// user on source chain
-	Users []*ibctest.User
+	Users []*ibc.Wallet
 	// temp storage in between test phases
 	TxCache []ibc.Tx
 }

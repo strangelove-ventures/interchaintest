@@ -234,8 +234,8 @@ func (commander) DefaultContainerVersion() string {
 	return DefaultContainerVersion
 }
 
-func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error) {
-	var wallet ibc.RelayerWallet
+func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
+	var wallet ibc.Wallet
 	err := json.Unmarshal([]byte(stdout), &wallet)
 	return wallet, err
 }

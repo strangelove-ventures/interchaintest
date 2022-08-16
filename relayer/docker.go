@@ -42,7 +42,7 @@ type DockerRelayer struct {
 	containerID string
 
 	// wallets contains a mapping of chainID to relayer wallet
-	wallets map[string]ibc.RelayerWallet
+	wallets map[string]ibc.Wallet
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -62,7 +62,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 
 		testName: testName,
 
-		wallets: map[string]ibc.RelayerWallet{},
+		wallets: map[string]ibc.Wallet{},
 	}
 
 	for _, opt := range options {
@@ -188,7 +188,7 @@ func (r *DockerRelayer) generateConfigTar(relativeConfigPath string, content []b
 	return &buf, nil
 }
 
-func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.RelayerWallet, error) {
+func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.Wallet, error) {
 	cmd := r.c.AddKey(chainID, keyName, r.HomeDir())
 
 	// Adding a key should be near-instantaneous, so add a 1-minute timeout
@@ -198,18 +198,18 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
-		return ibc.RelayerWallet{}, res.Err
+		return ibc.Wallet{}, res.Err
 	}
 
 	wallet, err := r.c.ParseAddKeyOutput(string(res.Stdout), string(res.Stderr))
 	if err != nil {
-		return ibc.RelayerWallet{}, err
+		return ibc.Wallet{}, err
 	}
 	r.wallets[chainID] = wallet
 	return wallet, nil
 }
 
-func (r *DockerRelayer) GetWallet(chainID string) (ibc.RelayerWallet, bool) {
+func (r *DockerRelayer) GetWallet(chainID string) (ibc.Wallet, bool) {
 	wallet, ok := r.wallets[chainID]
 	return wallet, ok
 }
@@ -318,7 +318,7 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 		return res.Err
 	}
 
-	r.wallets[chainID] = ibc.RelayerWallet{
+	r.wallets[chainID] = ibc.Wallet{
 		Mnemonic: mnemonic,
 		Address:  r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr)),
 	}
@@ -611,7 +611,7 @@ type RelayerCommander interface {
 
 	// ParseAddKeyOutput processes the output of AddKey
 	// to produce the wallet that was created.
-	ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error)
+	ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error)
 
 	// ParseRestoreKeyOutput extracts the address from the output of RestoreKey.
 	ParseRestoreKeyOutput(stdout, stderr string) string

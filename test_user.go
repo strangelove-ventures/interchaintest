@@ -5,29 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 )
 
-type User struct {
-	Address []byte
-	KeyName string
-}
-
-func (u *User) GetKeyName() string {
-	return u.KeyName
-}
-
-func (u *User) Bech32Address(bech32Prefix string) string {
-	return types.MustBech32ifyAddressBytes(bech32Prefix, u.Address)
-}
-
 // generateUserWallet creates a new user wallet with the given key name on the given chain.
 // a user is recovered if a mnemonic is specified.
-func generateUserWallet(ctx context.Context, keyName, mnemonic string, chain ibc.Chain) (*User, error) {
+func generateUserWallet(ctx context.Context, keyName, mnemonic string, chain ibc.Chain) (*ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := chain.RecoverKey(ctx, keyName, mnemonic); err != nil {
 			return nil, fmt.Errorf("failed to recover key on source chain: %w", err)
@@ -41,9 +27,9 @@ func generateUserWallet(ctx context.Context, keyName, mnemonic string, chain ibc
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source user account address: %w", err)
 	}
-	user := User{
+	user := ibc.Wallet{
 		KeyName: keyName,
-		Address: userAccountAddressBytes,
+		Address: string(userAccountAddressBytes),
 	}
 	return &user, nil
 }
@@ -57,7 +43,7 @@ func GetAndFundTestUserWithMnemonic(
 	keyNamePrefix, mnemonic string,
 	amount int64,
 	chain ibc.Chain,
-) *User {
+) *ibc.Wallet {
 	chainCfg := chain.Config()
 	keyName := fmt.Sprintf("%s-%s-%s", keyNamePrefix, chainCfg.ChainID, dockerutil.RandLowerCaseLetterString(3))
 	user, err := generateUserWallet(ctx, keyName, mnemonic, chain)
@@ -81,8 +67,8 @@ func GetAndFundTestUsers(
 	keyNamePrefix string,
 	amount int64,
 	chains ...ibc.Chain,
-) []*User {
-	var users []*User
+) []*ibc.Wallet {
+	var users []*ibc.Wallet
 	for _, chain := range chains {
 		user := GetAndFundTestUserWithMnemonic(t, ctx, keyNamePrefix, "", amount, chain)
 		users = append(users, user)
