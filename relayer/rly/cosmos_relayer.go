@@ -204,6 +204,8 @@ func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
 func (c commander) StartRelayer(pathName, homeDir string) []string {
 	cmd := []string{
 		"rly", "start", pathName, "--debug",
+		"-p", "events",
+		"-b", "50",
 		"--home", homeDir,
 	}
 	cmd = append(cmd, c.extraStartFlags...)
