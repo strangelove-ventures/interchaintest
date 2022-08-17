@@ -174,6 +174,8 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 }))
 ```
 
+Upon calling build, a faucet account with 10b units of denom is created. This wallet then funds 
+
 Note the `SkipPathCreation` boolean. You can set this to true if you would like to manually call the relayer to create the `client`, `connection` and `channel`.
 
 For example here we can manually create channel using the `ics27-1` standard like so:
