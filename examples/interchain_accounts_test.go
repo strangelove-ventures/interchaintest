@@ -31,8 +31,18 @@ func TestInterchainAccounts(t *testing.T) {
 
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "icad", Version: "damian-fix-non-determinism-e2e-tests"},
-		{Name: "icad", Version: "damian-fix-non-determinism-e2e-tests"},
+		{
+			Name: "icad",
+			ChainConfig: ibc.ChainConfig{
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "master"}},
+			},
+		},
+		{
+			Name: "icad",
+			ChainConfig: ibc.ChainConfig{
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "master"}},
+			},
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -66,11 +76,6 @@ func TestInterchainAccounts(t *testing.T) {
 
 		SkipPathCreation: true,
 	}))
-
-	// chain1
-	// "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
-	// chain2
-	// "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
 
 	// Fund a user account on chain1 and chain2
 	const userFunds = int64(10_000_000_000)
@@ -187,11 +192,6 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, icaOrigBal+transferAmount, icaBal)
 
-	t.Logf("User OG Bal: %d \n", chain2OrigBal)
-	t.Logf("ICA OG Bal: %d \n", icaOrigBal)
-	t.Logf("User Bal: %d \n", chain2Bal)
-	t.Logf("ICA Bal: %d \n", icaBal)
-
 	// Build bank transfer msg
 	rawMsg, err := json.Marshal(map[string]any{
 		"@type":        "/cosmos.bank.v1beta1.MsgSend",
@@ -225,19 +225,12 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert that the funds have been received by the user account on chain2
-	t.Logf("User OG Bal: %d \n", chain2Bal)
-	t.Logf("ICA OG Bal: %d \n", icaBal)
-
 	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
+	require.Equal(t, chain2OrigBal, chain2Bal)
 
 	// Assert that the funds have been removed from the ICA on chain2
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-
-	t.Logf("User Bal: %d \n", chain2Bal)
-	t.Logf("ICA Bal: %d \n", icaBal)
-
-	require.Equal(t, chain2OrigBal, chain2Bal)
 	require.Equal(t, icaOrigBal, icaBal)
 }
