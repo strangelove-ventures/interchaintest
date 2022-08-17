@@ -1,4 +1,4 @@
-package penumbra_test
+package polkadot_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestPenumbraChainStart(t *testing.T) {
+func TestPolkadotComposableChainStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -20,32 +20,34 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	client, network := ibctest.DockerSetup(t)
 
-	nv := 4
+	nv := 5
+	nf := 3
 
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:    "penumbra",
-			Version: "025-helike,v0.35.9",
+			Name:    "composable",
+			Version: "polkadot:v0.9.19,composable:v2.1.9",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "penumbra-1",
+				ChainID: "rococo-local",
 			},
 			NumValidators: &nv,
+			NumFullNodes:  &nf,
 		},
 	},
 	).Chains(t.Name())
-	require.NoError(t, err, "failed to get penumbra chain")
+
+	require.NoError(t, err, "failed to get polkadot chain")
 	require.Len(t, chains, 1)
 	chain := chains[0]
 
 	ctx := context.Background()
 
 	err = chain.Initialize(ctx, t.Name(), client, network)
-	require.NoError(t, err, "failed to initialize penumbra chain")
+	require.NoError(t, err, "failed to initialize polkadot chain")
 
 	err = chain.Start(t.Name(), ctx)
-	require.NoError(t, err, "failed to start penumbra chain")
+	require.NoError(t, err, "failed to start polkadot chain")
 
 	err = test.WaitForBlocks(ctx, 10, chain)
-
-	require.NoError(t, err, "penumbra chain failed to make blocks")
+	require.NoError(t, err, "polkadot chain failed to make blocks")
 }

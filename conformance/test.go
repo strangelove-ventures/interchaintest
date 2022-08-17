@@ -35,7 +35,7 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/label"
@@ -304,8 +304,7 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 	// funds relayer src and dst wallets on respective chain in genesis
 	// creates a faucet account on the both chains (separate fullnode)
 	// funds faucet accounts in genesis
-	home := ibctest.TempDir(t)
-	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, client, network, home, srcChain, dstChain, rf, preRelayerStartFuncs)
+	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, client, network, srcChain, dstChain, rf, preRelayerStartFuncs)
 	req.NoError(err, "failed to StartChainPairAndRelayer")
 
 	for _, testCase := range testCases {

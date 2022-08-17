@@ -26,7 +26,6 @@ func TestMessagesView(t *testing.T) {
 
 	t.Parallel()
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
@@ -63,7 +62,6 @@ func TestMessagesView(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 

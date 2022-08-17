@@ -281,7 +281,7 @@ func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporte
 	return res.Err
 }
 
-func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string, env []string) dockerutil.ContainerExecResult {
+func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string, env []string) ibc.RelayerExecResult {
 	job := dockerutil.NewImage(r.log, r.client, r.networkID, r.testName, r.containerImage().Repository, r.containerImage().Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
@@ -302,7 +302,12 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 		)
 	}()
 
-	return res
+	return ibc.RelayerExecResult{
+		Err:      res.Err,
+		ExitCode: res.ExitCode,
+		Stdout:   res.Stdout,
+		Stderr:   res.Stderr,
+	}
 }
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
+	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
@@ -18,7 +18,6 @@ import (
 func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
@@ -53,7 +52,6 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 

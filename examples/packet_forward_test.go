@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
@@ -19,7 +19,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		t.Skip()
 	}
 
-	home := ibctest.TempDir(t)
 	client, network := ibctest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
@@ -65,7 +64,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
-		HomeDir:   home,
 		Client:    client,
 		NetworkID: network,
 

@@ -102,8 +102,8 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) Initialize(testName string, homeDirectory string, cli *client.Client, networkID string) error {
-	return c.initializeChainNodes(testName, homeDirectory, cli, networkID)
+func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
 // Exec implements chain interface.
@@ -217,11 +217,11 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 // creates the test node objects required for bootstrapping tests
 func (c *PenumbraChain) initializeChainNodes(
-	testName, home string,
+	ctx context.Context,
+	testName string,
 	cli *client.Client,
 	networkID string,
 ) error {
-	ctx := context.TODO()
 	penumbraNodes := []PenumbraNode{}
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
@@ -419,12 +419,12 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		val := val
 		// Use an errgroup to save some time doing many concurrent copies inside containers.
 		eg.Go(func() error {
-			firstValPrivKeyRelPath := fmt.Sprintf("node%d/tendermint/config/priv_validator_key.json", i)
+			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/tendermint/config/priv_validator_key.json", i)
 
 			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
 			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.VolumeName, firstValPrivKeyRelPath)
 			if err != nil {
-				return fmt.Errorf("getting validator private key content: %w", err)
+				return fmt.Errorf("error getting validator private key content: %w", err)
 			}
 
 			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
