@@ -12,8 +12,8 @@ func TestTemplate(t *testing.T) {
 	ctx := context.Background()
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", ChainName: "gaia-1", Version: "v7.0.2"},
-		{Name: "osmosis", ChainName: "gaia-2", Version: "v7.0.2"},
+        {Name: "gaia", ChainName: "gaia", Version: "v7.0.3"},
+        {Name: "osmosis", ChainName: "osmo", Version: "v11.0.1"},
 	})
 
 	client, network := ibctest.DockerSetup(t)
@@ -65,25 +65,29 @@ func TestTemplate(t *testing.T) {
 
 ```go
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    {Name: "gaia", ChainName: "gaia-1", Version: "v7.0.2"},
-    {Name: "osmosis", ChainName: "gaia-2", Version: "v7.0.2"},
+    {Name: "gaia", ChainName: "gaia", Version: "v7.0.3"},
+    {Name: "osmosis", ChainName: "osmo", Version: "v11.0.1"},
 })
 ```
 
-The chain factory is where you configure your chain binaries. By default, `ibctest` will spin up a 3 docker images for each binary; 2 validators, 1 full node. These settings can all be configured as you'll see below.
+The chain factory is where you configure your chain binaries. 
 
-Unless `Images` are passed into the `ChainSpec`, `ibctest` will attempt to build images from [Heighliner's](https://github.com/strangelove-ventures/heighliner) packages.
+`ibctest` needs a docker package with the binary installed in order spin up nodes. 
 
-Here is an example of building one gaia chain from Heighliner and another chain from ibc-go's simd images. Note that we override the default number of validators (default: 2) and full nodes (default: 1) for the gaia chain.
+
+Its integration with [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains) makes this easy by simply passing in a `Name` and `Version` into the `ChainFactory`. 
+
+
+However, you can also pass in remote images AND local images. 
+
+See an example of each below:
 
 ```go
-gaiaValidators := int(4)
-gaiaFullnodes := int(2)
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    // gaia chain
+    // HEIGHLINER EXAMPLE -- gaia chain -- Note that we override the default number of validators (default: 2) and full nodes (default: 1) for the gaia chain.
     {Name: "gaia", ChainName: "gaia", Version: "v7.0.2", NumValidators: &gaiaValidators, NumFullNodes: &gaiaFullnodes},
 
-    // ibc-go simd chain
+    // REMOTE REPO EXAMPLE -- ibc-go simd chain
     {ChainConfig: ibc.ChainConfig{
         Type: "cosmos",
         Name: "ibc-go-simd",
@@ -96,34 +100,51 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
         },
         Bin: "simd",
         Bech32Prefix: "cosmos",
-        Denom: "steak",
-        GasPrices: "0.00steak",
+        Denom: "gos",
+        GasPrices: "0.00gos",
         GasAdjustment: 1.3,
         TrustingPeriod: "508h",
-        NoHostMount: false}
+        NoHostMount: false},
+    },
+
+    // LOCAL DOCKER IMAGE EXAMPLE
+    {ChainConfig: ibc.ChainConfig{
+        Type: "cosmos",
+        Name: "stringChain",
+        ChainID: "string-1",
+        Images: []ibc.DockerImage{
+            {
+                Repository: "string", // local docker image name
+                Version: "v1.0.0",	// docker tag 
+            },
+        },
+        Bin: "stringd",
+        Bech32Prefix: "cosmos",
+        Denom: "cheese",
+        GasPrices: "0.01cheese",
+        GasAdjustment: 1.3,
+        TrustingPeriod: "508h",
+        NoHostMount: false},
     },
     })
 ```
 
-You can now interact with each binary. For example, getting the RPC address:
+By default, `ibctest` will spin up a 3 docker images for each binary; 2 validators, 1 full node. These settings can all be configured inside the `ChainSpec`.
+Example:
 
 ```go
-chains, err := cf.Chains(t.Name())
-require.NoError(t, err)
-gaia, osmosis := chains[0], chains[1]
-
-gaiaRPC := gaia.GetGRPCAddress()
-osmosisRPC := osmosis.GetGRPCAddress()
+gaiaValidators := int(4)
+gaiaFullnodes := int(2)
+cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+    {Name: "gaia", ChainName: "gaia", Version: "v7.0.2", NumValidators: &gaiaValidators, NumFullNodes: &gaiaFullnodes},
+})
 ```
 
-Here we create new funded wallets(users) for both chains. Note that there is also the option to restore a wallet (`ibctest.GetAndFundTestUserWithMnemonic`)
-```go
-gaiaUser, osmoUser := ibctest.GetAndFundTestUsers(t, ctx, "key1", 10_000_000, gaia, osmosis)
-```
 
 ## Relayer Factory
 
-The relayer factory is where docker images with relayers are created. Here we create an image with the [Golang Relayer](https://github.com/cosmos/relayer)
+The relayer factory is where relayer docker images are configured. 
+Here we prep an image with the [Golang Relayer](https://github.com/cosmos/relayer)
 
 ```go
 client, network := ibctest.DockerSetup(t)
@@ -133,7 +154,7 @@ r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build
 
 ## Interchain
 
-This is where all initial IBC transactions are made and where chains are linked.
+This is where docker containers are built and all initial IBC transactions and links are made.
 
 We prep the "interchain" here:
 
@@ -152,17 +173,11 @@ ic := ibctest.NewInterchain().
     })
 ```
 
-And initiate the build below. Note that the `Build` function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. This functionality is discussed ##HERE.
+And initiate the build below. Note that the `Build` function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. This functionality is discussed ##HERE. The `RelayerExecReporter` statisfies the reporter requirment. 
 
-If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
-
+Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
 
 ```go
-wd, err := os.Getwd()
-require.NoError(t, err)
-f, err := os.Create(filepath.Join(wd, "ibcTest_logs", fmt.Sprintf("%d.json", time.Now().Unix())))
-require.NoError(t, err)
-
 rep := testreporter.NewReporter(f)
 eRep := rep.RelayerExecReporter(t)
 require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
@@ -189,6 +204,60 @@ r1.CreateChannel(ctx, eRep, ibcPath, ibc.CreateChannelOptions{
 })
 ```
 
+
+
+
+
+
+
+
+
+Once you configure your `ChainFactory`, You interact with each binary. 
+
+For example, getting the RPC address:
+
+```go
+chains, err := cf.Chains(t.Name())
+require.NoError(t, err)
+gaia, osmosis := chains[0], chains[1]
+
+gaiaRPC := gaia.GetGRPCAddress()
+osmosisRPC := osmosis.GetGRPCAddress()
+```
+
+Here we create new funded wallets(users) for both chains. Note that there is also the option to restore a wallet (`ibctest.GetAndFundTestUserWithMnemonic`)
+```go
+gaiaUser, osmoUser := ibctest.GetAndFundTestUsers(t, ctx, "key1", 10_000_000, gaia, osmosis)
+```
+
+
+
+
+
+
+## WIP RESEARCH: 
+Would you use `cosmos.NewCosmosChain` instead oc `chainFactory` if you only need to initialize and start one chain?
+https://github.com/strangelove-ventures/ibctest/blob/andrew/upgrade_test/examples/upgrade_test.go
+```go
+	ctx := context.Background()
+
+	home := ibctest.TempDir(t)
+	client, network := ibctest.DockerSetup(t)
+
+	cfg, err := ibctest.BuiltinChainConfig(chainName)
+	require.NoError(t, err)
+
+	cfg.Images[0].Version = initialVersion
+	cfg.ChainID = "chain-1"
+
+	chain := cosmos.NewCosmosChain(t.Name(), cfg, 4, 1, zaptest.NewLogger(t))
+
+	err = chain.Initialize(t.Name(), home, client, network, ibc.HaltHeight(haltHeight))
+	require.NoError(t, err, "error initializing chain")
+
+	err = chain.Start(t.Name(), ctx)
+	require.NoError(t, err, "error starting chain")
+```
 
 
 ## Transaction Example
