@@ -35,7 +35,7 @@ type Interchain struct {
 
 	// Map of relayer-chain pairs to address and mnemonic, set during Build().
 	// Not yet exposed through any exported API.
-	relayerWallets map[relayerChain]ibc.RelayerWallet
+	relayerWallets map[relayerChain]ibc.Wallet
 
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
@@ -321,7 +321,7 @@ func (ic *Interchain) generateRelayerWallets() {
 	kr := keyring.NewInMemory(cdc)
 
 	relayerChains := ic.relayerChains()
-	ic.relayerWallets = make(map[relayerChain]ibc.RelayerWallet, len(relayerChains))
+	ic.relayerWallets = make(map[relayerChain]ibc.Wallet, len(relayerChains))
 	for r, chains := range relayerChains {
 		for _, c := range chains {
 			// Just an ephemeral unique name, only for the local use of the keyring.
@@ -373,7 +373,7 @@ type relayerChain struct {
 	C ibc.Chain
 }
 
-func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.RelayerWallet {
+func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
 	// NOTE: this is hardcoded to the cosmos coin type.
 	// In the future, we may need to get the coin type from the chain config.
 	const coinType = types.CoinType
@@ -394,7 +394,7 @@ func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 		panic(fmt.Errorf("failed to get address: %w", err))
 	}
 
-	return ibc.RelayerWallet{
+	return ibc.Wallet{
 		Address: types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
 
 		Mnemonic: mnemonic,

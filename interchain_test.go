@@ -121,8 +121,8 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	}))
 
 	var (
-		g1Wallet    ibc.RelayerWallet
-		g2Wallet    ibc.RelayerWallet
+		g1Wallet    ibc.Wallet
+		g2Wallet    ibc.Wallet
 		walletFound bool
 	)
 
@@ -206,7 +206,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		user := ibctest.GetAndFundTestUserWithMnemonic(t, ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
-		require.NotEmpty(t, user.Address)
+		require.NotEqual(t, "", user.Address)
 		require.NotEmpty(t, user.KeyName)
 
 		actualBalance, err := gaia0.GetBalance(ctx, user.Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)

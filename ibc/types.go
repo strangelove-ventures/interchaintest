@@ -1,6 +1,9 @@
 package ibc
 
-import ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
+import (
+	"github.com/cosmos/cosmos-sdk/types"
+	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
+)
 
 type ChainConfig struct {
 	Type           string
@@ -138,9 +141,18 @@ type ConnectionOutput struct {
 
 type ConnectionOutputs []*ConnectionOutput
 
-type RelayerWallet struct {
+type Wallet struct {
 	Mnemonic string `json:"mnemonic"`
 	Address  string `json:"address"`
+	KeyName  string
+}
+
+func (w *Wallet) GetKeyName() string {
+	return w.KeyName
+}
+
+func (w *Wallet) Bech32Address(bech32Prefix string) string {
+	return types.MustBech32ifyAddressBytes(bech32Prefix, []byte(w.Address))
 }
 
 type RelayerImplementation int64
