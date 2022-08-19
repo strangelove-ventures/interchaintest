@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -197,6 +198,31 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
 	}
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
+
+	return tx, nil
+}
+
+// Implements Chain interface
+func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.SoftwareUpgradeTx, _ error) {
+	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
+	}
+	txResp, err := c.getTransaction(txHash)
+	if err != nil {
+		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+	tx.Height = uint64(txResp.Height)
+	tx.TxHash = txHash
+	// In cosmos, user is charged for entire gas requested, not the actual gas used.
+	tx.GasSpent = txResp.GasWanted
+	events := txResp.Events
+
+	tx.DepositAmount, _ = tendermint.AttributeValue(events, "proposal_deposit", "amount")
+
+	evtSubmitProp := "submit_proposal"
+	tx.ProposalID, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_id")
+	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
 
 	return tx, nil
 }
@@ -413,6 +439,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// sign gentx for each validator
 	for _, v := range validators {
 		v := v
+		v.Validator = true
 		eg.Go(func() error {
 			return v.InitValidatorFiles(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation, haltHeight)
 		})
@@ -421,6 +448,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// just initialize folder for any full nodes
 	for _, n := range fullnodes {
 		n := n
+		n.Validator = false
 		eg.Go(func() error { return n.InitFullNodeFiles(ctx) })
 	}
 
@@ -464,7 +492,20 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	for _, cn := range c.ChainNodes[1:] {
+	if c.cfg.ModifyGenesis != nil {
+		genbz, err = c.cfg.ModifyGenesis(genbz)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Provide EXPORT_GENESIS_FILE_PATH to help debug genesis file
+	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
+	if exportGenesis != "" {
+		_ = os.WriteFile(exportGenesis, genbz, 0600)
+	}
+
+	for _, cn := range c.ChainNodes {
 		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
@@ -595,4 +636,48 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return c.getFullNode().FindTxs(ctx, height)
+}
+
+// StopAllNodes stops and removes all long running containers (validators and full nodes)
+func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, n := range c.ChainNodes {
+		n := n
+		eg.Go(func() error {
+			if err := n.StopContainer(ctx); err != nil {
+				return err
+			}
+			return n.RemoveContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+// StartAllNodes creates and starts new containers for each node.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, n := range c.ChainNodes {
+		n := n
+		eg.Go(func() error {
+			if err := n.CreateNodeContainer(ctx); err != nil {
+				return err
+			}
+			return n.StartContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
+	var eg errgroup.Group
+	for _, n := range c.ChainNodes {
+		if n.Validator {
+			n := n
+			eg.Go(func() error {
+				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
+			})
+		}
+	}
+	return eg.Wait()
 }

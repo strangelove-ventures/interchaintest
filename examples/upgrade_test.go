@@ -2,80 +2,104 @@ package ibctest_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	"golang.org/x/sync/errgroup"
 )
 
-const haltHeight = uint64(10)
-const blocksAfterUpgrade = uint64(10)
+const (
+	haltHeight         = uint64(30)
+	blocksAfterUpgrade = uint64(10)
+	votingPeriod       = "10s"
+)
 
-func testCosmosChainUpgrade(t *testing.T, chainName, initialVersion, upgradeVersion string) {
-	ctx := context.Background()
+func TestJunoUpgrade(t *testing.T) {
+	TestCosmosChainUpgrade(t, "juno", "v6.0.0", "v7.0.0")
+}
 
-	client, network := ibctest.DockerSetup(t)
+func TestCosmosChainUpgrade(t *testing.T, chainName, initialVersion, upgradeVersion string) {
+	if testing.Short() {
+		t.Skip()
+	}
 
-	cfg, err := ibctest.BuiltinChainConfig(chainName)
+	t.Parallel()
+
+	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+		{
+			Name:          chainName,
+			ChainName:     chainName,
+			Version:       initialVersion,
+			ModifyGenesis: modifyGenesisVotingPeriod(votingPeriod),
+		},
+	})
+
+	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	cfg.Images[0].Version = initialVersion
-	cfg.ChainID = "chain-1"
+	chain := chains[0].(*cosmos.CosmosChain)
 
-	chain := cosmos.NewCosmosChain(t.Name(), cfg, 4, 1, zaptest.NewLogger(t))
+	ic := ibctest.NewInterchain().
+		AddChain(chain)
 
-	err = chain.Initialize(ctx, t.Name(), client, network, ibc.HaltHeight(haltHeight))
-	require.NoError(t, err, "error initializing chain")
+	ctx := context.Background()
+	client, network := ibctest.DockerSetup(t)
 
-	err = chain.Start(t.Name(), ctx)
-	require.NoError(t, err, "error starting chain")
+	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation:  true,
+	}))
 
-	// TODO make upgrade proposal
+	const userFunds = int64(10_000_000_000)
+	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
+	chainUser := users[0]
+
+	proposal := ibc.SoftwareUpgradeProposal{
+		Deposit:     "500000000" + chain.Config().Denom,
+		Title:       "Chain Upgrade 1",
+		Name:        "chain-upgrade",
+		Description: "First chain software upgrade",
+		Height:      haltHeight,
+	}
+
+	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
+	require.NoError(t, err, "error submitting software upgrade proposal tx")
+
+	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
+	require.NoError(t, err, "failed to submit votes")
 
 	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
-	err = test.WaitForBlocks(timeoutCtx, int(haltHeight)+1, chain)
+	height, err := chain.Height(ctx)
+	require.NoError(t, err, "error fetching height before upgrade")
+
+	err = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 	require.Error(t, err, "chain did not halt at halt height")
 
-	height, err := chain.Height(ctx)
+	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after halt")
 
 	require.Equal(t, haltHeight, height, "height is not equal to halt height")
 
-	var eg errgroup.Group
-	for _, n := range chain.ChainNodes {
-		n := n
-		eg.Go(func() error {
-			if err := n.StopContainer(ctx); err != nil {
-				return err
-			}
-			return n.RemoveContainer(ctx)
-		})
-	}
-	require.NoError(t, eg.Wait(), "error stopping node(s)")
+	err = chain.StopAllNodes(ctx)
+	require.NoError(t, err, "error stopping node(s)")
 
 	chain.UpgradeVersion(ctx, client, upgradeVersion)
 
-	for _, n := range chain.ChainNodes {
-		n := n
-		eg.Go(func() error {
-			if err := n.SetHaltHeight(ctx, 0); err != nil {
-				return err
-			}
-			if err := n.CreateNodeContainer(ctx); err != nil {
-				return err
-			}
-			return n.StartContainer(ctx)
-		})
-	}
-	require.NoError(t, eg.Wait(), "error starting upgraded node(s)")
+	err = chain.StartAllNodes(ctx)
+	require.NoError(t, err, "error starting upgraded node(s)")
 
 	timeoutCtx, timeoutCtxCancel = context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
@@ -86,9 +110,22 @@ func testCosmosChainUpgrade(t *testing.T, chainName, initialVersion, upgradeVers
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after upgrade")
 
-	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height is not ")
+	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
 }
 
-func TestJunoUpgrade(t *testing.T) {
-	testCosmosChainUpgrade(t, "juno", "v6.0.0", "v7.0.0")
+func modifyGenesisVotingPeriod(votingPeriod string) func([]byte) ([]byte, error) {
+	return func(genbz []byte) ([]byte, error) {
+		g := make(map[string]interface{})
+		if err := json.Unmarshal(genbz, &g); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
+		}
+		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		out, err := json.Marshal(g)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+		}
+		return out, nil
+	}
 }

@@ -59,6 +59,9 @@ type Chain interface {
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
 
+	// UpgradeProposal submits a software-upgrade proposal to the chain.
+	UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (SoftwareUpgradeTx, error)
+
 	// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
 	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
 

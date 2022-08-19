@@ -409,7 +409,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	return err
 }
 
-type IBCTransferTx struct {
+type CosmosTx struct {
 	TxHash string `json:"txhash"`
 }
 
@@ -443,7 +443,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
-	output := IBCTransferTx{}
+	output := CosmosTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
 	return output.TxHash, err
 }
@@ -618,15 +618,66 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return tn.ExecThenWaitForBlocks(ctx, command)
 }
 
-// TODO use dazzle or read/write config from go with go-toml or BurntSushi/toml
-func (tn *ChainNode) SetHaltHeight(ctx context.Context, height uint64) error {
-	command := []string{
-		"sed", "-i",
-		fmt.Sprintf("/^halt-height = .*/ s//halt-height = \"%d\"/", height),
-		filepath.Join(tn.HomeDir(), "config", "app.toml"),
+// VoteOnProposal submits a vote for the specified proposal.
+func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "gov", "vote",
+		proposalID, vote,
+		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
+		"-y",
+		"--home", tn.HomeDir(),
+		"--chain-id", tn.Chain.Config().ChainID,
 	}
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
+}
+
+// UpgradeProposal submits a software-upgrade proposal to the chain.
+func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "gov", "submit-proposal",
+		"software-upgrade", prop.Name,
+		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--title", prop.Title,
+		"--description", prop.Description,
+		"--deposit", prop.Deposit,
+	}
+
+	if prop.Info != "" {
+		command = append(command, "--upgrade-info", prop.Info)
+	}
+
+	command = append(command,
+		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
+		"-y",
+		"--home", tn.HomeDir(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+	stdout, _, err := tn.Exec(ctx, command, nil)
+	if err != nil {
+		return "", err
+	}
+	err = test.WaitForBlocks(ctx, 2, tn)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
+	}
+	output := CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	return output.TxHash, err
 }
 
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
@@ -808,11 +859,6 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	if haltHeight != 0 {
-		if err := tn.SetHaltHeight(ctx, haltHeight); err != nil {
-			return err
-		}
-	}
 	bech32, err := tn.KeyBech32(ctx, valKey)
 	if err != nil {
 		return err
@@ -937,7 +983,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 	if err != nil {
 		return "", err
 	}
-	output := IBCTransferTx{}
+	output := CosmosTx{}
 	err = yaml.Unmarshal([]byte(stdout), &output)
 	if err != nil {
 		return "", err

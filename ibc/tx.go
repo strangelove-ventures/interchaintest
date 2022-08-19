@@ -32,3 +32,27 @@ func (tx Tx) Validate() error {
 	}
 	return multierr.Append(err, tx.Packet.Validate())
 }
+
+const (
+	ProposalVoteYes        = "yes"
+	ProposalVoteNo         = "no"
+	ProposalVoteNoWithVeto = "noWithVeto"
+	ProposalVoteAbstain    = "abstain"
+)
+
+// SoftwareUpgradeTx is a generalized IBC transaction.
+type SoftwareUpgradeTx struct {
+	// The block height.
+	Height uint64
+	// The transaction hash.
+	TxHash string
+	// Amount of gas charged to the account.
+	GasSpent int64
+
+	// Amount deposited for proposal.
+	DepositAmount string
+	// ID of proposal.
+	ProposalID string
+	// Type of proposal.
+	ProposalType string
+}
