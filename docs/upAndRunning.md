@@ -124,6 +124,7 @@ The `Build` function below spins everything up. Note that this function takes a 
 
 Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
 
+
 ```go
 rep := testreporter.NewReporter(f)
 eRep := rep.RelayerExecReporter(t)
@@ -137,13 +138,13 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 ```
 
 Upon calling build, several things happen (specifically for cosmos based chains):
-    - genesis for each chain takes place
-    - each validator gets 2 trillion units of "stake"
-        - 1 trillion "stake" are staked
-        - 100 billion "stake" are self delegated
-    - each chain gets a faucet address (key named "faucet") with 10 billion units of denom
-    - the realyer wallet gets 1 billion units of each chains denom #HELP! Does the faucet fund relayer wallets? Is the faucet wallet reachable via the API?
-    - IBC paths are created: `client`, `connection`, `channel` for each link
+- genesis for each chain takes place
+- each validator gets 2 trillion units of "stake"
+    - 1 trillion "stake" are staked
+    - 100 billion "stake" are self delegated
+- each chain gets a faucet address (key named "faucet") with 10 billion units of denom
+- the realyer wallet gets 1 billion units of each chains denom #HELP! Does the faucet fund relayer wallets? Is the faucet wallet reachable via the API?
+- IBC paths are created: `client`, `connection`, `channel` for each link
     
     
 Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
