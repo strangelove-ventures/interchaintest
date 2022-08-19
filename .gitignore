@@ -6,3 +6,5 @@ ibctest.test
 
 #GoLand project directory
 .idea/
+
+.vscode/
