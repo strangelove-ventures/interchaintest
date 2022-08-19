@@ -102,7 +102,7 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string, opts ...ibc.ChainOption) error {
+func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 

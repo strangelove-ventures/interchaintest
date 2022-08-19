@@ -34,7 +34,6 @@ type CosmosChain struct {
 	numValidators int
 	numFullNodes  int
 	ChainNodes    ChainNodes
-	opts          []ibc.ChainOption
 
 	log *zap.Logger
 }
@@ -81,8 +80,7 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface
-func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string, opts ...ibc.ChainOption) error {
-	c.opts = opts
+func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
@@ -426,22 +424,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	validators := c.ChainNodes[:c.numValidators]
 	fullnodes := c.ChainNodes[c.numValidators:]
 
-	haltHeight := uint64(0)
-
-	for _, opt := range c.opts {
-		switch o := opt.(type) {
-		case ibc.ChainOptionHaltHeight:
-			haltHeight = o.Height
-		}
-	}
-
 	eg := new(errgroup.Group)
 	// sign gentx for each validator
 	for _, v := range validators {
 		v := v
 		v.Validator = true
 		eg.Go(func() error {
-			return v.InitValidatorFiles(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation, haltHeight)
+			return v.InitValidatorFiles(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
 		})
 	}
 

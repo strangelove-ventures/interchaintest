@@ -851,7 +851,6 @@ func (tn *ChainNode) InitValidatorFiles(
 	chainType *ibc.ChainConfig,
 	genesisAmounts []types.Coin,
 	genesisSelfDelegation types.Coin,
-	haltHeight uint64,
 ) error {
 	if err := tn.InitHomeFolder(ctx); err != nil {
 		return err

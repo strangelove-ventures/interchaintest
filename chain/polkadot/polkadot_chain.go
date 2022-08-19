@@ -106,7 +106,7 @@ func (c *PolkadotChain) Config() ibc.ChainConfig {
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
 // Implements Chain interface.
-func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string, opts ...ibc.ChainOption) error {
+func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	relayChainNodes := []*RelayChainNode{}
 	chainCfg := c.Config()
 	images := []ibc.DockerImage{}
