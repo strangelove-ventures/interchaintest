@@ -23,10 +23,10 @@ const (
 )
 
 func TestJunoUpgrade(t *testing.T) {
-	TestCosmosChainUpgrade(t, "juno", "v6.0.0", "v7.0.0")
+	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v7.0.0")
 }
 
-func TestCosmosChainUpgrade(t *testing.T, chainName, initialVersion, upgradeVersion string) {
+func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string) {
 	if testing.Short() {
 		t.Skip()
 	}
