@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
 	"github.com/stretchr/testify/require"
@@ -51,9 +53,11 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1, chain2 := chains[0], chains[1]
 
 	// Get a relayer instance
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network,
-	)
+	r := ibctest.NewBuiltinRelayerFactory(
+		ibc.CosmosRly,
+		zaptest.NewLogger(t),
+		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
+	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
 	const pathName = "test-path"
@@ -70,11 +74,11 @@ func TestInterchainAccounts(t *testing.T) {
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
-
-		SkipPathCreation: true,
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
+		SkipPathCreation:  true,
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(), // TODO remove this before merging
 	}))
 
 	// Fund a user account on chain1 and chain2
@@ -83,7 +87,7 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1User := users[0]
 	chain2User := users[1]
 
-	// Generate a new path
+	// Generate a new IBC path
 	err = r.GeneratePath(ctx, eRep, chain1.Config().ChainID, chain2.Config().ChainID, pathName)
 	require.NoError(t, err)
 
@@ -110,7 +114,7 @@ func TestInterchainAccounts(t *testing.T) {
 	host := strings.Split(chain1.GetRPCAddress(), "//")[1]
 	nodeAddr := fmt.Sprintf("tcp://%s", host)
 
-	// Register a new interchain account on behalf of the user acc on chain1
+	// Register a new interchain account on chain2, on behalf of the user acc on chain1
 	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
 
 	registerICA := []string{
@@ -153,14 +157,8 @@ func TestInterchainAccounts(t *testing.T) {
 	stdout, _, err := chain1.Exec(ctx, queryICA, nil)
 	require.NoError(t, err)
 
-	// At this point stdout should look like this
-	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
-	// we split the string at the : and then grab the address.
-	parts := strings.SplitN(string(stdout), ":", 2)
-	require.Equal(t, 2, len(parts))
-
-	icaAddr := strings.TrimSpace(parts[1])
-	require.NotEqual(t, "", icaAddr)
+	icaAddr := parseInterchainAccountField(stdout)
+	require.NotEmpty(t, icaAddr)
 
 	// Get initial account balances
 	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
@@ -179,6 +177,7 @@ func TestInterchainAccounts(t *testing.T) {
 		Amount:  transferAmount,
 	}
 	err = chain2.SendFunds(ctx, chain2User.KeyName, transfer)
+	require.NoError(t, err)
 
 	// Wait for transfer to be complete and assert balances
 	err = test.WaitForBlocks(ctx, 5, chain2)
@@ -233,4 +232,67 @@ func TestInterchainAccounts(t *testing.T) {
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, icaOrigBal, icaBal)
+
+	// Stop the relayer and wait for the process to terminate
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	require.NoError(t, err)
+
+	// Send another bank transfer msg to ICA on chain2 from the user account on chain1.
+	// This message should timeout and the channel will be closed when we re-start the relayer.
+	_, _, err = chain1.Exec(ctx, sendICATransfer, nil)
+	require.NoError(t, err)
+
+	// Wait for approximately one minute to allow packet timeout threshold to be hit
+	time.Sleep(180 * time.Second)
+
+	// Restart the relayer and wait for NextSeqRecv proof to be delivered and packet timed out
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
+	require.NoError(t, err)
+
+	// Assert that the packet timed out and that the acc balances are correct
+	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, chain2OrigBal, chain2Bal)
+
+	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, icaOrigBal, icaBal)
+
+	// Assert that the channel ends are both closed
+	chain1Chans, err := r.GetChannels(ctx, eRep, chain1.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, "STATE_CLOSED", chain1Chans[0].State)
+
+	chain2Chans, err := r.GetChannels(ctx, eRep, chain2.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, "STATE_CLOSED", chain2Chans[0].State)
+
+	// Attempt to open another channel for the same ICA
+	_, _, err = chain1.Exec(ctx, registerICA, nil)
+	require.NoError(t, err)
+
+	// Wait for channel handshake to finish
+	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
+	require.NoError(t, err)
+
+	// Assert that the channel has been opened and the same ICA is in use
+	stdout, _, err = chain1.Exec(ctx, queryICA, nil)
+	require.NoError(t, err)
+}
+
+// parseInterchainAccountField takes a slice of bytes which should be returned when querying for an ICA via
+// the 'intertx interchainaccounts' cmd and splices out the actual address portion.
+func parseInterchainAccountField(stdout []byte) string {
+	// After querying an ICA the stdout should look like the following,
+	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
+	// So we split the string at the : and then grab the address and return.
+	parts := strings.SplitN(string(stdout), ":", 2)
+	icaAddr := strings.TrimSpace(parts[1])
+	return icaAddr
 }
