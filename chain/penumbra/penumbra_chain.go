@@ -170,33 +170,33 @@ func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
+func (c *PenumbraChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
+	panic("implement me")
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	// NOOP
-	return "", errors.New("not yet implemented")
+	panic("implement me")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	// NOOP
-	return errors.New("not yet implemented")
+	panic("implement me")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	// NOOP
-	return nil, errors.New("not yet implemented")
+	panic("implement me")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
-	return "", errors.New("not yet implemented")
+	panic("implement me")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	// NOOP
-	return errors.New("not yet implemented")
+	panic("implement me")
 }
 
 func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
@@ -205,7 +205,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	return -1, errors.New("not yet implemented")
+	panic("implement me")
 }
 
 // Implements Chain interface

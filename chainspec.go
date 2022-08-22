@@ -31,6 +31,8 @@ type ChainSpec struct {
 	GasAdjustment *float64
 	NoHostMount   *bool
 
+	ModifyGenesis func([]byte) ([]byte, error)
+
 	// Embedded ChainConfig to allow for simple JSON definition of a ChainSpec.
 	ibc.ChainConfig
 
@@ -107,6 +109,9 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	}
 	if s.NoHostMount != nil {
 		cfg.NoHostMount = *s.NoHostMount
+	}
+	if s.ModifyGenesis != nil {
+		cfg.ModifyGenesis = s.ModifyGenesis
 	}
 
 	// Set the version depending on the chain type.

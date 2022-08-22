@@ -20,9 +20,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
@@ -407,7 +409,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	return err
 }
 
-type IBCTransferTx struct {
+type CosmosTx struct {
 	TxHash string `json:"txhash"`
 }
 
@@ -441,7 +443,7 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
-	output := IBCTransferTx{}
+	output := CosmosTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
 	return output.TxHash, err
 }
@@ -616,6 +618,68 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return tn.ExecThenWaitForBlocks(ctx, command)
 }
 
+// VoteOnProposal submits a vote for the specified proposal.
+func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "gov", "vote",
+		proposalID, vote,
+		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
+		"-y",
+		"--home", tn.HomeDir(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+	_, _, err := tn.Exec(ctx, command, nil)
+	return err
+}
+
+// UpgradeProposal submits a software-upgrade proposal to the chain.
+func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
+	command := []string{tn.Chain.Config().Bin,
+		"tx", "gov", "submit-proposal",
+		"software-upgrade", prop.Name,
+		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--title", prop.Title,
+		"--description", prop.Description,
+		"--deposit", prop.Deposit,
+	}
+
+	if prop.Info != "" {
+		command = append(command, "--upgrade-info", prop.Info)
+	}
+
+	command = append(command,
+		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--keyring-backend", keyring.BackendTest,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
+		"-y",
+		"--home", tn.HomeDir(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+	stdout, _, err := tn.Exec(ctx, command, nil)
+	if err != nil {
+		return "", err
+	}
+	err = test.WaitForBlocks(ctx, 2, tn)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
+	}
+	output := CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	return output.TxHash, err
+}
+
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
 	command := []string{tn.Chain.Config().Bin,
 		"query", "wasm", "contract-state", "all", contractAddress,
@@ -686,16 +750,18 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	if chainCfg.NoHostMount {
 		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
 	}
+	imageRef := tn.Image.Ref()
 	tn.logger().
 		Info("Running command",
 			zap.String("command", strings.Join(cmd, " ")),
 			zap.String("container", tn.Name()),
+			zap.String("image", imageRef),
 		)
 
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: tn.Image.Ref(),
+			Image: imageRef,
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
@@ -763,6 +829,22 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
+func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	timeout := 30 * time.Second
+	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+}
+
+func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
+	err := tn.DockerClient.ContainerRemove(ctx, tn.containerID, dockertypes.ContainerRemoveOptions{
+		Force:         true,
+		RemoveVolumes: true,
+	})
+	if err != nil && !errdefs.IsNotFound(err) {
+		return fmt.Errorf("remove container %s: %w", tn.Name(), err)
+	}
+	return nil
+}
+
 // InitValidatorFiles creates the node files and signs a genesis transaction
 func (tn *ChainNode) InitValidatorFiles(
 	ctx context.Context,
@@ -776,7 +858,6 @@ func (tn *ChainNode) InitValidatorFiles(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-
 	bech32, err := tn.KeyBech32(ctx, valKey)
 	if err != nil {
 		return err
@@ -901,7 +982,7 @@ func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID stri
 	if err != nil {
 		return "", err
 	}
-	output := IBCTransferTx{}
+	output := CosmosTx{}
 	err = yaml.Unmarshal([]byte(stdout), &output)
 	if err != nil {
 		return "", err

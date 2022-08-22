@@ -563,6 +563,12 @@ func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	panic("not implemented yet")
 }
 
+// UpgradeProposal submits a software-upgrade proposal to the chain.
+// Implements Chain interface.
+func (c *PolkadotChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
+	panic("implement me")
+}
+
 // InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
 // Implements Chain interface.
 func (c *PolkadotChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
