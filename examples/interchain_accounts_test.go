@@ -3,7 +3,6 @@ package ibctest
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -74,11 +73,10 @@ func TestInterchainAccounts(t *testing.T) {
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		SkipPathCreation:  true,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(), // TODO remove this before merging
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: true,
 	}))
 
 	// Fund a user account on chain1 and chain2
@@ -110,10 +108,6 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(connections))
 
-	// Not really great, consider exposing a function for retrieving a nodes addr like below
-	host := strings.Split(chain1.GetRPCAddress(), "//")[1]
-	nodeAddr := fmt.Sprintf("tcp://%s", host)
-
 	// Register a new interchain account on chain2, on behalf of the user acc on chain1
 	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
 
@@ -123,7 +117,7 @@ func TestInterchainAccounts(t *testing.T) {
 		"--connection-id", connections[0].ID,
 		"--chain-id", chain1.Config().ChainID,
 		"--home", chain1.HomeDir(),
-		"--node", nodeAddr,
+		"--node", chain1.GetRPCAddress(),
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
@@ -152,7 +146,7 @@ func TestInterchainAccounts(t *testing.T) {
 		chain1.Config().Bin, "query", "intertx", "interchainaccounts", connections[0].ID, chain1Addr,
 		"--chain-id", chain1.Config().ChainID,
 		"--home", chain1.HomeDir(),
-		"--node", nodeAddr,
+		"--node", chain1.GetRPCAddress(),
 	}
 	stdout, _, err := chain1.Exec(ctx, queryICA, nil)
 	require.NoError(t, err)
@@ -212,7 +206,7 @@ func TestInterchainAccounts(t *testing.T) {
 		"--from", chain1Addr,
 		"--chain-id", chain1.Config().ChainID,
 		"--home", chain1.HomeDir(),
-		"--node", nodeAddr,
+		"--node", chain1.GetRPCAddress(),
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
@@ -246,7 +240,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for approximately one minute to allow packet timeout threshold to be hit
-	time.Sleep(180 * time.Second)
+	time.Sleep(70 * time.Second)
 
 	// Restart the relayer and wait for NextSeqRecv proof to be delivered and packet timed out
 	err = r.StartRelayer(ctx, eRep, pathName)
