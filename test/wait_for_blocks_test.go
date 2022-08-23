@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +20,18 @@ func (m *mockChainHeighter) Height(ctx context.Context) (uint64, error) {
 		panic("nil context")
 	}
 	atomic.AddInt64(&m.CurHeight, 1)
+	return uint64(m.CurHeight), m.Err
+}
+
+type mockChainHeighterFixed struct {
+	CurHeight int64
+	Err       error
+}
+
+func (m *mockChainHeighterFixed) Height(ctx context.Context) (uint64, error) {
+	if ctx == nil {
+		panic("nil context")
+	}
 	return uint64(m.CurHeight), m.Err
 }
 
@@ -66,5 +79,56 @@ func TestWaitForBlocks(t *testing.T) {
 		require.NoError(t, err)
 		// Because 0 is always invalid height, we do not start testing for the delta until height > 0.
 		require.EqualValues(t, 2, chain.CurHeight)
+	})
+}
+
+func TestWaitForInSync(t *testing.T) {
+	t.Parallel()
+
+	t.Run("happy path", func(t *testing.T) {
+		var (
+			startHeightChain int64 = 10
+			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}
+			startHeightNode1 int64 = 5
+			node1                  = mockChainHeighter{CurHeight: startHeightNode1}
+			startHeightNode2 int64 = 3
+			node2                  = mockChainHeighter{CurHeight: startHeightNode2}
+		)
+
+		err := WaitForInSync(context.Background(), &chain, &node1, &node2)
+
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, node1.CurHeight, chain.CurHeight)
+		require.GreaterOrEqual(t, node2.CurHeight, chain.CurHeight)
+	})
+
+	t.Run("no nodes", func(t *testing.T) {
+		var (
+			startHeightChain int64 = 10
+			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}
+		)
+		require.Panics(t, func() {
+			_ = WaitForInSync(context.Background(), &chain)
+		})
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		var (
+			startHeightChain int64 = 10
+			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}
+			startHeightNode1 int64 = 5
+
+			// node1 will not increment
+			node1 = mockChainHeighterFixed{CurHeight: startHeightNode1}
+
+			startHeightNode2 int64 = 3
+			node2                  = mockChainHeighter{CurHeight: startHeightNode2}
+		)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		err := WaitForInSync(ctx, &chain, &node1, &node2)
+
+		require.Error(t, err)
 	})
 }

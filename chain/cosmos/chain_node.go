@@ -28,6 +28,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
@@ -118,7 +119,13 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
+	var nodeType string
+	if tn.Validator {
+		nodeType = "val"
+	} else {
+		nodeType = "fn"
+	}
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 // hostname of the test node container
@@ -187,38 +194,65 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
-func (tn *ChainNode) SetValidatorConfigAndPeers(ctx context.Context, peers string) error {
-	// Pull default config
-	cfg := tmconfig.DefaultConfig()
+// SetTestConfig modifies the config to reasonable values for use within ibctest.
+func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
+	c := make(configutil.Toml)
 
-	// change config to include everything needed
-	applyConfigChanges(cfg, peers)
+	// Set Log Level to info
+	c["log_level"] = "info"
 
-	// Unfortunately, the tmconfig package does not expose the config template directly.
-	// So we have to write the file to disk, then read it back and write it to the container.
-	tempF, err := os.CreateTemp("", "config-"+tn.Name()+"-*.toml")
-	if err != nil {
-		return fmt.Errorf("creating temporary config file: %w", err)
-	}
-	defer os.Remove(tempF.Name())
-	if err := tempF.Close(); err != nil {
-		return fmt.Errorf("closing temporary config file: %w", err)
-	}
+	p2p := make(configutil.Toml)
 
-	tmconfig.WriteConfigFile(tempF.Name(), cfg) // Panics on error.
+	// Allow p2p strangeness
+	p2p["allow_duplicate_ip"] = true
+	p2p["addr_book_strict"] = false
 
-	content, err := os.ReadFile(tempF.Name())
-	if err != nil {
-		return fmt.Errorf("reading temporary config file: %w", err)
-	}
+	c["p2p"] = p2p
 
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, "config/config.toml", content); err != nil {
-		return fmt.Errorf("overwriting config.toml: %w", err)
-	}
+	consensus := make(configutil.Toml)
 
-	return nil
+	blockT := (time.Duration(blockTime) * time.Second).String()
+	consensus["timeout_commit"] = blockT
+	consensus["timeout_propose"] = blockT
+
+	c["consensus"] = consensus
+
+	rpc := make(configutil.Toml)
+
+	// Enable public RPC
+	rpc["laddr"] = "tcp://0.0.0.0:26657"
+
+	c["rpc"] = rpc
+
+	return configutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/config.toml",
+		c,
+	)
+}
+
+// SetPeers modifies the config persistent_peers for a node
+func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
+	c := make(configutil.Toml)
+	p2p := make(configutil.Toml)
+
+	// Set peers
+	p2p["persistent_peers"] = peers
+	c["p2p"] = p2p
+
+	return configutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/config.toml",
+		c,
+	)
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
@@ -846,15 +880,12 @@ func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
-func (tn *ChainNode) InitValidatorFiles(
+func (tn *ChainNode) InitValidatorGenTx(
 	ctx context.Context,
 	chainType *ibc.ChainConfig,
 	genesisAmounts []types.Coin,
 	genesisSelfDelegation types.Coin,
 ) error {
-	if err := tn.InitHomeFolder(ctx); err != nil {
-		return err
-	}
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
@@ -869,7 +900,11 @@ func (tn *ChainNode) InitValidatorFiles(
 }
 
 func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
-	return tn.InitHomeFolder(ctx)
+	if err := tn.InitHomeFolder(ctx); err != nil {
+		return err
+	}
+
+	return tn.SetTestConfig(ctx)
 }
 
 // NodeID returns the persistent ID of a given node.

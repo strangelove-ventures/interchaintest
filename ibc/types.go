@@ -31,6 +31,8 @@ type ChainConfig struct {
 	NoHostMount bool
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func([]byte) ([]byte, error)
+	// Override config parameters for files at filepath.
+	ConfigFileOverrides map[string]any
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -78,6 +80,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.ModifyGenesis != nil {
 		c.ModifyGenesis = other.ModifyGenesis
+	}
+
+	if other.ConfigFileOverrides != nil {
+		c.ConfigFileOverrides = other.ConfigFileOverrides
 	}
 
 	return c

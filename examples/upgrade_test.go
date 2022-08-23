@@ -35,10 +35,12 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:          chainName,
-			ChainName:     chainName,
-			Version:       initialVersion,
-			ModifyGenesis: modifyGenesisVotingPeriod(votingPeriod),
+			Name:      chainName,
+			ChainName: chainName,
+			Version:   initialVersion,
+			ChainConfig: ibc.ChainConfig{
+				ModifyGenesis: modifyGenesisVotingPeriod(votingPeriod),
+			},
 		},
 	})
 
