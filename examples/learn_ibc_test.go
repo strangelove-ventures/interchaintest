@@ -15,6 +15,8 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// This test is meant to be used as a basic ibctest tutorial.
+// Code snippets are broken down in ./docs/upAndRunning.md
 func TestLearn(t *testing.T) {
 	ctx := context.Background()
 
@@ -72,7 +74,7 @@ func TestLearn(t *testing.T) {
 	fundAmount := 1_000
 	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia, osmosis)
 	gaiaUser := users[0]
-	// osmosisUser := users[1]
+	osmosisUser := users[1]
 
 	gaiaUserBal, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)
@@ -90,10 +92,12 @@ func TestLearn(t *testing.T) {
 	// Send Transaction
 	t.Run("send ibc transaction", func(t *testing.T) {
 		rep.TrackTest(t)
+		t.Log("osmosisUser.Bech32Address(gaia.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(gaia.Config().Bech32Prefix))
+		t.Log("osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
 		tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
-			Address: gaiaUser.Bech32Address(osmosis.Config().Bech32Prefix),
+			Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
 			Denom:   gaia.Config().Denom,
-			Amount:  int64(100),
+			Amount:  100,
 		},
 			nil,
 		)
