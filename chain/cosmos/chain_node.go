@@ -10,13 +10,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -30,6 +28,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	tmconfig "github.com/tendermint/tendermint/config"
@@ -195,71 +194,14 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// DecodedToml is used for holding the decoded state of a toml config file.
-type DecodedToml map[string]any
-
-// ModifyTomlConfigFile reads, modifies, then overwrites a toml config file, useful for config.toml, app.toml, etc.
-func (tn *ChainNode) ModifyTomlConfigFile(ctx context.Context, filePath string, modifications DecodedToml) error {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	config, err := fr.SingleFileContent(ctx, tn.VolumeName, filePath)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve %s: %w", filePath, err)
-	}
-
-	var c DecodedToml
-	if err := toml.Unmarshal(config, &c); err != nil {
-		return fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
-	}
-
-	for key, value := range modifications {
-		if reflect.ValueOf(value).Kind() == reflect.Map {
-			cV, ok := c[key]
-			if !ok {
-				// Did not find section in existing config, populating fresh.
-				cV = make(DecodedToml)
-			}
-			// Retrieve existing config to apply overrides to.
-			cVM, ok := cV.(map[string]any)
-			if !ok {
-				return fmt.Errorf("failed to convert section to (map[string]any), found (%T)", cV)
-			}
-			v := value.(DecodedToml)
-			for nestKey, nestVal := range v {
-				cVM[nestKey] = nestVal
-			}
-			c[key] = cVM
-		} else {
-			// Not a map, so we can set override value directly.
-			c[key] = value
-		}
-	}
-
-	buf := new(bytes.Buffer)
-	if err := toml.NewEncoder(buf).Encode(c); err != nil {
-		return err
-	}
-
-	debugCfg := os.Getenv("DEBUG_CONFIG")
-	if debugCfg != "" {
-		fmt.Printf("Modified toml config: %s:\n%s", filePath, buf.String())
-	}
-
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, filePath, buf.Bytes()); err != nil {
-		return fmt.Errorf("overwriting %s: %w", filePath, err)
-	}
-
-	return nil
-}
-
 // SetTestConfig modifies the config to reasonable values for use within ibctest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
-	c := make(DecodedToml)
+	c := make(configutil.Toml)
 
 	// Set Log Level to info
 	c["log_level"] = "info"
 
-	p2p := make(DecodedToml)
+	p2p := make(configutil.Toml)
 
 	// Allow p2p strangeness
 	p2p["allow_duplicate_ip"] = true
@@ -267,7 +209,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["p2p"] = p2p
 
-	consensus := make(DecodedToml)
+	consensus := make(configutil.Toml)
 
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensus["timeout_commit"] = blockT
@@ -275,26 +217,42 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["consensus"] = consensus
 
-	rpc := make(DecodedToml)
+	rpc := make(configutil.Toml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return tn.ModifyTomlConfigFile(ctx, "config/config.toml", c)
+	return configutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/config.toml",
+		c,
+	)
 }
 
 // SetPeers modifies the config persistent_peers for a node
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
-	c := make(DecodedToml)
-	p2p := make(DecodedToml)
+	c := make(configutil.Toml)
+	p2p := make(configutil.Toml)
 
 	// Set peers
 	p2p["persistent_peers"] = peers
 	c["p2p"] = p2p
 
-	return tn.ModifyTomlConfigFile(ctx, "config/config.toml", c)
+	return configutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/config.toml",
+		c,
+	)
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {

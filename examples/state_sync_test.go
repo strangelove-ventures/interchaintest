@@ -10,6 +10,7 @@ import (
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -31,10 +32,10 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	nf := 1
 
 	configFileOverrides := make(map[string]any)
-	appTomlOverrides := make(cosmos.DecodedToml)
+	appTomlOverrides := make(configutil.Toml)
 
 	// state sync snapshots every stateSyncSnapshotInterval blocks.
-	stateSync := make(cosmos.DecodedToml)
+	stateSync := make(configutil.Toml)
 	stateSync["snapshot-interval"] = stateSyncSnapshotInterval
 	appTomlOverrides["state-sync"] = stateSync
 
@@ -95,12 +96,13 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 
 	// Construct statesync parameters for new node to get in sync.
 	configFileOverrides = make(map[string]any)
-	configTomlOverrides := make(cosmos.DecodedToml)
+	configTomlOverrides := make(configutil.Toml)
 
 	// Set trusted parameters and rpc servers for verification.
-	stateSync = make(cosmos.DecodedToml)
+	stateSync = make(configutil.Toml)
 	stateSync["trust_hash"] = trustHash
 	stateSync["trust_height"] = trustHeight
+	// State sync requires minimum of two RPC servers for verification. We can provide the same RPC twice though.
 	stateSync["rpc_servers"] = fmt.Sprintf("tcp://%s:26657,tcp://%s:26657", firstFullNode.HostName(), firstFullNode.HostName())
 	configTomlOverrides["statesync"] = stateSync
 

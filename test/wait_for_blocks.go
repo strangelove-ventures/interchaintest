@@ -29,42 +29,50 @@ func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) erro
 	return eg.Wait()
 }
 
+// nodesInSync returns an error if the nodes are not in sync with the chain.
+func nodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter) error {
+	var chainHeight uint64
+	nodeHeights := make([]uint64, len(nodes))
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() (err error) {
+		chainHeight, err = chain.Height(egCtx)
+		return err
+	})
+	for i, n := range nodes {
+		i := i
+		n := n
+		eg.Go(func() (err error) {
+			nodeHeights[i], err = n.Height(egCtx)
+			return err
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	for _, h := range nodeHeights {
+		if h < chainHeight {
+			return fmt.Errorf("Node is not yet in sync: %d < %d", h, chainHeight)
+		}
+	}
+	// all nodes >= chainHeight
+	return nil
+}
+
 // WaitForInSync blocks until all nodes have heights greater than or equal to the chain height.
 func WaitForInSync(ctx context.Context, chain ChainHeighter, nodes ...ChainHeighter) error {
 	if len(nodes) == 0 {
 		panic("missing nodes")
 	}
-InSyncLoop:
 	for {
-		if ctx.Err() != nil {
-			return fmt.Errorf("timed out waiting for node(s) to be in sync: %w", ctx.Err())
-		}
-		var chainHeight uint64
-		nodeHeights := make([]uint64, len(nodes))
-		eg, egCtx := errgroup.WithContext(ctx)
-		eg.Go(func() (err error) {
-			chainHeight, err = chain.Height(egCtx)
-			return err
-		})
-		for i, n := range nodes {
-			i := i
-			n := n
-			eg.Go(func() (err error) {
-				nodeHeights[i], err = n.Height(egCtx)
-				return err
-			})
-		}
-		if err := eg.Wait(); err != nil {
-			return err
-		}
-		for _, h := range nodeHeights {
-			if h < chainHeight {
-				fmt.Printf("Node height %d is less than chain height %d\n", h, chainHeight)
-				continue InSyncLoop
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if err := nodesInSync(ctx, chain, nodes); err != nil {
+				continue
 			}
+			return nil
 		}
-		// all nodes >= chainHeight
-		return nil
 	}
 }
 

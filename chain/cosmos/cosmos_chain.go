@@ -20,6 +20,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
@@ -112,11 +113,19 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(DecodedToml)
+				modifiedToml, ok := modifiedConfig.(configutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := fn.ModifyTomlConfigFile(ctx, configFile, modifiedToml); err != nil {
+				if err := configutil.ModifyTomlConfigFile(
+					ctx,
+					fn.logger(),
+					fn.DockerClient,
+					fn.TestName,
+					fn.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
 					return err
 				}
 			}
@@ -517,11 +526,19 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(DecodedToml)
+				modifiedToml, ok := modifiedConfig.(configutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := v.ModifyTomlConfigFile(ctx, configFile, modifiedToml); err != nil {
+				if err := configutil.ModifyTomlConfigFile(
+					ctx,
+					v.logger(),
+					v.DockerClient,
+					v.TestName,
+					v.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
 					return err
 				}
 			}
@@ -538,11 +555,19 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(DecodedToml)
+				modifiedToml, ok := modifiedConfig.(configutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := n.ModifyTomlConfigFile(ctx, configFile, modifiedToml); err != nil {
+				if err := configutil.ModifyTomlConfigFile(
+					ctx,
+					n.logger(),
+					n.DockerClient,
+					n.TestName,
+					n.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
 					return err
 				}
 			}
