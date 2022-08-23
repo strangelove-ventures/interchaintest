@@ -20,8 +20,8 @@ func TestLearn(t *testing.T) {
 
 	// Chain Factory
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", ChainName: "gaia", Version: "v7.0.3"},
-		{Name: "osmosis", ChainName: "osmosis", Version: "v11.0.1"},
+		{Name: "gaia", Version: "v7.0.3"},
+		{Name: "osmosis", Version: "v11.0.1"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -72,9 +72,9 @@ func TestLearn(t *testing.T) {
 	fundAmount := 1_000
 	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia, osmosis)
 	gaiaUser := users[0]
-	osmosisUser := users[1]
+	// osmosisUser := users[1]
 
-	gaiaUserBal, err := gaia.GetBalance(ctx, string(gaiaUser.Address), gaia.Config().Denom)
+	gaiaUserBal, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)
 	t.Log("INITIAL BALANCE!!!!", gaiaUserBal)
 
@@ -89,10 +89,11 @@ func TestLearn(t *testing.T) {
 
 	// Send Transaction
 	t.Run("send ibc transaction", func(t *testing.T) {
+		rep.TrackTest(t)
 		tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
-			Address: string(osmosisUser.Address),
+			Address: gaiaUser.Bech32Address(osmosis.Config().Bech32Prefix),
 			Denom:   gaia.Config().Denom,
-			Amount:  1_000,
+			Amount:  int64(100),
 		},
 			nil,
 		)
@@ -102,23 +103,19 @@ func TestLearn(t *testing.T) {
 
 	// Relay Packet
 	t.Run("relay packet", func(t *testing.T) {
+		rep.TrackTest(t)
 		require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, gaiaChannelID))
 	})
 
 	// Relay Acknowledgement
 	t.Run("relay acknowledgement", func(t *testing.T) {
+		rep.TrackTest(t)
 		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, osmoChannelID))
 	})
 
-	gaiaUserBal, err = gaia.GetBalance(ctx, string(gaiaUser.Address), gaia.Config().Denom)
+	gaiaUserBal, err = gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)
 	t.Log("FINAL BALANCE!!!", gaiaUserBal)
-
-	// START RELAYER
-
-	// SEND IBC TX
-
-	// CONFIRM
 
 }
 

@@ -14,19 +14,26 @@ We'll use this test to break down code snippets and go into more detail about ex
 
 ```go
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    {Name: "gaia", ChainName: "gaia", Version: "v7.0.3"},
-    {Name: "osmosis", ChainName: "osmo", Version: "v11.0.1"},
+    {Name: "gaia", Version: "v7.0.3"},
+    {Name: "osmosis", Version: "v11.0.1"},
 })
 ```
 
 The chain factory is where you configure your chain binaries. 
 
-`ibctest` needs a docker image with the chain binary(s) of choice installed to spin up nodes. 
+`ibctest` needs a docker image with the chain binary(s) installed to spin up nodes. 
+
+To spin up tests quickly, IBCTest has several chains [pre-configured chains](LINK/HERE).
+
+The above code snippet is an example of using these pre-configured chains. Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner)  
+
+Note that these docker images for the pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner)(repository of docker images of many IBC enabled chains). 
+
 
 
 Its integration with [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains) makes this easy by simply passing in a `Name` and `Version` into the `ChainFactory`. 
 
-You can also pass in remote images AND local docker images. 
+You can also pass in remote images AND/OR local docker images. 
 
 See an example of each below:
 
@@ -78,7 +85,7 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 ```
 
 By default, `ibctest` will spin up a 3 docker images for each binary; 2 validator nodes, 1 full node. These settings can all be configured inside the `ChainSpec`.
-EXAMPLE: specifying validators and full nodes:
+EXAMPLE: Overrideing defaults for number of validators and full nodes:
 
 ```go
 gaiaValidators := int(4)
@@ -92,8 +99,10 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 ## Relayer Factory
 
 The relayer factory is where relayer docker images are configured. 
-Here we prep an image with the [Golang Relayer](https://github.com/cosmos/relayer)(CosmosRly)
 
+Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into IBCtest. 
+
+Here we prep an image with the Cosmos/Relayer:
 ```go
 client, network := ibctest.DockerSetup(t)
 r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
@@ -120,10 +129,7 @@ ic := ibctest.NewInterchain().
     })
 ```
 
-The `Build` function below spins everything up. Note that this function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. This functionality is discussed ##HERE. The `RelayerExecReporter` satisfies the reporter requirement. 
-
-Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
-
+The `Build` function below spins everything up.
 
 ```go
 rep := testreporter.NewReporter(f)
@@ -145,9 +151,15 @@ Upon calling build, several things happen (specifically for cosmos based chains)
 - each chain gets a faucet address (key named "faucet") with 10 billion units of denom
 - the realyer wallet gets 1 billion units of each chains denom #HELP! Does the faucet fund relayer wallets? Is the faucet wallet reachable via the API?
 - IBC paths are created: `client`, `connection`, `channel` for each link
+
+
+ Note that this function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. This functionality is discussed ##HERE. The `RelayerExecReporter` satisfies the reporter requirement. 
+
+Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
     
     
 Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
+
 
 Default `channel options` are:
 ```yaml
@@ -180,7 +192,7 @@ Note the `SkipPathCreation` boolean. You can set this to `true` if you would lik
 EXAMPLE: creating client manually with relayer: 
 
 ```go
-r.CreateClients(ctx, eRep, ibcPath)
+r.CreateClients(ctx, eRep, "my-path")
 ```
 
 Now that the interchain is built, you interact with each binary. 
@@ -210,7 +222,9 @@ osmosisUser := users[1]
 
 
 
+## Pre-Configured chains
 
+IBCtest has several pre-configured chains. This makes it easy to spin up tests 
 
 ## WIP RESEARCH: 
 Would you use `cosmos.NewCosmosChain` instead oc `chainFactory` if you only need to initialize and start one chain?
