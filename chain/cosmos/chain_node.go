@@ -10,11 +10,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -118,7 +120,13 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
+	var nodeType string
+	if tn.Validator {
+		nodeType = "val"
+	} else {
+		nodeType = "fn"
+	}
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 // hostname of the test node container
@@ -187,38 +195,106 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// SetValidatorConfigAndPeers modifies the config for a validator node to start a chain
-func (tn *ChainNode) SetValidatorConfigAndPeers(ctx context.Context, peers string) error {
-	// Pull default config
-	cfg := tmconfig.DefaultConfig()
+// DecodedToml is used for holding the decoded state of a toml config file.
+type DecodedToml map[string]any
 
-	// change config to include everything needed
-	applyConfigChanges(cfg, peers)
-
-	// Unfortunately, the tmconfig package does not expose the config template directly.
-	// So we have to write the file to disk, then read it back and write it to the container.
-	tempF, err := os.CreateTemp("", "config-"+tn.Name()+"-*.toml")
+// ModifyTomlConfigFile reads, modifies, then overwrites a toml config file, useful for config.toml, app.toml, etc.
+func (tn *ChainNode) ModifyTomlConfigFile(ctx context.Context, filePath string, modifications DecodedToml) error {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	config, err := fr.SingleFileContent(ctx, tn.VolumeName, filePath)
 	if err != nil {
-		return fmt.Errorf("creating temporary config file: %w", err)
-	}
-	defer os.Remove(tempF.Name())
-	if err := tempF.Close(); err != nil {
-		return fmt.Errorf("closing temporary config file: %w", err)
+		return fmt.Errorf("failed to retrieve %s: %w", filePath, err)
 	}
 
-	tmconfig.WriteConfigFile(tempF.Name(), cfg) // Panics on error.
+	var c DecodedToml
+	if err := toml.Unmarshal(config, &c); err != nil {
+		return fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
+	}
 
-	content, err := os.ReadFile(tempF.Name())
-	if err != nil {
-		return fmt.Errorf("reading temporary config file: %w", err)
+	for key, value := range modifications {
+		if reflect.ValueOf(value).Kind() == reflect.Map {
+			cV, ok := c[key]
+			if !ok {
+				// Did not find section in existing config, populating fresh.
+				cV = make(DecodedToml)
+			}
+			// Retrieve existing config to apply overrides to.
+			cVM, ok := cV.(map[string]any)
+			if !ok {
+				return fmt.Errorf("failed to convert section to (map[string]any), found (%T)", cV)
+			}
+			v := value.(DecodedToml)
+			for nestKey, nestVal := range v {
+				cVM[nestKey] = nestVal
+			}
+			c[key] = cVM
+		} else {
+			// Not a map, so we can set override value directly.
+			c[key] = value
+		}
+	}
+
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(c); err != nil {
+		return err
+	}
+
+	debugCfg := os.Getenv("DEBUG_CONFIG")
+	if debugCfg != "" {
+		fmt.Printf("Modified toml config: %s:\n%s", filePath, buf.String())
 	}
 
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, "config/config.toml", content); err != nil {
-		return fmt.Errorf("overwriting config.toml: %w", err)
+	if err := fw.WriteFile(ctx, tn.VolumeName, filePath, buf.Bytes()); err != nil {
+		return fmt.Errorf("overwriting %s: %w", filePath, err)
 	}
 
 	return nil
+}
+
+// SetTestConfig modifies the config to reasonable values for use within ibctest.
+func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
+	c := make(DecodedToml)
+
+	// Set Log Level to info
+	c["log_level"] = "info"
+
+	p2p := make(DecodedToml)
+
+	// Allow p2p strangeness
+	p2p["allow_duplicate_ip"] = true
+	p2p["addr_book_strict"] = false
+
+	c["p2p"] = p2p
+
+	consensus := make(DecodedToml)
+
+	blockT := (time.Duration(blockTime) * time.Second).String()
+	consensus["timeout_commit"] = blockT
+	consensus["timeout_propose"] = blockT
+
+	c["consensus"] = consensus
+
+	rpc := make(DecodedToml)
+
+	// Enable public RPC
+	rpc["laddr"] = "tcp://0.0.0.0:26657"
+
+	c["rpc"] = rpc
+
+	return tn.ModifyTomlConfigFile(ctx, "config/config.toml", c)
+}
+
+// SetPeers modifies the config persistent_peers for a node
+func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
+	c := make(DecodedToml)
+	p2p := make(DecodedToml)
+
+	// Set peers
+	p2p["persistent_peers"] = peers
+	c["p2p"] = p2p
+
+	return tn.ModifyTomlConfigFile(ctx, "config/config.toml", c)
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
@@ -846,15 +922,12 @@ func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
-func (tn *ChainNode) InitValidatorFiles(
+func (tn *ChainNode) InitValidatorGenTx(
 	ctx context.Context,
 	chainType *ibc.ChainConfig,
 	genesisAmounts []types.Coin,
 	genesisSelfDelegation types.Coin,
 ) error {
-	if err := tn.InitHomeFolder(ctx); err != nil {
-		return err
-	}
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
@@ -869,7 +942,11 @@ func (tn *ChainNode) InitValidatorFiles(
 }
 
 func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
-	return tn.InitHomeFolder(ctx)
+	if err := tn.InitHomeFolder(ctx); err != nil {
+		return err
+	}
+
+	return tn.SetTestConfig(ctx)
 }
 
 // NodeID returns the persistent ID of a given node.

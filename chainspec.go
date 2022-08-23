@@ -31,8 +31,6 @@ type ChainSpec struct {
 	GasAdjustment *float64
 	NoHostMount   *bool
 
-	ModifyGenesis func([]byte) ([]byte, error)
-
 	// Embedded ChainConfig to allow for simple JSON definition of a ChainSpec.
 	ibc.ChainConfig
 
