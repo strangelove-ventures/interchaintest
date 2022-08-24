@@ -445,6 +445,8 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 
 type CosmosTx struct {
 	TxHash string `json:"txhash"`
+	Code   int    `json:"code"`
+	RawLog string `json:"raw_log"`
 }
 
 func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
@@ -479,6 +481,9 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 	}
 	output := CosmosTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
+	if output.Code != 0 {
+		return "", fmt.Errorf("failed to send ibc transfer tx: %s", output.RawLog)
+	}
 	return output.TxHash, err
 }
 
