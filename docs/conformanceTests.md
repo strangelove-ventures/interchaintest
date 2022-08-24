@@ -1,11 +1,11 @@
 # Conformance Tests
 
-`ibctest` comes with a suite of conformance tests. These tests ensure IBC and relayer compatibility on a high level. It test things such as `client`, `channel`, and `connection` creation. It ensure that messages are properly relayed and acknowledged across chain pairs. 
+`ibctest` comes with a suite of conformance tests. These tests ensure IBC and relayer compatibility on a high level. It tests things such as `client`, `channel`, and `connection` creation. It ensure that messages are properly relayed and acknowledged and that packets are being properly timed out.
 
 You can view all the specific conformance test by reviewing them in the [conformance](../conformance/) folder.
 
 
-To run them from the binary, simply run binary without any extra arguments:
+To run them from the binary, simply run the binary without any extra arguments:
 ```shell
 ibctest
 ```
@@ -17,9 +17,12 @@ go test -v ./cmd/ibctest/
 
 **The benefit of running from a binary is that you can easily pass in custom chain pairs and custom settings about the testing environment.**
 
-This is accomplished via the `-matrix <path/to/matrix.json>` argument. 
+This is accomplished via the `-matrix` argument. 
+```shell
+ibctest -matrix <path/to/matrix.json>
+```
 
-Passing in a matrix file you can easily customize these aspects of the environment:
+By passing in a matrix file you can easily customize these aspects of the environment:
 - chain pairs
 - number of validators
 - number of full nodes
@@ -30,11 +33,9 @@ Passing in a matrix file you can easily customize these aspects of the environme
 
 Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Heighliner needs to have the `Version` you are requesting.
 
-
-Here is an example of a matrix file using pre-configured chains: [example_matrix.json](../cmd/ibctest/example_matrix.json)
-
-
-Here is an example of a more customized matrix file [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json)
+**Example Matrix Files:**
+- [example_matrix.json](../cmd/ibctest/example_matrix.json) - Basic example using pre-configured chains
+- [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json) - More customized example pointing to specific chain binary docker images
 
 
 ## Focusing on Specific Tests
