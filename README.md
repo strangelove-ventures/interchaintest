@@ -2,8 +2,80 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/ibctest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/ibctest@main)
 
-ibctest orchestrates Go tests that utilize Docker containers for multiple
+`ibctest` orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
+
+It allows users to quickly spin up custom testnets and dev environments to test IBC and chain infrastructures.
+
+## Building Binary
+
+While it is not necessary to build the binary, sometimes it can be more convenient, specifically when running conformance test with custom chain sets (details below). 
+
+To build binary:
+
+```shell
+git clone https://github.com/strangelove-ventures/ibctest.git
+cd ibctest
+make ibctest
+```
+
+This places the binary in `ibctest/.bin/ibctest`
+
+
+Note that this is not in your Go path.
+
+## Conformance Tests
+
+`ibctest` comes with a suite of conformance tests. These tests ensure IBC and relayer compatibility on a high level. It test things such as `client`, `channel`, and `connection` creation. It ensure that messages are properly relayed and acknowledged across chain pairs. 
+
+You can view all the specific conformance test by reviewing them in the [conformance](./conformance/) folder.
+
+
+To run them from the binary:
+```shell
+ibctest
+```
+
+
+To run straight from source code:
+```shell
+go test -v ./cmd/ibctest/
+```
+
+**The benefit of running from a binary is that you can easily pass in custom chain pairs and custom settings about the testing environment.**
+
+This is accomplished via the `-matrix <path/to/matrix.json>` argument. 
+
+Passing in a matrix file you can easily customize these aspects of the environment:
+- chain pairs
+- number of validators
+- number of full nodes
+- relayer tech (currently only integrated with [Go Relayer](https://github.com/cosmos/relayer))
+
+
+`ibctest` comes with several [pre-configured chains](./docs/preconfiguredChains.txt). 
+
+Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Heighliner needs to have the `Version` you are requesting.
+
+
+Here is an example of a matrix file using pre-configured chains: [example_matrix.json](./cmd/ibctest/example_matrix.json)
+
+
+Here is an example of a more customized matrix file [example_matrix_custom.json](./cmd/ibctest/example_matrix_custom.json)
+
+
+**Local Docker Images**
+You can supply local docker images in the matrix file by:
+
+```yaml
+...
+        Images: []ibc.DockerImage{
+            {
+                Repository: "simd", // local docker image name
+                Version: "v1.0.0",	// docker tag 
+            },
+...
+```
 
 ## Focusing on Specific Tests
 

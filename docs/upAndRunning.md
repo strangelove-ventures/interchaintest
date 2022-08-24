@@ -23,26 +23,21 @@ The chain factory is where you configure your chain binaries.
 
 `ibctest` needs a docker image with the chain binary(s) installed to spin up nodes. 
 
-To spin up tests quickly, IBCTest has several chains [pre-configured chains](LINK/HERE).
+To spin up tests quickly, IBCTest has several [pre-configured chains](./docs/preconfiguredChains.txt).
 
-The above code snippet is an example of using these pre-configured chains. Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner)  
-
-Note that these docker images for the pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner)(repository of docker images of many IBC enabled chains). 
+The above code snippet is an example of using these pre-configured chains. Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Heighliner needs to have the `Version` you are requesting. 
 
 
-
-Its integration with [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains) makes this easy by simply passing in a `Name` and `Version` into the `ChainFactory`. 
-
-You can also pass in remote images AND/OR local docker images. 
+You can also pass in **remote images** AND/OR **local docker images**. 
 
 See an example of each below:
 
 ```go
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    // HEIGHLINER EXAMPLE -- gaia chain
-    {Name: "gaia", ChainName: "gaia", Version: "v7.0.2"},
+    // PRE CONFIGURED CHAIN EXAMPLE -- gaia chain
+    {Name: "gaia", Version: "v7.0.2"},
 
-    // REMOTE REPO EXAMPLE -- ibc-go simd chain
+    // REMOTE IMAGE EXAMPLE -- ibc-go simd chain
     {ChainConfig: ibc.ChainConfig{
         Type: "cosmos",
         Name: "ibc-go-simd",
@@ -84,7 +79,7 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
     })
 ```
 
-By default, `ibctest` will spin up a 3 docker images for each binary; 2 validator nodes, 1 full node. These settings can all be configured inside the `ChainSpec`.
+By default, `ibctest` will spin up a 3 docker images for each chain; 2 validator nodes, 1 full node. These settings can all be configured inside the `ChainSpec`.
 EXAMPLE: Overrideing defaults for number of validators and full nodes:
 
 ```go
@@ -144,12 +139,13 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 ```
 
 Upon calling build, several things happen (specifically for cosmos based chains):
-- genesis for each chain takes place
-- each validator gets 2 trillion units of "stake"
+
+- each validator gets 2 trillion units of "stake" funded in genesis
     - 1 trillion "stake" are staked
     - 100 billion "stake" are self delegated
-- each chain gets a faucet address (key named "faucet") with 10 billion units of denom
-- the realyer wallet gets 1 billion units of each chains denom #HELP! Does the faucet fund relayer wallets? Is the faucet wallet reachable via the API?
+- each chain gets a faucet address (key named "faucet") with 10 billion units of denom funded in gensis
+- the realyer wallet gets 1 billion units of each chains denom funded in genesis 
+- genesis for each chain takes place
 - IBC paths are created: `client`, `connection`, `channel` for each link
 
 
@@ -208,7 +204,7 @@ osmosisRPC := osmosis.GetGRPCAddress()
 ```
 
 
-Here we create new funded wallets(users) for both chains. These wallets are funded from the faucet key.
+Here we create new funded wallets(users) for both chains. These wallets are funded from the "faucet" key.
 Note that there is also the option to restore a wallet (`ibctest.GetAndFundTestUserWithMnemonic`)
 ```go
 fundAmount := 1_000
@@ -220,11 +216,6 @@ osmosisUser := users[1]
 
 
 
-
-
-## Pre-Configured chains
-
-IBCtest has several pre-configured chains. This makes it easy to spin up tests 
 
 ## WIP RESEARCH: 
 Would you use `cosmos.NewCosmosChain` instead oc `chainFactory` if you only need to initialize and start one chain?

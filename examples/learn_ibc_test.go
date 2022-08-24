@@ -62,16 +62,17 @@ func TestLearn(t *testing.T) {
 
 	// Build interchain
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),
 	)
 
 	// Create and Fund User Wallets
-	fundAmount := 1_000
+	fundAmount := 10_000_000
 	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
@@ -90,32 +91,26 @@ func TestLearn(t *testing.T) {
 	osmoChannelID := osmoChannelInfo[0].ChannelID
 
 	// Send Transaction
-	t.Run("send ibc transaction", func(t *testing.T) {
-		rep.TrackTest(t)
-		t.Log("osmosisUser.Bech32Address(gaia.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(gaia.Config().Bech32Prefix))
-		t.Log("osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
-		tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
-			Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
-			Denom:   gaia.Config().Denom,
-			Amount:  100,
-		},
-			nil,
-		)
-		require.NoError(t, err)
-		require.NoError(t, tx.Validate())
-	})
 
-	// Relay Packet
-	t.Run("relay packet", func(t *testing.T) {
-		rep.TrackTest(t)
-		require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, gaiaChannelID))
-	})
+	t.Log("osmosisUser.Bech32Address(gaia.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(gaia.Config().Bech32Prefix))
+	t.Log("osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
+	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   gaia.Config().Denom,
+		Amount:  1_000_000,
+	},
+		nil,
+	)
+	t.Log("Transfered!!")
+	require.NoError(t, err)
+	t.Log("No ERROR!!")
+	require.NoError(t, tx.Validate())
+	t.Log("VALIDATED!!")
+
+	require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, gaiaChannelID))
 
 	// Relay Acknowledgement
-	t.Run("relay acknowledgement", func(t *testing.T) {
-		rep.TrackTest(t)
-		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, osmoChannelID))
-	})
+	require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, osmoChannelID))
 
 	gaiaUserBal, err = gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)

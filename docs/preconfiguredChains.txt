@@ -1,0 +1,6 @@
+gaia
+osmosis
+juno
+agoric
+icad
+penumbra
