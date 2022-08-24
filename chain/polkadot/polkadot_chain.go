@@ -282,8 +282,8 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 			return fmt.Errorf("error getting beefy address")
 		}
 		balances = append(balances,
-			[]interface{}{stashAddress, 1000000000000000000},
-			[]interface{}{accountAddress, 1000000000000000000},
+			[]interface{}{stashAddress, uint64(1000000000000000000)},
+			[]interface{}{accountAddress, uint64(1000000000000000000)},
 		)
 		if i == 0 {
 			sudoAddress = accountAddress
