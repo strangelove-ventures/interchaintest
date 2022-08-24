@@ -220,8 +220,8 @@ func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
-func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	cmd := r.c.CreateClients(pathName, r.HomeDir())
+func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
+	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -275,8 +275,8 @@ func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecR
 	return r.c.ParseGetConnectionsOutput(string(res.Stdout), string(res.Stderr))
 }
 
-func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
-	cmd := r.c.LinkPath(pathName, r.HomeDir(), opts)
+func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
+	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -638,14 +638,14 @@ type RelayerCommander interface {
 	AddChainConfiguration(containerFilePath, homeDir string) []string
 	AddKey(chainID, keyName, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
-	CreateClients(pathName, homeDir string) []string
+	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
 	FlushAcknowledgements(pathName, channelID, homeDir string) []string
 	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
-	LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string
+	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
 	RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
 	StartRelayer(pathName, homeDir string) []string
 	UpdateClients(pathName, homeDir string) []string

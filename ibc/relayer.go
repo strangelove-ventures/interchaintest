@@ -39,7 +39,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
 
 	// setup channels, connections, and clients
-	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
+	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
 
 	// update clients, such as after new genesis
 	UpdateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
@@ -66,7 +66,7 @@ type Relayer interface {
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
-	CreateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
+	CreateClients(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateClientOptions) error
 
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.
@@ -176,6 +176,27 @@ func (o Order) Validate() error {
 		return nil
 	}
 	return chantypes.ErrInvalidChannelOrdering
+}
+
+// CreateClientOptions contains the configuration for creating a client.
+type CreateClientOptions struct {
+	TrustingPeriod string
+}
+
+// DefaultClientOpts returns the default settings for creating clients.
+// These default options are usually determined by the relayer
+func DefaultClientOpts() CreateClientOptions {
+	return CreateClientOptions{
+		TrustingPeriod: "0",
+	}
+}
+
+func (opts CreateClientOptions) Validate() error {
+	_, err := time.ParseDuration(opts.TrustingPeriod)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ExecReporter is the interface of a narrow type returned by testreporter.RelayerExecReporter.
