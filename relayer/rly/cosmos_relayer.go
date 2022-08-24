@@ -133,9 +133,17 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 	}
 }
 
-func (commander) CreateClients(pathName, homeDir string) []string {
+func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	return []string{
-		"rly", "tx", "clients", pathName,
+		"rly", "tx", "clients", pathName, "--client-tp", opts.TrustingPeriod,
+		"--home", homeDir,
+	}
+}
+
+// passing a value of 0 for customeClientTrustingPeriod will use default
+func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
+	return []string{
+		"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,
 		"--home", homeDir,
 	}
 }
@@ -182,13 +190,14 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
-func (commander) LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string {
+func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
-		"--src-port", opts.SourcePortName,
-		"--dst-port", opts.DestPortName,
-		"--order", opts.Order.String(),
-		"--version", opts.Version,
+		"--src-port", channelOpts.SourcePortName,
+		"--dst-port", channelOpts.DestPortName,
+		"--order", channelOpts.Order.String(),
+		"--version", channelOpts.Version,
+		"--client-tp", clientOpt.TrustingPeriod,
 
 		"--home", homeDir,
 	}
