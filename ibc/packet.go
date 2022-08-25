@@ -3,9 +3,8 @@ package ibc
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
-	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	"go.uber.org/multierr"
 )
 
@@ -57,7 +56,9 @@ func (packet Packet) Validate() error {
 
 // Equal returns true if both packets are equal.
 func (packet Packet) Equal(other Packet) bool {
-	return reflect.DeepEqual(packet, other)
+	return packet.Sequence == other.Sequence &&
+		packet.SourceChannel == other.SourceChannel &&
+		packet.SourcePort == other.SourcePort
 }
 
 // PacketAcknowledgement signals the packet was processed and accepted by the counterparty chain.

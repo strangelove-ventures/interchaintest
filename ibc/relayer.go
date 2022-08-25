@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	chantypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
-	ptypes "github.com/cosmos/ibc-go/v5/modules/core/05-port/types"
-	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	ptypes "github.com/cosmos/ibc-go/v3/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.

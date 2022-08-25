@@ -13,11 +13,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	chanTypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
+	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/internal/configutil"
@@ -220,7 +220,7 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -270,7 +270,7 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -334,7 +334,7 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
+func (c *CosmosChain) GetTransaction(txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
 	err := retry.Do(func() error {

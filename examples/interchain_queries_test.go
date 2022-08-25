@@ -2,11 +2,14 @@ package ibctest
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/strangelove-ventures/ibctest"
+	"github.com/strangelove-ventures/ibctest/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/chain/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/test"
@@ -31,8 +34,8 @@ func TestInterchainQueries(t *testing.T) {
 
 	// TODO still need to get a docker image pulled into heighliner for icqd to avoid this manual configuration
 	dockerImage := ibc.DockerImage{
-		Repository: "icq",
-		Version:    "16a398a",
+		Repository: "interchainquerydemo",
+		Version:    "latest",
 	}
 
 	// Get both chains
@@ -46,7 +49,7 @@ func TestInterchainQueries(t *testing.T) {
 				Images:         []ibc.DockerImage{dockerImage},
 				Bin:            "icq",
 				Bech32Prefix:   "cosmos",
-				Denom:          "atom",
+				Denom:          "uatom",
 				GasPrices:      "0.00stake",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
@@ -60,7 +63,7 @@ func TestInterchainQueries(t *testing.T) {
 				Images:         []ibc.DockerImage{dockerImage},
 				Bin:            "icq",
 				Bech32Prefix:   "cosmos",
-				Denom:          "atom",
+				Denom:          "uatom",
 				GasPrices:      "0.00stake",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
@@ -99,7 +102,8 @@ func TestInterchainQueries(t *testing.T) {
 		Client:    client,
 		NetworkID: network,
 
-		SkipPathCreation: false,
+		SkipPathCreation:  false,
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		CreateChannelOpts: ibc.CreateChannelOptions{
 			SourcePortName: "interquery",
 			DestPortName:   "icqhost",
@@ -140,7 +144,7 @@ func TestInterchainQueries(t *testing.T) {
 	require.NoError(t, err)
 
 	// Query for the balances of an account on the counterparty chain using IBC queries.
-	chanID := channels[0].Counterparty.ChannelID
+	chanID := channels[0].ChannelID
 	require.NotEqual(t, "", chanID)
 
 	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
@@ -149,12 +153,16 @@ func TestInterchainQueries(t *testing.T) {
 	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
 	require.NotEqual(t, "", chain2Addr)
 
+	chain1Height, err := chain1.Height(ctx)
+	require.NoError(t, err)
+
 	cmd := []string{"icq", "tx", "interquery", "send-query-all-balances", chanID, chain2Addr,
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
 		"--chain-id", chain1.Config().ChainID,
 		"--from", chain1Addr,
 		"--keyring-dir", chain1.HomeDir(),
+		"--output", "json",
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
@@ -165,12 +173,44 @@ func TestInterchainQueries(t *testing.T) {
 	t.Logf("stdout: %s \n", stdout)
 	t.Logf("stderr: %s \n", stderr)
 
-	// Wait a few blocks for query to be sent to counterparty.
-	err = test.WaitForBlocks(ctx, 10, chain1)
+	var icqSendTxRes cosmos.CosmosTx
+	err = json.Unmarshal(stdout, &icqSendTxRes)
 	require.NoError(t, err)
 
+	// Wait a few blocks for tx to be available
+	err = test.WaitForBlocks(ctx, 2, chain1)
+	require.NoError(t, err)
+
+	icqSendTx, err := chain1.(*cosmos.CosmosChain).GetTransaction(icqSendTxRes.TxHash)
+	require.NoError(t, err)
+
+	t.Logf("icqSendTx: +%v\n", icqSendTx)
+
+	const evType = "send_packet"
+	events := icqSendTx.Events
+	var (
+		seq, _     = tendermint.AttributeValue(events, evType, "packet_sequence")
+		srcPort, _ = tendermint.AttributeValue(events, evType, "packet_src_port")
+		srcChan, _ = tendermint.AttributeValue(events, evType, "packet_src_channel")
+	)
+
+	sequence, err := strconv.ParseUint(seq, 10, 64)
+	require.NoError(t, err)
+
+	ack, err := test.PollForAck(ctx, chain1, chain1Height, chain1Height+15, ibc.Packet{
+		Sequence:      sequence,
+		SourceChannel: srcChan,
+		SourcePort:    srcPort,
+	})
+	require.NoError(t, err)
+	require.NoError(t, ack.Validate())
+
+	// // Wait a few blocks for query to be sent to counterparty.
+	// err = test.WaitForBlocks(ctx, 10, chain1)
+	// require.NoError(t, err)
+
 	// Check the results from the IBC query above.
-	cmd = []string{"icq", "query", "interquery", "query-state", strconv.Itoa(1),
+	cmd = []string{"icq", "query", "interquery", "query-state", seq,
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
 		"--chain-id", chain1.Config().ChainID,
