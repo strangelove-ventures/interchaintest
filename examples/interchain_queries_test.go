@@ -38,30 +38,30 @@ func TestInterchainQueries(t *testing.T) {
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			ChainName: "test-1",
+			ChainName: "sender",
 			ChainConfig: ibc.ChainConfig{
 				Type:           "cosmos",
-				Name:           "icq",
-				ChainID:        "test-1",
+				Name:           "sender",
+				ChainID:        "sender",
 				Images:         []ibc.DockerImage{dockerImage},
 				Bin:            "icq",
 				Bech32Prefix:   "cosmos",
 				Denom:          "atom",
-				GasPrices:      "0.00stake",
+				GasPrices:      "0.00atom",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
 			}},
 		{
-			ChainName: "test-2",
+			ChainName: "receiver",
 			ChainConfig: ibc.ChainConfig{
 				Type:           "cosmos",
-				Name:           "icq",
-				ChainID:        "test-2",
+				Name:           "receiver",
+				ChainID:        "receiver",
 				Images:         []ibc.DockerImage{dockerImage},
 				Bin:            "icq",
 				Bech32Prefix:   "cosmos",
 				Denom:          "atom",
-				GasPrices:      "0.00stake",
+				GasPrices:      "0.00atom",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
 			}},
