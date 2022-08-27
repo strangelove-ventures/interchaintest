@@ -3,10 +3,12 @@ package ibctest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/relayer"
@@ -30,10 +32,9 @@ func TestInterchainQueries(t *testing.T) {
 
 	ctx := context.Background()
 
-	// TODO still need to get a docker image pulled into heighliner for icqd to avoid this manual configuration
 	dockerImage := ibc.DockerImage{
-		Repository: "icq",
-		Version:    "16a398a",
+		Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
+		Version:    "latest",
 	}
 
 	// Get both chains
@@ -65,6 +66,7 @@ func TestInterchainQueries(t *testing.T) {
 				GasPrices:      "0.00atom",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
+				ModifyGenesis:  modifyGenesisAllowICQQueries([]string{"/cosmos.bank.v1beta1.Query/AllBalances"}),
 			}},
 	})
 
@@ -208,4 +210,21 @@ type ICQResults struct {
 			Total   string      `json:"total"`
 		} `json:"pagination"`
 	} `json:"response"`
+}
+
+func modifyGenesisAllowICQQueries(allowQueries []string) func([]byte) ([]byte, error) {
+	return func(genbz []byte) ([]byte, error) {
+		g := make(map[string]interface{})
+		if err := json.Unmarshal(genbz, &g); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
+		}
+		if err := dyno.Set(g, allowQueries, "app_state", "interchainquery", "params", "allow_queries"); err != nil {
+			return nil, fmt.Errorf("failed to set allowed interchain queries in genesis json: %w", err)
+		}
+		out, err := json.Marshal(g)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+		}
+		return out, nil
+	}
 }
