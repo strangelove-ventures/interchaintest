@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// TestInterchainQueries is a test case that performs basic simulations and assertions around the packet implementation
+// of interchain queries. See: https://github.com/quasar-finance/interchain-query-demo
 func TestInterchainQueries(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -66,7 +68,7 @@ func TestInterchainQueries(t *testing.T) {
 				GasPrices:      "0.00atom",
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
-				ModifyGenesis:  modifyGenesisAllowICQQueries([]string{"/cosmos.bank.v1beta1.Query/AllBalances"}),
+				ModifyGenesis:  modifyGenesisAllowICQQueries([]string{"/cosmos.bank.v1beta1.Query/AllBalances"}), // Add the whitelisted queries to the host chain
 			}},
 	})
 
@@ -118,7 +120,7 @@ func TestInterchainQueries(t *testing.T) {
 	chain2User := users[1]
 
 	// Wait a few blocks for user accounts to be created on chain.
-	err = test.WaitForBlocks(ctx, 10, chain1, chain2)
+	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the recently created channel-id.
@@ -142,7 +144,7 @@ func TestInterchainQueries(t *testing.T) {
 	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
-	// Query for the balances of an account on the counterparty chain using IBC queries.
+	// Query for the balances of an account on the counterparty chain using interchain queries.
 	chanID := channels[0].Counterparty.ChannelID
 	require.NotEqual(t, "", chanID)
 
@@ -168,7 +170,7 @@ func TestInterchainQueries(t *testing.T) {
 	err = test.WaitForBlocks(ctx, 10, chain1)
 	require.NoError(t, err)
 
-	// Check the results from the IBC query above.
+	// Check the results from the interchain query above.
 	cmd = []string{"icq", "query", "interquery", "query-state", strconv.Itoa(1),
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
@@ -178,16 +180,14 @@ func TestInterchainQueries(t *testing.T) {
 	stdout, _, err := chain1.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
 
-	results := &ICQResults{}
+	results := &icqResults{}
 	err = json.Unmarshal(stdout, results)
 	require.NoError(t, err)
 	require.NotEmpty(t, results.Request)
 	require.NotEmpty(t, results.Response)
-
-	t.Logf("ICQ Results: %+v \n", results)
 }
 
-type ICQResults struct {
+type icqResults struct {
 	Request struct {
 		Type       string `json:"@type"`
 		Address    string `json:"address"`
