@@ -1,5 +1,5 @@
 <div align="center">
-# ibctest
+<h1>ibctest</h1>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/ibctest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/ibctest@main)
 [![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/ibctest.svg?style=flat-square)](https://github.com/strangelove-ventures/ibctest/blob/main/create-test-readme/LICENSE)
@@ -13,6 +13,7 @@
 It allows users to quickly spin up custom testnets and dev environments to test IBC and chain infrastructures.
 </div>
 
+
 **Features:**
 - Built-in suite of conformance tests to test high-level IBC compatibility between chain sets.
 - Easily construct customized tests in highly configurable environments
@@ -25,6 +26,7 @@ It allows users to quickly spin up custom testnets and dev environments to test 
     - [Running Conformance Tests](./docs/conformanceTests.md) - suite of built-in tests that test high-level IBC compatibility
     - [Architect Custom Tests](./docs/architectCustomTests.md) - How to create custom tests
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
+- [Deploy as GitHub CI tests] (./docs/ciTests.md) - Docs WIP
 
 
 ## Building Binary

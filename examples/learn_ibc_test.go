@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/testreporter"
@@ -22,7 +23,9 @@ func TestLearn(t *testing.T) {
 
 	// Chain Factory
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.3"},
+		{Name: "gaia", Version: "v7.0.3", ChainConfig: ibc.ChainConfig{
+			GasPrices: "0.0uatom",
+		}},
 		{Name: "osmosis", Version: "v11.0.1"},
 	})
 
@@ -72,14 +75,14 @@ func TestLearn(t *testing.T) {
 	)
 
 	// Create and Fund User Wallets
-	fundAmount := 10_000_000
+	fundAmount := int64(10_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 
-	gaiaUserBal, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)
-	t.Log("INITIAL BALANCE!!!!", gaiaUserBal)
+	require.Equal(t, fundAmount, gaiaUserBalInitial)
 
 	// Get Channel ID
 	gaiaChannelInfo, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
@@ -91,31 +94,35 @@ func TestLearn(t *testing.T) {
 	osmoChannelID := osmoChannelInfo[0].ChannelID
 
 	// Send Transaction
-
-	t.Log("osmosisUser.Bech32Address(gaia.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(gaia.Config().Bech32Prefix))
-	t.Log("osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)!!: ", osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
+	amountToSend := int64(1_000_000)
 	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
 		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
 		Denom:   gaia.Config().Denom,
-		Amount:  1_000_000,
+		Amount:  amountToSend,
 	},
 		nil,
 	)
-	t.Log("Transfered!!")
 	require.NoError(t, err)
-	t.Log("No ERROR!!")
 	require.NoError(t, tx.Validate())
-	t.Log("VALIDATED!!")
 
-	require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, gaiaChannelID))
+	// relay packets and acknoledgments
+	require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
+	require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, gaiaChannelID))
 
-	// Relay Acknowledgement
-	require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, osmoChannelID))
-
-	gaiaUserBal, err = gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	// test source wallet has decreased funds
+	expectedBal := gaiaUserBalInitial - amountToSend
+	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
 	require.NoError(t, err)
-	t.Log("FINAL BALANCE!!!", gaiaUserBal)
+	require.Equal(t, expectedBal, gaiaUserBalNew)
 
+	// Trace IBC Denom
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, gaia.Config().Denom))
+	dstIbcDenom := srcDenomTrace.IBCDenom()
+
+	// Test destination wallet has increased funds
+	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), dstIbcDenom)
+	require.NoError(t, err)
+	require.Equal(t, amountToSend, osmosUserBalNew)
 }
 
-// go test -timeout 300s -v -run ^TestTemplate$ github.com/strangelove-ventures/ibctest/examples
+// go test -timeout 300s -v -run ^TestLearn$ github.com/strangelove-ventures/ibctest/examples
