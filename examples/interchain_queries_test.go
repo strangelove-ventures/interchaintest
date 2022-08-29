@@ -2,6 +2,7 @@ package ibctest
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -158,12 +159,8 @@ func TestInterchainQueries(t *testing.T) {
 		"--keyring-backend", keyring.BackendTest,
 		"-y",
 	}
-	stdout, stderr, err := chain1.Exec(ctx, cmd, nil)
+	_, _, err = chain1.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
-
-	// TODO remove debug logging
-	t.Logf("stdout: %s \n", stdout)
-	t.Logf("stderr: %s \n", stderr)
 
 	// Wait a few blocks for query to be sent to counterparty.
 	err = test.WaitForBlocks(ctx, 10, chain1)
@@ -174,11 +171,41 @@ func TestInterchainQueries(t *testing.T) {
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
 		"--chain-id", chain1.Config().ChainID,
+		"--output", "json",
 	}
-	stdout, stderr, err = chain1.Exec(ctx, cmd, nil)
+	stdout, _, err := chain1.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
 
-	// TODO remove debug logging
-	t.Logf("stdout: %s \n", stdout)
-	t.Logf("stderr: %s \n", stderr)
+	results := &ICQResults{}
+	err = json.Unmarshal(stdout, results)
+	require.NoError(t, err)
+	require.NotEmpty(t, results.Request)
+	require.NotEmpty(t, results.Response)
+
+	t.Logf("ICQ Results: %+v \n", results)
+}
+
+type ICQResults struct {
+	Request struct {
+		Type       string `json:"@type"`
+		Address    string `json:"address"`
+		Pagination struct {
+			Key        interface{} `json:"key"`
+			Offset     string      `json:"offset"`
+			Limit      string      `json:"limit"`
+			CountTotal bool        `json:"count_total"`
+			Reverse    bool        `json:"reverse"`
+		} `json:"pagination"`
+	} `json:"request"`
+	Response struct {
+		Type     string `json:"@type"`
+		Balances []struct {
+			Amount string `json:"amount"`
+			Denom  string `json:"denom"`
+		} `json:"balances"`
+		Pagination struct {
+			NextKey interface{} `json:"next_key"`
+			Total   string      `json:"total"`
+		} `json:"pagination"`
+	} `json:"response"`
 }
