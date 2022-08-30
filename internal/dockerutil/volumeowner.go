@@ -20,25 +20,14 @@ type VolumeOwnerOptions struct {
 	VolumeName string
 	ImageRef   string
 	TestName   string
+	Owner      string
 }
 
 // SetVolumeOwner configures the owner of a volume to match the default user in the supplied image reference.
 func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
-	ii, _, err := opts.Client.ImageInspectWithRaw(ctx, opts.ImageRef)
-	if err != nil {
-		return fmt.Errorf("inspecting image %q: %w", opts.ImageRef, err)
-	}
-
-	// Unclear guidance on the difference between the Config and ContainerConfig fields:
-	// https://forums.docker.com/t/what-is-the-difference-between-containerconfig-and-config-in-image/83232
-	// https://stackoverflow.com/q/36216220
-	// Assuming Config is more pertinent.
-	u := ii.Config.User
+	u := opts.Owner
 	if u == "" {
-		// The inline script expects a real user, and some images
-		// may not have an explicit user set. When they don't,
-		// it should be safe to assume the user is root.
-		u = "root"
+		u = GetRootUserString()
 	}
 
 	// Start a one-off container to chmod and chown the volume.
@@ -49,7 +38,7 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 	cc, err := opts.Client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: opts.ImageRef, // Using the original image so the owner is present.
+			Image: busyboxRef, // Using busybox image which has chown and chmod.
 
 			Entrypoint: []string{"sh", "-c"},
 			Cmd: []string{

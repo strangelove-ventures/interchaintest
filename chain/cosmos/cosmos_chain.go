@@ -425,6 +425,7 @@ func (c *CosmosChain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
+		Owner:      dockerutil.GetHeighlinerUserString(),
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
