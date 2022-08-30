@@ -78,11 +78,9 @@ func NewComposableChainConfig() ibc.ChainConfig {
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/polkadot",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/composable",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: "polkadot",
@@ -193,7 +191,6 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			VolumeName: v.Name,
 			ImageRef:   chainCfg.Images[0].Ref(),
 			TestName:   testName,
-			UidGid:     chainCfg.Images[0].UidGid,
 		}); err != nil {
 			return fmt.Errorf("set volume owner: %w", err)
 		}
@@ -240,7 +237,6 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 				VolumeName: v.Name,
 				ImageRef:   parachainConfig.Image.Ref(),
 				TestName:   testName,
-				UidGid:     parachainConfig.Image.UidGid,
 			}); err != nil {
 				return fmt.Errorf("set volume owner: %w", err)
 			}
@@ -286,8 +282,8 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 			return fmt.Errorf("error getting beefy address")
 		}
 		balances = append(balances,
-			[]interface{}{stashAddress, uint64(1000000000000000000)},
-			[]interface{}{accountAddress, uint64(1000000000000000000)},
+			[]interface{}{stashAddress, 1000000000000000000},
+			[]interface{}{accountAddress, 1000000000000000000},
 		)
 		if i == 0 {
 			sudoAddress = accountAddress
@@ -565,12 +561,6 @@ func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ib
 // Implements Chain interface.
 func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
 	panic("not implemented yet")
-}
-
-// UpgradeProposal submits a software-upgrade proposal to the chain.
-// Implements Chain interface.
-func (c *PolkadotChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
-	panic("implement me")
 }
 
 // InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.

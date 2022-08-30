@@ -25,7 +25,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "025-helike,v0.35.9",
+			Version: "015-ersa-v2,v0.35.4",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/ibc"
 	"github.com/strangelove-ventures/ibctest/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
 	"go.uber.org/zap"
@@ -34,8 +32,7 @@ type CosmosChain struct {
 	cfg           ibc.ChainConfig
 	numValidators int
 	numFullNodes  int
-	Validators    ChainNodes
-	FullNodes     ChainNodes
+	ChainNodes    ChainNodes
 
 	log *zap.Logger
 }
@@ -60,7 +57,6 @@ func NewCosmosHeighlinerChainConfig(name string,
 		Images: []ibc.DockerImage{
 			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: binary,
@@ -77,68 +73,6 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 	}
 }
 
-// Nodes returns all nodes, including validators and fullnodes.
-func (c *CosmosChain) Nodes() ChainNodes {
-	return append(c.Validators, c.FullNodes...)
-}
-
-// AddFullNodes adds new fullnodes to the network, peering with the existing nodes.
-func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[string]any, inc int) error {
-	// Get peer string for existing nodes
-	peers := c.Nodes().PeerString(ctx)
-
-	// Get genesis.json
-	genbz, err := c.Validators[0].genesisFileContent(ctx)
-	if err != nil {
-		return err
-	}
-
-	prevCount := c.numFullNodes
-	c.numFullNodes += inc
-	if err := c.initializeChainNodes(ctx, c.testName, c.getFullNode().DockerClient, c.getFullNode().NetworkID); err != nil {
-		return err
-	}
-
-	var eg errgroup.Group
-	for i := prevCount; i < c.numFullNodes; i++ {
-		i := i
-		eg.Go(func() error {
-			fn := c.FullNodes[i]
-			if err := fn.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			if err := fn.SetPeers(ctx, peers); err != nil {
-				return err
-			}
-			if err := fn.overwriteGenesisFile(ctx, genbz); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := configutil.ModifyTomlConfigFile(
-					ctx,
-					fn.logger(),
-					fn.DockerClient,
-					fn.TestName,
-					fn.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			if err := fn.CreateNodeContainer(ctx); err != nil {
-				return err
-			}
-			return fn.StartContainer(ctx)
-		})
-	}
-	return eg.Wait()
-}
-
 // Implements Chain interface
 func (c *CosmosChain) Config() ibc.ChainConfig {
 	return c.cfg
@@ -146,16 +80,19 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 
 // Implements Chain interface
 func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	// The Initialize interface needs to change to accept a context,
+	// but there are other implementations that still need to switch
+	// to Docker volumes first.
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
-	if len(c.FullNodes) > 0 {
+	if len(c.ChainNodes) > c.numValidators {
 		// use first full node
-		return c.FullNodes[0]
+		return c.ChainNodes[c.numValidators]
 	}
 	// use first validator
-	return c.Validators[0]
+	return c.ChainNodes[0]
 }
 
 // Exec implements ibc.Chain.
@@ -266,31 +203,6 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 }
 
 // Implements Chain interface
-func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.SoftwareUpgradeTx, _ error) {
-	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
-	if err != nil {
-		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
-	}
-	txResp, err := c.getTransaction(txHash)
-	if err != nil {
-		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
-	}
-	tx.Height = uint64(txResp.Height)
-	tx.TxHash = txHash
-	// In cosmos, user is charged for entire gas requested, not the actual gas used.
-	tx.GasSpent = txResp.GasWanted
-	events := txResp.Events
-
-	tx.DepositAmount, _ = tendermint.AttributeValue(events, "proposal_deposit", "amount")
-
-	evtSubmitProp := "submit_proposal"
-	tx.ProposalID, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_id")
-	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
-
-	return tx, nil
-}
-
-// Implements Chain interface
 func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
@@ -352,19 +264,16 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
-func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, version string) {
-	c.cfg.Images[0].Version = version
-	for _, n := range c.Validators {
-		n.Image.Version = version
-	}
-	for _, n := range c.FullNodes {
-		n.Image.Version = version
-	}
-	c.pullImages(ctx, cli)
-}
-
-func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
-	for _, image := range c.Config().Images {
+// creates the test node objects required for bootstrapping tests
+func (c *CosmosChain) initializeChainNodes(
+	ctx context.Context,
+	testName string,
+	cli *client.Client,
+	networkID string,
+) error {
+	count := c.numValidators + c.numFullNodes
+	chainCfg := c.Config()
+	for _, image := range chainCfg.Images {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
@@ -381,97 +290,59 @@ func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
 			_ = rc.Close()
 		}
 	}
-}
 
-// NewChainNode constructs a new cosmos chain node with a docker volume.
-func (c *CosmosChain) NewChainNode(
-	ctx context.Context,
-	testName string,
-	cli *client.Client,
-	networkID string,
-	image ibc.DockerImage,
-	validator bool,
-) (*ChainNode, error) {
-	// Construct the ChainNode first so we can access its name.
-	// The ChainNode's VolumeName cannot be set until after we create the volume.
-	tn := &ChainNode{
-		log: c.log,
-
-		Validator: validator,
-
-		Chain:        c,
-		DockerClient: cli,
-		NetworkID:    networkID,
-		TestName:     testName,
-		Image:        image,
-	}
-
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
-			dockerutil.NodeOwnerLabel: tn.Name(),
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("creating volume for chain node: %w", err)
-	}
-	tn.VolumeName = v.Name
-
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
-
-		Client: cli,
-
-		VolumeName: v.Name,
-		ImageRef:   image.Ref(),
-		TestName:   testName,
-		UidGid:     image.UidGid,
-	}); err != nil {
-		return nil, fmt.Errorf("set volume owner: %w", err)
-	}
-	return tn, nil
-}
-
-// creates the test node objects required for bootstrapping tests
-func (c *CosmosChain) initializeChainNodes(
-	ctx context.Context,
-	testName string,
-	cli *client.Client,
-	networkID string,
-) error {
-	chainCfg := c.Config()
-	c.pullImages(ctx, cli)
 	image := chainCfg.Images[0]
-
+	chainNodes := make([]*ChainNode, count)
 	eg, egCtx := errgroup.WithContext(ctx)
-	for i := len(c.Validators); i < c.numValidators; i++ {
+	for i := 0; i < count; i++ {
 		i := i
 		eg.Go(func() error {
-			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true)
-			if err != nil {
-				return err
+			// Construct the ChainNode first so we can access its name.
+			// The ChainNode's VolumeName cannot be set until after we create the volume.
+			tn := &ChainNode{
+				log: c.log,
+
+				Index:        i,
+				Chain:        c,
+				DockerClient: cli,
+				NetworkID:    networkID,
+				TestName:     testName,
+				Image:        image,
 			}
-			val.Index = i
-			c.Validators = append(c.Validators, val)
-			return nil
-		})
-	}
-	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
-		i := i
-		eg.Go(func() error {
-			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false)
+
+			v, err := cli.VolumeCreate(egCtx, volumetypes.VolumeCreateBody{
+				Labels: map[string]string{
+					dockerutil.CleanupLabel: testName,
+
+					dockerutil.NodeOwnerLabel: tn.Name(),
+				},
+			})
 			if err != nil {
-				return err
+				return fmt.Errorf("creating volume for chain node: %w", err)
 			}
-			fn.Index = i
-			c.FullNodes = append(c.FullNodes, fn)
+			tn.VolumeName = v.Name
+
+			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+				Log: c.log,
+
+				Client: cli,
+
+				VolumeName: v.Name,
+				ImageRef:   image.Ref(),
+				TestName:   testName,
+			}); err != nil {
+				return fmt.Errorf("set volume owner: %w", err)
+			}
+
+			chainNodes[i] = tn
+
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	c.ChainNodes = chainNodes
 	return nil
 }
 
@@ -516,65 +387,20 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	genesisAmounts := []types.Coin{genesisAmount, genesisStakeAmount}
 
-	configFileOverrides := chainCfg.ConfigFileOverrides
+	validators := c.ChainNodes[:c.numValidators]
+	fullnodes := c.ChainNodes[c.numValidators:]
 
 	eg := new(errgroup.Group)
-	// Initialize config and sign gentx for each validator.
-	for _, v := range c.Validators {
+	// sign gentx for each validator
+	for _, v := range validators {
 		v := v
-		v.Validator = true
-		eg.Go(func() error {
-			if err := v.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := configutil.ModifyTomlConfigFile(
-					ctx,
-					v.logger(),
-					v.DockerClient,
-					v.TestName,
-					v.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
-		})
+		eg.Go(func() error { return v.InitValidatorFiles(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation) })
 	}
 
-	// Initialize config for each full node.
-	for _, n := range c.FullNodes {
+	// just initialize folder for any full nodes
+	for _, n := range fullnodes {
 		n := n
-		n.Validator = false
-		eg.Go(func() error {
-			if err := n.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := configutil.ModifyTomlConfigFile(
-					ctx,
-					n.logger(),
-					n.DockerClient,
-					n.TestName,
-					n.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
+		eg.Go(func() error { return n.InitFullNodeFiles(ctx) })
 	}
 
 	// wait for this to finish
@@ -584,9 +410,9 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	// for the validators we need to collect the gentxs and the accounts
 	// to the first node's genesis file
-	validator0 := c.Validators[0]
-	for i := 1; i < len(c.Validators); i++ {
-		validatorN := c.Validators[i]
+	validator0 := validators[0]
+	for i := 1; i < len(validators); i++ {
+		validatorN := validators[i]
 
 		bech32, err := validatorN.KeyBech32(ctx, valKey)
 		if err != nil {
@@ -617,33 +443,18 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	if c.cfg.ModifyGenesis != nil {
-		genbz, err = c.cfg.ModifyGenesis(genbz)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Provide EXPORT_GENESIS_FILE_PATH to help debug genesis file
-	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
-	if exportGenesis != "" {
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
-	}
-
-	chainNodes := c.Nodes()
-
-	for _, cn := range chainNodes {
+	for _, cn := range c.ChainNodes[1:] {
 		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
 
-	if err := chainNodes.LogGenesisHashes(ctx); err != nil {
+	if err := c.ChainNodes.LogGenesisHashes(ctx); err != nil {
 		return err
 	}
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	for _, n := range chainNodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer(egCtx)
@@ -653,14 +464,14 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := chainNodes.PeerString(ctx)
+	peers := c.ChainNodes.PeerString(ctx)
 
 	eg, egCtx = errgroup.WithContext(ctx)
-	for _, n := range chainNodes {
+	for _, n := range c.ChainNodes {
 		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
-			if err := n.SetPeers(egCtx, peers); err != nil {
+			if err := n.SetValidatorConfigAndPeers(egCtx, peers); err != nil {
 				return err
 			}
 			return n.StartContainer(egCtx)
@@ -747,48 +558,4 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return c.getFullNode().FindTxs(ctx, height)
-}
-
-// StopAllNodes stops and removes all long running containers (validators and full nodes)
-func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
-	var eg errgroup.Group
-	for _, n := range c.Nodes() {
-		n := n
-		eg.Go(func() error {
-			if err := n.StopContainer(ctx); err != nil {
-				return err
-			}
-			return n.RemoveContainer(ctx)
-		})
-	}
-	return eg.Wait()
-}
-
-// StartAllNodes creates and starts new containers for each node.
-// Should only be used if the chain has previously been started with .Start.
-func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
-	var eg errgroup.Group
-	for _, n := range c.Nodes() {
-		n := n
-		eg.Go(func() error {
-			if err := n.CreateNodeContainer(ctx); err != nil {
-				return err
-			}
-			return n.StartContainer(ctx)
-		})
-	}
-	return eg.Wait()
-}
-
-func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
-	var eg errgroup.Group
-	for _, n := range c.Nodes() {
-		if n.Validator {
-			n := n
-			eg.Go(func() error {
-				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
-			})
-		}
-	}
-	return eg.Wait()
 }

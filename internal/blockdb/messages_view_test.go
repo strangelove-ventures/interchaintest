@@ -93,7 +93,7 @@ func TestMessagesView(t *testing.T) {
 
 	t.Run("create clients", func(t *testing.T) {
 		// Creating the clients will cause transactions.
-		require.NoError(t, r.CreateClients(ctx, eRep, pathName, ibc.DefaultClientOpts()))
+		require.NoError(t, r.CreateClients(ctx, eRep, pathName))
 
 		// MsgCreateClient should match the opposite chain IDs.
 		const qCreateClient = `SELECT

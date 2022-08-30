@@ -79,7 +79,7 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
-		req.NoError(r.CreateClients(ctx, rep.RelayerExecReporter(t), pathName, ibc.DefaultClientOpts()))
+		req.NoError(r.CreateClients(ctx, rep.RelayerExecReporter(t), pathName))
 	})
 	if t.Failed() {
 		return

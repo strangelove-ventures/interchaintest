@@ -1,38 +1,19 @@
 package ibc
 
-import (
-	"github.com/cosmos/cosmos-sdk/types"
-	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
-)
+import ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 
-// ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
 type ChainConfig struct {
-	// Chain type, e.g. cosmos.
-	Type string
-	// Chain name, e.g. cosmoshub.
-	Name string
-	// Chain ID, e.g. cosmoshub-4
-	ChainID string
-	// Docker images required for running chain nodes.
-	Images []DockerImage
-	// Binary to execute for the chain node daemon.
-	Bin string
-	// Bech32 prefix for chain addresses, e.g. cosmos.
-	Bech32Prefix string
-	// Denomination of native currency, e.g. uatom.
-	Denom string
-	// Minimum gas prices for sending transactions, in native currency denom.
-	GasPrices string
-	// Adjustment multiplier for gas fees.
-	GasAdjustment float64
-	// Trusting period of the chain.
+	Type           string
+	Name           string
+	ChainID        string
+	Images         []DockerImage
+	Bin            string
+	Bech32Prefix   string
+	Denom          string
+	GasPrices      string
+	GasAdjustment  float64
 	TrustingPeriod string
-	// Do not use docker host mount.
-	NoHostMount bool
-	// When provided, genesis file contents will be altered before sharing for genesis.
-	ModifyGenesis func([]byte) ([]byte, error)
-	// Override config parameters for files at filepath.
-	ConfigFileOverrides map[string]any
+	NoHostMount    bool
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -78,14 +59,6 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	// Skip NoHostMount so that false can be distinguished.
 
-	if other.ModifyGenesis != nil {
-		c.ModifyGenesis = other.ModifyGenesis
-	}
-
-	if other.ConfigFileOverrides != nil {
-		c.ConfigFileOverrides = other.ConfigFileOverrides
-	}
-
 	return c
 }
 
@@ -107,7 +80,6 @@ func (c ChainConfig) IsFullyConfigured() bool {
 type DockerImage struct {
 	Repository string
 	Version    string
-	UidGid     string
 }
 
 // Ref returns the reference to use when e.g. creating a container.
@@ -166,18 +138,9 @@ type ConnectionOutput struct {
 
 type ConnectionOutputs []*ConnectionOutput
 
-type Wallet struct {
+type RelayerWallet struct {
 	Mnemonic string `json:"mnemonic"`
 	Address  string `json:"address"`
-	KeyName  string
-}
-
-func (w *Wallet) GetKeyName() string {
-	return w.KeyName
-}
-
-func (w *Wallet) Bech32Address(bech32Prefix string) string {
-	return types.MustBech32ifyAddressBytes(bech32Prefix, []byte(w.Address))
 }
 
 type RelayerImplementation int64
@@ -186,13 +149,3 @@ const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
 )
-
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
-}

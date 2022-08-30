@@ -69,11 +69,9 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: "tendermint",
@@ -172,33 +170,33 @@ func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
-func (c *PenumbraChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
-	panic("implement me")
-}
-
 // Implements Chain interface
 func (c *PenumbraChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	panic("implement me")
+	// NOOP
+	return "", errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	panic("implement me")
+	// NOOP
+	return errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	panic("implement me")
+	// NOOP
+	return nil, errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
-	panic("implement me")
+	return "", errors.New("not yet implemented")
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	panic("implement me")
+	// NOOP
+	return errors.New("not yet implemented")
 }
 
 func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
@@ -207,7 +205,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	panic("implement me")
+	return -1, errors.New("not yet implemented")
 }
 
 // Implements Chain interface
@@ -267,7 +265,6 @@ func (c *PenumbraChain) initializeChainNodes(
 			VolumeName: tn.VolumeName,
 			ImageRef:   tn.Image.Ref(),
 			TestName:   tn.TestName,
-			UidGid:     tn.Image.UidGid,
 		}); err != nil {
 			return fmt.Errorf("set tendermint volume owner: %w", err)
 		}
@@ -293,7 +290,6 @@ func (c *PenumbraChain) initializeChainNodes(
 			VolumeName: pn.VolumeName,
 			ImageRef:   pn.Image.Ref(),
 			TestName:   pn.TestName,
-			UidGid:     tn.Image.UidGid,
 		}); err != nil {
 			return fmt.Errorf("set penumbra volume owner: %w", err)
 		}
@@ -423,12 +419,12 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		val := val
 		// Use an errgroup to save some time doing many concurrent copies inside containers.
 		eg.Go(func() error {
-			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/tendermint/config/priv_validator_key.json", i)
+			firstValPrivKeyRelPath := fmt.Sprintf("node%d/tendermint/config/priv_validator_key.json", i)
 
 			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
 			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.VolumeName, firstValPrivKeyRelPath)
 			if err != nil {
-				return fmt.Errorf("error getting validator private key content: %w", err)
+				return fmt.Errorf("getting validator private key content: %w", err)
 			}
 
 			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)

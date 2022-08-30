@@ -16,15 +16,11 @@ type RelayerOptionDockerImage struct {
 	DockerImage ibc.DockerImage
 }
 
-// CustomDockerImage overrides the default relayer docker image.
-// uidGid is the uid:gid format owner that should be used within the container.
-// If uidGid is empty, root user will be assumed.
-func CustomDockerImage(repository string, version string, uidGid string) RelayerOption {
+func CustomDockerImage(repository string, version string) RelayerOption {
 	return RelayerOptionDockerImage{
 		DockerImage: ibc.DockerImage{
 			Repository: repository,
 			Version:    version,
-			UidGid:     uidGid,
 		},
 	}
 }
@@ -47,7 +43,6 @@ type RelayerOptionExtraStartFlags struct {
 	Flags []string
 }
 
-// StartupFlags appends additional flags when starting the relayer.
 func StartupFlags(flags ...string) RelayerOption {
 	return RelayerOptionExtraStartFlags{
 		Flags: flags,

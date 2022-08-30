@@ -35,7 +35,7 @@ type Interchain struct {
 
 	// Map of relayer-chain pairs to address and mnemonic, set during Build().
 	// Not yet exposed through any exported API.
-	relayerWallets map[relayerChain]ibc.Wallet
+	relayerWallets map[relayerChain]ibc.RelayerWallet
 
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
@@ -167,11 +167,6 @@ type InterchainBuildOptions struct {
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
 
-	// If set, these options will be used when creating the client in the path link step.
-	// If a zero value initialization is used, e.g. CreateClientOptions{},
-	// then the default values will be used via ibc.DefaultClientOpts.
-	CreateClientOpts ibc.CreateClientOptions
-
 	// If set, these options will be used when creating the channel in the path link step.
 	// If a zero value initialization is used, e.g. CreateChannelOptions{},
 	// then the default values will be used via ibc.DefaultChannelOpts.
@@ -232,17 +227,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return nil
 	}
 
-	// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
-	// client options.
-	if opts.CreateClientOpts == (ibc.CreateClientOptions{}) {
-		opts.CreateClientOpts = ibc.DefaultClientOpts()
-	}
-
-	// Check that the client creation options are valid and fully specified.
-	if err := opts.CreateClientOpts.Validate(); err != nil {
-		return err
-	}
-
 	// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
 	// channel options for an ics20 fungible token transfer channel.
 	if opts.CreateChannelOpts == (ibc.CreateChannelOptions{}) {
@@ -265,7 +249,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			)
 		}
 
-		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts, opts.CreateClientOpts); err != nil {
+		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
@@ -307,7 +291,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			{
 				Address: faucetAddresses[c],
 				Denom:   c.Config().Denom,
-				Amount:  10_000_000_000_000, // Faucet wallet gets 10t units of denom.
+				Amount:  10_000_000_000_000, // Faucet wallet gets 10b units of denom.
 			},
 		}
 	}
@@ -318,7 +302,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
 			Address: wallet.Address,
 			Denom:   c.Config().Denom,
-			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
+			Amount:  1_000_000_000_000, // Every wallet gets 1b units of denom.
 		})
 	}
 
@@ -337,7 +321,7 @@ func (ic *Interchain) generateRelayerWallets() {
 	kr := keyring.NewInMemory(cdc)
 
 	relayerChains := ic.relayerChains()
-	ic.relayerWallets = make(map[relayerChain]ibc.Wallet, len(relayerChains))
+	ic.relayerWallets = make(map[relayerChain]ibc.RelayerWallet, len(relayerChains))
 	for r, chains := range relayerChains {
 		for _, c := range chains {
 			// Just an ephemeral unique name, only for the local use of the keyring.
@@ -389,7 +373,7 @@ type relayerChain struct {
 	C ibc.Chain
 }
 
-func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
+func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.RelayerWallet {
 	// NOTE: this is hardcoded to the cosmos coin type.
 	// In the future, we may need to get the coin type from the chain config.
 	const coinType = types.CoinType
@@ -410,7 +394,7 @@ func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 		panic(fmt.Errorf("failed to get address: %w", err))
 	}
 
-	return ibc.Wallet{
+	return ibc.RelayerWallet{
 		Address: types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
 
 		Mnemonic: mnemonic,

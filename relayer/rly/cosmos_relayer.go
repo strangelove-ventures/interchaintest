@@ -104,7 +104,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return "100:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return "rlyuser" // The name of the user according to rly's Dockerfile.
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
@@ -133,17 +133,9 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 	}
 }
 
-func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+func (commander) CreateClients(pathName, homeDir string) []string {
 	return []string{
-		"rly", "tx", "clients", pathName, "--client-tp", opts.TrustingPeriod,
-		"--home", homeDir,
-	}
-}
-
-// passing a value of 0 for customeClientTrustingPeriod will use default
-func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
-	return []string{
-		"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,
+		"rly", "tx", "clients", pathName,
 		"--home", homeDir,
 	}
 }
@@ -190,14 +182,13 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
-func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
+func (commander) LinkPath(pathName, homeDir string, opts ibc.CreateChannelOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
-		"--src-port", channelOpts.SourcePortName,
-		"--dst-port", channelOpts.DestPortName,
-		"--order", channelOpts.Order.String(),
-		"--version", channelOpts.Version,
-		"--client-tp", clientOpt.TrustingPeriod,
+		"--src-port", opts.SourcePortName,
+		"--dst-port", opts.DestPortName,
+		"--order", opts.Order.String(),
+		"--version", opts.Version,
 
 		"--home", homeDir,
 	}
@@ -243,8 +234,8 @@ func (commander) DefaultContainerVersion() string {
 	return DefaultContainerVersion
 }
 
-func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
-	var wallet ibc.Wallet
+func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.RelayerWallet, error) {
+	var wallet ibc.RelayerWallet
 	err := json.Unmarshal([]byte(stdout), &wallet)
 	return wallet, err
 }

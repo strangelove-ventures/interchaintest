@@ -63,17 +63,19 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/root"
+	return fmt.Sprintf("/root/.%s", p.Chain.Config().Name)
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "wallet", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
 		return err
 	}
-	return nil
+	cmd = []string{"pcli", "-w", p.WalletPathContainer(), "addr", "new", keyName}
+	_, _, err = p.Exec(ctx, cmd, nil)
+	return err
 }
 
 // initializes validator definition template file
@@ -81,7 +83,7 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 	cmd := []string{
 		"pcli",
-		"-d", p.HomeDir(),
+		"-w", p.WalletPathContainer(),
 		"validator", "template-definition",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
@@ -91,6 +93,10 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
 	return filepath.Join(p.HomeDir(), "validator.json")
+}
+
+func (p *PenumbraAppNode) WalletPathContainer() string {
+	return filepath.Join(p.HomeDir(), "wallet")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
@@ -103,9 +109,9 @@ func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
 
 func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
-	gen, err := fr.SingleFileContent(ctx, p.VolumeName, ".penumbra/testnet_data/node0/tendermint/config/genesis.json")
+	gen, err := fr.SingleFileContent(ctx, p.VolumeName, "node0/tendermint/config/genesis.json")
 	if err != nil {
-		return nil, fmt.Errorf("error getting genesis.json content: %w", err)
+		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
 
 	return gen, nil
@@ -134,18 +140,18 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	}
 	cmd := []string{
 		"pd",
-		"testnet",
-		"generate",
+		"generate-testnet",
 		"--chain-id", chainID,
 		"--validators-input-file", p.ValidatorsInputFileContainer(),
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
+		"--output-dir", p.HomeDir(),
 	}
 	_, _, err = p.Exec(ctx, cmd, nil)
 	return err
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -165,7 +171,7 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 }
 
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
+	cmd := []string{"pcli", "-w", p.WalletPathContainer(), "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
@@ -192,7 +198,7 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
-	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
+	cmd := []string{"pd", "start", "--host", "0.0.0.0", "-r", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
 	cc, err := p.DockerClient.ContainerCreate(
