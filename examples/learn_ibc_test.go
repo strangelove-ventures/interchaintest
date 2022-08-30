@@ -23,10 +23,10 @@ func TestLearn(t *testing.T) {
 
 	// Chain Factory
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.3", ChainConfig: ibc.ChainConfig{
+		{Name: "gaia", Version: "v7.0.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0uatom",
 		}},
-		{Name: "osmosis", Version: "v11.0.1"},
+		{Name: "osmosis", Version: "v11.0.0"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -95,8 +95,9 @@ func TestLearn(t *testing.T) {
 
 	// Send Transaction
 	amountToSend := int64(1_000_000)
+	dstAddress := osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)
 	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
-		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
 	},
@@ -123,6 +124,5 @@ func TestLearn(t *testing.T) {
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), dstIbcDenom)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend, osmosUserBalNew)
-}
 
-// go test -timeout 300s -v -run ^TestLearn$ github.com/strangelove-ventures/ibctest/examples
+}

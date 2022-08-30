@@ -2,7 +2,7 @@
 ### How to construct custom tests
 
 
-This document breaks down code snippets in [learn_ibc_test.go](../examples/learn_ibc_test.go).
+This document breaks down code snippets in [learn_ibc_test.go](../examples/learn_ibc_test.go). Follow along there for a better learning experience.
 
 [learn_ibc_test.go](../examples/learn_ibc_test.go) is a basic test that:
 
@@ -241,19 +241,43 @@ tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.Wallet
 )
 ```
 
-The above example used the builtin `SendIBCTransfer` method however, this could have also been accomplished using the `Exec` method which allows any arbitrary commands to be executed by the binary.
+The above example used the builtin `SendIBCTransfer` method however, this could have also been accomplished using the `Exec` method.
 
-EXAMPLE: Using Exec:
+The `Exec` method allos any arbitrary command to be passed into a chain binary or relayer binary. 
+
+EXAMPLE: Sending an IBC transfer with the `Exec`:
+```go
+	amountToSendString := strconv.Itoa(int(amountToSend)) + gaia.Config().Denom
+	cmd := []string{gaia.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", gaiaChannelID, dstAddress,
+		amountToSendString,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", gaia.GetRPCAddress(),
+		"--from", gaiaUser.KeyName,
+		"--gas-prices", gaia.Config().GasPrices,
+		"--home", gaia.HomeDir(),
+		"--chain-id", gaia.Config().ChainID,
+	}
+	_, _, err = gaia.Exec(ctx, cmd, nil)
+	require.NoError(t, err)
+
+	test.WaitForBlocks(ctx, 3, gaia)
+```
+Notice, how it waits for blocks. Sometimes this is necessary.
 
 
+Here we instruct the relayer to flush packets and acknoledgments.
 
+```go
+require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
+require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, gaiaChannelID))
+```
 
-RELAYER...
+This could have also been accomplished by starting the relayer on a loop:
 
-example starting instead of just flusing...
-
-
-
+```go
+require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
+test.WaitForBlocks(ctx, 3, gaia)
+```
 
 ## Final Notes
 When troubleshooting while writing tests, it can be helpful to use:
@@ -281,6 +305,6 @@ To run:
 `go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES `
 
 <br>
+---
 <br>
-
 Happy Testing 🧪
