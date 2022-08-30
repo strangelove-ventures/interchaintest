@@ -414,6 +414,7 @@ func (r *DockerRelayer) containerImage() ibc.DockerImage {
 	return ibc.DockerImage{
 		Repository: r.c.DefaultContainerImage(),
 		Version:    r.c.DefaultContainerVersion(),
+		UidGid:     r.c.DockerUser(),
 	}
 }
 
@@ -608,8 +609,7 @@ type RelayerCommander interface {
 	DefaultContainerVersion() string
 
 	// The Docker user to use in created container.
-	// According to the Docker docs, this can be in format:
-	// <name|uid>[:<group|gid>].
+	// For ibctest, must be of the format: uid:gid.
 	DockerUser() string
 
 	// ConfigContent generates the content of the config file that will be passed to AddChainConfiguration.

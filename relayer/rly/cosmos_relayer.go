@@ -104,7 +104,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return "rlyuser" // The name of the user according to rly's Dockerfile.
+	return "100:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
