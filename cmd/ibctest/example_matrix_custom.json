@@ -13,7 +13,8 @@
         "Images": [
           {
             "Repository": "ghcr.io/strangelove-ventures/heighliner/gaia",
-            "Version": "latest"
+            "Version": "latest",
+            "UidGid": "1025:1025"
           }
         ],
         "Bin": "gaiad",
@@ -32,7 +33,8 @@
         "Images": [
           {
             "Repository": "ghcr.io/strangelove-ventures/heighliner/osmosis",
-            "Version": "latest"
+            "Version": "latest",
+            "UidGid": "1025:1025"
           }
         ],
         "Bin": "osmosisd",

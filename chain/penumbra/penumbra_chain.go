@@ -69,9 +69,11 @@ func NewPenumbraChainConfig() ibc.ChainConfig {
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
+				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
+				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: "tendermint",
@@ -265,6 +267,7 @@ func (c *PenumbraChain) initializeChainNodes(
 			VolumeName: tn.VolumeName,
 			ImageRef:   tn.Image.Ref(),
 			TestName:   tn.TestName,
+			UidGid:     tn.Image.UidGid,
 		}); err != nil {
 			return fmt.Errorf("set tendermint volume owner: %w", err)
 		}
@@ -290,6 +293,7 @@ func (c *PenumbraChain) initializeChainNodes(
 			VolumeName: pn.VolumeName,
 			ImageRef:   pn.Image.Ref(),
 			TestName:   pn.TestName,
+			UidGid:     tn.Image.UidGid,
 		}); err != nil {
 			return fmt.Errorf("set penumbra volume owner: %w", err)
 		}
