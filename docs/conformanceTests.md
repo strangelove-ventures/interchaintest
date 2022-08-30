@@ -2,8 +2,8 @@
 
 `ibctest` comes with a suite of conformance tests. These tests ensure IBC and relayer compatibility. On a high-level it tests:
 - `client`, `channel`, and `connection` creation
-- Ensure that messages are properly relayed and acknowledged 
-- Ensure packets are being properly timed out
+- messages are properly relayed and acknowledged 
+- packets are being properly timed out
 
 You can view all the specific conformance test by reviewing them in the [conformance](../conformance/) folder.
 
@@ -13,7 +13,7 @@ To run conformance tests with the default chain and relayer configuration (gaiad
 ibctest
 ```
 
-To run straight from source code:
+To run same tests from source code:
 ```shell
 go test -v ./cmd/ibctest/
 ```
@@ -25,22 +25,26 @@ This is accomplished via the `-matrix` argument.
 ibctest -matrix <path/to/matrix.json>
 ```
 
-By passing in a matrix file you can easily customize these aspects of the environment:
+By passing in a matrix file you can customize these aspects of the environment:
 - chain pairs
 - number of validators
 - number of full nodes
 - relayer tech (currently only integrated with [Go Relayer](https://github.com/cosmos/relayer))
 
+<br>
+
 **Example Matrix Files:**
 - [example_matrix.json](../cmd/ibctest/example_matrix.json) - Basic example using pre-configured chains
 - [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json) - More customized example pointing to specific chain binary docker images
 
+<br>
 
 `ibctest` comes with [pre-configured chains](./preconfiguredChains.txt). 
-In the matrix file, if `Name` matches the name any pre-configured chain, `ibctest` will use the pre-configured settings UNLESS overriden in the matrix file. [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json) is an example of overriding all options.
+In the matrix file, if `Name` matches the name of any pre-configured chain, `ibctest` will use the pre-configured settings UNLESS overriden in the matrix file. [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json) is an example of overriding all options.
 
 
-The `Image` array in the matrix json file allows you to pass in docker images with your chain binary of choice. If the docker image does not live in a public repository can you pass in a local docker image like so:
+The `Image` array in the matrix json file allows you to pass in docker images with your chain binary of choice. 
+If the docker image does not live in a public repository, can you **pass in a local docker image like so:**
 
 ```json
         "Images": [
@@ -50,6 +54,9 @@ The `Image` array in the matrix json file allows you to pass in docker images wi
           }
         ],
 ```
+
+If you are supplying custom docker images, you will need to fill out all values. See [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json).
+
 
 Note that the docker images for these pre-configured chains are being pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Heighliner needs to have the `Version` you are requesting.
 

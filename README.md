@@ -11,13 +11,13 @@
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
 It allows users to quickly spin up custom testnets and dev environments to test IBC and chain infrastructures.
-</div>
 
-
-**Features:**
+<h3>-- Features --</h3>
 - Built-in suite of conformance tests to test high-level IBC compatibility between chain sets.
 - Easily construct customized tests in highly configurable environments
 - Deployable as CI tests in production workflows
+</div>
+<br>
 
 
 ## Table Of Contents
@@ -26,7 +26,10 @@ It allows users to quickly spin up custom testnets and dev environments to test 
     - [Running Conformance Tests](./docs/conformanceTests.md) - suite of built-in tests that test high-level IBC compatibility
     - [Architect Custom Tests](./docs/architectCustomTests.md) - How to create custom tests
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
-- [Deploy as GitHub CI tests] (./docs/ciTests.md) - Docs WIP
+- [Deploy as GitHub CI Tests](./docs/ciTests.md)
+
+
+<br>
 
 
 ## Building Binary

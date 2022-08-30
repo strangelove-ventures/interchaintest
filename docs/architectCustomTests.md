@@ -1,8 +1,10 @@
-# Up and Running: Architecting Tests
+# Architecting Tests
+### How to construct custom tests
 
-This doc breaks down code snippets found in [learn_ibc_test.go](./examples/learn_ibc_test.go).
 
-This is a basic test that:
+This document breaks down code snippets in [learn_ibc_test.go](../examples/learn_ibc_test.go).
+
+[learn_ibc_test.go](../examples/learn_ibc_test.go) is a basic test that:
 
 1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
@@ -24,11 +26,12 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 
 The chain factory is where you configure your chain binaries. 
 
-`ibctest` needs a docker image with the chain binary(s) installed to spin up nodes. 
+`ibctest` needs a docker image with the chain binary(s) installed to spin up the local testnet. 
 
-To spin up tests quickly, IBCTest has several [pre-configured chains](./docs/preconfiguredChains.txt). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that heighliner needs the `Version` you are requesting.
+`ibctest` has several [pre-configured chains](./preconfiguredChains.txt). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
-If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them intot the `ibc.ChainConfig` when initalizing your ChainFactory. We do this above with the `GasPrices` for gaia.
+When creating your `ChainFactory`,
+If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with the `GasPrices` for gaia above.
 
 You can also pass in **remote images** AND/OR **local docker images**. 
 
@@ -81,8 +84,13 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
     })
 ```
 
-By default, `ibctest` will spin up a 3 docker images for each chain; 2 validator nodes, 1 full node. These settings can all be configured inside the `ChainSpec`.
-EXAMPLE: Overrideing defaults for number of validators and full nodes:
+By default, `ibctest` will spin up a 3 docker images for each chain:
+- 2 validator nodes
+- 1 full node. 
+
+These settings can all be configured inside the `ChainSpec`.
+
+EXAMPLE: Overriding defaults for number of validators and full nodes:
 
 ```go
 gaiaValidators := int(4)
@@ -92,7 +100,7 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 })
 ```
 
-Here we break out each chain in preparation to pass into `Interchain`:
+Here we break out each chain in preparation to pass into `Interchain` (documented below):
 ```go
 chains, err := cf.Chains(t.Name())
 require.NoError(t, err)
@@ -135,7 +143,7 @@ ic := ibctest.NewInterchain().
 The `Build` function below spins everything up.
 
 ```go
-rep := testreporter.NewReporter(f) // f is the location to write the logs
+rep := testreporter.NewReporter(f) // f is the path location to output the logs
 eRep := rep.RelayerExecReporter(t)
 require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
     TestName:  t.Name(),
@@ -157,7 +165,7 @@ Upon calling build, several things happen (specifically for cosmos based chains)
 - IBC paths are created: `client`, `connection`, `channel` for each link
 
 
- Note that this function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. The `RelayerExecReporter` satisfies the reporter requirement. 
+Note that this function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. The `RelayerExecReporter` satisfies the reporter requirement. 
 
 Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
     
@@ -201,7 +209,7 @@ r.CreateClients(ctx, eRep, "my-path")
 
 ## Creating Users(wallets)
 
-Here we create new funded wallets(users) for both chains. These wallets are funded from the "faucet" key.
+Here we create new funded wallets(users) for both chains. These wallets are funded from the "faucet" key created at genesis.
 Note that there is also the option to restore a wallet (`ibctest.GetAndFundTestUserWithMnemonic`)
 
 ```go
@@ -221,17 +229,56 @@ gaiaRPC := gaia.GetGRPCAddress()
 osmosisRPC := osmosis.GetGRPCAddress()
 ```
 
-The rest of code in `learn_ibc_test.go` is failry self explanitory. 
+Here we send an IBC Transaction:
+```go
+amountToSend := int64(1_000_000)
+tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
+    Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+    Denom:   gaia.Config().Denom,
+    Amount:  amountToSend,
+},
+    nil,
+)
+```
+
+The above example used the builtin `SendIBCTransfer` method however, this could have also been accomplished using the `Exec` method which allows any arbitrary commands to be executed by the binary.
+
+EXAMPLE: Using Exec:
+
+
+
+
+RELAYER...
+
+example starting instead of just flusing...
+
+
+
+
+## Final Notes
+When troubleshooting while writing tests, it can be helpful to use:
+```go
+t.log("PRINT STATEMENT: ", variableToPrint)
+```
+to print out variables during testing. You will need to pass in the `-v` flag in the `go test` command to see this output. Exampled below.
+
+
+This document only scratches the surface of the full functionality of `ibctest`. Take a look at other functions beginning with "Test" to get more in-depth/advanced testing examples.
 
 
 ## How to run
 
 Running tests leverages Go Tests.
 
-For more details run:
+For more details, run:
+
 `go help test`
 
-In general your test needs to be in a file ending in "_test.go". The function name must start with "Test"
+In general, your test needs to be in a file ending in "_test.go". The function name must start with "Test"
 
 To run:
-`go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TESTS/FILES `
+
+`go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES `
+
+
+Happy Testing 🧪
