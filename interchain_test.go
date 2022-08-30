@@ -121,8 +121,8 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	}))
 
 	var (
-		g1Wallet    ibc.RelayerWallet
-		g2Wallet    ibc.RelayerWallet
+		g1Wallet    ibc.Wallet
+		g2Wallet    ibc.Wallet
 		walletFound bool
 	)
 

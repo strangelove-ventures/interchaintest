@@ -10,7 +10,7 @@ type Chain interface {
 	// Config fetches the chain configuration.
 	Config() ChainConfig
 
-	// Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
+	// Initialize initializes node structs so that things like initializing keys can be done before starting the chain
 	Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error
 
 	// Start sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis.
@@ -58,6 +58,9 @@ type Chain interface {
 
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
+
+	// UpgradeProposal submits a software-upgrade proposal to the chain.
+	UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (SoftwareUpgradeTx, error)
 
 	// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
 	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
