@@ -11,6 +11,7 @@ import (
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/relayer"
 	"github.com/strangelove-ventures/ibctest/test"
 	"github.com/strangelove-ventures/ibctest/testreporter"
@@ -37,6 +38,7 @@ func TestInterchainQueries(t *testing.T) {
 	dockerImage := ibc.DockerImage{
 		Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
 		Version:    "latest",
+		UidGid:     dockerutil.GetHeighlinerUserString(),
 	}
 
 	// Get both chains

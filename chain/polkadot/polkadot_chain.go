@@ -78,9 +78,11 @@ func NewComposableChainConfig() ibc.ChainConfig {
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/polkadot",
+				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/composable",
+				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: "polkadot",
@@ -191,6 +193,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			VolumeName: v.Name,
 			ImageRef:   chainCfg.Images[0].Ref(),
 			TestName:   testName,
+			UidGid:     chainCfg.Images[0].UidGid,
 		}); err != nil {
 			return fmt.Errorf("set volume owner: %w", err)
 		}
@@ -237,6 +240,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 				VolumeName: v.Name,
 				ImageRef:   parachainConfig.Image.Ref(),
 				TestName:   testName,
+				UidGid:     parachainConfig.Image.UidGid,
 			}); err != nil {
 				return fmt.Errorf("set volume owner: %w", err)
 			}

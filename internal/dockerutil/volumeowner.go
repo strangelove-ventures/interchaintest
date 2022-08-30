@@ -20,14 +20,14 @@ type VolumeOwnerOptions struct {
 	VolumeName string
 	ImageRef   string
 	TestName   string
-	Owner      string
+	UidGid     string
 }
 
 // SetVolumeOwner configures the owner of a volume to match the default user in the supplied image reference.
 func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
-	u := opts.Owner
-	if u == "" {
-		u = GetRootUserString()
+	owner := opts.UidGid
+	if owner == "" {
+		owner = GetRootUserString()
 	}
 
 	// Start a one-off container to chmod and chown the volume.
@@ -45,7 +45,7 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 				`chown "$2" "$1" && chmod 0700 "$1"`,
 				"_", // Meaningless arg0 for sh -c with positional args.
 				mountPath,
-				u,
+				owner,
 			},
 
 			// Root user so we have permissions to set ownership and mode.

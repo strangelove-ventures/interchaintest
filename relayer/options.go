@@ -16,11 +16,12 @@ type RelayerOptionDockerImage struct {
 	DockerImage ibc.DockerImage
 }
 
-func CustomDockerImage(repository string, version string) RelayerOption {
+func CustomDockerImage(repository string, version string, uidGid string) RelayerOption {
 	return RelayerOptionDockerImage{
 		DockerImage: ibc.DockerImage{
 			Repository: repository,
 			Version:    version,
+			UidGid:     uidGid,
 		},
 	}
 }
