@@ -17,7 +17,7 @@ It validates each step and confirms that the balances of each wallet are correct
 
 ```go
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    {Name: "gaia", Version: "v7.0.3", ChainConfig: ibc.ChainConfig{
+    {Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{
         GasPrices: "0.0uatom",
     }},
     {Name: "osmosis", Version: "v11.0.1"},
@@ -33,7 +33,7 @@ The chain factory is where you configure your chain binaries.
 When creating your `ChainFactory`,
 If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with the `GasPrices` for gaia above.
 
-You can also pass in **remote images** AND/OR **local docker images**. 
+You can also pass in **remote images** and/or **local docker images**. 
 
 See an example of each below:
 
@@ -90,7 +90,7 @@ By default, `ibctest` will spin up a 3 docker images for each chain:
 
 These settings can all be configured inside the `ChainSpec`.
 
-EXAMPLE: Overriding defaults for number of validators and full nodes:
+EXAMPLE: Overriding defaults for number of validators and full nodes in `ChainSpec`:
 
 ```go
 gaiaValidators := int(4)
@@ -111,7 +111,7 @@ gaia, osmosis := chains[0], chains[1]
 
 The relayer factory is where relayer docker images are configured. 
 
-Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into IBCtest. 
+Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into `ibctest`. 
 
 Here we prep an image with the Cosmos/Relayer:
 ```go
@@ -280,5 +280,7 @@ To run:
 
 `go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES `
 
+<br>
+<br>
 
 Happy Testing 🧪
