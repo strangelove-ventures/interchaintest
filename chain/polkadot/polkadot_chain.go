@@ -620,22 +620,3 @@ func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]
 func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("not implemented yet")
 }
-
-// RegisterInterchainAccount will register an interchain account on behalf of the calling chain (controller chain)
-// on the counterparty chain (the host chain).
-// Implements Chain interface.
-func (c *PolkadotChain) RegisterInterchainAccount(ctx context.Context, keyName, connectionID string) (string, error) {
-	panic("not implemented yet")
-}
-
-// SendICABankTransfer will send a bank transfer msg from the fromAddr to the specified address for the given amount and denom.
-// Implements Chain interface.
-func (c *PolkadotChain) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	panic("not implemented yet")
-}
-
-// QueryInterchainAccount will query the interchain account that was created on behalf of the specified address.
-// Implements Chain interface.
-func (c *PolkadotChain) QueryInterchainAccount(ctx context.Context, connectionID, address string) (string, error) {
-	panic("not implemented yet")
-}
