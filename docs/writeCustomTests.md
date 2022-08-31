@@ -134,12 +134,13 @@ ic := ibctest.NewInterchain().
 The `Build` function below spins everything up.
 
 ```go
-rep := testreporter.NewReporter(f) // f is the path location to output the logs
+rep := testreporter.NewReporter(f) // f is the path to output reports
 eRep := rep.RelayerExecReporter(t)
 require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
     TestName:  t.Name(),
     Client:    client,
     NetworkID: network,
+    BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 
     SkipPathCreation: false,
 }))
@@ -160,7 +161,10 @@ Note that this function takes a `testReporter`. This will instruct `ibctest` to 
 
 Note: If report files are not needed, you can use `testreporter.NewNopReporter()` instead.
     
-    
+
+Passing in the optional `BlockDatabaseFile` will instruct `ibctest` to create a sqlite3 database with all block history. This includes raw event data.
+
+
 Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
 
 
