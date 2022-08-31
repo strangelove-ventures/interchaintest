@@ -1,14 +1,23 @@
 # Write Custom Tests
 
-This document breaks down code snippets in [learn_ibc_test.go](../examples/learn_ibc_test.go). Follow along there for a better learning experience.
+This document explains the basic necessities to write custom tests.
 
-[learn_ibc_test.go](../examples/learn_ibc_test.go) is a basic test that:
+
+We'll break down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
 
 1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
 3) Sends an IBC transaction between them.
 
 It validates each step and confirms that the balances of each wallet are correct. 
+
+
+There are three basic components of `ibctest`:
+- Chain Facorty - Select chain binaries to include in tests
+- Relayer Factory - Select Relayer to use in tests
+- Interchain - Where the testnet is configured and spun up
+
+Each section is broken down below. Lets start with the Chain Factory...
 
 
 ## Chain Factory
