@@ -3,8 +3,6 @@ package ibctest_test
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -52,12 +50,7 @@ func TestLearn(t *testing.T) {
 		})
 
 	// Log location
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-	logFolder := filepath.Join(wd, "ibcTest_logs")
-	os.MkdirAll(logFolder, os.ModePerm)
-	require.NoError(t, err)
-	f, err := os.Create(filepath.Join(logFolder, fmt.Sprintf("%d.json", time.Now().Unix())))
+	f, err := ibctest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
 	require.NoError(t, err)
 	// Reporter/logs
 	rep := testreporter.NewReporter(f)
