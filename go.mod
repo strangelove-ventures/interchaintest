@@ -11,6 +11,7 @@ require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.4
 	github.com/cosmos/cosmos-sdk v0.46.0
 	github.com/cosmos/ibc-go/v5 v5.0.0-beta1
+	github.com/cosmos/interchain-accounts v0.3.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible
