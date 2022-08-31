@@ -1,6 +1,4 @@
-# Architecting Tests
-### How to construct custom tests
-
+# Write Custom Tests
 
 This document breaks down code snippets in [learn_ibc_test.go](../examples/learn_ibc_test.go). Follow along there for a better learning experience.
 
@@ -31,26 +29,27 @@ The chain factory is where you configure your chain binaries.
 `ibctest` has several [pre-configured chains](./preconfiguredChains.txt). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
 When creating your `ChainFactory`,
-If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with the `GasPrices` for gaia above.
+If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
 
 You can also pass in **remote images** and/or **local docker images**. 
 
-See an example of each below:
+See an examples below:
 
 ```go
 cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-    // PRE CONFIGURED CHAIN EXAMPLE -- gaia chain
+    
+    // -- PRE CONFIGURED CHAIN EXAMPLE --
     {Name: "gaia", Version: "v7.0.2"},
 
-    // REMOTE IMAGE EXAMPLE -- ibc-go simd chain
+    // -- REMOTE/LOCAL IMAGE EXAMPLE --
     {ChainConfig: ibc.ChainConfig{
         Type: "cosmos",
         Name: "ibc-go-simd",
         ChainID: "simd-1",
         Images: []ibc.DockerImage{
             {
-                Repository: "ghcr.io/cosmos/ibc-go-simd-e2e",
-                Version: "pr-1973",
+                Repository: "ghcr.io/cosmos/ibc-go-simd-e2e",   // FOR LOCAL IMAGE USE: Docker Image Name
+                Version: "pr-1973",                             // FOR LOCAL IMAGE USE: Docker Image Tag  
             },
         },
         Bin: "simd",
@@ -61,28 +60,10 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
         TrustingPeriod: "508h",
         NoHostMount: false},
     },
-
-    // LOCAL DOCKER IMAGE EXAMPLE
-    {ChainConfig: ibc.ChainConfig{
-        Type: "cosmos",
-        Name: "stringChain",
-        ChainID: "string-1",
-        Images: []ibc.DockerImage{
-            {
-                Repository: "string", // local docker image name
-                Version: "v1.0.0",	// docker tag 
-            },
-        },
-        Bin: "stringd",
-        Bech32Prefix: "cosmos",
-        Denom: "cheese",
-        GasPrices: "0.01cheese",
-        GasAdjustment: 1.3,
-        TrustingPeriod: "508h",
-        NoHostMount: false},
-    },
     })
 ```
+If you are not using a pre-configured chain, you must fill out all values of the `ibctest.ChainSpec`.
+
 
 By default, `ibctest` will spin up a 3 docker images for each chain:
 - 2 validator nodes
@@ -156,24 +137,24 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 
 Upon calling build, several things happen (specifically for cosmos based chains):
 
-- each validator gets 2 trillion units of "stake" funded in genesis
+- Each validator gets 2 trillion units of "stake" funded in genesis
     - 1 trillion "stake" are staked
     - 100 billion "stake" are self delegated
-- each chain gets a faucet address (key named "faucet") with 10 billion units of denom funded in gensis
-- the realyer wallet gets 1 billion units of each chains denom funded in genesis 
-- genesis for each chain takes place
+- Each chain gets a faucet address (key named "faucet") with 10 billion units of denom funded in genesis
+- The relayer wallet gets 1 billion units of each chains denom funded in genesis 
+- Genesis for each chain takes place
 - IBC paths are created: `client`, `connection`, `channel` for each link
 
 
-Note that this function takes a `testReporter`. This will instruct `ibctest` to create logs and reports. The `RelayerExecReporter` satisfies the reporter requirement. 
+Note that this function takes a `testReporter`. This will instruct `ibctest` to export and reports of the test(s). The `RelayerExecReporter` satisfies the reporter requirement. 
 
-Note: If log files are not needed, you can use `testreporter.NewNopReporter()` instead.
+Note: If report files are not needed, you can use `testreporter.NewNopReporter()` instead.
     
     
 Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
 
 
-Default `channel options` are:
+Default `createChannelOptions` are:
 ```yaml
     SourcePortName: "transfer",
     DestPortName:   "transfer",
@@ -181,7 +162,7 @@ Default `channel options` are:
     Version:        "ics20-1",
 ```
 
-EXAMPLE: passing in channel options to support the `ics27-1` interchain accounts standard:
+EXAMPLE: Passing in channel options to support the `ics27-1` interchain accounts standard:
 ```go
 require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
@@ -200,8 +181,8 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 	)
 ```
 
-Note the `SkipPathCreation` boolean. You can set this to `true` if you would like to manually call the relayer to create the `client`, `connection` and `channel`.
-EXAMPLE: creating client manually with relayer: 
+Note the `SkipPathCreation` boolean. You can set this to `true` if IBC paths (`client`, `connection` and `channel`) are not necessary OR if you would like to make those calls manually.
+EXAMPLE: Creating client manually with relayer: 
 
 ```go
 r.CreateClients(ctx, eRep, "my-path")
@@ -265,7 +246,7 @@ EXAMPLE: Sending an IBC transfer with the `Exec`:
 Notice, how it waits for blocks. Sometimes this is necessary.
 
 
-Here we instruct the relayer to flush packets and acknoledgments.
+Here we instruct the relayer to flush packets and acknowledgments.
 
 ```go
 require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
@@ -280,11 +261,11 @@ test.WaitForBlocks(ctx, 3, gaia)
 ```
 
 ## Final Notes
-When troubleshooting while writing tests, it can be helpful to use:
+When troubleshooting while writing tests, it can be helpful to print out variables:
 ```go
 t.log("PRINT STATEMENT: ", variableToPrint)
 ```
-to print out variables during testing. You will need to pass in the `-v` flag in the `go test` command to see this output. Exampled below.
+You will need to pass in the `-v` flag in the `go test` command to see this output. Exampled below.
 
 
 This document only scratches the surface of the full functionality of `ibctest`. Take a look at other functions beginning with "Test" to get more in-depth/advanced testing examples.
@@ -302,7 +283,7 @@ In general, your test needs to be in a file ending in "_test.go". The function n
 
 To run:
 
-`go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES `
+`go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES>`
 
 <br>
 ---

@@ -24,8 +24,8 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 ## Table Of Contents
 - [Building Binary](#building-binary)
 - **Usage:**
-    - [Running Conformance Tests](./docs/conformanceTests.md) - suite of built-in tests that test high-level IBC compatibility
-    - [Architect Custom Tests](./docs/architectCustomTests.md) - How to create custom tests
+    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
+    - [Write Custom Tests](./docs/writeCustomTests.md) - How to write custom tests
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
 - [Deploy as GitHub CI Tests](./docs/ciTests.md)
 
