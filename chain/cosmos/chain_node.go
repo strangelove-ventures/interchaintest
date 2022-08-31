@@ -31,7 +31,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/test"
-	tmconfig "github.com/tendermint/tendermint/config"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -312,25 +311,6 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	}
 
 	return txs, nil
-}
-
-func applyConfigChanges(cfg *tmconfig.Config, peers string) {
-	// turn down blocktimes to make the chain faster
-	cfg.Consensus.TimeoutCommit = time.Duration(blockTime) * time.Second
-	cfg.Consensus.TimeoutPropose = time.Duration(blockTime) * time.Second
-
-	// Open up rpc address
-	cfg.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-
-	// Allow for some p2p weirdness
-	cfg.P2P.AllowDuplicateIP = true
-	cfg.P2P.AddrBookStrict = false
-
-	// Set log level to info
-	cfg.BaseConfig.LogLevel = "info"
-
-	// set persistent peer nodes
-	cfg.P2P.PersistentPeers = peers
 }
 
 // CondenseMoniker fits a moniker into the cosmos character limit for monikers.
