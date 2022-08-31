@@ -13,7 +13,7 @@ It validates each step and confirms that the balances of each wallet are correct
 
 
 There are three basic components of `ibctest`:
-- Chain Facorty - Select chain binaries to include in tests
+- Chain Factory - Select chain binaries to include in tests
 - Relayer Factory - Select Relayer to use in tests
 - Interchain - Where the testnet is configured and spun up
 
