@@ -70,7 +70,9 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasPrices = other.GasPrices
 	}
 
-	// Skip GasAdjustment, so that 0.0 can be distinguished.
+	if other.GasAdjustment > 0 && c.GasAdjustment == 0 {
+		c.GasAdjustment = other.GasAdjustment
+	}
 
 	if other.TrustingPeriod != "" {
 		c.TrustingPeriod = other.TrustingPeriod
