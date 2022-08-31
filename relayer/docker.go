@@ -351,7 +351,7 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	rc, err := r.client.ContainerLogs(ctx, r.containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Tail:       "50",
+		Tail:       "250",
 	})
 	if err != nil {
 		return fmt.Errorf("StopRelayer: retrieving ContainerLogs: %w", err)
