@@ -12,12 +12,13 @@ We'll break down code snippets from [learn_ibc_test.go](../examples/learn_ibc_te
 It validates each step and confirms that the balances of each wallet are correct. 
 
 
-There are three basic components of `ibctest`:
-- Chain Factory - Select chain binaries to include in tests
-- Relayer Factory - Select Relayer to use in tests
-- Interchain - Where the testnet is configured and spun up
+### There are three basic components of `ibctest`:
+- **Chain Factory** - Select chain binaries to include in tests
+- **Relayer Factory** - Select Relayer to use in tests
+- **Interchain** - Where the testnet is configured and spun up
 
-Each section is broken down below. Lets start with the Chain Factory...
+Each section is broken down below. 
+Lets start with the Chain Factory...
 
 
 ## Chain Factory
@@ -293,8 +294,9 @@ In general, your test needs to be in a file ending in "_test.go". The function n
 To run:
 
 `go test -timeout 10m -v -run <NAME_OF_TEST> <PATH/TO/FOLDER/HOUSING/TEST/FILES>`
-
 <br>
+
 ---
+
 <br>
 Happy Testing 🧪
