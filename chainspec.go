@@ -70,13 +70,16 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 	// Get built-in config.
 	cfg, ok := builtinChainConfigs[s.Name]
 	if !ok {
-		availableChains := make([]string, 0, len(builtinChainConfigs))
-		for k := range builtinChainConfigs {
-			availableChains = append(availableChains, k)
-		}
-		sort.Strings(availableChains)
+		if !s.ChainConfig.IsFullyConfigured() {
+			availableChains := make([]string, 0, len(builtinChainConfigs))
+			for k := range builtinChainConfigs {
+				availableChains = append(availableChains, k)
+			}
+			sort.Strings(availableChains)
 
-		return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
+			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
+		}
+		cfg = ibc.ChainConfig{}
 	}
 
 	// Apply any overrides from this ChainSpec.
