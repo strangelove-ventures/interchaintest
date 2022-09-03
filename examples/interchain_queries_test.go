@@ -114,6 +114,9 @@ func TestInterchainQueries(t *testing.T) {
 			Version:        "icq-1",
 		},
 	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	// Fund user accounts, so we can query balances and make assertions.
 	const userFunds = int64(10_000_000_000)

@@ -193,6 +193,8 @@ func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.
 func TestConformance(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	logger, err := extraFlags.Logger()
 	if err != nil {
 		t.Fatal(err)
@@ -226,7 +228,7 @@ func TestConformance(t *testing.T) {
 	}
 
 	// Begin test execution, which will spawn many parallel subtests.
-	conformance.Test(t, chainFactories, relayerFactories, reporter)
+	conformance.Test(t, ctx, chainFactories, relayerFactories, reporter)
 }
 
 // addFlags configures additional flags beyond the default testing flags.

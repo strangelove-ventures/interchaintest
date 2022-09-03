@@ -38,12 +38,12 @@ func DockerSetup(t *testing.T) (*client.Client, string) {
 	return dockerutil.DockerSetup(t)
 }
 
-// startup both chains and relayer
+// startup both chains
 // creates wallets in the relayer for src and dst chain
 // funds relayer src and dst wallets on respective chain in genesis
 // creates a faucet account on the both chains (separate fullnode)
 // funds faucet accounts in genesis
-func StartChainPairAndRelayer(
+func StartChainPair(
 	t *testing.T,
 	ctx context.Context,
 	rep *testreporter.Reporter,
@@ -52,12 +52,8 @@ func StartChainPairAndRelayer(
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
-) (ibc.Relayer, []ibc.ChannelOutput, error) {
+) (ibc.Relayer, error) {
 	relayerImpl := f.Build(t, cli, networkID)
-
-	errResponse := func(err error) (ibc.Relayer, []ibc.ChannelOutput, error) {
-		return nil, []ibc.ChannelOutput{}, err
-	}
 
 	ic := NewInterchain().
 		AddChain(srcChain).
@@ -82,18 +78,36 @@ func StartChainPairAndRelayer(
 		BlockDatabaseFile: blockSqlite,
 		CreateChannelOpts: ibc.DefaultChannelOpts(),
 	}); err != nil {
-		return errResponse(err)
+		return nil, err
 	}
 	t.Cleanup(func() {
 		_ = ic.Close()
 	})
 
-	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChain.Config().ChainID)
-	if err != nil {
-		return errResponse(fmt.Errorf("failed to get channels: %w", err))
+	return relayerImpl, nil
+}
+
+// StopStartRelayerWithPreStartFuncs will stop the relayer if it is currently running,
+// then execute the preRelayerStartFuncs and wait for all to complete before starting
+// the relayer.
+func StopStartRelayerWithPreStartFuncs(
+	t *testing.T,
+	ctx context.Context,
+	srcChainID string,
+	relayerImpl ibc.Relayer,
+	eRep *testreporter.RelayerExecReporter,
+	preRelayerStartFuncs []func([]ibc.ChannelOutput),
+	pathNames ...string,
+) ([]ibc.ChannelOutput, error) {
+	if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
+		t.Logf("error stopping relayer: %v", err)
 	}
-	if len(channels) != 1 {
-		return errResponse(fmt.Errorf("channel count invalid. expected: 1, actual: %d", len(channels)))
+	channels, err := relayerImpl.GetChannels(ctx, eRep, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get channels: %w", err)
+	}
+	if len(channels) == 0 {
+		return nil, fmt.Errorf("channel count invalid. expected: > 0, actual: %d", len(channels))
 	}
 
 	wg := sync.WaitGroup{}
@@ -110,17 +124,28 @@ func StartChainPairAndRelayer(
 	}
 	wg.Wait()
 
-	if err := relayerImpl.StartRelayer(ctx, eRep, testPathName); err != nil {
-		return errResponse(fmt.Errorf("failed to start relayer: %w", err))
+	if len(pathNames) == 0 {
+		if err := relayerImpl.StartRelayer(ctx, eRep, testPathName); err != nil {
+			return nil, fmt.Errorf("failed to start relayer: %w", err)
+		}
+	} else {
+		for _, path := range pathNames {
+			if err := relayerImpl.StartRelayer(ctx, eRep, path); err != nil {
+				return nil, fmt.Errorf("failed to start relayer: %w", err)
+			}
+		}
 	}
+
+	// TODO: cleanup since this will stack multiple StopRelayer calls for
+	// multiple calls to this func, requires StopRelayer to be idempotent.
 	t.Cleanup(func() {
 		if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
 			t.Logf("error stopping relayer: %v", err)
 		}
 	})
 
-	// wait for relayer to start up
+	// wait for relayer(s) to start up
 	time.Sleep(5 * time.Second)
 
-	return relayerImpl, channels, nil
+	return channels, nil
 }

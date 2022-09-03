@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	haltHeight         = uint64(30)
+	haltHeightDelta    = uint64(30) // will propose upgrade this many blocks in the future
 	blocksAfterUpgrade = uint64(10)
 	votingPeriod       = "10s"
+	maxDepositPeriod   = "10s"
 )
 
 func TestJunoUpgrade(t *testing.T) {
@@ -62,10 +63,18 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true,
 	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	const userFunds = int64(10_000_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
+
+	height, err := chain.Height(ctx)
+	require.NoError(t, err, "error fetching height before submit upgrade proposal")
+
+	haltHeight := height + haltHeightDelta
 
 	proposal := ibc.SoftwareUpgradeProposal{
 		Deposit:     "500000000" + chain.Config().Denom,
@@ -78,20 +87,22 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
+	err = test.WaitForBlocks(ctx, 2, chain)
+	require.NoError(t, err)
+
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
-	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Minute*2)
 	defer timeoutCtxCancel()
 
-	height, err := chain.Height(ctx)
+	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before upgrade")
 
-	err = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
-	require.Error(t, err, "chain did not halt at halt height")
+	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
-	require.NoError(t, err, "error fetching height after halt")
+	require.NoError(t, err, "error fetching height after chain should have halted")
 
 	require.Equal(t, haltHeight, height, "height is not equal to halt height")
 
@@ -122,6 +133,9 @@ func modifyGenesisVotingPeriod(votingPeriod string) func([]byte) ([]byte, error)
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
 		}
 		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
 		out, err := json.Marshal(g)
