@@ -28,7 +28,7 @@ type Interchain struct {
 	relayers map[ibc.Relayer]string
 
 	// Key: relayer and path name; Value: the two chains being linked.
-	links map[relayerPath][2]ibc.Chain
+	links map[relayerPath]interchainLink
 
 	// Set to true after Build is called once.
 	built bool
@@ -39,6 +39,19 @@ type Interchain struct {
 
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
+}
+
+type interchainLink struct {
+	chains [2]ibc.Chain
+	// If set, these options will be used when creating the client in the path link step.
+	// If a zero value initialization is used, e.g. CreateClientOptions{},
+	// then the default values will be used via ibc.DefaultClientOpts.
+	createClientOpts ibc.CreateClientOptions
+
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
+	createChannelOpts ibc.CreateChannelOptions
 }
 
 // NewInterchain returns a new Interchain.
@@ -52,7 +65,7 @@ func NewInterchain() *Interchain {
 		chains:   make(map[ibc.Chain]string),
 		relayers: make(map[ibc.Relayer]string),
 
-		links: make(map[relayerPath][2]ibc.Chain),
+		links: make(map[relayerPath]interchainLink),
 	}
 }
 
@@ -121,6 +134,16 @@ type InterchainLink struct {
 
 	// Name of path to create.
 	Path string
+
+	// If set, these options will be used when creating the client in the path link step.
+	// If a zero value initialization is used, e.g. CreateClientOptions{},
+	// then the default values will be used via ibc.DefaultClientOpts.
+	CreateClientOpts ibc.CreateClientOptions
+
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
+	CreateChannelOpts ibc.CreateChannelOptions
 }
 
 // AddLink adds the given link to the Interchain.
@@ -151,7 +174,11 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 		panic(fmt.Errorf("relayer %q already has a path named %q", key.Relayer, key.Path))
 	}
 
-	ic.links[key] = [2]ibc.Chain{link.Chain1, link.Chain2}
+	ic.links[key] = interchainLink{
+		chains:            [2]ibc.Chain{link.Chain1, link.Chain2},
+		createChannelOpts: link.CreateChannelOpts,
+		createClientOpts:  link.CreateClientOpts,
+	}
 	return ic
 }
 
@@ -166,16 +193,6 @@ type InterchainBuildOptions struct {
 	// but it does still configure keys and wallets for declared relayer-chain links.
 	// This is useful for tests that need lower-level access to configuring relayers.
 	SkipPathCreation bool
-
-	// If set, these options will be used when creating the client in the path link step.
-	// If a zero value initialization is used, e.g. CreateClientOptions{},
-	// then the default values will be used via ibc.DefaultClientOpts.
-	CreateClientOpts ibc.CreateClientOptions
-
-	// If set, these options will be used when creating the channel in the path link step.
-	// If a zero value initialization is used, e.g. CreateChannelOptions{},
-	// then the default values will be used via ibc.DefaultChannelOpts.
-	CreateChannelOpts ibc.CreateChannelOptions
 
 	// Optional. Git sha for test invocation. Once Go 1.18 supported,
 	// may be deprecated in favor of runtime/debug.ReadBuildInfo.
@@ -232,32 +249,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return nil
 	}
 
-	// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
-	// client options.
-	if opts.CreateClientOpts == (ibc.CreateClientOptions{}) {
-		opts.CreateClientOpts = ibc.DefaultClientOpts()
-	}
-
-	// Check that the client creation options are valid and fully specified.
-	if err := opts.CreateClientOpts.Validate(); err != nil {
-		return err
-	}
-
-	// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
-	// channel options for an ics20 fungible token transfer channel.
-	if opts.CreateChannelOpts == (ibc.CreateChannelOptions{}) {
-		opts.CreateChannelOpts = ibc.DefaultChannelOpts()
-	}
-
-	// Check that the channel creation options are valid and fully specified.
-	if err := opts.CreateChannelOpts.Validate(); err != nil {
-		return err
-	}
-
 	// For every relayer link, teach the relayer about the link and create the link.
-	for rp, chains := range ic.links {
-		c0 := chains[0]
-		c1 := chains[1]
+	for rp, link := range ic.links {
+
+		c0 := link.chains[0]
+		c1 := link.chains[1]
 		if err := rp.Relayer.GeneratePath(ctx, rep, c0.Config().ChainID, c1.Config().ChainID, rp.Path); err != nil {
 			return fmt.Errorf(
 				"failed to generate path %s on relayer %s between chains %s and %s: %w",
@@ -265,7 +261,29 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 			)
 		}
 
-		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, opts.CreateChannelOpts, opts.CreateClientOpts); err != nil {
+		// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
+		// client options.
+		if link.createClientOpts == (ibc.CreateClientOptions{}) {
+			link.createClientOpts = ibc.DefaultClientOpts()
+		}
+
+		// Check that the client creation options are valid and fully specified.
+		if err := link.createClientOpts.Validate(); err != nil {
+			return err
+		}
+
+		// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
+		// channel options for an ics20 fungible token transfer channel.
+		if link.createChannelOpts == (ibc.CreateChannelOptions{}) {
+			link.createChannelOpts = ibc.DefaultChannelOpts()
+		}
+
+		// Check that the channel creation options are valid and fully specified.
+		if err := link.createChannelOpts.Validate(); err != nil {
+			return err
+		}
+
+		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, link.createChannelOpts, link.createClientOpts); err != nil {
 			return fmt.Errorf(
 				"failed to link path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
@@ -424,13 +442,13 @@ func (ic *Interchain) relayerChains() map[ibc.Relayer][]ibc.Chain {
 	// so we don't have to manually deduplicate entries.
 	uniq := make(map[ibc.Relayer]map[ibc.Chain]struct{}, len(ic.relayers))
 
-	for rp, chains := range ic.links {
+	for rp, link := range ic.links {
 		r := rp.Relayer
 		if uniq[r] == nil {
 			uniq[r] = make(map[ibc.Chain]struct{}, 2) // Adding at least 2 chains per relayer.
 		}
-		uniq[r][chains[0]] = struct{}{}
-		uniq[r][chains[1]] = struct{}{}
+		uniq[r][link.chains[0]] = struct{}{}
+		uniq[r][link.chains[1]] = struct{}{}
 	}
 
 	// Then convert the sets to slices.

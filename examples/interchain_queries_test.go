@@ -99,6 +99,12 @@ func TestInterchainQueries(t *testing.T) {
 			Chain2:  chain2,
 			Relayer: r,
 			Path:    pathName,
+			CreateChannelOpts: ibc.CreateChannelOptions{
+				SourcePortName: "interquery",
+				DestPortName:   "icqhost",
+				Order:          ibc.Unordered,
+				Version:        "icq-1",
+			},
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
@@ -107,12 +113,6 @@ func TestInterchainQueries(t *testing.T) {
 		NetworkID: network,
 
 		SkipPathCreation: false,
-		CreateChannelOpts: ibc.CreateChannelOptions{
-			SourcePortName: "interquery",
-			DestPortName:   "icqhost",
-			Order:          ibc.Unordered,
-			Version:        "icq-1",
-		},
 	}))
 
 	// Fund user accounts, so we can query balances and make assertions.
