@@ -92,7 +92,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
-	// Test IBC conformance before chain upgrade.
+	// test IBC conformance before chain upgrade
 	conformance.TestChainPair(t, ctx, client, network, chain, counterpartyChain, rf, rep, r, path)
 
 	height, err := chain.Height(ctx)
@@ -101,7 +101,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	haltHeight := height + haltHeightDelta
 
 	proposal := ibc.SoftwareUpgradeProposal{
-		Deposit:     "500000000" + chain.Config().Denom,
+		Deposit:     "500000000" + chain.Config().Denom, // greater than min deposit
 		Title:       "Chain Upgrade 1",
 		Name:        upgradeName,
 		Description: "First chain software upgrade",
@@ -110,9 +110,6 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 
 	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
-
-	err = test.WaitForBlocks(ctx, 2, chain)
-	require.NoError(t, err)
 
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
@@ -123,18 +120,25 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
+	// this should timeout due to chain halt at upgrade height.
 	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after chain should have halted")
 
+	// make sure that chain is halted
 	require.Equal(t, haltHeight, height, "height is not equal to halt height")
 
+	// bring down nodes to prepare for upgrade
 	err = chain.StopAllNodes(ctx)
 	require.NoError(t, err, "error stopping node(s)")
 
+	// upgrade version on all nodes
 	chain.UpgradeVersion(ctx, client, upgradeVersion)
 
+	// start all nodes back up.
+	// validators reach consensus on first block after upgrade height
+	// and chain block production resumes.
 	err = chain.StartAllNodes(ctx)
 	require.NoError(t, err, "error starting upgraded node(s)")
 
@@ -144,11 +148,6 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	err = test.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
 	require.NoError(t, err, "chain did not produce blocks after upgrade")
 
-	height, err = chain.Height(ctx)
-	require.NoError(t, err, "error fetching height after upgrade")
-
-	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
-
-	// Test IBC conformance before chain upgrade.
+	// test IBC conformance after chain upgrade on same path
 	conformance.TestChainPair(t, ctx, client, network, chain, counterpartyChain, rf, rep, r, path)
 }

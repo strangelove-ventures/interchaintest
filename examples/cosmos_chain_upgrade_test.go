@@ -77,7 +77,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	haltHeight := height + haltHeightDelta
 
 	proposal := ibc.SoftwareUpgradeProposal{
-		Deposit:     "500000000" + chain.Config().Denom,
+		Deposit:     "500000000" + chain.Config().Denom, // greater than min deposit
 		Title:       "Chain Upgrade 1",
 		Name:        upgradeName,
 		Description: "First chain software upgrade",
@@ -86,9 +86,6 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 
 	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
-
-	err = test.WaitForBlocks(ctx, 2, chain)
-	require.NoError(t, err)
 
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
@@ -99,18 +96,25 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before upgrade")
 
+	// this should timeout due to chain halt at upgrade height.
 	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after chain should have halted")
 
+	// make sure that chain is halted
 	require.Equal(t, haltHeight, height, "height is not equal to halt height")
 
+	// bring down nodes to prepare for upgrade
 	err = chain.StopAllNodes(ctx)
 	require.NoError(t, err, "error stopping node(s)")
 
+	// upgrade version on all nodes
 	chain.UpgradeVersion(ctx, client, upgradeVersion)
 
+	// start all nodes back up.
+	// validators reach consensus on first block after upgrade height
+	// and chain block production resumes.
 	err = chain.StartAllNodes(ctx)
 	require.NoError(t, err, "error starting upgraded node(s)")
 
