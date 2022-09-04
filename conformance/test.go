@@ -254,10 +254,8 @@ func Test(t *testing.T, ctx context.Context, cfs []ibctest.ChainFactory, rfs []i
 								rep.TrackParallel(t)
 
 								chains, err := cf.Chains(t.Name())
-								require.NoError(t, err, "failed to get chains")
-
-								if len(chains) != 2 {
-									panic(fmt.Errorf("expected 2 chains, got %d", len(chains)))
+								if err != nil {
+									panic(fmt.Errorf("failed to get chains: %v", err))
 								}
 
 								client, network := ibctest.DockerSetup(t)
