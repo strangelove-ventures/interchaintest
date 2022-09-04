@@ -444,6 +444,11 @@ func (c *CosmosChain) initializeChainNodes(
 	c.pullImages(ctx, cli)
 	image := chainCfg.Images[0]
 
+	newVals := make(ChainNodes, c.numValidators)
+	copy(newVals, c.Validators)
+	newFullNodes := make(ChainNodes, c.numFullNodes)
+	copy(newFullNodes, c.FullNodes)
+
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i := len(c.Validators); i < c.numValidators; i++ {
 		i := i
@@ -453,7 +458,7 @@ func (c *CosmosChain) initializeChainNodes(
 				return err
 			}
 			val.Index = i
-			c.Validators = append(c.Validators, val)
+			newVals[i] = val
 			return nil
 		})
 	}
@@ -465,13 +470,15 @@ func (c *CosmosChain) initializeChainNodes(
 				return err
 			}
 			fn.Index = i
-			c.FullNodes = append(c.FullNodes, fn)
+			newFullNodes[i] = fn
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	c.Validators = newVals
+	c.FullNodes = newFullNodes
 	return nil
 }
 
