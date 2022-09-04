@@ -16,10 +16,10 @@ import (
 )
 
 func TestJunoUpgradeIBC(t *testing.T) {
-	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "v7.0.0")
+	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
 }
 
-func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeVersion string) {
+func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -32,7 +32,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: modifyGenesisVotingPeriod(votingPeriod),
+				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
 		{
@@ -103,7 +103,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	proposal := ibc.SoftwareUpgradeProposal{
 		Deposit:     "500000000" + chain.Config().Denom,
 		Title:       "Chain Upgrade 1",
-		Name:        "chain-upgrade",
+		Name:        upgradeName,
 		Description: "First chain software upgrade",
 		Height:      haltHeight,
 	}
@@ -120,7 +120,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before upgrade")
 
-	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Minute*2)
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
 	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)

@@ -690,13 +690,19 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop i
 	if err != nil {
 		return "", err
 	}
+	output := CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	if output.Code != 0 {
+		return "", fmt.Errorf("failed to send upgrade proposal tx: %s", output.RawLog)
+	}
 	err = test.WaitForBlocks(ctx, 2, tn)
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
-	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
-	return output.TxHash, err
+	return output.TxHash, nil
 }
 
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {

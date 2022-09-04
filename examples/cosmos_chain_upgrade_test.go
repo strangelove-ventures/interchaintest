@@ -17,17 +17,17 @@ import (
 )
 
 const (
-	haltHeightDelta    = uint64(30) // will propose upgrade this many blocks in the future
+	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
 	blocksAfterUpgrade = uint64(10)
 	votingPeriod       = "10s"
 	maxDepositPeriod   = "10s"
 )
 
 func TestJunoUpgrade(t *testing.T) {
-	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v7.0.0")
+	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
 }
 
-func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string) {
+func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -40,7 +40,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: modifyGenesisVotingPeriod(votingPeriod),
+				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
 	})
@@ -79,7 +79,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	proposal := ibc.SoftwareUpgradeProposal{
 		Deposit:     "500000000" + chain.Config().Denom,
 		Title:       "Chain Upgrade 1",
-		Name:        "chain-upgrade",
+		Name:        upgradeName,
 		Description: "First chain software upgrade",
 		Height:      haltHeight,
 	}
@@ -93,7 +93,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
-	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Minute*2)
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
 	height, err = chain.Height(ctx)
@@ -126,8 +126,8 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
 }
 
-func modifyGenesisVotingPeriod(votingPeriod string) func([]byte) ([]byte, error) {
-	return func(genbz []byte) ([]byte, error) {
+func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) func(ibc.ChainConfig, []byte) ([]byte, error) {
+	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
 		if err := json.Unmarshal(genbz, &g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
@@ -136,6 +136,9 @@ func modifyGenesisVotingPeriod(votingPeriod string) func([]byte) ([]byte, error)
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
 		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "deposit_params", "min_deposit", 0, "denom"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
 		out, err := json.Marshal(g)
