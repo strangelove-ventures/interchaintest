@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
 	// FlushPackets will be exercised in a subtest,
@@ -49,7 +49,6 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 			CreateChannelOpts: ibc.DefaultChannelOpts(),
 		})
 
-	ctx := context.Background()
 	eRep := rep.RelayerExecReporter(t)
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{

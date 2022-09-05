@@ -30,7 +30,7 @@ type ChainConfig struct {
 	// Do not use docker host mount.
 	NoHostMount bool
 	// When provided, genesis file contents will be altered before sharing for genesis.
-	ModifyGenesis func([]byte) ([]byte, error)
+	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 }

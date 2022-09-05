@@ -15,7 +15,7 @@ import (
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
-func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
 	client, network := ibctest.DockerSetup(t)
@@ -47,7 +47,6 @@ func TestRelayerSetup(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerF
 			Path: pathName,
 		})
 
-	ctx := context.Background()
 	eRep := rep.RelayerExecReporter(t)
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{

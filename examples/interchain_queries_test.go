@@ -83,7 +83,7 @@ func TestInterchainQueries(t *testing.T) {
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
+		relayer.StartupFlags("-p", "events", "-b", "100"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -114,6 +114,9 @@ func TestInterchainQueries(t *testing.T) {
 
 		SkipPathCreation: false,
 	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	// Fund user accounts, so we can query balances and make assertions.
 	const userFunds = int64(10_000_000_000)
@@ -214,8 +217,8 @@ type icqResults struct {
 	} `json:"response"`
 }
 
-func modifyGenesisAllowICQQueries(allowQueries []string) func([]byte) ([]byte, error) {
-	return func(genbz []byte) ([]byte, error) {
+func modifyGenesisAllowICQQueries(allowQueries []string) func(ibc.ChainConfig, []byte) ([]byte, error) {
+	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
 		if err := json.Unmarshal(genbz, &g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)

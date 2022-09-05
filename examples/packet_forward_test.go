@@ -69,6 +69,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		SkipPathCreation: false,
 	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	const userFunds = int64(10_000_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, osmosis, gaia, juno)
