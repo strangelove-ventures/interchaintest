@@ -1,9 +1,6 @@
 # Write Custom Tests
 
-This document explains the basic necessities to write custom tests.
-
-
-We'll break down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
+This document breaks down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
 
 1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
@@ -12,13 +9,10 @@ We'll break down code snippets from [learn_ibc_test.go](../examples/learn_ibc_te
 It validates each step and confirms that the balances of each wallet are correct. 
 
 
-### There are three basic components of `ibctest`:
+### Three basic components of `ibctest`:
 - **Chain Factory** - Select chain binaries to include in tests
 - **Relayer Factory** - Select Relayer to use in tests
 - **Interchain** - Where the testnet is configured and spun up
-
-Each section is broken down below. 
-Lets start with the Chain Factory...
 
 
 ## Chain Factory
@@ -38,8 +32,7 @@ The chain factory is where you configure your chain binaries.
 
 `ibctest` has several [pre-configured chains](./preconfiguredChains.txt). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
-When creating your `ChainFactory`,
-If the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
+When creating your `ChainFactory`, if the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
 
 You can also pass in **remote images** and/or **local docker images**. 
 
@@ -196,11 +189,7 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 ```
 
 Note the `SkipPathCreation` boolean. You can set this to `true` if IBC paths (`client`, `connection` and `channel`) are not necessary OR if you would like to make those calls manually.
-EXAMPLE: Creating client manually with relayer: 
 
-```go
-r.CreateClients(ctx, eRep, "my-path")
-```
 
 ## Creating Users(wallets)
 
@@ -236,9 +225,7 @@ tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.Wallet
 )
 ```
 
-The above example used the builtin `SendIBCTransfer` method however, this could have also been accomplished using the `Exec` method.
-
-The `Exec` method allos any arbitrary command to be passed into a chain binary or relayer binary. 
+The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
 
 EXAMPLE: Sending an IBC transfer with the `Exec`:
 ```go
@@ -282,7 +269,7 @@ t.log("PRINT STATEMENT: ", variableToPrint)
 You will need to pass in the `-v` flag in the `go test` command to see this output. Exampled below.
 
 
-This document only scratches the surface of the full functionality of `ibctest`. Take a look at other functions beginning with "Test" to get more in-depth/advanced testing examples.
+This document only scratches the surface of the full functionality of `ibctest`. Refer to other tests in this repo for more in-depth/advanced testing examples.
 
 
 ## How to run
