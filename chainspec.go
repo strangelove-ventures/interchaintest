@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/label"
 )
 
 // ChainSpec is a wrapper around an ibc.ChainConfig
@@ -54,12 +55,15 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		}
 	}
 
+	// s.Name and chainConfig.Name are interchangeable
+	if s.Name == "" && s.ChainConfig.Name != "" {
+		s.Name = s.ChainConfig.Name
+	} else if s.Name != "" && s.ChainConfig.Name == "" {
+		s.ChainConfig.Name = s.Name
+	}
+
+	// Empty name is only valid with a fully defined chain config.
 	if s.Name == "" {
-		// Empty name is only valid with a fully defined chain config.
-		// If ChainName is provided and ChainConfig.Name is not set, set it.
-		if s.ChainConfig.Name == "" && s.ChainName != "" {
-			s.ChainConfig.Name = s.ChainName
-		}
 		if !s.ChainConfig.IsFullyConfigured() {
 			return nil, errors.New("ChainSpec.Name required when not all config fields are set")
 		}
@@ -68,6 +72,7 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 	}
 
 	// Get built-in config.
+	// If chain doesn't have built in config, but is fully configured, register chain label.
 	cfg, ok := builtinChainConfigs[s.Name]
 	if !ok {
 		if !s.ChainConfig.IsFullyConfigured() {
@@ -78,6 +83,10 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 			sort.Strings(availableChains)
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
+		}
+		chainLabel := label.Chain(s.Name)
+		if !chainLabel.IsKnown() {
+			label.RegisterChainLabel(chainLabel)
 		}
 		cfg = ibc.ChainConfig{}
 	}
