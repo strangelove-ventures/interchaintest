@@ -266,36 +266,16 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 // FindTxs implements blockdb.BlockSaver.
 func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	h := int64(height)
-	blockRes, err := tn.Client.Block(ctx, &h)
+	blockRes, err := tn.Client.BlockResults(ctx, &h)
 	if err != nil {
 		return nil, err
 	}
-	txs := make([]blockdb.Tx, len(blockRes.Block.Txs))
-	for i, tx := range blockRes.Block.Txs {
-		// Store the raw transaction data first, in case decoding/encoding fails.
-		txs[i].Data = tx
+	txs := make([]blockdb.Tx, 0, len(blockRes.TxsResults)+2)
+	for i, tx := range blockRes.TxsResults {
+		txs[i].Data = tx.Data
 
-		sdkTx, err := decodeTX(tx)
-		if err != nil {
-			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
-			continue
-		}
-		b, err := encodeTxToJSON(sdkTx)
-		if err != nil {
-			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
-			continue
-		}
-		txs[i].Data = b
-
-		// Request the transaction directly in order to get the tendermint events.
-		txRes, err := tn.Client.Tx(ctx, tx.Hash(), false)
-		if err != nil {
-			tn.logger().Info("Failed to retrieve tx", zap.Uint64("height", height), zap.Error(err))
-			continue
-		}
-
-		txs[i].Events = make([]blockdb.Event, len(txRes.TxResult.Events))
-		for j, e := range txRes.TxResult.Events {
+		txs[i].Events = make([]blockdb.Event, len(tx.Events))
+		for j, e := range tx.Events {
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for k, attr := range e.Attributes {
 				attrs[k] = blockdb.EventAttribute{
@@ -308,6 +288,46 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 				Attributes: attrs,
 			}
 		}
+	}
+	if len(blockRes.BeginBlockEvents) > 0 {
+		beginBlockTx := blockdb.Tx{
+			Data: []byte("begin_block"),
+		}
+		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
+		for i, e := range blockRes.BeginBlockEvents {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for j, attr := range e.Attributes {
+				attrs[j] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			beginBlockTx.Events[i] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
+		txs = append(txs, beginBlockTx)
+	}
+	if len(blockRes.EndBlockEvents) > 0 {
+		endBlockTx := blockdb.Tx{
+			Data: []byte("end_block"),
+		}
+		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
+		for i, e := range blockRes.EndBlockEvents {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for j, attr := range e.Attributes {
+				attrs[j] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			endBlockTx.Events[i] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
+		txs = append(txs, endBlockTx)
 	}
 
 	return txs, nil
