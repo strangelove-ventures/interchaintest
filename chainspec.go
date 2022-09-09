@@ -64,6 +64,10 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 
 	// Empty name is only valid with a fully defined chain config.
 	if s.Name == "" {
+		// If ChainName is provided and ChainConfig.Name is not set, set it.
+		if s.ChainConfig.Name == "" && s.ChainName != "" {
+			s.ChainConfig.Name = s.ChainName
+		}
 		if !s.ChainConfig.IsFullyConfigured() {
 			return nil, errors.New("ChainSpec.Name required when not all config fields are set")
 		}
