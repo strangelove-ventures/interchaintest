@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -35,8 +36,10 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 )
 
@@ -266,16 +269,41 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 // FindTxs implements blockdb.BlockSaver.
 func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	h := int64(height)
-	blockRes, err := tn.Client.BlockResults(ctx, &h)
-	if err != nil {
+	var eg errgroup.Group
+	var blockRes *coretypes.ResultBlockResults
+	var block *coretypes.ResultBlock
+	eg.Go(func() (err error) {
+		blockRes, err = tn.Client.BlockResults(ctx, &h)
+		return err
+	})
+	eg.Go(func() (err error) {
+		block, err = tn.Client.Block(ctx, &h)
+		return err
+	})
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-	txs := make([]blockdb.Tx, 0, len(blockRes.TxsResults)+2)
-	for i, tx := range blockRes.TxsResults {
-		txs[i].Data = tx.Data
+	txs := make([]blockdb.Tx, 0, len(block.Block.Txs)+2)
+	for i, tx := range block.Block.Txs {
+		var newTx blockdb.Tx
+		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
 
-		txs[i].Events = make([]blockdb.Event, len(tx.Events))
-		for j, e := range tx.Events {
+		sdkTx, err := decodeTX(tx)
+		if err != nil {
+			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
+			continue
+		}
+		b, err := encodeTxToJSON(sdkTx)
+		if err != nil {
+			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
+			continue
+		}
+		newTx.Data = b
+
+		rTx := blockRes.TxsResults[i]
+
+		newTx.Events = make([]blockdb.Event, len(rTx.Events))
+		for j, e := range rTx.Events {
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for k, attr := range e.Attributes {
 				attrs[k] = blockdb.EventAttribute{
@@ -283,15 +311,16 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 					Value: string(attr.Value),
 				}
 			}
-			txs[i].Events[j] = blockdb.Event{
+			newTx.Events[j] = blockdb.Event{
 				Type:       e.Type,
 				Attributes: attrs,
 			}
 		}
+		txs = append(txs, newTx)
 	}
 	if len(blockRes.BeginBlockEvents) > 0 {
 		beginBlockTx := blockdb.Tx{
-			Data: []byte("begin_block"),
+			Data: []byte(`{"data":"begin_block"}`),
 		}
 		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
 		for i, e := range blockRes.BeginBlockEvents {
@@ -311,7 +340,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	}
 	if len(blockRes.EndBlockEvents) > 0 {
 		endBlockTx := blockdb.Tx{
-			Data: []byte("end_block"),
+			Data: []byte(`{"data":"end_block"}`),
 		}
 		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
 		for i, e := range blockRes.EndBlockEvents {
