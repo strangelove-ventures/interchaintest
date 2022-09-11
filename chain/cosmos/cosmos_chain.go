@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -270,11 +271,29 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 }
 
 // Implements Chain interface
-func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.SoftwareUpgradeTx, _ error) {
+func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*govtypes.Proposal, error) {
+	return c.getFullNode().QueryProposal(ctx, proposalID)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.TxProposal, _ error) {
 	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
+	return c.txProposal(txHash)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop ibc.TextProposal) (tx ibc.TxProposal, _ error) {
+	txHash, err := c.getFullNode().TextProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
+func (c *CosmosChain) txProposal(txHash string) (tx ibc.TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
@@ -315,8 +334,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 }
 
 // Implements Chain interface
-func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	return c.getFullNode().CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
+func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, params ibc.PoolParams) (string, error) {
+	return c.getFullNode().CreatePool(ctx, keyName, params)
+}
+
+func (c *CosmosChain) SwapExactAmountIn(ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
+	return c.getFullNode().SwapExactAmountIn(ctx, keyName, coinIn, minAmountOut, poolIDs, swapDenoms)
 }
 
 // Implements Chain interface

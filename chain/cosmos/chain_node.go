@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -109,7 +110,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
 		Client:            tn.Client,
-		ChainID:           tn.Chain.Config().ChainID,
+		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
@@ -691,6 +692,20 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 	return err
 }
 
+// QueryProposal returns the status of a proposal.
+func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*govtypes.Proposal, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
+	if err != nil {
+		return nil, err
+	}
+	var proposal govtypes.Proposal
+	err = json.Unmarshal(stdout, &proposal)
+	if err != nil {
+		return nil, err
+	}
+	return &proposal, nil
+}
+
 // UpgradeProposal submits a software-upgrade proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
 	command := []string{
@@ -706,6 +721,21 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop i
 		command = append(command, "--upgrade-info", prop.Info)
 	}
 
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// TextProposal submits a text proposal to the chain.
+func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop ibc.TextProposal) (string, error) {
+	command := []string{
+		"gov", "submit-proposal",
+		"--type", "text",
+		"--title", prop.Title,
+		"--description", prop.Description,
+		"--deposit", prop.Deposit,
+	}
+	if prop.Expedited {
+		command = append(command, "--is-expedited=true")
+	}
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
@@ -745,14 +775,49 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	return err
 }
 
-func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	// TODO generate --pool-file
-	poolFilePath := "TODO"
-	_, err := tn.ExecTx(ctx,
+func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, params ibc.PoolParams) (string, error) {
+	poolbz, err := json.Marshal(params)
+	if err != nil {
+		return "", err
+	}
+
+	poolFile := "pool.json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, poolFile, poolbz); err != nil {
+		return "", fmt.Errorf("failed to write pool file: %w", err)
+	}
+
+	if _, err := tn.ExecTx(ctx, keyName,
 		"gamm", "create-pool",
-		"--pool-file", poolFilePath,
+		"--pool-file", filepath.Join(tn.HomeDir(), poolFile),
+	); err != nil {
+		return "", fmt.Errorf("failed to create pool: %w", err)
+	}
+
+	stdout, _, err := tn.ExecQuery(ctx, "gamm", "num-pools")
+	if err != nil {
+		return "", fmt.Errorf("failed to query num pools: %w", err)
+	}
+	var res map[string]string
+	if err := json.Unmarshal(stdout, &res); err != nil {
+		return "", fmt.Errorf("failed to unmarshal query response: %w", err)
+	}
+
+	numPools, ok := res["num_pools"]
+	if !ok {
+		return "", fmt.Errorf("could not find number of pools in query response: %w", err)
+	}
+	return numPools, nil
+}
+
+func (tn *ChainNode) SwapExactAmountIn(ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
+	return tn.ExecTx(ctx, keyName,
+		"gamm", "swap-exact-amount-in",
+		coinIn, minAmountOut,
+		"--swap-route-pool-ids", strings.Join(poolIDs, ","),
+		"--swap-route-denoms", strings.Join(swapDenoms, ","),
 	)
-	return err
 }
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
