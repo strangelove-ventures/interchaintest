@@ -59,21 +59,6 @@ type Chain interface {
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
 
-	// UpgradeProposal submits a software-upgrade proposal to the chain.
-	UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (SoftwareUpgradeTx, error)
-
-	// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-	InstantiateContract(ctx context.Context, keyName string, amount WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error)
-
-	// ExecuteContract executes a contract transaction with a message using it's address.
-	ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error
-
-	// DumpContractState dumps the state of a contract at a block height.
-	DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error)
-
-	// CreatePool creates a balancer pool.
-	CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []WalletAmount) error
-
 	// Height returns the current block height or an error if unable to get current height.
 	Height(ctx context.Context) (uint64, error)
 

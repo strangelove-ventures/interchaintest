@@ -48,18 +48,43 @@ func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxH
 	return found.(ibc.PacketTimeout), nil
 }
 
-type blockPoller struct {
-	CurrentHeight func(ctx context.Context) (uint64, error)
-	Acker         ChainAcker
-	Timeouter     ChainTimeouter
-	pollErr       *pollError
+type ChainProposalStatuser interface {
+	ChainHeighter
+	QueryProposal(ctx context.Context, proposalID string) (string, error)
 }
 
-func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, packet ibc.Packet) (any, error) {
+type proposalSearch struct {
+	id     string
+	status string
+}
+
+// PollForTimeout attempts to find a timeout containing a packet equal to the packet argument.
+// Otherwise, works identically to PollForAck.
+func PollForProposalStatus(ctx context.Context, chain ChainProposalStatuser, startHeight, maxHeight uint64, proposalID string, status string) error {
+	poller := blockPoller{CurrentHeight: chain.Height, ProposalStatuser: chain}
+	_, err := poller.doPoll(ctx, startHeight, maxHeight, proposalSearch{
+		id:     proposalID,
+		status: status,
+	})
+	return err
+}
+
+type blockPoller struct {
+	CurrentHeight    func(ctx context.Context) (uint64, error)
+	Acker            ChainAcker
+	Timeouter        ChainTimeouter
+	ProposalStatuser ChainProposalStatuser
+	pollErr          *pollError
+}
+
+func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, pollData any) (any, error) {
 	if maxHeight < startHeight {
 		panic("maxHeight must be greater than or equal to startHeight")
 	}
-	p.pollErr = &pollError{targetPacket: packet}
+	switch {
+	case p.Acker != nil, p.Timeouter != nil:
+		p.pollErr = &pollError{targetPacket: pollData.(ibc.Packet)}
+	}
 
 	cursor := startHeight
 	for cursor <= maxHeight {
@@ -77,9 +102,11 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 		)
 		switch {
 		case p.Acker != nil:
-			found, findErr = p.findAck(ctx, cursor, packet)
+			found, findErr = p.findAck(ctx, cursor, pollData.(ibc.Packet))
 		case p.Timeouter != nil:
-			found, findErr = p.findTimeout(ctx, cursor, packet)
+			found, findErr = p.findTimeout(ctx, cursor, pollData.(ibc.Packet))
+		case p.ProposalStatuser != nil:
+			findErr = p.findProposalStatus(ctx, cursor, pollData.(proposalSearch))
 		default:
 			panic("poller misconfiguration")
 		}
@@ -123,6 +150,17 @@ func (p blockPoller) findTimeout(ctx context.Context, height uint64, packet ibc.
 		}
 	}
 	return zero, ErrNotFound
+}
+
+func (p blockPoller) findProposalStatus(ctx context.Context, height uint64, proposal proposalSearch) error {
+	status, err := p.ProposalStatuser.QueryProposal(ctx, proposal.id)
+	if err != nil {
+		return err
+	}
+	if status != proposal.status {
+		return fmt.Errorf("status: (%s) is not equal to expected: (%s)", status, proposal.status)
+	}
+	return nil
 }
 
 type pollError struct {

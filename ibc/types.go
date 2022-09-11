@@ -197,6 +197,14 @@ const (
 )
 
 // SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
+type TextProposal struct {
+	Deposit     string
+	Title       string
+	Description string
+	Expedited   bool
+}
+
+// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
 type SoftwareUpgradeProposal struct {
 	Deposit     string
 	Title       string
@@ -204,4 +212,13 @@ type SoftwareUpgradeProposal struct {
 	Description string
 	Height      uint64
 	Info        string // optional
+}
+
+// PoolParams defines parameters for creating a gamm liquidity pool
+type PoolParams struct {
+	Weights        string `json:"weights"`
+	InitialDeposit string `json:"initial-deposit"`
+	SwapFee        string `json:"swap-fee"`
+	ExitFee        string `json:"exit-fee"`
+	FutureGovernor string `json:"future-governor"`
 }

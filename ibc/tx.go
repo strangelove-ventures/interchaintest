@@ -38,10 +38,17 @@ const (
 	ProposalVoteNo         = "no"
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
+
+	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
+	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
+	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
+	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
+	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
+	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
 )
 
-// SoftwareUpgradeTx is a generalized IBC transaction.
-type SoftwareUpgradeTx struct {
+// TxProposal contains chain proposal transaction details.
+type TxProposal struct {
 	// The block height.
 	Height uint64
 	// The transaction hash.
