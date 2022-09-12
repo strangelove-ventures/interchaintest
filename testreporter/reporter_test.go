@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/strangelove-ventures/ibctest/internal/mocktesting"
-	"github.com/strangelove-ventures/ibctest/label"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/strangelove-ventures/ibctest/v3/internal/mocktesting"
+	"github.com/strangelove-ventures/ibctest/v3/label"
+	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"github.com/stretchr/testify/require"
 )
 

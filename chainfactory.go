@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/strangelove-ventures/ibctest/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/chain/penumbra"
-	"github.com/strangelove-ventures/ibctest/chain/polkadot"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/label"
+	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v3/chain/penumbra"
+	"github.com/strangelove-ventures/ibctest/v3/chain/polkadot"
+	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/ibctest/v3/label"
 	"go.uber.org/zap"
 )
 
