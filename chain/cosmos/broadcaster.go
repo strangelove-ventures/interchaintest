@@ -14,7 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context

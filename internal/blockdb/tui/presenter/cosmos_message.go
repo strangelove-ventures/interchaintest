@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
 )
 
 // CosmosMessage presents a blockdb.CosmosMessageResult.

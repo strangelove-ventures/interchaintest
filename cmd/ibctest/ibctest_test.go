@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/conformance"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/ibctest/internal/blockdb/tui"
-	"github.com/strangelove-ventures/ibctest/internal/version"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/strangelove-ventures/ibctest/v5"
+	"github.com/strangelove-ventures/ibctest/v5/conformance"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
+	blockdbtui "github.com/strangelove-ventures/ibctest/v5/internal/blockdb/tui"
+	"github.com/strangelove-ventures/ibctest/v5/internal/version"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"go.uber.org/zap"
 )
 
