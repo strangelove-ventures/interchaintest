@@ -320,7 +320,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	}
 	if len(blockRes.BeginBlockEvents) > 0 {
 		beginBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"begin_block"}`),
+			Data: []byte(`{"data":"begin_block","note":"this is a transaction artificially created for debugging purposes"}`),
 		}
 		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
 		for i, e := range blockRes.BeginBlockEvents {
@@ -340,7 +340,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	}
 	if len(blockRes.EndBlockEvents) > 0 {
 		endBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"end_block"}`),
+			Data: []byte(`{"data":"end_block","note":"this is a transaction artificially created for debugging purposes"}`),
 		}
 		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
 		for i, e := range blockRes.EndBlockEvents {
