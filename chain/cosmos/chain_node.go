@@ -361,11 +361,11 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	return txs, nil
 }
 
-// ExecTx executes a transaction, waits for blocks, waits
-// for 2 blocks if successful, then returns the tx hash.
-func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...string) (string, error) {
+// TxCommand is a helper to retrieve a full command for broadcasting a tx
+// with the chain node binary.
+func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	command = tn.NodeCommand(append(command,
+	return tn.NodeCommand(append(command,
 		"--from", keyName,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
@@ -373,11 +373,14 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 		"--output", "json",
 		"-y",
 	)...)
+}
 
+// ExecTx executes a transaction, waits for 2 blocks if successful, then returns the tx hash.
+func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...string) (string, error) {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, _, err := tn.Exec(ctx, command, nil)
+	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), nil)
 	if err != nil {
 		return "", err
 	}
