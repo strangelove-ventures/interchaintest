@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmtypes "github.com/tendermint/tendermint/rpc/core/types"
 )
@@ -14,14 +15,14 @@ type blockClient interface {
 
 // rangeBlockMessages iterates through all a block's transactions and each transaction's messages yielding to f.
 // Return true from f to stop iteration.
-func rangeBlockMessages(ctx context.Context, client blockClient, height uint64, done func(sdk.Msg) bool) error {
+func rangeBlockMessages(ctx context.Context, interfaceRegistry codectypes.InterfaceRegistry, client blockClient, height uint64, done func(sdk.Msg) bool) error {
 	h := int64(height)
 	block, err := client.Block(ctx, &h)
 	if err != nil {
 		return fmt.Errorf("tendermint rpc get block: %w", err)
 	}
 	for _, txbz := range block.Block.Txs {
-		tx, err := decodeTX(txbz)
+		tx, err := decodeTX(interfaceRegistry, txbz)
 		if err != nil {
 			return fmt.Errorf("decode tendermint tx: %w", err)
 		}

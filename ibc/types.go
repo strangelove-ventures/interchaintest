@@ -1,6 +1,7 @@
 package ibc
 
 import (
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 )
@@ -33,6 +34,8 @@ type ChainConfig struct {
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
+	// Non-nil will override the encoding config, used for cosmos chains only.
+	EncodingConfig *simappparams.EncodingConfig
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -86,6 +89,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.ConfigFileOverrides != nil {
 		c.ConfigFileOverrides = other.ConfigFileOverrides
+	}
+
+	if other.EncodingConfig != nil {
+		c.EncodingConfig = other.EncodingConfig
 	}
 
 	return c

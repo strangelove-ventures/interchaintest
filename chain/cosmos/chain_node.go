@@ -107,15 +107,16 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
+	cfg := tn.Chain.Config()
 	return client.Context{
 		Client:            tn.Client,
 		ChainID:           tn.Chain.Config().ChainID,
-		InterfaceRegistry: defaultEncoding.InterfaceRegistry,
+		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
 		OutputFormat:      "json",
-		LegacyAmino:       defaultEncoding.Amino,
-		TxConfig:          defaultEncoding.TxConfig,
+		LegacyAmino:       cfg.EncodingConfig.Amino,
+		TxConfig:          cfg.EncodingConfig.TxConfig,
 	}
 }
 
@@ -283,17 +284,18 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
+	interfaceRegistry := tn.Chain.Config().EncodingConfig.InterfaceRegistry
 	txs := make([]blockdb.Tx, 0, len(block.Block.Txs)+2)
 	for i, tx := range block.Block.Txs {
 		var newTx blockdb.Tx
 		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
 
-		sdkTx, err := decodeTX(tx)
+		sdkTx, err := decodeTX(interfaceRegistry, tx)
 		if err != nil {
 			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		b, err := encodeTxToJSON(sdkTx)
+		b, err := encodeTxToJSON(interfaceRegistry, sdkTx)
 		if err != nil {
 			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
 			continue

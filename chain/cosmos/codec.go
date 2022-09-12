@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
@@ -12,7 +13,7 @@ import (
 	ibctypes "github.com/cosmos/ibc-go/v5/modules/core/types"
 )
 
-func newTestEncoding() simappparams.EncodingConfig {
+func DefaultEncoding() simappparams.EncodingConfig {
 	// core modules
 	cfg := simappparams.MakeTestEncodingConfig()
 	std.RegisterLegacyAminoCodec(cfg.Amino)
@@ -28,16 +29,12 @@ func newTestEncoding() simappparams.EncodingConfig {
 	return cfg
 }
 
-var (
-	defaultEncoding = newTestEncoding()
-)
-
-func decodeTX(txbz []byte) (sdk.Tx, error) {
-	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+func decodeTX(interfaceRegistry codectypes.InterfaceRegistry, txbz []byte) (sdk.Tx, error) {
+	cdc := codec.NewProtoCodec(interfaceRegistry)
 	return authTx.DefaultTxDecoder(cdc)(txbz)
 }
 
-func encodeTxToJSON(tx sdk.Tx) ([]byte, error) {
-	cdc := codec.NewProtoCodec(defaultEncoding.InterfaceRegistry)
+func encodeTxToJSON(interfaceRegistry codectypes.InterfaceRegistry, tx sdk.Tx) ([]byte, error) {
+	cdc := codec.NewProtoCodec(interfaceRegistry)
 	return authTx.DefaultJSONTxEncoder(cdc)(tx)
 }
