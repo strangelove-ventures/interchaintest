@@ -40,7 +40,6 @@ import (
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -362,6 +361,94 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	return txs, nil
 }
 
+// TxCommand is a helper to retrieve a full command for broadcasting a tx
+// with the chain node binary.
+func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
+	command = append([]string{"tx"}, command...)
+	return tn.NodeCommand(append(command,
+		"--from", keyName,
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--keyring-backend", keyring.BackendTest,
+		"--output", "json",
+		"-y",
+	)...)
+}
+
+// ExecTx executes a transaction, waits for 2 blocks if successful, then returns the tx hash.
+func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...string) (string, error) {
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+
+	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), nil)
+	if err != nil {
+		return "", err
+	}
+	output := CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	if output.Code != 0 {
+		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
+	}
+	if err := test.WaitForBlocks(ctx, 2, tn); err != nil {
+		return "", err
+	}
+	return output.TxHash, nil
+}
+
+// NodeCommand is a helper to retrieve a full command for a chain node binary.
+// when interactions with the RPC endpoint are necessary.
+// For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,
+// pass ("keys", "show", "key1") for command to return the full command.
+// Will include additional flags for node URL, home directory, and chain ID.
+func (tn *ChainNode) NodeCommand(command ...string) []string {
+	command = tn.BinCommand(command...)
+	return append(command,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
+}
+
+// BinCommand is a helper to retrieve a full command for a chain node binary.
+// For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,
+// pass ("keys", "show", "key1") for command to return the full command.
+// Will include additional flags for home directory and chain ID.
+func (tn *ChainNode) BinCommand(command ...string) []string {
+	command = append([]string{tn.Chain.Config().Bin}, command...)
+	return append(command,
+		"--home", tn.HomeDir(),
+	)
+}
+
+// ExecBin is a helper to execute a command for a chain node binary.
+// For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,
+// pass ("keys", "show", "key1") for command to execute the command against the node.
+// Will include additional flags for home directory and chain ID.
+func (tn *ChainNode) ExecBin(ctx context.Context, command ...string) ([]byte, []byte, error) {
+	return tn.Exec(ctx, tn.BinCommand(command...), nil)
+}
+
+// QueryCommand is a helper to retrieve the full query command. For example,
+// if chain node binary is gaiad, and desired command is `gaiad query gov params`,
+// pass ("gov", "params") for command to return the full command with all necessary
+// flags to query the specific node.
+func (tn *ChainNode) QueryCommand(command ...string) []string {
+	command = append([]string{"query"}, command...)
+	return tn.NodeCommand(append(command,
+		"--output", "json",
+	)...)
+}
+
+// ExecQuery is a helper to execute a query command. For example,
+// if chain node binary is gaiad, and desired command is `gaiad query gov params`,
+// pass ("gov", "params") for command to execute the query against the node.
+// Returns response in json format.
+func (tn *ChainNode) ExecQuery(ctx context.Context, command ...string) ([]byte, []byte, error) {
+	return tn.Exec(ctx, tn.QueryCommand(command...), nil)
+}
+
 // CondenseMoniker fits a moniker into the cosmos character limit for monikers.
 // If the moniker already fits, it is returned unmodified.
 // Otherwise, the middle is truncated, and a hash is appended to the end
@@ -390,24 +477,25 @@ func CondenseMoniker(m string) string {
 
 // InitHomeFolder initializes a home folder for the given node
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin, "init", CondenseMoniker(tn.Name()),
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+
+	_, _, err := tn.ExecBin(ctx,
+		"init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.HomeDir(),
-	}
-	_, _, err := tn.Exec(ctx, command, nil)
+	)
 	return err
 }
 
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
-	command := []string{tn.Chain.Config().Bin, "keys", "add", name,
-		"--keyring-backend", keyring.BackendTest,
-		"--output", "json",
-		"--home", tn.HomeDir(),
-	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
+
+	_, _, err := tn.ExecBin(ctx,
+		"keys", "add", name,
+		"--keyring-backend", keyring.BackendTest,
+	)
 	return err
 }
 
@@ -418,8 +506,10 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 		"-c",
 		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.HomeDir()),
 	}
+
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
+
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
@@ -433,9 +523,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		}
 		amount += fmt.Sprintf("%d%s", coin.Amount.Int64(), coin.Denom)
 	}
-	command := []string{tn.Chain.Config().Bin, "add-genesis-account", address, amount,
-		"--home", tn.HomeDir(),
-	}
+
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
@@ -444,20 +532,20 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.ExecBin(ctx, "add-genesis-account", address, amount)
 	return err
 }
 
 // Gentx generates the gentx for a given node
 func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation types.Coin) error {
-	command := []string{tn.Chain.Config().Bin, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
-		"--keyring-backend", keyring.BackendTest,
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
+
+	_, _, err := tn.ExecBin(ctx,
+		"gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+		"--keyring-backend", keyring.BackendTest,
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
 	return err
 }
 
@@ -466,8 +554,10 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
 		"--home", tn.HomeDir(),
 	}
+
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
+
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
@@ -479,17 +569,9 @@ type CosmosTx struct {
 }
 
 func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", channelID,
+	command := []string{
+		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
-		"--keyring-backend", keyring.BackendTest,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--from", keyName,
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
 	}
 	if timeout != nil {
 		if timeout.NanoSeconds > 0 {
@@ -498,45 +580,15 @@ func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyN
 			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
 		}
 	}
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-	stdout, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
-		return "", err
-	}
-	err = test.WaitForBlocks(ctx, 2, tn)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
-	if output.Code != 0 {
-		return "", fmt.Errorf("failed to send ibc transfer tx: %s", output.RawLog)
-	}
-	return output.TxHash, err
+	return tn.ExecTx(ctx, keyName, command...)
 }
 
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	command := []string{tn.Chain.Config().Bin, "tx", "bank", "send", keyName,
+	_, err := tn.ExecTx(ctx,
+		keyName, "bank", "send", keyName,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	return tn.ExecThenWaitForBlocks(ctx, command)
-}
-
-func (tn *ChainNode) ExecThenWaitForBlocks(ctx context.Context, command []string) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
-		return err
-	}
-	return test.WaitForBlocks(ctx, 2, tn)
+	)
+	return err
 }
 
 type InstantiateContractAttribute struct {
@@ -578,20 +630,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	command := []string{tn.Chain.Config().Bin, "tx", "wasm", "store", path.Join(tn.HomeDir(), file),
-		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-	if _, _, err := tn.Exec(ctx, command, nil); err != nil {
+	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
 		return "", err
 	}
 
@@ -600,15 +639,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
 
-	command = []string{tn.Chain.Config().Bin,
-		"query", "wasm", "list-code", "--reverse",
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-
-	stdout, _, err := tn.Exec(ctx, command, nil)
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
 	if err != nil {
 		return "", err
 	}
@@ -619,44 +650,16 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 
 	codeID := res.CodeInfos[0].CodeID
-
-	command = []string{tn.Chain.Config().Bin,
-		"tx", "wasm", "instantiate", codeID, initMessage,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--label", "satoshi-test",
-		"--from", keyName,
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-
+	command := []string{"wasm", "instantiate", codeID, initMessage}
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-
-	_, _, err = tn.Exec(ctx, command, nil)
+	_, err = tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
 	}
 
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-
-	command = []string{tn.Chain.Config().Bin,
-		"query", "wasm", "list-contract-by-code", codeID,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-
-	stdout, _, err = tn.Exec(ctx, command, nil)
+	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
 		return "", err
 	}
@@ -671,46 +674,25 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 }
 
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	command := []string{tn.Chain.Config().Bin,
-		"tx", "wasm", "execute", contractAddress, message,
-		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	return tn.ExecThenWaitForBlocks(ctx, command)
+	_, err := tn.ExecTx(ctx, keyName,
+		"wasm", "execute", contractAddress, message,
+	)
+	return err
 }
 
 // VoteOnProposal submits a vote for the specified proposal.
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
-	command := []string{tn.Chain.Config().Bin,
-		"tx", "gov", "vote",
+	_, err := tn.ExecTx(ctx, keyName,
+		"gov", "vote",
 		proposalID, vote,
-		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-	_, _, err := tn.Exec(ctx, command, nil)
+	)
 	return err
 }
 
 // UpgradeProposal submits a software-upgrade proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
-	command := []string{tn.Chain.Config().Bin,
-		"tx", "gov", "submit-proposal",
+	command := []string{
+		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
 		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
 		"--title", prop.Title,
@@ -722,48 +704,14 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop i
 		command = append(command, "--upgrade-info", prop.Info)
 	}
 
-	command = append(command,
-		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	)
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-	stdout, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
-		return "", err
-	}
-	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
-	if err != nil {
-		return "", err
-	}
-	if output.Code != 0 {
-		return "", fmt.Errorf("failed to send upgrade proposal tx: %s", output.RawLog)
-	}
-	err = test.WaitForBlocks(ctx, 2, tn)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-	return output.TxHash, nil
+	return tn.ExecTx(ctx, keyName, command...)
 }
 
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	command := []string{tn.Chain.Config().Bin,
-		"query", "wasm", "contract-state", "all", contractAddress,
+	stdout, _, err := tn.ExecQuery(ctx,
+		"wasm", "contract-state", "all", contractAddress,
 		"--height", fmt.Sprint(height),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	stdout, _, err := tn.Exec(ctx, command, nil)
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -776,12 +724,10 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 }
 
 func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {
-	command := []string{tn.Chain.Config().Bin,
-		"export",
-		"--height", fmt.Sprint(height),
-		"--home", tn.HomeDir(),
-	}
-	_, stderr, err := tn.Exec(ctx, command, nil)
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+
+	_, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
 	if err != nil {
 		return "", err
 	}
@@ -790,32 +736,21 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin,
-		"unsafe-reset-all",
-		"--home", tn.HomeDir(),
-	}
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.ExecBin(ctx, "unsafe-reset-all")
 	return err
 }
 
 func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	// TODO generate --pool-file
 	poolFilePath := "TODO"
-	command := []string{tn.Chain.Config().Bin,
-		"tx", "gamm", "create-pool",
+	_, err := tn.ExecTx(ctx,
+		"gamm", "create-pool",
 		"--pool-file", poolFilePath,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--from", keyName,
-		"--keyring-backend", keyring.BackendTest,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--output", "json",
-		"-y",
-		"--home", tn.HomeDir(),
-		"--chain-id", tn.Chain.Config().ChainID,
-	}
-	return tn.ExecThenWaitForBlocks(ctx, command)
+	)
+	return err
 }
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
@@ -1042,37 +977,18 @@ func (tn *ChainNode) logger() *zap.Logger {
 }
 
 // RegisterICA will attempt to register an interchain account on the counterparty chain.
-func (tn *ChainNode) RegisterICA(ctx context.Context, address, connectionID string) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "tx", "intertx", "register",
-		"--from", address,
+func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
+	return tn.ExecTx(ctx, keyName,
+		"intertx", "register",
 		"--connection-id", connectionID,
-		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.HomeDir(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
-		"--keyring-backend", keyring.BackendTest,
-		"-y",
-	}
-
-	stdout, _, err := tn.Exec(ctx, command, nil)
-	if err != nil {
-		return "", err
-	}
-	output := CosmosTx{}
-	err = yaml.Unmarshal([]byte(stdout), &output)
-	if err != nil {
-		return "", err
-	}
-	return output.TxHash, nil
+	)
 }
 
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "query", "intertx", "interchainaccounts", connectionID, address,
-		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.HomeDir(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name())}
-
-	stdout, _, err := tn.Exec(ctx, command, nil)
+	stdout, _, err := tn.ExecQuery(ctx,
+		"intertx", "interchainaccounts", connectionID, address,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -1105,16 +1021,9 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		return err
 	}
 
-	command := []string{tn.Chain.Config().Bin, "tx", "intertx", "submit", string(msg),
+	_, err = tn.ExecTx(ctx, fromAddr,
+		"intertx", "submit", string(msg),
 		"--connection-id", connectionID,
-		"--from", fromAddr,
-		"--chain-id", tn.Chain.Config().ChainID,
-		"--home", tn.HomeDir(),
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.Name()),
-		"--keyring-backend", keyring.BackendTest,
-		"-y",
-	}
-
-	_, _, err = tn.Exec(ctx, command, nil)
+	)
 	return err
 }
