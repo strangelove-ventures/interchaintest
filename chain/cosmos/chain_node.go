@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -35,8 +36,10 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 )
 
@@ -266,14 +269,24 @@ func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
 // FindTxs implements blockdb.BlockSaver.
 func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	h := int64(height)
-	blockRes, err := tn.Client.Block(ctx, &h)
-	if err != nil {
+	var eg errgroup.Group
+	var blockRes *coretypes.ResultBlockResults
+	var block *coretypes.ResultBlock
+	eg.Go(func() (err error) {
+		blockRes, err = tn.Client.BlockResults(ctx, &h)
+		return err
+	})
+	eg.Go(func() (err error) {
+		block, err = tn.Client.Block(ctx, &h)
+		return err
+	})
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-	txs := make([]blockdb.Tx, len(blockRes.Block.Txs))
-	for i, tx := range blockRes.Block.Txs {
-		// Store the raw transaction data first, in case decoding/encoding fails.
-		txs[i].Data = tx
+	txs := make([]blockdb.Tx, 0, len(block.Block.Txs)+2)
+	for i, tx := range block.Block.Txs {
+		var newTx blockdb.Tx
+		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
 
 		sdkTx, err := decodeTX(tx)
 		if err != nil {
@@ -285,17 +298,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
 			continue
 		}
-		txs[i].Data = b
+		newTx.Data = b
 
-		// Request the transaction directly in order to get the tendermint events.
-		txRes, err := tn.Client.Tx(ctx, tx.Hash(), false)
-		if err != nil {
-			tn.logger().Info("Failed to retrieve tx", zap.Uint64("height", height), zap.Error(err))
-			continue
-		}
+		rTx := blockRes.TxsResults[i]
 
-		txs[i].Events = make([]blockdb.Event, len(txRes.TxResult.Events))
-		for j, e := range txRes.TxResult.Events {
+		newTx.Events = make([]blockdb.Event, len(rTx.Events))
+		for j, e := range rTx.Events {
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for k, attr := range e.Attributes {
 				attrs[k] = blockdb.EventAttribute{
@@ -303,11 +311,52 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 					Value: string(attr.Value),
 				}
 			}
-			txs[i].Events[j] = blockdb.Event{
+			newTx.Events[j] = blockdb.Event{
 				Type:       e.Type,
 				Attributes: attrs,
 			}
 		}
+		txs = append(txs, newTx)
+	}
+	if len(blockRes.BeginBlockEvents) > 0 {
+		beginBlockTx := blockdb.Tx{
+			Data: []byte(`{"data":"begin_block","note":"this is a transaction artificially created for debugging purposes"}`),
+		}
+		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
+		for i, e := range blockRes.BeginBlockEvents {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for j, attr := range e.Attributes {
+				attrs[j] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			beginBlockTx.Events[i] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
+		txs = append(txs, beginBlockTx)
+	}
+	if len(blockRes.EndBlockEvents) > 0 {
+		endBlockTx := blockdb.Tx{
+			Data: []byte(`{"data":"end_block","note":"this is a transaction artificially created for debugging purposes"}`),
+		}
+		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
+		for i, e := range blockRes.EndBlockEvents {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for j, attr := range e.Attributes {
+				attrs[j] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			endBlockTx.Events[i] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
+		txs = append(txs, endBlockTx)
 	}
 
 	return txs, nil
