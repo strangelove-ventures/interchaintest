@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/label"
+	"github.com/strangelove-ventures/ibctest/v5/label"
 )
 
 // T is a subset of testing.TB,

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
 	"github.com/stretchr/testify/require"
 )
 
