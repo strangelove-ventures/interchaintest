@@ -567,36 +567,6 @@ func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	panic("not implemented yet")
 }
 
-// UpgradeProposal submits a software-upgrade proposal to the chain.
-// Implements Chain interface.
-func (c *PolkadotChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
-	panic("implement me")
-}
-
-// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-// Implements Chain interface.
-func (c *PolkadotChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	panic("not implemented yet")
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-// Implements Chain interface.
-func (c *PolkadotChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	panic("not implemented yet")
-}
-
-// DumpContractState dumps the state of a contract at a block height.
-// Implements Chain interface.
-func (c *PolkadotChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	panic("not implemented yet")
-}
-
-// CreatePool creates a balancer pool.
-// Implements Chain interface.
-func (c *PolkadotChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	panic("not implemented yet")
-}
-
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
