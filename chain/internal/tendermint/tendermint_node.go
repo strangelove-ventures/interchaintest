@@ -16,6 +16,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
@@ -130,24 +131,46 @@ func (tn *TendermintNode) HomeDir() string {
 	return path.Join("/var/tendermint", tn.Chain.Config().Name)
 }
 
-func (tn *TendermintNode) sedCommandForConfigFile(key, newValue string) string {
-	configPath := path.Join(tn.HomeDir(), "config/config.toml")
-	return fmt.Sprintf("sed -i \"/^%s = .*/ s//%s = %s/\" %s", key, key, newValue, configPath)
-}
-
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	timeoutCommitPropose := fmt.Sprintf("\\\"%ds\\\"", BlockTimeSeconds)
-	cmds := []string{
-		tn.sedCommandForConfigFile("timeout-commit", timeoutCommitPropose),
-		tn.sedCommandForConfigFile("timeout-propose", timeoutCommitPropose),
-		tn.sedCommandForConfigFile("allow-duplicate-ip", "true"),
-		tn.sedCommandForConfigFile("addr-book-strict", "false"),
-		tn.sedCommandForConfigFile("persistent-peers", fmt.Sprintf("\\\"%s\\\"", peers)),
-	}
-	cmd := []string{"sh", "-c", strings.Join(cmds, " && ")}
-	_, _, err := tn.Exec(ctx, cmd, nil)
-	return err
+	c := make(configutil.Toml)
+
+	// Set Log Level to info
+	c["log-level"] = "info"
+
+	p2p := make(configutil.Toml)
+
+	// Allow p2p strangeness
+	p2p["allow-duplicate-ip"] = true
+	p2p["addr-book-strict"] = false
+	p2p["persistent-peers"] = peers
+
+	c["p2p"] = p2p
+
+	consensus := make(configutil.Toml)
+
+	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
+	consensus["timeout-commit"] = blockT
+	consensus["timeout-propose"] = blockT
+
+	c["consensus"] = consensus
+
+	rpc := make(configutil.Toml)
+
+	// Enable public RPC
+	rpc["laddr"] = "tcp://0.0.0.0:26657"
+
+	c["rpc"] = rpc
+
+	return configutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/config.toml",
+		c,
+	)
 }
 
 func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
