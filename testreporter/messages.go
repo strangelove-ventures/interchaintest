@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/label"
+	"github.com/strangelove-ventures/ibctest/v3/label"
 )
 
 // Message is the sentinel interface to all testreporter messages.
