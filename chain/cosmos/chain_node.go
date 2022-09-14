@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -693,12 +692,12 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 }
 
 // QueryProposal returns the status of a proposal.
-func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*govtypes.Proposal, error) {
+func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ibc.ProposalResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
 	if err != nil {
 		return nil, err
 	}
-	var proposal govtypes.Proposal
+	var proposal ibc.ProposalResponse
 	err = json.Unmarshal(stdout, &proposal)
 	if err != nil {
 		return nil, err

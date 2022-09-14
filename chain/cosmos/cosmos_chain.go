@@ -13,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -271,7 +270,7 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 }
 
 // Implements Chain interface
-func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*govtypes.Proposal, error) {
+func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ibc.ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 

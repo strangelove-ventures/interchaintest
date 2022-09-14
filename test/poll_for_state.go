@@ -50,7 +50,7 @@ func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxH
 
 type ChainProposalStatuser interface {
 	ChainHeighter
-	QueryProposal(ctx context.Context, proposalID string) (string, error)
+	QueryProposal(ctx context.Context, proposalID string) (*ibc.ProposalResponse, error)
 }
 
 type proposalSearch struct {
@@ -84,6 +84,8 @@ func (p blockPoller) doPoll(ctx context.Context, startHeight, maxHeight uint64, 
 	switch {
 	case p.Acker != nil, p.Timeouter != nil:
 		p.pollErr = &pollError{targetPacket: pollData.(ibc.Packet)}
+	default:
+		p.pollErr = &pollError{}
 	}
 
 	cursor := startHeight
@@ -153,12 +155,12 @@ func (p blockPoller) findTimeout(ctx context.Context, height uint64, packet ibc.
 }
 
 func (p blockPoller) findProposalStatus(ctx context.Context, height uint64, proposal proposalSearch) error {
-	status, err := p.ProposalStatuser.QueryProposal(ctx, proposal.id)
+	res, err := p.ProposalStatuser.QueryProposal(ctx, proposal.id)
 	if err != nil {
 		return err
 	}
-	if status != proposal.status {
-		return fmt.Errorf("status: (%s) is not equal to expected: (%s)", status, proposal.status)
+	if res.Status != proposal.status {
+		return fmt.Errorf("status: (%s) is not equal to expected: (%s)", res.Status, proposal.status)
 	}
 	return nil
 }
@@ -185,6 +187,10 @@ func (pe *pollError) Unwrap() error {
 func (pe *pollError) Format(s fmt.State, verb rune) {
 	if verb != 'v' && !s.Flag('+') {
 		fmt.Fprint(s, pe.error.Error())
+		return
+	}
+
+	if pe.targetPacket.Sequence == 0 {
 		return
 	}
 
