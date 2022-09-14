@@ -18,7 +18,7 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 		if p.Status != status {
 			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", p.Status, status)
 		}
-		return p, nil
+		return *p, nil
 	}
 	bp := test.BlockPoller{CurrentHeight: chain.Height, PollFunc: doPoll}
 	p, err := bp.DoPoll(ctx, startHeight, maxHeight)
