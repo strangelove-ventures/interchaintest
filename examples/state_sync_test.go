@@ -93,7 +93,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	firstFullNode := chain.FullNodes[0]
 
 	// Fetch block hash for trusted height.
-	blockRes, err := firstFullNode.Client.Block(ctx, &trustHeight)
+	blockRes, err := firstFullNode.TendermintClient.Block(ctx, &trustHeight)
 	require.NoError(t, err, "failed to fetch trusted block")
 	trustHash := hex.EncodeToString(blockRes.BlockID.Hash)
 

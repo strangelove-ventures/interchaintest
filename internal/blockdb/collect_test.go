@@ -63,7 +63,7 @@ func TestCollector_Collect(t *testing.T) {
 			return nil
 		})
 
-		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond, 1)
 		defer collector.Stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -98,7 +98,7 @@ func TestCollector_Collect(t *testing.T) {
 		})
 		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
-		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond, 1)
 		defer collector.Stop()
 		go collector.Collect(context.Background())
 
@@ -120,7 +120,7 @@ func TestCollector_Collect(t *testing.T) {
 			return errors.New("boom")
 		})
 
-		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
+		collector := NewCollector(nopLog, finder, saver, time.Nanosecond, 1)
 		defer collector.Stop()
 		go collector.Collect(context.Background())
 
@@ -147,7 +147,7 @@ func TestCollector_Stop(t *testing.T) {
 	})
 	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
 
-	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond)
+	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond, 1)
 	defer c.Stop() // Will be stopped explicitly in a few lines, but defer anyway for cleanup just in case.
 
 	n := runtime.NumGoroutine()

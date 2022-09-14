@@ -46,22 +46,24 @@ type BlockSaver interface {
 
 // Collector saves block transactions at regular intervals.
 type Collector struct {
-	finder TxFinder
-	log    *zap.Logger
-	rate   time.Duration
-	saver  BlockSaver
-	cancel context.CancelFunc
+	finder        TxFinder
+	log           *zap.Logger
+	rate          time.Duration
+	saver         BlockSaver
+	cancel        context.CancelFunc
+	initialHeight uint64
 }
 
 // NewCollector creates a valid Collector that polls every duration at rate.
 // The rate should be less than the time it takes to produce a block.
 // Typically, a rate that will collect a few times a second is sufficient such as 100-200ms.
-func NewCollector(log *zap.Logger, finder TxFinder, saver BlockSaver, rate time.Duration) *Collector {
+func NewCollector(log *zap.Logger, finder TxFinder, saver BlockSaver, rate time.Duration, initialHeight uint64) *Collector {
 	return &Collector{
-		finder: finder,
-		log:    log,
-		rate:   rate,
-		saver:  saver,
+		finder:        finder,
+		log:           log,
+		rate:          rate,
+		saver:         saver,
+		initialHeight: initialHeight,
 	}
 }
 
@@ -73,7 +75,7 @@ func (p *Collector) Collect(ctx context.Context) {
 
 	tick := time.NewTicker(p.rate)
 	defer tick.Stop()
-	var height uint64 = 1
+	var height uint64 = p.initialHeight
 	for {
 		select {
 		case <-ctx.Done():

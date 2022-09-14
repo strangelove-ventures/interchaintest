@@ -181,7 +181,12 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 				return nil
 			}
 			log := cs.log.With(zap.String("chain_id", id))
-			collector := blockdb.NewCollector(log, finder, chaindb, 100*time.Millisecond)
+			initialHeight := uint64(1)
+			height, err := c.Height(ctx)
+			if err == nil {
+				initialHeight = height
+			}
+			collector := blockdb.NewCollector(log, finder, chaindb, 100*time.Millisecond, initialHeight)
 			cs.collectors[j] = collector
 			collector.Collect(ctx)
 			return nil
