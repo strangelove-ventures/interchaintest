@@ -22,5 +22,8 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 	}
 	bp := test.BlockPoller{CurrentHeight: chain.Height, PollFunc: doPoll}
 	p, err := bp.DoPoll(ctx, startHeight, maxHeight)
-	return p.(ProposalResponse), err
+	if err != nil {
+		return zero, err
+	}
+	return p.(ProposalResponse), nil
 }
