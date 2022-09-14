@@ -57,12 +57,14 @@ type ChainAcker interface {
 // Polling starts at startHeight and continues until maxHeight. It is safe to call this function even if
 // the chain has yet to produce blocks for the target min/max height range. Polling delays until heights exist
 // on the chain. Returns an error if acknowledgement not found or problems getting height or acknowledgements.
-func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight uint64, packet ibc.Packet) (*ibc.PacketAcknowledgement, error) {
+func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight uint64, packet ibc.Packet) (ibc.PacketAcknowledgement, error) {
+	var zero ibc.PacketAcknowledgement
 	pollError := new(packetPollError)
 	poll := func(ctx context.Context, height uint64) (any, error) {
+
 		acks, err := chain.Acknowledgements(ctx, height)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		for _, ack := range acks {
 			pollError.PushSearched(ack)
@@ -70,16 +72,16 @@ func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight ui
 				return &ack, nil
 			}
 		}
-		return nil, ErrNotFound
+		return zero, ErrNotFound
 	}
 
 	poller := BlockPoller{CurrentHeight: chain.Height, PollFunc: poll}
 	found, err := poller.DoPoll(ctx, startHeight, maxHeight)
 	if err != nil {
 		pollError.SetErr(err)
-		return nil, pollError
+		return zero, pollError
 	}
-	return found.(*ibc.PacketAcknowledgement), nil
+	return found.(ibc.PacketAcknowledgement), nil
 }
 
 // ChainTimeouter is a chain that can get its timeouts at a specified height
@@ -92,12 +94,13 @@ type ChainTimeouter interface {
 // Polling starts at startHeight and continues until maxHeight. It is safe to call this function even if
 // the chain has yet to produce blocks for the target min/max height range. Polling delays until heights exist
 // on the chain. Returns an error if acknowledgement not found or problems getting height or acknowledgements.
-func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxHeight uint64, packet ibc.Packet) (*ibc.PacketAcknowledgement, error) {
+func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxHeight uint64, packet ibc.Packet) (ibc.PacketTimeout, error) {
 	pollError := new(packetPollError)
+	var zero ibc.PacketTimeout
 	poll := func(ctx context.Context, height uint64) (any, error) {
 		timeouts, err := chain.Timeouts(ctx, height)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 		for _, t := range timeouts {
 			pollError.PushSearched(t)
@@ -105,16 +108,16 @@ func PollForTimeout(ctx context.Context, chain ChainTimeouter, startHeight, maxH
 				return &t, nil
 			}
 		}
-		return nil, ErrNotFound
+		return zero, ErrNotFound
 	}
 
 	poller := BlockPoller{CurrentHeight: chain.Height, PollFunc: poll}
 	found, err := poller.DoPoll(ctx, startHeight, maxHeight)
 	if err != nil {
 		pollError.SetErr(err)
-		return nil, pollError
+		return zero, pollError
 	}
-	return found.(*ibc.PacketAcknowledgement), nil
+	return found.(ibc.PacketTimeout), nil
 }
 
 type packetPollError struct {
