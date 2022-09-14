@@ -10,6 +10,7 @@ require (
 	github.com/strangelove-ventures/ibctest/v3 v3.2.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 )
 
 require (
@@ -147,7 +148,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
@@ -173,13 +173,13 @@ require (
 )
 
 replace (
-	// Use ibctest from this repo
-	github.com/strangelove-ventures/ibctest/v3 => ../../
-
-  github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
+
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	// Use ibctest from this repo
+	github.com/strangelove-ventures/ibctest/v3 => ../../
 
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
