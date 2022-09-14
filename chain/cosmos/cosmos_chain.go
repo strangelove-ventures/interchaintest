@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// CosmosChain is a local docker testnet for a Cosmos SDK chain.
+// Implements the ibc.Chain interface.
 type CosmosChain struct {
 	testName      string
 	cfg           ibc.ChainConfig
@@ -269,13 +271,13 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	return tx, nil
 }
 
-// Implements Chain interface
-func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ibc.ProposalResponse, error) {
+// QueryProposal returns the state and details of a governance proposal.
+func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
-// Implements Chain interface
-func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.TxProposal, _ error) {
+// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
@@ -283,8 +285,8 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 	return c.txProposal(txHash)
 }
 
-// Implements Chain interface
-func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop ibc.TextProposal) (tx ibc.TxProposal, _ error) {
+// TextProposal submits a text governance proposal to the chain.
+func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop TextProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().TextProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
@@ -292,7 +294,7 @@ func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop ibc
 	return c.txProposal(txHash)
 }
 
-func (c *CosmosChain) txProposal(txHash string) (tx ibc.TxProposal, _ error) {
+func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
@@ -312,35 +314,28 @@ func (c *CosmosChain) txProposal(txHash string) (tx ibc.TxProposal, _ error) {
 	return tx, nil
 }
 
-// Implements Chain interface
+// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
 func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
 	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
-// Implements Chain interface
+// ExecuteContract executes a contract transaction with a message using it's address.
 func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
-// Implements Chain interface
-func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
+// DumpContractState dumps the state of a contract at a block height.
+func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	return c.getFullNode().DumpContractState(ctx, contractAddress, height)
 }
 
+// ExportState exports the chain state at specific height.
 // Implements Chain interface
 func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, error) {
 	return c.getFullNode().ExportState(ctx, height)
 }
 
-// Implements Chain interface
-func (c *CosmosChain) CreatePool(ctx context.Context, keyName string, params ibc.PoolParams) (string, error) {
-	return c.getFullNode().CreatePool(ctx, keyName, params)
-}
-
-func (c *CosmosChain) SwapExactAmountIn(ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
-	return c.getFullNode().SwapExactAmountIn(ctx, keyName, coinIn, minAmountOut, poolIDs, swapDenoms)
-}
-
+// GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}

@@ -691,13 +691,13 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 	return err
 }
 
-// QueryProposal returns the status of a proposal.
-func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ibc.ProposalResponse, error) {
+// QueryProposal returns the state and details of a governance proposal.
+func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
 	if err != nil {
 		return nil, err
 	}
-	var proposal ibc.ProposalResponse
+	var proposal ProposalResponse
 	err = json.Unmarshal(stdout, &proposal)
 	if err != nil {
 		return nil, err
@@ -705,8 +705,8 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ibc
 	return &proposal, nil
 }
 
-// UpgradeProposal submits a software-upgrade proposal to the chain.
-func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
+// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
@@ -723,8 +723,8 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop i
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-// TextProposal submits a text proposal to the chain.
-func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop ibc.TextProposal) (string, error) {
+// TextProposal submits a text governance proposal to the chain.
+func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
 	command := []string{
 		"gov", "submit-proposal",
 		"--type", "text",
@@ -738,7 +738,8 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop ibc.
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
+// DumpContractState dumps the state of a contract at a block height.
+func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
 		"wasm", "contract-state", "all", contractAddress,
 		"--height", fmt.Sprint(height),
@@ -747,7 +748,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 		return nil, err
 	}
 
-	res := &ibc.DumpContractStateResponse{}
+	res := new(DumpContractStateResponse)
 	if err := json.Unmarshal([]byte(stdout), res); err != nil {
 		return nil, err
 	}
@@ -772,51 +773,6 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 
 	_, _, err := tn.ExecBin(ctx, "unsafe-reset-all")
 	return err
-}
-
-func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, params ibc.PoolParams) (string, error) {
-	poolbz, err := json.Marshal(params)
-	if err != nil {
-		return "", err
-	}
-
-	poolFile := "pool.json"
-
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, poolFile, poolbz); err != nil {
-		return "", fmt.Errorf("failed to write pool file: %w", err)
-	}
-
-	if _, err := tn.ExecTx(ctx, keyName,
-		"gamm", "create-pool",
-		"--pool-file", filepath.Join(tn.HomeDir(), poolFile),
-	); err != nil {
-		return "", fmt.Errorf("failed to create pool: %w", err)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "gamm", "num-pools")
-	if err != nil {
-		return "", fmt.Errorf("failed to query num pools: %w", err)
-	}
-	var res map[string]string
-	if err := json.Unmarshal(stdout, &res); err != nil {
-		return "", fmt.Errorf("failed to unmarshal query response: %w", err)
-	}
-
-	numPools, ok := res["num_pools"]
-	if !ok {
-		return "", fmt.Errorf("could not find number of pools in query response: %w", err)
-	}
-	return numPools, nil
-}
-
-func (tn *ChainNode) SwapExactAmountIn(ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
-	return tn.ExecTx(ctx, keyName,
-		"gamm", "swap-exact-amount-in",
-		coinIn, minAmountOut,
-		"--swap-route-pool-ids", strings.Join(poolIDs, ","),
-		"--swap-route-denoms", strings.Join(swapDenoms, ","),
-	)
 }
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {

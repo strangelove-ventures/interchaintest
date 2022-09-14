@@ -139,15 +139,6 @@ type IBCTimeout struct {
 	Height      uint64
 }
 
-type ContractStateModels struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type DumpContractStateResponse struct {
-	Models []ContractStateModels `json:"models"`
-}
-
 type ChannelCounterparty struct {
 	PortID    string `json:"port_id"`
 	ChannelID string `json:"channel_id"`
@@ -195,60 +186,3 @@ const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
 )
-
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type TextProposal struct {
-	Deposit     string
-	Title       string
-	Description string
-	Expedited   bool
-}
-
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
-}
-
-// PoolParams defines parameters for creating a gamm liquidity pool
-type PoolParams struct {
-	Weights        string `json:"weights"`
-	InitialDeposit string `json:"initial-deposit"`
-	SwapFee        string `json:"swap-fee"`
-	ExitFee        string `json:"exit-fee"`
-	FutureGovernor string `json:"future-governor"`
-}
-
-type ProposalResponse struct {
-	ProposalID       string                   `json:"proposal_id"`
-	Content          ProposalContent          `json:"content"`
-	Status           string                   `json:"status"`
-	FinalTallyResult ProposalFinalTallyResult `json:"final_tally_result"`
-	SubmitTime       string                   `json:"submit_time"`
-	DepositEndTime   string                   `json:"deposit_end_time"`
-	TotalDeposit     []ProposalDeposit        `json:"total_deposit"`
-	VotingStartTime  string                   `json:"voting_start_time"`
-	VotingEndTime    string                   `json:"voting_end_time"`
-}
-
-type ProposalContent struct {
-	Type        string `json:"@type"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-type ProposalFinalTallyResult struct {
-	Yes        string `json:"yes"`
-	Abstain    string `json:"abstain"`
-	No         string `json:"no"`
-	NoWithVeto string `json:"no_with_veto"`
-}
-
-type ProposalDeposit struct {
-	Denom  string `json:"denom"`
-	Amount string `json:"amount"`
-}
