@@ -147,7 +147,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	b.buf.Reset()
 	kr := b.keyrings[fromUser]
 	cn := b.chain.getFullNode()
-	return cn.CliContext().
+	return cn.CosmosClient.
 		WithOutput(b.buf).
 		WithFrom(fromUser.Bech32Address(b.chain.Config().Bech32Prefix)).
 		WithFromAddress(sdkAdd).
