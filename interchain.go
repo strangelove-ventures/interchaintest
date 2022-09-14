@@ -11,6 +11,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // Interchain represents a full IBC network, encompassing a collection of
@@ -248,47 +249,61 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 
 	// For every relayer link, teach the relayer about the link and create the link.
 	for rp, link := range ic.links {
-
+		rp := rp
+		link := link
 		c0 := link.chains[0]
 		c1 := link.chains[1]
+
 		if err := rp.Relayer.GeneratePath(ctx, rep, c0.Config().ChainID, c1.Config().ChainID, rp.Path); err != nil {
 			return fmt.Errorf(
 				"failed to generate path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
 			)
 		}
-
-		// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
-		// client options.
-		if link.createClientOpts == (ibc.CreateClientOptions{}) {
-			link.createClientOpts = ibc.DefaultClientOpts()
-		}
-
-		// Check that the client creation options are valid and fully specified.
-		if err := link.createClientOpts.Validate(); err != nil {
-			return err
-		}
-
-		// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
-		// channel options for an ics20 fungible token transfer channel.
-		if link.createChannelOpts == (ibc.CreateChannelOptions{}) {
-			link.createChannelOpts = ibc.DefaultChannelOpts()
-		}
-
-		// Check that the channel creation options are valid and fully specified.
-		if err := link.createChannelOpts.Validate(); err != nil {
-			return err
-		}
-
-		if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, link.createChannelOpts, link.createClientOpts); err != nil {
-			return fmt.Errorf(
-				"failed to link path %s on relayer %s between chains %s and %s: %w",
-				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
-			)
-		}
 	}
 
-	return nil
+	// Now link the paths in parallel
+	// Creates clients, connections, and channels for each link/path.
+	var eg errgroup.Group
+	for rp, link := range ic.links {
+		rp := rp
+		link := link
+		c0 := link.chains[0]
+		c1 := link.chains[1]
+		eg.Go(func() error {
+			// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
+			// client options.
+			if link.createClientOpts == (ibc.CreateClientOptions{}) {
+				link.createClientOpts = ibc.DefaultClientOpts()
+			}
+
+			// Check that the client creation options are valid and fully specified.
+			if err := link.createClientOpts.Validate(); err != nil {
+				return err
+			}
+
+			// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
+			// channel options for an ics20 fungible token transfer channel.
+			if link.createChannelOpts == (ibc.CreateChannelOptions{}) {
+				link.createChannelOpts = ibc.DefaultChannelOpts()
+			}
+
+			// Check that the channel creation options are valid and fully specified.
+			if err := link.createChannelOpts.Validate(); err != nil {
+				return err
+			}
+
+			if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, link.createChannelOpts, link.createClientOpts); err != nil {
+				return fmt.Errorf(
+					"failed to link path %s on relayer %s between chains %s and %s: %w",
+					rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,
+				)
+			}
+			return nil
+		})
+	}
+
+	return eg.Wait()
 }
 
 // WithLog sets the logger on the interchain object.
@@ -322,7 +337,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			{
 				Address: faucetAddresses[c],
 				Denom:   c.Config().Denom,
-				Amount:  10_000_000_000_000, // Faucet wallet gets 10t units of denom.
+				Amount:  100_000_000_000_000, // Faucet wallet gets 100T units of denom.
 			},
 		}
 	}
