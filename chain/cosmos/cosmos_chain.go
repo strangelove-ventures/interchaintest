@@ -1,6 +1,7 @@
 package cosmos
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -208,7 +209,7 @@ func (c *CosmosChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 
 // Implements Chain interface
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	b32Addr, err := c.getFullNode().KeyBech32(ctx, keyName)
+	b32Addr, err := c.getFullNode().KeyBech32(ctx, keyName, "")
 	if err != nil {
 		return nil, err
 	}
@@ -534,21 +535,16 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	chainCfg := c.Config()
 
 	genesisAmount := types.Coin{
-		Amount: types.NewInt(1000000000000),
+		Amount: types.NewInt(10_000_000_000_000),
 		Denom:  chainCfg.Denom,
 	}
 
-	genesisStakeAmount := types.Coin{
-		Amount: types.NewInt(1000000000000),
-		Denom:  "stake",
-	}
-
 	genesisSelfDelegation := types.Coin{
-		Amount: types.NewInt(100000000000),
-		Denom:  "stake",
+		Amount: types.NewInt(5_000_000_000_000),
+		Denom:  chainCfg.Denom,
 	}
 
-	genesisAmounts := []types.Coin{genesisAmount, genesisStakeAmount}
+	genesisAmounts := []types.Coin{genesisAmount}
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
@@ -622,7 +618,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	for i := 1; i < len(c.Validators); i++ {
 		validatorN := c.Validators[i]
 
-		bech32, err := validatorN.KeyBech32(ctx, valKey)
+		bech32, err := validatorN.KeyBech32(ctx, valKey, "")
 		if err != nil {
 			return err
 		}
@@ -651,6 +647,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
+
 	if c.cfg.ModifyGenesis != nil {
 		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
 		if err != nil {
@@ -658,9 +656,14 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	// Provide EXPORT_GENESIS_FILE_PATH to help debug genesis file
+	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
-	if exportGenesis != "" {
+	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
+	if exportGenesis != "" && exportGenesisChain == c.cfg.Name {
+		c.log.Debug("Exporting genesis file",
+			zap.String("chain", exportGenesisChain),
+			zap.String("path", exportGenesis),
+		)
 		_ = os.WriteFile(exportGenesis, genbz, 0600)
 	}
 
