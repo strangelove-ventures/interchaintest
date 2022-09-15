@@ -100,7 +100,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 
 	haltHeight := height + haltHeightDelta
 
-	proposal := ibc.SoftwareUpgradeProposal{
+	proposal := cosmos.SoftwareUpgradeProposal{
 		Deposit:     "500000000" + chain.Config().Denom, // greater than min deposit
 		Title:       "Chain Upgrade 1",
 		Name:        upgradeName,
@@ -111,8 +111,11 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
-	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, ibc.ProposalVoteYes)
+	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
+
+	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+haltHeightDelta, upgradeTx.ProposalID, cosmos.ProposalStatusPassed)
+	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before upgrade")
