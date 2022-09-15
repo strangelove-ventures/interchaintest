@@ -37,6 +37,60 @@ var AllowMessages = []string{
 	"/ibc.applications.transfer.v1.MsgTransfer",
 }
 
+type HostZoneAccount struct {
+	Address string `json:"address"`
+	// Delegations [] `json:"delegations"`
+	Target string `json:"target"`
+}
+
+type HostZoneValidator struct {
+	Address              string `json:"address"`
+	CommissionRate       string `json:"commissionRate"`
+	DelegationAmt        string `json:"delegationAmt"`
+	InternalExchangeRate string `json:"internalExchangeRate"`
+	Name                 string `json:"name"`
+	Status               string `json:"status"`
+	Weight               string `json:"weight"`
+}
+
+type HostZoneWrapper struct {
+	HostZone HostZone `json:"HostZone"`
+}
+
+type HostZone struct {
+	HostDenom             string              `json:"HostDenom"`
+	IBCDenom              string              `json:"IBCDenom"`
+	LastRedemptionRate    string              `json:"LastRedemptionRate"`
+	RedemptionRate        string              `json:"RedemptionRate"`
+	Address               string              `json:"address"`
+	Bech32prefix          string              `json:"bech32pref ix"`
+	ChainID               string              `json:"chainId"`
+	ConnectionID          string              `json:"connectionId"`
+	DelegationAccount     HostZoneAccount     `json:"delegationAccount"`
+	FeeAccount            HostZoneAccount     `json:"feeAccount"`
+	RedemptionAccount     HostZoneAccount     `json:"redemptionAccount"`
+	WithdrawalAccount     HostZoneAccount     `json:"withdrawalAccount"`
+	StakedBal             string              `json:"stakedBal"`
+	TransferChannelId     string              `json:"transferChannelId"`
+	UnbondingFrequency    string              `json:"unbondingFrequency"`
+	Validators            []HostZoneValidator `json:"validators"`
+	BlacklistedValidators []HostZoneValidator `json:"blacklistedValidators"`
+}
+
+type DepositRecord struct {
+	Id                 string `json:"id,omitempty"`
+	Amount             string `json:"amount,omitempty"`
+	Denom              string `json:"denom,omitempty"`
+	HostZoneId         string `json:"hostZoneId,omitempty"`
+	Status             string `json:"status,omitempty"`
+	DepositEpochNumber string `json:"depositEpochNumber,omitempty"`
+	Source             string `json:"source,omitempty"`
+}
+
+type DepositRecordWrapper struct {
+	DepositRecord []DepositRecord `json:"DepositRecord"`
+}
+
 func ModifyGenesisStride() func(ibc.ChainConfig, []byte) ([]byte, error) {
 	return func(cfg ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})

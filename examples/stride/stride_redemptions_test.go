@@ -81,7 +81,8 @@ func TestStrideRedemptions(t *testing.T) {
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "andrew-client_icq", "100:1000"),
+		relayer.ImagePull(false),
+		relayer.CustomDockerImage("relayer", "local", "100:1000"),
 		relayer.StartupFlags("-p", "events"),
 	).Build(t, client, network)
 
@@ -122,6 +123,7 @@ func TestStrideRedemptions(t *testing.T) {
 	strideUser, gaiaUser := users[0], users[1]
 
 	strideFullNode := stride.FullNodes[0]
+	gaiaFullNode := gaia.FullNodes[0]
 
 	// Wait a few blocks for user accounts to be created on chain.
 	err = test.WaitForBlocks(ctx, 2, stride, gaia)
@@ -248,21 +250,43 @@ func TestStrideRedemptions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Liquid stake some atom
-	res, err := strideFullNode.ExecTx(ctx, strideUser.KeyName,
+	_, err = strideFullNode.ExecTx(ctx, strideUser.KeyName,
 		"stakeibc", "liquid-stake",
 		"10000", gaiaCfg.Denom,
 	)
 	require.NoError(t, err)
-	fmt.Println("RESPONSE FROM LIQUID STAKE")
-	fmt.Println(res)
 
-	// query deposit records
-	stdout, _, err = strideFullNode.ExecQuery(ctx,
-		"records", "list-deposit-record",
+	// wait for delegation
+	for {
+		err = test.WaitForBlocks(ctx, 1, stride, gaia)
+		require.NoError(t, err)
+
+		stdout, _, err := strideFullNode.ExecQuery(ctx,
+			"stakeibc", "show-host-zone", gaiaCfg.ChainID,
+		)
+		require.NoError(t, err)
+		err = json.Unmarshal(stdout, &gaiaHostZone)
+		require.NoError(t, err)
+
+		if gaiaHostZone.HostZone.StakedBal != "0" {
+			break
+		}
+	}
+
+	// Redeem
+	_, err = strideFullNode.ExecTx(ctx, strideUser.KeyName,
+		"stakeibc", "redeem-stake",
+		"5000", gaiaCfg.ChainID, gaiaUser.Address,
 	)
-	require.NoError(t, err)
-	fmt.Print(string(stdout))
 
-	// err = json.Unmarshal(stdout, &depositRecords)
-	// require.NoError(t, err)
+	err = test.WaitForBlocks(ctx, 100, stride, gaia)
+
+	// Check that tokens were transfered to the redemption account
+	redemptionAddress := gaiaHostZone.HostZone.RedemptionAccount.Address
+	redemptionBalance, err := gaiaFullNode.Chain.GetBalance(ctx, redemptionAddress, "uatom")
+	require.NoError(t, err)
+
+	fmt.Println("BALANCE:", redemptionBalance)
+
+	require.True(t, redemptionBalance > 0)
 }
