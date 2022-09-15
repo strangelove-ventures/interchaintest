@@ -139,15 +139,6 @@ type IBCTimeout struct {
 	Height      uint64
 }
 
-type ContractStateModels struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type DumpContractStateResponse struct {
-	Models []ContractStateModels `json:"models"`
-}
-
 type ChannelCounterparty struct {
 	PortID    string `json:"port_id"`
 	ChannelID string `json:"channel_id"`
@@ -195,13 +186,3 @@ const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
 )
-
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
-}
