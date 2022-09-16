@@ -30,7 +30,7 @@ The chain factory is where you configure your chain binaries.
 
 `ibctest` needs a docker image with the chain binary(s) installed to spin up the local testnet. 
 
-`ibctest` has several [pre-configured chains](./preconfiguredChains.txt). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
+`ibctest` has several [pre-configured chains](../configuredChains.yaml). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
 When creating your `ChainFactory`, if the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
 

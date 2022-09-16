@@ -38,7 +38,8 @@ By passing in a matrix file you can customize these aspects of the environment:
 
 
 **Pre-Configured Chains**
-`ibctest` comes with [pre-configured chains](./preconfiguredChains.txt). 
+
+`ibctest` comes with [pre-configured chains](../configuredChains.yaml). 
 In the matrix file, if `Name` matches the name of any pre-configured chain, `ibctest` will use standard settings UNLESS overriden in the matrix file. [example_matrix_custom.json](../cmd/ibctest/example_matrix_custom.json) is an example of overriding all options.
 
 

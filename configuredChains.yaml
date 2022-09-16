@@ -1,0 +1,99 @@
+agoric:
+  name: agoric
+  type: cosmos
+  bin: agd
+  bech32Prefix: agoric
+  denom: urun
+  gas-prices: 0.01urun
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/agoric
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+composable:
+  name: composable
+  type: polkadot
+  bin: polkadot
+  bech32Prefix: ""
+  denom: uDOT
+  gas-prices: ""
+  gas-adjustment: 0
+  trusting-period: ""
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/polkadot
+      uid-gid: 1025:1025
+    - repository: ghcr.io/strangelove-ventures/heighliner/composable
+      uid-gid: 1025:1025
+
+gaia:
+  name: gaia
+  type: cosmos
+  bin: gaiad
+  bech32Prefix: cosmos
+  denom: uatom
+  gas-prices: 0.01uatom
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/gaia
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+icad:
+  name: icad
+  type: cosmos
+  bin: icad
+  bech32Prefix: cosmos
+  denom: photon
+  gas-prices: 0.0photon
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/icad
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+juno:
+  name: juno
+  type: cosmos
+  bin: junod
+  bech32Prefix: juno
+  denom: ujuno
+  gas-prices: 0.0025ujuno
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/juno
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+osmosis:
+  name: osmosis
+  type: cosmos
+  bin: osmosisd
+  bech32Prefix: osmo
+  denom: uosmo
+  gas-prices: 0.0uosmo
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/osmosis
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+penumbra:
+  name: penumbra
+  type: penumbra
+  bin: tendermint
+  bech32Prefix: penumbra
+  denom: upenumbra
+  gas-prices: 0.0upenumbra
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/tendermint,
+      uid-gid: 1025:1025
+    - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
+      uid-gid: 1025:1025

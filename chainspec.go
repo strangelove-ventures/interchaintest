@@ -75,6 +75,11 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		return s.applyConfigOverrides(s.ChainConfig)
 	}
 
+	builtinChainConfigs, err := initBuiltinChainConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get preconfigured chains")
+	}
+
 	// Get built-in config.
 	// If chain doesn't have built in config, but is fully configured, register chain label.
 	cfg, ok := builtinChainConfigs[s.Name]

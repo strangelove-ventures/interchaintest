@@ -57,29 +57,6 @@ type PenumbraGenesisAppStateAllocation struct {
 	Address string `json:"address"`
 }
 
-func NewPenumbraChainConfig() ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:           "penumbra",
-		Name:           "penumbra",
-		Bech32Prefix:   "penumbra",
-		Denom:          "upenumbra",
-		GasPrices:      "0.0upenumbra",
-		GasAdjustment:  1.3,
-		TrustingPeriod: "672h",
-		Images: []ibc.DockerImage{
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-		},
-		Bin: "tendermint",
-	}
-}
-
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
 	return &PenumbraChain{
 		log:           log,

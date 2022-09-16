@@ -2,6 +2,7 @@ package ibctest
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
@@ -10,6 +11,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/label"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -42,16 +44,18 @@ type BuiltinChainFactory struct {
 	specs []*ChainSpec
 }
 
-// builtinChainConfigs is a mapping of valid builtin chain names
-// to their predefined ibc.ChainConfig.
-var builtinChainConfigs = map[string]ibc.ChainConfig{
-	"gaia":       cosmos.NewCosmosHeighlinerChainConfig("gaia", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h", false),
-	"osmosis":    cosmos.NewCosmosHeighlinerChainConfig("osmosis", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h", false),
-	"juno":       cosmos.NewCosmosHeighlinerChainConfig("juno", "junod", "juno", "ujuno", "0.0025ujuno", 1.3, "672h", false),
-	"agoric":     cosmos.NewCosmosHeighlinerChainConfig("agoric", "agd", "agoric", "urun", "0.01urun", 1.3, "672h", true),
-	"icad":       cosmos.NewCosmosHeighlinerChainConfig("icad", "icad", "cosmos", "photon", "0.00photon", 1.2, "504h", false),
-	"penumbra":   penumbra.NewPenumbraChainConfig(),
-	"composable": polkadot.NewComposableChainConfig(),
+// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
+func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
+	dat, err := os.ReadFile("./configuredChains.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("error reading configuredChains.yaml: %v", err)
+	}
+	builtinChainConfigs := make(map[string]ibc.ChainConfig)
+	err = yaml.Unmarshal(dat, &builtinChainConfigs)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing configuredChains.yaml: %v", err)
+	}
+	return builtinChainConfigs, nil
 }
 
 // NewBuiltinChainFactory returns a BuiltinChainFactory that returns chains defined by entries.
