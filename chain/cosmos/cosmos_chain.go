@@ -819,10 +819,7 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 			return n.StartContainer(ctx)
 		})
 	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return eg.Wait()
 }
 
 func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
