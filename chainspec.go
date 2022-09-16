@@ -45,8 +45,6 @@ type ChainSpec struct {
 	autoSuffix     string
 }
 
-var builtinChainConfigsLock sync.Mutex
-
 // Config returns the underlying ChainConfig,
 // with any overrides applied.
 func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
@@ -79,8 +77,6 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 
 	// Get built-in config.
 	// If chain doesn't have built in config, but is fully configured, register chain label.
-	builtinChainConfigsLock.Lock()
-	defer builtinChainConfigsLock.Unlock()
 	cfg, ok := builtinChainConfigs[s.Name]
 	if !ok {
 		if !s.ChainConfig.IsFullyConfigured() {
@@ -98,6 +94,8 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		}
 		cfg = ibc.ChainConfig{}
 	}
+
+	cfg = cfg.Clone()
 
 	// Apply any overrides from this ChainSpec.
 	cfg = cfg.MergeChainSpecConfig(s.ChainConfig)

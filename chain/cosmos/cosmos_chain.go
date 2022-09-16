@@ -42,7 +42,7 @@ type CosmosChain struct {
 
 	log *zap.Logger
 
-	findTxLock sync.Mutex
+	findTxMu sync.Mutex
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
@@ -783,14 +783,13 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
-	c.findTxLock.Lock()
-	defer c.findTxLock.Unlock()
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
 	return c.getFullNode().FindTxs(ctx, height)
 }
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)
 func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
-	c.findTxLock.Lock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		n := n
@@ -807,6 +806,9 @@ func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 // StartAllNodes creates and starts new containers for each node.
 // Should only be used if the chain has previously been started with .Start.
 func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		n := n
@@ -820,7 +822,6 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 	if err := eg.Wait(); err != nil {
 		return err
 	}
-	c.findTxLock.Unlock()
 	return nil
 }
 
