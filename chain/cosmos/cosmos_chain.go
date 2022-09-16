@@ -159,6 +159,8 @@ func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *clie
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
 	if len(c.FullNodes) > 0 {
 		// use first full node
 		return c.FullNodes[0]
@@ -507,6 +509,8 @@ func (c *CosmosChain) initializeChainNodes(
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
 	c.Validators = newVals
 	c.FullNodes = newFullNodes
 	return nil
@@ -784,8 +788,9 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	c.findTxMu.Lock()
-	defer c.findTxMu.Unlock()
-	return c.getFullNode().FindTxs(ctx, height)
+	fn := c.getFullNode()
+	c.findTxMu.Unlock()
+	return fn.FindTxs(ctx, height)
 }
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)
