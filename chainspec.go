@@ -43,15 +43,13 @@ type ChainSpec struct {
 	// Generate the automatic suffix on demand when needed.
 	autoSuffixOnce sync.Once
 	autoSuffix     string
-
-	mu sync.Mutex
 }
+
+var builtinChainConfigsLock sync.Mutex
 
 // Config returns the underlying ChainConfig,
 // with any overrides applied.
 func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.Version == "" {
 		// Version must be set at top-level if not set in inlined config.
 		if len(s.ChainConfig.Images) == 0 || s.ChainConfig.Images[0].Version == "" {
@@ -81,6 +79,8 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 
 	// Get built-in config.
 	// If chain doesn't have built in config, but is fully configured, register chain label.
+	builtinChainConfigsLock.Lock()
+	defer builtinChainConfigsLock.Unlock()
 	cfg, ok := builtinChainConfigs[s.Name]
 	if !ok {
 		if !s.ChainConfig.IsFullyConfigured() {

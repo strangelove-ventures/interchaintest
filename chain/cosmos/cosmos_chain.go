@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -40,6 +41,8 @@ type CosmosChain struct {
 	FullNodes     ChainNodes
 
 	log *zap.Logger
+
+	findTxLock sync.Mutex
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
@@ -780,11 +783,14 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+	c.findTxLock.Lock()
+	defer c.findTxLock.Unlock()
 	return c.getFullNode().FindTxs(ctx, height)
 }
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)
 func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
+	c.findTxLock.Lock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		n := n
@@ -811,7 +817,11 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 			return n.StartContainer(ctx)
 		})
 	}
-	return eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	c.findTxLock.Unlock()
+	return nil
 }
 
 func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
