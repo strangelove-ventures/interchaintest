@@ -88,3 +88,20 @@ type ContractStateModels struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
+
+type ContractInfo struct {
+    // CodeID is the reference to the stored Wasm code
+    CodeID string `json:"code_id"`
+    // Creator address who initially instantiated the contract
+    Creator string `json:"creator"`
+    // Admin is an optional address that can execute migrations
+    Admin string `json:"admin"`
+    // Label is optional metadata to be stored with a contract instance.
+    Label string `json:"label"`
+    IBCPortID string `json:"ibc_port_id"`
+}
+
+type QueryContractInfoResponse struct {
+    Address string `json:"address"`
+    ContractInfo ContractInfo `json:"contract_info"`
+}

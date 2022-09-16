@@ -620,35 +620,43 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (tn *ChainNode) InstantiateContract(
+    ctx context.Context,
+	keyName string,
+	amount ibc.WalletAmount,
+	fileName,
+	initMessage string,
+	needsNoAdminFlag bool,
+) (QueryContractInfoResponse, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		return "", err
+		return QueryContractInfoResponse{}, err
 	}
 
 	_, file := filepath.Split(fileName)
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+		return QueryContractInfoResponse{}, fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
-		return "", err
+	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", fmt.Sprintf("%d", amount.Amount)); err != nil {
+		return QueryContractInfoResponse{}, err
 	}
 
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	err = test.WaitForBlocks(ctx, 5, tn)
 	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
+		return QueryContractInfoResponse{}, fmt.Errorf("wait for blocks: %w", err)
 	}
 
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
 	if err != nil {
-		return "", err
+		return QueryContractInfoResponse{}, err
 	}
+        tn.logger().Info(string(stdout))
 
 	res := CodeInfosResponse{}
 	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
-		return "", err
+		return QueryContractInfoResponse{}, err
 	}
 
 	codeID := res.CodeInfos[0].CodeID
@@ -658,21 +666,41 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	}
 	_, err = tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
-		return "", err
+		return QueryContractInfoResponse{}, err
 	}
 
 	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
-		return "", err
+		return QueryContractInfoResponse{}, err
 	}
 
-	contactsRes := QueryContractResponse{}
-	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
-		return "", err
+	contractsRes := QueryContractResponse{}
+	if err := json.Unmarshal([]byte(stdout), &contractsRes); err != nil {
+		return QueryContractInfoResponse{}, err
 	}
 
-	contractAddress := contactsRes.Contracts[len(contactsRes.Contracts)-1]
-	return contractAddress, nil
+	contractAddress := contractsRes.Contracts[len(contractsRes.Contracts)-1]
+
+	command = []string{tn.Chain.Config().Bin,
+		"query", "wasm", "contract", contractAddress,
+		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--output", "json",
+		"--home", tn.HomeDir(),
+		"--chain-id", tn.Chain.Config().ChainID,
+	}
+
+	stdout, _, err = tn.Exec(ctx, command, nil)
+	if err != nil {
+		return QueryContractInfoResponse{}, err
+	}
+        tn.logger().Info(string(stdout))
+
+        contractInfoRes := QueryContractInfoResponse{}
+	if err := json.Unmarshal([]byte(stdout), &contractInfoRes); err != nil {
+		return QueryContractInfoResponse{}, err
+	}
+
+	return contractInfoRes, nil
 }
 
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {

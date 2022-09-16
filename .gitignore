@@ -3,3 +3,11 @@
 ibctest.test
 
 /bin
+
+#GoLand project directory
+.idea/
+
+vendor/
+
+# vim swap file
+*.swp
