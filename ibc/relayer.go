@@ -53,7 +53,7 @@ type Relayer interface {
 	// After configuration is initialized, begin relaying.
 	// This method is intended to create a background worker that runs the relayer.
 	// You must call StopRelayer to cleanly stop the relaying.
-	StartRelayer(ctx context.Context, rep RelayerExecReporter, pathName string) error
+	StartRelayer(ctx context.Context, rep RelayerExecReporter, pathNames ...string) error
 
 	// StopRelayer stops a relayer that started work through StartRelayer.
 	StopRelayer(ctx context.Context, rep RelayerExecReporter) error
