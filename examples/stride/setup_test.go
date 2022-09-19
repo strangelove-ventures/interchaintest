@@ -1,11 +1,14 @@
 package stride_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/icza/dyno"
+	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/ibctest/v3/test"
 )
 
 const (
@@ -91,6 +94,21 @@ type DepositRecordWrapper struct {
 	DepositRecord []DepositRecord `json:"DepositRecord"`
 }
 
+type UserRedemptionRecordWrapper struct {
+	UserRedemptionRecord []UserRedemptionRecord `json:"UserRedemptionRecord"`
+}
+
+type UserRedemptionRecord struct {
+	ID             string `json:"id"`
+	Sender         string `json:"sender"`
+	Receiver       string `json:"receiver"`
+	Amount         string `json:"amount"`
+	Denom          string `json:"denom"`
+	HostZoneID     string `json:"hostZoneId"`
+	EpochNumber    string `json:"epochNumber"`
+	ClaimIsPending bool   `json:"claimIsPending"`
+}
+
 func ModifyGenesisStride() func(ibc.ChainConfig, []byte) ([]byte, error) {
 	return func(cfg ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
@@ -158,4 +176,34 @@ func ModifyGenesisStrideCounterparty() func(ibc.ChainConfig, []byte) ([]byte, er
 		}
 		return out, nil
 	}
+}
+
+// PollForHostZoneStakedBalance polls until the host zone for the given chainID has a non-zero staked balance
+func PollForHostZoneStakedBalance(ctx context.Context, chain *cosmos.CosmosChain, startHeight, maxHeight uint64, chainID string) (HostZoneWrapper, error) {
+	var zero HostZoneWrapper
+	doPoll := func(ctx context.Context, height uint64) (any, error) {
+		stdout, _, err := chain.FullNodes[0].ExecQuery(ctx,
+			"stakeibc", "show-host-zone", chainID,
+		)
+		if err != nil {
+			return zero, err
+		}
+		hostZone := new(HostZoneWrapper)
+		err = json.Unmarshal(stdout, &hostZone)
+		if err != nil {
+			return zero, err
+		}
+
+		if hostZone.HostZone.StakedBal == "0" {
+			return zero, fmt.Errorf("host zone for %s has zero staked balance", chainID)
+		}
+
+		return *hostZone, nil
+	}
+	bp := test.BlockPoller{CurrentHeight: chain.Height, PollFunc: doPoll}
+	p, err := bp.DoPoll(ctx, startHeight, maxHeight)
+	if err != nil {
+		return zero, err
+	}
+	return p.(HostZoneWrapper), nil
 }

@@ -3,7 +3,7 @@ package stride_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -81,8 +81,8 @@ func TestStrideRedemptions(t *testing.T) {
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.ImagePull(false),
-		relayer.CustomDockerImage("relayer", "local", "100:1000"),
+		//relayer.ImagePull(false),
+		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "andrew-client_icq", "100:1000"),
 		relayer.StartupFlags("-p", "events"),
 	).Build(t, client, network)
 
@@ -123,7 +123,7 @@ func TestStrideRedemptions(t *testing.T) {
 	strideUser, gaiaUser := users[0], users[1]
 
 	strideFullNode := stride.FullNodes[0]
-	gaiaFullNode := gaia.FullNodes[0]
+	//gaiaFullNode := gaia.FullNodes[0]
 
 	// Wait a few blocks for user accounts to be created on chain.
 	err = test.WaitForBlocks(ctx, 2, stride, gaia)
@@ -249,6 +249,12 @@ func TestStrideRedemptions(t *testing.T) {
 	err = json.Unmarshal(stdout, &gaiaHostZone)
 	require.NoError(t, err)
 
+	strideUserIBCAtomBefore, err := stride.GetBalance(ctx, strideAddr, atomIBCDenom)
+	require.NoError(t, err)
+
+	strideUserSTAtomBefore, err := stride.GetBalance(ctx, strideAddr, "st"+gaiaCfg.Denom)
+	require.NoError(t, err)
+
 	// Liquid stake some atom
 	_, err = strideFullNode.ExecTx(ctx, strideUser.KeyName,
 		"stakeibc", "liquid-stake",
@@ -256,37 +262,95 @@ func TestStrideRedemptions(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	err = test.WaitForBlocks(ctx, 10, stride, gaia)
+	require.NoError(t, err)
+
+	strideUserIBCAtomAfter, err := stride.GetBalance(ctx, strideAddr, atomIBCDenom)
+	require.NoError(t, err)
+
+	strideUserSTAtomAfter, err := stride.GetBalance(ctx, strideAddr, "st"+gaiaCfg.Denom)
+	require.NoError(t, err)
+
+	require.Equal(t, strideUserIBCAtomBefore-10000, strideUserIBCAtomAfter)
+	require.Equal(t, strideUserSTAtomBefore+10000, strideUserSTAtomAfter)
+
 	// wait for delegation
-	for {
-		err = test.WaitForBlocks(ctx, 1, stride, gaia)
-		require.NoError(t, err)
+	height, err := stride.Height(ctx)
+	require.NoError(t, err)
 
-		stdout, _, err := strideFullNode.ExecQuery(ctx,
-			"stakeibc", "show-host-zone", gaiaCfg.ChainID,
-		)
-		require.NoError(t, err)
-		err = json.Unmarshal(stdout, &gaiaHostZone)
-		require.NoError(t, err)
+	_, err = PollForHostZoneStakedBalance(ctx, stride, height, height+70, gaiaCfg.ChainID)
+	require.NoError(t, err)
 
-		if gaiaHostZone.HostZone.StakedBal != "0" {
-			break
-		}
-	}
+	redemptionAmount := int64(5)
 
 	// Redeem
 	_, err = strideFullNode.ExecTx(ctx, strideUser.KeyName,
 		"stakeibc", "redeem-stake",
-		"5000", gaiaCfg.ChainID, gaiaUser.Address,
+		strconv.FormatInt(redemptionAmount, 10), gaiaCfg.ChainID, gaiaAddress,
 	)
-
-	err = test.WaitForBlocks(ctx, 100, stride, gaia)
-
-	// Check that tokens were transfered to the redemption account
-	redemptionAddress := gaiaHostZone.HostZone.RedemptionAccount.Address
-	redemptionBalance, err := gaiaFullNode.Chain.GetBalance(ctx, redemptionAddress, "uatom")
 	require.NoError(t, err)
 
-	fmt.Println("BALANCE:", redemptionBalance)
+	// err = test.WaitForBlocks(ctx, 20, stride, gaia)
+	// require.NoError(t, err)
 
-	require.True(t, redemptionBalance > 0)
+	// Check that tokens were transfered to the redemption account
+	// redemptionBalance, err := gaiaFullNode.Chain.GetBalance(ctx, hz.HostZone.RedemptionAccount.Address, gaiaCfg.Denom)
+	// require.NoError(t, err)
+	// require.Greater(t, redemptionBalance, int64(0))
+
+	// fmt.Printf("redemption balance: %d\n", redemptionBalance)
+
+	stdout, _, err = strideFullNode.ExecQuery(ctx,
+		"records", "list-user-redemption-record",
+	)
+	require.NoError(t, err)
+
+	var userRedemptionRecords UserRedemptionRecordWrapper
+	err = json.Unmarshal(stdout, &userRedemptionRecords)
+	require.NoError(t, err)
+	require.Len(t, userRedemptionRecords.UserRedemptionRecord, 1)
+	redemptionRecord := userRedemptionRecords.UserRedemptionRecord[0]
+	require.Equal(t, redemptionRecord.HostZoneID, gaiaCfg.ChainID)
+	require.False(t, redemptionRecord.ClaimIsPending)
+	require.Equal(t, redemptionRecord.Amount, strconv.FormatInt(redemptionAmount, 10))
+	require.Equal(t, redemptionRecord.Denom, gaiaCfg.Denom)
+	require.Equal(t, redemptionRecord.Sender, strideAddr)
+	require.Equal(t, redemptionRecord.Receiver, gaiaAddress)
+
+	// wait for unbondings to process
+	err = test.WaitForBlocks(ctx, 100, stride, gaia)
+	require.NoError(t, err)
+
+	balanceBeforeClaim, err := gaia.GetBalance(ctx, gaiaAddress, gaiaCfg.Denom)
+	require.NoError(t, err)
+
+	_, err = strideFullNode.ExecTx(ctx, strideUser.KeyName,
+		"stakeibc", "claim-undelegated-tokens", gaiaCfg.ChainID,
+		redemptionRecord.EpochNumber, strideAddr,
+	)
+	require.NoError(t, err)
+
+	stdout, _, err = strideFullNode.ExecQuery(ctx,
+		"records", "list-user-redemption-record",
+	)
+	require.NoError(t, err)
+
+	err = json.Unmarshal(stdout, &userRedemptionRecords)
+	require.NoError(t, err)
+	require.Len(t, userRedemptionRecords.UserRedemptionRecord, 1)
+	redemptionRecord = userRedemptionRecords.UserRedemptionRecord[0]
+	require.Equal(t, redemptionRecord.HostZoneID, gaiaCfg.ChainID)
+	require.True(t, redemptionRecord.ClaimIsPending)
+	require.Equal(t, redemptionRecord.Amount, strconv.FormatInt(redemptionAmount, 10))
+	require.Equal(t, redemptionRecord.Denom, gaiaCfg.Denom)
+	require.Equal(t, redemptionRecord.Sender, strideAddr)
+	require.Equal(t, redemptionRecord.Receiver, gaiaAddress)
+
+	err = test.WaitForBlocks(ctx, 100, stride, gaia)
+	require.NoError(t, err)
+
+	balanceAfterClaim, err := gaia.GetBalance(ctx, gaiaAddress, gaiaCfg.Denom)
+	require.NoError(t, err)
+
+	require.Equal(t, balanceBeforeClaim+redemptionAmount, balanceAfterClaim)
 }
