@@ -46,13 +46,13 @@ type BuiltinChainFactory struct {
 }
 
 //go:embed configuredChains.yaml
-var embededConfiguredChains []byte
+var embeddedConfiguredChains []byte
 
 // initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
 func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
 
 	// checks if configuredChains.yaml is found in cwd or parent of cwd,
-	// otherwise it will use the the embeded version of configuredChains.yaml
+	// otherwise it will use the the embedded version of configuredChains.yaml
 	configuredChainsFile := ""
 	if _, err := os.Stat("./configuredChains.yaml"); err == nil {
 		configuredChainsFile = "./configuredChains.yaml"
@@ -70,7 +70,7 @@ func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
 			return nil, fmt.Errorf("error reading configuredChains.yaml: %v", err)
 		}
 	} else {
-		dat = embededConfiguredChains
+		dat = embeddedConfiguredChains
 	}
 
 	err = yaml.Unmarshal(dat, &builtinChainConfigs)

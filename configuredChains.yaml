@@ -1,6 +1,6 @@
-## NOTICE: This file gets embeded into ibctest binary
+## NOTICE: This file gets embedded into ibctest binary
 ## Ibctest will check the existence for this file in its cwd and in the parent of the cwd,
-## if it is not found it will resort to the embeded version.
+## if it is not found it will resort to the embedded version.
 
 agoric:
   name: agoric
