@@ -1,3 +1,7 @@
+## NOTICE: This file gets embeded into ibctest binary
+## Ibctest will check the existence for this file in its cwd and in the parent of the cwd,
+## if it is not found it will resort to the embeded version.
+
 agoric:
   name: agoric
   type: cosmos

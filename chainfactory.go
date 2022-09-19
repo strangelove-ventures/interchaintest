@@ -1,6 +1,7 @@
 package ibctest
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"strings"
@@ -44,13 +45,34 @@ type BuiltinChainFactory struct {
 	specs []*ChainSpec
 }
 
+//go:embed configuredChains.yaml
+var embededConfiguredChains []byte
+
 // initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
 func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
-	dat, err := os.ReadFile("./configuredChains.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("error reading configuredChains.yaml: %v", err)
+
+	// checks if configuredChains.yaml is found in cwd or parent of cwd,
+	// otherwise it will use the the embeded version of configuredChains.yaml
+	configuredChainsFile := ""
+	if _, err := os.Stat("./configuredChains.yaml"); err == nil {
+		configuredChainsFile = "./configuredChains.yaml"
+	} else if os.Stat("../configuredChains.yaml"); err == nil {
+		configuredChainsFile = "../configuredChains.yaml"
 	}
+
 	builtinChainConfigs := make(map[string]ibc.ChainConfig)
+
+	var dat []byte
+	var err error
+	if configuredChainsFile != "" {
+		dat, err = os.ReadFile(configuredChainsFile)
+		if err != nil {
+			return nil, fmt.Errorf("error reading configuredChains.yaml: %v", err)
+		}
+	} else {
+		dat = embededConfiguredChains
+	}
+
 	err = yaml.Unmarshal(dat, &builtinChainConfigs)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing configuredChains.yaml: %v", err)
