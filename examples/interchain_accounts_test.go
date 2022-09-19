@@ -282,7 +282,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for channel handshake to finish
-	err = test.WaitForBlocks(ctx, 20, chain1, chain2)
+	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
 	require.NoError(t, err)
 
 	// Assert that a new channel has been opened and the same ICA is in use
