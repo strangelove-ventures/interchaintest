@@ -56,7 +56,8 @@ func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
 	configuredChainsFile := ""
 	if _, err := os.Stat("./configuredChains.yaml"); err == nil {
 		configuredChainsFile = "./configuredChains.yaml"
-	} else if os.Stat("../configuredChains.yaml"); err == nil {
+	}
+	if _, err := os.Stat("../configuredChains.yaml"); err == nil {
 		configuredChainsFile = "../configuredChains.yaml"
 	}
 
