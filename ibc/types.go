@@ -19,7 +19,7 @@ type ChainConfig struct {
 	// Binary to execute for the chain node daemon.
 	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
-	Bech32Prefix string `yaml:"bech32Prefix"`
+	Bech32Prefix string `yaml:"bech32-prefix"`
 	// Denomination of native currency, e.g. uatom.
 	Denom string `yaml:"denom"`
 	// Minimum gas prices for sending transactions, in native currency denom.
