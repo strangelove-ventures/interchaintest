@@ -886,7 +886,7 @@ func (tn *ChainNode) InitValidatorGenTx(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	bech32, err := tn.KeyBech32(ctx, valKey)
+	bech32, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
 		return err
 	}
@@ -925,10 +925,15 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 }
 
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
-func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error) {
+// bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
+func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
+	}
+
+	if bech != "" {
+		command = append(command, "--bech", bech)
 	}
 
 	stdout, stderr, err := tn.Exec(ctx, command, nil)
@@ -937,6 +942,11 @@ func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error)
 	}
 
 	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
+}
+
+// AccountKeyBech32 retrieves the named key's address in bech32 account format.
+func (tn *ChainNode) AccountKeyBech32(ctx context.Context, name string) (string, error) {
+	return tn.KeyBech32(ctx, name, "")
 }
 
 // PeerString returns the string for connecting the nodes passed in

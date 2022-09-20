@@ -9,6 +9,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/conformance"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/ibctest/v3/relayer"
 	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"github.com/stretchr/testify/require"
@@ -58,6 +59,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	rf := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
+		relayer.StartupFlags("-b", "100"),
 	)
 
 	r := rf.Build(t, client, network)
