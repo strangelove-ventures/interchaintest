@@ -39,4 +39,4 @@ jobs:
       # run tests
       - name: run all tests
         # show cosmos chain and relayer logs on test failure
-        run: (go test -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (go test -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
