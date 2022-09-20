@@ -49,7 +49,7 @@ type ChainSpec struct {
 
 // Config returns the underlying ChainConfig,
 // with any overrides applied.
-func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
+func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 	if s.Version == "" {
 		// Version must be set at top-level if not set in inlined config.
 		if len(s.ChainConfig.Images) == 0 || s.ChainConfig.Images[0].Version == "" {
@@ -77,7 +77,7 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		return s.applyConfigOverrides(s.ChainConfig)
 	}
 
-	builtinChainConfigs, err := initBuiltinChainConfig(s.log)
+	builtinChainConfigs, err := initBuiltinChainConfig(log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pre-configured chains: %w", err)
 	}

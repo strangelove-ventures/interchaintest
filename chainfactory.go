@@ -4,8 +4,8 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path"
 	"strings"
+	"sync"
 
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v5/chain/penumbra"
@@ -49,21 +49,21 @@ type BuiltinChainFactory struct {
 //go:embed configuredChains.yaml
 var embeddedConfiguredChains []byte
 
+var once sync.Once
+
 // initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
 func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
 	var dat []byte
 	var err error
 
-	// checks if CONFIGURED_CHAINS environment variable is set with a path,
-	// otherwise configuredChains.yaml at the root of the ibctest dir gets embedded and used.
-	val, present := os.LookupEnv("CONFIGURED_CHAINS")
-	if present {
-		cleanPath := path.Clean(val)
-		dat, err = os.ReadFile(cleanPath)
+	// checks if IBCTEST_CONFIGURED_CHAINS environment variable is set with a path,
+	// otherwise, ./configuredChains.yaml gets embedded and used.
+	val := os.Getenv("IBCTEST_CONFIGURED_CHAINS")
+
+	if val != "" {
+		dat, err = os.ReadFile(val)
 		if err != nil {
-			log.Info("failed to read configured chains file", zap.String("file", cleanPath), zap.Error(err))
-			log.Info("resorting to embedded configuredChains.yaml")
-			dat = embeddedConfiguredChains
+			return nil, err
 		}
 	} else {
 		dat = embeddedConfiguredChains
@@ -75,6 +75,15 @@ func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling pre-configured chains: %w", err)
 	}
+
+	once.Do(func() {
+		if val != "" {
+			log.Info("Using user specified configured chains", zap.String("file", val))
+		} else {
+			log.Info("Using embedded configured chains", zap.String("file", "ibctest/configuredChains.yaml"))
+		}
+	})
+
 	return builtinChainConfigs, nil
 }
 
@@ -90,7 +99,7 @@ func (f *BuiltinChainFactory) Count() int {
 func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 	chains := make([]ibc.Chain, len(f.specs))
 	for i, s := range f.specs {
-		cfg, err := s.Config()
+		cfg, err := s.Config(f.log)
 		if err != nil {
 			// Prefer to wrap the error with the chain name if possible.
 			if s.Name != "" {
@@ -154,7 +163,7 @@ func (f *BuiltinChainFactory) Name() string {
 	for i, s := range f.specs {
 		// Ignoring error here because if we fail to generate the config,
 		// another part of the factory stack should have failed properly before we got here.
-		cfg, _ := s.Config()
+		cfg, _ := s.Config(f.log)
 
 		v := s.Version
 		if v == "" {
