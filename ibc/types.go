@@ -38,6 +38,14 @@ type ChainConfig struct {
 	EncodingConfig *simappparams.EncodingConfig
 }
 
+func (c ChainConfig) Clone() ChainConfig {
+	x := c
+	images := make([]DockerImage, len(c.Images))
+	copy(images, c.Images)
+	x.Images = images
+	return x
+}
+
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 	// Make several in-place modifications to c,
 	// which is a value, not a reference,
