@@ -17,7 +17,6 @@ import (
 // that allows callers to easily reference one of the built-in chain configs
 // and optionally provide overrides for some settings.
 type ChainSpec struct {
-	log *zap.Logger
 	// Name is the name of the built-in config to use as a basis for this chain spec.
 	// Required unless every other field is set.
 	Name string
