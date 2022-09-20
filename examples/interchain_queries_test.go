@@ -83,7 +83,7 @@ func TestInterchainQueries(t *testing.T) {
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.StartupFlags("-p", "events", "-b", "100"),
+		relayer.StartupFlags("-b", "100"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer

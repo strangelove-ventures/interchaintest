@@ -28,8 +28,8 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{Name: "gaia", ChainName: "gaia-fork", Version: "bugfix-replace_default_transfer_with_router_module"},
-		{Name: "osmosis", ChainName: "osmosis", Version: "v7.3.0"},
-		{Name: "juno", ChainName: "juno", Version: "v6.0.0"},
+		{Name: "osmosis", ChainName: "osmosis", Version: "v11.0.1"},
+		{Name: "juno", ChainName: "juno", Version: "v9.0.0"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -37,7 +37,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 	gaia, osmosis, juno := chains[0], chains[1], chains[2]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := ibctest.NewBuiltinRelayerFactory(
+		ibc.CosmosRly,
+		zaptest.NewLogger(t),
+	).Build(
 		t, client, network,
 	)
 
@@ -63,9 +66,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false,
 	}))
@@ -76,14 +80,14 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	const userFunds = int64(10_000_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, osmosis, gaia, juno)
 
-	channels, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
+	osmoChannels, err := r.GetChannels(ctx, eRep, osmosis.Config().ChainID)
+	require.NoError(t, err)
+
+	junoChannels, err := r.GetChannels(ctx, eRep, juno.Config().ChainID)
 	require.NoError(t, err)
 
 	// Start the relayer on both paths
-	err = r.StartRelayer(ctx, eRep, pathOsmoHub)
-	require.NoError(t, err)
-
-	err = r.StartRelayer(ctx, eRep, pathJunoHub)
+	err = r.StartRelayer(ctx, eRep, pathOsmoHub, pathJunoHub)
 	require.NoError(t, err)
 
 	t.Cleanup(
@@ -96,9 +100,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	)
 
 	// Get original account balances
-	osmosisUser := users[0]
-	gaiaUser := users[1]
-	junoUser := users[2]
+	osmosisUser, gaiaUser, junoUser := users[0], users[1], users[2]
 
 	osmosisBalOG, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
 	require.NoError(t, err)
@@ -106,14 +108,16 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	// Send packet from Osmosis->Hub->Juno
 	// receiver format: {intermediate_refund_address}|{foward_port}/{forward_channel}:{final_destination_address}
 	const transferAmount int64 = 100000
-	receiver := fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), channels[1].PortID, channels[1].ChannelID, junoUser.Bech32Address(juno.Config().Bech32Prefix))
+	gaiaJunoChan := junoChannels[0].Counterparty
+	receiver := fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, junoUser.Bech32Address(juno.Config().Bech32Prefix))
 	transfer := ibc.WalletAmount{
 		Address: receiver,
 		Denom:   osmosis.Config().Denom,
 		Amount:  transferAmount,
 	}
 
-	_, err = osmosis.SendIBCTransfer(ctx, channels[0].ChannelID, osmosisUser.KeyName, transfer, nil)
+	osmosisGaiaChan := osmoChannels[0]
+	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil)
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
@@ -126,8 +130,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.Equal(t, osmosisBalOG-transferAmount, osmosisBal)
 
 	// Compose the prefixed denoms and ibc denom for asserting balances
-	firstHopDenom := transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, osmosis.Config().Denom)
-	secondHopDenom := transfertypes.GetPrefixedDenom(channels[1].Counterparty.PortID, channels[1].Counterparty.ChannelID, firstHopDenom)
+	gaiaOsmoChan := osmoChannels[0].Counterparty
+	junoGaiaChan := junoChannels[0]
+	firstHopDenom := transfertypes.GetPrefixedDenom(gaiaOsmoChan.PortID, gaiaOsmoChan.ChannelID, osmosis.Config().Denom)
+	secondHopDenom := transfertypes.GetPrefixedDenom(junoGaiaChan.Counterparty.PortID, junoGaiaChan.Counterparty.ChannelID, firstHopDenom)
 	dstIbcDenom := transfertypes.ParseDenomTrace(secondHopDenom)
 
 	// Check that the funds sent are present in the acc on juno
@@ -136,14 +142,14 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.Equal(t, transferAmount, junoBal)
 
 	// Send packet back from Juno->Hub->Osmosis
-	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
+	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaOsmoChan.PortID, gaiaOsmoChan.ChannelID, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
 	transfer = ibc.WalletAmount{
 		Address: receiver,
 		Denom:   dstIbcDenom.IBCDenom(),
 		Amount:  transferAmount,
 	}
 
-	_, err = juno.SendIBCTransfer(ctx, channels[1].Counterparty.ChannelID, junoUser.KeyName, transfer, nil)
+	_, err = juno.SendIBCTransfer(ctx, junoGaiaChan.ChannelID, junoUser.KeyName, transfer, nil)
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
@@ -162,14 +168,14 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 	// Send a malformed packet with invalid receiver address from Osmosis->Hub->Juno
 	// This should succeed in the first hop and fail to make the second hop; funds should end up in the intermediary account.
-	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), channels[1].PortID, channels[1].ChannelID, "xyz1t8eh66t2w5k67kwurmn5gqhtq6d2ja0vp7jmmq")
+	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, "xyz1t8eh66t2w5k67kwurmn5gqhtq6d2ja0vp7jmmq")
 	transfer = ibc.WalletAmount{
 		Address: receiver,
 		Denom:   osmosis.Config().Denom,
 		Amount:  transferAmount,
 	}
 
-	_, err = osmosis.SendIBCTransfer(ctx, channels[0].ChannelID, osmosisUser.KeyName, transfer, nil)
+	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil)
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
