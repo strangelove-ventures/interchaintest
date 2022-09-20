@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
@@ -49,34 +50,30 @@ type BuiltinChainFactory struct {
 var embeddedConfiguredChains []byte
 
 // initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
-func initBuiltinChainConfig() (map[string]ibc.ChainConfig, error) {
-
-	// checks if configuredChains.yaml is found in cwd or parent of cwd,
-	// otherwise it will use the the embedded version of configuredChains.yaml
-	configuredChainsFile := ""
-	if _, err := os.Stat("./configuredChains.yaml"); err == nil {
-		configuredChainsFile = "./configuredChains.yaml"
-	}
-	if _, err := os.Stat("../configuredChains.yaml"); err == nil {
-		configuredChainsFile = "../configuredChains.yaml"
-	}
-
-	builtinChainConfigs := make(map[string]ibc.ChainConfig)
-
+func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
 	var dat []byte
 	var err error
-	if configuredChainsFile != "" {
-		dat, err = os.ReadFile(configuredChainsFile)
+
+	// checks if CONFIGURED_CHAINS environment variable is set with a path,
+	// otherwise configuredChains.yaml at the root of the ibctest dir gets embedded and used.
+	val, present := os.LookupEnv("CONFIGURED_CHAINS")
+	if present {
+		cleanPath := path.Clean(val)
+		dat, err = os.ReadFile(cleanPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading configuredChains.yaml: %v", err)
+			log.Info("failed to read configured chains file", zap.String("file", cleanPath), zap.Error(err))
+			log.Info("resorting to embedded configuredChains.yaml")
+			dat = embeddedConfiguredChains
 		}
 	} else {
 		dat = embeddedConfiguredChains
 	}
 
+	builtinChainConfigs := make(map[string]ibc.ChainConfig)
+
 	err = yaml.Unmarshal(dat, &builtinChainConfigs)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing configuredChains.yaml: %v", err)
+		return nil, fmt.Errorf("error unmarshalling pre-configured chains: %w", err)
 	}
 	return builtinChainConfigs, nil
 }

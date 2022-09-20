@@ -10,12 +10,14 @@ import (
 
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/label"
+	"go.uber.org/zap"
 )
 
 // ChainSpec is a wrapper around an ibc.ChainConfig
 // that allows callers to easily reference one of the built-in chain configs
 // and optionally provide overrides for some settings.
 type ChainSpec struct {
+	log *zap.Logger
 	// Name is the name of the built-in config to use as a basis for this chain spec.
 	// Required unless every other field is set.
 	Name string
@@ -75,9 +77,9 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		return s.applyConfigOverrides(s.ChainConfig)
 	}
 
-	builtinChainConfigs, err := initBuiltinChainConfig()
+	builtinChainConfigs, err := initBuiltinChainConfig(s.log)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get preconfigured chains")
+		return nil, fmt.Errorf("failed to get pre-configured chains: %w", err)
 	}
 
 	// Get built-in config.
