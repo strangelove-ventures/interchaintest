@@ -49,7 +49,7 @@ type BuiltinChainFactory struct {
 //go:embed configuredChains.yaml
 var embeddedConfiguredChains []byte
 
-var once sync.Once
+var logConfiguredChainsSourceOnce sync.Once
 
 // initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
 func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
@@ -76,11 +76,11 @@ func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error)
 		return nil, fmt.Errorf("error unmarshalling pre-configured chains: %w", err)
 	}
 
-	once.Do(func() {
+	logConfiguredChainsSourceOnce.Do(func() {
 		if val != "" {
 			log.Info("Using user specified configured chains", zap.String("file", val))
 		} else {
-			log.Info("Using embedded configured chains", zap.String("file", "ibctest/configuredChains.yaml"))
+			log.Info("Using embedded configured chains")
 		}
 	})
 
