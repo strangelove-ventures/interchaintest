@@ -197,7 +197,8 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, mnemonic)
 
-		user := ibctest.GetAndFundTestUserWithMnemonic(t, ctx, keyName, mnemonic, 10000, gaia0)
+		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
+		require.NoError(t, err)
 		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)

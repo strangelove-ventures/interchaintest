@@ -19,6 +19,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/internal/blockdb"
 	blockdbtui "github.com/strangelove-ventures/ibctest/v3/internal/blockdb/tui"
 	"github.com/strangelove-ventures/ibctest/v3/internal/version"
+	"github.com/strangelove-ventures/ibctest/v3/relayer"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"go.uber.org/zap"
 )
@@ -171,7 +172,7 @@ func configureTestReporter() error {
 func getRelayerFactory(name string, logger *zap.Logger) (ibctest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
-		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger, relayer.StartupFlags("-b", "100")), nil
 	case "hermes":
 		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes, logger), nil
 	default:
