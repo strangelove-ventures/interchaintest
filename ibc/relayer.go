@@ -36,7 +36,7 @@ type Relayer interface {
 	AddChainConfiguration(ctx context.Context, rep RelayerExecReporter, chainConfig ChainConfig, keyName, rpcAddr, grpcAddr string) error
 
 	// generate new path between two chains
-	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
+	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, filter ChannelFilter) error
 
 	// setup channels, connections, and clients
 	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error

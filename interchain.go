@@ -53,6 +53,8 @@ type interchainLink struct {
 	// If a zero value initialization is used, e.g. CreateChannelOptions{},
 	// then the default values will be used via ibc.DefaultChannelOpts.
 	createChannelOpts ibc.CreateChannelOptions
+
+	filter ibc.ChannelFilter
 }
 
 // NewInterchain returns a new Interchain.
@@ -145,6 +147,9 @@ type InterchainLink struct {
 	// If a zero value initialization is used, e.g. CreateChannelOptions{},
 	// then the default values will be used via ibc.DefaultChannelOpts.
 	CreateChannelOpts ibc.CreateChannelOptions
+
+	// ChannelFilter allows filtering channels from the source chain's perspective.
+	ChannelFilter ibc.ChannelFilter
 }
 
 // AddLink adds the given link to the Interchain.
@@ -179,6 +184,7 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 		chains:            [2]ibc.Chain{link.Chain1, link.Chain2},
 		createChannelOpts: link.CreateChannelOpts,
 		createClientOpts:  link.CreateClientOpts,
+		filter:            link.ChannelFilter,
 	}
 	return ic
 }
@@ -257,7 +263,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		c0 := link.chains[0]
 		c1 := link.chains[1]
 
-		if err := rp.Relayer.GeneratePath(ctx, rep, c0.Config().ChainID, c1.Config().ChainID, rp.Path); err != nil {
+		if err := rp.Relayer.GeneratePath(ctx, rep, c0.Config().ChainID, c1.Config().ChainID, rp.Path, link.filter); err != nil {
 			return fmt.Errorf(
 				"failed to generate path %s on relayer %s between chains %s and %s: %w",
 				rp.Path, rp.Relayer, ic.chains[c0], ic.chains[c1], err,

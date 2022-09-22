@@ -68,7 +68,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
-		req.NoError(r.GeneratePath(ctx, rep.RelayerExecReporter(t), c0.Config().ChainID, c1.Config().ChainID, pathName))
+		req.NoError(r.GeneratePath(ctx, rep.RelayerExecReporter(t), c0.Config().ChainID, c1.Config().ChainID, pathName, ibc.ChannelFilter{}))
 	})
 	if t.Failed() {
 		return

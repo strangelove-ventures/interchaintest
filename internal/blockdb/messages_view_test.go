@@ -89,7 +89,7 @@ func TestMessagesView(t *testing.T) {
 	// Generate the path.
 	// No transactions happen here.
 	const pathName = "p"
-	require.NoError(t, r.GeneratePath(ctx, eRep, gaia0ChainID, gaia1ChainID, pathName))
+	require.NoError(t, r.GeneratePath(ctx, eRep, gaia0ChainID, gaia1ChainID, pathName, ibc.ChannelFilter{}))
 
 	t.Run("create clients", func(t *testing.T) {
 		// Creating the clients will cause transactions.

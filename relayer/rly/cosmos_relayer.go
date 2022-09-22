@@ -169,10 +169,12 @@ func (commander) FlushPackets(pathName, channelID, homeDir string) []string {
 	}
 }
 
-func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+func (commander) GeneratePath(srcChainID, dstChainID, pathName string, filter ibc.ChannelFilter, homeDir string) []string {
 	return []string{
 		"rly", "paths", "new", srcChainID, dstChainID, pathName,
 		"--home", homeDir,
+		"--filter-rule", filter.Rule,
+		"--filter-channels", strings.Join(filter.ChannelList, ","),
 	}
 }
 
