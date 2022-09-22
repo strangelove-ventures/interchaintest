@@ -251,6 +251,12 @@ func (r *DockerRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecRep
 	return res.Err
 }
 
+func (r *DockerRelayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, filter ibc.ChannelFilter) error {
+	cmd := r.c.UpdatePath(pathName, r.HomeDir(), filter)
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
+}
+
 func (r *DockerRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
 	cmd := r.c.GetChannels(chainID, r.HomeDir())
 
@@ -645,6 +651,7 @@ type RelayerCommander interface {
 	FlushAcknowledgements(pathName, channelID, homeDir string) []string
 	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
+	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
