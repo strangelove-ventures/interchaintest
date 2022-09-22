@@ -101,7 +101,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		req.NoError(err)
 
 		// Ack shouldn't happen yet.
-		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
+		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+5, tx.Packet)
 		req.ErrorIs(err, test.ErrNotFound)
 	})
 
@@ -118,7 +118,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		req.NoError(err)
 
 		// Now the ack must be present.
-		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
+		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+5, tx.Packet)
 		req.NoError(err)
 	})
 }

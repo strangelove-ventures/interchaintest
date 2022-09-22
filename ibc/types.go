@@ -194,3 +194,10 @@ const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
 )
+
+// ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
+// which will be used to narrow down the list of channels a user wants to relay on.
+type ChannelFilter struct {
+	Rule        string
+	ChannelList []string
+}
