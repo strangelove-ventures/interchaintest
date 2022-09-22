@@ -16,6 +16,90 @@ agoric:
       uid-gid: 1025:1025
   no-host-mount: true
 
+akash:
+  name: akash
+  type: cosmos
+  bin: akash
+  bech32-prefix: akash
+  denom: uakt
+  gas-prices: 0.01uakt
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/akash
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+axelar:
+  name: axelar
+  type: cosmos
+  bin: axelard
+  bech32-prefix: axelar
+  denom: uaxl
+  gas-prices: 0.01uaxl
+  gas-adjustment: 1.3
+  trusting-period: 168h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/axelar
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bitcanna:
+  name: bitcanna
+  type: cosmos
+  bin: bcnad
+  bech32-prefix: bcna
+  denom: ubcna
+  gas-prices: 0.01ubcna
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bitcanna
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bitsong:
+  name: bitsong
+  type: cosmos
+  bin: bitsongd
+  bech32-prefix: bitsong
+  denom: ubtsg
+  gas-prices: 0.01ubtsg
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bitsong
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bostrom:
+  name: bostrom
+  type: cosmos
+  bin: cyber
+  bech32-prefix: bostrom
+  denom: boot
+  gas-prices: 0.01boot
+  gas-adjustment: 1.3
+  trusting-period: 192h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bostrom
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+carbon:
+  name: carbon
+  type: cosmos
+  bin: carbond
+  bech32-prefix: swth
+  denom: swth
+  gas-prices: 0.01swth
+  gas-adjustment: 1.3
+  trusting-period: 720h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/carbon
+      uid-gid: 1025:1025
+  no-host-mount: true
+
 composable:
   name: composable
   type: polkadot
