@@ -8,6 +8,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestChainSpec_Config(t *testing.T) {
@@ -18,7 +19,7 @@ func TestChainSpec_Config(t *testing.T) {
 			Version: "v7.0.1",
 		}
 
-		_, err := s.Config()
+		_, err := s.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 	})
 
@@ -42,7 +43,7 @@ func TestChainSpec_Config(t *testing.T) {
 			},
 		}
 
-		_, err := s.Config()
+		_, err := s.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 	})
 
@@ -53,10 +54,10 @@ func TestChainSpec_Config(t *testing.T) {
 			Version: "v7.0.1",
 		}
 
-		cfg1, err := s.Config()
+		cfg1, err := s.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 
-		cfg2, err := s.Config()
+		cfg2, err := s.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 
 		diff := cmp.Diff(cfg1, cfg2)
@@ -71,7 +72,7 @@ func TestChainSpec_Config(t *testing.T) {
 				Version: "v7.0.1",
 			}
 
-			cfg, err := s.Config()
+			cfg, err := s.Config(zaptest.NewLogger(t))
 			require.NoError(t, err)
 
 			require.Regexp(t, regexp.MustCompile(`^gaia-\d+$`), cfg.Name)
@@ -86,7 +87,7 @@ func TestChainSpec_Config(t *testing.T) {
 				Version: "v7.0.1",
 			}
 
-			cfg, err := s.Config()
+			cfg, err := s.Config(zaptest.NewLogger(t))
 			require.NoError(t, err)
 
 			require.Equal(t, "mychain", cfg.Name)
@@ -104,7 +105,7 @@ func TestChainSpec_Config(t *testing.T) {
 				ChainID: "g-0000",
 			},
 		}
-		baseCfg, err := baseSpec.Config()
+		baseCfg, err := baseSpec.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 
 		t.Run("GasAdjustment", func(t *testing.T) {
@@ -114,7 +115,7 @@ func TestChainSpec_Config(t *testing.T) {
 			s := baseSpec
 			s.GasAdjustment = &g
 
-			cfg, err := s.Config()
+			cfg, err := s.Config(zaptest.NewLogger(t))
 			require.NoError(t, err)
 
 			require.Equal(t, g, cfg.GasAdjustment)
@@ -127,7 +128,7 @@ func TestChainSpec_Config(t *testing.T) {
 			s := baseSpec
 			s.NoHostMount = &m
 
-			cfg, err := s.Config()
+			cfg, err := s.Config(zaptest.NewLogger(t))
 			require.NoError(t, err)
 
 			require.Equal(t, m, cfg.NoHostMount)
@@ -140,7 +141,7 @@ func TestChainSpec_Config(t *testing.T) {
 				Name: "gaia",
 			}
 
-			_, err := s.Config()
+			_, err := s.Config(zaptest.NewLogger(t))
 			require.EqualError(t, err, "ChainSpec.Version must not be empty")
 		})
 
@@ -149,7 +150,7 @@ func TestChainSpec_Config(t *testing.T) {
 				Version: "v1.2.3",
 			}
 
-			_, err := s.Config()
+			_, err := s.Config(zaptest.NewLogger(t))
 			require.EqualError(t, err, "ChainSpec.Name required when not all config fields are set")
 		})
 
@@ -159,7 +160,7 @@ func TestChainSpec_Config(t *testing.T) {
 				Version: "v1.2.3",
 			}
 
-			_, err := s.Config()
+			_, err := s.Config(zaptest.NewLogger(t))
 			require.ErrorContains(t, err, "no chain configuration for invalid_chain (available chains are:")
 		})
 	})
