@@ -17,12 +17,12 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.18
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18
 
       - name: checkout ibctest
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
@@ -38,12 +38,12 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.18
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18
 
       - name: checkout ibctest
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
@@ -59,12 +59,12 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.18
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18
 
       - name: checkout ibctest
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
@@ -80,12 +80,12 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.18
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18
 
       - name: checkout ibctest
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
