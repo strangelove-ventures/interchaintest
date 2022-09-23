@@ -1,4 +1,4 @@
-package ibctest_test
+package cosmos_test
 
 import (
 	"context"
