@@ -251,6 +251,12 @@ func (r *DockerRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecRep
 	return res.Err
 }
 
+func (r *DockerRelayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, filter ibc.ChannelFilter) error {
+	cmd := r.c.UpdatePath(pathName, r.HomeDir(), filter)
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
+}
+
 func (r *DockerRelayer) GetChannels(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) ([]ibc.ChannelOutput, error) {
 	cmd := r.c.GetChannels(chainID, r.HomeDir())
 
@@ -337,8 +343,8 @@ func (r *DockerRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
-func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	return r.createNodeContainer(ctx, pathName)
+func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathNames ...string) error {
+	return r.createNodeContainer(ctx, pathNames...)
 }
 
 func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecReporter) error {
@@ -433,10 +439,11 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 	return nil
 }
 
-func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathName string) error {
+func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...string) error {
 	containerImage := r.containerImage()
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), pathName)
-	cmd := r.c.StartRelayer(pathName, r.HomeDir())
+	joinedPaths := strings.Join(pathNames, ".")
+	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 	r.log.Info(
 		"Running command",
 		zap.String("command", strings.Join(cmd, " ")),
@@ -450,7 +457,7 @@ func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathName string
 			Entrypoint: []string{},
 			Cmd:        cmd,
 
-			Hostname: r.HostName(pathName),
+			Hostname: r.HostName(joinedPaths),
 			User:     r.c.DockerUser(),
 
 			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
@@ -644,10 +651,11 @@ type RelayerCommander interface {
 	FlushAcknowledgements(pathName, channelID, homeDir string) []string
 	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
+	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
 	RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
-	StartRelayer(pathName, homeDir string) []string
+	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
 }

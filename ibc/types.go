@@ -38,6 +38,14 @@ type ChainConfig struct {
 	EncodingConfig *simappparams.EncodingConfig
 }
 
+func (c ChainConfig) Clone() ChainConfig {
+	x := c
+	images := make([]DockerImage, len(c.Images))
+	copy(images, c.Images)
+	x.Images = images
+	return x
+}
+
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 	// Make several in-place modifications to c,
 	// which is a value, not a reference,
@@ -139,15 +147,6 @@ type IBCTimeout struct {
 	Height      uint64
 }
 
-type ContractStateModels struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type DumpContractStateResponse struct {
-	Models []ContractStateModels `json:"models"`
-}
-
 type ChannelCounterparty struct {
 	PortID    string `json:"port_id"`
 	ChannelID string `json:"channel_id"`
@@ -196,12 +195,9 @@ const (
 	Hermes
 )
 
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
+// ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
+// which will be used to narrow down the list of channels a user wants to relay on.
+type ChannelFilter struct {
+	Rule        string
+	ChannelList []string
 }

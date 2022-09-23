@@ -109,7 +109,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
 		Client:            tn.Client,
-		ChainID:           tn.Chain.Config().ChainID,
+		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
@@ -691,8 +691,22 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 	return err
 }
 
-// UpgradeProposal submits a software-upgrade proposal to the chain.
-func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (string, error) {
+// QueryProposal returns the state and details of a governance proposal.
+func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
+	if err != nil {
+		return nil, err
+	}
+	var proposal ProposalResponse
+	err = json.Unmarshal(stdout, &proposal)
+	if err != nil {
+		return nil, err
+	}
+	return &proposal, nil
+}
+
+// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
@@ -709,7 +723,23 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop i
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
+// TextProposal submits a text governance proposal to the chain.
+func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
+	command := []string{
+		"gov", "submit-proposal",
+		"--type", "text",
+		"--title", prop.Title,
+		"--description", prop.Description,
+		"--deposit", prop.Deposit,
+	}
+	if prop.Expedited {
+		command = append(command, "--is-expedited=true")
+	}
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// DumpContractState dumps the state of a contract at a block height.
+func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
 		"wasm", "contract-state", "all", contractAddress,
 		"--height", fmt.Sprint(height),
@@ -718,7 +748,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 		return nil, err
 	}
 
-	res := &ibc.DumpContractStateResponse{}
+	res := new(DumpContractStateResponse)
 	if err := json.Unmarshal([]byte(stdout), res); err != nil {
 		return nil, err
 	}
@@ -742,16 +772,6 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	defer tn.lock.Unlock()
 
 	_, _, err := tn.ExecBin(ctx, "unsafe-reset-all")
-	return err
-}
-
-func (tn *ChainNode) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	// TODO generate --pool-file
-	poolFilePath := "TODO"
-	_, err := tn.ExecTx(ctx,
-		"gamm", "create-pool",
-		"--pool-file", poolFilePath,
-	)
 	return err
 }
 
@@ -866,7 +886,7 @@ func (tn *ChainNode) InitValidatorGenTx(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	bech32, err := tn.KeyBech32(ctx, valKey)
+	bech32, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
 		return err
 	}
@@ -905,10 +925,15 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 }
 
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
-func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error) {
+// bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
+func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
 	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
+	}
+
+	if bech != "" {
+		command = append(command, "--bech", bech)
 	}
 
 	stdout, stderr, err := tn.Exec(ctx, command, nil)
@@ -917,6 +942,11 @@ func (tn *ChainNode) KeyBech32(ctx context.Context, name string) (string, error)
 	}
 
 	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
+}
+
+// AccountKeyBech32 retrieves the named key's address in bech32 account format.
+func (tn *ChainNode) AccountKeyBech32(ctx context.Context, name string) (string, error) {
+	return tn.KeyBech32(ctx, name, "")
 }
 
 // PeerString returns the string for connecting the nodes passed in

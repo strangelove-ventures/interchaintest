@@ -101,6 +101,8 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		cfg = ibc.ChainConfig{}
 	}
 
+	cfg = cfg.Clone()
+
 	// Apply any overrides from this ChainSpec.
 	cfg = cfg.MergeChainSpecConfig(s.ChainConfig)
 
