@@ -283,12 +283,14 @@ WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 
 	t.Run("relay packet", func(t *testing.T) {
 		require.NoError(t, r.FlushPackets(ctx, eRep, pathName, gaia0ChannelID))
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
 
 		const qMsgRecvPacket = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id
 FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 `
+
 		var portID, channelID, counterpartyPortID, counterpartyChannelID string
 		require.NoError(t, db.QueryRow(qMsgRecvPacket, gaia1ChainID).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
 
@@ -306,7 +308,8 @@ WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 	}
 
 	t.Run("relay acknowledgement", func(t *testing.T) {
-		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, pathName, gaia1ChannelID))
+		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, pathName, gaia0ChannelID))
+		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia1))
 
 		const qMsgAck = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id

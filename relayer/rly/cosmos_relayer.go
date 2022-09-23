@@ -176,6 +176,15 @@ func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) 
 	}
 }
 
+func (commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+	return []string{
+		"rly", "paths", "update", pathName,
+		"--home", homeDir,
+		"--filter-rule", filter.Rule,
+		"--filter-channels", strings.Join(filter.ChannelList, ","),
+	}
+}
+
 func (commander) GetChannels(chainID, homeDir string) []string {
 	return []string{
 		"rly", "q", "channels", chainID,

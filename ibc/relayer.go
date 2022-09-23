@@ -41,6 +41,9 @@ type Relayer interface {
 	// setup channels, connections, and clients
 	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
 
+	// update path channel filter
+	UpdatePath(ctx context.Context, rep RelayerExecReporter, pathName string, filter ChannelFilter) error
+
 	// update clients, such as after new genesis
 	UpdateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
 
