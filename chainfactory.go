@@ -1,8 +1,11 @@
 package ibctest
 
 import (
+	_ "embed"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/chain/penumbra"
@@ -10,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/label"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -42,16 +46,45 @@ type BuiltinChainFactory struct {
 	specs []*ChainSpec
 }
 
-// builtinChainConfigs is a mapping of valid builtin chain names
-// to their predefined ibc.ChainConfig.
-var builtinChainConfigs = map[string]ibc.ChainConfig{
-	"gaia":       cosmos.NewCosmosHeighlinerChainConfig("gaia", "gaiad", "cosmos", "uatom", "0.01uatom", 1.3, "504h", false),
-	"osmosis":    cosmos.NewCosmosHeighlinerChainConfig("osmosis", "osmosisd", "osmo", "uosmo", "0.0uosmo", 1.3, "336h", false),
-	"juno":       cosmos.NewCosmosHeighlinerChainConfig("juno", "junod", "juno", "ujuno", "0.0025ujuno", 1.3, "672h", false),
-	"agoric":     cosmos.NewCosmosHeighlinerChainConfig("agoric", "agd", "agoric", "urun", "0.01urun", 1.3, "672h", true),
-	"icad":       cosmos.NewCosmosHeighlinerChainConfig("icad", "icad", "cosmos", "photon", "0.00photon", 1.2, "504h", false),
-	"penumbra":   penumbra.NewPenumbraChainConfig(),
-	"composable": polkadot.NewComposableChainConfig(),
+//go:embed configuredChains.yaml
+var embeddedConfiguredChains []byte
+
+var logConfiguredChainsSourceOnce sync.Once
+
+// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
+func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
+	var dat []byte
+	var err error
+
+	// checks if IBCTEST_CONFIGURED_CHAINS environment variable is set with a path,
+	// otherwise, ./configuredChains.yaml gets embedded and used.
+	val := os.Getenv("IBCTEST_CONFIGURED_CHAINS")
+
+	if val != "" {
+		dat, err = os.ReadFile(val)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		dat = embeddedConfiguredChains
+	}
+
+	builtinChainConfigs := make(map[string]ibc.ChainConfig)
+
+	err = yaml.Unmarshal(dat, &builtinChainConfigs)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling pre-configured chains: %w", err)
+	}
+
+	logConfiguredChainsSourceOnce.Do(func() {
+		if val != "" {
+			log.Info("Using user specified configured chains", zap.String("file", val))
+		} else {
+			log.Info("Using embedded configured chains")
+		}
+	})
+
+	return builtinChainConfigs, nil
 }
 
 // NewBuiltinChainFactory returns a BuiltinChainFactory that returns chains defined by entries.
@@ -66,7 +99,7 @@ func (f *BuiltinChainFactory) Count() int {
 func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 	chains := make([]ibc.Chain, len(f.specs))
 	for i, s := range f.specs {
-		cfg, err := s.Config()
+		cfg, err := s.Config(f.log)
 		if err != nil {
 			// Prefer to wrap the error with the chain name if possible.
 			if s.Name != "" {
@@ -130,7 +163,7 @@ func (f *BuiltinChainFactory) Name() string {
 	for i, s := range f.specs {
 		// Ignoring error here because if we fail to generate the config,
 		// another part of the factory stack should have failed properly before we got here.
-		cfg, _ := s.Config()
+		cfg, _ := s.Config(f.log)
 
 		v := s.Version
 		if v == "" {
