@@ -1,15 +1,12 @@
-module github.com/strangelove-ventures/ibctest/v5/examples
+module github.com/strangelove-ventures/ibctest/v5/examples/cosmos
 
 go 1.18
 
 require (
-	github.com/cosmos/cosmos-sdk v0.46.0
-	github.com/cosmos/ibc-go/v5 v5.0.0-beta1
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
 	github.com/strangelove-ventures/ibctest/v5 v5.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
-	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 )
 
 require (
@@ -42,9 +39,11 @@ require (
 	github.com/confio/ics23/go v0.7.0 // indirect
 	github.com/cosmos/btcutil v1.0.4 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-alpha7 // indirect
+	github.com/cosmos/cosmos-sdk v0.46.0 // indirect
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
 	github.com/cosmos/iavl v0.19.0 // indirect
+	github.com/cosmos/ibc-go/v5 v5.0.0-beta1 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.11.1 // indirect
 	github.com/cosmos/ledger-go v0.9.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
@@ -168,6 +167,7 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
@@ -203,7 +203,7 @@ replace (
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/strangelove-ventures/ibctest/v5 => ../
+	github.com/strangelove-ventures/ibctest/v5 => ../../
 
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )

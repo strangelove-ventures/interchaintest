@@ -24,13 +24,6 @@ jobs:
       - name: checkout ibctest
         uses: actions/checkout@v2
 
-      # cleanup docker environment on self-hosted test runner
-      # - name: prepare fresh docker environment
-      #   run: |
-      #     docker stop $(docker ps -a -q) || true
-      #     docker rm -f $(docker ps -a -q) || true
-      #     docker network prune -f || true
-
       # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
@@ -40,3 +33,24 @@ jobs:
       - name: run all tests
         # show cosmos chain and relayer logs on test failure
         run: (go test -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+  test-cosmos:
+    name: test-cosmos
+    runs-on: [self-hosted, linux]
+    steps:
+      # Install and setup go
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: checkout ibctest
+        uses: actions/checkout@v2
+
+      # cleanup environment on self-hosted test runner
+      - name: clean
+        run: |-
+          rm -rf ~/.ibctest
+
+      # run tests
+      - name: run all tests
+        run: cd examples/cosmos && go test -race -timeout 30m -v -p 2 ./...
