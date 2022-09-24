@@ -147,6 +147,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 				ChainID:         "dali-dev",
 				Image:           cfg.Images[1],
 				NumNodes:        nf,
+				Flags:           []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},
 				RelayChainFlags: []string{"--execution=wasm"},
 			}}
 			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
