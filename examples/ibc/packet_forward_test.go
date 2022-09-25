@@ -245,9 +245,14 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(0), gaiaBal)
 
+	// Now restart all nodes with a version of gaia that has 2 retries and 1 second timeout
+	err = gaia.StopAllNodes(ctx)
+	require.NoError(t, err)
+	gaia.UpgradeVersion(ctx, client, "strangelove-packet-forward-middleware-two-retries-low-timeout")
+	err = gaia.StartAllNodes(ctx)
+	require.NoError(t, err)
+
 	// Send packet from Osmosis->Hub->Juno with the timeout so low that it can not make it from Hub to Juno, which should result in a refund from Hub to Osmosis after two retries.
-	// receiver format: {intermediate_refund_address}|{foward_port}/{forward_channel}:{final_destination_address}:{max_retries}:{timeout_duration}
-	// receiver = fmt.Sprintf("%s|%s/%s:%s:%d:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, junoUser.Bech32Address(juno.Config().Bech32Prefix), 2, "1s")
 	transfer = ibc.WalletAmount{
 		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
 		Denom:   osmosis.Config().Denom,
