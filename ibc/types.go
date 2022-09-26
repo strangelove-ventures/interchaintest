@@ -9,27 +9,27 @@ import (
 // ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
-	Type string
+	Type string `yaml:"type"`
 	// Chain name, e.g. cosmoshub.
-	Name string
+	Name string `yaml:"name"`
 	// Chain ID, e.g. cosmoshub-4
-	ChainID string
+	ChainID string `yaml:"chain-id"`
 	// Docker images required for running chain nodes.
-	Images []DockerImage
+	Images []DockerImage `yaml:"images"`
 	// Binary to execute for the chain node daemon.
-	Bin string
+	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
-	Bech32Prefix string
+	Bech32Prefix string `yaml:"bech32-prefix"`
 	// Denomination of native currency, e.g. uatom.
-	Denom string
+	Denom string `yaml:"denom"`
 	// Minimum gas prices for sending transactions, in native currency denom.
-	GasPrices string
+	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
-	GasAdjustment float64
+	GasAdjustment float64 `yaml:"gas-adjustment"`
 	// Trusting period of the chain.
-	TrustingPeriod string
+	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
-	NoHostMount bool
+	NoHostMount bool `yaml:"no-host-mount"`
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Override config parameters for files at filepath.
@@ -122,9 +122,9 @@ func (c ChainConfig) IsFullyConfigured() bool {
 }
 
 type DockerImage struct {
-	Repository string
-	Version    string
-	UidGid     string
+	Repository string `yaml:"repository"`
+	Version    string `yaml:"version"`
+	UidGid     string `yaml:"uid-gid"`
 }
 
 // Ref returns the reference to use when e.g. creating a container.
