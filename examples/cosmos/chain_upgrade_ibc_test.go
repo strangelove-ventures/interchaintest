@@ -1,33 +1,26 @@
-package ibctest_test
+package cosmos_test
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v5/conformance"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/relayer"
 	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
-const (
-	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
-	blocksAfterUpgrade = uint64(10)
-	votingPeriod       = "10s"
-	maxDepositPeriod   = "10s"
-)
-
-func TestJunoUpgrade(t *testing.T) {
-	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
+func TestJunoUpgradeIBC(t *testing.T) {
+	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
 }
 
-func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
+func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -43,25 +36,55 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
+		{
+			Name:      "gaia",
+			ChainName: "gaia",
+			Version:   "v7.0.3",
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	chain := chains[0].(*cosmos.CosmosChain)
-
-	ic := ibctest.NewInterchain().
-		AddChain(chain)
-
-	ctx := context.Background()
 	client, network := ibctest.DockerSetup(t)
 
-	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
+	chain, counterpartyChain := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
+
+	const (
+		path        = "ibc-upgrade-test-path"
+		relayerName = "relayer"
+	)
+
+	// Get a relayer instance
+	rf := ibctest.NewBuiltinRelayerFactory(
+		ibc.CosmosRly,
+		zaptest.NewLogger(t),
+		relayer.StartupFlags("-b", "100"),
+	)
+
+	r := rf.Build(t, client, network)
+
+	ic := ibctest.NewInterchain().
+		AddChain(chain).
+		AddChain(counterpartyChain).
+		AddRelayer(r, relayerName).
+		AddLink(ibctest.InterchainLink{
+			Chain1:  chain,
+			Chain2:  counterpartyChain,
+			Relayer: r,
+			Path:    path,
+		})
+
+	ctx := context.Background()
+
+	rep := testreporter.NewNopReporter()
+
+	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  true,
+		SkipPathCreation:  false,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()
@@ -70,6 +93,9 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	const userFunds = int64(10_000_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
+
+	// test IBC conformance before chain upgrade
+	conformance.TestChainPair(t, ctx, client, network, chain, counterpartyChain, rf, rep, r, path)
 
 	height, err := chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
@@ -93,11 +119,11 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+haltHeightDelta, upgradeTx.ProposalID, cosmos.ProposalStatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
-	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
-	defer timeoutCtxCancel()
-
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height before upgrade")
+
+	timeoutCtx, timeoutCtxCancel := context.WithTimeout(ctx, time.Second*45)
+	defer timeoutCtxCancel()
 
 	// this should timeout due to chain halt at upgrade height.
 	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
@@ -127,31 +153,6 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	err = test.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
 	require.NoError(t, err, "chain did not produce blocks after upgrade")
 
-	height, err = chain.Height(ctx)
-	require.NoError(t, err, "error fetching height after upgrade")
-
-	require.GreaterOrEqual(t, height, haltHeight+blocksAfterUpgrade, "height did not increment enough after upgrade")
-}
-
-func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) func(ibc.ChainConfig, []byte) ([]byte, error) {
-	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
-		g := make(map[string]interface{})
-		if err := json.Unmarshal(genbz, &g); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
-		}
-		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
-			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
-		}
-		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
-			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
-		}
-		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "deposit_params", "min_deposit", 0, "denom"); err != nil {
-			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
-		}
-		out, err := json.Marshal(g)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
-		}
-		return out, nil
-	}
+	// test IBC conformance after chain upgrade on same path
+	conformance.TestChainPair(t, ctx, client, network, chain, counterpartyChain, rf, rep, r, path)
 }
