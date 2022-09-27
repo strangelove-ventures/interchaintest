@@ -1,4 +1,4 @@
-package ibctest
+package polkadot_test
 
 import (
 	"context"
@@ -32,46 +32,21 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	nv := 5 // Number of validators
 	nf := 3 // Number of full nodes
 
-	// These will need to point to local Docker images that include the relevant
-	// IBC code so that Parachains can communicate with the Cosmos chain.
-	var polkadotDocker, composableDocker, gaiaDocker ibc.DockerImage
-
-	//polkadotDocker := ibc.DockerImage{
-	//	Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
-	//	Version:    "latest",
-	//	UidGid:     dockerutil.GetHeighlinerUserString(),
-	//}
-	//
-	//composableDocker := ibc.DockerImage{
-	//	Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
-	//	Version:    "latest",
-	//	UidGid:     dockerutil.GetHeighlinerUserString(),
-	//}
-	//gaiaDocker := ibc.DockerImage{
-	//	Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
-	//	Version:    "latest",
-	//	UidGid:     dockerutil.GetHeighlinerUserString(),
-	//}
-
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "composable",
-			Version: "polkadot:v0.9.19,composable:v2.1.9",
+			Version: "polkadot:v0.9.19,composable:centauri",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "rococo-local",
-				// Need to pass in the relay chain Docker image first, and then the parachain docker image
-				Images: []ibc.DockerImage{polkadotDocker, composableDocker},
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,
 		},
 		{
 			ChainName: "gaia",
-			ChainConfig: ibc.ChainConfig{
-				ChainID: "gaia",
-				Images:  []ibc.DockerImage{gaiaDocker},
-			}},
+			Version:   "v7.0.3",
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -86,7 +61,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		relayer.StartupFlags("-b", "100"),
 		// These two fields are used to pass in a custom Docker image built locally
 		//relayer.ImagePull(false),
-		//relayer.CustomDockerImage(),
+		relayer.CustomDockerImage("ghcr.io/composablefi/relayer", "sub-create-client", "100:1000"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
