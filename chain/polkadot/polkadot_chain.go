@@ -64,31 +64,6 @@ type ParachainConfig struct {
 // IndexedName is a slice of the substrate dev key names used for key derivation.
 var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
 
-// NewComposableChainConfig returns an ibc.ChainConfig for configuring a polkadot relay chain and composable parachain.
-func NewComposableChainConfig() ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:         "polkadot",
-		Name:         "composable",
-		Bech32Prefix: "",
-		Denom:        "uDOT",
-		// TODO maybe use these params for the weight-based fee model
-		GasPrices:      "",
-		GasAdjustment:  0,
-		TrustingPeriod: "",
-		Images: []ibc.DockerImage{
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/polkadot",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/composable",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-		},
-		Bin: "polkadot",
-	}
-}
-
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
 func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
 	return &PolkadotChain{

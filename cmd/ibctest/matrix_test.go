@@ -7,6 +7,7 @@ import (
 
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 // Embed the matrix files as strings since they aren't intended to be changed.
@@ -36,7 +37,7 @@ func TestMatrixValid(t *testing.T) {
 
 			for i, cs := range m.ChainSets {
 				for j, c := range cs {
-					_, err := c.Config()
+					_, err := c.Config(zaptest.NewLogger(t))
 					require.NoErrorf(t, err, "failed to generate config from chainset at index %d-%d", i, j)
 				}
 			}

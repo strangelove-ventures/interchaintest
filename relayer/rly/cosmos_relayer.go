@@ -61,7 +61,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.1.0"
+	DefaultContainerVersion = "v2.1.2"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -173,6 +173,15 @@ func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) 
 	return []string{
 		"rly", "paths", "new", srcChainID, dstChainID, pathName,
 		"--home", homeDir,
+	}
+}
+
+func (commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+	return []string{
+		"rly", "paths", "update", pathName,
+		"--home", homeDir,
+		"--filter-rule", filter.Rule,
+		"--filter-channels", strings.Join(filter.ChannelList, ","),
 	}
 }
 
