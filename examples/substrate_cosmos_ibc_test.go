@@ -34,7 +34,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 
 	// These will need to point to local Docker images that include the relevant
 	// IBC code so that Parachains can communicate with the Cosmos chain.
-	var polkadotDocker, composableDocker, gaiaDocker ibc.DockerImage
+	// var gaiaDocker ibc.DockerImage
 
 	//polkadotDocker := ibc.DockerImage{
 	//	Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
@@ -57,21 +57,14 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "composable",
-			Version: "polkadot:v0.9.19,composable:v2.1.9",
+			Version: "polkadot:v0.9.19,composable:centauri",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "rococo-local",
-				// Need to pass in the relay chain Docker image first, and then the parachain docker image
-				Images: []ibc.DockerImage{polkadotDocker, composableDocker},
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,
 		},
-		{
-			ChainName: "gaia",
-			ChainConfig: ibc.ChainConfig{
-				ChainID: "gaia",
-				Images:  []ibc.DockerImage{gaiaDocker},
-			}},
+		{Name: "gaia", ChainName: "gaia", Version: "v7.0.1"},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -133,17 +126,17 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	// Once client, connection, and handshake logic is implemented for the Substrate provider
 	// we can link the path, start the relayer and attempt to send a token transfer via IBC.
 
-	//r.LinkPath()
-	//
-	//composable.SendIBCTransfer()
-	//
-	//r.StartRelayer()
-	//t.Cleanup(func() {
-	//	err = r.StopRelayer(ctx, eRep)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//})
+	// r.LinkPath()
+
+	// composable.SendIBCTransfer()
+
+	// r.StartRelayer()
+	// t.Cleanup(func() {
+	// 	err = r.StopRelayer(ctx, eRep)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// })
 
 	// Make assertions to determine if the token transfer was successful
 }
