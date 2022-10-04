@@ -39,13 +39,13 @@ func TestInterchainAccounts(t *testing.T) {
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "master"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "latest"}},
 			},
 		},
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "master"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "latest"}},
 			},
 		},
 	})
@@ -276,9 +276,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.Equal(t, "STATE_CLOSED", chain2Chans[0].State)
 
 	// Attempt to open another channel for the same ICA
-	stdout, stderr, err := chain1.Exec(ctx, registerICA, nil)
-	t.Logf("STDOUT: %s \n", stdout)
-	t.Logf("STDERR: %s \n", stderr)
+	_, _, err = chain1.Exec(ctx, registerICA, nil)
 	require.NoError(t, err)
 
 	// Wait for channel handshake to finish
@@ -289,13 +287,11 @@ func TestInterchainAccounts(t *testing.T) {
 	stdout, _, err = chain1.Exec(ctx, queryICA, nil)
 	require.NoError(t, err)
 
-	t.Logf("Second register command output: %s \n", stdout)
 	newICA := parseInterchainAccountField(stdout)
 	require.NotEmpty(t, newICA)
 	require.Equal(t, icaAddr, newICA)
 
 	chain1Chans, err = r.GetChannels(ctx, eRep, chain1.Config().ChainID)
-	t.Logf("Channels after re-register: %+v \n", chain1Chans)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(chain1Chans))
 	require.Equal(t, "STATE_OPEN", chain1Chans[1].State)
