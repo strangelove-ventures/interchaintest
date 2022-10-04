@@ -28,7 +28,6 @@ func DefaultEncoding() simappparams.EncodingConfig {
 	ibctypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	transfertypes.RegisterInterfaces(cfg.InterfaceRegistry)
 
-	// TODO possibly pull this back out before merging
 	demoTypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	icaTypes.RegisterInterfaces(cfg.InterfaceRegistry)
 
