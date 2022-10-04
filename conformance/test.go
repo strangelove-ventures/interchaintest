@@ -9,20 +9,20 @@
 // should define their own implementation of ibc.RelayerFactory,
 // and in most cases should use an instance of ibc.BuiltinChainFactory.
 //
-//     package myrelayer_test
+//	package myrelayer_test
 //
-//     import (
-//       "testing"
+//	import (
+//	  "testing"
 //
-//       "github.com/strangelove-ventures/ibctest/v5/conformance"
-//       "github.com/strangelove-ventures/ibctest/v5/ibc"
-//     )
+//	  "github.com/strangelove-ventures/ibctest/v5/conformance"
+//	  "github.com/strangelove-ventures/ibctest/v5/ibc"
+//	)
 //
-//     func TestMyRelayer(t *testing.T) {
-//       conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
-//         {Name: "foo_bar" /* ... */},
-//       }, MyRelayerFactory(), getTestReporter())
-//     }
+//	func TestMyRelayer(t *testing.T) {
+//	  conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
+//	    {Name: "foo_bar" /* ... */},
+//	  }, MyRelayerFactory(), getTestReporter())
+//	}
 //
 // Although the conformance package is made available as a convenience for other projects,
 // the ibctest project should be considered the canonical definition of tests and configuration.
@@ -35,7 +35,7 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"

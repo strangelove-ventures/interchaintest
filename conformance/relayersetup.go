@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
+	conntypes "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/test"
