@@ -1,7 +1,7 @@
 package relayer
 
 import (
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
 )
 
 // RelayerOption is used to customize the relayer configuration, whether constructed with the

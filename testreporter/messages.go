@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v5/label"
+	"github.com/strangelove-ventures/ibctest/v6/label"
 )
 
 // Message is the sentinel interface to all testreporter messages.
@@ -94,8 +94,10 @@ func (m ContinueTestMessage) typ() string {
 
 // TestErrorMessage is tracked when a Reporter's TestifyT().Errorf method is called.
 // This is the intended usage of a Reporter with require:
-//     req := require.New(rep.TestifyT(t))
-//     req.NoError(foo())
+//
+//	req := require.New(rep.TestifyT(t))
+//	req.NoError(foo())
+//
 // If req.NoError fails, then rep will track a TestErrorMessage.
 type TestErrorMessage struct {
 	Name    string
