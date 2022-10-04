@@ -1,10 +1,12 @@
-module github.com/strangelove-ventures/ibctest/v5/cmd/ibctest
+module github.com/strangelove-ventures/ibctest/v6/cmd/ibctest
 
 go 1.18
 
+replace github.com/strangelove-ventures/ibctest/v6 => ../../
+
 require (
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
-	github.com/strangelove-ventures/ibctest/v5 v5.0.0-00010101000000-000000000000
+	github.com/strangelove-ventures/ibctest/v6 v6.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
 )
@@ -209,9 +211,6 @@ replace (
 
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
-
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/strangelove-ventures/ibctest/v5 => ../../
-
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
