@@ -1,4 +1,4 @@
-package ibctest
+package ibc
 
 import (
 	"context"

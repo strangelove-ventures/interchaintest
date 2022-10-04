@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/relayer"
-	"github.com/strangelove-ventures/ibctest/test"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/strangelove-ventures/ibctest/v5"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
 	// FlushPackets will be exercised in a subtest,
@@ -45,17 +45,16 @@ func TestRelayerFlushing(t *testing.T, cf ibctest.ChainFactory, rf ibctest.Relay
 			Chain2:  c1,
 			Relayer: r,
 
-			Path: pathName,
+			Path:              pathName,
+			CreateChannelOpts: ibc.DefaultChannelOpts(),
 		})
 
-	ctx := context.Background()
 	eRep := rep.RelayerExecReporter(t)
 
 	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		CreateChannelOpts: ibc.DefaultChannelOpts(),
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
 	}))
 	defer ic.Close()
 

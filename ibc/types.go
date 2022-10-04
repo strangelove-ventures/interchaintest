@@ -1,6 +1,7 @@
 package ibc
 
 import (
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 )
@@ -8,31 +9,41 @@ import (
 // ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
-	Type string
+	Type string `yaml:"type"`
 	// Chain name, e.g. cosmoshub.
-	Name string
+	Name string `yaml:"name"`
 	// Chain ID, e.g. cosmoshub-4
-	ChainID string
+	ChainID string `yaml:"chain-id"`
 	// Docker images required for running chain nodes.
-	Images []DockerImage
+	Images []DockerImage `yaml:"images"`
 	// Binary to execute for the chain node daemon.
-	Bin string
+	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
-	Bech32Prefix string
+	Bech32Prefix string `yaml:"bech32-prefix"`
 	// Denomination of native currency, e.g. uatom.
-	Denom string
+	Denom string `yaml:"denom"`
 	// Minimum gas prices for sending transactions, in native currency denom.
-	GasPrices string
+	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
-	GasAdjustment float64
+	GasAdjustment float64 `yaml:"gas-adjustment"`
 	// Trusting period of the chain.
-	TrustingPeriod string
+	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
-	NoHostMount bool
+	NoHostMount bool `yaml:"no-host-mount"`
 	// When provided, genesis file contents will be altered before sharing for genesis.
-	ModifyGenesis func([]byte) ([]byte, error)
+	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
+	// Non-nil will override the encoding config, used for cosmos chains only.
+	EncodingConfig *simappparams.EncodingConfig
+}
+
+func (c ChainConfig) Clone() ChainConfig {
+	x := c
+	images := make([]DockerImage, len(c.Images))
+	copy(images, c.Images)
+	x.Images = images
+	return x
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -70,7 +81,9 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasPrices = other.GasPrices
 	}
 
-	// Skip GasAdjustment, so that 0.0 can be distinguished.
+	if other.GasAdjustment > 0 && c.GasAdjustment == 0 {
+		c.GasAdjustment = other.GasAdjustment
+	}
 
 	if other.TrustingPeriod != "" {
 		c.TrustingPeriod = other.TrustingPeriod
@@ -84,6 +97,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.ConfigFileOverrides != nil {
 		c.ConfigFileOverrides = other.ConfigFileOverrides
+	}
+
+	if other.EncodingConfig != nil {
+		c.EncodingConfig = other.EncodingConfig
 	}
 
 	return c
@@ -105,9 +122,9 @@ func (c ChainConfig) IsFullyConfigured() bool {
 }
 
 type DockerImage struct {
-	Repository string
-	Version    string
-	UidGid     string
+	Repository string `yaml:"repository"`
+	Version    string `yaml:"version"`
+	UidGid     string `yaml:"uid-gid"`
 }
 
 // Ref returns the reference to use when e.g. creating a container.
@@ -128,15 +145,6 @@ type WalletAmount struct {
 type IBCTimeout struct {
 	NanoSeconds uint64
 	Height      uint64
-}
-
-type ContractStateModels struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type DumpContractStateResponse struct {
-	Models []ContractStateModels `json:"models"`
 }
 
 type ChannelCounterparty struct {
@@ -187,12 +195,9 @@ const (
 	Hermes
 )
 
-// SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
-type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
+// ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
+// which will be used to narrow down the list of channels a user wants to relay on.
+type ChannelFilter struct {
+	Rule        string
+	ChannelList []string
 }

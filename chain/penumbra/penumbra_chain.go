@@ -12,10 +12,10 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/chain/internal/tendermint"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/test"
+	"github.com/strangelove-ventures/ibctest/v5/chain/internal/tendermint"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/test"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -55,29 +55,6 @@ type PenumbraGenesisAppStateAllocation struct {
 	Amount  int64  `json:"amount"`
 	Denom   string `json:"denom"`
 	Address string `json:"address"`
-}
-
-func NewPenumbraChainConfig() ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:           "penumbra",
-		Name:           "penumbra",
-		Bech32Prefix:   "penumbra",
-		Denom:          "upenumbra",
-		GasPrices:      "0.0upenumbra",
-		GasAdjustment:  1.3,
-		TrustingPeriod: "672h",
-		Images: []ibc.DockerImage{
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/tendermint",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/penumbra",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-		},
-		Bin: "tendermint",
-	}
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -172,32 +149,8 @@ func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
 }
 
-func (c *PenumbraChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
-	panic("implement me")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	panic("implement me")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	panic("implement me")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	panic("implement me")
-}
-
 // Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
-	panic("implement me")
-}
-
-// Implements Chain interface
-func (c *PenumbraChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	panic("implement me")
 }
 

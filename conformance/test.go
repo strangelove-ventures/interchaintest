@@ -14,8 +14,8 @@
 //     import (
 //       "testing"
 //
-//       "github.com/strangelove-ventures/ibctest/conformance"
-//       "github.com/strangelove-ventures/ibctest/ibc"
+//       "github.com/strangelove-ventures/ibctest/v5/conformance"
+//       "github.com/strangelove-ventures/ibctest/v5/ibc"
 //     )
 //
 //     func TestMyRelayer(t *testing.T) {
@@ -36,12 +36,14 @@ import (
 	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/label"
-	"github.com/strangelove-ventures/ibctest/relayer"
-	"github.com/strangelove-ventures/ibctest/test"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/ibctest/v5"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/label"
+	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -52,12 +54,17 @@ const (
 	pollHeightMax  = uint64(50)
 )
 
+type TxCache struct {
+	Src []ibc.Tx
+	Dst []ibc.Tx
+}
+
 type RelayerTestCase struct {
 	Config RelayerTestCaseConfig
 	// user on source chain
 	Users []*ibc.Wallet
 	// temp storage in between test phases
-	TxCache []ibc.Tx
+	TxCache TxCache
 }
 
 type RelayerTestCaseConfig struct {
@@ -152,37 +159,50 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 		Amount:  testCoinAmount,
 	}
 
-	var (
-		eg    errgroup.Group
-		srcTx ibc.Tx
-		dstTx ibc.Tx
-	)
+	var eg errgroup.Group
+	srcTxs := make([]ibc.Tx, len(channels))
+	dstTxs := make([]ibc.Tx, len(channels))
 
-	eg.Go(func() error {
-		var err error
-		srcChannelID := channels[0].ChannelID
-		srcTx, err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
-		if err != nil {
-			return fmt.Errorf("failed to send ibc transfer from source: %w", err)
+	eg.Go(func() (err error) {
+		for i, channel := range channels {
+			srcChannelID := channel.ChannelID
+			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+			if err != nil {
+				return fmt.Errorf("failed to send ibc transfer from source: %w", err)
+			}
+			if err := test.WaitForBlocks(ctx, 1, srcChain); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 
-	eg.Go(func() error {
-		var err error
-		dstChannelID := channels[0].Counterparty.ChannelID
-		dstTx, err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
-		if err != nil {
-			return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
+	eg.Go(func() (err error) {
+		for i, channel := range channels {
+			dstChannelID := channel.Counterparty.ChannelID
+			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+			if err != nil {
+				return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
+			}
+			if err := test.WaitForBlocks(ctx, 1, dstChain); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 
 	require.NoError(t, eg.Wait())
-	require.NoError(t, srcTx.Validate(), "source ibc transfer tx is invalid")
-	require.NoError(t, dstTx.Validate(), "destination ibc transfer tx is invalid")
+	for _, srcTx := range srcTxs {
+		require.NoError(t, srcTx.Validate(), "source ibc transfer tx is invalid")
+	}
+	for _, dstTx := range dstTxs {
+		require.NoError(t, dstTx.Validate(), "destination ibc transfer tx is invalid")
+	}
 
-	testCase.TxCache = []ibc.Tx{srcTx, dstTx}
+	testCase.TxCache = TxCache{
+		Src: srcTxs,
+		Dst: dstTxs,
+	}
 }
 
 // Test is the stable API exposed by the conformance package.
@@ -192,7 +212,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 // so that it can properly group subtests in a single invocation.
 // If the subtest configuration does not meet your needs,
 // you can directly call one of the other exported Test functions, such as TestChainPair.
-func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func Test(t *testing.T, ctx context.Context, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory, rep *testreporter.Reporter) {
 	// Validate chain factory counts up front.
 	counts := make(map[int]bool)
 	for _, cf := range cfs {
@@ -226,21 +246,27 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
-								TestRelayerSetup(t, cf, rf, rep)
+								TestRelayerSetup(t, ctx, cf, rf, rep)
 							})
 
 							t.Run("conformance", func(t *testing.T) {
 								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
-								TestChainPair(t, cf, rf, rep)
+								chains, err := cf.Chains(t.Name())
+								if err != nil {
+									panic(fmt.Errorf("failed to get chains: %v", err))
+								}
+
+								client, network := ibctest.DockerSetup(t)
+								TestChainPair(t, ctx, client, network, chains[0], chains[1], rf, rep, nil)
 							})
 
 							t.Run("flushing", func(t *testing.T) {
 								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
-								TestRelayerFlushing(t, cf, rf, rep)
+								TestRelayerFlushing(t, ctx, cf, rf, rep)
 							})
 						})
 					}
@@ -258,26 +284,27 @@ func Test(t *testing.T, cfs []ibctest.ChainFactory, rfs []ibctest.RelayerFactory
 // 2. Proper handling of no timeout from A -> B and B -> A.
 // 3. Proper handling of height timeout from A -> B and B -> A.
 // 4. Proper handling of timestamp timeout from A -> B and B -> A.
-func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
-	client, network := ibctest.DockerSetup(t)
-
+// If a non-nil relayerImpl is passed, it is assumed that the chains are already started.
+func TestChainPair(
+	t *testing.T,
+	ctx context.Context,
+	client *client.Client,
+	network string,
+	srcChain, dstChain ibc.Chain,
+	rf ibctest.RelayerFactory,
+	rep *testreporter.Reporter,
+	relayerImpl ibc.Relayer,
+	pathNames ...string,
+) {
 	req := require.New(rep.TestifyT(t))
-	chains, err := cf.Chains(t.Name())
-	req.NoError(err, "failed to get chains")
-
-	if len(chains) != 2 {
-		panic(fmt.Errorf("expected 2 chains, got %d", len(chains)))
-	}
-
-	srcChain := chains[0]
-	dstChain := chains[1]
 
 	var (
 		preRelayerStartFuncs []func([]ibc.ChannelOutput)
 		testCases            []*RelayerTestCase
-
-		ctx = context.Background()
+		err                  error
 	)
+
+	randomSuffix := dockerutil.RandLowerCaseLetterString(4)
 
 	for _, testCaseConfig := range relayerTestCaseConfigs {
 		testCase := RelayerTestCase{
@@ -292,30 +319,46 @@ func TestChainPair(t *testing.T, cf ibctest.ChainFactory, rf ibctest.RelayerFact
 		}
 		preRelayerStartFunc := func(channels []ibc.ChannelOutput) {
 			// fund a user wallet on both chains, save on test case
-			testCase.Users = ibctest.GetAndFundTestUsers(t, ctx, strings.ReplaceAll(testCase.Config.Name, " ", "-"), userFaucetFund, srcChain, dstChain)
+			testCase.Users = ibctest.GetAndFundTestUsers(t, ctx, strings.ReplaceAll(testCase.Config.Name, " ", "-")+"-"+randomSuffix, userFaucetFund, srcChain, dstChain)
 			// run test specific pre relayer start action
 			testCase.Config.PreRelayerStart(ctx, t, &testCase, srcChain, dstChain, channels)
 		}
 		preRelayerStartFuncs = append(preRelayerStartFuncs, preRelayerStartFunc)
 	}
 
-	// startup both chains and relayer
-	// creates wallets in the relayer for src and dst chain
-	// funds relayer src and dst wallets on respective chain in genesis
-	// creates a faucet account on the both chains (separate fullnode)
-	// funds faucet accounts in genesis
-	_, channels, err := ibctest.StartChainPairAndRelayer(t, ctx, rep, client, network, srcChain, dstChain, rf, preRelayerStartFuncs)
-	req.NoError(err, "failed to StartChainPairAndRelayer")
-
-	for _, testCase := range testCases {
-		testCase := testCase
-		t.Run(testCase.Config.Name, func(t *testing.T) {
-			rep.TrackTest(t, testCase.Config.TestLabels...)
-			requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
-			rep.TrackParallel(t)
-			testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
-		})
+	if relayerImpl == nil {
+		// startup both chains.
+		// creates wallets in the relayer for src and dst chain.
+		// funds relayer src and dst wallets on respective chain in genesis.
+		// creates a faucet account on the both chains (separate fullnode).
+		// funds faucet accounts in genesis.
+		relayerImpl, err = ibctest.StartChainPair(t, ctx, rep, client, network, srcChain, dstChain, rf, preRelayerStartFuncs)
+		req.NoError(err, "failed to StartChainPair")
 	}
+
+	// execute the pre relayer start functions, then start the relayer.
+	channels, err := ibctest.StopStartRelayerWithPreStartFuncs(
+		t,
+		ctx,
+		srcChain.Config().ChainID,
+		relayerImpl,
+		rep.RelayerExecReporter(t),
+		preRelayerStartFuncs,
+		pathNames...,
+	)
+	req.NoError(err, "failed to StopStartRelayerWithPreStartFuncs")
+
+	t.Run("post_relayer_start", func(t *testing.T) {
+		for _, testCase := range testCases {
+			testCase := testCase
+			t.Run(testCase.Config.Name, func(t *testing.T) {
+				rep.TrackTest(t, testCase.Config.TestLabels...)
+				requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
+				rep.TrackParallel(t)
+				testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
+			})
+		}
+	})
 }
 
 // PreRelayerStart methods for the RelayerTestCases
@@ -364,66 +407,64 @@ func testPacketRelaySuccess(
 	dstChainCfg := dstChain.Config()
 
 	// [BEGIN] assert on source to destination transfer
-	t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
-	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-	srcInitialBalance := userFaucetFund
-	dstInitialBalance := int64(0)
+	for i, srcTx := range testCase.TxCache.Src {
+		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
+		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
+		srcInitialBalance := userFaucetFund
+		dstInitialBalance := int64(0)
 
-	// fetch src ibc transfer tx
-	srcTx := testCase.TxCache[0]
+		srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		req.NoError(err, "failed to get acknowledgement on source chain")
+		req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
-	srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
-	req.NoError(err, "failed to get acknowledgement on source chain")
-	req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
+		// get ibc denom for src denom on dst chain
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
+		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-	// get ibc denom for src denom on dst chain
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
-	dstIbcDenom := srcDenomTrace.IBCDenom()
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
+		req.NoError(err, "failed to get balance from source chain")
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
-	req.NoError(err, "failed to get balance from source chain")
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		req.NoError(err, "failed to get balance from dest chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
-	req.NoError(err, "failed to get balance from dest chain")
+		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
+		expectedDifference := testCoinAmount + totalFees
 
-	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
-	expectedDifference := testCoinAmount + totalFees
-
-	req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
-	req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
+		req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
+		req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
+	}
 
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
-	t.Logf("Asserting %s to %s transfer", dstChainCfg.ChainID, srcChainCfg.ChainID)
-	dstUser := testCase.Users[1]
-	dstDenom := dstChainCfg.Denom
-	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-	srcInitialBalance = int64(0)
-	dstInitialBalance = userFaucetFund
-	// fetch src ibc transfer tx
-	dstTx := testCase.TxCache[1]
+	for i, dstTx := range testCase.TxCache.Dst {
+		t.Logf("Asserting %s to %s transfer", dstChainCfg.ChainID, srcChainCfg.ChainID)
+		dstUser := testCase.Users[1]
+		dstDenom := dstChainCfg.Denom
+		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
+		srcInitialBalance := int64(0)
+		dstInitialBalance := userFaucetFund
 
-	dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
-	req.NoError(err, "failed to get acknowledgement on destination chain")
-	req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
+		dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		req.NoError(err, "failed to get acknowledgement on destination chain")
+		req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
-	// get ibc denom for dst denom on src chain
-	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
-	srcIbcDenom := dstDenomTrace.IBCDenom()
+		// get ibc denom for dst denom on src chain
+		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
+		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
-	req.NoError(err, "failed to get balance from source chain")
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		req.NoError(err, "failed to get balance from source chain")
 
-	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
-	req.NoError(err, "failed to get balance from dest chain")
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
+		req.NoError(err, "failed to get balance from dest chain")
 
-	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
-	expectedDifference = testCoinAmount + totalFees
+		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
+		expectedDifference := testCoinAmount + totalFees
 
-	req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
-	req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
-
+		req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
+		req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
+	}
 	//[END] assert on destination to source transfer
 }
 
@@ -448,61 +489,60 @@ func testPacketRelayFail(
 	dstDenom := dstChainCfg.Denom
 
 	// [BEGIN] assert on source to destination transfer
-	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-	srcInitialBalance := userFaucetFund
-	dstInitialBalance := int64(0)
+	for i, srcTx := range testCase.TxCache.Src {
+		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
+		srcInitialBalance := userFaucetFund
+		dstInitialBalance := int64(0)
 
-	// fetch src ibc transfer tx
-	srcTx := testCase.TxCache[0]
+		timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		req.NoError(err, "failed to get timeout packet on source chain")
+		req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
-	timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
-	req.NoError(err, "failed to get timeout packet on source chain")
-	req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
+		// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
+		// So we have a small buffer here.
+		require.NoError(t, test.WaitForBlocks(ctx, 2, srcChain, dstChain))
 
-	// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
-	// So we have a small buffer here.
-	require.NoError(t, test.WaitForBlocks(ctx, 2, srcChain, dstChain))
+		// get ibc denom for src denom on dst chain
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
+		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-	// get ibc denom for src denom on dst chain
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].Counterparty.PortID, channels[0].Counterparty.ChannelID, srcDenom))
-	dstIbcDenom := srcDenomTrace.IBCDenom()
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
+		req.NoError(err, "failed to get balance from source chain")
 
-	srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
-	req.NoError(err, "failed to get balance from source chain")
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		req.NoError(err, "failed to get balance from destination chain")
 
-	dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
-	req.NoError(err, "failed to get balance from destination chain")
+		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
-	totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
-
-	req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
-	req.Equal(dstInitialBalance, dstFinalBalance)
+		req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
+		req.Equal(dstInitialBalance, dstFinalBalance)
+	}
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
-	// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-	srcInitialBalance = int64(0)
-	dstInitialBalance = userFaucetFund
-	// fetch src ibc transfer tx
-	dstTx := testCase.TxCache[1]
+	for i, dstTx := range testCase.TxCache.Dst {
+		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
+		srcInitialBalance := int64(0)
+		dstInitialBalance := userFaucetFund
 
-	timeout, err = test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
-	req.NoError(err, "failed to get timeout packet on destination chain")
-	req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
+		timeout, err := test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		req.NoError(err, "failed to get timeout packet on destination chain")
+		req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
 
-	// get ibc denom for dst denom on src chain
-	dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[0].PortID, channels[0].ChannelID, dstDenom))
-	srcIbcDenom := dstDenomTrace.IBCDenom()
+		// get ibc denom for dst denom on src chain
+		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
+		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-	srcFinalBalance, err = srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
-	req.NoError(err, "failed to get balance from source chain")
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		req.NoError(err, "failed to get balance from source chain")
 
-	dstFinalBalance, err = dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
-	req.NoError(err, "failed to get balance from destination chain")
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
+		req.NoError(err, "failed to get balance from destination chain")
 
-	totalFees = dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
+		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
-	req.Equal(srcInitialBalance, srcFinalBalance)
-	req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
+		req.Equal(srcInitialBalance, srcFinalBalance)
+		req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
+	}
 	// [END] assert on destination to source transfer
 }

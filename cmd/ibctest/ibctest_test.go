@@ -13,13 +13,14 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/conformance"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/ibctest/internal/blockdb/tui"
-	"github.com/strangelove-ventures/ibctest/internal/version"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/strangelove-ventures/ibctest/v5"
+	"github.com/strangelove-ventures/ibctest/v5/conformance"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
+	blockdbtui "github.com/strangelove-ventures/ibctest/v5/internal/blockdb/tui"
+	"github.com/strangelove-ventures/ibctest/v5/internal/version"
+	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"go.uber.org/zap"
 )
 
@@ -171,7 +172,7 @@ func configureTestReporter() error {
 func getRelayerFactory(name string, logger *zap.Logger) (ibctest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
-		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger), nil
+		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger, relayer.StartupFlags("-b", "100")), nil
 	case "hermes":
 		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes, logger), nil
 	default:
@@ -192,6 +193,8 @@ func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.
 // can be used to reduce how many tests actively run at once.
 func TestConformance(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	logger, err := extraFlags.Logger()
 	if err != nil {
@@ -226,7 +229,7 @@ func TestConformance(t *testing.T) {
 	}
 
 	// Begin test execution, which will spawn many parallel subtests.
-	conformance.Test(t, chainFactories, relayerFactories, reporter)
+	conformance.Test(t, ctx, chainFactories, relayerFactories, reporter)
 }
 
 // addFlags configures additional flags beyond the default testing flags.

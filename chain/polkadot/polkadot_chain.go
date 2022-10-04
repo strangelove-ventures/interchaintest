@@ -15,8 +15,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -63,31 +63,6 @@ type ParachainConfig struct {
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
 var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-
-// NewComposableChainConfig returns an ibc.ChainConfig for configuring a polkadot relay chain and composable parachain.
-func NewComposableChainConfig() ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:         "polkadot",
-		Name:         "composable",
-		Bech32Prefix: "",
-		Denom:        "uDOT",
-		// TODO maybe use these params for the weight-based fee model
-		GasPrices:      "",
-		GasAdjustment:  0,
-		TrustingPeriod: "",
-		Images: []ibc.DockerImage{
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/polkadot",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-			{
-				Repository: "ghcr.io/strangelove-ventures/heighliner/composable",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
-			},
-		},
-		Bin: "polkadot",
-	}
-}
 
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
 func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
@@ -564,36 +539,6 @@ func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ib
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
 func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
-	panic("not implemented yet")
-}
-
-// UpgradeProposal submits a software-upgrade proposal to the chain.
-// Implements Chain interface.
-func (c *PolkadotChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (ibc.SoftwareUpgradeTx, error) {
-	panic("implement me")
-}
-
-// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-// Implements Chain interface.
-func (c *PolkadotChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	panic("not implemented yet")
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-// Implements Chain interface.
-func (c *PolkadotChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	panic("not implemented yet")
-}
-
-// DumpContractState dumps the state of a contract at a block height.
-// Implements Chain interface.
-func (c *PolkadotChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	panic("not implemented yet")
-}
-
-// CreatePool creates a balancer pool.
-// Implements Chain interface.
-func (c *PolkadotChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
 	panic("not implemented yet")
 }
 

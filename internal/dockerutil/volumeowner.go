@@ -34,6 +34,10 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 
 	containerName := fmt.Sprintf("ibctest-volumeowner-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
 
+	if err := ensureBusybox(ctx, opts.Client); err != nil {
+		return err
+	}
+
 	const mountPath = "/mnt/dockervolume"
 	cc, err := opts.Client.ContainerCreate(
 		ctx,

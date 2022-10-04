@@ -8,7 +8,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/strangelove-ventures/ibctest/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/label"
+	"go.uber.org/zap"
 )
 
 // ChainSpec is a wrapper around an ibc.ChainConfig
@@ -46,7 +48,7 @@ type ChainSpec struct {
 
 // Config returns the underlying ChainConfig,
 // with any overrides applied.
-func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
+func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 	if s.Version == "" {
 		// Version must be set at top-level if not set in inlined config.
 		if len(s.ChainConfig.Images) == 0 || s.ChainConfig.Images[0].Version == "" {
@@ -54,8 +56,15 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		}
 	}
 
+	// s.Name and chainConfig.Name are interchangeable
+	if s.Name == "" && s.ChainConfig.Name != "" {
+		s.Name = s.ChainConfig.Name
+	} else if s.Name != "" && s.ChainConfig.Name == "" {
+		s.ChainConfig.Name = s.Name
+	}
+
+	// Empty name is only valid with a fully defined chain config.
 	if s.Name == "" {
-		// Empty name is only valid with a fully defined chain config.
 		// If ChainName is provided and ChainConfig.Name is not set, set it.
 		if s.ChainConfig.Name == "" && s.ChainName != "" {
 			s.ChainConfig.Name = s.ChainName
@@ -67,17 +76,32 @@ func (s *ChainSpec) Config() (*ibc.ChainConfig, error) {
 		return s.applyConfigOverrides(s.ChainConfig)
 	}
 
+	builtinChainConfigs, err := initBuiltinChainConfig(log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pre-configured chains: %w", err)
+	}
+
 	// Get built-in config.
+	// If chain doesn't have built in config, but is fully configured, register chain label.
 	cfg, ok := builtinChainConfigs[s.Name]
 	if !ok {
-		availableChains := make([]string, 0, len(builtinChainConfigs))
-		for k := range builtinChainConfigs {
-			availableChains = append(availableChains, k)
-		}
-		sort.Strings(availableChains)
+		if !s.ChainConfig.IsFullyConfigured() {
+			availableChains := make([]string, 0, len(builtinChainConfigs))
+			for k := range builtinChainConfigs {
+				availableChains = append(availableChains, k)
+			}
+			sort.Strings(availableChains)
 
-		return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
+			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
+		}
+		chainLabel := label.Chain(s.Name)
+		if !chainLabel.IsKnown() {
+			label.RegisterChainLabel(chainLabel)
+		}
+		cfg = ibc.ChainConfig{}
 	}
+
+	cfg = cfg.Clone()
 
 	// Apply any overrides from this ChainSpec.
 	cfg = cfg.MergeChainSpecConfig(s.ChainConfig)

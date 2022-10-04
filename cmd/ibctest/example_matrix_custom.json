@@ -19,7 +19,7 @@
         ],
         "Bin": "gaiad",
         "Bech32Prefix": "cosmos",
-        "Denom": "cosmos",
+        "Denom": "uatom",
         "GasPrices": "0.01uatom",
         "GasAdjustment": 1.3,
         "TrustingPeriod": "504h"
@@ -27,6 +27,7 @@
       {
         "NumValidators": 2,
         "NumFullNodes": 1,
+
         "Type": "cosmos",
         "Name": "osmosis",
         "ChainID": "osmosis-1001",

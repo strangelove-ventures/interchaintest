@@ -1,4 +1,4 @@
-package ibctest
+package ibc_test
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/ibctest"
-	"github.com/strangelove-ventures/ibctest/ibc"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/relayer"
-	"github.com/strangelove-ventures/ibctest/test"
-	"github.com/strangelove-ventures/ibctest/testreporter"
+	"github.com/strangelove-ventures/ibctest/v5"
+	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -83,7 +83,7 @@ func TestInterchainQueries(t *testing.T) {
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
+		relayer.StartupFlags("-b", "100"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -99,6 +99,12 @@ func TestInterchainQueries(t *testing.T) {
 			Chain2:  chain2,
 			Relayer: r,
 			Path:    pathName,
+			CreateChannelOpts: ibc.CreateChannelOptions{
+				SourcePortName: "interquery",
+				DestPortName:   "icqhost",
+				Order:          ibc.Unordered,
+				Version:        "icq-1",
+			},
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
@@ -107,13 +113,10 @@ func TestInterchainQueries(t *testing.T) {
 		NetworkID: network,
 
 		SkipPathCreation: false,
-		CreateChannelOpts: ibc.CreateChannelOptions{
-			SourcePortName: "interquery",
-			DestPortName:   "icqhost",
-			Order:          ibc.Unordered,
-			Version:        "icq-1",
-		},
 	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
 	// Fund user accounts, so we can query balances and make assertions.
 	const userFunds = int64(10_000_000_000)
@@ -214,8 +217,8 @@ type icqResults struct {
 	} `json:"response"`
 }
 
-func modifyGenesisAllowICQQueries(allowQueries []string) func([]byte) ([]byte, error) {
-	return func(genbz []byte) ([]byte, error) {
+func modifyGenesisAllowICQQueries(allowQueries []string) func(ibc.ChainConfig, []byte) ([]byte, error) {
+	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
 		if err := json.Unmarshal(genbz, &g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)

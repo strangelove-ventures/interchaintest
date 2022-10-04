@@ -1,68 +1,57 @@
-# ibctest
+<div align="center">
+<h1>ibctest</h1>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/ibctest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/ibctest@main)
+[![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/ibctest.svg?style=flat-square)](https://github.com/strangelove-ventures/ibctest/blob/main/create-test-readme/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/strangelove-ventures/ibctest)](https://goreportcard.com/report/github.com/strangelove-ventures/ibctest)
 
-ibctest orchestrates Go tests that utilize Docker containers for multiple
+
+
+`ibctest` orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
-## Focusing on Specific Tests
+It allows users to quickly spin up custom testnets and dev environments to test IBC and chain infrastructures.
+</div>
 
-You may focus on a specific tests using the `-test.run=<regex>` flag.
+### -- Features --
 
+- Built-in suite of conformance tests to test high-level IBC compatibility between chain sets
+- Easily construct customized tests in highly configurable environments
+- Deployable as CI tests in production workflows
+
+<br>
+
+## Table Of Contents
+- [Building Binary](#building-binary)
+- **Usage:**
+    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
+    - [Write Custom Tests](./docs/writeCustomTests.md)
+- [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
+- [Deploy as GitHub CI Tests](./docs/ciTests.md)
+
+
+<br>
+
+
+## Building Binary
+
+While it is not necessary to build the binary, sometimes it can be more convenient, *specifically* when running conformance test with custom chain sets. 
+
+Building binary:
 ```shell
-ibctest -test.run=/<test category>/<chain combination>/<relayer>/<test subcategory>/<test name>
+git clone https://github.com/strangelove-ventures/ibctest.git
+cd ibctest
+make ibctest
 ```
 
-If you want to focus on a specific test:
+This places the binary in `ibctest/.bin/ibctest`
 
-```shell
-ibctest -test.run=/////relay_packet
-ibctest -test.run=/////no_timeout
-ibctest -test.run=/////height_timeout
-ibctest -test.run=/////timestamp_timeout
-```
+Note that this is not in your Go path.
 
-Example of narrowing your focus even more:
-
-```shell
-# run all tests for Go relayer
-ibctest -test.run=///rly/
-
-# run all tests for Go relayer and gaia chains
-ibctest -test.run=//gaia/rly/
-
-# only run no_timeout test for Go relayer and gaia chains
-ibctest -test.run=//gaia/rly/conformance/no_timeout
-```
-
-## Retaining data on failed tests
-
-By default, failed tests will clean up any temporary directories they created.
-Sometimes when debugging a failed test, it can be more helpful to leave the directory behind
-for further manual inspection.
-
-Setting the environment variable `IBCTEST_SKIP_FAILURE_CLEANUP` to any non-empty value
-will cause the test to skip deletion of the temporary directories.
-Any tests that fail and skip cleanup will log a message like
-`Not removing temporary directory for test at: /tmp/...`.
-
-Test authors must use
-[`ibctest.TempDir`](https://pkg.go.dev/github.com/strangelove-ventures/ibctest#TempDir)
-instead of `(*testing.T).Cleanup` to opt in to this behavior.
-
-By default, Docker volumes associated with tests are cleaned up at the end of each test run.
-That same `IBCTEST_SKIP_FAILURE_CLEANUP` controls whether the volumes associated with failed tests are pruned.
 
 ## Contributing
 
-Running `make ibctest` will produce an `ibctest` binary into `./bin`.
-Running that binary without any extra arguments will run a simple IBC test suite involving
-the [Go Relayer](https://github.com/cosmos/relayer).
-Alternatively, you can run `ibctest -matrix path/to/matrix.json` to define a set of chains to IBC-test.
-See [`cmd/ibctest/README.md`](cmd/ibctest/README.md) for more details.
-
-Note that `ibctest` is under active development
-and we are not yet ready to commit to any stable APIs around the testing interfaces.
+Contributing is encouraged.
 
 Please read the [logging style guide](./docs/logging.md).
 

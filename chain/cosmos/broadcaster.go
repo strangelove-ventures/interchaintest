@@ -14,7 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/ibctest/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -135,7 +135,7 @@ func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user User) ([]byte
 // instance of sdk.TxResponse.
 func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
 	resp := sdk.TxResponse{}
-	if err := defaultEncoding.Codec.UnmarshalJSON(bytes, &resp); err != nil {
+	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
 	return resp, nil
@@ -156,7 +156,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastBlock).
-		WithCodec(defaultEncoding.Codec)
+		WithCodec(b.chain.cfg.EncodingConfig.Codec)
 
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
 	// but that field no longer exists and the test against Broadcaster still passes without it.
