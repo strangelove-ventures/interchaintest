@@ -9,10 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	icaTypes "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts/types"
 	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
 	ibctypes "github.com/cosmos/ibc-go/v5/modules/core/types"
-	demoTypes "github.com/cosmos/interchain-accounts/x/inter-tx/types"
 )
 
 func DefaultEncoding() simappparams.EncodingConfig {
@@ -27,9 +25,6 @@ func DefaultEncoding() simappparams.EncodingConfig {
 	banktypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	ibctypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	transfertypes.RegisterInterfaces(cfg.InterfaceRegistry)
-
-	demoTypes.RegisterInterfaces(cfg.InterfaceRegistry)
-	icaTypes.RegisterInterfaces(cfg.InterfaceRegistry)
 
 	return cfg
 }
