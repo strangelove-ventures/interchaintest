@@ -35,6 +35,9 @@ type Interchain struct {
 	// Not yet exposed through any exported API.
 	relayerWallets map[relayerChain]ibc.Wallet
 
+	// Map of chain to additional genesis wallets to include at chain start.
+	additionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount
+
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
 }
@@ -77,7 +80,7 @@ type relayerPath struct {
 // using the chain ID reported by the chain's config.
 // If the given chain already exists,
 // or if another chain with the same configured chain ID exists, AddChain panics.
-func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
+func (ic *Interchain) AddChain(chain ibc.Chain, additionalGenesisWallets ...ibc.WalletAmount) *Interchain {
 	if chain == nil {
 		panic(fmt.Errorf("cannot add nil chain"))
 	}
@@ -98,6 +101,16 @@ func (ic *Interchain) AddChain(chain ibc.Chain) *Interchain {
 	}
 
 	ic.chains[chain] = newID
+
+	if len(additionalGenesisWallets) == 0 {
+		return ic
+	}
+
+	if ic.additionalGenesisWallets == nil {
+		ic.additionalGenesisWallets = make(map[ibc.Chain][]ibc.WalletAmount)
+	}
+	ic.additionalGenesisWallets[chain] = additionalGenesisWallets
+
 	return ic
 }
 
@@ -340,6 +353,10 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 				Amount:  100_000_000_000_000, // Faucet wallet gets 100T units of denom.
 			},
 		}
+
+		if ic.additionalGenesisWallets != nil {
+			walletAmounts[c] = append(walletAmounts[c], ic.additionalGenesisWallets[c]...)
+		}
 	}
 
 	// Then add all defined relayer wallets.
@@ -370,7 +387,7 @@ func (ic *Interchain) generateRelayerWallets() {
 			// Just an ephemeral unique name, only for the local use of the keyring.
 			accountName := ic.relayers[r] + "-" + ic.chains[c]
 
-			ic.relayerWallets[relayerChain{R: r, C: c}] = buildWallet(kr, accountName, c.Config())
+			ic.relayerWallets[relayerChain{R: r, C: c}] = BuildWallet(kr, accountName, c.Config())
 		}
 	}
 }
@@ -416,7 +433,9 @@ type relayerChain struct {
 	C ibc.Chain
 }
 
-func buildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
+// BuildWallet will generate a random key for the key name in the provided keyring.
+// Returns the mnemonic and address in the bech32 format of the provided ChainConfig.
+func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
 	// NOTE: this is hardcoded to the cosmos coin type.
 	// In the future, we may need to get the coin type from the chain config.
 	const coinType = types.CoinType
