@@ -78,11 +78,10 @@ func TestInterchainAccounts(t *testing.T) {
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		SkipPathCreation:  true,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: true,
 	}))
 
 	// Fund a user account on chain1 and chain2
