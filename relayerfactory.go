@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/label"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/label"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
 	"go.uber.org/zap"
 )
 

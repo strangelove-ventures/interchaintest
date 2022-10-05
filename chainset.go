@@ -10,8 +10,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
