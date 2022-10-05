@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibctest/v5
+module github.com/strangelove-ventures/ibctest/v6
 
 go 1.18
 
@@ -10,8 +10,7 @@ require (
 	github.com/avast/retry-go/v4 v4.0.4
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.4
 	github.com/cosmos/cosmos-sdk v0.46.1
-	github.com/cosmos/ibc-go/v5 v5.0.0
-	github.com/cosmos/interchain-accounts v0.3.4
+	github.com/cosmos/ibc-go/v6 v6.0.0-alpha1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible

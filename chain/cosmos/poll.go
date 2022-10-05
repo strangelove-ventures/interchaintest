@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v6/test"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.

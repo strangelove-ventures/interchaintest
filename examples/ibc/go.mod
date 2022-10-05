@@ -1,13 +1,14 @@
-module github.com/strangelove-ventures/ibctest/v5/examples/ibc
+module github.com/strangelove-ventures/ibctest/v6/examples/ibc
 
 go 1.18
 
+replace github.com/strangelove-ventures/ibctest/v6 => ../../
+
 require (
 	github.com/cosmos/cosmos-sdk v0.46.1
-	github.com/cosmos/ibc-go/v5 v5.0.0
+	github.com/cosmos/ibc-go/v6 v6.0.0-alpha1
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
-	github.com/strangelove-ventures/ibctest v0.0.0-20220912210217-eb7f6a3b4e6a
-	github.com/strangelove-ventures/ibctest/v5 v5.0.0-00010101000000-000000000000
+	github.com/strangelove-ventures/ibctest/v6 v6.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
 )
@@ -45,7 +46,6 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
 	github.com/cosmos/iavl v0.19.1 // indirect
-	github.com/cosmos/interchain-accounts v0.3.4 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.11.1 // indirect
 	github.com/cosmos/ledger-go v0.9.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
@@ -204,9 +204,6 @@ replace (
 
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
-
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/strangelove-ventures/ibctest/v5 => ../../
-
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
