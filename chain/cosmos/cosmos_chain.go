@@ -22,7 +22,6 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/test"
 	"go.uber.org/zap"
@@ -124,11 +123,11 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(ibc.ChainUtilToml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := ibc.ModifyTomlConfigFile(
 					ctx,
 					fn.logger(),
 					fn.DockerClient,
@@ -565,11 +564,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(ibc.ChainUtilToml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := ibc.ModifyTomlConfigFile(
 					ctx,
 					v.logger(),
 					v.DockerClient,
@@ -594,11 +593,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(ibc.ChainUtilToml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := ibc.ModifyTomlConfigFile(
 					ctx,
 					n.logger(),
 					n.DockerClient,

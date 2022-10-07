@@ -29,7 +29,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/test"
 	tmjson "github.com/tendermint/tendermint/libs/json"
@@ -198,12 +197,12 @@ func (tn *ChainNode) HomeDir() string {
 
 // SetTestConfig modifies the config to reasonable values for use within ibctest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
-	c := make(configutil.Toml)
+	c := make(ibc.ChainUtilToml)
 
 	// Set Log Level to info
 	c["log_level"] = "info"
 
-	p2p := make(configutil.Toml)
+	p2p := make(ibc.ChainUtilToml)
 
 	// Allow p2p strangeness
 	p2p["allow_duplicate_ip"] = true
@@ -211,7 +210,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["p2p"] = p2p
 
-	consensus := make(configutil.Toml)
+	consensus := make(ibc.ChainUtilToml)
 
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensus["timeout_commit"] = blockT
@@ -219,14 +218,14 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["consensus"] = consensus
 
-	rpc := make(configutil.Toml)
+	rpc := make(ibc.ChainUtilToml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return configutil.ModifyTomlConfigFile(
+	return ibc.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -239,14 +238,14 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 // SetPeers modifies the config persistent_peers for a node
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
-	c := make(configutil.Toml)
-	p2p := make(configutil.Toml)
+	c := make(ibc.ChainUtilToml)
+	p2p := make(ibc.ChainUtilToml)
 
 	// Set peers
 	p2p["persistent_peers"] = peers
 	c["p2p"] = p2p
 
-	return configutil.ModifyTomlConfigFile(
+	return ibc.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
