@@ -48,4 +48,8 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = test.WaitForBlocks(ctx, 10, chain)
 
 	require.NoError(t, err, "penumbra chain failed to make blocks")
+
+	// DAN added:
+
+	chain.CreateKey(ctx)
 }

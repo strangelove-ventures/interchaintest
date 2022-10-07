@@ -135,13 +135,13 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
+func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string, index int) ([]byte, error) {
+	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName, index)
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, amount)
+	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, index, amount)
 }
 
 // Implements Chain interface

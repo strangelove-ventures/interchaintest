@@ -63,11 +63,15 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/root"
+	return "/home/heighliner"
 }
 
+// creates a new key
+// penumbra does not name their keys, instead we use the keyName as the folder to house the key
+// keyname is left blank, the key is created in the home folder
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
+	keyPath := filepath.Join(p.HomeDir(), keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
@@ -82,7 +86,7 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 	cmd := []string{
 		"pcli",
 		"-d", p.HomeDir(),
-		"validator", "template-definition",
+		"validator", "template", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
 	_, _, err := p.Exec(ctx, cmd, nil)
@@ -144,8 +148,9 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	return err
 }
 
-func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
+func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string, index int) ([]byte, error) {
+	keyPath := filepath.Join(p.HomeDir(), keyName)
+	cmd := []string{"pcli", "-d", keyPath, "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -170,24 +175,15 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 	if err != nil {
 		return "", err
 	}
-	addresses := strings.Split(string(stdout), "\n")
-	for _, address := range addresses {
-		fields := strings.Fields(address)
-		if len(fields) < 3 {
-			continue
-		}
-		if fields[1] == keyName {
-			return fields[2], nil
-		}
-	}
-	return "", errors.New("address not found")
+	addresses := stdout
+	return string(addresses), nil
 }
 
-func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName, string, index int, amount ibc.WalletAmount) error {
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, index int, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
