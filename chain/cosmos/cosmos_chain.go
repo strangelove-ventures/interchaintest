@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	sdkClient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -152,6 +153,10 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 // Implements Chain interface
 func (c *CosmosChain) Config() ibc.ChainConfig {
 	return c.cfg
+}
+
+func (c *CosmosChain) CliContext() sdkClient.Context {
+	return c.getFullNode().CliContext()
 }
 
 // Implements Chain interface
