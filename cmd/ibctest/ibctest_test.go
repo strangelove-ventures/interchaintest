@@ -192,6 +192,10 @@ func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.
 // if this is too taxing on a system, the -test.parallel flag
 // can be used to reduce how many tests actively run at once.
 func TestConformance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping conformance tests in short mode")
+	}
+
 	t.Parallel()
 
 	ctx := context.Background()

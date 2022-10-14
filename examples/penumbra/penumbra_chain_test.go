@@ -13,7 +13,7 @@ import (
 
 func TestPenumbraChainStart(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()

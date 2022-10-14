@@ -29,7 +29,7 @@ func TestJunoUpgrade(t *testing.T) {
 
 func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()

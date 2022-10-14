@@ -31,9 +31,10 @@ jobs:
 
       # run tests
       - name: run unit tests
-        run: go test -race -timeout 30m -v -p 2 ./...
-  test-cmd-ibctest:
-    name: test-cmd-ibctest
+        # -short flag purposefully omitted because there are some longer unit tests
+        run: go test -race -timeout 10m -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+  test-conformance:
+    name: test-conformance
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -52,7 +53,7 @@ jobs:
 
       # run tests
       - name: run conformance tests
-        run: (cd cmd/ibctest && go test -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (go test -race -timeout 30m -v -p 2 ./cmd/ibctest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
   test-ibc-examples:
     name: test-ibc-examples
     runs-on: [self-hosted, linux]
@@ -73,7 +74,7 @@ jobs:
 
       # run tests
       - name: run example ibc tests
-        run: cd examples/ibc && go test -race -timeout 30m -v -p 2 ./...
+        run: go test -race -timeout 30m -v -p 2 ./examples/ibc
   test-cosmos-examples:
     name: test-cosmos-examples
     runs-on: [self-hosted, linux]
@@ -94,4 +95,4 @@ jobs:
 
       # run tests
       - name: run example cosmos tests
-        run: cd examples/cosmos && go test -race -timeout 30m -v -p 2 ./...
+        run: go test -race -timeout 30m -v -p 2 ./examples/cosmos
