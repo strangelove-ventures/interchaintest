@@ -32,7 +32,7 @@ jobs:
       # run tests
       - name: run unit tests
         # -short flag purposefully omitted because there are some longer unit tests
-        run: go test -race -timeout 10m -v -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+        run: go test -race -timeout 10m -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
   test-conformance:
     name: test-conformance
     runs-on: [self-hosted, linux]
