@@ -31,9 +31,9 @@ jobs:
 
       # run tests
       - name: run unit tests
-        run: go test -race -timeout 30m -v -p 2 ./...
-  test-cmd-ibctest:
-    name: test-cmd-ibctest
+        run: make test
+  test-conformance:
+    name: test-conformance
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -52,7 +52,7 @@ jobs:
 
       # run tests
       - name: run conformance tests
-        run: (cd cmd/ibctest && go test -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (go test -race -timeout 30m -v -p 2 ./cmd/ibctest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
   test-ibc-examples:
     name: test-ibc-examples
     runs-on: [self-hosted, linux]
