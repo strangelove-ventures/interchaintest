@@ -24,7 +24,7 @@ const stateSyncSnapshotInterval = 10
 
 func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()

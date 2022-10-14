@@ -17,6 +17,10 @@ import (
 // This test is meant to be used as a basic ibctest tutorial.
 // Code snippets are broken down in ./docs/upAndRunning.md
 func TestLearn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
 	ctx := context.Background()
 
 	// Chain Factory
@@ -117,5 +121,4 @@ func TestLearn(t *testing.T) {
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), dstIbcDenom)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend, osmosUserBalNew)
-
 }

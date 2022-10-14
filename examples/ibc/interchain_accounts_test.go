@@ -22,7 +22,7 @@ import (
 // features and packet flows surrounding interchain accounts. See: https://github.com/cosmos/interchain-accounts-demo
 func TestInterchainAccounts(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()

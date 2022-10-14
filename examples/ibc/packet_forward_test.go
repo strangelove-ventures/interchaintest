@@ -16,7 +16,7 @@ import (
 
 func TestPacketForwardMiddleware(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	client, network := ibctest.DockerSetup(t)
