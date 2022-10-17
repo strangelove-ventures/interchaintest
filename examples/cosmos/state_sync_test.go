@@ -17,7 +17,7 @@ import (
 )
 
 func TestCosmosHubStateSync(t *testing.T) {
-	CosmosChainStateSyncTest(t, "gaia", "v7.0.3")
+	CosmosChainStateSyncTest(t, "gaia", gaiaVersion)
 }
 
 const stateSyncSnapshotInterval = 10
