@@ -320,8 +320,8 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	return tx, nil
 }
 
-// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+// InstantiateContract takes a file path to smart contract and initialization message and returns the contract info.
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (QueryContractInfoResponse, error) {
 	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
