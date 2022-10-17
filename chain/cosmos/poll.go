@@ -30,6 +30,9 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 // fn is optional. Return true from the fn to stop polling and return the found message. If fn is nil, returns the first message to match type T.
 func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry codectypes.InterfaceRegistry, startHeight, maxHeight uint64, fn func(found T) bool) (T, error) {
 	var zero T
+	if fn == nil {
+		fn = func(T) bool { return true }
+	}
 	doPoll := func(ctx context.Context, height uint64) (T, error) {
 		h := int64(height)
 		block, err := chain.getFullNode().Client.Block(ctx, &h)
