@@ -560,6 +560,14 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	for _, v := range c.Validators {
 		v := v
 		v.Validator = true
+
+		if dockerutil.KeepVolumesOnFailure {
+			v.logger().Debug("Validator docker volume", zap.String("volume name", v.VolumeName),
+				zap.String("Image Repo", v.Image.Repository),
+				zap.String("Image Version", v.Image.Version),
+			)
+		}
+
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
 				return err
@@ -589,6 +597,14 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	for _, n := range c.FullNodes {
 		n := n
 		n.Validator = false
+
+		if dockerutil.KeepVolumesOnFailure {
+			n.logger().Debug("Node docker volume", zap.String("volume name", n.VolumeName),
+				zap.String("Image Repo", n.Image.Repository),
+				zap.String("Image Version", n.Image.Version),
+			)
+		}
+
 		eg.Go(func() error {
 			if err := n.InitFullNodeFiles(ctx); err != nil {
 				return err

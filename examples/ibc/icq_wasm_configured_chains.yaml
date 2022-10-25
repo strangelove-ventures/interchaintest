@@ -1,0 +1,32 @@
+## Set the environment variable: IBCTEST_CONFIGURED_CHAINS to a path
+## to use custom versions of this file
+
+gaia:
+  name: gaia
+  type: cosmos
+  bin: gaiad
+  bech32-prefix: cosmos
+  denom: uatom
+  gas-prices: 0.01uatom
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/gaia
+      version: v7.1.0
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+juno:
+  name: juno
+  type: cosmos
+  bin: junod
+  bech32-prefix: juno
+  denom: ujuno
+  gas-prices: 0.0025ujuno
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/juno
+      version: v10.1.0
+      uid-gid: 1025:1025
+  no-host-mount: false

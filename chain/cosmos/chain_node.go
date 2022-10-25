@@ -391,6 +391,11 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err != nil {
 		return "", err
 	}
+
+	//If the Logger is in Debug mode provide exact TX details
+	//This will be very verbose so consider switching out log levels
+	tn.log.Debug("Container result log", zap.Int("code", output.Code), zap.String("raw log", output.RawLog))
+
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
@@ -621,7 +626,7 @@ type CodeInfosResponse struct {
 }
 
 func (tn *ChainNode) InstantiateContract(
-    ctx context.Context,
+	ctx context.Context,
 	keyName string,
 	amount ibc.WalletAmount,
 	fileName,
@@ -638,21 +643,27 @@ func (tn *ChainNode) InstantiateContract(
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
 		return QueryContractInfoResponse{}, fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
+	tn.logger().Info("Wrote contract to docker volume")
 
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", fmt.Sprintf("%d", amount.Amount)); err != nil {
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", fmt.Sprintf("%d", amount.Amount)); err != nil {
 		return QueryContractInfoResponse{}, err
 	}
+
+	tn.logger().Info("Ran wasm store command")
 
 	err = test.WaitForBlocks(ctx, 5, tn)
 	if err != nil {
 		return QueryContractInfoResponse{}, fmt.Errorf("wait for blocks: %w", err)
 	}
 
+	tn.logger().Info("Waited for blocks")
+
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
 	if err != nil {
 		return QueryContractInfoResponse{}, err
 	}
-        tn.logger().Info(string(stdout))
+	tn.logger().Info("executed query")
+	tn.logger().Info(string(stdout))
 
 	res := CodeInfosResponse{}
 	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
@@ -660,7 +671,7 @@ func (tn *ChainNode) InstantiateContract(
 	}
 
 	codeID := res.CodeInfos[0].CodeID
-	command := []string{"wasm", "instantiate", codeID, initMessage}
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", fileName}
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
@@ -668,6 +679,8 @@ func (tn *ChainNode) InstantiateContract(
 	if err != nil {
 		return QueryContractInfoResponse{}, err
 	}
+
+	tn.logger().Info("Ran wasm instantiate command")
 
 	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
@@ -693,9 +706,9 @@ func (tn *ChainNode) InstantiateContract(
 	if err != nil {
 		return QueryContractInfoResponse{}, err
 	}
-        tn.logger().Info(string(stdout))
+	tn.logger().Info(string(stdout))
 
-        contractInfoRes := QueryContractInfoResponse{}
+	contractInfoRes := QueryContractInfoResponse{}
 	if err := json.Unmarshal([]byte(stdout), &contractInfoRes); err != nil {
 		return QueryContractInfoResponse{}, err
 	}
