@@ -371,6 +371,7 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		"--from", keyName,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
+		"--gas", "auto",
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
@@ -620,59 +621,59 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, string, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	_, file := filepath.Split(fileName)
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+		return "", "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
-		return "", err
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
+		return "", "", err
 	}
 
 	err = test.WaitForBlocks(ctx, 5, tn.Chain)
 	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
+		return "", "", fmt.Errorf("wait for blocks: %w", err)
 	}
 
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	res := CodeInfosResponse{}
 	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	codeID := res.CodeInfos[0].CodeID
-	command := []string{"wasm", "instantiate", codeID, initMessage}
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
 	_, err = tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	contactsRes := QueryContractResponse{}
 	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	contractAddress := contactsRes.Contracts[len(contactsRes.Contracts)-1]
-	return contractAddress, nil
+	return contractAddress, codeID, nil
 }
 
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
@@ -680,6 +681,11 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 		"wasm", "execute", contractAddress, message,
 	)
 	return err
+}
+
+func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, query string) ([] byte, [] byte, error) {
+	//stdout, _, err := juno1Chain.Exec(ctx, "query", "wasm", "contract-state", "smart", juno1ContractAddr)
+	return tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, query)
 }
 
 // VoteOnProposal submits a vote for the specified proposal.

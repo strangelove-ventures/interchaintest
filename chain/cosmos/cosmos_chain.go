@@ -175,6 +175,14 @@ func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (std
 	return c.getFullNode().Exec(ctx, cmd, env)
 }
 
+// ExecQuery is a helper to execute a query command. For example,
+// if chain node binary is gaiad, and desired command is `gaiad query gov params`,
+// pass ("gov", "params") for command to execute the query against the node.
+// Returns response in json format.
+//func (c *CosmosChain) ExecQuery(ctx context.Context, command ...string) ([]byte, []byte, error) {
+//	return c.getFullNode().ExecQuery(ctx, command)
+//}
+
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
@@ -321,13 +329,17 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 }
 
 // InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, string, error) {
 	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
 func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
+}
+
+func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query string) ([] byte, [] byte, error) {
+	return c.getFullNode().QueryContract(ctx, contractAddress, query)
 }
 
 // DumpContractState dumps the state of a contract at a block height.
