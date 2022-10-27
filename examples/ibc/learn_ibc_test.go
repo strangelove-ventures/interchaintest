@@ -17,6 +17,12 @@ import (
 // This test is meant to be used as a basic ibctest tutorial.
 // Code snippets are broken down in ./docs/upAndRunning.md
 func TestLearn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+
 	ctx := context.Background()
 
 	// Chain Factory
@@ -69,7 +75,7 @@ func TestLearn(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(10_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia, osmosis)
+	users := ibctest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 
@@ -117,5 +123,4 @@ func TestLearn(t *testing.T) {
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), dstIbcDenom)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend, osmosUserBalNew)
-
 }

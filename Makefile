@@ -10,7 +10,7 @@ ibctest: gen ## Build ibctest binary into ./bin
 
 .PHONY: test
 test: ## Run unit tests
-	@go test -cover -short -race -timeout=60s $(shell go list ./... | grep -v /cmd/)
+	@go test -cover -short -race -timeout=60s ./...
 
 .PHONY: docker-reset
 docker-reset: ## Attempt to delete all running containers. Useful if ibctest does not exit cleanly.

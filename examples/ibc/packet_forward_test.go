@@ -16,7 +16,7 @@ import (
 
 func TestPacketForwardMiddleware(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	client, network := ibctest.DockerSetup(t)
@@ -133,7 +133,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	gaiaOsmoChan := osmoChannels[0].Counterparty
 	junoGaiaChan := junoChannels[0]
 	firstHopDenom := transfertypes.GetPrefixedDenom(gaiaOsmoChan.PortID, gaiaOsmoChan.ChannelID, osmosis.Config().Denom)
-	secondHopDenom := transfertypes.GetPrefixedDenom(junoGaiaChan.Counterparty.PortID, junoGaiaChan.Counterparty.ChannelID, firstHopDenom)
+	secondHopDenom := transfertypes.GetPrefixedDenom(junoGaiaChan.PortID, junoGaiaChan.ChannelID, firstHopDenom)
 	dstIbcDenom := transfertypes.ParseDenomTrace(secondHopDenom)
 
 	// Check that the funds sent are present in the acc on juno
