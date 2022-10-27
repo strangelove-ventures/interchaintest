@@ -135,13 +135,13 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string, index int) ([]byte, error) {
-	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName, index)
+func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, index, amount)
+	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, amount)
 }
 
 // Implements Chain interface
@@ -284,6 +284,8 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	chainCfg := c.Config()
 
+	fmt.Println("Starting START ----- ")
+
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
 	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
 
@@ -368,6 +370,8 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	if err := firstVal.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
 		return fmt.Errorf("generating genesis file: %w", err)
 	}
+
+	fmt.Println("HERE!!!")
 
 	// penumbra generate-testnet right now overwrites new validator keys
 	eg, egCtx = errgroup.WithContext(ctx)

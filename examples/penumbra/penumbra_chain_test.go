@@ -17,7 +17,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	}
 
 	t.Parallel()
-
 	client, network := ibctest.DockerSetup(t)
 
 	nv := 4
@@ -25,7 +24,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "025-helike,v0.35.9",
+			Version: "030-isonoe,v0.34.21",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
@@ -48,8 +47,4 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = test.WaitForBlocks(ctx, 10, chain)
 
 	require.NoError(t, err, "penumbra chain failed to make blocks")
-
-	// DAN added:
-
-	chain.CreateKey(ctx)
 }
