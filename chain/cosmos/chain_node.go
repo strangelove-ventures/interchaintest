@@ -620,7 +620,8 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
+// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
+func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return "", err
@@ -632,7 +633,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
 		return "", err
 	}
 
@@ -651,17 +652,21 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", err
 	}
 
-	codeID := res.CodeInfos[0].CodeID
-	command := []string{"wasm", "instantiate", codeID, initMessage}
+	return res.CodeInfos[0].CodeID, nil
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-	_, err = tn.ExecTx(ctx, keyName, command...)
+	_, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
 	}
 
-	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
 		return "", err
 	}
@@ -675,10 +680,25 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	return contractAddress, nil
 }
 
+// ExecuteContract executes a contract transaction with a message using it's address.
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"wasm", "execute", contractAddress, message,
 	)
+	return err
+}
+
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
+	query, err := json.Marshal(queryMsg)
+	if err != nil {
+		return err
+	}
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(stdout), response)
 	return err
 }
 
