@@ -146,9 +146,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	// TODO: introduce index option to get specific addresses
-	keyPath := filepath.Join(p.HomeDir(), keyName)
-	cmd := []string{"pcli", "-d", keyPath, "addr", "list"}
+	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
