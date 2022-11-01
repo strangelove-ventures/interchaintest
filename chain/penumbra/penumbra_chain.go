@@ -284,8 +284,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	chainCfg := c.Config()
 
-	fmt.Println("Starting START ----- ")
-
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
 	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
 
@@ -371,8 +369,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		return fmt.Errorf("generating genesis file: %w", err)
 	}
 
-	fmt.Println("HERE!!!")
-
 	// penumbra generate-testnet right now overwrites new validator keys
 	eg, egCtx = errgroup.WithContext(ctx)
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
@@ -432,7 +428,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy-app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
+				fmt.Sprintf("--proxy_app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
 		})
