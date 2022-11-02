@@ -320,14 +320,24 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	return tx, nil
 }
 
-// InstantiateContract takes a file path to smart contract and initialization message and returns the instantiated contract address.
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	return c.getFullNode().InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
+// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
+func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
+	return c.getFullNode().StoreContract(ctx, keyName, fileName)
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+	return c.getFullNode().InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag)
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
 func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
+}
+
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
+	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
 }
 
 // DumpContractState dumps the state of a contract at a block height.
