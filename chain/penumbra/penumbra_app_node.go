@@ -170,8 +170,18 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 	if err != nil {
 		return "", err
 	}
-	addresses := stdout
-	return string(addresses), nil
+	addresses := strings.Split(string(stdout), "\n")
+	for _, address := range addresses {
+		fields := strings.Fields(address)
+		if len(fields) < 3 {
+			continue
+		}
+		if fields[1] == keyName {
+			return fields[2], nil
+		}
+	}
+	return "", errors.New("address not found")
+
 }
 
 func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
