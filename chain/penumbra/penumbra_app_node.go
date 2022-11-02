@@ -67,8 +67,7 @@ func (p *PenumbraAppNode) HomeDir() string {
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	keyPath := filepath.Join(p.HomeDir())
-	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
+	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
