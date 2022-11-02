@@ -87,7 +87,7 @@ func (p *RelayChainNode) Bind() []string {
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
 func (p *RelayChainNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", p.Chain.Config().Name)
+	return "/home/heighliner"
 }
 
 // PeerID returns the public key of the node key for p2p.
@@ -250,7 +250,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
+			User:     p.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -318,7 +318,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
 }
