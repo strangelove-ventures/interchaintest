@@ -8,10 +8,10 @@ import (
 
 	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos/wasm"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
-	"github.com/strangelove-ventures/ibctest/v3/wasm"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -89,12 +89,10 @@ func TestWasmIbc(t *testing.T) {
 	juno1UserBalInitial, err := juno1.GetBalance(ctx, juno1User.Bech32Address(juno1.Config().Bech32Prefix), juno1.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, juno1UserBalInitial)
-	t.Logf("User1 %s", juno1User.Bech32Address(juno1.Config().Bech32Prefix))
 
 	juno2UserBalInitial, err := juno2.GetBalance(ctx, juno2User.Bech32Address(juno2.Config().Bech32Prefix), juno2.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, juno2UserBalInitial)
-	t.Logf("User2 %s", juno2User.Bech32Address(juno2.Config().Bech32Prefix))
 
 	// Start the relayer
 	err = r.StartRelayer(ctx, eRep, ibcPath)
@@ -121,7 +119,6 @@ func TestWasmIbc(t *testing.T) {
 	ibcReflectSendContractAddr, err := juno1Chain.InstantiateContract(
 		ctx, juno1User.KeyName, ibcReflectSendCodeId, "{}",	true)
 	require.NoError(t, err)
-	t.Logf("ibcReflectSendContractAddr %s", ibcReflectSendContractAddr)
 	
 	// Store reflect.wasm contract
 	reflectCodeId, err := juno2Chain.StoreContract(
@@ -129,11 +126,9 @@ func TestWasmIbc(t *testing.T) {
 	require.NoError(t, err)
 
 	// Instantiate reflect.wasm contract
-	reflectContractAddr, err := juno2Chain.InstantiateContract(
+	_, err = juno2Chain.InstantiateContract(
 		ctx, juno2User.KeyName, reflectCodeId, "{}", true)
 	require.NoError(t, err)
-
-	t.Logf("reflectContractAddr %s", reflectContractAddr)
 
 	// Store ibc_reflect.wasm contract
 	ibcReflectCodeId, err := juno2Chain.StoreContract(
@@ -145,7 +140,6 @@ func TestWasmIbc(t *testing.T) {
 	ibcReflectContractAddr, err := juno2Chain.InstantiateContract(
 		ctx, juno2User.KeyName, ibcReflectCodeId, initMsg, true)
 	require.NoError(t, err)
-	t.Logf("ibcReflectContractAddr %s", ibcReflectContractAddr)
 
 	err = test.WaitForBlocks(ctx, 2, juno1, juno2)
 	require.NoError(t, err)
