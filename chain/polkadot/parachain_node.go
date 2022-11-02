@@ -65,7 +65,7 @@ func (pn *ParachainNode) Bind() []string {
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
 func (pn *ParachainNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", pn.Chain.Config().Name)
+	return "/home/heighliner"
 }
 
 // RawChainSpecFilePathFull returns the full path to the raw chain spec file
@@ -199,7 +199,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: pn.HostName(),
-			User:     dockerutil.GetRootUserString(),
+			User:     pn.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: pn.TestName},
 
@@ -266,7 +266,7 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: pn.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  pn.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
 }
