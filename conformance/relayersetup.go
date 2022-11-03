@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	conntypes "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -85,7 +85,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 	}
 
 	// The client isn't created immediately -- wait for two blocks to ensure the clients are ready.
-	req.NoError(test.WaitForBlocks(ctx, 2, c0, c1))
+	req.NoError(chainutil.WaitForBlocks(ctx, 2, c0, c1))
 
 	t.Run("create connections", func(t *testing.T) {
 		rep.TrackTest(t)

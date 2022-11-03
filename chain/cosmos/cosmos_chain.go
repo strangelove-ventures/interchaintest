@@ -23,8 +23,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test"
-	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
+	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	configutil "github.com/strangelove-ventures/ibctest/v6/util/config"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -725,7 +725,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return test.WaitForBlocks(ctx, 5, c.getFullNode())
+	return chainutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 // Height implements ibc.Chain

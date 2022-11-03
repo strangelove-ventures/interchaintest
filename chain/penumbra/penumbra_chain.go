@@ -15,7 +15,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test"
+	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -461,5 +461,5 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
+	return chainutil.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }

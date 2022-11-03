@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"

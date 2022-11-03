@@ -242,7 +242,7 @@ EXAMPLE: Sending an IBC transfer with the `Exec`:
 	_, _, err = gaia.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
 
-	test.WaitForBlocks(ctx, 3, gaia)
+	chainutil.WaitForBlocks(ctx, 3, gaia)
 ```
 Notice, how it waits for blocks. Sometimes this is necessary.
 
@@ -258,7 +258,7 @@ This could have also been accomplished by starting the relayer on a loop:
 
 ```go
 require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
-test.WaitForBlocks(ctx, 3, gaia)
+chainutil.WaitForBlocks(ctx, 3, gaia)
 ```
 
 ## Final Notes

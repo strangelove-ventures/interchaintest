@@ -1,4 +1,4 @@
-package configutil
+package config
 
 import (
 	"bytes"

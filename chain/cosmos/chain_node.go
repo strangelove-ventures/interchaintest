@@ -30,8 +30,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test"
-	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
+	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	configutil "github.com/strangelove-ventures/ibctest/v6/util/config"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -394,7 +394,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := test.WaitForBlocks(ctx, 2, tn); err != nil {
+	if err := chainutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
 	}
 	return output.TxHash, nil
@@ -637,7 +637,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 		return "", err
 	}
 
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	err = chainutil.WaitForBlocks(ctx, 5, tn.Chain)
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}

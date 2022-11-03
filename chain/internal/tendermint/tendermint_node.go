@@ -17,7 +17,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
+	configutil "github.com/strangelove-ventures/ibctest/v6/util/config"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
