@@ -496,6 +496,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 	_, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
+		"--coin-type", fmt.Sprint(tn.Chain.Config().CoinType),
 		"--keyring-backend", keyring.BackendTest,
 	)
 	return err
@@ -506,7 +507,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.HomeDir()),
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %d --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
 	tn.lock.Lock()
@@ -688,7 +689,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return err
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
 	query, err := json.Marshal(queryMsg)
 	if err != nil {

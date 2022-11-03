@@ -421,7 +421,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 			}
 
 			if err := r.RestoreKey(ctx,
-				rep,
+				rep, c.Config().CoinType,
 				c.Config().ChainID, chainName,
 				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic,
 			); err != nil {
@@ -442,9 +442,7 @@ type relayerChain struct {
 // BuildWallet will generate a random key for the key name in the provided keyring.
 // Returns the mnemonic and address in the bech32 format of the provided ChainConfig.
 func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
-	// NOTE: this is hardcoded to the cosmos coin type.
-	// In the future, we may need to get the coin type from the chain config.
-	const coinType = types.CoinType
+	coinType := config.CoinType
 
 	info, mnemonic, err := kr.NewMnemonic(
 		keyName,
@@ -463,9 +461,9 @@ func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 	}
 
 	return ibc.Wallet{
-		Address: types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
-
+		Address:  types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
 		Mnemonic: mnemonic,
+		CoinType: coinType,
 	}
 }
 

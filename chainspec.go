@@ -106,6 +106,12 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 	// Apply any overrides from this ChainSpec.
 	cfg = cfg.MergeChainSpecConfig(s.ChainConfig)
 
+	coinType, err := cfg.VerifyCoinType()
+	if err != nil {
+		return nil, err
+	}
+	cfg.CoinType = coinType
+
 	// Apply remaining top-level overrides.
 	return s.applyConfigOverrides(cfg)
 }
