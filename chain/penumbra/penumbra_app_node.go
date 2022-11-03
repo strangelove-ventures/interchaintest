@@ -205,7 +205,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     dockerutil.GetHeighlinerUserString(),
+			User:     p.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -259,7 +259,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetHeighlinerUserString(),
+		User:  p.Image.UidGid,
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err

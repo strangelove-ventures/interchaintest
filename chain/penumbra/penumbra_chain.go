@@ -425,10 +425,14 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+		sep, err := n.TendermintNode.GetConfigSeparator()
+		if err != nil {
+			return err
+		}
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy_app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
+				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
 		})
