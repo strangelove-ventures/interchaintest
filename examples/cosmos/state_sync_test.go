@@ -10,8 +10,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )

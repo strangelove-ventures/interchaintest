@@ -29,9 +29,9 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -688,7 +688,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return err
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
 	query, err := json.Marshal(queryMsg)
 	if err != nil {

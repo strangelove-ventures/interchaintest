@@ -22,9 +22,9 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/test/configutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -335,7 +335,7 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
 	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
 }
