@@ -155,7 +155,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
-		WithBroadcastMode(flags.BroadcastBlock).
+		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)
 
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),

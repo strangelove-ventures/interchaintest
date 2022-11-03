@@ -10,7 +10,6 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
@@ -196,7 +195,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		_, mnemonic, err := kr.NewMnemonic(
 			keyName,
 			keyring.English,
-			hd.CreateHDPath(types.CoinType, 0, 0).String(),
+			hd.CreateHDPath(sdk.CoinType, 0, 0).String(),
 			"", // Empty passphrase.
 			hd.Secp256k1,
 		)
@@ -286,9 +285,10 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	t.Run("broadcast success", func(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
-		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
+		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sdk.NewInt(sendAmount)}
+		memo := ""
 
-		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
+		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0, memo)
 		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
