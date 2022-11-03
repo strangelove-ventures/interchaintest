@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 )
 
@@ -39,7 +39,7 @@ type ChainConfig struct {
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
-	EncodingConfig *simappparams.EncodingConfig
+	EncodingConfig *testutil.TestEncodingConfig
 }
 
 func (c ChainConfig) Clone() ChainConfig {
