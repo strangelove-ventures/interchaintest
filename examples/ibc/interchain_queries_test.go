@@ -14,7 +14,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -125,7 +125,7 @@ func TestInterchainQueries(t *testing.T) {
 	chain2User := users[1]
 
 	// Wait a few blocks for user accounts to be created on chain.
-	err = chainutil.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the recently created channel-id.
@@ -146,7 +146,7 @@ func TestInterchainQueries(t *testing.T) {
 	)
 
 	// Wait a few blocks for the relayer to start.
-	err = chainutil.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the balances of an account on the counterparty chain using interchain queries.
@@ -172,7 +172,7 @@ func TestInterchainQueries(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait a few blocks for query to be sent to counterparty.
-	err = chainutil.WaitForBlocks(ctx, 10, chain1)
+	err = testutil.WaitForBlocks(ctx, 10, chain1)
 	require.NoError(t, err)
 
 	// Check the results from the interchain query above.

@@ -17,7 +17,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	configutil "github.com/strangelove-ventures/ibctest/v6/util/config"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -133,12 +133,12 @@ func (tn *TendermintNode) HomeDir() string {
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	c := make(configutil.Toml)
+	c := make(testutil.Toml)
 
 	// Set Log Level to info
 	c["log-level"] = "info"
 
-	p2p := make(configutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Allow p2p strangeness
 	p2p["allow-duplicate-ip"] = true
@@ -147,7 +147,7 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 	c["p2p"] = p2p
 
-	consensus := make(configutil.Toml)
+	consensus := make(testutil.Toml)
 
 	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
 	consensus["timeout-commit"] = blockT
@@ -155,14 +155,14 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 	c["consensus"] = consensus
 
-	rpc := make(configutil.Toml)
+	rpc := make(testutil.Toml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return configutil.ModifyTomlConfigFile(
+	return testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,

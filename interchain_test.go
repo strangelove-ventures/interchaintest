@@ -17,7 +17,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -206,7 +206,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
-		require.NoError(t, chainutil.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
 
@@ -219,7 +219,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
-		require.NoError(t, chainutil.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
@@ -295,7 +295,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, chainutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()

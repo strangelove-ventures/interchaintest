@@ -6,7 +6,7 @@ import (
 
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -48,6 +48,6 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start polkadot chain")
 
-	err = chainutil.WaitForBlocks(ctx, 10, chain)
+	err = testutil.WaitForBlocks(ctx, 10, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 }

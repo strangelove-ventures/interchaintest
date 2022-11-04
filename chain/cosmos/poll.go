@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
@@ -22,7 +22,7 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 		}
 		return *p, nil
 	}
-	bp := chainutil.BlockPoller[ProposalResponse]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller[ProposalResponse]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
@@ -55,6 +55,6 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 		return zero, errors.New("not found")
 	}
 
-	bp := chainutil.BlockPoller[T]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller[T]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }

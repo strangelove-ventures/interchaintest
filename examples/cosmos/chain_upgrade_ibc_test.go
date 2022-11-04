@@ -11,7 +11,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	chainutil "github.com/strangelove-ventures/ibctest/v6/util/chain"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -126,7 +126,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	defer timeoutCtxCancel()
 
 	// this should timeout due to chain halt at upgrade height.
-	_ = chainutil.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
+	_ = testutil.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after chain should have halted")
@@ -150,7 +150,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	timeoutCtx, timeoutCtxCancel = context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
-	err = chainutil.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
+	err = testutil.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
 	require.NoError(t, err, "chain did not produce blocks after upgrade")
 
 	// test IBC conformance after chain upgrade on same path
