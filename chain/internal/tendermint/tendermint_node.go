@@ -1,7 +1,5 @@
 package tendermint
 
-// this package applies to chains that use tendermint >= v0.35.0, likely separate from the abci app
-
 import (
 	"context"
 	"crypto/sha256"
@@ -15,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/hashicorp/go-version"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
@@ -135,23 +134,28 @@ func (tn *TendermintNode) HomeDir() string {
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
 	c := make(configutil.Toml)
 
+	sep, err := tn.GetConfigSeparator()
+	if err != nil {
+		return err
+	}
+
 	// Set Log Level to info
-	c["log-level"] = "info"
+	c[fmt.Sprintf("log%slevel", sep)] = "info"
 
 	p2p := make(configutil.Toml)
 
 	// Allow p2p strangeness
-	p2p["allow-duplicate-ip"] = true
-	p2p["addr-book-strict"] = false
-	p2p["persistent-peers"] = peers
+	p2p[fmt.Sprintf("allow%sduplicate%sip", sep, sep)] = true
+	p2p[fmt.Sprintf("addr%sbook%sstrict", sep, sep)] = false
+	p2p[fmt.Sprintf("persistent%speers", sep)] = peers
 
 	c["p2p"] = p2p
 
 	consensus := make(configutil.Toml)
 
 	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
-	consensus["timeout-commit"] = blockT
-	consensus["timeout-propose"] = blockT
+	consensus[fmt.Sprintf("timeout%scommit", sep)] = blockT
+	consensus[fmt.Sprintf("timeout%spropose", sep)] = blockT
 
 	c["consensus"] = consensus
 
@@ -171,6 +175,26 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 		"config/config.toml",
 		c,
 	)
+}
+
+// Tenderment deprecate snake_case in config for hyphen-case in v0.34.1
+// https://github.com/tendermint/tendermint/blob/main/CHANGELOG.md#v0341
+func (tn *TendermintNode) GetConfigSeparator() (string, error) {
+	var sep = "_"
+
+	currentTnVersion, err := version.NewVersion(tn.Image.Version[1:])
+	if err != nil {
+		return "", err
+	}
+	tnVersion34_1, err := version.NewVersion("0.34.1")
+	if err != nil {
+		return "", err
+	}
+	// if currentVersion >= 0.34.1
+	if tnVersion34_1.GreaterThanOrEqual(currentTnVersion) {
+		sep = "-"
+	}
+	return sep, nil
 }
 
 func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {

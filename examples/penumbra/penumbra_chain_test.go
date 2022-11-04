@@ -17,7 +17,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	}
 
 	t.Parallel()
-
 	client, network := ibctest.DockerSetup(t)
 
 	nv := 4
@@ -25,7 +24,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "025-helike,v0.35.9",
+			Version: "033-eirene,v0.34.21",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
