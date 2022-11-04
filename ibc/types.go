@@ -51,23 +51,22 @@ func (c ChainConfig) Clone() ChainConfig {
 	return x
 }
 
-func (c ChainConfig) VerifyCoinType() (uint32, error) {
+func (c ChainConfig) VerifyCoinType() (string, error) {
 	if c.CoinType == "" {
 		typ := reflect.TypeOf(c)
 		f, _ := typ.FieldByName("CoinType")
-		coinTypeS := f.Tag.Get("default")
-		u64, err := strconv.ParseUint(coinTypeS, 10, 32)
+		coinType := f.Tag.Get("default")
+		_, err := strconv.ParseUint(coinType, 10, 32)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-		u32 := uint32(u64)
-		return u32, nil
+		return coinType, nil
 	} else {
-		u64, err := strconv.ParseUint(c.CoinType, 10, 32)
+		_, err := strconv.ParseUint(c.CoinType, 10, 32)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-		return uint32(u64), nil
+		return c.CoinType, nil
 	}
 
 }
@@ -103,7 +102,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.Denom = other.Denom
 	}
 
-	if other.CoinType != 0 {
+	if other.CoinType != "" {
 		c.CoinType = other.CoinType
 	}
 

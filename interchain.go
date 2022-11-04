@@ -3,6 +3,7 @@ package ibctest
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -421,8 +422,9 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 			}
 
 			if err := r.RestoreKey(ctx,
-				rep, c.Config().CoinType,
+				rep,
 				c.Config().ChainID, chainName,
+				c.Config().CoinType,
 				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic,
 			); err != nil {
 				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
@@ -442,7 +444,11 @@ type relayerChain struct {
 // BuildWallet will generate a random key for the key name in the provided keyring.
 // Returns the mnemonic and address in the bech32 format of the provided ChainConfig.
 func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
-	coinType := config.CoinType
+	coinTypeU64, err := strconv.ParseUint(config.CoinType, 10, 32)
+	if err != nil {
+		panic(fmt.Errorf("invalid coin type: %w", err))
+	}
+	coinType := uint32(coinTypeU64)
 
 	info, mnemonic, err := kr.NewMnemonic(
 		keyName,
