@@ -52,6 +52,8 @@ func (c ChainConfig) Clone() ChainConfig {
 }
 
 func (c ChainConfig) VerifyCoinType() (string, error) {
+	// If coin-type is left blank in the ChainConfig,
+	// the Cosmos SDK default of 118 is used.
 	if c.CoinType == "" {
 		typ := reflect.TypeOf(c)
 		f, _ := typ.FieldByName("CoinType")
@@ -68,7 +70,6 @@ func (c ChainConfig) VerifyCoinType() (string, error) {
 		}
 		return c.CoinType, nil
 	}
-
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
