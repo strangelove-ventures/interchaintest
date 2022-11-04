@@ -26,7 +26,7 @@ type ChainConfig struct {
 	// Denomination of native currency, e.g. uatom.
 	Denom string `yaml:"denom"`
 	// Coin type
-	CoinType uint32 `default:"118" yaml:"coin-type"`
+	CoinType string `default:"118" yaml:"coin-type"`
 	// Minimum gas prices for sending transactions, in native currency denom.
 	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
@@ -52,18 +52,22 @@ func (c ChainConfig) Clone() ChainConfig {
 }
 
 func (c ChainConfig) VerifyCoinType() (uint32, error) {
-	if c.CoinType == 0 {
+	if c.CoinType == "" {
 		typ := reflect.TypeOf(c)
 		f, _ := typ.FieldByName("CoinType")
 		coinTypeS := f.Tag.Get("default")
-		u64, err := strconv.ParseUint(coinTypeS, 0, 32)
+		u64, err := strconv.ParseUint(coinTypeS, 10, 32)
 		if err != nil {
 			return 0, err
 		}
 		u32 := uint32(u64)
 		return u32, nil
 	} else {
-		return c.CoinType, nil
+		u64, err := strconv.ParseUint(c.CoinType, 10, 32)
+		if err != nil {
+			return 0, err
+		}
+		return uint32(u64), nil
 	}
 
 }
