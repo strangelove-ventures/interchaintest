@@ -444,16 +444,15 @@ type relayerChain struct {
 // BuildWallet will generate a random key for the key name in the provided keyring.
 // Returns the mnemonic and address in the bech32 format of the provided ChainConfig.
 func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
-	coinTypeU64, err := strconv.ParseUint(config.CoinType, 10, 32)
+	coinType, err := strconv.ParseUint(config.CoinType, 10, 32)
 	if err != nil {
 		panic(fmt.Errorf("invalid coin type: %w", err))
 	}
-	coinType := uint32(coinTypeU64)
 
 	info, mnemonic, err := kr.NewMnemonic(
 		keyName,
 		keyring.English,
-		hd.CreateHDPath(coinType, 0, 0).String(),
+		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
 		"", // Empty passphrase.
 		hd.Secp256k1,
 	)
@@ -469,7 +468,7 @@ func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 	return ibc.Wallet{
 		Address:  types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
 		Mnemonic: mnemonic,
-		CoinType: coinType,
+		CoinType: uint32(coinType),
 	}
 }
 

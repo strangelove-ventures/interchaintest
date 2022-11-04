@@ -496,7 +496,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 	_, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
-		"--coin-type", fmt.Sprint(tn.Chain.Config().CoinType),
+		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
 	)
 	return err
