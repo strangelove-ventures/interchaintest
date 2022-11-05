@@ -7,7 +7,7 @@ import (
 	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest/v3"
+	ibctest "github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"github.com/stretchr/testify/require"

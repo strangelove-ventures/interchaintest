@@ -22,9 +22,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v3/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v3/test"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -124,11 +123,11 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					fn.logger(),
 					fn.DockerClient,
@@ -575,11 +574,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					v.logger(),
 					v.DockerClient,
@@ -604,11 +603,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					n.logger(),
 					n.DockerClient,
@@ -725,7 +724,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return test.WaitForBlocks(ctx, 5, c.getFullNode())
+	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 // Height implements ibc.Chain

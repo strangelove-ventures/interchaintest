@@ -9,18 +9,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v3"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	ibctest "github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
-
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {
@@ -199,7 +198,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
 
@@ -212,7 +211,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
@@ -288,7 +287,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest/v3"
+	ibctest "github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/conformance"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/blockdb"

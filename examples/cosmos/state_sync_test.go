@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v3"
+	ibctest "github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/internal/configutil"
-	"github.com/strangelove-ventures/ibctest/v3/test"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -32,10 +31,10 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	nf := 1
 
 	configFileOverrides := make(map[string]any)
-	appTomlOverrides := make(configutil.Toml)
+	appTomlOverrides := make(testutil.Toml)
 
 	// state sync snapshots every stateSyncSnapshotInterval blocks.
-	stateSync := make(configutil.Toml)
+	stateSync := make(testutil.Toml)
 	stateSync["snapshot-interval"] = stateSyncSnapshotInterval
 	appTomlOverrides["state-sync"] = stateSync
 
@@ -82,7 +81,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	})
 
 	// Wait for blocks so that nodes have a few state sync snapshot available
-	require.NoError(t, test.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))
+	require.NoError(t, testutil.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))
 
 	latestHeight, err := chain.Height(ctx)
 	require.NoError(t, err, "failed to fetch latest chain height")
@@ -99,10 +98,10 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 
 	// Construct statesync parameters for new node to get in sync.
 	configFileOverrides = make(map[string]any)
-	configTomlOverrides := make(configutil.Toml)
+	configTomlOverrides := make(testutil.Toml)
 
 	// Set trusted parameters and rpc servers for verification.
-	stateSync = make(configutil.Toml)
+	stateSync = make(testutil.Toml)
 	stateSync["trust_hash"] = trustHash
 	stateSync["trust_height"] = trustHeight
 	// State sync requires minimum of two RPC servers for verification. We can provide the same RPC twice though.
@@ -117,5 +116,5 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	// Wait for new node to be in sync.
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	require.NoError(t, test.WaitForInSync(ctx, chain, chain.FullNodes[len(chain.FullNodes)-1]))
+	require.NoError(t, testutil.WaitForInSync(ctx, chain, chain.FullNodes[len(chain.FullNodes)-1]))
 }
