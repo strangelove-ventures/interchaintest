@@ -95,12 +95,12 @@ func TestLearn(t *testing.T) {
 	// Send Transaction
 	amountToSend := int64(1_000_000)
 	dstAddress := osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix)
-	transferAmount := ibc.WalletAmount{
+	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
 	}
-	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transferAmount, nil, "")
+	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, nil, "")
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 

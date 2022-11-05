@@ -166,7 +166,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			srcChannelID := channel.ChannelID
-			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout, "")
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 			}
@@ -180,7 +180,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			dstChannelID := channel.Counterparty.ChannelID
-			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout, "")
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 			}

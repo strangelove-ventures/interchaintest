@@ -216,13 +216,12 @@ osmosisRPC := osmosis.GetGRPCAddress()
 Here we send an IBC Transaction:
 ```go
 amountToSend := int64(1_000_000)
-tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
+transfer := ibc.WalletAmount{
     Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
     Denom:   gaia.Config().Denom,
     Amount:  amountToSend,
-},
-    nil,
-)
+}
+tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, nil, "")
 ```
 
 The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
