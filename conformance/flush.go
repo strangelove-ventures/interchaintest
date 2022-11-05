@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -93,7 +93,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		// Should trigger MsgRecvPacket.
 		req.NoError(r.FlushPackets(ctx, eRep, pathName, c0ChannelID))
 
-		req.NoError(test.WaitForBlocks(ctx, 3, c0, c1))
+		req.NoError(testutil.WaitForBlocks(ctx, 3, c0, c1))
 
 		req.NoError(r.FlushPackets(ctx, eRep, pathName, c1ChannelID))
 
@@ -101,8 +101,8 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		req.NoError(err)
 
 		// Ack shouldn't happen yet.
-		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
-		req.ErrorIs(err, test.ErrNotFound)
+		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
+		req.ErrorIs(err, testutil.ErrNotFound)
 	})
 
 	t.Run("flush acks", func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		req.NoError(err)
 
 		// Now the ack must be present.
-		_, err = test.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
+		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
 		req.NoError(err)
 	})
 }

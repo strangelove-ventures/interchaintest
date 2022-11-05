@@ -37,13 +37,13 @@ import (
 
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/label"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -170,7 +170,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 			}
-			if err := test.WaitForBlocks(ctx, 1, srcChain); err != nil {
+			if err := testutil.WaitForBlocks(ctx, 1, srcChain); err != nil {
 				return err
 			}
 		}
@@ -184,7 +184,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 			}
-			if err := test.WaitForBlocks(ctx, 1, dstChain); err != nil {
+			if err := testutil.WaitForBlocks(ctx, 1, dstChain); err != nil {
 				return err
 			}
 		}
@@ -378,7 +378,7 @@ func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *
 	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
-	require.NoError(t, test.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
+	require.NoError(t, testutil.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
 }
 
 func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
@@ -413,7 +413,7 @@ func testPacketRelaySuccess(
 		srcInitialBalance := userFaucetFund
 		dstInitialBalance := int64(0)
 
-		srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
 		req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
@@ -445,7 +445,7 @@ func testPacketRelaySuccess(
 		srcInitialBalance := int64(0)
 		dstInitialBalance := userFaucetFund
 
-		dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on destination chain")
 		req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
@@ -494,13 +494,13 @@ func testPacketRelayFail(
 		srcInitialBalance := userFaucetFund
 		dstInitialBalance := int64(0)
 
-		timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
 		req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
 		// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
 		// So we have a small buffer here.
-		require.NoError(t, test.WaitForBlocks(ctx, 2, srcChain, dstChain))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, srcChain, dstChain))
 
 		// get ibc denom for src denom on dst chain
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
@@ -525,7 +525,7 @@ func testPacketRelayFail(
 		srcInitialBalance := int64(0)
 		dstInitialBalance := userFaucetFund
 
-		timeout, err := test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")
 		req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
 

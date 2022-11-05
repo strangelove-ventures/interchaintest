@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -114,13 +114,13 @@ WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 	var gaia0ClientID, gaia0ConnID, gaia1ClientID, gaia1ConnID string
 	t.Run("create connections", func(t *testing.T) {
 		// The client isn't created immediately -- wait for two blocks to ensure the clients are ready.
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0, gaia1))
 
 		// Next, create the connections.
 		require.NoError(t, r.CreateConnections(ctx, eRep, pathName))
 
 		// Wait for another block before retrieving the connections and querying for them.
-		require.NoError(t, test.WaitForBlocks(ctx, 1, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
 		conns, err := r.GetConnections(ctx, eRep, gaia0ChainID)
 		require.NoError(t, err)
@@ -188,7 +188,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		}))
 
 		// Wait for another block before retrieving the channels and querying for them.
-		require.NoError(t, test.WaitForBlocks(ctx, 1, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
 		channels, err := r.GetChannels(ctx, eRep, gaia0ChainID)
 		require.NoError(t, err)
@@ -283,7 +283,7 @@ WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 
 	t.Run("relay packet", func(t *testing.T) {
 		require.NoError(t, r.FlushPackets(ctx, eRep, pathName, gaia0ChannelID))
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 
 		const qMsgRecvPacket = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id
@@ -309,7 +309,7 @@ WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 
 	t.Run("relay acknowledgement", func(t *testing.T) {
 		require.NoError(t, r.FlushAcknowledgements(ctx, eRep, pathName, gaia0ChannelID))
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia1))
 
 		const qMsgAck = `SELECT
 port_id, channel_id, counterparty_port_id, counterparty_channel_id

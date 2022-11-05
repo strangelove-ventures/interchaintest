@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -121,7 +121,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
-	err = test.WaitForBlocks(ctx, 10, gaia)
+	err = testutil.WaitForBlocks(ctx, 10, gaia)
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on osmosis
@@ -153,7 +153,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
-	err = test.WaitForBlocks(ctx, 10, gaia)
+	err = testutil.WaitForBlocks(ctx, 10, gaia)
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on juno
@@ -179,7 +179,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be relayed
-	err = test.WaitForBlocks(ctx, 10, gaia)
+	err = testutil.WaitForBlocks(ctx, 10, gaia)
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on osmosis

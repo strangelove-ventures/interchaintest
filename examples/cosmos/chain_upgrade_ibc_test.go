@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/conformance"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -126,7 +126,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	defer timeoutCtxCancel()
 
 	// this should timeout due to chain halt at upgrade height.
-	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
+	_ = testutil.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after chain should have halted")
@@ -150,7 +150,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	timeoutCtx, timeoutCtxCancel = context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
-	err = test.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
+	err = testutil.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
 	require.NoError(t, err, "chain did not produce blocks after upgrade")
 
 	// test IBC conformance after chain upgrade on same path

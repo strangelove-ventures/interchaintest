@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -98,14 +98,14 @@ func TestInterchainAccounts(t *testing.T) {
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
 
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Create a new connection
 	err = r.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the newly created connection
@@ -143,7 +143,7 @@ func TestInterchainAccounts(t *testing.T) {
 	)
 
 	// Wait for relayer to start up and finish channel handshake
-	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the newly registered interchain account
@@ -179,7 +179,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for transfer to be complete and assert balances
-	err = test.WaitForBlocks(ctx, 5, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain2)
 	require.NoError(t, err)
 
 	chain2Bal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
@@ -219,7 +219,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tx to be relayed
-	err = test.WaitForBlocks(ctx, 10, chain2)
+	err = testutil.WaitForBlocks(ctx, 10, chain2)
 	require.NoError(t, err)
 
 	// Assert that the funds have been received by the user account on chain2
@@ -236,7 +236,7 @@ func TestInterchainAccounts(t *testing.T) {
 	err = r.StopRelayer(ctx, eRep)
 	require.NoError(t, err)
 
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Send another bank transfer msg to ICA on chain2 from the user account on chain1.
@@ -251,7 +251,7 @@ func TestInterchainAccounts(t *testing.T) {
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
 	require.NoError(t, err)
 
 	// Assert that the packet timed out and that the acc balances are correct
@@ -279,7 +279,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for channel handshake to finish
-	err = test.WaitForBlocks(ctx, 15, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
 	require.NoError(t, err)
 
 	// Assert that a new channel has been opened and the same ICA is in use
