@@ -2,17 +2,32 @@ package ibc_test
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"testing"
+	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
+
+type PacketMetadata struct {
+	Forward *ForwardMetadata `json:"forward"`
+}
+
+type ForwardMetadata struct {
+	Receiver       string        `json:"receiver"`
+	Port           string        `json:"port"`
+	Channel        string        `json:"channel"`
+	Timeout        time.Duration `json:"timeout"`
+	Retries        *uint8        `json:"retries,omitempty"`
+	Next           *string       `json:"next,omitempty"`
+	RefundSequence *uint64       `json:"refund_sequence,omitempty"`
+}
 
 func TestPacketForwardMiddleware(t *testing.T) {
 	if testing.Short() {
@@ -27,15 +42,15 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	ctx := context.Background()
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", ChainName: "gaia-fork", Version: "bugfix-replace_default_transfer_with_router_module"},
-		{Name: "osmosis", ChainName: "osmosis", Version: "v11.0.1"},
-		{Name: "juno", ChainName: "juno", Version: "v9.0.0"},
+		{Name: "gaia", Version: "strangelove-forward_middleware_memo_v3", ChainConfig: ibc.ChainConfig{GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "strangelove-forward_middleware_memo_v3", ChainConfig: ibc.ChainConfig{GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "strangelove-forward_middleware_memo_v3", ChainConfig: ibc.ChainConfig{GasPrices: "0.0uatom"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia, osmosis, juno := chains[0], chains[1], chains[2]
+	gaia, osmosis, juno := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain), chains[2].(*cosmos.CosmosChain)
 
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
@@ -102,32 +117,29 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	// Get original account balances
 	osmosisUser, gaiaUser, junoUser := users[0], users[1], users[2]
 
-	osmosisBalOG, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
-	require.NoError(t, err)
-
 	// Send packet from Osmosis->Hub->Juno
-	// receiver format: {intermediate_refund_address}|{foward_port}/{forward_channel}:{final_destination_address}
 	const transferAmount int64 = 100000
 	gaiaJunoChan := junoChannels[0].Counterparty
-	receiver := fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, junoUser.Bech32Address(juno.Config().Bech32Prefix))
 	transfer := ibc.WalletAmount{
-		Address: receiver,
+		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
 		Denom:   osmosis.Config().Denom,
 		Amount:  transferAmount,
 	}
 
+	metadata := &PacketMetadata{
+		Forward: &ForwardMetadata{
+			Receiver: junoUser.Bech32Address(juno.Config().Bech32Prefix),
+			Channel:  gaiaJunoChan.ChannelID,
+			Port:     gaiaJunoChan.PortID,
+		},
+	}
+
+	memo, err := json.Marshal(metadata)
+	require.NoError(t, err)
+
 	osmosisGaiaChan := osmoChannels[0]
-	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil)
+	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil, string(memo))
 	require.NoError(t, err)
-
-	// Wait for transfer to be relayed
-	err = testutil.WaitForBlocks(ctx, 10, gaia)
-	require.NoError(t, err)
-
-	// Check that the funds sent are gone from the acc on osmosis
-	osmosisBal, err := osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, osmosisBalOG-transferAmount, osmosisBal)
 
 	// Compose the prefixed denoms and ibc denom for asserting balances
 	gaiaOsmoChan := osmoChannels[0].Counterparty
@@ -136,60 +148,150 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopDenom := transfertypes.GetPrefixedDenom(junoGaiaChan.PortID, junoGaiaChan.ChannelID, firstHopDenom)
 	dstIbcDenom := transfertypes.ParseDenomTrace(secondHopDenom)
 
-	// Check that the funds sent are present in the acc on juno
-	junoBal, err := juno.GetBalance(ctx, junoUser.Bech32Address(juno.Config().Bech32Prefix), dstIbcDenom.IBCDenom())
+	// Check that the funds sent are gone from the acc on osmosis
+	err = cosmos.PollForBalance(ctx, osmosis, 2, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds - transferAmount,
+	})
 	require.NoError(t, err)
-	require.Equal(t, transferAmount, junoBal)
+
+	// Check that the funds sent are present in the acc on juno
+	err = cosmos.PollForBalance(ctx, juno, 15, ibc.WalletAmount{
+		Address: junoUser.Bech32Address(juno.Config().Bech32Prefix),
+		Denom:   dstIbcDenom.IBCDenom(),
+		Amount:  transferAmount,
+	})
+	require.NoError(t, err)
 
 	// Send packet back from Juno->Hub->Osmosis
-	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaOsmoChan.PortID, gaiaOsmoChan.ChannelID, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix))
 	transfer = ibc.WalletAmount{
-		Address: receiver,
+		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
 		Denom:   dstIbcDenom.IBCDenom(),
 		Amount:  transferAmount,
 	}
 
-	_, err = juno.SendIBCTransfer(ctx, junoGaiaChan.ChannelID, junoUser.KeyName, transfer, nil)
+	metadata = &PacketMetadata{
+		Forward: &ForwardMetadata{
+			Receiver: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+			Channel:  gaiaOsmoChan.ChannelID,
+			Port:     gaiaOsmoChan.PortID,
+		},
+	}
+
+	memo, err = json.Marshal(metadata)
 	require.NoError(t, err)
 
-	// Wait for transfer to be relayed
-	err = testutil.WaitForBlocks(ctx, 10, gaia)
+	_, err = juno.SendIBCTransfer(ctx, junoGaiaChan.ChannelID, junoUser.KeyName, transfer, nil, string(memo))
 	require.NoError(t, err)
 
 	// Check that the funds sent are gone from the acc on juno
-	junoBal, err = juno.GetBalance(ctx, junoUser.Bech32Address(juno.Config().Bech32Prefix), dstIbcDenom.IBCDenom())
+	err = cosmos.PollForBalance(ctx, juno, 2, ibc.WalletAmount{
+		Address: junoUser.Bech32Address(juno.Config().Bech32Prefix),
+		Denom:   dstIbcDenom.IBCDenom(),
+		Amount:  int64(0),
+	})
 	require.NoError(t, err)
-	require.Equal(t, int64(0), junoBal)
 
 	// Check that the funds sent are present in the acc on osmosis
-	osmosisBal, err = osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
+	err = cosmos.PollForBalance(ctx, osmosis, 15, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds,
+	})
 	require.NoError(t, err)
-	require.Equal(t, osmosisBalOG, osmosisBal)
 
 	// Send a malformed packet with invalid receiver address from Osmosis->Hub->Juno
-	// This should succeed in the first hop and fail to make the second hop; funds should end up in the intermediary account.
-	receiver = fmt.Sprintf("%s|%s/%s:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, "xyz1t8eh66t2w5k67kwurmn5gqhtq6d2ja0vp7jmmq")
+	// This should succeed in the first hop and fail to make the second hop; funds should then be refunded to osmosis.
 	transfer = ibc.WalletAmount{
-		Address: receiver,
+		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
 		Denom:   osmosis.Config().Denom,
 		Amount:  transferAmount,
 	}
 
-	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil)
+	metadata = &PacketMetadata{
+		Forward: &ForwardMetadata{
+			Receiver: "xyz1t8eh66t2w5k67kwurmn5gqhtq6d2ja0vp7jmmq", // malformed receiver address on juno
+			Channel:  gaiaJunoChan.ChannelID,
+			Port:     gaiaJunoChan.PortID,
+		},
+	}
+
+	memo, err = json.Marshal(metadata)
 	require.NoError(t, err)
 
-	// Wait for transfer to be relayed
-	err = testutil.WaitForBlocks(ctx, 10, gaia)
+	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil, string(memo))
 	require.NoError(t, err)
 
-	// Check that the funds sent are gone from the acc on osmosis
-	osmosisBal, err = osmosis.GetBalance(ctx, osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix), osmosis.Config().Denom)
+	// Wait until the funds sent are gone from the acc on osmosis
+	err = cosmos.PollForBalance(ctx, osmosis, 2, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds - transferAmount,
+	})
 	require.NoError(t, err)
-	require.Equal(t, osmosisBalOG-transferAmount, osmosisBal)
 
-	// Check that the funds sent ended up in the acc on gaia
+	// Wait until the funds sent are back in the acc on osmosis
+	err = cosmos.PollForBalance(ctx, osmosis, 15, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds,
+	})
+	require.NoError(t, err)
+
+	// Check that the gaia account is empty
 	intermediaryIBCDenom := transfertypes.ParseDenomTrace(firstHopDenom)
 	gaiaBal, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), intermediaryIBCDenom.IBCDenom())
 	require.NoError(t, err)
-	require.Equal(t, transferAmount, gaiaBal)
+	require.Equal(t, int64(0), gaiaBal)
+
+	// Send packet from Osmosis->Hub->Juno with the timeout so low that it can not make it from Hub to Juno, which should result in a refund from Hub to Osmosis after two retries.
+	// receiver format: {intermediate_refund_address}|{foward_port}/{forward_channel}:{final_destination_address}:{max_retries}:{timeout_duration}
+	// receiver = fmt.Sprintf("%s|%s/%s:%s:%d:%s", gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaiaJunoChan.PortID, gaiaJunoChan.ChannelID, junoUser.Bech32Address(juno.Config().Bech32Prefix), 2, "1s")
+	transfer = ibc.WalletAmount{
+		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	retries := uint8(2)
+	metadata = &PacketMetadata{
+		Forward: &ForwardMetadata{
+			Receiver: junoUser.Bech32Address(juno.Config().Bech32Prefix),
+			Channel:  gaiaJunoChan.ChannelID,
+			Port:     gaiaJunoChan.PortID,
+			Retries:  &retries,
+			Timeout:  1 * time.Second,
+		},
+	}
+
+	memo, err = json.Marshal(metadata)
+	require.NoError(t, err)
+
+	_, err = osmosis.SendIBCTransfer(ctx, osmosisGaiaChan.ChannelID, osmosisUser.KeyName, transfer, nil, string(memo))
+	require.NoError(t, err)
+
+	// Wait until the funds sent are gone from the acc on osmosis
+	err = cosmos.PollForBalance(ctx, osmosis, 2, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds - transferAmount,
+	})
+	require.NoError(t, err)
+
+	// Wait until the funds leave the gaia wallet (attempting to send to juno)
+	err = cosmos.PollForBalance(ctx, gaia, 5, ibc.WalletAmount{
+		Address: gaiaUser.Bech32Address(gaia.Config().Bech32Prefix),
+		Denom:   intermediaryIBCDenom.IBCDenom(),
+		Amount:  0,
+	})
+	require.NoError(t, err)
+
+	// Wait until the funds are back in the acc on osmosis
+	err = cosmos.PollForBalance(ctx, osmosis, 15, ibc.WalletAmount{
+		Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
+		Denom:   osmosis.Config().Denom,
+		Amount:  userFunds,
+	})
+	require.NoError(t, err)
 }

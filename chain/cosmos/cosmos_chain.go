@@ -227,8 +227,15 @@ func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 }
 
 // Implements Chain interface
-func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (tx ibc.Tx, _ error) {
-	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+func (c *CosmosChain) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	timeout *ibc.IBCTimeout,
+	memo string,
+) (tx ibc.Tx, _ error) {
+	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout, memo)
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
