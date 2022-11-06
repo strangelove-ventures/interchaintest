@@ -201,6 +201,13 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
+func (commander) GetClients(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "clients", chainID,
+		"--home", homeDir,
+	}
+}
+
 func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
@@ -304,6 +311,28 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 	}
 
 	return connections, nil
+}
+
+func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+	var clients ibc.ClientOutputs
+	for _, client := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(client) == "" {
+			continue
+		}
+
+		var clientOutput ibc.ClientOutput
+		if err := json.Unmarshal([]byte(client), &clientOutput); err != nil {
+			c.log.Error(
+				"Error parsing client json",
+				zap.Error(err),
+			)
+
+			continue
+		}
+		clients = append(clients, &clientOutput)
+	}
+
+	return clients, nil
 }
 
 func (commander) Init(homeDir string) []string {
