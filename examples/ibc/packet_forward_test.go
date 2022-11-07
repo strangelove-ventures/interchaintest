@@ -3,7 +3,6 @@ package ibc_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -157,10 +156,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopIBCDenom := secondHopDenomTrace.IBCDenom()
 	thirdHopIBCDenom := thirdHopDenomTrace.IBCDenom()
 
-	fmt.Printf("first hop denom: %s, first hop denom trace: %+v, first hop ibc denom: %s", firstHopDenom, firstHopDenomTrace, firstHopIBCDenom)
-	fmt.Printf("second hop denom: %s, second hop denom trace: %+v, second hop ibc denom: %s", secondHopDenom, secondHopDenomTrace, secondHopIBCDenom)
-	fmt.Printf("third hop denom: %s, third hop denom trace: %+v, third hop ibc denom: %s", thirdHopDenom, thirdHopDenomTrace, thirdHopIBCDenom)
-
 	t.Run("multi-hop a->b->c->d", func(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain C->Chain D
 
@@ -198,24 +193,26 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		transferTx, err := chainA.SendIBCTransfer(ctx, abChan.ChannelID, userA.KeyName, transfer, nil, string(memo))
 		require.NoError(t, err)
-
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+30, transferTx.Packet)
+		require.NoError(t, err)
+		err = testutil.WaitForBlocks(ctx, 2, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, userFunds-transferAmount, chainABalance)
 
 		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainBBalance)
 
 		chainCBalance, err := chainC.GetBalance(ctx, userC.Bech32Address(chainC.Config().Bech32Prefix), secondHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainCBalance)
 
 		chainDBalance, err := chainD.GetBalance(ctx, userD.Bech32Address(chainD.Config().Bech32Prefix), thirdHopIBCDenom)
 		require.NoError(t, err)
+
+		require.Equal(t, userFunds-transferAmount, chainABalance)
+		require.Equal(t, int64(0), chainBBalance)
+		require.Equal(t, int64(0), chainCBalance)
 		require.Equal(t, transferAmount, chainDBalance)
 	})
 
@@ -257,24 +254,26 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		transferTx, err := chainD.SendIBCTransfer(ctx, dcChan.ChannelID, userD.KeyName, transfer, nil, string(memo))
 		require.NoError(t, err)
-
 		_, err = testutil.PollForAck(ctx, chainD, chainDHeight, chainDHeight+30, transferTx.Packet)
+		require.NoError(t, err)
+		err = testutil.WaitForBlocks(ctx, 2, chainA)
 		require.NoError(t, err)
 
 		chainDBalance, err := chainD.GetBalance(ctx, userD.Bech32Address(chainD.Config().Bech32Prefix), thirdHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainDBalance)
 
 		chainCBalance, err := chainC.GetBalance(ctx, userC.Bech32Address(chainC.Config().Bech32Prefix), secondHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainCBalance)
 
 		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainBBalance)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
 		require.NoError(t, err)
+
+		require.Equal(t, int64(0), chainDBalance)
+		require.Equal(t, int64(0), chainCBalance)
+		require.Equal(t, int64(0), chainBBalance)
 		require.Equal(t, userFunds, chainABalance)
 	})
 
@@ -303,20 +302,22 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		transferTx, err := chainA.SendIBCTransfer(ctx, abChan.ChannelID, userA.KeyName, transfer, nil, string(memo))
 		require.NoError(t, err)
-
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
+		require.NoError(t, err)
+		err = testutil.WaitForBlocks(ctx, 2, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, userFunds, chainABalance)
 
 		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainBBalance)
 
 		chainCBalance, err := chainC.GetBalance(ctx, userC.Bech32Address(chainC.Config().Bech32Prefix), secondHopIBCDenom)
 		require.NoError(t, err)
+
+		require.Equal(t, userFunds, chainABalance)
+		require.Equal(t, int64(0), chainBBalance)
 		require.Equal(t, int64(0), chainCBalance)
 	})
 
@@ -347,20 +348,22 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		transferTx, err := chainA.SendIBCTransfer(ctx, abChan.ChannelID, userA.KeyName, transfer, nil, string(memo))
 		require.NoError(t, err)
-
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
+		require.NoError(t, err)
+		err = testutil.WaitForBlocks(ctx, 2, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, userFunds, chainABalance)
 
 		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainBBalance)
 
 		chainCBalance, err := chainC.GetBalance(ctx, userC.Bech32Address(chainC.Config().Bech32Prefix), secondHopIBCDenom)
 		require.NoError(t, err)
+
+		require.Equal(t, userFunds, chainABalance)
+		require.Equal(t, int64(0), chainBBalance)
 		require.Equal(t, int64(0), chainCBalance)
 	})
 
@@ -406,17 +409,24 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
 		require.NoError(t, err)
-
-		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
+		err = testutil.WaitForBlocks(ctx, 2, chainA)
 		require.NoError(t, err)
-		require.Equal(t, userFunds, chainABalance)
 
-		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
+		chainDBalance, err := chainD.GetBalance(ctx, userD.Bech32Address(chainD.Config().Bech32Prefix), thirdHopIBCDenom)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), chainBBalance)
 
 		chainCBalance, err := chainC.GetBalance(ctx, userC.Bech32Address(chainC.Config().Bech32Prefix), secondHopIBCDenom)
 		require.NoError(t, err)
+
+		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
+		require.NoError(t, err)
+
+		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
+		require.NoError(t, err)
+
+		require.Equal(t, userFunds, chainABalance)
+		require.Equal(t, int64(0), chainBBalance)
 		require.Equal(t, int64(0), chainCBalance)
+		require.Equal(t, int64(0), chainDBalance)
 	})
 }
