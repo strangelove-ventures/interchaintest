@@ -195,7 +195,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+30, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 2, chainA)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
@@ -256,7 +256,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainD, chainDHeight, chainDHeight+30, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 2, chainA)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
 		require.NoError(t, err)
 
 		chainDBalance, err := chainD.GetBalance(ctx, userD.Bech32Address(chainD.Config().Bech32Prefix), thirdHopIBCDenom)
@@ -304,7 +304,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 2, chainA)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
@@ -350,7 +350,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 2, chainA)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
 		require.NoError(t, err)
 
 		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
@@ -409,7 +409,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+25, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 2, chainA)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
 		require.NoError(t, err)
 
 		chainDBalance, err := chainD.GetBalance(ctx, userD.Bech32Address(chainD.Config().Bech32Prefix), thirdHopIBCDenom)
