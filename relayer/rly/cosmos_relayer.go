@@ -4,7 +4,6 @@ package rly
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -120,7 +119,7 @@ func (commander) AddChainConfiguration(containerFilePath, homeDir string) []stri
 func (commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	return []string{
 		"rly", "keys", "add", chainID, keyName,
-		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
+		"--coin-type", coinType, "--home", homeDir,
 	}
 }
 
@@ -218,7 +217,7 @@ func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChanne
 func (commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
 	return []string{
 		"rly", "keys", "restore", chainID, keyName, mnemonic,
-		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
+		"--coin-type", coinType, "--home", homeDir,
 	}
 }
 
