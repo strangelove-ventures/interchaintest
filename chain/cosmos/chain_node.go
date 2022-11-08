@@ -588,22 +588,21 @@ func (tn *ChainNode) SendIBCTransfer(
 	channelID string,
 	keyName string,
 	amount ibc.WalletAmount,
-	timeout *ibc.IBCTimeout,
-	memo string,
+	options ibc.TransferOptions,
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
-	if timeout != nil {
-		if timeout.NanoSeconds > 0 {
-			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(timeout.NanoSeconds))
-		} else if timeout.Height > 0 {
-			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
+		} else if options.Timeout.Height > 0 {
+			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
 		}
 	}
-	if memo != "" {
-		command = append(command, "--memo", memo)
+	if options.Memo != "" {
+		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
 }

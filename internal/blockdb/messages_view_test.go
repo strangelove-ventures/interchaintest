@@ -260,7 +260,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 			Denom:   gaia0.Config().Denom,
 			Amount:  txAmount,
 		}
-		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, ibctest.FaucetAccountKeyName, transfer, nil, "")
+		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, ibctest.FaucetAccountKeyName, transfer, ibc.TransferOptions{})
 		require.NoError(t, err)
 		require.NoError(t, tx.Validate())
 

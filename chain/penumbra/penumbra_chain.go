@@ -150,10 +150,9 @@ func (c *PenumbraChain) SendIBCTransfer(
 	channelID string,
 	keyName string,
 	amount ibc.WalletAmount,
-	timeout *ibc.IBCTimeout,
-	memo string,
+	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout, memo)
+	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 }
 
 // Implements Chain interface

@@ -85,7 +85,7 @@ func TestUpdateLightClients(t *testing.T) {
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
 	}
-	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, transfer, nil, "")
+	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 

@@ -79,7 +79,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf ibctest.ChainFact
 		Address: c1FaucetAddr,
 		Denom:   c0.Config().Denom,
 		Amount:  txAmount,
-	}, nil, "")
+	}, ibc.TransferOptions{})
 	req.NoError(err)
 	req.NoError(tx.Validate())
 

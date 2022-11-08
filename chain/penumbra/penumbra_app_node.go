@@ -193,8 +193,7 @@ func (p *PenumbraAppNode) SendIBCTransfer(
 	channelID string,
 	keyName string,
 	amount ibc.WalletAmount,
-	timeout *ibc.IBCTimeout,
-	memo string,
+	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }

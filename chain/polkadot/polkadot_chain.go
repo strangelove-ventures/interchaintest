@@ -543,8 +543,7 @@ func (c *PolkadotChain) SendIBCTransfer(
 	channelID string,
 	keyName string,
 	amount ibc.WalletAmount,
-	timeout *ibc.IBCTimeout,
-	memo string,
+	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
 	panic("not implemented yet")
 }

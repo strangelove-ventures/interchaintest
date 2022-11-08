@@ -232,10 +232,9 @@ func (c *CosmosChain) SendIBCTransfer(
 	channelID string,
 	keyName string,
 	amount ibc.WalletAmount,
-	timeout *ibc.IBCTimeout,
-	memo string,
+	options ibc.TransferOptions,
 ) (tx ibc.Tx, _ error) {
-	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout, memo)
+	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, options)
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}

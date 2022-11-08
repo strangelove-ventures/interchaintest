@@ -221,7 +221,7 @@ transfer := ibc.WalletAmount{
     Denom:   gaia.Config().Denom,
     Amount:  amountToSend,
 }
-tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, nil, "")
+tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 ```
 
 The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
