@@ -112,13 +112,6 @@ func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter,
 
 	var srcClientID string
 	for _, client := range srcClients {
-		// cs, err := clienttypes.UnpackClientState(client.ClientState)
-		// if err != nil {
-		// 	fmt.Printf("Error unpacking client state: %v", err)
-		// 	continue
-		// }
-		// switch c := cs.(type) {
-		// case *ibctm.ClientState:
 		// TODO continue for expired clients
 		if client.ClientState.ChainID == dstChainID {
 			if srcClientID != "" {
@@ -126,7 +119,6 @@ func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter,
 			}
 			srcClientID = client.ClientID
 		}
-		// }
 	}
 
 	if srcClientID == "" {
