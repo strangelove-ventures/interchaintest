@@ -144,6 +144,10 @@ func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter,
 		}
 	}
 
+	if srcConnectionID == "" {
+		return nil, fmt.Errorf("unable to find connection on %s for client %s", srcChainID, srcClientID)
+	}
+
 	srcChannels, err := r.GetChannels(ctx, rep, srcChainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get channels on source chain: %w", err)
