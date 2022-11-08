@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/testutil"
 )
 
@@ -57,4 +58,25 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 
 	bp := testutil.BlockPoller[T]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
+}
+
+// PollForBalance polls until the balance matches
+func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64, balance ibc.WalletAmount) error {
+	h, err := chain.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height uint64) (any, error) {
+		bal, err := chain.GetBalance(ctx, balance.Address, balance.Denom)
+		if err != nil {
+			return nil, err
+		}
+		if bal != balance.Amount {
+			return nil, fmt.Errorf("balance (%d) does not match expected: (%d)", bal, balance.Amount)
+		}
+		return nil, nil
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
+	return err
 }

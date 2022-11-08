@@ -225,7 +225,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["rpc"] = rpc
 
-	return testutil.ModifyTomlConfigFile(
+	if err := testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -233,6 +233,20 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 		tn.VolumeName,
 		"config/config.toml",
 		c,
+	); err != nil {
+		return err
+	}
+
+	a := make(testutil.Toml)
+	a["minimum-gas-prices"] = tn.Chain.Config().GasPrices
+	return testutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/app.toml",
+		a,
 	)
 }
 
@@ -570,17 +584,26 @@ type CosmosTx struct {
 	RawLog string `json:"raw_log"`
 }
 
-func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
+func (tn *ChainNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
-	if timeout != nil {
-		if timeout.NanoSeconds > 0 {
-			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(timeout.NanoSeconds))
-		} else if timeout.Height > 0 {
-			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
+		} else if options.Timeout.Height > 0 {
+			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
 		}
+	}
+	if options.Memo != "" {
+		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
 }

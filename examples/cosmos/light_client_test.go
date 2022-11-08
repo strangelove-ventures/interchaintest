@@ -80,13 +80,12 @@ func TestUpdateLightClients(t *testing.T) {
 
 	amountToSend := int64(553255) // Unique amount to make log searching easier.
 	dstAddress := osmoUser.Bech32Address(osmosis.Config().Bech32Prefix)
-	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, ibc.WalletAmount{
+	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
-	},
-		nil,
-	)
+	}
+	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 

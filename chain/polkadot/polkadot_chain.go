@@ -538,7 +538,13 @@ func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ib
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
-func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+func (c *PolkadotChain) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
 	panic("not implemented yet")
 }
 

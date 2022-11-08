@@ -243,6 +243,16 @@ func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecR
 	return r.c.ParseGetConnectionsOutput(string(res.Stdout), string(res.Stderr))
 }
 
+func (r *DockerRelayer) GetClients(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ClientOutputs, error) {
+	cmd := r.c.GetClients(chainID, r.HomeDir())
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
+	}
+
+	return r.c.ParseGetClientsOutput(string(res.Stdout), string(res.Stderr))
+}
+
 func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts)
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -499,6 +509,10 @@ type RelayerCommander interface {
 	// to produce the connection output values.
 	ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error)
 
+	// ParseGetClientsOutput processes the output of GetClients
+	// to produce the client output values.
+	ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error)
+
 	// Init is the command to run on the first call to AddChainConfiguration.
 	// If the returned command is nil or empty, nothing will be executed.
 	Init(homeDir string) []string
@@ -516,6 +530,7 @@ type RelayerCommander interface {
 	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
+	GetClients(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
 	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
