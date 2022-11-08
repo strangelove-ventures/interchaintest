@@ -57,7 +57,7 @@ type Chain interface {
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
 
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
-	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
+	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, options TransferOptions) (Tx, error)
 
 	// Height returns the current block height or an error if unable to get current height.
 	Height(ctx context.Context) (uint64, error)
@@ -73,4 +73,10 @@ type Chain interface {
 
 	// Timeouts returns all timeouts in a block at height.
 	Timeouts(ctx context.Context, height uint64) ([]PacketTimeout, error)
+}
+
+// TransferOptions defines the options for an IBC packet transfer.
+type TransferOptions struct {
+	Timeout *IBCTimeout
+	Memo    string
 }

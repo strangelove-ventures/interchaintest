@@ -255,11 +255,12 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 
 		// Send the IBC transfer. Relayer isn't running, so this will just create a MsgTransfer.
 		const txAmount = 13579 // Arbitrary amount that is easy to find in logs.
-		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, ibctest.FaucetAccountKeyName, ibc.WalletAmount{
+		transfer := ibc.WalletAmount{
 			Address: gaia1FaucetAddr,
 			Denom:   gaia0.Config().Denom,
 			Amount:  txAmount,
-		}, nil)
+		}
+		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, ibctest.FaucetAccountKeyName, transfer, ibc.TransferOptions{})
 		require.NoError(t, err)
 		require.NoError(t, tx.Validate())
 

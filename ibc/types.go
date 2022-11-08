@@ -204,6 +204,17 @@ type ConnectionOutput struct {
 
 type ConnectionOutputs []*ConnectionOutput
 
+type ClientOutput struct {
+	ClientID    string      `json:"client_id"`
+	ClientState ClientState `json:"client_state"`
+}
+
+type ClientState struct {
+	ChainID string `json:"chain_id"`
+}
+
+type ClientOutputs []*ClientOutput
+
 type Wallet struct {
 	Mnemonic string `json:"mnemonic"`
 	Address  string `json:"address"`
