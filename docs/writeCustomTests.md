@@ -1,6 +1,6 @@
 # Write Custom Tests
 
-This document breaks down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
+This document breaks down code snippets from [learn_ibc_test.go](../examples/ibc/learn_ibc_test.go). This test:
 
 1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
