@@ -6,9 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-
-	//"github.com/icza/dyno"
-	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -25,9 +23,16 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// CW-20 packet transfer
 // TestInterchainQueriesWASM is a test case that performs a round trip query from an ICQ wasm contract <> ICQ module.
+// On the sender chain, CosmWasm capability is required to instantiate/execute the smart contract. On the receiver chain,
+// the ICQ module is required to be present in order to receive interchain queries.
 func TestInterchainQueriesWASM(t *testing.T) {
+	//TODO (1): force relayer to use specific versions of the chains configured in the file.
+	//os.Setenv("IBCTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
+
+	//TODO (2): use Juno as sender "ghcr.io/strangelove-ventures/heighliner/juno:v10.1.0"
+	//and Strangelove's icqd (or another chain with ICQ module present) as receiver.
+
 	logger := zaptest.NewLogger(t)
 
 	if testing.Short() {
@@ -42,38 +47,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	ctx := context.Background()
 	contractFilePath := "sample_contracts/icq.wasm" //Contract that will be initialized on chain
 
-	//Supports receiving interchain queries. This means the ICQ Module is present.
-	// interchainQueriesImage := ibc.DockerImage{
-	// 	Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
-	// 	Version:    "latest",
-	// 	UidGid:     dockerutil.GetHeighlinerUserString(),
-	// }
-
 	wasmImage := ibc.DockerImage{
-		Repository: "kyle/wasmd", //"ghcr.io/polymerdao/wasmd",
-		Version:    "v1.0",       //"latest",
+		Repository: "ghcr.io/strangelove-ventures/heighliner/wasmd", //was: kyle/wasmd //"ghcr.io/polymerdao/wasmd",
+		Version:    "v0.0.1",
 		UidGid:     dockerutil.GetHeighlinerUserString(),
 	}
-
-	os.Setenv("EXPORT_GENESIS_FILE_PATH", "/home/kyle/projects/Strangelove/ibctest/juno_genesis_icq.json")
-	os.Setenv("EXPORT_GENESIS_CHAIN", "juno1")
-
-	//Forces relayer to use the specific versions of the chains configured in the file.
-	//These match our DockerImage versions below (from this test case)
-	//os.Setenv("IBCTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
-
-	//sender
-	// junoDockerImage := ibc.DockerImage{
-	// 	Repository: "ghcr.io/strangelove-ventures/heighliner/juno",
-	// 	Version:    "v10.1.0",
-	// 	UidGid:     dockerutil.GetHeighlinerUserString(),
-	// }
-
-	// gaiaDockerImage := ibc.DockerImage{
-	// 	Repository: "ghcr.io/strangelove-ventures/heighliner/gaia",
-	// 	Version:    "v7.1.0",
-	// 	UidGid:     dockerutil.GetHeighlinerUserString(),
-	// }
 
 	genesisAllowICQ := map[string]interface{}{
 		"interchainquery": map[string]interface{}{
@@ -123,62 +101,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 			}},
 	})
 
-	// Chain Factory
-	// cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-	// 	{Name: "juno", ChainName: "juno1", Version: "latest", ChainConfig: ibc.ChainConfig{
-	// 		GasPrices:      "0.00ujuno",
-	// 		ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-	// 		EncodingConfig: wasm.WasmEncoding(),
-	// 	}},
-	// 	{Name: "juno", ChainName: "juno2", Version: "latest", ChainConfig: ibc.ChainConfig{
-	// 		GasPrices:      "0.00ujuno",
-	// 		ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-	// 		EncodingConfig: wasm.WasmEncoding(),
-	// 	}},
-	// })
-
-	// minVal := 1
-	// cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-	// 	{
-	// 		ChainName:     "sender",
-	// 		NumValidators: &minVal,
-	// 		ChainConfig: ibc.ChainConfig{
-	// 			Type:           "cosmos",
-	// 			Name:           "sender",
-	// 			ChainID:        "sender",
-	// 			Images:         []ibc.DockerImage{junoDockerImage},
-	// 			Bin:            "junod",
-	// 			Bech32Prefix:   "juno",
-	// 			Denom:          "ujuno",
-	// 			GasPrices:      "0.00ujuno",
-	// 			TrustingPeriod: "300h",
-	// 			GasAdjustment:  1.1,
-	// 			ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-	// 		}},
-	// 	{
-	// 		ChainName:     "receiver",
-	// 		NumValidators: &minVal,
-	// 		ChainConfig: ibc.ChainConfig{
-	// 			Type:           "cosmos",
-	// 			Name:           "receiver",
-	// 			ChainID:        "receiver",
-	// 			Images:         []ibc.DockerImage{gaiaDockerImage},
-	// 			Bin:            "gaiad",
-	// 			Bech32Prefix:   "cosmos",
-	// 			Denom:          "uatom",
-	// 			GasPrices:      "0.00uatom",
-	// 			TrustingPeriod: "300h",
-	// 			GasAdjustment:  1.1,
-	// 			ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-	// 		}},
-	// })
-
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 	chain1, chain2 := chains[0], chains[1]
 
 	// Get a relayer instance
-
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		logger,
@@ -205,7 +132,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(), //filepath.Join(tmpDir, ".ibctest", "databases", "block.db"), //
+		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  false,
 	}))
 
@@ -247,8 +174,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
-	//Instantiate the smart contract on the Juno test chain, facilitating testing of ICQ WASM functionality
-	//ibc.WalletAmount{Amount: 5000000}, contractFilePath,
+	//Instantiate the smart contract on the test chain, facilitating testing of ICQ WASM functionality
 	contractAddr, err := chain1CChain.InstantiateContract(ctx, chain1User.KeyName, wasmIcqCodeId, initMessage, true)
 	require.NoError(t, err)
 	logger.Info("icq contract deployed", zap.String("contractAddr", contractAddr))
@@ -300,8 +226,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 	logger.Info("channel", zap.String("info", fmt.Sprintf("Channel Port: %s, Channel ID: %s, Counterparty Channel ID: %s", channel.PortID, channel.ChannelID, channel.Counterparty.ChannelID)))
 
-	// Query for the balances of an account on the counterparty chain using interchain queries.
-	//Get the base64 encoded Gaia user address in the format required by the AllBalances query
+	//Query for the balances of an account on the counterparty chain using interchain queries.
+	//Get the base64 encoded chain2 user address in the format required by the AllBalances query
 	chain2UserAddrQuery := fmt.Sprintf(`{"address":"%s"}`, chain2UserAddress)
 	chain2UserAddrQueryB64 := base64.StdEncoding.EncodeToString([]byte(chain2UserAddrQuery))
 
@@ -330,14 +256,9 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	logger.Info("Chain height", zap.String("Chain 1", blockHeightC1.SyncInfo.Height), zap.String("Chain 2", blockHeightC2.SyncInfo.Height))
 
-	// heightC1, err := strconv.ParseInt(blockHeightC1.SyncInfo.Height, 10, 64)
-	// require.NoError(t, err)
-	// heightC2, err := strconv.ParseInt(blockHeightC2.SyncInfo.Height, 10, 64)
-	// require.NoError(t, err)
-
 	query := executeQuery{
 		Query: msgQuery{
-			Timeout: 10000,
+			Timeout: 1000,
 			Channel: channel.ChannelID,
 			Requests: []RequestQuery{ //can't use abci.RequestQuery since Height/Prove JSON fields are omitted which causes contract errors
 				{
@@ -349,18 +270,6 @@ func TestInterchainQueriesWASM(t *testing.T) {
 			},
 		},
 	}
-
-	// query2 := executeQuery{
-	// 	Query: msgQuery{
-	// 		Channel: channels[0].ChannelID,
-	// 		Requests: []abcitypes.RequestQuery{
-	// 			{
-	// 				Path: "/cosmos.bank.v1beta1.Query/AllBalances",
-	// 				Data: []byte("eyJhZGRyZXNzIjoiYWRkcmVzcyJ9"), //was originally: eyJhZGRyZXNzIjoiYWRkcmVzcyJ9, //gaiaAddressQueryB64
-	// 			},
-	// 		},
-	// 	},
-	// }
 
 	b, err := json.Marshal(query)
 	require.NoError(t, err)
@@ -379,21 +288,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		"--chain-id", chain1.Config().ChainID,
 		"--output", "json",
 	}
-	stdout, _, err = chain1.Exec(ctx, cmd, nil)
+	_, _, err = chain1.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
 
-	logger.Info("TX Query result: ......")
-	logger.Info(string(stdout))
-	logger.Info("End TX query result: ......")
-
-	//b2, err := json.Marshal(query2)
-	//msg2 := string(b2)
-	//Query the Juno contract, requesting the balance of the Gaia user's wallet via IBC.
-	// err = chain1CChain.ExecuteContract(ctx, chain1User.KeyName, contractAddr, msg2)
-	// require.NoError(t, err)
-
 	// Wait a few blocks for query to be sent to counterparty.
-	err = test.WaitForBlocks(ctx, 10, chain1, chain2)
+	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Check the results from the interchain query above.
@@ -403,24 +302,28 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		"--chain-id", chain1.Config().ChainID,
 		"--output", "json",
 	}
+
 	stdout, _, err = chain1.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
-
-	logger.Info("WASM Query result: ......")
-	logger.Info(string(stdout))
-	logger.Info("End Query result: ......")
-
 	results := &contractStateResp{}
 	err = json.Unmarshal(stdout, results)
 	require.NoError(t, err)
+	hasIcqQuery := false
+
 	for _, kv := range results.Models {
 		keyBytes, _ := hex.DecodeString(kv.Key)
 		valueBytes, err := base64.StdEncoding.DecodeString(kv.Value)
 		require.NoError(t, err)
-		logger.Info("Query result", zap.String("key", string(keyBytes)), zap.String("value", string(valueBytes)))
+		if string(keyBytes) == "query_result_counter" {
+			res, err := strconv.Atoi(string(valueBytes))
+			require.NoError(t, err)
+			if res > 0 {
+				hasIcqQuery = true
+				logger.Info("ICQ query result counter", zap.Int("counter", res))
+			}
+		}
 	}
-	// logger.Info("contract state ->", zap.Any("results", results))
-	require.NotEmpty(t, results.Models)
+	require.Equal(t, hasIcqQuery, true)
 }
 
 func FirstWithPort(channels []ibc.ChannelOutput, port string) *ibc.ChannelOutput {
