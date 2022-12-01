@@ -498,9 +498,7 @@ func (r *DockerRelayer) Bind() []string {
 
 // HomeDir returns the home directory of the relayer on the underlying Docker container's filesystem.
 func (r *DockerRelayer) HomeDir() string {
-	// Relayer writes to these files, so /var seems like a reasonable root.
-	// https://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/var.html
-	return "/var/relayer-" + r.c.Name()
+	return "/home/relayer"
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
