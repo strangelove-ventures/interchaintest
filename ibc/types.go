@@ -1,6 +1,9 @@
 package ibc
 
 import (
+	"reflect"
+	"strconv"
+
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
@@ -22,6 +25,8 @@ type ChainConfig struct {
 	Bech32Prefix string `yaml:"bech32-prefix"`
 	// Denomination of native currency, e.g. uatom.
 	Denom string `yaml:"denom"`
+	// Coin type
+	CoinType string `default:"118" yaml:"coin-type"`
 	// Minimum gas prices for sending transactions, in native currency denom.
 	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
@@ -44,6 +49,27 @@ func (c ChainConfig) Clone() ChainConfig {
 	copy(images, c.Images)
 	x.Images = images
 	return x
+}
+
+func (c ChainConfig) VerifyCoinType() (string, error) {
+	// If coin-type is left blank in the ChainConfig,
+	// the Cosmos SDK default of 118 is used.
+	if c.CoinType == "" {
+		typ := reflect.TypeOf(c)
+		f, _ := typ.FieldByName("CoinType")
+		coinType := f.Tag.Get("default")
+		_, err := strconv.ParseUint(coinType, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		return coinType, nil
+	} else {
+		_, err := strconv.ParseUint(c.CoinType, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		return c.CoinType, nil
+	}
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -75,6 +101,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.Denom != "" {
 		c.Denom = other.Denom
+	}
+
+	if other.CoinType != "" {
+		c.CoinType = other.CoinType
 	}
 
 	if other.GasPrices != "" {
@@ -178,6 +208,7 @@ type Wallet struct {
 	Mnemonic string `json:"mnemonic"`
 	Address  string `json:"address"`
 	KeyName  string
+	CoinType uint32
 }
 
 func (w *Wallet) GetKeyName() string {
