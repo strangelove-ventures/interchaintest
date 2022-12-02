@@ -26,9 +26,11 @@ composable:
   gas-adjustment: 0
   trusting-period: ""
   images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/polkadot
+    - repository: seunlanlege/centauri-polkadot # ghcr.io/strangelove-ventures/heighliner/polkadot
+      version: v0.9.27
       uid-gid: 1025:1025
-    - repository: ghcr.io/strangelove-ventures/heighliner/composable
+    - repository: seunlanlege/centauri-parachain # ghcr.io/strangelove-ventures/heighliner/composable
+      version: v0.9.27
       uid-gid: 1025:1025
 
 gaia:
@@ -42,6 +44,21 @@ gaia:
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/gaia
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+ibcgo:
+  name: ibcgo
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: uatom
+  gas-prices: 0.01uatom
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ibcgo
+      version: latest
       uid-gid: 1025:1025
   no-host-mount: false
 

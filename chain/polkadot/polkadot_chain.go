@@ -3,6 +3,7 @@ package polkadot
 import (
 	"context"
 	crand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,6 +31,7 @@ type PolkadotChain struct {
 	parachainConfig    []ParachainConfig
 	RelayChainNodes    RelayChainNodes
 	ParachainNodes     []ParachainNodes
+	publicKey          []byte
 }
 
 // PolkadotAuthority is used when constructing the validator authorities in the substrate chain spec.
@@ -292,18 +294,20 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("sudo", "key")...); err != nil {
 		return fmt.Errorf("error setting sudo key: %w", err)
 	}
-	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoGrandpa", "owner")...); err != nil {
-		return fmt.Errorf("error setting bridgeRococoGrandpa owner: %w", err)
-	}
-	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeWococoGrandpa", "owner")...); err != nil {
-		return fmt.Errorf("error setting bridgeWococoGrandpa owner: %w", err)
-	}
-	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoMessages", "owner")...); err != nil {
-		return fmt.Errorf("error setting bridgeRococoMessages owner: %w", err)
-	}
-	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeWococoMessages", "owner")...); err != nil {
-		return fmt.Errorf("error setting bridgeWococoMessages owner: %w", err)
-	}
+	/*
+		if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoGrandpa", "owner")...); err != nil {
+			return fmt.Errorf("error setting bridgeRococoGrandpa owner: %w", err)
+		}
+		if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeWococoGrandpa", "owner")...); err != nil {
+			return fmt.Errorf("error setting bridgeWococoGrandpa owner: %w", err)
+		}
+		if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoMessages", "owner")...); err != nil {
+			return fmt.Errorf("error setting bridgeRococoMessages owner: %w", err)
+		}
+		if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeWococoMessages", "owner")...); err != nil {
+			return fmt.Errorf("error setting bridgeWococoMessages owner: %w", err)
+		}
+	*/
 	if err := dyno.Set(chainSpec, 2, runtimeGenesisPath("configuration", "config", "validation_upgrade_delay")...); err != nil {
 		return fmt.Errorf("error setting validation upgrade delay: %w", err)
 	}
@@ -412,6 +416,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	c.logger().Info("Para nodes1: ", zap.String("nodes", fmt.Sprintf("%v", c.ParachainNodes)))
+	c.logger().Info("Para nodes2: ", zap.Int("count", len(c.ParachainNodes)))
 	for _, nodes := range c.ParachainNodes {
 		nodes := nodes
 		for _, n := range nodes {
@@ -447,10 +453,22 @@ func (c *PolkadotChain) Exec(ctx context.Context, cmd []string, env []string) ([
 // GetRPCAddress retrieves the rpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.
 func (c *PolkadotChain) GetRPCAddress() string {
+	fmt.Println("GetRPCAddress: ", rpcPort)
+	// time.Sleep(15 * time.Minute)
+	var parachainHostName string
+	port := strings.Split(rpcPort, "/")[0]
+
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
-		return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
+		parachainHostName = c.ParachainNodes[0][0].HostName()
+	} else {
+		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
-	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
+
+	relaychainHostName := c.RelayChainNodes[0].HostName()
+
+	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
+	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
+	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
@@ -502,66 +520,69 @@ func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
 // ExportState exports the chain state at specific height.
 // Implements Chain interface.
 func (c *PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
-	panic("not implemented yet")
+	panic("[ExportState] not implemented yet")
 }
 
 // HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
 // the container's filesystem (not the host).
 // Implements Chain interface.
 func (c *PolkadotChain) HomeDir() string {
-	panic("not implemented yet")
+	panic("[HomeDir] not implemented yet")
 }
 
 // CreateKey creates a test key in the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
-	panic("not implemented yet")
+	// Alice's key
+	publicKey, err := hex.DecodeString("020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1")
+	c.publicKey = publicKey
+	return err
 }
 
 // RecoverKey recovers an existing user from a given mnemonic.
 // Implements Chain interface.
 func (c *PolkadotChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	panic("not implemented yet")
+	panic("[RecoverKey] not implemented yet")
 }
 
 // GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	panic("not implemented yet")
+	return c.publicKey, nil
 }
 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	panic("not implemented yet")
+	panic("[SendFunds] not implemented yet")
 }
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
 func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
-	panic("not implemented yet")
+	panic("[SendIBCTransfer] not implemented yet")
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	panic("not implemented yet")
+	panic("[GetBalance] not implemented yet")
 }
 
 // GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
 // Implements Chain interface.
 func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
-	panic("not implemented yet")
+	panic("[GetGasFeesInNativeDenom] not implemented yet")
 }
 
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
 func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
-	panic("not implemented yet")
+	panic("[Acknowledgements] not implemented yet")
 }
 
 // Timeouts returns all timeouts in a block at height.
 // Implements Chain interface.
 func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
-	panic("not implemented yet")
+	panic("[Timeouts] not implemented yet")
 }

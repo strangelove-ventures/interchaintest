@@ -143,11 +143,45 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		switch {
 		case strings.Contains(cfg.Name, "composable"):
 			parachains := []polkadot.ParachainConfig{{
-				Bin:             "composable-node",
-				ChainID:         "dali-dev",
-				Image:           cfg.Images[1],
-				NumNodes:        nf,
-				Flags:           []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},
+				Bin:      "parachain-node",
+				ChainID:  "dev-2000",
+				Image:    cfg.Images[1],
+				NumNodes: nf,
+				/*
+					--base-path=/data
+					--chain=/app/dev-2000-2000.json
+					--ws-external
+					--rpc-external
+					--rpc-cors=all
+					--name=parachain-2000-0
+					--collator
+					--rpc-methods=unsafe
+					--wasmtime-instantiation-strategy=recreate-instance-copy-on-write
+					--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace
+					--force-authoring
+					--execution=wasm
+					--alice
+					--node-key=7c667a99279cf5a884d6bb86fac6e320ef2d413dc880f01ff0e1ad353d615045
+					--listen-addr=/ip4/0.0.0.0/tcp/30333
+					--
+					--chain=/app/rococo-local.json
+					--execution=wasm
+					--name=relaychain-alice
+					--enable-offchain-indexing=true
+				*/
+				Flags: []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},
+				/*
+					"--chain=/app/rococo-local.json",
+					"--validator",
+					"--ws-external",
+					"--rpc-external",
+					"--rpc-cors=all",
+					// "--name=alice",
+					// "--alice",
+					"--rpc-methods=unsafe",
+					"--beefy",
+					"--enable-offchain-indexing=true",
+				*/
 				RelayChainFlags: []string{"--execution=wasm"},
 			}}
 			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil

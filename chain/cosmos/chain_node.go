@@ -997,6 +997,8 @@ func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]by
 		Env:   env,
 		Binds: tn.Bind(),
 	}
+	fmt.Println("cmd", cmd)
+	fmt.Println("opts", opts)
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }

@@ -135,6 +135,7 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
 
+	fmt.Println("content: ", chainConfigFile, string(configContent))
 	tar, err := r.generateConfigTar(chainConfigFile, configContent)
 	if err != nil {
 		return fmt.Errorf("generating tar for configuration: %w", err)
@@ -148,10 +149,11 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 
 	// Adding the chain configuration simply reads from a file on disk,
 	// so this should also complete immediately.
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
 	res := r.Exec(ctx, rep, cmd, nil)
+	r.log.Info("Output:", zap.String("stdout", string(res.Stdout)), zap.String("stderr", string(res.Stderr)))
 	return res.Err
 }
 

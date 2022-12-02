@@ -217,6 +217,8 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 
 	logger.Info("About to start container")
 
+	// time.Sleep(10 * time.Minute) // Give the container a second to start.
+
 	err = StartContainer(ctx, image.client, cID)
 	if err != nil {
 		return nil, image.wrapErr(fmt.Errorf("start container %s: %w", containerName, err))

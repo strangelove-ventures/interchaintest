@@ -4,6 +4,7 @@ package rly
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -74,12 +75,17 @@ func Capabilities() map[relayer.Capability]bool {
 }
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
+	chainType := chainConfig.Type
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+		chainType = "substrate"
+	}
 	return CosmosRelayerChainConfig{
-		Type: chainConfig.Type,
+		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{
-			Key:            keyName,
-			ChainID:        chainConfig.ChainID,
-			RPCAddr:        rpcAddr,
+			Key:     keyName,
+			ChainID: chainConfig.ChainID,
+			RPCAddr: rpcAddr,
+
 			GRPCAddr:       gprcAddr,
 			AccountPrefix:  chainConfig.Bech32Prefix,
 			KeyringBackend: keyring.BackendTest,
@@ -108,6 +114,7 @@ func (commander) DockerUser() string {
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
+	fmt.Println("AddChainConfiguration1")
 	return []string{
 		"rly", "chains", "add", "-f", containerFilePath,
 		"--home", homeDir,

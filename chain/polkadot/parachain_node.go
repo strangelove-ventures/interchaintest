@@ -95,7 +95,7 @@ func (pn *ParachainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
 type GetParachainIDResponse struct {
@@ -175,8 +175,13 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		"--unsafe-rpc-external",
 		"--prometheus-external",
 		"--rpc-cors=all",
+		"--ws-external",
+		"--rpc-external",
+		"--rpc-methods=unsafe",
+		"--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace",
+		"--force-authoring",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(rpcPort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", pn.NodeHome(),
 		fmt.Sprintf("--chain=%s", pn.ChainID),

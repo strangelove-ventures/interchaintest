@@ -52,9 +52,13 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
+	/*
+		rpcPort        = "27452/tcp"
+	*/
 	wsPort         = "27451/tcp"
-	rpcPort        = "27452/tcp"
+	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"
+	nodePort       = "27452/tcp"
 )
 
 var (
@@ -67,6 +71,7 @@ var exposedPorts = map[nat.Port]struct{}{
 	nat.Port(wsPort):         {},
 	nat.Port(rpcPort):        {},
 	nat.Port(prometheusPort): {},
+	nat.Port(nodePort):       {},
 }
 
 // Name returns the name of the test node.
@@ -145,7 +150,7 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
 func (c *RelayChainNode) logger() *zap.Logger {
@@ -225,13 +230,18 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--ws-port=%s", strings.Split(wsPort, "/")[0]),
 		fmt.Sprintf("--%s", IndexedName[p.Index]),
 		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
+
+		// "--validator",
+		"--ws-external",
+		"--rpc-external",
+
 		"--beefy",
 		"--rpc-cors=all",
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(rpcPort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
@@ -298,6 +308,7 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
 	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
 
+	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -307,6 +318,7 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
+	p.logger().Info("Done", zap.String("container", p.Name()))
 	p.api = api
 
 	return nil

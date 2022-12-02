@@ -2,7 +2,9 @@ package polkadot_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
@@ -36,16 +38,24 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "composable",
-			Version: "polkadot:v0.9.19,composable:centauri",
+			Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "rococo-local",
+				ChainID:      "rococo-local",
+				Bech32Prefix: "composable",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,
 		},
 		{
-			ChainName: "gaia",
-			Version:   "v7.0.3",
+			Name:    "ibcgo",
+			Version: "latest",
+			ChainConfig: ibc.ChainConfig{
+				Bech32Prefix: "cosmos",
+			},
+			/*
+				ChainName: "gaia",
+				Version:   "v7.0.3",
+			*/
 		},
 	})
 
@@ -60,8 +70,9 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
 		// These two fields are used to pass in a custom Docker image built locally
-		//relayer.ImagePull(false),
-		relayer.CustomDockerImage("ghcr.io/composablefi/relayer", "sub-create-client", "100:1000"),
+		relayer.ImagePull(false),
+		// relayer.CustomDockerImage("ghcr.io/composablefi/relayer", "sub-create-client", "100:1000"),
+		relayer.CustomDockerImage("go-relayer", "local", "100:1000"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -86,10 +97,6 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 
 		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
 	}))
-
-	t.Cleanup(func() {
-		_ = ic.Close()
-	})
 
 	// If necessary you can wait for x number of blocks to pass before taking some action
 	//blocksToWait := 10
@@ -121,4 +128,10 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	//})
 
 	// Make assertions to determine if the token transfer was successful
+
+	t.Cleanup(func() {
+		fmt.Println("Cleaning up in 30 seconds...")
+		time.Sleep(30 * time.Second)
+		_ = ic.Close()
+	})
 }
