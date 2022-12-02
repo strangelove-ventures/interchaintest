@@ -350,6 +350,16 @@ func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress str
 	return c.getFullNode().DumpContractState(ctx, contractAddress, height)
 }
 
+// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
+func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
+       return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
+}
+	
+// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
+func (c *CosmosChain) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
+	return c.getFullNode().QueryClientContractCode(ctx, codeHash, response)
+}
+
 // ExportState exports the chain state at specific height.
 // Implements Chain interface
 func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, error) {
