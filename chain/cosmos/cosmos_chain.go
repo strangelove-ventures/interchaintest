@@ -331,13 +331,8 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContractWithResult(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return c.getFullNode().ExecuteContractWithResult(ctx, keyName, contractAddress, message)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.

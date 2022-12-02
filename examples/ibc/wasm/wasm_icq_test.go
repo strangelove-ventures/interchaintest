@@ -48,7 +48,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	contractFilePath := "sample_contracts/icq.wasm" //Contract that will be initialized on chain
 
 	wasmImage := ibc.DockerImage{
-		Repository: "ghcr.io/strangelove-ventures/heighliner/wasmd", //was: kyle/wasmd //"ghcr.io/polymerdao/wasmd",
+		Repository: "ghcr.io/strangelove-ventures/heighliner/wasmd",
 		Version:    "v0.0.1",
 		UidGid:     dockerutil.GetHeighlinerUserString(),
 	}
@@ -97,7 +97,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 				TrustingPeriod: "300h",
 				GasAdjustment:  1.1,
 				EncodingConfig: wasm.WasmEncoding(),
-				ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"), //modifyGenesisAllowICQQueries([]string{"/cosmos.bank.v1beta1.Query/AllBalances"}), //modifyGenesisAtPath(genesisAllowICQ, "app_state"),
+				ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
 			}},
 	})
 
@@ -265,7 +265,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 					Height: 0,
 					Prove:  false,
 					Path:   "/cosmos.bank.v1beta1.Query/AllBalances",
-					Data:   []byte(chain2UserAddrQueryB64), //was originally: eyJhZGRyZXNzIjoiYWRkcmVzcyJ9, //chain2UserAddrQueryB64
+					Data:   []byte(chain2UserAddrQueryB64),
 				},
 			},
 		},
@@ -276,8 +276,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	msg := string(b)
 	logger.Info("Executing msg ->", zap.String("msg", msg))
 
-	//Query the Juno contract, requesting the balance of the Gaia user's wallet via IBC.
-	hash, err := chain1CChain.ExecuteContractWithResult(ctx, chain1User.KeyName, contractAddr, msg)
+	//Query the contract on chain 1. The contract makes an interchain query to chain 2 to get the chain 2 user's balance.
+	hash, err := chain1CChain.ExecuteContract(ctx, chain1User.KeyName, contractAddr, msg)
 
 	require.NoError(t, err)
 
@@ -367,31 +367,6 @@ type statusResults struct {
 	} `json:"SyncInfo"`
 }
 
-// type icqResults struct {
-// 	Request struct {
-// 		Type       string `json:"@type"`
-// 		Address    string `json:"address"`
-// 		Pagination struct {
-// 			Key        interface{} `json:"key"`
-// 			Offset     string      `json:"offset"`
-// 			Limit      string      `json:"limit"`
-// 			CountTotal bool        `json:"count_total"`
-// 			Reverse    bool        `json:"reverse"`
-// 		} `json:"pagination"`
-// 	} `json:"request"`
-// 	Response struct {
-// 		Type     string `json:"@type"`
-// 		Balances []struct {
-// 			Amount string `json:"amount"`
-// 			Denom  string `json:"denom"`
-// 		} `json:"balances"`
-// 		Pagination struct {
-// 			NextKey interface{} `json:"next_key"`
-// 			Total   string      `json:"total"`
-// 		} `json:"pagination"`
-// 	} `json:"response"`
-// }
-
 func modifyGenesisAtPath(insertedBlock map[string]interface{}, key string) func(ibc.ChainConfig, []byte) ([]byte, error) {
 	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
@@ -428,20 +403,3 @@ func modifyGenesisAtPath(insertedBlock map[string]interface{}, key string) func(
 		return out, nil
 	}
 }
-
-// func modifyGenesisAllowICQQueries(allowQueries []string) func(ibc.ChainConfig, []byte) ([]byte, error) {
-// 	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
-// 		g := make(map[string]interface{})
-// 		if err := json.Unmarshal(genbz, &g); err != nil {
-// 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
-// 		}
-// 		if err := dyno.Set(g, allowQueries, "app_state", "interchainquery", "params", "allow_queries"); err != nil {
-// 			return nil, fmt.Errorf("failed to set allowed interchain queries in genesis json: %w", err)
-// 		}
-// 		out, err := json.Marshal(g)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
-// 		}
-// 		return out, nil
-// 	}
-// }
