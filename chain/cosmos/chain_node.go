@@ -634,7 +634,6 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-
 	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
 		return "", err
 	}
@@ -683,14 +682,13 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	_, err := tn.ExecTx(ctx, keyName,
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
+	return tn.ExecTx(ctx, keyName,
 		"wasm", "execute", contractAddress, message,
 	)
-	return err
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
 	query, err := json.Marshal(queryMsg)
 	if err != nil {
