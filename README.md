@@ -5,8 +5,6 @@
 [![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/ibctest.svg?style=flat-square)](https://github.com/strangelove-ventures/ibctest/blob/main/create-test-readme/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/strangelove-ventures/ibctest)](https://goreportcard.com/report/github.com/strangelove-ventures/ibctest)
 
-
-
 `ibctest` orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
@@ -22,22 +20,22 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 <br>
 
 ## Table Of Contents
+
 - [Building Binary](#building-binary)
 - **Usage:**
-    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
-    - [Write Custom Tests](./docs/writeCustomTests.md)
+  - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
+  - [Write Custom Tests](./docs/writeCustomTests.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
 - [Deploy as GitHub CI Tests](./docs/ciTests.md)
 
-
 <br>
-
 
 ## Building Binary
 
-While it is not necessary to build the binary, sometimes it can be more convenient, *specifically* when running conformance test with custom chain sets. 
+While it is not necessary to build the binary, sometimes it can be more convenient, *specifically* when running conformance test with custom chain sets.
 
 Building binary:
+
 ```shell
 git clone https://github.com/strangelove-ventures/ibctest.git
 cd ibctest
@@ -47,7 +45,6 @@ make ibctest
 This places the binary in `ibctest/.bin/ibctest`
 
 Note that this is not in your Go path.
-
 
 ## Contributing
 

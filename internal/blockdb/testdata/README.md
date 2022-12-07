@@ -1,4 +1,4 @@
-# How to dump JSON from sqlite3.
+# How to dump JSON from sqlite3
 
 For sample_txs.json
 
