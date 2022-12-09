@@ -182,12 +182,6 @@ func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber u
 // BroadcastTx uses the provided Broadcaster to broadcast all the provided messages which will be signed
 // by the User provided. The sdk.TxResponse and an error are returned.
 func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser User, msgs ...sdk.Msg) (sdk.TxResponse, error) {
-	for _, msg := range msgs {
-		if err := msg.ValidateBasic(); err != nil {
-			return sdk.TxResponse{}, err
-		}
-	}
-
 	f, err := broadcaster.GetFactory(ctx, broadcastingUser)
 	if err != nil {
 		return sdk.TxResponse{}, err
