@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
@@ -22,7 +23,7 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 		}
 		return *p, nil
 	}
-	bp := test.BlockPoller[ProposalResponse]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller[ProposalResponse]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
@@ -55,6 +56,27 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 		return zero, errors.New("not found")
 	}
 
-	bp := test.BlockPoller[T]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller[T]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
+}
+
+// PollForBalance polls until the balance matches
+func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64, balance ibc.WalletAmount) error {
+	h, err := chain.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height uint64) (any, error) {
+		bal, err := chain.GetBalance(ctx, balance.Address, balance.Denom)
+		if err != nil {
+			return nil, err
+		}
+		if bal != balance.Amount {
+			return nil, fmt.Errorf("balance (%d) does not match expected: (%d)", bal, balance.Amount)
+		}
+		return nil, nil
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
+	return err
 }

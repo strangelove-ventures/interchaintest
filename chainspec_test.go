@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"

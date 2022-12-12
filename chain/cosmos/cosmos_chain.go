@@ -22,9 +22,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -124,11 +123,11 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					fn.logger(),
 					fn.DockerClient,
@@ -228,8 +227,14 @@ func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 }
 
 // Implements Chain interface
-func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (tx ibc.Tx, _ error) {
-	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+func (c *CosmosChain) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (tx ibc.Tx, _ error) {
+	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, options)
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
@@ -335,7 +340,7 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
 	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
 }
@@ -575,11 +580,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					v.logger(),
 					v.DockerClient,
@@ -604,11 +609,11 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(configutil.Toml)
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
 					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
-				if err := configutil.ModifyTomlConfigFile(
+				if err := testutil.ModifyTomlConfigFile(
 					ctx,
 					n.logger(),
 					n.DockerClient,
@@ -725,7 +730,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return test.WaitForBlocks(ctx, 5, c.getFullNode())
+	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
 // Height implements ibc.Chain

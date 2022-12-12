@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -17,7 +17,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	}
 
 	t.Parallel()
-
 	client, network := ibctest.DockerSetup(t)
 
 	nv := 4
@@ -25,7 +24,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "025-helike,v0.35.9",
+			Version: "033-eirene,v0.34.21",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
@@ -45,7 +44,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start penumbra chain")
 
-	err = test.WaitForBlocks(ctx, 10, chain)
+	err = testutil.WaitForBlocks(ctx, 10, chain)
 
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 }

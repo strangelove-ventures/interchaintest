@@ -29,9 +29,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/test"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -198,12 +197,12 @@ func (tn *ChainNode) HomeDir() string {
 
 // SetTestConfig modifies the config to reasonable values for use within ibctest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
-	c := make(configutil.Toml)
+	c := make(testutil.Toml)
 
 	// Set Log Level to info
 	c["log_level"] = "info"
 
-	p2p := make(configutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Allow p2p strangeness
 	p2p["allow_duplicate_ip"] = true
@@ -211,7 +210,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["p2p"] = p2p
 
-	consensus := make(configutil.Toml)
+	consensus := make(testutil.Toml)
 
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensus["timeout_commit"] = blockT
@@ -219,14 +218,14 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["consensus"] = consensus
 
-	rpc := make(configutil.Toml)
+	rpc := make(testutil.Toml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return configutil.ModifyTomlConfigFile(
+	if err := testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -234,19 +233,33 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 		tn.VolumeName,
 		"config/config.toml",
 		c,
+	); err != nil {
+		return err
+	}
+
+	a := make(testutil.Toml)
+	a["minimum-gas-prices"] = tn.Chain.Config().GasPrices
+	return testutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/app.toml",
+		a,
 	)
 }
 
 // SetPeers modifies the config persistent_peers for a node
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
-	c := make(configutil.Toml)
-	p2p := make(configutil.Toml)
+	c := make(testutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Set peers
 	p2p["persistent_peers"] = peers
 	c["p2p"] = p2p
 
-	return configutil.ModifyTomlConfigFile(
+	return testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -394,7 +407,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := test.WaitForBlocks(ctx, 2, tn); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
 	}
 	return output.TxHash, nil
@@ -496,6 +509,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 	_, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
+		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
 	)
 	return err
@@ -506,7 +520,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.HomeDir()),
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
 	tn.lock.Lock()
@@ -570,17 +584,26 @@ type CosmosTx struct {
 	RawLog string `json:"raw_log"`
 }
 
-func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
+func (tn *ChainNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
-	if timeout != nil {
-		if timeout.NanoSeconds > 0 {
-			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(timeout.NanoSeconds))
-		} else if timeout.Height > 0 {
-			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
+		} else if options.Timeout.Height > 0 {
+			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
 		}
+	}
+	if options.Memo != "" {
+		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
 }
@@ -637,7 +660,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 		return "", err
 	}
 
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	err = testutil.WaitForBlocks(ctx, 5, tn.Chain)
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
@@ -688,7 +711,7 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return err
 }
 
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated. 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
 	query, err := json.Marshal(queryMsg)
 	if err != nil {

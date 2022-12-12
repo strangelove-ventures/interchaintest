@@ -11,12 +11,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v6/test"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -205,7 +205,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address)
 		require.NotEmpty(t, user.KeyName)
 
@@ -218,7 +218,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address)
 		require.NotEmpty(t, users[0].KeyName)
@@ -286,16 +286,24 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	t.Run("broadcast success", func(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
 		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sdk.NewInt(sendAmount)}
-		memo := ""
 
-		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0, memo)
+		msg := transfertypes.NewMsgTransfer(
+			"transfer",
+			"channel-0",
+			transferAmount,
+			testUser.Bech32Address(gaia0.Config().Bech32Prefix),
+			testUser.Bech32Address(gaia1.Config().Bech32Prefix),
+			clienttypes.NewHeight(1, 1000),
+			0,
+			"",
+		)
 		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()

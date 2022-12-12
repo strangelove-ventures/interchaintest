@@ -1,6 +1,6 @@
 # Write Custom Tests
 
-This document breaks down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
+This document breaks down code snippets from [learn_ibc_test.go](../examples/ibc/learn_ibc_test.go). This test:
 
 1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
@@ -216,13 +216,12 @@ osmosisRPC := osmosis.GetGRPCAddress()
 Here we send an IBC Transaction:
 ```go
 amountToSend := int64(1_000_000)
-tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
+transfer := ibc.WalletAmount{
     Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
     Denom:   gaia.Config().Denom,
     Amount:  amountToSend,
-},
-    nil,
-)
+}
+tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 ```
 
 The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
@@ -242,7 +241,7 @@ EXAMPLE: Sending an IBC transfer with the `Exec`:
 	_, _, err = gaia.Exec(ctx, cmd, nil)
 	require.NoError(t, err)
 
-	test.WaitForBlocks(ctx, 3, gaia)
+	testutil.WaitForBlocks(ctx, 3, gaia)
 ```
 Notice, how it waits for blocks. Sometimes this is necessary.
 
@@ -258,7 +257,7 @@ This could have also been accomplished by starting the relayer on a loop:
 
 ```go
 require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
-test.WaitForBlocks(ctx, 3, gaia)
+testutil.WaitForBlocks(ctx, 3, gaia)
 ```
 
 ## Final Notes

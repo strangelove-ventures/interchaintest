@@ -63,7 +63,7 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/root"
+	return "/home/heighliner"
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
@@ -82,7 +82,7 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 	cmd := []string{
 		"pcli",
 		"-d", p.HomeDir(),
-		"validator", "template-definition",
+		"validator", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
 	_, _, err := p.Exec(ctx, cmd, nil)
@@ -181,13 +181,20 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 		}
 	}
 	return "", errors.New("address not found")
+
 }
 
 func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+func (p *PenumbraAppNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
@@ -204,7 +211,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
+			User:     p.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -258,7 +265,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err

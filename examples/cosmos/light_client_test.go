@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
-	"github.com/strangelove-ventures/ibctest/v6"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
@@ -80,13 +80,12 @@ func TestUpdateLightClients(t *testing.T) {
 
 	amountToSend := int64(553255) // Unique amount to make log searching easier.
 	dstAddress := osmoUser.Bech32Address(osmosis.Config().Bech32Prefix)
-	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, ibc.WalletAmount{
+	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
-	},
-		nil,
-	)
+	}
+	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 

@@ -4,6 +4,7 @@ package rly
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -12,6 +13,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"go.uber.org/zap"
 )
+
+const RlyDefaultUidGid = "100:1000"
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
@@ -104,7 +107,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return "100:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return RlyDefaultUidGid // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
@@ -114,10 +117,10 @@ func (commander) AddChainConfiguration(containerFilePath, homeDir string) []stri
 	}
 }
 
-func (commander) AddKey(chainID, keyName, homeDir string) []string {
+func (commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	return []string{
 		"rly", "keys", "add", chainID, keyName,
-		"--home", homeDir,
+		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
 	}
 }
 
@@ -199,6 +202,13 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
+func (commander) GetClients(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "clients", chainID,
+		"--home", homeDir,
+	}
+}
+
 func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
@@ -212,10 +222,10 @@ func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChanne
 	}
 }
 
-func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string {
+func (commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
 	return []string{
 		"rly", "keys", "restore", chainID, keyName, mnemonic,
-		"--home", homeDir,
+		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
 	}
 }
 
@@ -302,6 +312,28 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 	}
 
 	return connections, nil
+}
+
+func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+	var clients ibc.ClientOutputs
+	for _, client := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(client) == "" {
+			continue
+		}
+
+		var clientOutput ibc.ClientOutput
+		if err := json.Unmarshal([]byte(client), &clientOutput); err != nil {
+			c.log.Error(
+				"Error parsing client json",
+				zap.Error(err),
+			)
+
+			continue
+		}
+		clients = append(clients, &clientOutput)
+	}
+
+	return clients, nil
 }
 
 func (commander) Init(homeDir string) []string {
