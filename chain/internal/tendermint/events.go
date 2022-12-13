@@ -13,8 +13,8 @@ func AttributeValue(events []abcitypes.Event, eventType, attrKey string) (string
 			continue
 		}
 		for _, attr := range event.Attributes {
-			if string(attr.Key) == attrKey {
-				return string(attr.Value), true
+			if attr.Key == attrKey {
+				return attr.Value, true
 			}
 		}
 	}
