@@ -22,8 +22,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
+
 	transfer "github.com/cosmos/ibc-go/v6/modules/apps/transfer"
 	ibccore "github.com/cosmos/ibc-go/v6/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v6/modules/light-clients/07-tendermint"
 )
 
 func DefaultEncoding() testutil.TestEncodingConfig {
@@ -48,6 +50,7 @@ func DefaultEncoding() testutil.TestEncodingConfig {
 		consensus.AppModuleBasic{},
 		transfer.AppModuleBasic{},
 		ibccore.AppModuleBasic{},
+		ibctm.AppModuleBasic{},
 	)
 }
 
