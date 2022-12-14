@@ -115,9 +115,8 @@ func (h *height) update(height uint64) {
 }
 
 // WaitForCondition periodically executes the given function fn based on the provided pollingInterval.
-// if the function returns true, this function exists. If the function never returns true within the timeoutAfter
-// period, or fn returns an error, the test will fail. Nil is returned if the condition was met, otherwise an
-// error is returned.
+// The function fn should return true of the desired condition is met. If the function never returns true within the timeoutAfter
+// period, or fn returns an error, the condition will not have been met.
 func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bool, error)) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
 	defer cancel()
