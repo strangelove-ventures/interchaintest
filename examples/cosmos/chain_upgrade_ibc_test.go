@@ -110,7 +110,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 		Height:      haltHeight,
 	}
 
-	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
+	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.GetKeyName(), proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, cosmos.ProposalVoteYes)

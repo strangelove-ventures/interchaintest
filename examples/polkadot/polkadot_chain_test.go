@@ -25,14 +25,42 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:    "composable",
-			Version: "polkadot:v0.9.19,composable:centauri",
+			/*Name:    "composable",
+			//Version: "polkadot:v0.9.19,composable:centauri",
+			Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
+			//Version: "polkadot:v0.9.27,composable:centauri",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "rococo-local",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,
+		},*/
+		ChainConfig: ibc.ChainConfig{
+			Type: "polkadot",
+			Name: "composable",
+			ChainID:      "rococo-local",
+			Images: []ibc.DockerImage{
+				{
+					Repository: "seunlanlege/centauri-polkadot",
+					Version: "v0.9.27",
+					UidGid: "1025:1025",
+				},
+				{
+					Repository: "seunlanlege/centauri-parachain",
+					Version: "v0.9.27",
+					//UidGid: "1025:1025",
+				},
+			},
+			Bin: "polkadot",
+			Bech32Prefix: "composable",
+			Denom: "uDOT",
+			GasPrices: "",
+			GasAdjustment: 0,
+			TrustingPeriod: "",
 		},
+		NumValidators: &nv,
+		NumFullNodes:  &nf,
+	},
 	},
 	).Chains(t.Name())
 

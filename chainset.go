@@ -72,9 +72,9 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 //
 // The keys are created concurrently because creating keys on one chain
 // should have no effect on any other chain.
-func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bech32 map[ibc.Chain]string, err error) {
+func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (faucetAddresses map[ibc.Chain]string, err error) {
 	var mu sync.Mutex
-	bech32 = make(map[ibc.Chain]string, len(cs.chains))
+	faucetAddresses = make(map[ibc.Chain]string, len(cs.chains))
 
 	eg, egCtx := errgroup.WithContext(ctx)
 
@@ -98,7 +98,7 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (be
 			}
 
 			mu.Lock()
-			bech32[c] = b32
+			faucetAddresses[c] = b32
 			mu.Unlock()
 
 			return nil
@@ -109,7 +109,7 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (be
 		return nil, fmt.Errorf("failed to create common account with name %s: %w", keyName, err)
 	}
 
-	return bech32, nil
+	return faucetAddresses, nil
 }
 
 // Start concurrently calls Start against each chain in the set.

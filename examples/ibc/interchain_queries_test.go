@@ -153,10 +153,10 @@ func TestInterchainQueries(t *testing.T) {
 	chanID := channels[0].Counterparty.ChannelID
 	require.NotEmpty(t, chanID)
 
-	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.GetFormattedAddress(chain1.Config().Bech32Prefix)
 	require.NotEmpty(t, chain1Addr)
 
-	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.GetFormattedAddress(chain2.Config().Bech32Prefix)
 	require.NotEmpty(t, chain2Addr)
 
 	cmd := []string{"icq", "tx", "interquery", "send-query-all-balances", chanID, chain2Addr,

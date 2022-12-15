@@ -47,17 +47,17 @@ func TestPushWasmClientCode(t *testing.T) {
 	configTomlOverrides := make(testutil.Toml)
 	
 	apiOverrides := make(testutil.Toml)
-	apiOverrides["rpc-max-body-bytes"] = 6000000
+	apiOverrides["rpc-max-body-bytes"] = 1350000
 	appTomlOverrides["api"] = apiOverrides
 
 	rpcOverrides := make(testutil.Toml)
-	rpcOverrides["max_body_bytes"] = 6000000
-	rpcOverrides["max_header_bytes"] = 6100000
+	rpcOverrides["max_body_bytes"] = 1350000
+	rpcOverrides["max_header_bytes"] = 1400000
 	configTomlOverrides["rpc"] = rpcOverrides
 
-	mempoolOverrides := make(testutil.Toml)
-	mempoolOverrides["max_tx_bytes"] = 6000000
-	configTomlOverrides["mempool"] = mempoolOverrides
+	//mempoolOverrides := make(testutil.Toml)
+	//mempoolOverrides["max_tx_bytes"] = 6000000
+	//configTomlOverrides["mempool"] = mempoolOverrides
 
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 	configFileOverrides["config/config.toml"] = configTomlOverrides
@@ -126,7 +126,7 @@ func TestPushWasmClientCode(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 2, simd)
 	require.NoError(t, err)
 
-	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.Bech32Address(simd.Config().Bech32Prefix), simd.Config().Denom)
+	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.GetFormattedAddress(simd.Config().Bech32Prefix), simd.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, simd1UserBalInitial)
 
@@ -135,7 +135,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	simdChain := simd.(*cosmos.CosmosChain)
 
-	codeHash, err := simdChain.StoreClientContract(ctx, simd1User.KeyName, "ics10_grandpa_cw.wasm")
+	codeHash, err := simdChain.StoreClientContract(ctx, simd1User.GetKeyName(), "ics10_grandpa_cw.wasm")
 	t.Logf("Contract codeHash: %s", codeHash)
 	require.NoError(t, err)
 

@@ -12,6 +12,11 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -41,7 +46,7 @@ type CosmosChain struct {
 	FullNodes     ChainNodes
 
 	log *zap.Logger
-
+	keyring keyring.Keyring
 	findTxMu sync.Mutex
 }
 
@@ -77,12 +82,19 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		cfg := DefaultEncoding()
 		chainConfig.EncodingConfig = &cfg
 	}
+
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
+
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
 		log:           log,
+		keyring:       kr,
 	}
 }
 
@@ -219,6 +231,56 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	}
 
 	return types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
+}
+
+// BuildWallet will return a Cosmos wallet
+// If mnemonic != "", it will restore using that mnemonic
+// If mnemonic == "", it will create a new key
+func (c *CosmosChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
+	if mnemonic != "" {
+		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
+			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
+		}
+	} else {
+		if err := c.CreateKey(ctx, keyName); err != nil {
+			return nil, fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
+		}
+	}
+
+	addrBytes, err := c.GetAddress(ctx, keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
+	}
+
+	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+}
+
+// BuildRelayerWallet will return a Cosmos wallet populated with the mnemonic so that the wallet can
+// be restored in the relayer node using the mnemonic. After it is built, that address is included in
+// genesis with some funds.
+func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
+	coinType, err := strconv.ParseUint(c.cfg.CoinType, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid coin type: %w", err)
+	}
+
+	info, mnemonic, err := c.keyring.NewMnemonic(
+		keyName,
+		keyring.English,
+		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
+		"", // Empty passphrase.
+		hd.Secp256k1,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
+	}
+
+	addrBytes, err := info.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address: %w", err)
+	}
+
+	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
 // Implements Chain interface

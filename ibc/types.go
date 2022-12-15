@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 )
 
@@ -215,19 +214,11 @@ type ClientState struct {
 
 type ClientOutputs []*ClientOutput
 
-type Wallet struct {
-	Mnemonic string `json:"mnemonic"`
-	Address  string `json:"address"`
-	KeyName  string
-	CoinType uint32
-}
-
-func (w *Wallet) GetKeyName() string {
-	return w.KeyName
-}
-
-func (w *Wallet) Bech32Address(bech32Prefix string) string {
-	return types.MustBech32ifyAddressBytes(bech32Prefix, []byte(w.Address))
+type Wallet interface {
+	GetKeyName() string
+	GetFormattedAddress(prefix string) string
+	GetMnemonic() string
+	GetAddress() string
 }
 
 type RelayerImplementation int64
