@@ -5,7 +5,6 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
-	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"io"
 	"math/rand"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -152,9 +152,9 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 
 		v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 			Labels: map[string]string{
-				dockerutil2.CleanupLabel: testName,
+				dockerutil.CleanupLabel: testName,
 
-				dockerutil2.NodeOwnerLabel: pn.Name(),
+				dockerutil.NodeOwnerLabel: pn.Name(),
 			},
 		})
 		if err != nil {
@@ -162,7 +162,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		}
 		pn.VolumeName = v.Name
 
-		if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
+		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 			Log:        c.log,
 			Client:     cli,
 			VolumeName: v.Name,
@@ -199,9 +199,9 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			}
 			v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 				Labels: map[string]string{
-					dockerutil2.CleanupLabel: testName,
+					dockerutil.CleanupLabel: testName,
 
-					dockerutil2.NodeOwnerLabel: pn.Name(),
+					dockerutil.NodeOwnerLabel: pn.Name(),
 				},
 			})
 			if err != nil {
@@ -209,7 +209,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			}
 			pn.VolumeName = v.Name
 
-			if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
+			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 				Log:        c.log,
 				Client:     cli,
 				VolumeName: v.Name,
@@ -353,8 +353,8 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 	if err := firstNode.GenerateChainSpec(ctx); err != nil {
 		return fmt.Errorf("error generating chain spec: %w", err)
 	}
-	fr := dockerutil2.NewFileRetriever(c.logger(), firstNode.DockerClient, c.testName)
-	fw := dockerutil2.NewFileWriter(c.logger(), firstNode.DockerClient, c.testName)
+	fr := dockerutil.NewFileRetriever(c.logger(), firstNode.DockerClient, c.testName)
+	fw := dockerutil.NewFileWriter(c.logger(), firstNode.DockerClient, c.testName)
 
 	chainSpecBytes, err := fr.SingleFileContent(ctx, firstNode.VolumeName, firstNode.ChainSpecFilePathContainer())
 	if err != nil {

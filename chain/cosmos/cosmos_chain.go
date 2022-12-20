@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"io"
 	"os"
 	"strconv"
@@ -21,6 +20,7 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
@@ -65,7 +65,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 		Images: []ibc.DockerImage{
 			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-				UidGid:     dockerutil2.GetHeighlinerUserString(),
+				UidGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: binary,
@@ -456,9 +456,9 @@ func (c *CosmosChain) NewChainNode(
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 		Labels: map[string]string{
-			dockerutil2.CleanupLabel: testName,
+			dockerutil.CleanupLabel: testName,
 
-			dockerutil2.NodeOwnerLabel: tn.Name(),
+			dockerutil.NodeOwnerLabel: tn.Name(),
 		},
 	})
 	if err != nil {
@@ -466,7 +466,7 @@ func (c *CosmosChain) NewChainNode(
 	}
 	tn.VolumeName = v.Name
 
-	if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 		Log: c.log,
 
 		Client: cli,

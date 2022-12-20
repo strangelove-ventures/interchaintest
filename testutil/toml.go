@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"reflect"
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -52,7 +52,7 @@ func ModifyTomlConfigFile(
 	filePath string,
 	modifications Toml,
 ) error {
-	fr := dockerutil2.NewFileRetriever(logger, dockerClient, testName)
+	fr := dockerutil.NewFileRetriever(logger, dockerClient, testName)
 	config, err := fr.SingleFileContent(ctx, volumeName, filePath)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve %s: %w", filePath, err)
@@ -72,7 +72,7 @@ func ModifyTomlConfigFile(
 		return err
 	}
 
-	fw := dockerutil2.NewFileWriter(logger, dockerClient, testName)
+	fw := dockerutil.NewFileWriter(logger, dockerClient, testName)
 	if err := fw.WriteFile(ctx, volumeName, filePath, buf.Bytes()); err != nil {
 		return fmt.Errorf("overwriting %s: %w", filePath, err)
 	}

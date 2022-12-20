@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"go.uber.org/zap"
 )
@@ -54,7 +54,7 @@ func (p *PenumbraAppNode) Name() string {
 
 // the hostname of the test node container
 func (p *PenumbraAppNode) HostName() string {
-	return dockerutil2.CondenseHostName(p.Name())
+	return dockerutil.CondenseHostName(p.Name())
 }
 
 // Bind returns the home folder bind point for running the node
@@ -102,7 +102,7 @@ func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
 }
 
 func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil2.NewFileRetriever(p.log, p.DockerClient, p.TestName)
+	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
 	gen, err := fr.SingleFileContent(ctx, p.VolumeName, ".penumbra/testnet_data/node0/tendermint/config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("error getting genesis.json content: %w", err)
@@ -121,7 +121,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
-	fw := dockerutil2.NewFileWriter(p.log, p.DockerClient, p.TestName)
+	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
 	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
@@ -213,7 +213,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 			Hostname: p.HostName(),
 			User:     p.Image.UidGid,
 
-			Labels: map[string]string{dockerutil2.CleanupLabel: p.TestName},
+			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
 			ExposedPorts: exposedPorts,
 		},
@@ -244,7 +244,7 @@ func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil2.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
 		return err
 	}
 
@@ -253,16 +253,16 @@ func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	p.hostRPCPort = dockerutil2.GetHostPort(c, rpcPort)
-	p.hostGRPCPort = dockerutil2.GetHostPort(c, grpcPort)
+	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
 
 	return nil
 }
 
 // Exec run a container for a specific job and block until the container exits
 func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil2.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
-	opts := dockerutil2.ContainerOptions{
+	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
+	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
 		User:  p.Image.UidGid,
