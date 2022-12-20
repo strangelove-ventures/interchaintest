@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 
 	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
