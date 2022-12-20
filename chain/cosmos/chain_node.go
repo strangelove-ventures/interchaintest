@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"hash/fnv"
 	"os"
 	"path"
@@ -29,7 +30,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
@@ -126,16 +126,16 @@ func (tn *ChainNode) Name() string {
 	} else {
 		nodeType = "fn"
 	}
-	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil2.SanitizeContainerName(tn.TestName))
 }
 
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
-	return dockerutil.CondenseHostName(tn.Name())
+	return dockerutil2.CondenseHostName(tn.Name())
 }
 
 func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	fr := dockerutil2.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
@@ -145,7 +145,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 }
 
 func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	fw := dockerutil2.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
@@ -161,13 +161,13 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 
 	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
 
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	fr := dockerutil2.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gentx, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
 	if err != nil {
 		return fmt.Errorf("getting gentx content: %w", err)
 	}
 
-	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
+	fw := dockerutil2.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
 	if err := fw.WriteFile(ctx, destVal.VolumeName, relPath, gentx); err != nil {
 		return fmt.Errorf("overwriting gentx: %w", err)
 	}
@@ -651,7 +651,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	}
 
 	_, file := filepath.Split(fileName)
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	fw := dockerutil2.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
@@ -842,7 +842,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 			Hostname: tn.HostName(),
 
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
+			Labels: map[string]string{dockerutil2.CleanupLabel: tn.TestName},
 
 			ExposedPorts: sentryPorts,
 		},
@@ -868,7 +868,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	if err := dockerutil2.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
 
@@ -878,8 +878,8 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	tn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	tn.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
+	tn.hostRPCPort = dockerutil2.GetHostPort(c, rpcPort)
+	tn.hostGRPCPort = dockerutil2.GetHostPort(c, grpcPort)
 
 	tn.logger().Info("Cosmos chain node started", zap.String("container", tn.Name()), zap.String("rpc_port", tn.hostRPCPort))
 
@@ -953,7 +953,7 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
 
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	fr := dockerutil2.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
 		return "", fmt.Errorf("getting node_key.json content: %w", err)
@@ -1035,8 +1035,8 @@ func (nodes ChainNodes) logger() *zap.Logger {
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
-	opts := dockerutil.ContainerOptions{
+	job := dockerutil2.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil2.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}

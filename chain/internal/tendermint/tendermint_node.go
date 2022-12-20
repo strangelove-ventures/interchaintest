@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"path"
 	"strings"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
@@ -84,15 +84,15 @@ func (tn *TendermintNode) NewClient(addr string) error {
 
 // Name is the hostname of the test node container
 func (tn *TendermintNode) Name() string {
-	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
+	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil2.SanitizeContainerName(tn.TestName))
 }
 
 func (tn *TendermintNode) HostName() string {
-	return dockerutil.CondenseHostName(tn.Name())
+	return dockerutil2.CondenseHostName(tn.Name())
 }
 
 func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	fr := dockerutil2.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
@@ -102,7 +102,7 @@ func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error
 }
 
 func (tn *TendermintNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	fw := dockerutil2.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
@@ -230,7 +230,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 
 			Hostname: tn.HostName(),
 
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
+			Labels: map[string]string{dockerutil2.CleanupLabel: tn.TestName},
 
 			ExposedPorts: sentryPorts,
 		},
@@ -261,7 +261,7 @@ func (tn *TendermintNode) StopContainer(ctx context.Context) error {
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	if err := dockerutil2.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
 
@@ -270,7 +270,7 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	port := dockerutil.GetHostPort(c, rpcPort)
+	port := dockerutil2.GetHostPort(c, rpcPort)
 	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
 
 	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
@@ -308,7 +308,7 @@ func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	fr := dockerutil2.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
 	if err != nil {
 		return "", fmt.Errorf("getting node_key.json content: %w", err)
@@ -357,8 +357,8 @@ func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
 }
 
 func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.Log, tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
-	opts := dockerutil.ContainerOptions{
+	job := dockerutil2.NewImage(tn.Log, tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	opts := dockerutil2.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}

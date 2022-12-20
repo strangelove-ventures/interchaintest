@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,7 +18,6 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -49,12 +49,12 @@ type ParachainNodes []*ParachainNode
 
 // Name returns the name of the test node container.
 func (pn *ParachainNode) Name() string {
-	return fmt.Sprintf("%s-%d-%s-%s", pn.Bin, pn.Index, pn.ChainID, dockerutil.SanitizeContainerName(pn.TestName))
+	return fmt.Sprintf("%s-%d-%s-%s", pn.Bin, pn.Index, pn.ChainID, dockerutil2.SanitizeContainerName(pn.TestName))
 }
 
 // HostName returns the docker hostname of the test container.
 func (pn *ParachainNode) HostName() string {
-	return dockerutil.CondenseHostName(pn.Name())
+	return dockerutil2.CondenseHostName(pn.Name())
 }
 
 // Bind returns the home folder bind point for running the node.
@@ -201,7 +201,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 			Hostname: pn.HostName(),
 			User:     pn.Image.UidGid,
 
-			Labels: map[string]string{dockerutil.CleanupLabel: pn.TestName},
+			Labels: map[string]string{dockerutil2.CleanupLabel: pn.TestName},
 
 			ExposedPorts: exposedPorts,
 		},
@@ -234,7 +234,7 @@ func (pn *ParachainNode) StopContainer(ctx context.Context) error {
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (pn *ParachainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, pn.DockerClient, pn.containerID); err != nil {
+	if err := dockerutil2.StartContainer(ctx, pn.DockerClient, pn.containerID); err != nil {
 		return err
 	}
 
@@ -244,8 +244,8 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	pn.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	pn.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	pn.hostWsPort = dockerutil2.GetHostPort(c, wsPort)
+	pn.hostRpcPort = dockerutil2.GetHostPort(c, rpcPort)
 
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
@@ -261,9 +261,9 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 }
 
 // Exec run a container for a specific job and block until the container exits.
-func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil.ContainerExecResult {
-	job := dockerutil.NewImage(pn.log, pn.DockerClient, pn.NetworkID, pn.TestName, pn.Image.Repository, pn.Image.Version)
-	opts := dockerutil.ContainerOptions{
+func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil2.ContainerExecResult {
+	job := dockerutil2.NewImage(pn.log, pn.DockerClient, pn.NetworkID, pn.TestName, pn.Image.Repository, pn.Image.Version)
+	opts := dockerutil2.ContainerOptions{
 		Binds: pn.Bind(),
 		Env:   env,
 		User:  pn.Image.UidGid,

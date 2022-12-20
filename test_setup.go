@@ -3,13 +3,13 @@ package ibctest
 import (
 	"context"
 	"fmt"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/version"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
 )

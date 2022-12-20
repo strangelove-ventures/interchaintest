@@ -3,11 +3,11 @@ package dockerutil_test
 import (
 	"context"
 	"fmt"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"testing"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/errdefs"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )

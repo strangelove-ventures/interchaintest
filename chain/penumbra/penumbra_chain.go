@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"io"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -209,16 +209,16 @@ func (c *PenumbraChain) initializeChainNodes(
 
 		tv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
+				dockerutil2.CleanupLabel: testName,
 
-				dockerutil.NodeOwnerLabel: tn.Name(),
+				dockerutil2.NodeOwnerLabel: tn.Name(),
 			},
 		})
 		if err != nil {
 			return fmt.Errorf("creating tendermint volume: %w", err)
 		}
 		tn.VolumeName = tv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
 			Log: c.log,
 
 			Client: cli,
@@ -235,16 +235,16 @@ func (c *PenumbraChain) initializeChainNodes(
 			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
 		pv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
+				dockerutil2.CleanupLabel: testName,
 
-				dockerutil.NodeOwnerLabel: pn.Name(),
+				dockerutil2.NodeOwnerLabel: pn.Name(),
 			},
 		})
 		if err != nil {
 			return fmt.Errorf("creating penumbra volume: %w", err)
 		}
 		pn.VolumeName = pv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
 			Log: c.log,
 
 			Client: cli,
@@ -301,7 +301,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
 			}
-			fr := dockerutil.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
+			fr := dockerutil2.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
 			privValKeyBytes, err := fr.SingleFileContent(egCtx, v.TendermintNode.VolumeName, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
@@ -319,7 +319,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
 			// but instantiate a new FileRetriever to be defensive.
-			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
+			fr = dockerutil2.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
 			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.json")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
@@ -384,13 +384,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 		eg.Go(func() error {
 			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/tendermint/config/priv_validator_key.json", i)
 
-			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
+			fr := dockerutil2.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
 			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.VolumeName, firstValPrivKeyRelPath)
 			if err != nil {
 				return fmt.Errorf("error getting validator private key content: %w", err)
 			}
 
-			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			fw := dockerutil2.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
 			if err := fw.WriteFile(egCtx, val.TendermintNode.VolumeName, "config/priv_validator_key.json", pk); err != nil {
 				return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 			}

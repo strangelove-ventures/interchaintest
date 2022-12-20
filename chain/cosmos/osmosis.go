@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"path/filepath"
 	"strings"
-
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 )
 
 // OsmosisPoolParams defines parameters for creating an osmosis gamm liquidity pool

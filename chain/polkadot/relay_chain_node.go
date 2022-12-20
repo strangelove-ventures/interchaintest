@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
@@ -71,12 +71,12 @@ var exposedPorts = map[nat.Port]struct{}{
 
 // Name returns the name of the test node.
 func (p *RelayChainNode) Name() string {
-	return fmt.Sprintf("relaychain-%d-%s-%s", p.Index, p.Chain.Config().ChainID, dockerutil.SanitizeContainerName(p.TestName))
+	return fmt.Sprintf("relaychain-%d-%s-%s", p.Index, p.Chain.Config().ChainID, dockerutil2.SanitizeContainerName(p.TestName))
 }
 
 // HostName returns the docker hostname of the test container.
 func (p *RelayChainNode) HostName() string {
-	return dockerutil.CondenseHostName(p.Name())
+	return dockerutil2.CondenseHostName(p.Name())
 }
 
 // Bind returns the home folder bind point for running the node.
@@ -186,7 +186,7 @@ func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
 	if res.Err != nil {
 		return res.Err
 	}
-	fw := dockerutil.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
+	fw := dockerutil2.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
 	return fw.WriteFile(ctx, p.VolumeName, p.ChainSpecFilePathContainer(), res.Stdout)
 }
 
@@ -204,7 +204,7 @@ func (p *RelayChainNode) GenerateChainSpecRaw(ctx context.Context) error {
 	if res.Err != nil {
 		return res.Err
 	}
-	fw := dockerutil.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
+	fw := dockerutil2.NewFileWriter(p.logger(), p.DockerClient, p.TestName)
 	return fw.WriteFile(ctx, p.VolumeName, p.RawChainSpecFilePathRelative(), res.Stdout)
 }
 
@@ -252,7 +252,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			Hostname: p.HostName(),
 			User:     p.Image.UidGid,
 
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
+			Labels: map[string]string{dockerutil2.CleanupLabel: p.TestName},
 
 			ExposedPorts: exposedPorts,
 		},
@@ -285,7 +285,7 @@ func (p *RelayChainNode) StopContainer(ctx context.Context) error {
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := dockerutil2.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
 		return err
 	}
 
@@ -295,8 +295,8 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostWsPort = dockerutil2.GetHostPort(c, wsPort)
+	p.hostRpcPort = dockerutil2.GetHostPort(c, rpcPort)
 
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
@@ -313,9 +313,9 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 }
 
 // Exec runs a container for a specific job and blocks until the container exits.
-func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil.ContainerExecResult {
-	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
-	opts := dockerutil.ContainerOptions{
+func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) dockerutil2.ContainerExecResult {
+	job := dockerutil2.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
+	opts := dockerutil2.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
 		User:  p.Image.UidGid,

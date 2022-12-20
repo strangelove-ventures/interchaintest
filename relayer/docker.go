@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	dockerutil2 "github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"io"
 	"path"
 	"strings"
@@ -16,7 +17,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -81,7 +81,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 		// Have to leave Driver unspecified for Docker Desktop compatibility.
 
-		Labels: map[string]string{dockerutil.CleanupLabel: testName},
+		Labels: map[string]string{dockerutil2.CleanupLabel: testName},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("creating volume: %w", err)
@@ -92,7 +92,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	// but we configure the relayer to run as a non-root user,
 	// so set the node home (where the volume is mounted) to be owned
 	// by the relayer user.
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+	if err := dockerutil2.SetVolumeOwner(ctx, dockerutil2.VolumeOwnerOptions{
 		Log: r.log,
 
 		Client: r.client,
@@ -134,7 +134,7 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
 
-	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	fw := dockerutil2.NewFileWriter(r.log, r.client, r.testName)
 	if err := fw.WriteFile(ctx, r.volumeName, chainConfigFile, configContent); err != nil {
 		return fmt.Errorf("failed to rly config: %w", err)
 	}
@@ -260,8 +260,8 @@ func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporte
 }
 
 func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, cmd []string, env []string) ibc.RelayerExecResult {
-	job := dockerutil.NewImage(r.log, r.client, r.networkID, r.testName, r.containerImage().Repository, r.containerImage().Version)
-	opts := dockerutil.ContainerOptions{
+	job := dockerutil2.NewImage(r.log, r.client, r.networkID, r.testName, r.containerImage().Repository, r.containerImage().Version)
+	opts := dockerutil2.ContainerOptions{
 		Env:   env,
 		Binds: r.Bind(),
 	}
@@ -431,7 +431,7 @@ func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...st
 			Hostname: r.HostName(joinedPaths),
 			User:     r.c.DockerUser(),
 
-			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
+			Labels: map[string]string{dockerutil2.CleanupLabel: r.testName},
 		},
 		&container.HostConfig{
 			Binds:      r.Bind(),
@@ -450,7 +450,7 @@ func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...st
 	}
 
 	r.containerID = cc.ID
-	return dockerutil.StartContainer(ctx, r.client, r.containerID)
+	return dockerutil2.StartContainer(ctx, r.client, r.containerID)
 }
 
 func (r *DockerRelayer) stopContainer(ctx context.Context) error {
@@ -459,7 +459,7 @@ func (r *DockerRelayer) stopContainer(ctx context.Context) error {
 }
 
 func (r *DockerRelayer) Name() string {
-	return r.c.Name() + "-" + dockerutil.SanitizeContainerName(r.testName)
+	return r.c.Name() + "-" + dockerutil2.SanitizeContainerName(r.testName)
 }
 
 // Bind returns the home folder bind point for running the node.
@@ -473,7 +473,7 @@ func (r *DockerRelayer) HomeDir() string {
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
-	return dockerutil.CondenseHostName(fmt.Sprintf("%s-%s", r.c.Name(), pathName))
+	return dockerutil2.CondenseHostName(fmt.Sprintf("%s-%s", r.c.Name(), pathName))
 }
 
 func (r *DockerRelayer) UseDockerNetwork() bool {
