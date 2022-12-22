@@ -65,6 +65,14 @@ func (f builtinRelayerFactory) Build(
 			networkID,
 			f.options...,
 		)
+	case ibc.Hyperspace:
+		return rly.NewHyperspaceRelayer(
+			f.log,
+			t.Name(),
+			cli,
+			networkID,
+			f.options...,
+		)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

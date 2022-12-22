@@ -23,9 +23,10 @@ import (
 
 // ParachainNode defines the properties required for running a polkadot parachain node.
 type ParachainNode struct {
-	log      *zap.Logger
-	TestName string
-	Index    int
+	log       *zap.Logger
+	TestName  string
+	Index     int
+	ChainName string
 
 	NetworkID    string
 	containerID  string
@@ -65,7 +66,7 @@ func (pn *ParachainNode) Bind() []string {
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
 func (pn *ParachainNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", pn.Chain.Config().Name)
+	return fmt.Sprintf("/home/.%s", pn.Chain.Config().ChainID)
 }
 
 // RawChainSpecFilePathFull returns the full path to the raw chain spec file

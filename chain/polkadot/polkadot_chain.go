@@ -56,11 +56,13 @@ type PolkadotParachainSpec struct {
 // ParachainConfig is a shared type that allows callers of this module to configure a parachain.
 type ParachainConfig struct {
 	ChainID         string
+	ChainName       string
 	Bin             string
 	Image           ibc.DockerImage
 	NumNodes        int
 	Flags           []string
 	RelayChainFlags []string
+	FinalityGadget  string
 }
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
@@ -185,6 +187,8 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			if err != nil {
 				return fmt.Errorf("error generating node key: %w", err)
 			}
+			fmt.Println("Using ParachainNode.ChainName = ", parachainConfig.ChainName)
+			fmt.Println("Using ParachainNode.ChainID = ", parachainConfig.ChainID)
 			pn := &ParachainNode{
 				log:             c.log,
 				Index:           i,
@@ -198,11 +202,11 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 				ChainID:         parachainConfig.ChainID,
 				Flags:           parachainConfig.Flags,
 				RelayChainFlags: parachainConfig.RelayChainFlags,
+				ChainName:       parachainConfig.ChainName,
 			}
 			v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 				Labels: map[string]string{
-					dockerutil.CleanupLabel: testName,
-
+					dockerutil.CleanupLabel:   testName,
 					dockerutil.NodeOwnerLabel: pn.Name(),
 				},
 			})
@@ -345,6 +349,7 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 func (c *PolkadotChain) logger() *zap.Logger {
 	return c.log.With(
 		zap.String("chain_id", c.cfg.ChainID),
+		zap.String("nane", c.cfg.Name),
 		zap.String("test", c.testName),
 	)
 }
@@ -453,7 +458,6 @@ func (c *PolkadotChain) Exec(ctx context.Context, cmd []string, env []string) ([
 // GetRPCAddress retrieves the rpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.
 func (c *PolkadotChain) GetRPCAddress() string {
-	fmt.Println("GetRPCAddress: ", rpcPort)
 	// time.Sleep(15 * time.Minute)
 	var parachainHostName string
 	port := strings.Split(rpcPort, "/")[0]
@@ -463,13 +467,22 @@ func (c *PolkadotChain) GetRPCAddress() string {
 	} else {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
+	fmt.Println("GetRPCAddress: ", parachainHostName, rpcPort)
 
 	relaychainHostName := c.RelayChainNodes[0].HostName()
 
 	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
 	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
+	//return parachainUrl
 	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
 }
+
+//func (c *PolkadotChain) GetRPCAddress() string {
+//	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
+//		return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
+//	}
+//	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
+//}
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.

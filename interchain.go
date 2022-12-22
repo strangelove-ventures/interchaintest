@@ -390,6 +390,9 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 	for r, chains := range ic.relayerChains() {
 		for _, c := range chains {
 			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
+			fmt.Println("rpcAddr1", rpcAddr)
+			fmt.Println("grpcAddr1", grpcAddr)
+
 			if !r.UseDockerNetwork() {
 				rpcAddr, grpcAddr = c.GetHostRPCAddress(), c.GetHostGRPCAddress()
 			}

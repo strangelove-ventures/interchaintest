@@ -37,9 +37,11 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:    "composable",
+			Name: "rococo-local",
+			//Name:    "composable",
 			Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
 			ChainConfig: ibc.ChainConfig{
+				Name:         "rococo-local",
 				ChainID:      "rococo-local",
 				Bech32Prefix: "composable",
 			},
@@ -73,6 +75,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		relayer.ImagePull(false),
 		// relayer.CustomDockerImage("ghcr.io/composablefi/relayer", "sub-create-client", "100:1000"),
 		relayer.CustomDockerImage("go-relayer", "local", "100:1000"),
+		//relayer.CustomDockerImage("hyperspace", "latest", "501:20"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer

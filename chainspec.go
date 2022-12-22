@@ -163,7 +163,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		}
 		cfg.Images[0].Version = relayChainVersion
 		switch {
-		case strings.Contains(s.Name, "composable"):
+		case strings.Contains(s.Name, "composable") || strings.Contains(s.Name, "rococo-local"):
 			if len(versionSplit) != 2 {
 				return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
 			}

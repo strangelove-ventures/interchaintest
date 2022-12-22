@@ -12,6 +12,8 @@ import (
 )
 
 func TestPolkadotComposableChainStart(t *testing.T) {
+	panic("implement me")
+
 	if testing.Short() {
 		t.Skip()
 	}
@@ -29,6 +31,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 			Version: "polkadot:v0.9.19,composable:centauri",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "rococo-local",
+				Name:    "rococo-local",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,

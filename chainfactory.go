@@ -141,12 +141,13 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
 	case "polkadot":
 		switch {
-		case strings.Contains(cfg.Name, "composable"):
+		case strings.Contains(cfg.Name, "composable") || strings.Contains(cfg.Name, "rococo-local"):
 			parachains := []polkadot.ParachainConfig{{
-				Bin:      "parachain-node",
-				ChainID:  "dev-2000",
-				Image:    cfg.Images[1],
-				NumNodes: nf,
+				Bin:       "parachain-node",
+				ChainID:   "dev-2000",
+				ChainName: "dev-2000",
+				Image:     cfg.Images[1],
+				NumNodes:  nf,
 				/*
 					--base-path=/data
 					--chain=/app/dev-2000-2000.json
@@ -183,6 +184,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 					"--enable-offchain-indexing=true",
 				*/
 				RelayChainFlags: []string{"--execution=wasm"},
+				FinalityGadget:  "grandpa",
 			}}
 			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
 		default:

@@ -145,7 +145,9 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 		return err // Already wrapped.
 	}
 
+	fmt.Println("here1")
 	cmd := r.c.AddChainConfiguration(chainConfigContainerFilePath, r.HomeDir())
+	fmt.Println("here2")
 
 	// Adding the chain configuration simply reads from a file on disk,
 	// so this should also complete immediately.

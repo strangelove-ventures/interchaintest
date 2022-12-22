@@ -181,6 +181,8 @@ func (p *RelayChainNode) RawChainSpecFilePathRelative() string {
 // GenerateChainSpec builds the chain spec for the configured chain ID.
 func (p *RelayChainNode) GenerateChainSpec(ctx context.Context) error {
 	chainCfg := p.Chain.Config()
+	fmt.Println("Using chainCfg.Name =", chainCfg.Name)
+	fmt.Println("chainCfg.ChainID =", chainCfg.ChainID)
 	cmd := []string{
 		chainCfg.Bin,
 		"build-spec",

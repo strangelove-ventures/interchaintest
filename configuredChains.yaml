@@ -17,7 +17,7 @@ agoric:
   no-host-mount: true
 
 composable:
-  name: composable
+  name: rococo-local # composable
   type: polkadot
   bin: polkadot
   bech32-prefix: ""
