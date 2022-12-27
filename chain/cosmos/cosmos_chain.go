@@ -40,7 +40,7 @@ type CosmosChain struct {
 	Validators    ChainNodes
 	FullNodes     ChainNodes
 
-	log *zap.Logger
+	Log *zap.Logger
 
 	findTxMu sync.Mutex
 }
@@ -82,7 +82,7 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		cfg:           chainConfig,
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
-		log:           log,
+		Log:           log,
 	}
 }
 
@@ -419,7 +419,7 @@ func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
 			dockertypes.ImagePullOptions{},
 		)
 		if err != nil {
-			c.log.Error("Failed to pull image",
+			c.Log.Error("Failed to pull image",
 				zap.Error(err),
 				zap.String("repository", image.Repository),
 				zap.String("tag", image.Version),
@@ -443,7 +443,7 @@ func (c *CosmosChain) NewChainNode(
 	// Construct the ChainNode first so we can access its name.
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := &ChainNode{
-		log: c.log,
+		log: c.Log,
 
 		Validator: validator,
 
@@ -467,7 +467,7 @@ func (c *CosmosChain) NewChainNode(
 	tn.VolumeName = v.Name
 
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
+		Log: c.Log,
 
 		Client: cli,
 
@@ -682,7 +682,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
 	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
 	if exportGenesis != "" && exportGenesisChain == c.cfg.Name {
-		c.log.Debug("Exporting genesis file",
+		c.Log.Debug("Exporting genesis file",
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
@@ -717,7 +717,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
 		n := n
-		c.log.Info("Starting container", zap.String("container", n.Name()))
+		c.Log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			if err := n.SetPeers(egCtx, peers); err != nil {
 				return err

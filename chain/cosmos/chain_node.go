@@ -629,7 +629,7 @@ type InstantiateContractLog struct {
 }
 
 type InstantiateContractResponse struct {
-	Logs []InstantiateContractLog `json:"log"`
+	Logs []InstantiateContractLog `json:"Log"`
 }
 
 type QueryContractResponse struct {
