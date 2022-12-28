@@ -27,9 +27,9 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
@@ -629,7 +629,7 @@ type InstantiateContractLog struct {
 }
 
 type InstantiateContractResponse struct {
-	Logs []InstantiateContractLog `json:"log"`
+	Logs []InstantiateContractLog `json:"Log"`
 }
 
 type QueryContractResponse struct {

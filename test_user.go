@@ -3,10 +3,10 @@ package ibctest
 import (
 	"context"
 	"fmt"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"testing"
 
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"

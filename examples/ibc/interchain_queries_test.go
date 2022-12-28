@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"strconv"
 	"testing"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/icza/dyno"
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
