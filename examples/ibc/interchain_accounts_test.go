@@ -40,13 +40,13 @@ func TestInterchainAccounts(t *testing.T) {
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "latest"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.3.5"}},
 			},
 		},
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "latest"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.3.5"}},
 			},
 		},
 	})
