@@ -41,18 +41,18 @@ func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 }
 
 type CosmosRelayerChainConfigValue struct {
-	AccountPrefix  string  `json:"account-prefix"`
-	ChainID        string  `json:"chain-id"`
-	Debug          bool    `json:"debug"`
-	GRPCAddr       string  `json:"grpc-addr"`
-	GasAdjustment  float64 `json:"gas-adjustment"`
-	GasPrices      string  `json:"gas-prices"`
-	Key            string  `json:"key"`
-	KeyringBackend string  `json:"keyring-backend"`
-	OutputFormat   string  `json:"output-format"`
-	RPCAddr        string  `json:"rpc-addr"`
-	SignMode       string  `json:"sign-mode"`
-	Timeout        string  `json:"timeout"`
+	AccountPrefix  string  `json:"account-prefix" toml:"account_prefix"`
+	ChainID        string  `json:"chain-id" toml:"chain_id"`
+	Debug          bool    `json:"debug" toml:"debug"`
+	GRPCAddr       string  `json:"grpc-addr" toml:"grpc_addr"`
+	GasAdjustment  float64 `json:"gas-adjustment" toml:"gas_adjustment"`
+	GasPrices      string  `json:"gas-prices" toml:"gas_prices"`
+	Key            string  `json:"key" toml:"key"`
+	KeyringBackend string  `json:"keyring-backend" toml:"keyring_backend"`
+	OutputFormat   string  `json:"output-format" toml:"output_format"`
+	RPCAddr        string  `json:"rpc-addr" toml:"rpc_addr"`
+	SignMode       string  `json:"sign-mode" toml:"sign_mode"`
+	Timeout        string  `json:"timeout" toml:"timeout"`
 }
 
 type SubstrateRelayerChainConfigValue struct {
@@ -69,18 +69,17 @@ type SubstrateRelayerChainConfigValue struct {
 	Debug                bool    `json:"debug" yaml:"debug"`
 	Timeout              string  `json:"timeout" yaml:"timeout"`
 	OutputFormat         string  `json:"output-format" yaml:"output-format"`
-	SignModeStr          string  `json:"sign-mode" yaml:"sign-mode"`
 	Network              uint16  `json:"network" yaml:"network"`
 	ParaID               uint32  `json:"para-id" yaml:"para-id"`
 	BeefyActivationBlock uint32  `json:"beefy-activation-block" yaml:"beefy-activation-block"`
 	RelayChain           int32   `json:"relay-chain" yaml:"relay-chain"`
 	FinalityProtocol     string  `json:"finality-protocol" yaml:"finality-protocol"`
-	SignMode             string  `json:"sign-mode"`
-	GRPCAddr             string  `json:"grpc-addr"`
+	SignMode             string  `json:"sign-mode" toml:"sign_mode"`
+	GRPCAddr             string  `json:"grpc-addr" toml:"grpc_addr"`
 }
 
 type CosmosRelayerChainConfig struct {
-	Type  string      `json:"type"`
+	Type  string      `json:"type" toml:"type"`
 	Value interface{} `json:"value"`
 }
 

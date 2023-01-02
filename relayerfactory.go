@@ -56,6 +56,7 @@ func (f builtinRelayerFactory) Build(
 	cli *client.Client,
 	networkID string,
 ) ibc.Relayer {
+	println(f.impl)
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.NewCosmosRelayer(

@@ -154,7 +154,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		relayChainImageSplit := strings.Split(versionSplit[0], ":")
 		var relayChainVersion string
 		if len(relayChainImageSplit) > 1 {
-			if relayChainImageSplit[0] != "seunlanlege/centauri-polkadot" {
+			if relayChainImageSplit[0] != "polkadot-node" {
 				return nil, fmt.Errorf("only polkadot is supported as the relay chain node. got: %s", relayChainImageSplit[0])
 			}
 			relayChainVersion = relayChainImageSplit[1]

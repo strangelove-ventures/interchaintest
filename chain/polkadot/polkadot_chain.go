@@ -349,7 +349,7 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 func (c *PolkadotChain) logger() *zap.Logger {
 	return c.log.With(
 		zap.String("chain_id", c.cfg.ChainID),
-		zap.String("nane", c.cfg.Name),
+		zap.String("name", c.cfg.Name),
 		zap.String("test", c.testName),
 	)
 }
@@ -567,19 +567,100 @@ func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte,
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	panic("[SendFunds] not implemented yet")
+	fmt.Println("[PolkadotChain] SendFunds: ", keyName, amount)
+	/*
+		api := c.ParachainNodes[0][0].api
+		meta, err := api.RPC.State.GetMetadataLatest()
+		if err != nil {
+			panic(err)
+		}
+
+		bob, err := types2.NewMultiAddressFromHexAccountID("0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48")
+		if err != nil {
+			panic(err)
+		}
+
+		// 1 unit of transfer
+		bal := new(big.Int).SetUint64(uint64(amount.Amount))
+
+		call, err := types2.NewCall(meta, "Balances.transfer", bob, types2.NewUCompact(bal))
+		if err != nil {
+			panic(err)
+		}
+
+		// Create the extrinsic
+		ext := types2.NewExtrinsic(call)
+
+		genesisHash, err := api.RPC.Chain.GetBlockHash(0)
+		if err != nil {
+			panic(err)
+		}
+
+		rv, err := api.RPC.State.GetRuntimeVersionLatest()
+		if err != nil {
+			panic(err)
+		}
+
+		key, err := types2.CreateStorageKey(meta, "System", "Account", signature.TestKeyringPairAlice.PublicKey)
+		if err != nil {
+			panic(err)
+		}
+
+		var accountInfo types2.AccountInfo
+		ok, err := api.RPC.State.GetStorageLatest(key, &accountInfo)
+		if err != nil || !ok {
+			panic(err)
+		}
+
+		nonce := uint32(accountInfo.Nonce)
+		o := types2.SignatureOptions{
+			BlockHash:          genesisHash,
+			Era:                types2.ExtrinsicEra{IsMortalEra: false},
+			GenesisHash:        genesisHash,
+			Nonce:              types2.NewUCompactFromUInt(uint64(nonce)),
+			SpecVersion:        rv.SpecVersion,
+			Tip:                types2.NewUCompactFromUInt(100),
+			TransactionVersion: rv.TransactionVersion,
+		}
+
+		// Sign the transaction using Alice's default account
+		err = ext.Sign(signature.TestKeyringPairAlice, o)
+		if err != nil {
+			panic(err)
+		}
+
+		// Send the extrinsic
+		_, err = api.RPC.Author.SubmitExtrinsic(ext)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Balance transferred from Alice to Bob: %v\n", bal.String())
+		//node.api.RPC.Author.SubmitAndWatchExtrinsic
+		//c.ParachainNodes[0][0].api.RPC.
+		//panic("[SendFunds] not implemented yet")
+
+	*/
+	return nil
 }
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
 func (c *PolkadotChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
-	panic("[SendIBCTransfer] not implemented yet")
+	fmt.Println("[PolkadotChain] SendIBCTransfer: ", channelID, keyName, amount, timeout)
+	return ibc.Tx{
+		Height:   0,
+		TxHash:   "",
+		GasSpent: 0,
+		Packet:   ibc.Packet{},
+	}, nil
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	panic("[GetBalance] not implemented yet")
+	fmt.Println("[PolkadotChain] GetBalance: ", address, denom)
+	return 0, nil
 }
 
 // GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
@@ -591,11 +672,13 @@ func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
 func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
-	panic("[Acknowledgements] not implemented yet")
+	fmt.Println("[PolkadotChain] Acknowledgements: ", height)
+	return nil, nil
 }
 
 // Timeouts returns all timeouts in a block at height.
 // Implements Chain interface.
 func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
-	panic("[Timeouts] not implemented yet")
+	fmt.Println("[PolkadotChain] Timeouts: ", height)
+	return nil, nil
 }

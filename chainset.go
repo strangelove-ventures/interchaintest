@@ -97,6 +97,10 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (be
 				return fmt.Errorf("failed to Bech32ifyAddressBytes on chain %s: %w", config.Name, err)
 			}
 
+			//fmt.Println("privateKey", c.Key(keyName).PublicKey)
+			fmt.Println("account", b32)
+			fmt.Println("address", addrBytes)
+
 			mu.Lock()
 			bech32[c] = b32
 			mu.Unlock()

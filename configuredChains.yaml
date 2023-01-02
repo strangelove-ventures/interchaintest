@@ -16,8 +16,8 @@ agoric:
       uid-gid: 1025:1025
   no-host-mount: true
 
-composable:
-  name: rococo-local # composable
+rococo-local:
+  name: rococo-local
   type: polkadot
   bin: polkadot
   bech32-prefix: ""
@@ -26,12 +26,29 @@ composable:
   gas-adjustment: 0
   trusting-period: ""
   images:
-    - repository: seunlanlege/centauri-polkadot # ghcr.io/strangelove-ventures/heighliner/polkadot
-      version: v0.9.27
+    - repository: polkadot-node
+      version: local
       uid-gid: 1025:1025
-    - repository: seunlanlege/centauri-parachain # ghcr.io/strangelove-ventures/heighliner/composable
-      version: v0.9.27
+    - repository: parachain-node
+      version: local
       uid-gid: 1025:1025
+
+#composable:
+#  name: rococo-local # composable
+#  type: polkadot
+#  bin: polkadot
+#  bech32-prefix: ""
+#  denom: uDOT
+#  gas-prices: ""
+#  gas-adjustment: 0
+#  trusting-period: ""
+#  images:
+#    - repository: seunlanlege/centauri-polkadot # ghcr.io/strangelove-ventures/heighliner/polkadot
+#      version: v0.9.27
+#      uid-gid: 1025:1025
+#    - repository: seunlanlege/centauri-parachain # ghcr.io/strangelove-ventures/heighliner/composable
+#      version: v0.9.27
+#      uid-gid: 1025:1025
 
 gaia:
   name: gaia
