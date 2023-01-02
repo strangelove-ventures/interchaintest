@@ -33,7 +33,7 @@ type Interchain struct {
 	relayerWallets map[relayerChain]ibc.Wallet
 
 	// Map of chain to additional genesis wallets to include at chain start.
-	additionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount
+	AdditionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount
 
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
@@ -103,10 +103,10 @@ func (ic *Interchain) AddChain(chain ibc.Chain, additionalGenesisWallets ...ibc.
 		return ic
 	}
 
-	if ic.additionalGenesisWallets == nil {
-		ic.additionalGenesisWallets = make(map[ibc.Chain][]ibc.WalletAmount)
+	if ic.AdditionalGenesisWallets == nil {
+		ic.AdditionalGenesisWallets = make(map[ibc.Chain][]ibc.WalletAmount)
 	}
-	ic.additionalGenesisWallets[chain] = additionalGenesisWallets
+	ic.AdditionalGenesisWallets[chain] = additionalGenesisWallets
 
 	return ic
 }
@@ -351,8 +351,8 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			},
 		}
 
-		if ic.additionalGenesisWallets != nil {
-			walletAmounts[c] = append(walletAmounts[c], ic.additionalGenesisWallets[c]...)
+		if ic.AdditionalGenesisWallets != nil {
+			walletAmounts[c] = append(walletAmounts[c], ic.AdditionalGenesisWallets[c]...)
 		}
 	}
 
@@ -360,7 +360,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 	for rc, wallet := range ic.relayerWallets {
 		c := rc.C
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
-			Address: wallet.GetAddress(),
+			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
 			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
 		})
@@ -418,7 +418,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 				rep,
 				c.Config().ChainID, chainName,
 				c.Config().CoinType,
-				ic.relayerWallets[relayerChain{R: r, C: c}].GetMnemonic(),
+				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic(),
 			); err != nil {
 				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}

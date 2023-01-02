@@ -23,21 +23,25 @@ func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.Cha
 	}
 }
 
-func (w *PenumbraWallet) GetKeyName() string {
+func (w *PenumbraWallet) KeyName() string {
 	return w.keyName
 }
 
-// Get Address using a custom prefix
-func (w *PenumbraWallet) GetFormattedAddress(prefix string) string {
-	return types.MustBech32ifyAddressBytes(prefix, w.address)
+// Get Address formatted with chain's prefix
+func (w *PenumbraWallet) FormattedAddress() string {
+	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
 }
 
 // Get mnemonic, only used for relayer wallets
-func (w *PenumbraWallet) GetMnemonic() string {
+func (w *PenumbraWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address using chain config prefix
-func (w *PenumbraWallet) GetAddress() string {
-	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
+// Get Address
+func (w *PenumbraWallet) Address() []byte {
+	return w.address
+}
+
+func (w *PenumbraWallet) FormattedAddressWithPrefix(prefix string) string {
+	return types.MustBech32ifyAddressBytes(prefix, w.address)
 }

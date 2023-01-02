@@ -38,6 +38,7 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/label"
@@ -149,12 +150,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	// will send ibc transfers from user wallet on both chains to their own respective wallet on the other chain
 
 	testCoinSrcToDst := ibc.WalletAmount{
-		Address: srcUser.GetFormattedAddress(dstChainCfg.Bech32Prefix),
+		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
-		Address: dstUser.GetFormattedAddress(srcChainCfg.Bech32Prefix),
+		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
@@ -166,7 +167,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			srcChannelID := channel.ChannelID
-			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.GetKeyName(), testCoinSrcToDst, ibc.TransferOptions{Timeout: timeout})
+			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName(), testCoinSrcToDst, ibc.TransferOptions{Timeout: timeout})
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 			}
@@ -180,7 +181,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			dstChannelID := channel.Counterparty.ChannelID
-			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.GetKeyName(), testCoinDstToSrc, ibc.TransferOptions{Timeout: timeout})
+			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName(), testCoinDstToSrc, ibc.TransferOptions{Timeout: timeout})
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 			}
@@ -421,10 +422,10 @@ func testPacketRelaySuccess(
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.GetFormattedAddress(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.GetFormattedAddress(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -453,10 +454,10 @@ func testPacketRelaySuccess(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.GetFormattedAddress(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.GetFormattedAddress(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
@@ -506,10 +507,10 @@ func testPacketRelayFail(
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.GetFormattedAddress(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.GetFormattedAddress(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -533,10 +534,10 @@ func testPacketRelayFail(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.GetFormattedAddress(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.GetFormattedAddress(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)

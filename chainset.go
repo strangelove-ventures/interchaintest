@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
@@ -81,24 +80,13 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (fa
 	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
-			config := c.Config()
-
-			if err := c.CreateKey(egCtx, keyName); err != nil {
-				return fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			addrBytes, err := c.GetAddress(egCtx, keyName)
+			wallet, err := c.BuildWallet(egCtx, keyName, "")
 			if err != nil {
-				return fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			b32, err := types.Bech32ifyAddressBytes(config.Bech32Prefix, addrBytes)
-			if err != nil {
-				return fmt.Errorf("failed to Bech32ifyAddressBytes on chain %s: %w", config.Name, err)
+				return err
 			}
 
 			mu.Lock()
-			faucetAddresses[c] = b32
+			faucetAddresses[c] = wallet.FormattedAddress()
 			mu.Unlock()
 
 			return nil

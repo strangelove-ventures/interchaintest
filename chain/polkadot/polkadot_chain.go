@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	//"strconv"
 	"strings"
-
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	//"github.com/cosmos/cosmos-sdk/crypto/hd"
+	
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
+	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -67,6 +68,7 @@ type ParachainConfig struct {
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
 var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
+var IndexedUri = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
 
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
 func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
@@ -76,6 +78,7 @@ func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 		cfg:                chainConfig,
 		numRelayChainNodes: numRelayChainNodes,
 		parachainConfig:    parachains,
+		keyring: keyring.NewArrayKeyring(nil),
 	}
 }
 
@@ -127,14 +130,14 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		if err != nil {
 			return err
 		}
-		accountKey, err := DeriveSr25519FromName([]string{nameCased})
-		if err != nil {
-			return err
-		}
-		stashKey, err := DeriveSr25519FromName([]string{nameCased, "stash"})
-		if err != nil {
-			return err
-		}
+
+		accountKeyName := IndexedName[i]
+		accountKeyUri := IndexedUri[i]
+		stashKeyName := accountKeyName + "stash"
+		stashKeyUri := accountKeyUri + "//stash"
+		c.RecoverKey(ctx, accountKeyName, accountKeyUri)
+		c.RecoverKey(ctx, stashKeyName, stashKeyUri)
+		
 		ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
 		if err != nil {
 			return fmt.Errorf("error generating secp256k1 private key: %w", err)
@@ -149,8 +152,8 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 			Image:             chainCfg.Images[0],
 			NodeKey:           nodeKey,
 			Ed25519PrivateKey: ed25519PrivKey,
-			AccountKey:        accountKey,
-			StashKey:          stashKey,
+			AccountKeyName:    accountKeyName,
+			StashKeyName:      stashKeyName,
 			EcdsaPrivateKey:   *ecdsaPrivKey,
 		}
 
@@ -237,7 +240,7 @@ func runtimeGenesisPath(path ...interface{}) []interface{} {
 	return fullPath
 }
 
-func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}) error {
+func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec interface{}, additionalGenesisWallets []ibc.WalletAmount) error {
 	bootNodes := []string{}
 	authorities := [][]interface{}{}
 	balances := [][]interface{}{}
@@ -248,13 +251,13 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 			return err
 		}
 		bootNodes = append(bootNodes, multiAddress)
-		stashAddress, err := n.StashAddress()
+		stashAddress, err := c.GetAddress(ctx, n.StashKeyName)
 		if err != nil {
-			return fmt.Errorf("error getting stash address")
+			return fmt.Errorf("error getting stash address: %w", err)
 		}
-		accountAddress, err := n.AccountAddress()
+		accountAddress, err := c.GetAddress(ctx, n.AccountKeyName)
 		if err != nil {
-			return fmt.Errorf("error getting account address")
+			return fmt.Errorf("error getting account address: %w", err)
 		}
 		grandpaAddress, err := n.GrandpaAddress()
 		if err != nil {
@@ -265,23 +268,28 @@ func (c *PolkadotChain) modifyGenesis(ctx context.Context, chainSpec interface{}
 			return fmt.Errorf("error getting beefy address")
 		}
 		balances = append(balances,
-			[]interface{}{stashAddress, uint64(1000000000000000000)},
-			[]interface{}{accountAddress, uint64(1000000000000000000)},
+			[]interface{}{string(stashAddress), uint64(1_100_000_000_000_000_000)},
+			[]interface{}{string(accountAddress), uint64(1_100_000_000_000_000_000)},
 		)
 		if i == 0 {
-			sudoAddress = accountAddress
+			sudoAddress = string(accountAddress)
 		}
-		authority := []interface{}{stashAddress, stashAddress, PolkadotAuthority{
+		authority := []interface{}{string(stashAddress), string(stashAddress), PolkadotAuthority{
 			Grandpa:            grandpaAddress,
-			Babe:               accountAddress,
-			IMOnline:           accountAddress,
-			ParachainValidator: accountAddress,
-			AuthorityDiscovery: accountAddress,
-			ParaValidator:      accountAddress,
-			ParaAssignment:     accountAddress,
+			Babe:               string(accountAddress),
+			IMOnline:           string(accountAddress),
+			ParachainValidator: string(accountAddress),
+			AuthorityDiscovery: string(accountAddress),
+			ParaValidator:      string(accountAddress),
+			ParaAssignment:     string(accountAddress),
 			Beefy:              beefyAddress,
 		}}
 		authorities = append(authorities, authority)
+	}
+	for _, wallet := range additionalGenesisWallets {
+		balances = append(balances,
+			[]interface{}{wallet.Address, wallet.Amount},
+		)
 	}
 
 	if err := dyno.Set(chainSpec, bootNodes, "bootNodes"); err != nil {
@@ -353,6 +361,27 @@ func (c *PolkadotChain) logger() *zap.Logger {
 // Start sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis.
 // Implements Chain interface.
 func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	var eg errgroup.Group
+	// Generate genesis file for each set of parachains
+	for _, parachainNodes := range c.ParachainNodes {
+		firstParachainNode := parachainNodes[0]
+		parachainChainSpec, err := firstParachainNode.GenerateParachainGenesisFile(ctx, additionalGenesisWallets...)
+		if err != nil {
+			return fmt.Errorf("error generating parachain genesis file: %w", err)
+		}
+		for _, n := range parachainNodes {
+			n := n
+			eg.Go(func() error {
+				c.logger().Info("Copying parachain chain spec", zap.String("container", n.Name()))
+				fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
+				return fw.WriteFile(ctx, n.VolumeName, n.ParachainChainSpecFileName(), parachainChainSpec)
+			})
+		}
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	// generate chain spec
 	firstNode := c.RelayChainNodes[0]
 	if err := firstNode.GenerateChainSpec(ctx); err != nil {
@@ -371,7 +400,7 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return fmt.Errorf("error unmarshaling chain spec: %w", err)
 	}
 
-	if err := c.modifyGenesis(ctx, chainSpec); err != nil {
+	if err := c.modifyRelayChainGenesis(ctx, chainSpec, additionalGenesisWallets); err != nil {
 		return fmt.Errorf("error modifying genesis: %w", err)
 	}
 
@@ -395,7 +424,6 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return fmt.Errorf("error reading chain spec: %w", err)
 	}
 
-	var eg errgroup.Group
 	for i, n := range c.RelayChainNodes {
 		n := n
 		i := i
@@ -423,7 +451,7 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 			n := n
 			eg.Go(func() error {
 				c.logger().Info("Copying raw chain spec", zap.String("container", n.Name()))
-				if err := fw.WriteFile(ctx, n.VolumeName, n.RawChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
+				if err := fw.WriteFile(ctx, n.VolumeName, n.RawRelayChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
 					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
 				//fmt.Print(string(rawChainSpecBytes))
@@ -528,30 +556,112 @@ func (c *PolkadotChain) HomeDir() string {
 	panic("[HomeDir] not implemented yet")
 }
 
+func NewMnemonic() (string, error) {
+	// Implementation copied from substrate's go-relayer implementation
+	entropySeed, err := bip39.NewEntropy(256)
+	if err != nil {
+		return "", err
+	}
+	mnemonic, err := bip39.NewMnemonic(entropySeed)
+	if err != nil {
+		return "", err
+	}
+
+	return mnemonic, nil
+}
+
 // CreateKey creates a test key in the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
-	panic("[CreateKey] not implemented yet")
+	_, err := c.keyring.Get(keyName)
+	if err == nil {
+		return fmt.Errorf("Key already exists: %s", keyName)
+	}
+
+	mnemonic, err := NewMnemonic()
+	if err != nil {
+		return err
+	}
+
+	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	if err != nil {
+		return fmt.Errorf("failed to create keypair: %w", err)
+	}
+
+	serializedKp, err := json.Marshal(kp)
+	if err != nil {
+		return err
+	}
+	err = c.keyring.Set(keyring.Item{
+		Key: keyName,
+		Data: serializedKp,
+	})
+
+	return err
 }
 
 // RecoverKey recovers an existing user from a given mnemonic.
 // Implements Chain interface.
-func (c *PolkadotChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	panic("[RecoverKey] not implemented yet")
+func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	_, err := c.keyring.Get(keyName)
+	if err == nil {
+		return fmt.Errorf("Key already exists: %s", keyName)
+	}
+
+	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	if err != nil {
+		return fmt.Errorf("failed to create keypair: %w", err)
+	}
+
+	serializedKp, err := json.Marshal(kp)
+	if err != nil {
+		return err
+	}
+	err = c.keyring.Set(keyring.Item{
+		Key: keyName,
+		Data: serializedKp,
+	})
+
+	return err
 }
 
 // GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	panic("[GetAddress] not implemented yet")
+	krItem, err := c.keyring.Get(keyName)
+	if err != nil {
+		return nil, err
+	}
+
+	kp := signature.KeyringPair{}
+	err = json.Unmarshal(krItem.Data, &kp)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(kp.Address), nil
+}
+
+func (c *PolkadotChain) GetPublicKey(keyName string) ([]byte, error) {
+	krItem, err := c.keyring.Get(keyName)
+	if err != nil {
+		return nil, err
+	}
+
+	kp := signature.KeyringPair{}
+	err = json.Unmarshal(krItem.Data, &kp)
+	if err != nil {
+		return nil, err
+	}
+
+	return kp.PublicKey, nil
 }
 
 // BuildWallet will return a Polkadot wallet
 // If mnemonic != "", it will restore using that mnemonic
 // If mnemonic == "", it will create a new key
 func (c *PolkadotChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
-	panic("[BuildWallet] not implemented yet")
-	/*if mnemonic != "" {
+	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
 			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
 		}
@@ -566,38 +676,20 @@ func (c *PolkadotChain) BuildWallet(ctx context.Context, keyName string, mnemoni
 		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
 	}
 
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil*/
+	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
 // BuildRelayerWallet will return a Polkadot wallet populated with the mnemonic so that the wallet can
 // be restored in the relayer node using the mnemonic. After it is built, that address is included in
 // genesis with some funds.
 func (c *PolkadotChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	panic("[BuildRelayerWallet] not implemented yet")
-	/*coinType, err := strconv.ParseUint(c.cfg.CoinType, 10, 32)
+	mnemonic, err := NewMnemonic()
 	if err != nil {
-		return nil, fmt.Errorf("invalid coin type: %w", err)
+		return nil, err
 	}
 
-	info, mnemonic, err := c.keyring.NewMnemonic(
-		keyName,
-		keyring.English,
-		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
-		"", // Empty passphrase.
-		hd.Secp256k1,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
-	}
-
-	addrBytes, err := info.GetAddress()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
-	}
-
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil*/
+	return c.BuildWallet(ctx, keyName, mnemonic)
 }
-
 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
@@ -620,7 +712,43 @@ func (c *PolkadotChain) SendIBCTransfer(
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	panic("[GetBalance] not implemented yet")
+	meta, err := c.RelayChainNodes[0].api.RPC.State.GetMetadataLatest()
+	if err != nil {
+		return -1, err
+	}
+	pubKey, err := DecodeAddressSS58(address)
+	if err != nil {
+		return -2, err
+	}
+	key, err := gstypes.CreateStorageKey(meta, "System", "Account", pubKey, nil)
+	if err != nil {
+		return -3, err
+	}
+
+	var accountInfo AccountInfo
+	ok, err := c.RelayChainNodes[0].api.RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil {
+		return -4, err
+	}
+	if !ok {
+		return -5, nil
+	}
+
+	return accountInfo.Data.Free.Int64(), nil
+}
+
+// AccountInfo contains information of an account
+type AccountInfo struct {
+	Nonce     gstypes.U32
+	Consumers gstypes.U32
+	Providers gstypes.U32
+	Sufficients gstypes.U32
+	Data      struct {
+		Free       gstypes.U128
+		Reserved   gstypes.U128
+		MiscFrozen gstypes.U128
+		FreeFrozen gstypes.U128
+	}
 }
 
 // GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.

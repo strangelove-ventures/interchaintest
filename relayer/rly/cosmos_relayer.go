@@ -268,9 +268,10 @@ func (commander) DefaultContainerVersion() string {
 }
 
 func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
-	var wallet RlyWallet
+	var wallet WalletModel
 	err := json.Unmarshal([]byte(stdout), &wallet)
-	return &wallet, err
+	rlyWallet := NewWallet("", wallet.Address, wallet.Mnemonic)
+	return rlyWallet, err
 }
 
 func (commander) ParseRestoreKeyOutput(stdout, stderr string) string {

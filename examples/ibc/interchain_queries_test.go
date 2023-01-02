@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/icza/dyno"
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
@@ -153,10 +154,10 @@ func TestInterchainQueries(t *testing.T) {
 	chanID := channels[0].Counterparty.ChannelID
 	require.NotEmpty(t, chanID)
 
-	chain1Addr := chain1User.GetFormattedAddress(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
 	require.NotEmpty(t, chain1Addr)
 
-	chain2Addr := chain2User.GetFormattedAddress(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
 	require.NotEmpty(t, chain2Addr)
 
 	cmd := []string{"icq", "tx", "interquery", "send-query-all-balances", chanID, chain2Addr,

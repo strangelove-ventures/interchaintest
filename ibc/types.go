@@ -215,10 +215,10 @@ type ClientState struct {
 type ClientOutputs []*ClientOutput
 
 type Wallet interface {
-	GetKeyName() string
-	GetFormattedAddress(prefix string) string
-	GetMnemonic() string
-	GetAddress() string
+	KeyName() string
+	FormattedAddress() string
+	Mnemonic() string
+	Address() []byte
 }
 
 type RelayerImplementation int64

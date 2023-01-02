@@ -79,7 +79,7 @@ func TestLearn(t *testing.T) {
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 
-	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.GetFormattedAddress(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, gaiaUserBalInitial)
 
@@ -94,13 +94,13 @@ func TestLearn(t *testing.T) {
 
 	// Send Transaction
 	amountToSend := int64(1_000_000)
-	dstAddress := osmosisUser.GetFormattedAddress(osmosis.Config().Bech32Prefix)
+	dstAddress := osmosisUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
 		Amount:  amountToSend,
 	}
-	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.GetKeyName(), transfer, ibc.TransferOptions{})
+	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 
@@ -110,7 +110,7 @@ func TestLearn(t *testing.T) {
 
 	// test source wallet has decreased funds
 	expectedBal := gaiaUserBalInitial - amountToSend
-	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.GetFormattedAddress(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, expectedBal, gaiaUserBalNew)
 
@@ -119,7 +119,7 @@ func TestLearn(t *testing.T) {
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	// Test destination wallet has increased funds
-	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.GetFormattedAddress(osmosis.Config().Bech32Prefix), dstIbcDenom)
+	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend, osmosUserBalNew)
 }

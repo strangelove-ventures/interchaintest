@@ -129,20 +129,20 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Run("Chain one wallet is returned", func(t *testing.T) {
 		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g1Wallet.GetAddress())
-		require.NotEmpty(t, g1Wallet.GetMnemonic())
+		require.NotEmpty(t, g1Wallet.Address())
+		require.NotEmpty(t, g1Wallet.Mnemonic())
 	})
 
 	t.Run("Chain two wallet is returned", func(t *testing.T) {
 		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g2Wallet.GetAddress())
-		require.NotEmpty(t, g2Wallet.GetMnemonic())
+		require.NotEmpty(t, g2Wallet.Address())
+		require.NotEmpty(t, g2Wallet.Mnemonic())
 	})
 
 	t.Run("Different wallets are returned", func(t *testing.T) {
-		require.NotEqual(t, g1Wallet.GetAddress(), g2Wallet.GetAddress())
-		require.NotEqual(t, g1Wallet.GetMnemonic(), g2Wallet.GetMnemonic())
+		require.NotEqual(t, g1Wallet.Address(), g2Wallet.Address())
+		require.NotEqual(t, g1Wallet.Mnemonic(), g2Wallet.Mnemonic())
 	})
 
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
@@ -207,10 +207,10 @@ func TestInterchain_CreateUser(t *testing.T) {
 		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
-		require.NotEmpty(t, user.GetAddress())
-		require.NotEmpty(t, user.GetKeyName())
+		require.NotEmpty(t, user.Address())
+		require.NotEmpty(t, user.KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, user.GetFormattedAddress(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 
@@ -221,10 +221,10 @@ func TestInterchain_CreateUser(t *testing.T) {
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
-		require.NotEmpty(t, users[0].GetAddress())
-		require.NotEmpty(t, users[0].GetKeyName())
+		require.NotEmpty(t, users[0].Address())
+		require.NotEmpty(t, users[0].KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, users[0].GetFormattedAddress(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 	})
@@ -292,13 +292,13 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 			"transfer",
 			"channel-0",
 			transferAmount,
-			testUser.GetFormattedAddress(gaia0.Config().Bech32Prefix),
-			testUser.GetFormattedAddress(gaia1.Config().Bech32Prefix),
+			testUser.FormattedAddress(),
+			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
 			clienttypes.NewHeight(1, 1000),
 			0,
 			"",
 		)
-		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
+		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})
@@ -309,7 +309,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.GetFormattedAddress(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.Equal(t, sendAmount, dstFinalBalance)
 	})

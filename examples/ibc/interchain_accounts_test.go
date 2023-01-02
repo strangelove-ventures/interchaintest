@@ -10,6 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
@@ -114,7 +115,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.Equal(t, 1, len(connections))
 
 	// Register a new interchain account on chain2, on behalf of the user acc on chain1
-	chain1Addr := chain1User.GetFormattedAddress(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
 
 	registerICA := []string{
 		chain1.Config().Bin, "tx", "intertx", "register",
@@ -160,7 +161,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NotEmpty(t, icaAddr)
 
 	// Get initial account balances
-	chain2Addr := chain2User.GetFormattedAddress(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
 
 	chain2OrigBal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
@@ -175,7 +176,7 @@ func TestInterchainAccounts(t *testing.T) {
 		Denom:   chain2.Config().Denom,
 		Amount:  transferAmount,
 	}
-	err = chain2.SendFunds(ctx, chain2User.GetKeyName(), transfer)
+	err = chain2.SendFunds(ctx, chain2User.KeyName(), transfer)
 	require.NoError(t, err)
 
 	// Wait for transfer to be complete and assert balances

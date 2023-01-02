@@ -126,7 +126,7 @@ func TestPushWasmClientCode(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 2, simd)
 	require.NoError(t, err)
 
-	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.GetFormattedAddress(simd.Config().Bech32Prefix), simd.Config().Denom)
+	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.FormattedAddress(), simd.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, simd1UserBalInitial)
 
@@ -135,7 +135,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	simdChain := simd.(*cosmos.CosmosChain)
 
-	codeHash, err := simdChain.StoreClientContract(ctx, simd1User.GetKeyName(), "ics10_grandpa_cw.wasm")
+	codeHash, err := simdChain.StoreClientContract(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm")
 	t.Logf("Contract codeHash: %s", codeHash)
 	require.NoError(t, err)
 

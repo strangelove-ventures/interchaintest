@@ -29,7 +29,7 @@ func GetAndFundTestUserWithMnemonic(
 	}
 
 	err = chain.SendFunds(ctx, FaucetAccountKeyName, ibc.WalletAmount{
-		Address: user.GetFormattedAddress(chainCfg.Bech32Prefix),
+		Address: user.FormattedAddress(),
 		Amount:  amount,
 		Denom:   chainCfg.Denom,
 	})

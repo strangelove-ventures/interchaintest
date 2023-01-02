@@ -23,21 +23,25 @@ func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.Cha
 	}
 }
 
-func (w *CosmosWallet) GetKeyName() string {
+func (w *CosmosWallet) KeyName() string {
 	return w.keyName
 }
 
 // Get formatted address, passing in a prefix
-func (w *CosmosWallet) GetFormattedAddress(prefix string) string {
-	return types.MustBech32ifyAddressBytes(prefix, w.address)
+func (w *CosmosWallet) FormattedAddress() string {
+	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
 }
 
 // Get mnemonic, only used for relayer wallets
-func (w *CosmosWallet) GetMnemonic() string {
+func (w *CosmosWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
 // Get Address with chain's prefix
-func (w *CosmosWallet) GetAddress() string {
-	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
+func (w *CosmosWallet) Address() []byte {
+	return w.address
+}
+
+func (w *CosmosWallet) FormattedAddressWithPrefix(prefix string) string {
+	return types.MustBech32ifyAddressBytes(prefix, w.address)
 }

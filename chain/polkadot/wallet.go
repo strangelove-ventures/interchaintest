@@ -2,7 +2,6 @@ package polkadot
 
 import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/cosmos/cosmos-sdk/types"
 )
 
 var _ ibc.Wallet = &PolkadotWallet{}
@@ -23,22 +22,21 @@ func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.Cha
 	}
 }
 
-func (w *PolkadotWallet) GetKeyName() string {
+func (w *PolkadotWallet) KeyName() string {
 	return w.keyName
 }
 
-// TODO Change to SS58
-func (w *PolkadotWallet) GetFormattedAddress(prefix string) string {
-	return types.MustBech32ifyAddressBytes(prefix, w.address)
+func (w *PolkadotWallet) FormattedAddress() string {
+	return string(w.address)
 }
 
 // Get mnemonic, only used for relayer wallets
-func (w *PolkadotWallet) GetMnemonic() string {
+func (w *PolkadotWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
 // Get Address
 // TODO Change to SS58
-func (w *PolkadotWallet) GetAddress() string {
-	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
+func (w *PolkadotWallet) Address() []byte {
+	return w.address
 }

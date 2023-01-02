@@ -2,39 +2,43 @@ package rly
 
 import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/cosmos/cosmos-sdk/types"
 )
 
 var _ ibc.Wallet = &RlyWallet{}
 
-type RlyWallet struct {
+type WalletModel struct {
 	Mnemonic string `json:"mnemonic"`
 	Address  string `json:"address"`
+}
+
+type RlyWallet struct {
+	mnemonic string
+	address  string
 	keyName  string
 }
 
 func NewWallet(keyname string, address string, mnemonic string) *RlyWallet {
 	return &RlyWallet{
-		Mnemonic: mnemonic,
-		Address: address,
+		mnemonic: mnemonic,
+		address: address,
 		keyName: keyname,
 	}
 }
 
-func (w *RlyWallet) GetKeyName() string {
+func (w *RlyWallet) KeyName() string {
 	return w.keyName
 }
 
-func (w *RlyWallet) GetFormattedAddress(prefix string) string {
-	return types.MustBech32ifyAddressBytes(prefix, []byte(w.Address))
+func (w *RlyWallet) FormattedAddress() string {
+	return w.address
 }
 
 // Get mnemonic, only used for relayer wallets
-func (w *RlyWallet) GetMnemonic() string {
-	return w.Mnemonic
+func (w *RlyWallet) Mnemonic() string {
+	return w.mnemonic
 }
 
 // Get Address
-func (w *RlyWallet) GetAddress() string {
-	return w.Address
+func (w *RlyWallet) Address() []byte {
+	return []byte(w.address)
 }

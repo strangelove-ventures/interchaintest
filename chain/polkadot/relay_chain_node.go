@@ -15,7 +15,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
-	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/zap"
@@ -39,8 +38,8 @@ type RelayChainNode struct {
 
 	Chain             ibc.Chain
 	NodeKey           p2pCrypto.PrivKey
-	AccountKey        *schnorrkel.MiniSecretKey
-	StashKey          *schnorrkel.MiniSecretKey
+	AccountKeyName    string
+	StashKeyName      string
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
 
@@ -107,24 +106,6 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	pubKey, err := p.Ed25519PrivateKey.GetPublic().Raw()
 	if err != nil {
 		return "", fmt.Errorf("error fetching pubkey bytes: %w", err)
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// AccountAddress returns the ss58 encoded account address.
-func (p *RelayChainNode) AccountAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.AccountKey.Public().Encode() {
-		pubKey[i] = mkByte
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// StashAddress returns the ss58 encoded stash address.
-func (p *RelayChainNode) StashAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.StashKey.Public().Encode() {
-		pubKey[i] = mkByte
 	}
 	return EncodeAddressSS58(pubKey)
 }
