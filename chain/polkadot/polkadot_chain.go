@@ -135,8 +135,14 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		accountKeyUri := IndexedUri[i]
 		stashKeyName := accountKeyName + "stash"
 		stashKeyUri := accountKeyUri + "//stash"
-		c.RecoverKey(ctx, accountKeyName, accountKeyUri)
-		c.RecoverKey(ctx, stashKeyName, stashKeyUri)
+		err = c.RecoverKey(ctx, accountKeyName, accountKeyUri)
+		if err != nil {
+			return err
+		}
+		err = c.RecoverKey(ctx, stashKeyName, stashKeyUri)
+		if err != nil {
+			return err
+		}
 		
 		ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
 		if err != nil {

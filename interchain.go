@@ -231,7 +231,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 
-	ic.generateRelayerWallets(ctx) // Build the relayer wallet mapping.
+	err := ic.generateRelayerWallets(ctx) // Build the relayer wallet mapping.
+	if err != nil {
+		return err
+	}
+	
 	walletAmounts, err := ic.genesisWalletAmounts(ctx)
 	if err != nil {
 		// Error already wrapped with appropriate detail.
