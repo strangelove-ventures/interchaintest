@@ -354,6 +354,9 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	if err := dyno.Set(chainSpec, parachains, runtimeGenesisPath("paras", "paras")...); err != nil {
 		return fmt.Errorf("error setting parachains: %w", err)
 	}
+	if err := dyno.Set(chainSpec, 10, "genesis", "runtime", "session_length_in_blocks"); err != nil {
+		return fmt.Errorf("error setting session_length_in_blocks: %w", err)
+	}
 	return nil
 }
 
@@ -700,7 +703,19 @@ func (c *PolkadotChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	panic("[SendFunds] not implemented yet")
+	// If denom == polkadot denom, it is a relay chain tx, else parachain tx
+	if(amount.Denom == c.cfg.Denom) {
+		// If keyName == faucet, also fund parachain's user until relay chain and parachains are their own chains
+		if keyName == "faucet" {
+			err := c.ParachainNodes[0][0].SendFunds(ctx, keyName, amount)
+			if err != nil {
+				return err
+			}
+		}
+		return c.RelayChainNodes[0].SendFunds(ctx, keyName, amount)
+	}
+
+	return c.ParachainNodes[0][0].SendFunds(ctx, keyName, amount)
 }
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
@@ -718,29 +733,12 @@ func (c *PolkadotChain) SendIBCTransfer(
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	meta, err := c.RelayChainNodes[0].api.RPC.State.GetMetadataLatest()
-	if err != nil {
-		return -1, err
-	}
-	pubKey, err := DecodeAddressSS58(address)
-	if err != nil {
-		return -2, err
-	}
-	key, err := gstypes.CreateStorageKey(meta, "System", "Account", pubKey, nil)
-	if err != nil {
-		return -3, err
+	// If denom == polkadot denom, it is a relay chain query, else parachain query
+	if(denom == c.cfg.Denom) {
+		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
 	}
 
-	var accountInfo AccountInfo
-	ok, err := c.RelayChainNodes[0].api.RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return -4, err
-	}
-	if !ok {
-		return -5, nil
-	}
-
-	return accountInfo.Data.Free.Int64(), nil
+	return c.ParachainNodes[0][0].GetBalance(ctx, address, denom)
 }
 
 // AccountInfo contains information of an account
@@ -773,4 +771,8 @@ func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]
 // Implements Chain interface.
 func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("[Timeouts] not implemented yet")
+}
+
+func (c *PolkadotChain) Keyring() keyring.Keyring {
+	return c.keyring
 }
