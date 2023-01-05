@@ -773,6 +773,18 @@ func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Pack
 	panic("[Timeouts] not implemented yet")
 }
 
-func (c *PolkadotChain) Keyring() keyring.Keyring {
-	return c.keyring
+// GetKeyringPair returns the keyring pair from the keyring using keyName
+func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, error) {
+	kp := signature.KeyringPair{}
+	krItem, err := c.keyring.Get(keyName)
+	if err != nil {
+		return kp, err
+	}
+
+	err = json.Unmarshal(krItem.Data, &kp)
+	if err != nil {
+		return kp, err
+	}
+
+	return kp, nil
 }

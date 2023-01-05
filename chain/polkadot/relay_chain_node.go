@@ -3,7 +3,6 @@ package polkadot
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -11,8 +10,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
-	signature "github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -287,10 +284,11 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	// Set the host ports once since they will not change after the container has started.
 	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
 	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
-
+	
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
-	fmt.Printf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m    %s\n",
-		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1), p.Name())
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
+	p.log.Info(explorerUrl, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -320,117 +318,22 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	meta, err := p.api.RPC.State.GetMetadataLatest()
+	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
 	}
 
-	receiverPubKey, err := DecodeAddressSS58(amount.Address)
+	hash, err := SendFundsTx(p.api, kp, amount)
 	if err != nil {
 		return err
 	}
 
-	receiver, err := gstypes.NewMultiAddressFromHexAccountID(hex.EncodeToString(receiverPubKey))
-	if err != nil {
-		return err
-	}
-
-	call, err := gstypes.NewCall(meta, "Balances.transfer", receiver, gstypes.NewUCompactFromUInt(uint64(amount.Amount)))
-	if err != nil {
-		return err
-	}	
-
-	// Create the extrinsic
-	ext := gstypes.NewExtrinsic(call)
-	genesisHash, err := p.api.RPC.Chain.GetBlockHash(0)
-	if err != nil {
-		return err
-	}
-
-	rv, err := p.api.RPC.State.GetRuntimeVersionLatest()
-	if err != nil {
-		return err
-	}
-
-	krItem, err := p.Chain.(*PolkadotChain).Keyring().Get(keyName)
-	if err != nil {
-		return err
-	}
-
-	kp := signature.KeyringPair{}
-	err = json.Unmarshal(krItem.Data, &kp)
-	if err != nil {
-		return err
-	}
-
-	pubKey, err := DecodeAddressSS58(kp.Address)
-	if err != nil {
-		return err
-	}
-
-	key, err := gstypes.CreateStorageKey(meta, "System", "Account", pubKey)
-	if err != nil {
-		return err
-	}
-
-	var accountInfo AccountInfo
-	ok, err := p.api.RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil || !ok {
-		return err
-	}
-
-	nonce := uint32(accountInfo.Nonce)
-	o := gstypes.SignatureOptions{
-		BlockHash:   genesisHash,
-		Era:         gstypes.ExtrinsicEra{IsMortalEra: false},
-		GenesisHash: genesisHash,
-		Nonce:       gstypes.NewUCompactFromUInt(uint64(nonce)),
-		SpecVersion: rv.SpecVersion,
-		Tip:         gstypes.NewUCompactFromUInt(0),
-		TransactionVersion: rv.TransactionVersion,
-	}
-
-	// Sign the transaction using Alice's default account
-	err = ext.Sign(kp, o)
-	if err != nil {
-		return err
-	}
-
-	// Send the extrinsic
-	hash, err := p.api.RPC.Author.SubmitExtrinsic(ext)
-	if err != nil {
-		fmt.Printf("Panic after submitExtrinsic, hash: %#x\n", hash)
-		return err
-	}
-
-	fmt.Printf("Transfer sent with hash %#x\n", hash)
+	p.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", p.Name()))
 	return nil
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
 func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	meta, err := p.api.RPC.State.GetMetadataLatest()
-	if err != nil {
-		return -1, err
-	}
-	pubKey, err := DecodeAddressSS58(address)
-	if err != nil {
-		return -2, err
-	}
-	key, err := gstypes.CreateStorageKey(meta, "System", "Account", pubKey, nil)
-	if err != nil {
-		return -3, err
-	}
-
-	var accountInfo AccountInfo
-	ok, err := p.api.RPC.State.GetStorageLatest(key, &accountInfo)
-	if err != nil {
-		return -4, err
-	}
-	if !ok {
-		return -5, nil
-	}
-
-	return accountInfo.Data.Free.Int64(), nil
+	return GetBalance(p.api, address)
 }
