@@ -149,7 +149,7 @@ func (pn *ParachainNode) GenerateParachainGenesisFile(ctx context.Context, addit
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		balances = append(balances, 
+		balances = append(balances,
 			[]interface{}{wallet.Address, wallet.Amount},
 		)
 	}

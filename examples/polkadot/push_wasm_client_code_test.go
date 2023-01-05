@@ -9,8 +9,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	//simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
@@ -42,10 +42,10 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	// Override config files to support an ~2.5MB contract
 	configFileOverrides := make(map[string]any)
-	
+
 	appTomlOverrides := make(testutil.Toml)
 	configTomlOverrides := make(testutil.Toml)
-	
+
 	apiOverrides := make(testutil.Toml)
 	apiOverrides["rpc-max-body-bytes"] = 1350000
 	appTomlOverrides["api"] = apiOverrides
@@ -64,34 +64,34 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		/*{
-			Name: "ibc-go-simd", 
-			Version: "feat/wasm-client", 
+			Name: "ibc-go-simd",
+			Version: "feat/wasm-client",
 			ChainConfig: ibc.ChainConfig{
 				GasPrices:  "0.00stake",
 				EncodingConfig: WasmClientEncoding(),
 			}
 		},*/
 		{ChainConfig: ibc.ChainConfig{
-				Type: "cosmos",
-				Name: "ibc-go-simd",
-				ChainID: "simd",
-				Images: []ibc.DockerImage{
-					{
-						Repository: "ibc-go-simd",
-						Version: "feat-wasm-client",
-						UidGid: "1025:1025",
-					},
+			Type:    "cosmos",
+			Name:    "ibc-go-simd",
+			ChainID: "simd",
+			Images: []ibc.DockerImage{
+				{
+					Repository: "ibc-go-simd",
+					Version:    "feat-wasm-client",
+					UidGid:     "1025:1025",
 				},
-				Bin: "simd",
-				Bech32Prefix: "cosmos",
-				Denom: "stake",
-				GasPrices: "0.00stake",
-				GasAdjustment: 1.3,
-				TrustingPeriod: "504h",
-				//EncodingConfig: WasmClientEncoding(),
-				NoHostMount: true,
-				ConfigFileOverrides: configFileOverrides,
 			},
+			Bin:            "simd",
+			Bech32Prefix:   "cosmos",
+			Denom:          "stake",
+			GasPrices:      "0.00stake",
+			GasAdjustment:  1.3,
+			TrustingPeriod: "504h",
+			//EncodingConfig: WasmClientEncoding(),
+			NoHostMount:         true,
+			ConfigFileOverrides: configFileOverrides,
+		},
 		},
 	})
 
@@ -104,16 +104,16 @@ func TestPushWasmClientCode(t *testing.T) {
 	t.Logf("NewInterchain")
 	ic := ibctest.NewInterchain().
 		AddChain(simd)
-		
+
 	t.Logf("Interchain build options")
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
+		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
-	
+
 	t.Cleanup(func() {
 		_ = ic.Close()
 	})
@@ -153,5 +153,5 @@ func TestPushWasmClientCode(t *testing.T) {
 }
 
 type GetCodeQueryMsgResponse struct {
-	Code 		[]byte 		`json:"code"`
+	Code []byte `json:"code"`
 }

@@ -3,8 +3,8 @@ package polkadot
 import (
 	"encoding/hex"
 
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 )
@@ -30,7 +30,7 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 	call, err := gstypes.NewCall(meta, "Balances.transfer", receiver, gstypes.NewUCompactFromUInt(uint64(amount.Amount)))
 	if err != nil {
 		return hash, err
-	}	
+	}
 
 	// Create the extrinsic
 	ext := gstypes.NewExtrinsic(call)
@@ -43,7 +43,7 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 	if err != nil {
 		return hash, err
 	}
-	
+
 	pubKey, err := DecodeAddressSS58(senderKeypair.Address)
 	if err != nil {
 		return hash, err
@@ -62,12 +62,12 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 
 	nonce := uint32(accountInfo.Nonce)
 	o := gstypes.SignatureOptions{
-		BlockHash:   genesisHash,
-		Era:         gstypes.ExtrinsicEra{IsMortalEra: false},
-		GenesisHash: genesisHash,
-		Nonce:       gstypes.NewUCompactFromUInt(uint64(nonce)),
-		SpecVersion: rv.SpecVersion,
-		Tip:         gstypes.NewUCompactFromUInt(0),
+		BlockHash:          genesisHash,
+		Era:                gstypes.ExtrinsicEra{IsMortalEra: false},
+		GenesisHash:        genesisHash,
+		Nonce:              gstypes.NewUCompactFromUInt(uint64(nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                gstypes.NewUCompactFromUInt(0),
 		TransactionVersion: rv.TransactionVersion,
 	}
 
@@ -79,6 +79,6 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 
 	// Send the extrinsic
 	hash, err = api.RPC.Author.SubmitExtrinsic(ext)
-	
+
 	return hash, err
 }

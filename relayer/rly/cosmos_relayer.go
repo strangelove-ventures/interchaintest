@@ -79,7 +79,7 @@ func Capabilities() map[relayer.Capability]bool {
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	chainType := chainConfig.Type
 	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
-			chainType = "substrate"
+		chainType = "substrate"
 	}
 	return CosmosRelayerChainConfig{
 		Type: chainType,

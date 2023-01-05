@@ -1,8 +1,8 @@
 package cosmos
 
 import (
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
 )
 
 var _ ibc.Wallet = &CosmosWallet{}
@@ -17,8 +17,8 @@ type CosmosWallet struct {
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) ibc.Wallet {
 	return &CosmosWallet{
 		mnemonic: mnemonic,
-		address: address,
-		keyName: keyname,
+		address:  address,
+		keyName:  keyname,
 		chainCfg: chainCfg,
 	}
 }

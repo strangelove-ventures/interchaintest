@@ -33,33 +33,33 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-		ChainConfig: ibc.ChainConfig{
-			Type: "polkadot",
-			Name: "composable",
-			ChainID:      "rococo-local",
-			Images: []ibc.DockerImage{
-				{
-					Repository: "seunlanlege/centauri-polkadot",
-					Version: "v0.9.27",
-					UidGid: "1025:1025",
+			ChainConfig: ibc.ChainConfig{
+				Type:    "polkadot",
+				Name:    "composable",
+				ChainID: "rococo-local",
+				Images: []ibc.DockerImage{
+					{
+						Repository: "seunlanlege/centauri-polkadot",
+						Version:    "v0.9.27",
+						UidGid:     "1025:1025",
+					},
+					{
+						Repository: "seunlanlege/centauri-parachain",
+						Version:    "v0.9.27",
+						//UidGid: "1025:1025",
+					},
 				},
-				{
-					Repository: "seunlanlege/centauri-parachain",
-					Version: "v0.9.27",
-					//UidGid: "1025:1025",
-				},
+				Bin:            "polkadot",
+				Bech32Prefix:   "composable",
+				Denom:          "uDOT",
+				GasPrices:      "",
+				GasAdjustment:  0,
+				TrustingPeriod: "",
+				CoinType:       "354",
 			},
-			Bin: "polkadot",
-			Bech32Prefix: "composable",
-			Denom: "uDOT",
-			GasPrices: "",
-			GasAdjustment: 0,
-			TrustingPeriod: "",
-			CoinType: "354",
+			NumValidators: &nv,
+			NumFullNodes:  &nf,
 		},
-		NumValidators: &nv,
-		NumFullNodes:  &nf,
-	},
 	},
 	).Chains(t.Name())
 
@@ -68,7 +68,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	chain := chains[0]
 
 	ic := ibctest.NewInterchain().
-	AddChain(chain)
+		AddChain(chain)
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:  t.Name(),
@@ -76,16 +76,16 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 		NetworkID: network,
 
 		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
-	}))	
+	}))
 
 	polkadotChain := chain.(*polkadot.PolkadotChain)
 
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 
-	PARACHAIN_DEFAULT_AMOUNT :=   1_152_921_504_606_847_000
-	RELAYCHAIN_DEFAULT_AMOUNT :=  1_100_000_000_000_000_000
-	FAUCET_AMOUNT :=                    100_000_000_000_000 // set in interchain.go/global
+	PARACHAIN_DEFAULT_AMOUNT := 1_152_921_504_606_847_000
+	RELAYCHAIN_DEFAULT_AMOUNT := 1_100_000_000_000_000_000
+	FAUCET_AMOUNT := 100_000_000_000_000 // set in interchain.go/global
 	//RELAYER_AMOUNT :=                   1_000_000_000_000 // set in interchain.go/global
 
 	// Check the faucet amounts
@@ -154,7 +154,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	user1 := users1[0]
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
-	
+
 	// Fund user2 on both relay and parachain, check that user1 was funded properly
 	users2 := ibctest.GetAndFundTestUsers(t, ctx, "user2", fundAmount, polkadotChain)
 	user2 := users2[0]
@@ -183,22 +183,22 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	txAmount := int64(1_000_000_000_000)
 	polkadotTxUser1ToUser2 := ibc.WalletAmount{
 		Address: user2.FormattedAddress(),
-		Amount: txAmount,
-		Denom: polkadotChain.Config().Denom,
+		Amount:  txAmount,
+		Denom:   polkadotChain.Config().Denom,
 	}
 	parachainTxUser1ToUser2 := ibc.WalletAmount{
 		Address: user2.FormattedAddress(),
-		Amount: txAmount,
-		Denom: "", // Anything other than polkadot denom
+		Amount:  txAmount,
+		Denom:   "", // Anything other than polkadot denom
 	}
 	err = polkadotChain.SendFunds(ctx, user1.KeyName(), polkadotTxUser1ToUser2)
 	require.NoError(t, err)
 	err = polkadotChain.SendFunds(ctx, user1.KeyName(), parachainTxUser1ToUser2)
 	require.NoError(t, err)
-	
+
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
-	
+
 	// Verify user1 and user2 funds on both chains are correct
 	polkadotUser1Amount, err = polkadotChain.GetBalance(ctx, user1.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Parachain user1 amount: ", parachainUser1Amount)
 	require.LessOrEqual(t, parachainUser1Amount, fundAmount-txAmount, "Final parachain user1 amount not expected")
-	parachainUser2Amount, err= polkadotChain.GetBalance(ctx, user2.FormattedAddress(), "")
+	parachainUser2Amount, err = polkadotChain.GetBalance(ctx, user2.FormattedAddress(), "")
 	require.NoError(t, err)
 	fmt.Println("Parachain user2 amount: ", parachainUser2Amount)
 	require.Equal(t, fundAmount+txAmount, parachainUser2Amount, "Final parachain user2 amount not expected")

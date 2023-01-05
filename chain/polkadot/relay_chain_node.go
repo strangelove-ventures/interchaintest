@@ -51,7 +51,7 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
-	wsPort         = "27451/tcp"
+	wsPort = "27451/tcp"
 	//rpcPort        = "27452/tcp"
 	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
@@ -284,7 +284,7 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	// Set the host ports once since they will not change after the container has started.
 	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
 	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
-	
+
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
 	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))

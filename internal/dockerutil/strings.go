@@ -76,7 +76,8 @@ func GetRootUserString() string {
 // if it is 64 characters or longer.
 //
 // Without this helper, you may see an error like:
-//     API error (500): failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: process_linux.go:545: container init caused: sethostname: invalid argument: unknown
+//
+//	API error (500): failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: process_linux.go:545: container init caused: sethostname: invalid argument: unknown
 func CondenseHostName(name string) string {
 	if len(name) < 64 {
 		return name

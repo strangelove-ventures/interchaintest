@@ -41,26 +41,26 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 			//Name:    "composable",
 			//Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
 			ChainConfig: ibc.ChainConfig{
-				Type: "polkadot",
-				Name: "composable",
-				ChainID:      "rococo-local",
+				Type:    "polkadot",
+				Name:    "composable",
+				ChainID: "rococo-local",
 				Images: []ibc.DockerImage{
 					{
 						Repository: "seunlanlege/centauri-polkadot",
-						Version: "v0.9.27",
-						UidGid: "1025:1025",
+						Version:    "v0.9.27",
+						UidGid:     "1025:1025",
 					},
 					{
 						Repository: "seunlanlege/centauri-parachain",
-						Version: "v0.9.27",
+						Version:    "v0.9.27",
 						//UidGid: "1025:1025",
 					},
 				},
-				Bin: "polkadot",
-				Bech32Prefix: "composable",
-				Denom: "uDOT",
-				GasPrices: "",
-				GasAdjustment: 0,
+				Bin:            "polkadot",
+				Bech32Prefix:   "composable",
+				Denom:          "uDOT",
+				GasPrices:      "",
+				GasAdjustment:  0,
 				TrustingPeriod: "",
 			},
 			NumValidators: &nv,
@@ -68,21 +68,21 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		},
 		{
 			ChainConfig: ibc.ChainConfig{
-				Type: "cosmos",
-				Name: "ibc-go-simd",
+				Type:    "cosmos",
+				Name:    "ibc-go-simd",
 				ChainID: "simd",
 				Images: []ibc.DockerImage{
 					{
 						Repository: "ibc-go-simd",
-						Version: "feat-wasm-client",
-						UidGid: "1025:1025",
+						Version:    "feat-wasm-client",
+						UidGid:     "1025:1025",
 					},
 				},
-				Bin: "simd",
-				Bech32Prefix: "cosmos",
-				Denom: "stake",
-				GasPrices: "0.00stake",
-				GasAdjustment: 1.3,
+				Bin:            "simd",
+				Bech32Prefix:   "cosmos",
+				Denom:          "stake",
+				GasPrices:      "0.00stake",
+				GasAdjustment:  1.3,
 				TrustingPeriod: "504h",
 				//EncodingConfig: WasmClientEncoding(),
 				NoHostMount: true,
@@ -117,7 +117,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 
 	ic := ibctest.NewInterchain().
 		AddChain(composable).
-		AddChain(simd)//.
+		AddChain(simd) //.
 		//AddRelayer(r, relayerName).
 		/*AddLink(ibctest.InterchainLink{
 			Chain1:  composable,

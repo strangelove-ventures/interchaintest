@@ -20,8 +20,8 @@ type RlyWallet struct {
 func NewWallet(keyname string, address string, mnemonic string) *RlyWallet {
 	return &RlyWallet{
 		mnemonic: mnemonic,
-		address: address,
-		keyName: keyname,
+		address:  address,
+		keyName:  keyname,
 	}
 }
 

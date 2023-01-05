@@ -235,7 +235,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	if err != nil {
 		return err
 	}
-	
+
 	walletAmounts, err := ic.genesisWalletAmounts(ctx)
 	if err != nil {
 		// Error already wrapped with appropriate detail.

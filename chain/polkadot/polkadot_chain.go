@@ -8,11 +8,11 @@ import (
 	"io"
 	"math/rand"
 	"strings"
-	
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -78,7 +78,7 @@ func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 		cfg:                chainConfig,
 		numRelayChainNodes: numRelayChainNodes,
 		parachainConfig:    parachains,
-		keyring: keyring.NewArrayKeyring(nil),
+		keyring:            keyring.NewArrayKeyring(nil),
 	}
 }
 
@@ -143,7 +143,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		if err != nil {
 			return err
 		}
-		
+
 		ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
 		if err != nil {
 			return fmt.Errorf("error generating secp256k1 private key: %w", err)
@@ -602,7 +602,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 	err = c.keyring.Set(keyring.Item{
-		Key: keyName,
+		Key:  keyName,
 		Data: serializedKp,
 	})
 
@@ -627,7 +627,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 		return err
 	}
 	err = c.keyring.Set(keyring.Item{
-		Key: keyName,
+		Key:  keyName,
 		Data: serializedKp,
 	})
 
@@ -704,7 +704,7 @@ func (c *PolkadotChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 // Implements Chain interface.
 func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	// If denom == polkadot denom, it is a relay chain tx, else parachain tx
-	if(amount.Denom == c.cfg.Denom) {
+	if amount.Denom == c.cfg.Denom {
 		// If keyName == faucet, also fund parachain's user until relay chain and parachains are their own chains
 		if keyName == "faucet" {
 			err := c.ParachainNodes[0][0].SendFunds(ctx, keyName, amount)
@@ -734,7 +734,7 @@ func (c *PolkadotChain) SendIBCTransfer(
 // Implements Chain interface.
 func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
-	if(denom == c.cfg.Denom) {
+	if denom == c.cfg.Denom {
 		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
 	}
 
@@ -743,11 +743,11 @@ func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom st
 
 // AccountInfo contains information of an account
 type AccountInfo struct {
-	Nonce     gstypes.U32
-	Consumers gstypes.U32
-	Providers gstypes.U32
+	Nonce       gstypes.U32
+	Consumers   gstypes.U32
+	Providers   gstypes.U32
 	Sufficients gstypes.U32
-	Data      struct {
+	Data        struct {
 		Free       gstypes.U128
 		Reserved   gstypes.U128
 		MiscFrozen gstypes.U128

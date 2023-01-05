@@ -304,7 +304,7 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
 	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
-	
+
 	return nil
 }
 
