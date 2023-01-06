@@ -14,9 +14,10 @@
 //	import (
 //	  "testing"
 
-//	  "github.com/strangelove-ventures/ibctest/v6/conformance"
-//	  "github.com/strangelove-ventures/ibctest/v6/ibc"
-)
+//	"github.com/strangelove-ventures/ibctest/v6/conformance"
+//	"github.com/strangelove-ventures/ibctest/v6/ibc"
+//
+// )
 //
 //	func TestMyRelayer(t *testing.T) {
 //	  conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
@@ -37,7 +38,7 @@ import (
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
+	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v3/label"
