@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
-	"github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	"github.com/strangelove-ventures/ibctest/v3"
+	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/ibctest/v3/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
