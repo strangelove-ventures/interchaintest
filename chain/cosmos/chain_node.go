@@ -678,7 +678,6 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	return res.CodeInfos[0].CodeID, nil
 }
 
-
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
@@ -730,19 +729,18 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-			return "", err
+		return "", err
 	}
 
 	_, file := filepath.Split(fileName)
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
-			return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
-
 
 	_, err = tn.ExecTx(ctx, keyName, "ibc", "wasm-client", "push-wasm", path.Join(tn.HomeDir(), file), "--gas", "auto")
 	if err != nil {
-		  return "", err
+		return "", err
 	}
 
 	codeHashByte32 := sha256.Sum256(content)

@@ -16,8 +16,8 @@ type PolkadotWallet struct {
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *PolkadotWallet {
 	return &PolkadotWallet{
 		mnemonic: mnemonic,
-		address: address,
-		keyName: keyname,
+		address:  address,
+		keyName:  keyname,
 		chainCfg: chainCfg,
 	}
 }

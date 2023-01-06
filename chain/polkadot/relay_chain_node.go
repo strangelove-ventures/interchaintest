@@ -51,7 +51,7 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
-	wsPort         = "27451/tcp"
+	wsPort = "27451/tcp"
 	//rpcPort        = "27452/tcp"
 	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
@@ -286,6 +286,9 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
+	p.log.Info(explorerUrl, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -310,4 +313,27 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 		User:  p.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+// SendFunds sends funds to a wallet from a user account.
+// Implements Chain interface.
+func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	hash, err := SendFundsTx(p.api, kp, amount)
+	if err != nil {
+		return err
+	}
+
+	p.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", p.Name()))
+	return nil
+}
+
+// GetBalance fetches the current balance for a specific account address and denom.
+// Implements Chain interface.
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+	return GetBalance(p.api, address)
 }

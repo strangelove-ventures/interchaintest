@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
 	"github.com/stretchr/testify/require"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 )
 
 func TestNodeKeyPeerID(t *testing.T) {
@@ -51,7 +51,7 @@ func Test_DeriveSr25519FromNameAccount(t *testing.T) {
 
 	kp, err := signature.KeyringPairFromSecret("//Alice", 42)
 	require.NoError(t, err, "error signature KeyringPairFromSecret")
-	
+
 	pubKeyDecoded, err := polkadot.DecodeAddressSS58(pubKeyEncoded)
 	require.NoError(t, err, "error decoding SS58 address to pub key")
 

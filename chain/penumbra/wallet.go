@@ -1,8 +1,8 @@
 package penumbra
 
 import (
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
 )
 
 var _ ibc.Wallet = &PenumbraWallet{}
@@ -17,8 +17,8 @@ type PenumbraWallet struct {
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *PenumbraWallet {
 	return &PenumbraWallet{
 		mnemonic: mnemonic,
-		address: address,
-		keyName: keyname,
+		address:  address,
+		keyName:  keyname,
 		chainCfg: chainCfg,
 	}
 }

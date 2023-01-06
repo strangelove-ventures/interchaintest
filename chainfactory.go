@@ -147,8 +147,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		case strings.Contains(cfg.Name, "composable"):
 			parachains := []polkadot.ParachainConfig{{
 				//Bin:             "composable",
-				Bin:             "parachain-node",
-				ChainID:         "dev-2000",
+				Bin:     "parachain-node",
+				ChainID: "dev-2000",
 				//ChainID:         "dali-dev",
 				Image:           cfg.Images[1],
 				NumNodes:        nf,

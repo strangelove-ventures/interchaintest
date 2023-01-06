@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -45,8 +45,8 @@ type CosmosChain struct {
 	Validators    ChainNodes
 	FullNodes     ChainNodes
 
-	log *zap.Logger
-	keyring keyring.Keyring
+	log      *zap.Logger
+	keyring  keyring.Keyring
 	findTxMu sync.Mutex
 }
 
@@ -414,9 +414,9 @@ func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress str
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
-       return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
+	return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
 }
-	
+
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
 func (c *CosmosChain) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
 	return c.getFullNode().QueryClientContractCode(ctx, codeHash, response)

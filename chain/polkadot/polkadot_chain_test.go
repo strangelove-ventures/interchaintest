@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-
 func TestWalletMethods(t *testing.T) {
 	ctx := context.Background()
 	nv := 5
@@ -19,40 +18,40 @@ func TestWalletMethods(t *testing.T) {
 
 	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-		ChainConfig: ibc.ChainConfig{
-			Type: "polkadot",
-			Name: "composable",
-			ChainID:      "rococo-local",
-			Images: []ibc.DockerImage{
-				{
-					Repository: "seunlanlege/centauri-polkadot",
-					Version: "v0.9.27",
-					UidGid: "1025:1025",
+			ChainConfig: ibc.ChainConfig{
+				Type:    "polkadot",
+				Name:    "composable",
+				ChainID: "rococo-local",
+				Images: []ibc.DockerImage{
+					{
+						Repository: "seunlanlege/centauri-polkadot",
+						Version:    "v0.9.27",
+						UidGid:     "1025:1025",
+					},
+					{
+						Repository: "seunlanlege/centauri-parachain",
+						Version:    "v0.9.27",
+						//UidGid: "1025:1025",
+					},
 				},
-				{
-					Repository: "seunlanlege/centauri-parachain",
-					Version: "v0.9.27",
-					//UidGid: "1025:1025",
-				},
+				Bin:            "polkadot",
+				Bech32Prefix:   "composable",
+				Denom:          "uDOT",
+				GasPrices:      "",
+				GasAdjustment:  0,
+				TrustingPeriod: "",
+				CoinType:       "354",
 			},
-			Bin: "polkadot",
-			Bech32Prefix: "composable",
-			Denom: "uDOT",
-			GasPrices: "",
-			GasAdjustment: 0,
-			TrustingPeriod: "",
-			CoinType: "354",
+			NumValidators: &nv,
+			NumFullNodes:  &nf,
 		},
-		NumValidators: &nv,
-		NumFullNodes:  &nf,
-	},
 	},
 	).Chains(t.Name())
 
 	require.NoError(t, err, "failed to get polkadot chain")
 	require.Len(t, chains, 1)
 	chain := chains[0]
-	
+
 	// BuildRelayerWallet test
 	relayKeyName := "relayerWallet"
 	relayWallet, err := chain.BuildRelayerWallet(ctx, relayKeyName)
