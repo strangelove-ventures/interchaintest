@@ -3,6 +3,10 @@ package gravity
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"strconv"
+
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/ethereum/go-ethereum/common"
@@ -12,13 +16,10 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"os"
-	"path"
-	"strconv"
 )
 
 type GravityChain struct {
-	cosmosChain *cosmos.CosmosChain
+	CosmosChain *cosmos.CosmosChain
 
 	numOrchestrators int
 	Orchestrators    OrchestratorNodes
@@ -31,13 +32,13 @@ func NewGravityChain(testname string, chainConfig ibc.ChainConfig, numValidators
 	cosmosChain := cosmos.NewCosmosChain(testname, chainConfig, numValidators, numFullNodes, log)
 
 	return &GravityChain{
-		cosmosChain:      cosmosChain,
+		CosmosChain:      cosmosChain,
 		numOrchestrators: numOrchestrators,
 	}
 }
 
 func (g *GravityChain) Config() ibc.ChainConfig {
-	return g.cosmosChain.Config()
+	return g.CosmosChain.Config()
 }
 
 func (g *GravityChain) NewOrchestratorNode(
@@ -48,9 +49,9 @@ func (g *GravityChain) NewOrchestratorNode(
 	image ibc.DockerImage,
 ) (*OrchestratorNode, error) {
 	on := &OrchestratorNode{
-		log: g.cosmosChain.Log,
+		log: g.CosmosChain.Log,
 
-		Chain:        g.cosmosChain,
+		Chain:        g.CosmosChain,
 		DockerClient: cli,
 		NetworkID:    networkID,
 		TestName:     testName,
@@ -69,7 +70,7 @@ func (g *GravityChain) NewOrchestratorNode(
 
 	on.VolumeName = v.Name
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: g.cosmosChain.Log,
+		Log: g.CosmosChain.Log,
 
 		Client: cli,
 
@@ -84,7 +85,7 @@ func (g *GravityChain) NewOrchestratorNode(
 }
 
 func (g *GravityChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
-	if err := g.cosmosChain.Initialize(ctx, testName, cli, networkID); err != nil {
+	if err := g.CosmosChain.Initialize(ctx, testName, cli, networkID); err != nil {
 		return err
 	}
 
@@ -109,14 +110,14 @@ func (g *GravityChain) Initialize(ctx context.Context, testName string, cli *cli
 	}
 
 	//todo: is this lock necessary?
-	//g.cosmosChain.findTxMu.Lock()
-	//defer g.cosmosChain.findTxMu.Unlock()
+	//g.CosmosChain.findTxMu.Lock()
+	//defer g.CosmosChain.findTxMu.Unlock()
 	g.Orchestrators = newOrchs
 	return nil
 }
 
 func (g *GravityChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	if err := g.cosmosChain.Start(testName, ctx, additionalGenesisWallets...); err != nil {
+	if err := g.CosmosChain.Start(testName, ctx, additionalGenesisWallets...); err != nil {
 		return err
 	}
 
@@ -152,11 +153,11 @@ listen_addr = "127.0.0.1:300%d"
 `,
 				evmChain.ID,
 				g.evmGravityContracts[i].String(),
-				g.cosmosChain.Config().Denom,
+				g.CosmosChain.Config().Denom,
 				evmChain.Node.Name(),
-				g.cosmosChain.Validators[i].Name(),
-				g.cosmosChain.Config().GasPrices,
-				g.cosmosChain.Config().Denom,
+				g.CosmosChain.Validators[i].Name(),
+				g.CosmosChain.Config().GasPrices,
+				g.CosmosChain.Config().Denom,
 				i,
 			)
 
@@ -263,4 +264,57 @@ func (g *GravityChain) Acknowledgements(ctx context.Context, height uint64) ([]i
 func (g *GravityChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+// StopAllNodes stops and removes all long-running containers (validators and full nodes)
+func (g *GravityChain) StopAllNodes(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, n := range g.CosmosChain.Nodes() {
+		n := n
+		eg.Go(func() error {
+			if err := n.StopContainer(ctx); err != nil {
+				return err
+			}
+			return n.RemoveContainer(ctx)
+		})
+	}
+
+	for _, o := range g.Orchestrators {
+		o := o
+		eg.Go(func() error {
+			if err := o.StopContainer(ctx); err != nil {
+				return err
+			}
+			return o.RemoveContainer(ctx)
+		})
+	}
+
+	return eg.Wait()
+}
+
+// StartAllNodes creates and starts new containers for each node.
+// Should only be used if the chain has previously been started with .Start.
+func (g *GravityChain) StartAllNodes(ctx context.Context) error {
+	// prevent client calls during this time
+	var eg errgroup.Group
+	if err := g.CosmosChain.StartAllNodes(ctx); err != nil {
+
+	}
+	eg.Go(func() error {
+		return g.CosmosChain.StartAllNodes(ctx)
+	})
+	for _, o := range g.Orchestrators {
+		o := o
+		eg.Go(func() error {
+			if err := o.CreateContainer(ctx); err != nil {
+				return err
+			}
+			return o.StartContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+func (g *GravityChain) UpgradeVersion(ctx context.Context, cli *client.Client, version string) {
+	g.CosmosChain.UpgradeVersion(ctx, cli, version)
 }

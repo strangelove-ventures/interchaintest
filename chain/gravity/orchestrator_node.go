@@ -3,17 +3,23 @@ package gravity
 import (
 	"context"
 	"fmt"
+	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/docker/types"
+	"path"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/avast/retry-go/v4"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/ory/dockertest/docker"
+	"github.com/docker/docker/errdefs"
 	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	"go.uber.org/zap"
-	"path"
-	"strings"
-	"sync"
 )
 
 type OrchestratorNode struct {
@@ -110,5 +116,46 @@ func (on *OrchestratorNode) CreateContainer(ctx context.Context) error {
 }
 
 func (on *OrchestratorNode) StartContainer(ctx context.Context) error {
-	panic("unimplemented")
+	if err := dockerutil.StartContainer(ctx, on.DockerClient, on.containerID); err != nil {
+		return err
+	}
+
+	rc, err := on.DockerClient.ContainerLogs(ctx, on.containerID, dockertypes.ContainerLogsOptions(types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	}))
+	if err != nil {
+		return err
+	}
+
+	return retry.Do(func() error {
+		on.logger().Info("waiting for orchestrator to be healthy:", zap.String("container", on.Name()))
+
+		var logsBuf []byte
+		if _, err := rc.Read(logsBuf); err != nil {
+			return err
+		}
+
+		if strings.Contains(string(logsBuf), "No unsigned batches! Everything good!") {
+			return nil
+		}
+		return fmt.Errorf("container still starting, container %s", on.Name())
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+}
+
+func (on *OrchestratorNode) StopContainer(ctx context.Context) error {
+	timeout := 30 * time.Second
+	return on.DockerClient.ContainerStop(ctx, on.containerID, &timeout)
+}
+
+func (on *OrchestratorNode) RemoveContainer(ctx context.Context) error {
+	err := on.DockerClient.ContainerRemove(ctx, on.containerID, dockertypes.ContainerRemoveOptions{
+		Force:         true,
+		RemoveVolumes: true,
+	})
+	if err != nil && !errdefs.IsNotFound(err) {
+		return fmt.Errorf("remove container %s: %w", on.Name(), err)
+	}
+	return nil
 }
