@@ -15,7 +15,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v3/test"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -145,8 +145,14 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
-	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+func (c *PenumbraChain) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
+	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 }
 
 // Implements Chain interface
@@ -425,10 +431,14 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+		sep, err := n.TendermintNode.GetConfigSeparator()
+		if err != nil {
+			return err
+		}
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy-app=tcp://%s:26658", n.PenumbraAppNode.HostName()),
+				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
 		})
@@ -461,5 +471,5 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return test.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
+	return testutil.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
 }

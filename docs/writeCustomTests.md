@@ -1,18 +1,19 @@
 # Write Custom Tests
 
-This document breaks down code snippets from [learn_ibc_test.go](../examples/ibc/learn_ibc_test.go). This test:
+This document breaks down code snippets from [learn_ibc_test.go](../examples/learn_ibc_test.go). This test:
 
-1) Spins up two chains (Gaia and Osmosis)
+1) Spins up two chains (Gaia and Osmosis) 
 2) Creates an IBC Path between them (client, connection, channel)
 3) Sends an IBC transaction between them.
 
-It validates each step and confirms that the balances of each wallet are correct.
+It validates each step and confirms that the balances of each wallet are correct. 
 
-### Three basic components of `ibctest`
 
+### Three basic components of `ibctest`:
 - **Chain Factory** - Select chain binaries to include in tests
 - **Relayer Factory** - Select Relayer to use in tests
 - **Interchain** - Where the testnet is configured and spun up
+
 
 ## Chain Factory
 
@@ -25,15 +26,15 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 })
 ```
 
-The chain factory is where you configure your chain binaries.
+The chain factory is where you configure your chain binaries. 
 
-`ibctest` needs a docker image with the chain binary(s) installed to spin up the local testnet.
+`ibctest` needs a docker image with the chain binary(s) installed to spin up the local testnet. 
 
 `ibctest` has several [pre-configured chains](../configuredChains.yaml). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
 When creating your `ChainFactory`, if the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
 
-You can also pass in **remote images** and/or **local docker images**.
+You can also pass in **remote images** and/or **local docker images**. 
 
 See an examples below:
 
@@ -64,13 +65,12 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
     },
     })
 ```
-
 If you are not using a pre-configured chain, you must fill out all values of the `ibctest.ChainSpec`.
 
-By default, `ibctest` will spin up a 3 docker images for each chain:
 
+By default, `ibctest` will spin up a 3 docker images for each chain:
 - 2 validator nodes
-- 1 full node.
+- 1 full node. 
 
 These settings can all be configured inside the `ChainSpec`.
 
@@ -85,7 +85,6 @@ cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 ```
 
 Here we break out each chain in preparation to pass into `Interchain` (documented below):
-
 ```go
 chains, err := cf.Chains(t.Name())
 require.NoError(t, err)
@@ -94,12 +93,11 @@ gaia, osmosis := chains[0], chains[1]
 
 ## Relayer Factory
 
-The relayer factory is where relayer docker images are configured.
+The relayer factory is where relayer docker images are configured. 
 
-Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into `ibctest`.
+Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into `ibctest`. 
 
 Here we prep an image with the Cosmos/Relayer:
-
 ```go
 client, network := ibctest.DockerSetup(t)
 r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
@@ -108,7 +106,7 @@ r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build
 
 ## Interchain
 
-This is where we configure our test-net/interchain.
+This is where we configure our test-net/interchain. 
 
 We prep the "interchain" by adding chains, a relayer, and specifying which chains to create IBC paths for:
 
@@ -144,23 +142,26 @@ require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 Upon calling build, several things happen (specifically for cosmos based chains):
 
 - Each validator gets 2 trillion units of "stake" funded in genesis
-  - 1 trillion "stake" are staked
-  - 100 billion "stake" are self delegated
+    - 1 trillion "stake" are staked
+    - 100 billion "stake" are self delegated
 - Each chain gets a faucet address (key named "faucet") with 10 billion units of denom funded in genesis
-- The relayer wallet gets 1 billion units of each chains denom funded in genesis
+- The relayer wallet gets 1 billion units of each chains denom funded in genesis 
 - Genesis for each chain takes place
 - IBC paths are created: `client`, `connection`, `channel` for each link
 
-Note that this function takes a `testReporter`. This will instruct `ibctest` to export and reports of the test(s). The `RelayerExecReporter` satisfies the reporter requirement.
+
+Note that this function takes a `testReporter`. This will instruct `ibctest` to export and reports of the test(s). The `RelayerExecReporter` satisfies the reporter requirement. 
 
 Note: If report files are not needed, you can use `testreporter.NewNopReporter()` instead.
+    
 
 Passing in the optional `BlockDatabaseFile` will instruct `ibctest` to create a sqlite3 database with all block history. This includes raw event data.
 
-Unless specified, default options are used for `client`, `connection`, and `channel` creation.
+
+Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
+
 
 Default `createChannelOptions` are:
-
 ```yaml
     SourcePortName: "transfer",
     DestPortName:   "transfer",
@@ -169,26 +170,26 @@ Default `createChannelOptions` are:
 ```
 
 EXAMPLE: Passing in channel options to support the `ics27-1` interchain accounts standard:
-
 ```go
 require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-  TestName:  t.Name(),
-  Client:    client,
-  NetworkID: network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
 
-  CreateChannelOpts: ibc.CreateChannelOptions{
-   SourcePortName: "transfer",
-   DestPortName:   "transfer",
-   Order:          ibc.Ordered,
-   Version:        "ics27-1",
-  },
+		CreateChannelOpts: ibc.CreateChannelOptions{
+			SourcePortName: "transfer",
+			DestPortName:   "transfer",
+			Order:          ibc.Ordered,
+			Version:        "ics27-1",
+		},
 
-  SkipPathCreation: false},
- ),
- )
+		SkipPathCreation: false},
+	),
+	)
 ```
 
 Note the `SkipPathCreation` boolean. You can set this to `true` if IBC paths (`client`, `connection` and `channel`) are not necessary OR if you would like to make those calls manually.
+
 
 ## Creating Users(wallets)
 
@@ -204,50 +205,46 @@ osmosisUser := users[1]
 
 ## Interacting with the Interchain
 
-Now that the interchain is built, you can interact with each binary.
+Now that the interchain is built, you can interact with each binary. 
 
 EXAMPLE: Getting the RPC address:
-
 ```go
 gaiaRPC := gaia.GetGRPCAddress()
 osmosisRPC := osmosis.GetGRPCAddress()
 ```
 
 Here we send an IBC Transaction:
-
 ```go
 amountToSend := int64(1_000_000)
-tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, ibc.WalletAmount{
+transfer := ibc.WalletAmount{
     Address: osmosisUser.Bech32Address(osmosis.Config().Bech32Prefix),
     Denom:   gaia.Config().Denom,
     Amount:  amountToSend,
-},
-    nil,
-)
+}
+tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 ```
 
-The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary.
+The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
 
 EXAMPLE: Sending an IBC transfer with the `Exec`:
-
 ```go
- amountToSendString := strconv.Itoa(int(amountToSend)) + gaia.Config().Denom
- cmd := []string{gaia.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", gaiaChannelID, dstAddress,
-  amountToSendString,
-  "--keyring-backend", keyring.BackendTest,
-  "--node", gaia.GetRPCAddress(),
-  "--from", gaiaUser.KeyName,
-  "--gas-prices", gaia.Config().GasPrices,
-  "--home", gaia.HomeDir(),
-  "--chain-id", gaia.Config().ChainID,
- }
- _, _, err = gaia.Exec(ctx, cmd, nil)
- require.NoError(t, err)
+	amountToSendString := strconv.Itoa(int(amountToSend)) + gaia.Config().Denom
+	cmd := []string{gaia.Config().Bin, "tx", "ibc-transfer", "transfer", "transfer", gaiaChannelID, dstAddress,
+		amountToSendString,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", gaia.GetRPCAddress(),
+		"--from", gaiaUser.KeyName,
+		"--gas-prices", gaia.Config().GasPrices,
+		"--home", gaia.HomeDir(),
+		"--chain-id", gaia.Config().ChainID,
+	}
+	_, _, err = gaia.Exec(ctx, cmd, nil)
+	require.NoError(t, err)
 
- test.WaitForBlocks(ctx, 3, gaia)
+	testutil.WaitForBlocks(ctx, 3, gaia)
 ```
-
 Notice, how it waits for blocks. Sometimes this is necessary.
+
 
 Here we instruct the relayer to flush packets and acknowledgments.
 
@@ -260,20 +257,19 @@ This could have also been accomplished by starting the relayer on a loop:
 
 ```go
 require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
-test.WaitForBlocks(ctx, 3, gaia)
+testutil.WaitForBlocks(ctx, 3, gaia)
 ```
 
 ## Final Notes
-
 When troubleshooting while writing tests, it can be helpful to print out variables:
-
 ```go
 t.log("PRINT STATEMENT: ", variableToPrint)
 ```
-
 You will need to pass in the `-v` flag in the `go test` command to see this output. Exampled below.
 
+
 This document only scratches the surface of the full functionality of `ibctest`. Refer to other tests in this repo for more in-depth/advanced testing examples.
+
 
 ## How to run
 

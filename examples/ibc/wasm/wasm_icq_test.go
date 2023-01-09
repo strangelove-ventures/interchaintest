@@ -16,8 +16,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v3/relayer"
-	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -138,7 +138,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	// Wait a few blocks for user accounts to be created on chain
 	logger.Info("wait for user accounts")
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Fund user accounts so we can query balances
@@ -147,7 +147,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	chain1User := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt, chain1)[0]
 	chain2User := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt, chain2)[0]
 
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	chain1UserAddress := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
@@ -171,7 +171,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	wasmIcqCodeId, err := chain1CChain.StoreContract(ctx, chain1User.KeyName, contractFilePath)
 	require.NoError(t, err)
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	//Instantiate the smart contract on the test chain, facilitating testing of ICQ WASM functionality
@@ -179,7 +179,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 	logger.Info("icq contract deployed", zap.String("contractAddr", contractAddr))
 
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	icqWasmPortId := "wasm." + contractAddr
@@ -192,7 +192,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		Version:        "icq-1",
 	})
 	require.NoError(t, err)
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the recently created channel-id.
@@ -222,7 +222,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	)
 
 	// Wait a few blocks for the relayer to start.
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 	logger.Info("channel", zap.String("info", fmt.Sprintf("Channel Port: %s, Channel ID: %s, Counterparty Channel ID: %s", channel.PortID, channel.ChannelID, channel.Counterparty.ChannelID)))
 
@@ -292,7 +292,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait a few blocks for query to be sent to counterparty.
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Check the results from the interchain query above.

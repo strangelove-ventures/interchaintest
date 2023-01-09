@@ -7,7 +7,7 @@ import (
 
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v3/test"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -88,7 +88,7 @@ func GetAndFundTestUsers(
 	require.NoError(t, eg.Wait())
 
 	// TODO(nix 05-17-2022): Map with generics once using go 1.18
-	chainHeights := make([]test.ChainHeighter, len(chains))
+	chainHeights := make([]testutil.ChainHeighter, len(chains))
 	for i := range chains {
 		chainHeights[i] = chains[i]
 	}
