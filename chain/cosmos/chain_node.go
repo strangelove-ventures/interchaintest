@@ -134,7 +134,7 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
@@ -144,7 +144,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
@@ -1016,7 +1016,7 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		gen, err := n.genesisFileContent(ctx)
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
