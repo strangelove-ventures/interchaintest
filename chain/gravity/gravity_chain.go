@@ -18,22 +18,30 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type EVM struct {
+	ID   uint32
+	Name string
+}
+
 type GravityChain struct {
 	CosmosChain *cosmos.CosmosChain
 
 	numOrchestrators int
 	Orchestrators    OrchestratorNodes
 
-	evmChains           []*evm.Chain
-	evmGravityContracts []common.Address
+	evmChains             []*evm.Chain
+	evmValidatorMnemonics []string
+	evmGravityContracts   []common.Address
 }
 
-func NewGravityChain(testname string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, numOrchestrators int, log *zap.Logger) *GravityChain {
+func NewGravityChain(testname string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, numOrchestrators int, evms []*evm.Chain, evmMnemonics []string, log *zap.Logger) *GravityChain {
 	cosmosChain := cosmos.NewCosmosChain(testname, chainConfig, numValidators, numFullNodes, log)
 
 	return &GravityChain{
-		CosmosChain:      cosmosChain,
-		numOrchestrators: numOrchestrators,
+		CosmosChain:           cosmosChain,
+		evmValidatorMnemonics: evmMnemonics,
+		numOrchestrators:      numOrchestrators,
+		evmChains:             evms,
 	}
 }
 
@@ -46,12 +54,15 @@ func (g *GravityChain) NewOrchestratorNode(
 	testName string,
 	cli *client.Client,
 	networkID string,
+	evmMnemonic string,
 	image ibc.DockerImage,
 ) (*OrchestratorNode, error) {
 	on := &OrchestratorNode{
 		log: g.CosmosChain.Log,
 
-		Chain:        g.CosmosChain,
+		mnemonic: evmMnemonic,
+
+		Chain:        g,
 		DockerClient: cli,
 		NetworkID:    networkID,
 		TestName:     testName,
@@ -96,7 +107,7 @@ func (g *GravityChain) Initialize(ctx context.Context, testName string, cli *cli
 	for i := len(g.Orchestrators); i < g.numOrchestrators; i++ {
 		i := i
 		eg.Go(func() error {
-			orch, err := g.NewOrchestratorNode(egCtx, testName, cli, networkID, image)
+			orch, err := g.NewOrchestratorNode(egCtx, testName, cli, networkID, g.evmValidatorMnemonics[i], image)
 			if err != nil {
 				return err
 			}
@@ -154,7 +165,8 @@ listen_addr = "127.0.0.1:300%d"
 				evmChain.ID,
 				g.evmGravityContracts[i].String(),
 				g.CosmosChain.Config().Denom,
-				evmChain.Node.Name(),
+				"empty-evm-name",
+				//evmChain.Node.Name(),
 				g.CosmosChain.Validators[i].Name(),
 				g.CosmosChain.Config().GasPrices,
 				g.CosmosChain.Config().Denom,
@@ -179,91 +191,92 @@ listen_addr = "127.0.0.1:300%d"
 			// check for orchestrator health
 		}
 	}
+
+	return nil
 }
 
 func (g *GravityChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - exec")
 }
 
 func (g *GravityChain) ExportState(ctx context.Context, height int64) (string, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - export state")
 }
 
 func (g *GravityChain) GetRPCAddress() string {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get rpc address")
 }
 
 func (g *GravityChain) GetGRPCAddress() string {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get grpc address")
 }
 
 func (g *GravityChain) GetHostRPCAddress() string {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get host rpc address")
 }
 
 func (g *GravityChain) GetHostGRPCAddress() string {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get host grpc address")
 }
 
 func (g *GravityChain) HomeDir() string {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - home dir")
 }
 
 func (g *GravityChain) CreateKey(ctx context.Context, keyName string) error {
-	//TODO implement me
-	panic("implement me")
+	return g.CosmosChain.CreateKey(ctx, keyName)
 }
 
 func (g *GravityChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - recover key")
 }
 
 func (g *GravityChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get address")
 }
 
 func (g *GravityChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - send funds")
 }
 
 func (g *GravityChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - send ibc transfer")
 }
 
 func (g *GravityChain) Height(ctx context.Context) (uint64, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - height")
 }
 
 func (g *GravityChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get balance")
 }
 
 func (g *GravityChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - get gas fees in native denom")
 }
 
 func (g *GravityChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - acknowledgements")
 }
 
 func (g *GravityChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - timeouts")
 }
 
 // StopAllNodes stops and removes all long-running containers (validators and full nodes)

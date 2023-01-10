@@ -3,7 +3,6 @@ package ibctest
 import (
 	_ "embed"
 	"fmt"
-	"github.com/strangelove-ventures/ibctest/v6/chain/gravity"
 	"os"
 	"strings"
 	"sync"
@@ -140,9 +139,6 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
-	case "gravity":
-		// match the number of orchestrators to validators
-		return gravity.NewGravityChain(testName, cfg, nv, nf, nv, log), nil
 	case "polkadot":
 		switch {
 		case strings.Contains(cfg.Name, "composable"):

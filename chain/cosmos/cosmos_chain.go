@@ -489,7 +489,7 @@ func (c *CosmosChain) initializeChainNodes(
 	networkID string,
 ) error {
 	chainCfg := c.Config()
-	c.pullImages(ctx, cli)
+	//c.pullImages(ctx, cli)
 	image := chainCfg.Images[0]
 
 	newVals := make(ChainNodes, c.numValidators)

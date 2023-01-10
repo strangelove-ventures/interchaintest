@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/strangelove-ventures/ibctest/v6/chain/gravity"
+	"github.com/strangelove-ventures/ibctest/v6/chain/evm"
 	"testing"
 	"time"
 
 	"github.com/icza/dyno"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v6/chain/gravity"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
@@ -24,9 +25,20 @@ const (
 	maxDepositPeriod   = "10s"
 )
 
-func TestJunoUpgrade(t *testing.T) {
+func MNEMONICS() []string {
+	return []string{
+		"say monitor orient heart super local purse cricket caution primary bring insane road expect rather help two extend own execute throw nation plunge subject",
+		"march carpet enact kiss tribe plastic wash enter index lift topic riot try juice replace supreme original shift hover adapt mutual holiday manual nut",
+		"assault section bleak gadget venture ship oblige pave fabric more initial april dutch scene parade shallow educate gesture lunar match patch hawk member problem",
+		"receive roof marine sure lady hundred sea enact exist place bean wagon kingdom betray science photo loop funny bargain floor suspect only strike endless",
+	}
+}
+
+func TestMultiEVMUpgrade(t *testing.T) {
 	GravityChainUpgradeTest(t, "gravity", "v3.0.0", "v4.0.0", "multi-evm")
 }
+
+var EVMs = []*evm.Chain{{ID: 1, Name: "ethereum"}, {ID: 43114, Name: "avalanche-c"}}
 
 func GravityChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
@@ -35,31 +47,29 @@ func GravityChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVer
 
 	t.Parallel()
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{
-			Name:      chainName,
-			ChainName: chainName,
-			Version:   initialVersion,
-			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
-				Images: []ibc.DockerImage{
-					{
-						Repository: "gravity",
-						Version:    "prebuilt",
-					},
-					{
-						Repository: "orchestrator",
-						Version:    "prebuilt",
-					},
-				},
+	chainConfig := ibc.ChainConfig{
+		ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+		Images: []ibc.DockerImage{
+			{
+				Repository: "gravity",
+				Version:    "prebuilt",
+			},
+			{
+				Repository: "orchestrator",
+				Version:    "prebuilt",
 			},
 		},
-	})
-
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
-
-	chain := chains[0].(*gravity.GravityChain)
+	}
+	chain := gravity.NewGravityChain(
+		t.Name(),
+		chainConfig,
+		4,
+		1,
+		4,
+		EVMs,
+		MNEMONICS(),
+		zaptest.NewLogger(t),
+	)
 
 	ic := ibctest.NewInterchain().
 		AddChain(chain)

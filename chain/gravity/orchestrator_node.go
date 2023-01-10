@@ -3,9 +3,8 @@ package gravity
 import (
 	"context"
 	"fmt"
-	"github.com/ory/dockertest/docker"
-	"github.com/ory/dockertest/docker/types"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +15,10 @@ import (
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
+	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/docker/types"
 	"github.com/strangelove-ventures/ibctest/v6/dockerutil"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -25,7 +28,7 @@ import (
 type OrchestratorNode struct {
 	VolumeName   string
 	Index        int
-	Chain        ibc.Chain
+	Chain        *GravityChain
 	NetworkID    string
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
@@ -36,6 +39,9 @@ type OrchestratorNode struct {
 	log  *zap.Logger
 
 	containerID string
+
+	// evm signing info
+	mnemonic string
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
@@ -67,11 +73,61 @@ func (on *OrchestratorNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", on.Chain.Config().Name)
 }
 
+type ethereumKey struct {
+	publicKey  string
+	privateKey string
+	address    string
+}
+
+const DerivationPath = "m/44'/60'/0'/0/0"
+
+func ethereumKeyFromMnemonic(mnemonic string) (*ethereumKey, error) {
+	wallet, err := hdwallet.NewFromMnemonic(mnemonic)
+	if err != nil {
+		return nil, err
+	}
+
+	derivationPath, err := hdwallet.ParseDerivationPath(DerivationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := wallet.Derive(derivationPath, false)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKeyBytes, err := wallet.PrivateKeyBytes(account)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKeyBytes, err := wallet.PublicKeyBytes(account)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ethereumKey{
+		privateKey: hexutil.Encode(privateKeyBytes),
+		publicKey:  hexutil.Encode(publicKeyBytes),
+		address:    account.Address.String(),
+	}, nil
+}
 func (on *OrchestratorNode) CreateContainer(ctx context.Context) error {
 	on.logger().Info("Creating Container",
 		zap.String("container", on.Name()),
 		zap.String("image", on.Image.Ref()),
 	)
+	ethereumKey, err := ethereumKeyFromMnemonic(on.mnemonic)
+	if err != nil {
+		return err
+	}
+
+	chainIDStrings := make([]string, len(on.Chain.evmChains))
+	for i, c := range on.Chain.evmChains {
+		chainIDStrings[i] = strconv.Itoa(int(c.ID))
+	}
+
 	cc, err := on.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -84,9 +140,9 @@ func (on *OrchestratorNode) CreateContainer(ctx context.Context) error {
 			},
 			Hostname: on.HostName(),
 			Env: []string{
-				fmt.Sprintf("CHAIN_IDS=%s", strings.Join(chainIDStrings(), ";")),
-				fmt.Sprintf("ORCH_MNEMONIC=%s", orch.mnemonic),
-				fmt.Sprintf("ETH_PRIV_KEY=%s", val.ethereumKey.privateKey),
+				fmt.Sprintf("CHAIN_IDS=%s", strings.Join(chainIDStrings, ";")),
+				fmt.Sprintf("ORCH_MNEMONIC=%s", on.mnemonic),
+				fmt.Sprintf("ETH_PRIV_KEY=%s", ethereumKey.privateKey),
 				"RUST_BACKTRACE=full",
 				"RUST_LOG=debug",
 			},
