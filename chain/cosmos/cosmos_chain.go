@@ -97,7 +97,7 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 	peers := c.Nodes().PeerString(ctx)
 
 	// Get genesis.json
-	genbz, err := c.Validators[0].genesisFileContent(ctx)
+	genbz, err := c.Validators[0].GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 			if err := fn.SetPeers(ctx, peers); err != nil {
 				return err
 			}
-			if err := fn.overwriteGenesisFile(ctx, genbz); err != nil {
+			if err := fn.OverwriteGenesisFile(ctx, genbz); err != nil {
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
@@ -692,7 +692,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	chainNodes := c.Nodes()
 
 	for _, cn := range chainNodes {
-		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
+		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
