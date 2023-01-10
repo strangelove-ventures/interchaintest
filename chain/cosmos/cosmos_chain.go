@@ -664,7 +664,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	genbz, err := validator0.genesisFileContent(ctx)
+	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
