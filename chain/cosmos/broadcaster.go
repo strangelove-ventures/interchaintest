@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -13,8 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -202,5 +205,32 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
-	return broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	err = testutil.WaitForCondition(time.Second*30, time.Second*5, func() (bool, error) {
+		_, err := broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
+
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	resp, err := authTx.QueryTx(cc, respWithTxHash.TxHash)
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	return *resp, nil
 }
