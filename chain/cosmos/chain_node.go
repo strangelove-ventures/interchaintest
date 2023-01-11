@@ -239,6 +239,14 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	a := make(testutil.Toml)
 	a["minimum-gas-prices"] = tn.Chain.Config().GasPrices
+
+	grpc := make(testutil.Toml)
+
+	// Enable public GRPC
+	grpc["address"] = "0.0.0.0:9090"
+
+	a["grpc"] = grpc
+
 	return testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
