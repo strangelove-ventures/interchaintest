@@ -3,3 +3,5 @@
 ibctest.test
 
 /bin
+.idea
+vendor
