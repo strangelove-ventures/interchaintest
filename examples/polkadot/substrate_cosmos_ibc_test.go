@@ -3,8 +3,10 @@ package polkadot_test
 import (
 	"context"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
 	"github.com/strangelove-ventures/ibctest/v5/relayer"
 	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
 	"github.com/strangelove-ventures/ibctest/v5/testreporter"
@@ -39,6 +41,27 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	nv := 5 // Number of validators
 	nf := 3 // Number of full nodes
 
+	configFileOverrides := make(configutil.Toml)
+
+	appTomlOverrides := make(configutil.Toml)
+	configTomlOverrides := make(configutil.Toml)
+
+	apiOverrides := make(configutil.Toml)
+	apiOverrides["rpc-max-body-bytes"] = 13500000
+	appTomlOverrides["api"] = apiOverrides
+
+	rpcOverrides := make(configutil.Toml)
+	rpcOverrides["max_body_bytes"] = 13500000
+	rpcOverrides["max_header_bytes"] = 14000000
+	configTomlOverrides["rpc"] = rpcOverrides
+
+	//mempoolOverrides := make(testutil.Toml)
+	//mempoolOverrides["max_tx_bytes"] = 6000000
+	//configTomlOverrides["mempool"] = mempoolOverrides
+
+	configFileOverrides["config/app.toml"] = appTomlOverrides
+	configFileOverrides["config/config.toml"] = configTomlOverrides
+
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
@@ -59,7 +82,8 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 			Name:    "ibcgo",
 			Version: "latest",
 			ChainConfig: ibc.ChainConfig{
-				Bech32Prefix: "cosmos",
+				Bech32Prefix:        "cosmos",
+				ConfigFileOverrides: configFileOverrides,
 			},
 			/*
 				ChainName: "gaia",
@@ -111,6 +135,23 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	t.Cleanup(func() {
 		_ = ic.Close()
 	})
+
+	// Create and Fund User Wallets
+	fundAmount := int64(10_000_000)
+	chainCfg := gaia.Config()
+	key := rly.GenKey()
+	err = gaia.SendFunds(ctx, "faucet", ibc.WalletAmount{
+		Address: types.MustBech32ifyAddressBytes(chainCfg.Bech32Prefix, key.Address),
+		//Address: user.Bech32Address(chainCfg.Bech32Prefix),
+		Amount: fundAmount,
+		Denom:  chainCfg.Denom,
+	})
+	require.NoError(t, err)
+	//users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia)
+	//gaiaUser := users[0]
+	//gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	//require.NoError(t, err)
+	//require.Equal(t, fundAmount, gaiaUserBalInitial)
 
 	time.Sleep(3000000 * time.Second)
 
