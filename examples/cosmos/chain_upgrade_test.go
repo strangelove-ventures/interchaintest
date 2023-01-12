@@ -27,6 +27,10 @@ func TestJunoUpgrade(t *testing.T) {
 	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
 }
 
+func TestCosmosHubUpgrade(t *testing.T) {
+	CosmosChainUpgradeTest(t, "gaia", "v7.1.0", "andrew-pfm_v2_migration", "v8-Rho")
+}
+
 func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
