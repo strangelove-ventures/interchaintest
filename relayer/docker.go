@@ -160,12 +160,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
-		return ibc.Wallet{}, res.Err
+		return nil, res.Err
 	}
 
 	wallet, err := r.c.ParseAddKeyOutput(string(res.Stdout), string(res.Stderr))
 	if err != nil {
-		return ibc.Wallet{}, err
+		return nil, err
 	}
 	r.wallets[chainID] = wallet
 	return wallet, nil
@@ -301,10 +301,10 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 		return res.Err
 	}
 
-	r.wallets[chainID] = ibc.Wallet{
-		Mnemonic: mnemonic,
-		Address:  r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr)),
-	}
+	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
+
+	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+
 	return nil
 }
 
@@ -535,4 +535,5 @@ type RelayerCommander interface {
 	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
+	CreateWallet(keyName, address, mnemonic string) ibc.Wallet
 }

@@ -221,8 +221,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckarep/golang-set v1.8.0 h1:sk9/l/KqpunDwP7pSjUg0keiOOLEnOBHzykLrsPppp4=
 github.com/deckarep/golang-set v1.8.0/go.mod h1:5nI87KwE7wgsBU1F4GKAw2Qod7p5kyS383rP6+o6qqo=
-github.com/decred/base58 v1.0.3 h1:KGZuh8d1WEMIrK0leQRM47W85KqCAdl2N+uagbctdDI=
-github.com/decred/base58 v1.0.3/go.mod h1:pXP9cXCfM2sFLb2viz2FNIdeMWmZDBKG3ZBYbiSM78E=
+github.com/decred/base58 v1.0.4 h1:QJC6B0E0rXOPA8U/kw2rP+qiRJsUaE2Er+pYb3siUeA=
+github.com/decred/base58 v1.0.4/go.mod h1:jJswKPEdvpFpvf7dsDvFZyLT22xZ9lWqEByX38oGd9E=
 github.com/decred/dcrd/chaincfg/chainhash v1.0.2 h1:rt5Vlq/jM3ZawwiacWjPa+smINyLRN07EO0cNBV6DGU=
 github.com/decred/dcrd/chaincfg/chainhash v1.0.2/go.mod h1:BpbrGgrPTr3YJYRN3Bm+D9NuaFd+zGyNeIKgrhCXK60=
 github.com/decred/dcrd/crypto/blake256 v1.0.0 h1:/8DMNYp9SGi5f0w7uCm6d6M4OU2rGFK09Y2A4Xv7EE0=
@@ -601,8 +601,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/mimoo/StrobeGo v0.0.0-20181016162300-f8f6d4d2b643/go.mod h1:43+3pMjjKimDBf5Kr4ZFNGbLql1zKkbImw+fZbw3geM=
-github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 h1:QRUSJEgZn2Snx0EmT/QLXibWjSUDjKWvXIT19NBVp94=
-github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0/go.mod h1:43+3pMjjKimDBf5Kr4ZFNGbLql1zKkbImw+fZbw3geM=
+github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b h1:QrHweqAtyJ9EwCaGHBu1fghwxIPiopAHV06JlXrMHjk=
+github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b/go.mod h1:xxLb2ip6sSUts3g1irPVHyk/DGslwQsNOo9I7smJfNU=
 github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 h1:lYpkrQH5ajf0OXOcUbGjvZxxijuBwbbmlSxLiuofa+g=
 github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1/go.mod h1:pD8RvIylQ358TN4wwqatJ8rNavkEINozVn9DtGI3dfQ=
 github.com/minio/highwayhash v1.0.2 h1:Aak5U0nElisjDCfPSG79Tgzkn2gl66NxOMspRrKnA/g=

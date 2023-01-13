@@ -25,8 +25,9 @@ type ClientContextOpt func(clientContext client.Context) client.Context
 type FactoryOpt func(factory tx.Factory) tx.Factory
 
 type User interface {
-	GetKeyName() string
-	Bech32Address(bech32Prefix string) string
+	KeyName() string
+	FormattedAddress() string
+	FormattedAddressWithPrefix(prefix string) string
 }
 
 type Broadcaster struct {
@@ -79,7 +80,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.Bech32Address(b.chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix))
 	if err != nil {
 		return tx.Factory{}, err
 	}
@@ -114,7 +115,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.Bech32Address(chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(chain.Config().Bech32Prefix))
 	if err != nil {
 		return client.Context{}, err
 	}
@@ -152,9 +153,9 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
-		WithFrom(fromUser.Bech32Address(b.chain.Config().Bech32Prefix)).
+		WithFrom(fromUser.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix)).
 		WithFromAddress(sdkAdd).
-		WithFromName(fromUser.GetKeyName()).
+		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
