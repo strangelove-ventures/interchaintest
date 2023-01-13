@@ -12,7 +12,7 @@ require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.47.0-rc1
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v6 v6.0.0-20230112164833-fb2c8bfb3a3d
+	github.com/cosmos/ibc-go/v6 v6.0.0-20230113152752-e650be91614c
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible
@@ -35,8 +35,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.17.3
 )
-
-//require github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 
 require (
 	cloud.google.com/go v0.105.0 // indirect
