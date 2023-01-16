@@ -596,7 +596,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					return err
 				}
 			}
-			return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			if c.cfg.SkipGenTx != nil && *c.cfg.SkipGenTx == false {
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			}
+			return nil
 		})
 	}
 
