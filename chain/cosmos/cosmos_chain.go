@@ -629,16 +629,16 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		})
 	}
 
+	// wait for this to finish
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	if c.cfg.PreGenesis != nil {
 		err := c.cfg.PreGenesis(chainCfg)
 		if err != nil {
 			return err
 		}
-	}
-
-	// wait for this to finish
-	if err := eg.Wait(); err != nil {
-		return err
 	}
 
 	// for the validators we need to collect the gentxs and the accounts
@@ -656,8 +656,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validatorN.copyGentx(ctx, validator0); err != nil {
-			return err
+		if c.cfg.SkipGenTx != nil && *c.cfg.SkipGenTx == false {
+			if err := validatorN.copyGentx(ctx, validator0); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -667,8 +669,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if err := validator0.CollectGentxs(ctx); err != nil {
-		return err
+	if c.cfg.SkipGenTx != nil && *c.cfg.SkipGenTx == false {
+		if err := validator0.CollectGentxs(ctx); err != nil {
+			return err
+		}
 	}
 
 	genbz, err := validator0.GenesisFileContent(ctx)

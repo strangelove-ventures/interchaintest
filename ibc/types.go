@@ -35,6 +35,8 @@ type ChainConfig struct {
 	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
 	NoHostMount bool `yaml:"no-host-mount"`
+	// When true, will skip validator gentx flow
+	SkipGenTx *bool
 	// When provided, will run before performing gentx and genesis file creation steps for validators.
 	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
@@ -125,6 +127,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.ModifyGenesis != nil {
 		c.ModifyGenesis = other.ModifyGenesis
+	}
+
+	if other.SkipGenTx != nil {
+		c.SkipGenTx = other.SkipGenTx
 	}
 
 	if other.PreGenesis != nil {
