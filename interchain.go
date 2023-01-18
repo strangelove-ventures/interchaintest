@@ -455,6 +455,7 @@ func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc
 	}
 
 	return ibc.Wallet{
+		KeyName: keyName,
 		Address: types.MustBech32ifyAddressBytes(config.Bech32Prefix, info.GetAddress().Bytes()),
 
 		Mnemonic: mnemonic,
