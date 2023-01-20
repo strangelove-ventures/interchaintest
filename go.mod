@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibctest/v6
+module github.com/strangelove-ventures/ibctest/v7
 
 go 1.19
 
