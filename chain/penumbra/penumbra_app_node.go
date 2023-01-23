@@ -67,7 +67,20 @@ func (p *PenumbraAppNode) HomeDir() string {
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
+	_, stderr, err := p.Exec(ctx, cmd, nil)
+	// already exists error is okay
+	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
+		return err
+	}
+	return nil
+}
+
+// RecoverKey restores a key from a given mnemonic.
+func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
@@ -78,10 +91,11 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 
 // initializes validator definition template file
 // wallet must be generated first
-func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
+func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", valKeyName)
 	cmd := []string{
 		"pcli",
-		"-d", p.HomeDir(),
+		"-d", keyPath,
 		"validator", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
