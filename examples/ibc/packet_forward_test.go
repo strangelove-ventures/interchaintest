@@ -95,10 +95,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		})
 
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
 
 		SkipPathCreation: false,
 	}))

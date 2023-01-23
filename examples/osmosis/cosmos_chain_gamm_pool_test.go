@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
+	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/examples/osmosis"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/relayer"
-	"github.com/strangelove-ventures/ibctest/v3/test"
 	"github.com/strangelove-ventures/ibctest/v3/testreporter"
+	"github.com/strangelove-ventures/ibctest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -78,11 +78,10 @@ func TestOsmosisGammPool(t *testing.T) {
 	rep := testreporter.NewNopReporter().RelayerExecReporter(t)
 
 	require.NoError(t, ic.Build(ctx, rep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  false,
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()
@@ -114,14 +113,14 @@ func TestOsmosisGammPool(t *testing.T) {
 		Address: chainUserBech32,
 		Amount:  counterpartyAmountSent,
 		Denom:   counterpartyDenom,
-	}, nil)
+	}, ibc.TransferOptions{})
 	require.NoError(t, err)
 
 	// will use this later for balance assertions
 	counterpartyIBCTransferFees := counterpartyChain.GetGasFeesInNativeDenom(tx.GasSpent)
 
 	// wait for packet flow to complete.
-	_, err = test.PollForAck(ctx, counterpartyChain, counterpartyHeight, counterpartyHeight+10, tx.Packet)
+	_, err = testutil.PollForAck(ctx, counterpartyChain, counterpartyHeight, counterpartyHeight+10, tx.Packet)
 	require.NoError(t, err)
 
 	// get ibc denom for counterparty denom on chain.
@@ -169,10 +168,10 @@ func TestOsmosisGammPool(t *testing.T) {
 		Address: counterpartyUserBech32,
 		Amount:  ibcDenomBalance,
 		Denom:   ibcDenom,
-	}, nil)
+	}, ibc.TransferOptions{})
 	require.NoError(t, err)
 
-	_, err = test.PollForAck(ctx, chain, chainHeight, chainHeight+10, tx.Packet)
+	_, err = testutil.PollForAck(ctx, chain, chainHeight, chainHeight+10, tx.Packet)
 	require.NoError(t, err)
 
 	ibcDenomBalancePostReturn, err := chain.GetBalance(ctx, chainUserBech32, ibcDenom)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
+	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/conformance"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
@@ -80,11 +80,10 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	rep := testreporter.NewNopReporter()
 
 	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  false,
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()

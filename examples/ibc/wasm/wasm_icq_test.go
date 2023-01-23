@@ -129,11 +129,10 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	logger.Info("ic.Build()")
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  false,
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: false,
 	}))
 
 	// Wait a few blocks for user accounts to be created on chain
