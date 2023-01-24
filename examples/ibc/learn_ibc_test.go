@@ -67,6 +67,7 @@ func TestLearn(t *testing.T) {
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),

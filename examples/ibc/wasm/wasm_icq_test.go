@@ -129,9 +129,10 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	logger.Info("ic.Build()")
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 

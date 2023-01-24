@@ -66,9 +66,10 @@ func TestWasmIbc(t *testing.T) {
 
 	// Build interchain
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {

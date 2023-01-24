@@ -78,9 +78,10 @@ func TestOsmosisGammPool(t *testing.T) {
 	rep := testreporter.NewNopReporter().RelayerExecReporter(t)
 
 	require.NoError(t, ic.Build(ctx, rep, ibctest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {

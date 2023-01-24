@@ -80,9 +80,10 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 	rep := testreporter.NewNopReporter()
 
 	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), ibctest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {

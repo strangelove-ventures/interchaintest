@@ -70,9 +70,10 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	client, network := ibctest.DockerSetup(t)
 
 	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: true,
 	}))
 	t.Cleanup(func() {
