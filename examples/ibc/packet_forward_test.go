@@ -47,10 +47,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	chainID_A, chainID_B, chainID_C, chainID_D := "chain-a", "chain-b", "chain-c", "chain-d"
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", Version: "justin-forward_middleware_v3_refactor", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "justin-forward_middleware_v3_refactor", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "justin-forward_middleware_v3_refactor", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "justin-forward_middleware_v3_refactor", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "v8.0.0-rc3", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "v8.0.0-rc3", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "v8.0.0-rc3", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0uatom"}},
+		{Name: "gaia", Version: "v8.0.0-rc3", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0uatom"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -615,5 +615,51 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.Equal(t, transferAmount, baEscrowBalance)
 		require.Equal(t, int64(0), bcEscrowBalance)
 		require.Equal(t, int64(0), cdEscrowBalance)
+	})
+
+	t.Run("forward a->b->a", func(t *testing.T) {
+		// Send packet from Chain A->Chain B->Chain A
+
+		userABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
+		require.NoError(t, err, "failed to get user a balance")
+
+		userBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopDenom)
+		require.NoError(t, err, "failed to get user a balance")
+
+		transfer := ibc.WalletAmount{
+			Address: userB.Bech32Address(chainB.Config().Bech32Prefix),
+			Denom:   chainA.Config().Denom,
+			Amount:  transferAmount,
+		}
+
+		firstHopMetadata := &PacketMetadata{
+			Forward: &ForwardMetadata{
+				Receiver: userA.Bech32Address(chainA.Config().Bech32Prefix),
+				Channel:  baChan.ChannelID,
+				Port:     baChan.PortID,
+			},
+		}
+
+		memo, err := json.Marshal(firstHopMetadata)
+		require.NoError(t, err)
+
+		chainAHeight, err := chainA.Height(ctx)
+		require.NoError(t, err)
+
+		transferTx, err := chainA.SendIBCTransfer(ctx, abChan.ChannelID, userA.KeyName, transfer, ibc.TransferOptions{Memo: string(memo)})
+		require.NoError(t, err)
+		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+30, transferTx.Packet)
+		require.NoError(t, err)
+		err = testutil.WaitForBlocks(ctx, 1, chainA)
+		require.NoError(t, err)
+
+		chainABalance, err := chainA.GetBalance(ctx, userA.Bech32Address(chainA.Config().Bech32Prefix), chainA.Config().Denom)
+		require.NoError(t, err)
+
+		chainBBalance, err := chainB.GetBalance(ctx, userB.Bech32Address(chainB.Config().Bech32Prefix), firstHopIBCDenom)
+		require.NoError(t, err)
+
+		require.Equal(t, userABalance, chainABalance)
+		require.Equal(t, userBBalance, chainBBalance)
 	})
 }

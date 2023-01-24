@@ -413,7 +413,7 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...string) error {
 	containerImage := r.containerImage()
 	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+	containerName := fmt.Sprintf("%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
 	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 	r.log.Info(
 		"Running command",

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/icza/dyno"
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
+	"github.com/strangelove-ventures/ibctest/v3"
 	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/examples/osmosis"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
@@ -54,11 +54,11 @@ func TestOsmosisExpeditedProposal(t *testing.T) {
 	client, network := ibctest.DockerSetup(t)
 
 	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  true,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: true,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()
