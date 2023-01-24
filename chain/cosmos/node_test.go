@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
 	"github.com/stretchr/testify/require"
 )
 

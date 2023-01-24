@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/ibctest/v7/testreporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )

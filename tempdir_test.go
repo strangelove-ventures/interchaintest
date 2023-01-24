@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/internal/mocktesting"
+	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	"github.com/strangelove-ventures/ibctest/v7/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 

@@ -14,8 +14,8 @@
 //	import (
 //	  "testing"
 //
-//	  "github.com/strangelove-ventures/ibctest/v6/conformance"
-//	  "github.com/strangelove-ventures/ibctest/v6/ibc"
+//	  "github.com/strangelove-ventures/ibctest/v7/conformance"
+//	  "github.com/strangelove-ventures/ibctest/v7/ibc"
 //	)
 //
 //	func TestMyRelayer(t *testing.T) {
@@ -35,16 +35,16 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/label"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/ibctest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v7/label"
+	"github.com/strangelove-ventures/ibctest/v7/relayer"
+	"github.com/strangelove-ventures/ibctest/v7/testreporter"
+	"github.com/strangelove-ventures/ibctest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )

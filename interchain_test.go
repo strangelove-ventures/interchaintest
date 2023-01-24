@@ -11,18 +11,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/ibctest/v7/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v7/testreporter"
+	"github.com/strangelove-ventures/ibctest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {

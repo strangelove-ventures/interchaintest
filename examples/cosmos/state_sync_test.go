@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/ibctest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )

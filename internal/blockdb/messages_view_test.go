@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/ibctest/v7/relayer"
+	"github.com/strangelove-ventures/ibctest/v7/testreporter"
+	"github.com/strangelove-ventures/ibctest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )

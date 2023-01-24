@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibctest/v6
+module github.com/strangelove-ventures/ibctest/v7
 
 go 1.19
 
@@ -12,7 +12,7 @@ require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.47.0-rc1
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v6 v6.0.0-20230113152752-e650be91614c
+	github.com/cosmos/ibc-go/v7 v7.0.0-20230120105519-ae96bf3d5ee9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible
@@ -31,7 +31,7 @@ require (
 	golang.org/x/crypto v0.4.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/tools v0.1.12
-	google.golang.org/grpc v1.51.0
+	google.golang.org/grpc v1.52.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.17.3
 )
@@ -203,7 +203,7 @@ require (
 	go.uber.org/goleak v1.1.12 // indirect
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.3.0 // indirect
+	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.3.0 // indirect
