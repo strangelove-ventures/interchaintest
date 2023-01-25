@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	gsrpc "github.com/ComposableFi/go-substrate-rpc-client/v4"
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -20,6 +20,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // ParachainNode defines the properties required for running a polkadot parachain node.
@@ -341,14 +342,20 @@ func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom s
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-// [Add back when we move from centrifuge -> ComposableFi's go-substrate-rpc-client (for ibc methods)]
-/*func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
 	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
-}*/
+}
+func (pn *ParachainNode) QueryLatestHeight(ctx context.Context) (uint64, error) {
+	res, err := pn.api.RPC.IBC.QueryLatestHeight(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return res, nil
+}
 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.

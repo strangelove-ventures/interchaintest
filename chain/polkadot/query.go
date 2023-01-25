@@ -1,8 +1,8 @@
 package polkadot
 
 import (
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	gsrpc "github.com/ComposableFi/go-substrate-rpc-client/v4"
+	gstypes "github.com/ComposableFi/go-substrate-rpc-client/v4/types"
 )
 
 // GetBalance fetches the current balance for a specific account address using the SubstrateAPI

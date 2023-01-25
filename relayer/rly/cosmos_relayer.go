@@ -42,7 +42,7 @@ func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 	return r
 }
 
-type CosmosRelayerChainConfigValue struct {
+type CosmosChainConfigValue struct {
 	AccountPrefix  string  `json:"account-prefix"`
 	ChainID        string  `json:"chain-id"`
 	Debug          bool    `json:"debug"`
@@ -57,9 +57,34 @@ type CosmosRelayerChainConfigValue struct {
 	Timeout        string  `json:"timeout"`
 }
 
+type SubstrateChainConfigValue struct {
+	Key                  string  `json:"key" yaml:"key"`
+	ChainName            string  `json:"chain-name" yaml:"chain-name"`
+	ChainID              string  `json:"chain-id" yaml:"chain-id"`
+	RPCAddr              string  `json:"rpc-addr" yaml:"rpc-addr"`
+	RelayRPCAddr         string  `json:"relay-rpc-addr" yaml:"relay-rpc-addr"`
+	AccountPrefix        string  `json:"account-prefix" yaml:"account-prefix"`
+	KeyringBackend       string  `json:"keyring-backend" yaml:"keyring-backend"`
+	KeyDirectory         string  `json:"key-directory" yaml:"key-directory"`
+	GasPrices            string  `json:"gas-prices" yaml:"gas-prices"`
+	GasAdjustment        float64 `json:"gas-adjustment" yaml:"gas-adjustment"`
+	Debug                bool    `json:"debug" yaml:"debug"`
+	Timeout              string  `json:"timeout" yaml:"timeout"`
+	OutputFormat         string  `json:"output-format" yaml:"output-format"`
+	SignModeStr          string  `json:"sign-mode" yaml:"sign-mode"`
+	Network              uint16  `json:"network" yaml:"network"`
+	ParaID               uint32  `json:"para-id" yaml:"para-id"`
+	BeefyActivationBlock uint32  `json:"beefy-activation-block" yaml:"beefy-activation-block"`
+	RelayChain           int32   `json:"relay-chain" yaml:"relay-chain"`
+	FinalityProtocol     string  `json:"finality-protocol" yaml:"finality-protocol"`
+	WasmClient           bool    `json:"wasm_client" yaml:"wasm_client"`
+	//SignMode             string  `json:"sign-mode"`
+	//GRPCAddr             string  `json:"grpc-addr"`
+}
+
 type CosmosRelayerChainConfig struct {
-	Type  string                        `json:"type"`
-	Value CosmosRelayerChainConfigValue `json:"value"`
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
 }
 
 const (
@@ -78,12 +103,9 @@ func Capabilities() map[relayer.Capability]bool {
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	chainType := chainConfig.Type
-	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
-		chainType = "substrate"
-	}
 	return CosmosRelayerChainConfig{
 		Type: chainType,
-		Value: CosmosRelayerChainConfigValue{
+		Value: CosmosChainConfigValue{
 			Key:            keyName,
 			ChainID:        chainConfig.ChainID,
 			RPCAddr:        rpcAddr,
@@ -96,6 +118,34 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 			Timeout:        "10s",
 			OutputFormat:   "json",
 			SignMode:       "direct",
+		},
+	}
+}
+
+func ChainConfigToSubstrateRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
+	chainType := chainConfig.Type
+	paraRpcAddr := strings.Split(rpcAddr, ",")[0]
+	relayRpcAddr := strings.Split(rpcAddr, ",")[1]
+	return CosmosRelayerChainConfig{
+		Type: chainType,
+		Value: SubstrateChainConfigValue{
+			Key:       keyName,
+			ChainID:   chainConfig.ChainID,
+			ChainName: chainConfig.Name,
+			RPCAddr:   paraRpcAddr,
+			RelayRPCAddr: relayRpcAddr,
+
+			//GRPCAddr:         gprcAddr,
+			AccountPrefix:    chainConfig.Bech32Prefix,
+			KeyringBackend:   keyring.BackendTest,
+			GasAdjustment:    chainConfig.GasAdjustment,
+			GasPrices:        chainConfig.GasPrices,
+			Debug:            true,
+			Timeout:          "10s",
+			OutputFormat:     "json",
+			//SignMode:         "direct",
+			FinalityProtocol: "grandpa",
+			WasmClient:       true,
 		},
 	}
 }
@@ -251,8 +301,18 @@ func (commander) UpdateClients(pathName, homeDir string) []string {
 }
 
 func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
-	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
+	chainType := cfg.Type
+
+	var config CosmosRelayerChainConfig
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+		chainType = "substrate"
+		// grpcAddr = relay rpc addr for now...
+		config = ChainConfigToSubstrateRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+	} else {
+		config = ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+
+	}
+	jsonBytes, err := json.Marshal(config)
 	if err != nil {
 		return nil, err
 	}

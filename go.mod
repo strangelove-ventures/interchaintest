@@ -6,10 +6,10 @@ require (
 	github.com/99designs/keyring v1.2.1
 	github.com/BurntSushi/toml v1.2.0
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
+	github.com/ComposableFi/go-substrate-rpc-client/v4 v4.0.10
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.0.4
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.46.2
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/ibc-go/v6 v6.0.0-20221104144119-b1f494c64328
@@ -36,7 +36,7 @@ require (
 	modernc.org/sqlite v1.17.3
 )
 
-//require github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
+//require github.com/ComposableFi/go-substrate-rpc-client/v4 v4.0.10
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
@@ -48,6 +48,7 @@ require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
+	github.com/ComposableFi/go-subkey/v2 v2.0.0-tm03420 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go v1.40.45 // indirect
@@ -179,7 +180,6 @@ require (
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/ulikunitz/xz v0.5.8 // indirect
-	github.com/vedhavyas/go-subkey v1.0.3 // indirect
 	github.com/zondax/hid v0.9.1-0.20220302062450-5552068d2266 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
@@ -225,6 +225,6 @@ replace github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel
 
 replace github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 
-//replace github.com/ComposableFi/go-substrate-rpc-client/v4 => ../../ComposableFi/go-substrate-rpc-client/
+replace github.com/ComposableFi/go-substrate-rpc-client/v4 => ../../ComposableFi/go-substrate-rpc-client/
 
 //replace github.com/cosmos/ibc-go/v6 => ../ibc-go_feat_wasm-client

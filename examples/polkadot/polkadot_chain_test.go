@@ -217,4 +217,9 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	fmt.Println("Parachain user2 amount: ", parachainUser2Amount)
 	require.Equal(t, fundAmount+txAmount, parachainUser2Amount, "Final parachain user2 amount not expected")
 
+	paraHeight, err := polkadotChain.ParachainNodes[0][0].QueryLatestHeight(ctx)
+	fmt.Println("Paraheight: ", paraHeight)
+	fmt.Println("Error: ", err)
+	require.NoError(t, err)
+	
 }

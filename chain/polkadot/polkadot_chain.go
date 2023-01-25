@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/99designs/keyring"
+	"github.com/ComposableFi/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/ComposableFi/go-substrate-rpc-client/v4/types"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -64,6 +64,7 @@ type ParachainConfig struct {
 	NumNodes        int
 	Flags           []string
 	RelayChainFlags []string
+	FinalityGadget  string
 }
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
