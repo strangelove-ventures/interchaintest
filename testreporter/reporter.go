@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v5/label"
+	"github.com/strangelove-ventures/ibctest/v6/label"
 )
 
 // T is a subset of testing.TB,
@@ -190,9 +190,10 @@ func (r *RelayerExecReporter) TrackRelayerExec(
 
 // TestifyT returns a TestifyReporter which will track logged errors in test.
 // Typically you will use this with the New method on the require or assert package:
-//     req := require.New(reporter.TestifyT(t))
-//     // ...
-//     req.NoError(err, "failed to foo the bar")
+//
+//	req := require.New(reporter.TestifyT(t))
+//	// ...
+//	req.NoError(err, "failed to foo the bar")
 func (r *Reporter) TestifyT(t TestifyT) *TestifyReporter {
 	return &TestifyReporter{r: r, t: t}
 }

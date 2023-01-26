@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/conformance"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/ibctest/v5/internal/blockdb/tui"
-	"github.com/strangelove-ventures/ibctest/v5/internal/version"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/conformance"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
+	blockdbtui "github.com/strangelove-ventures/ibctest/v6/internal/blockdb/tui"
+	"github.com/strangelove-ventures/ibctest/v6/internal/version"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/testreporter"
 	"go.uber.org/zap"
 )
 
@@ -192,6 +192,10 @@ func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.
 // if this is too taxing on a system, the -test.parallel flag
 // can be used to reduce how many tests actively run at once.
 func TestConformance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping conformance tests in short mode")
+	}
+
 	t.Parallel()
 
 	ctx := context.Background()

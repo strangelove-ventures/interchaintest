@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v5"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )

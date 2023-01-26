@@ -9,20 +9,20 @@
 // should define their own implementation of ibc.RelayerFactory,
 // and in most cases should use an instance of ibc.BuiltinChainFactory.
 //
-//     package myrelayer_test
+//	package myrelayer_test
 //
-//     import (
-//       "testing"
+//	import (
+//	  "testing"
 //
-//       "github.com/strangelove-ventures/ibctest/v5/conformance"
-//       "github.com/strangelove-ventures/ibctest/v5/ibc"
-//     )
+//	  "github.com/strangelove-ventures/ibctest/v6/conformance"
+//	  "github.com/strangelove-ventures/ibctest/v6/ibc"
+//	)
 //
-//     func TestMyRelayer(t *testing.T) {
-//       conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
-//         {Name: "foo_bar" /* ... */},
-//       }, MyRelayerFactory(), getTestReporter())
-//     }
+//	func TestMyRelayer(t *testing.T) {
+//	  conformance.Test(t, ibc.NewBuiltinChainFactory([]ibc.BuiltinChainFactoryEntry{
+//	    {Name: "foo_bar" /* ... */},
+//	  }, MyRelayerFactory(), getTestReporter())
+//	}
 //
 // Although the conformance package is made available as a convenience for other projects,
 // the ibctest project should be considered the canonical definition of tests and configuration.
@@ -35,15 +35,16 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/label"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/label"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -62,7 +63,7 @@ type TxCache struct {
 type RelayerTestCase struct {
 	Config RelayerTestCaseConfig
 	// user on source chain
-	Users []*ibc.Wallet
+	Users []ibc.Wallet
 	// temp storage in between test phases
 	TxCache TxCache
 }
@@ -149,12 +150,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	// will send ibc transfers from user wallet on both chains to their own respective wallet on the other chain
 
 	testCoinSrcToDst := ibc.WalletAmount{
-		Address: srcUser.Bech32Address(dstChainCfg.Bech32Prefix),
+		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
-		Address: dstUser.Bech32Address(srcChainCfg.Bech32Prefix),
+		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
@@ -166,11 +167,11 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			srcChannelID := channel.ChannelID
-			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName, testCoinSrcToDst, timeout)
+			srcTxs[i], err = srcChain.SendIBCTransfer(ctx, srcChannelID, srcUser.KeyName(), testCoinSrcToDst, ibc.TransferOptions{Timeout: timeout})
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from source: %w", err)
 			}
-			if err := test.WaitForBlocks(ctx, 1, srcChain); err != nil {
+			if err := testutil.WaitForBlocks(ctx, 1, srcChain); err != nil {
 				return err
 			}
 		}
@@ -180,11 +181,11 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	eg.Go(func() (err error) {
 		for i, channel := range channels {
 			dstChannelID := channel.Counterparty.ChannelID
-			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName, testCoinDstToSrc, timeout)
+			dstTxs[i], err = dstChain.SendIBCTransfer(ctx, dstChannelID, dstUser.KeyName(), testCoinDstToSrc, ibc.TransferOptions{Timeout: timeout})
 			if err != nil {
 				return fmt.Errorf("failed to send ibc transfer from destination: %w", err)
 			}
-			if err := test.WaitForBlocks(ctx, 1, dstChain); err != nil {
+			if err := testutil.WaitForBlocks(ctx, 1, dstChain); err != nil {
 				return err
 			}
 		}
@@ -378,7 +379,7 @@ func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *
 	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
-	require.NoError(t, test.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
+	require.NoError(t, testutil.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
 }
 
 func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
@@ -413,7 +414,7 @@ func testPacketRelaySuccess(
 		srcInitialBalance := userFaucetFund
 		dstInitialBalance := int64(0)
 
-		srcAck, err := test.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
 		req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
@@ -421,10 +422,10 @@ func testPacketRelaySuccess(
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -445,7 +446,7 @@ func testPacketRelaySuccess(
 		srcInitialBalance := int64(0)
 		dstInitialBalance := userFaucetFund
 
-		dstAck, err := test.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on destination chain")
 		req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
@@ -453,10 +454,10 @@ func testPacketRelaySuccess(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
@@ -494,22 +495,22 @@ func testPacketRelayFail(
 		srcInitialBalance := userFaucetFund
 		dstInitialBalance := int64(0)
 
-		timeout, err := test.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
+		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
 		req.NoError(timeout.Validate(), "invalid timeout packet on source chain")
 
 		// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
 		// So we have a small buffer here.
-		require.NoError(t, test.WaitForBlocks(ctx, 2, srcChain, dstChain))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, srcChain, dstChain))
 
 		// get ibc denom for src denom on dst chain
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.Bech32Address(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.Bech32Address(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -525,7 +526,7 @@ func testPacketRelayFail(
 		srcInitialBalance := int64(0)
 		dstInitialBalance := userFaucetFund
 
-		timeout, err := test.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
+		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")
 		req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
 
@@ -533,10 +534,10 @@ func testPacketRelayFail(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.Bech32Address(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.Bech32Address(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)

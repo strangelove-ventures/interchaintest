@@ -6,11 +6,11 @@ help: ## Print this help message
 
 .PHONY: ibctest
 ibctest: gen ## Build ibctest binary into ./bin
-	go test -ldflags "-X github.com/strangelove-ventures/ibctest/v5/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/ibctest ./cmd/ibctest
+	go test -ldflags "-X github.com/strangelove-ventures/ibctest/v6/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/ibctest ./cmd/ibctest
 
 .PHONY: test
 test: ## Run unit tests
-	@go test -cover -short -race -timeout=60s $(shell go list ./... | grep -v /cmd/)
+	@go test -cover -short -race -timeout=60s ./...
 
 .PHONY: docker-reset
 docker-reset: ## Attempt to delete all running containers. Useful if ibctest does not exit cleanly.

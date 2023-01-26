@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/strangelove-ventures/ibctest/v5/chain/polkadot"
+	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,7 +49,14 @@ func Test_DeriveSr25519FromNameAccount(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKeyAccount)
 	require.NoError(t, err, "error encoding account public key to ss58")
 
+	kp, err := signature.KeyringPairFromSecret("//Alice", 42)
+	require.NoError(t, err, "error signature KeyringPairFromSecret")
+
+	pubKeyDecoded, err := polkadot.DecodeAddressSS58(pubKeyEncoded)
+	require.NoError(t, err, "error decoding SS58 address to pub key")
+
 	require.Equal(t, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", pubKeyEncoded)
+	require.Equal(t, pubKeyDecoded, kp.PublicKey)
 }
 
 func Test_DeriveSr25519FromNameStash(t *testing.T) {
@@ -62,7 +70,11 @@ func Test_DeriveSr25519FromNameStash(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKeyStash)
 	require.NoError(t, err, "error encoding stash public key to ss58")
 
+	kp, err := signature.KeyringPairFromSecret("//Alice//stash", 42)
+	require.NoError(t, err, "error signature KeyringPairFromSecret")
+
 	require.Equal(t, "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", pubKeyEncoded)
+	require.Equal(t, "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", kp.Address)
 }
 
 func Test_DeriveSecp256k1FromName(t *testing.T) {

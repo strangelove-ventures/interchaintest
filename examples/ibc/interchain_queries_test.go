@@ -9,12 +9,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -23,7 +24,7 @@ import (
 // of interchain queries. See: https://github.com/quasar-finance/interchain-query-demo
 func TestInterchainQueries(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()
@@ -125,7 +126,7 @@ func TestInterchainQueries(t *testing.T) {
 	chain2User := users[1]
 
 	// Wait a few blocks for user accounts to be created on chain.
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the recently created channel-id.
@@ -146,17 +147,17 @@ func TestInterchainQueries(t *testing.T) {
 	)
 
 	// Wait a few blocks for the relayer to start.
-	err = test.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the balances of an account on the counterparty chain using interchain queries.
 	chanID := channels[0].Counterparty.ChannelID
 	require.NotEmpty(t, chanID)
 
-	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
 	require.NotEmpty(t, chain1Addr)
 
-	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
 	require.NotEmpty(t, chain2Addr)
 
 	cmd := []string{"icq", "tx", "interquery", "send-query-all-balances", chanID, chain2Addr,
@@ -172,7 +173,7 @@ func TestInterchainQueries(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait a few blocks for query to be sent to counterparty.
-	err = test.WaitForBlocks(ctx, 10, chain1)
+	err = testutil.WaitForBlocks(ctx, 10, chain1)
 	require.NoError(t, err)
 
 	// Check the results from the interchain query above.

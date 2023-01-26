@@ -15,14 +15,13 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
-	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
@@ -39,8 +38,8 @@ type RelayChainNode struct {
 
 	Chain             ibc.Chain
 	NodeKey           p2pCrypto.PrivKey
-	AccountKey        *schnorrkel.MiniSecretKey
-	StashKey          *schnorrkel.MiniSecretKey
+	AccountKeyName    string
+	StashKeyName      string
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
 
@@ -52,13 +51,11 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
-	/*
-		rpcPort        = "27452/tcp"
-	*/
-	wsPort         = "27451/tcp"
+	wsPort = "27451/tcp"
+	//rpcPort        = "27452/tcp"
+	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"
-	nodePort       = "27452/tcp"
 )
 
 var (
@@ -92,7 +89,7 @@ func (p *RelayChainNode) Bind() []string {
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
 func (p *RelayChainNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", p.Chain.Config().Name)
+	return "/home/heighliner"
 }
 
 // PeerID returns the public key of the node key for p2p.
@@ -109,24 +106,6 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	pubKey, err := p.Ed25519PrivateKey.GetPublic().Raw()
 	if err != nil {
 		return "", fmt.Errorf("error fetching pubkey bytes: %w", err)
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// AccountAddress returns the ss58 encoded account address.
-func (p *RelayChainNode) AccountAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.AccountKey.Public().Encode() {
-		pubKey[i] = mkByte
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// StashAddress returns the ss58 encoded stash address.
-func (p *RelayChainNode) StashAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.StashKey.Public().Encode() {
-		pubKey[i] = mkByte
 	}
 	return EncodeAddressSS58(pubKey)
 }
@@ -232,11 +211,9 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--ws-port=%s", strings.Split(wsPort, "/")[0]),
 		fmt.Sprintf("--%s", IndexedName[p.Index]),
 		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
-
 		// "--validator",
 		"--ws-external",
 		"--rpc-external",
-
 		"--beefy",
 		"--rpc-cors=all",
 		"--unsafe-ws-external",
@@ -262,7 +239,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
+			User:     p.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -311,6 +288,9 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
+	p.log.Info(explorerUrl, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -332,7 +312,30 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+// SendFunds sends funds to a wallet from a user account.
+// Implements Chain interface.
+func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	hash, err := SendFundsTx(p.api, kp, amount)
+	if err != nil {
+		return err
+	}
+
+	p.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", p.Name()))
+	return nil
+}
+
+// GetBalance fetches the current balance for a specific account address and denom.
+// Implements Chain interface.
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+	return GetBalance(p.api, address)
 }

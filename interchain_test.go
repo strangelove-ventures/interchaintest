@@ -12,18 +12,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	ibctest "github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {
@@ -129,20 +129,20 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Run("Chain one wallet is returned", func(t *testing.T) {
 		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g1Wallet.Address)
-		require.NotEmpty(t, g1Wallet.Mnemonic)
+		require.NotEmpty(t, g1Wallet.Address())
+		require.NotEmpty(t, g1Wallet.Mnemonic())
 	})
 
 	t.Run("Chain two wallet is returned", func(t *testing.T) {
 		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g2Wallet.Address)
-		require.NotEmpty(t, g2Wallet.Mnemonic)
+		require.NotEmpty(t, g2Wallet.Address())
+		require.NotEmpty(t, g2Wallet.Mnemonic())
 	})
 
 	t.Run("Different wallets are returned", func(t *testing.T) {
-		require.NotEqual(t, g1Wallet.Address, g2Wallet.Address)
-		require.NotEqual(t, g1Wallet.Mnemonic, g2Wallet.Mnemonic)
+		require.NotEqual(t, g1Wallet.Address(), g2Wallet.Address())
+		require.NotEqual(t, g1Wallet.Mnemonic(), g2Wallet.Mnemonic())
 	})
 
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
@@ -206,11 +206,11 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
-		require.NotEmpty(t, user.Address)
-		require.NotEmpty(t, user.KeyName)
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
+		require.NotEmpty(t, user.Address())
+		require.NotEmpty(t, user.KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, user.Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 
@@ -219,12 +219,12 @@ func TestInterchain_CreateUser(t *testing.T) {
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
 		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
-		require.NotEmpty(t, users[0].Address)
-		require.NotEmpty(t, users[0].KeyName)
+		require.NotEmpty(t, users[0].Address())
+		require.NotEmpty(t, users[0].KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, users[0].Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 	})
@@ -288,19 +288,28 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
 		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
 
-		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
-		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
+		msg := transfertypes.NewMsgTransfer(
+			"transfer",
+			"channel-0",
+			transferAmount,
+			testUser.FormattedAddress(),
+			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
+			clienttypes.NewHeight(1, 1000),
+			0,
+			"",
+		)
+		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.Bech32Address(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.Equal(t, sendAmount, dstFinalBalance)
 	})

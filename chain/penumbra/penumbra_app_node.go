@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -63,11 +63,24 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/root"
+	return "/home/heighliner"
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
+	_, stderr, err := p.Exec(ctx, cmd, nil)
+	// already exists error is okay
+	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
+		return err
+	}
+	return nil
+}
+
+// RecoverKey restores a key from a given mnemonic.
+func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
@@ -78,11 +91,12 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 
 // initializes validator definition template file
 // wallet must be generated first
-func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
+func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", valKeyName)
 	cmd := []string{
 		"pcli",
-		"-d", p.HomeDir(),
-		"validator", "template-definition",
+		"-d", keyPath,
+		"validator", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
 	_, _, err := p.Exec(ctx, cmd, nil)
@@ -181,13 +195,20 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 		}
 	}
 	return "", errors.New("address not found")
+
 }
 
 func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+func (p *PenumbraAppNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
@@ -204,7 +225,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
+			User:     p.Image.UidGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -258,7 +279,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err

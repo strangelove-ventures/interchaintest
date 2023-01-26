@@ -6,17 +6,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/types"
 	"strings"
+
+	"github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	keys "github.com/cosmos/btcutil/hdkeychain"
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"go.uber.org/zap"
 )
+
+var _ HyperspaceRelayer = HyperspaceRelayer{}
 
 // HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
 type HyperspaceRelayer struct {
@@ -267,7 +270,7 @@ func (hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir stri
 	}
 }
 
-func (hyperspaceCommander) AddKey(chainID, keyName, homeDir string) []string {
+func (hyperspaceCommander) AddKey(chainID, keyName, coinType string, homeDir string) []string {
 	fmt.Println("[hyperspace] AddKey", chainID, keyName, homeDir)
 	return []string{
 		"hyperspace",
@@ -405,7 +408,7 @@ func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.Cr
 	}
 }
 
-func (hyperspaceCommander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string {
+func (hyperspaceCommander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
 	fmt.Println("[hyperspace] RestoreKey", chainID, keyName, mnemonic, homeDir)
 	return []string{
 		"hyperspace",
@@ -523,4 +526,36 @@ func (hyperspaceCommander) Init(homeDir string) []string {
 		// "rly", "config", "init",
 		// "--home", homeDir,
 	}
+}
+func (hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+	return NewWallet(keyName, address, mnemonic)
+}
+
+func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "clients", chainID,
+		"--home", homeDir,
+	}
+}
+
+func (c hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+	var clients ibc.ClientOutputs
+	for _, client := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(client) == "" {
+			continue
+		}
+
+		var clientOutput ibc.ClientOutput
+		if err := json.Unmarshal([]byte(client), &clientOutput); err != nil {
+			c.log.Error(
+				"Error parsing client json",
+				zap.Error(err),
+			)
+
+			continue
+		}
+		clients = append(clients, &clientOutput)
+	}
+
+	return clients, nil
 }

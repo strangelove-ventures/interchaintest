@@ -3,17 +3,18 @@ package polkadot_test
 import (
 	"context"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 	"testing"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestKeyGen(t *testing.T) {
@@ -41,16 +42,16 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	nv := 5 // Number of validators
 	nf := 3 // Number of full nodes
 
-	configFileOverrides := make(configutil.Toml)
+	configFileOverrides := make(testutil.Toml)
 
-	appTomlOverrides := make(configutil.Toml)
-	configTomlOverrides := make(configutil.Toml)
+	appTomlOverrides := make(testutil.Toml)
+	configTomlOverrides := make(testutil.Toml)
 
-	apiOverrides := make(configutil.Toml)
+	apiOverrides := make(testutil.Toml)
 	apiOverrides["rpc-max-body-bytes"] = 13500000
 	appTomlOverrides["api"] = apiOverrides
 
-	rpcOverrides := make(configutil.Toml)
+	rpcOverrides := make(testutil.Toml)
 	rpcOverrides["max_body_bytes"] = 13500000
 	rpcOverrides["max_header_bytes"] = 14000000
 	configTomlOverrides["rpc"] = rpcOverrides
@@ -71,9 +72,27 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 			Version:   "polkadot-node:local,parachain-node:local",
 			//Version:   "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
 			ChainConfig: ibc.ChainConfig{
-				Name:         "rococo-local",
-				ChainID:      "rococo-local",
-				Bech32Prefix: "composable",
+				Name:    "rococo-local",
+				ChainID: "rococo-local",
+				Type:    "polkadot",
+				Images: []ibc.DockerImage{
+					{
+						Repository: "polkadot-node",
+						Version:    "local",
+						UidGid:     "1025:1025",
+					},
+					{
+						Repository: "parachain-node",
+						Version:    "local",
+						//UidGid: "1025:1025",
+					},
+				},
+				Bin:            "polkadot",
+				Bech32Prefix:   "composable",
+				Denom:          "uDOT",
+				GasPrices:      "",
+				GasAdjustment:  0,
+				TrustingPeriod: "",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,

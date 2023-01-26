@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
+	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"github.com/stretchr/testify/require"
 )
 
