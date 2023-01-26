@@ -558,7 +558,8 @@ type ValidatorWithIntPower struct {
 }
 
 // Bootstraps the chain from a given genesis file.
-// minValSet -> if true, only
+// If minValSet = true, only enough validators to reach a combined voting power of > 2/3 will be
+// initialized with given genesis file. The remaining validators will not not be incluced in test.
 func (c *CosmosChain) StartWithGenesisFile(
 	t *testing.T,
 	ctx context.Context,
@@ -581,7 +582,6 @@ func (c *CosmosChain) StartWithGenesisFile(
 	}
 
 	genesisValidators := genesisFile.Validators
-	t.Log("!!---genesisValidators:", genesisValidators)
 	totalPower := int64(0)
 
 	validatorsWithPower := make([]ValidatorWithIntPower, 0)
@@ -686,7 +686,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,
