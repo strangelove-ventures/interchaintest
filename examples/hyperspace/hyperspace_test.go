@@ -12,7 +12,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v6/relayer/hyperspace"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
@@ -214,9 +214,9 @@ func TestHyperspace(t *testing.T) {
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
 
-	r.(*rly.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
-	r.(*rly.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	r.(*rly.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
 
 	//err = testutil.WaitForBlocks(ctx, 22, polkadotChain, cosmosChain)
 	//require.NoError(t, err)

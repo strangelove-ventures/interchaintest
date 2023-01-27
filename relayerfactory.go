@@ -9,6 +9,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/label"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
+	"github.com/strangelove-ventures/ibctest/v6/relayer/hyperspace"
 	"go.uber.org/zap"
 )
 
@@ -66,7 +67,7 @@ func (f builtinRelayerFactory) Build(
 			f.options...,
 		)
 	case ibc.Hyperspace:
-		return rly.NewHyperspaceRelayer(
+		return hyperspace.NewHyperspaceRelayer(
 			f.log,
 			t.Name(),
 			cli,
