@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/ibctest/v6"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"github.com/strangelove-ventures/ibctest/v6/relayer/rly"
@@ -156,7 +157,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
+	fundAmount := int64(100_000_000)
 	chainCfg := gaia.Config()
 	key := rly.GenKey()
 	err = gaia.SendFunds(ctx, "faucet", ibc.WalletAmount{
@@ -165,7 +166,23 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		Amount: fundAmount,
 		Denom:  chainCfg.Denom,
 	})
+
 	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 2, gaia, composable)
+
+	balance, err := gaia.GetBalance(ctx, types.MustBech32ifyAddressBytes(chainCfg.Bech32Prefix, key.Address), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, fundAmount, balance)
+
+	gaiad := gaia.(*cosmos.CosmosChain)
+
+	codeHash, err := gaiad.StoreClientContract(ctx, "faucet", "ics10_grandpa_cw.wasm")
+	t.Logf("Contract codeHash: %s", codeHash)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 5, gaia, composable)
+	require.NoError(t, err)
+
 	//users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), gaia)
 	//gaiaUser := users[0]
 	//gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
