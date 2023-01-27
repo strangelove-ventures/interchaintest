@@ -736,18 +736,18 @@ func (c *CosmosChain) StartWithGenesisFile(
 	}
 
 	// validator0 := c.Validators[0]
-	validator0 := c.FullNodes[0]
-	if err := validator0.OverwriteGenesisFile(ctx, genbz); err != nil {
+	// validator0 := c.FullNodes[0]
+	if err := fn.OverwriteGenesisFile(ctx, genbz); err != nil {
 		return err
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := fn.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
 			return err
 		}
 	}
 
-	genbz, err = validator0.GenesisFileContent(ctx)
+	genbz, err = fn.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
