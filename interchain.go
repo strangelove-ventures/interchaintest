@@ -311,6 +311,7 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		provider, consumer := providerConsumerLink.provider.(*cosmos.CosmosChain), providerConsumerLink.consumer.(*cosmos.CosmosChain)
 		consumer.NumValidators = provider.NumValidators
 		consumer.Provider = provider
+		provider.Consumers = append(provider.Consumers, consumer)
 	}
 
 	// Initialize the chains (pull docker images, etc.).

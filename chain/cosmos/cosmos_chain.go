@@ -41,6 +41,7 @@ type CosmosChain struct {
 	Validators    ChainNodes
 	FullNodes     ChainNodes
 	Provider      *CosmosChain
+	Consumers     []*CosmosChain
 
 	log *zap.Logger
 
@@ -766,14 +767,14 @@ type CCVInitialValidatorPubKey struct {
 	Ed25519 string `json:"ed25519"`
 }
 
-// Bootstraps the chain and starts it from genesis
+// Bootstraps the consumer chain and starts it from genesis
 func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
 	eg := new(errgroup.Group)
-	// Initialize config and sign gentx for each validator.
+	// Initialize validators and fullnodes.
 	for _, v := range c.Nodes() {
 		v := v
 		v.Validator = true
@@ -843,6 +844,11 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 		return fmt.Errorf("failed to query provider block to initialize consumer client")
 	}
 
+	genbz, err := validator0.genesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
 	nextValidatorsHash := block.Block.NextValidatorsHash
 	timestamp := block.Block.Time
 	rootHash := block.Block.AppHash
@@ -869,11 +875,6 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
 
 	// populate initial_val_set with provider val pubkeys and power
-
-	genbz, err := validator0.genesisFileContent(ctx)
-	if err != nil {
-		return err
-	}
 
 	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
 

@@ -28,11 +28,9 @@ func TestICS(t *testing.T) {
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{Name: "gaia", Version: "v9.0.0-rc1", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0uatom",
-			ICSType:   ibc.ICSTypeProvider,
 		}},
 		{Name: "noble", Version: "v0.1.1", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0token",
-			ICSType:   ibc.ICSTypeConsumer,
 		}},
 	})
 

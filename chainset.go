@@ -122,16 +122,16 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 		eg.Go(func() error {
 			chainCfg := c.Config()
 			if cosmosChain, ok := c.(*cosmos.CosmosChain); ok {
-				switch chainCfg.ICSType {
-				case ibc.ICSTypeProvider:
+				if cosmosChain.Provider != nil {
+					// this is a consumer chain
+					// TODO need to wait for provider chain to be started up first
+					cosmosChain.StartConsumerChain(testName, egCtx, additionalGenesisWallets[c]...)
+				} else if len(cosmosChain.Consumers) > 0 {
+					// this is a provider chain
 					if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
 						return fmt.Errorf("failed to start chain %s: %w", chainCfg.Name, err)
 					}
-					// TODO gov proposal for consumer, or maybe happens below as part of consumer chain startup?
-					return nil
-				case ibc.ICSTypeConsumer:
-					// TODO need to wait for provider chain to be started up first
-					cosmosChain.StartConsumerChain(testName, egCtx, additionalGenesisWallets[c]...)
+					// TODO gov proposal for consumer, or maybe happens above as part of consumer chain startup?
 					return nil
 				}
 			}

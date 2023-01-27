@@ -9,14 +9,6 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 )
 
-type ICSType int64
-
-const (
-	ICSTypeNone     ICSType = 0
-	ICSTypeProvider ICSType = 1
-	ICSTypeConsumer ICSType = 2
-)
-
 // ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
@@ -53,8 +45,6 @@ type ChainConfig struct {
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
 	EncodingConfig *simappparams.EncodingConfig
-	// For Cosmos Interchain-Security, flag if chain is a provider or consumer
-	ICSType ICSType
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -153,10 +143,6 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.EncodingConfig != nil {
 		c.EncodingConfig = other.EncodingConfig
-	}
-
-	if other.ICSType != ICSTypeNone {
-		c.ICSType = other.ICSType
 	}
 
 	return c
