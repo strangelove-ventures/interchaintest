@@ -735,7 +735,8 @@ func (c *CosmosChain) StartWithGenesisFile(
 		_ = os.WriteFile(exportGenesis, genbz, 0600)
 	}
 
-	validator0 := c.Validators[0]
+	// validator0 := c.Validators[0]
+	validator0 := c.FullNodes[0]
 	if err := validator0.OverwriteGenesisFile(ctx, genbz); err != nil {
 		return err
 	}
