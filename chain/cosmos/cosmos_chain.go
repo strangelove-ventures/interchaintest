@@ -570,6 +570,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 	minValSet bool,
 	additionalGenesisWallets ...ibc.WalletAmount,
 ) error {
+	chainCfg := c.Config()
 
 	genbz, err := ioutil.ReadFile(genesisFilePath)
 	if err != nil {
@@ -707,6 +708,13 @@ func (c *CosmosChain) StartWithGenesisFile(
 	// wait for this to finish
 	if err := eg.Wait(); err != nil {
 		return err
+	}
+
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.cfg.ModifyGenesis != nil {
