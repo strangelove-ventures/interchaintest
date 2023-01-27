@@ -15,8 +15,10 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"go.uber.org/zap"
 )
 
@@ -42,6 +44,10 @@ type DockerRelayer struct {
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
+}
+
+type HyperspaceRelayerCoreConfig struct {
+	PrometheusEndpoint string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -116,6 +122,20 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		res := r.Exec(ctx, ibc.NopRelayerExecReporter{}, init, nil)
 		if res.Err != nil {
 			return nil, res.Err
+		}
+	}
+
+	if r.c.Name() == "hyperspace" {
+		coreConfig := HyperspaceRelayerCoreConfig{
+			PrometheusEndpoint: "",
+		}
+		bytes, err := toml.Marshal(coreConfig)
+		if err != nil {
+			return nil, err
+		}
+		fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+		if err := fw.WriteFile(ctx, r.volumeName, "core.config", bytes); err != nil {
+			return nil, fmt.Errorf("failed writing core config: %w", err)
 		}
 	}
 
@@ -289,22 +309,66 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 }
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
-	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
+	addrBytes := ""
+	switch r.c.Name() {
+	case "hyperspace":
+		chainConfig := make(testutil.Toml)
+		chainConfig["private_key"] = mnemonic
+		chainConfigFile := chainID + ".config"
+		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
+		if err != nil {
+			return err
+		}
+	case "rly":
+		cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
-	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
-	// to detect if Docker has hung.
+		// Restoring a key should be near-instantaneous, so add a 1-minute timeout
+		// to detect if Docker has hung.
+		ctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+
+		res := r.Exec(ctx, rep, cmd, nil)
+		if res.Err != nil {
+			return res.Err
+		}
+		addrBytes = r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
+	}
+
+
+	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+
+	return nil
+}
+
+func (r *DockerRelayer) PrintCoreConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
+	cmd := []string{
+		"cat",
+		path.Join(r.HomeDir(), "core.config"),
+	}
+		
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
+	fmt.Println(string(res.Stdout))
+	return nil
+}
 
-	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
-
-	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
-
+func (r *DockerRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) error {
+	cmd := []string{
+		"cat",
+		path.Join(r.HomeDir(), chainID+".config"),
+	}
+		
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+	fmt.Println(string(res.Stdout))
 	return nil
 }
 

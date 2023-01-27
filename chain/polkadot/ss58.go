@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	ss58Format = 42
+	Ss58Format = 42
 	ss58Prefix = "SS58PRE"
 )
 
 func EncodeAddressSS58(key []byte) (string, error) {
-	input := []byte{ss58Format}
+	input := []byte{Ss58Format}
 	input = append(input, key...)
 
 	checksum, err := ss58Checksum(input)
@@ -36,7 +36,7 @@ func EncodeAddressSS58(key []byte) (string, error) {
 func DecodeAddressSS58(address string) ([]byte, error) {
 	checksumPrefix := []byte(ss58Prefix)
 	ss58AddrDecoded, err := base58.Decode(address)
-	if len(ss58AddrDecoded) == 0 || ss58AddrDecoded[0] != byte(ss58Format) || err != nil {
+	if len(ss58AddrDecoded) == 0 || ss58AddrDecoded[0] != byte(Ss58Format) || err != nil {
 		return nil, err
 	}
 	var checksumLength int

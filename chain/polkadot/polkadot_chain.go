@@ -592,7 +592,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
-	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)
 	if err != nil {
 		return fmt.Errorf("failed to create keypair: %w", err)
 	}
@@ -617,7 +617,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 		return fmt.Errorf("Key already exists: %s", keyName)
 	}
 
-	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)
 	if err != nil {
 		return fmt.Errorf("failed to create keypair: %w", err)
 	}
@@ -634,7 +634,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 	return err
 }
 
-// GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
+// GetAddress fetches the address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	krItem, err := c.keyring.Get(keyName)
