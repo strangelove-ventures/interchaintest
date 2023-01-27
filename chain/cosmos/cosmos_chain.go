@@ -3,6 +3,7 @@ package cosmos
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -35,10 +36,11 @@ import (
 type CosmosChain struct {
 	testName      string
 	cfg           ibc.ChainConfig
-	numValidators int
+	NumValidators int
 	numFullNodes  int
 	Validators    ChainNodes
 	FullNodes     ChainNodes
+	Provider      *CosmosChain
 
 	log *zap.Logger
 
@@ -80,10 +82,18 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
-		numValidators: numValidators,
+		NumValidators: numValidators,
 		numFullNodes:  numFullNodes,
 		log:           log,
 	}
+}
+
+func (c *CosmosChain) SetNumValidators(numValidators int) {
+	c.NumValidators = numValidators
+}
+
+func (c *CosmosChain) GetNumValidators() int {
+	return c.NumValidators
 }
 
 // Nodes returns all nodes, including validators and fullnodes.
@@ -492,13 +502,13 @@ func (c *CosmosChain) initializeChainNodes(
 	c.pullImages(ctx, cli)
 	image := chainCfg.Images[0]
 
-	newVals := make(ChainNodes, c.numValidators)
+	newVals := make(ChainNodes, c.NumValidators)
 	copy(newVals, c.Validators)
 	newFullNodes := make(ChainNodes, c.numFullNodes)
 	copy(newFullNodes, c.FullNodes)
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	for i := len(c.Validators); i < c.numValidators; i++ {
+	for i := len(c.Validators); i < c.NumValidators; i++ {
 		i := i
 		eg.Go(func() error {
 			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true)
@@ -707,6 +717,188 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	for _, cn := range chainNodes {
 		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
+			return err
+		}
+	}
+
+	if err := chainNodes.LogGenesisHashes(ctx); err != nil {
+		return err
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	for _, n := range chainNodes {
+		n := n
+		eg.Go(func() error {
+			return n.CreateNodeContainer(egCtx)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	peers := chainNodes.PeerString(ctx)
+
+	eg, egCtx = errgroup.WithContext(ctx)
+	for _, n := range chainNodes {
+		n := n
+		c.log.Info("Starting container", zap.String("container", n.Name()))
+		eg.Go(func() error {
+			if err := n.SetPeers(egCtx, peers); err != nil {
+				return err
+			}
+			return n.StartContainer(egCtx)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// Wait for 5 blocks before considering the chains "started"
+	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+}
+
+type CCVInitialValidator struct {
+	PubKey CCVInitialValidatorPubKey `json:"pub_key"`
+	Power  string                    `json:"power"`
+}
+
+type CCVInitialValidatorPubKey struct {
+	Ed25519 string `json:"ed25519"`
+}
+
+// Bootstraps the chain and starts it from genesis
+func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	chainCfg := c.Config()
+
+	configFileOverrides := chainCfg.ConfigFileOverrides
+
+	eg := new(errgroup.Group)
+	// Initialize config and sign gentx for each validator.
+	for _, v := range c.Nodes() {
+		v := v
+		v.Validator = true
+		eg.Go(func() error {
+			if err := v.InitFullNodeFiles(ctx); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					ctx,
+					v.logger(),
+					v.DockerClient,
+					v.TestName,
+					v.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+
+	// wait for this to finish
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// for the validators we need to collect the gentxs and the accounts
+	// to the first node's genesis file
+	validator0 := c.Validators[0]
+
+	// TODO: fund provider vals in genesis?
+	/*
+		for i := 1; i < len(c.Provider.Validators); i++ {
+			validatorN := c.Provider.Validators[i]
+
+			bech32, err := validatorN.AccountKeyBech32(ctx, valKey)
+			if err != nil {
+				return err
+			}
+
+			if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
+				return err
+			}
+		}*/
+
+	for _, wallet := range additionalGenesisWallets {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+			return err
+		}
+	}
+
+	providerHeight, err := c.Provider.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query provider height")
+	}
+	providerHeightInt64 := int64(providerHeight)
+
+	block, err := c.Provider.getFullNode().Client.Block(ctx, &providerHeightInt64)
+	if err != nil {
+		return fmt.Errorf("failed to query provider block to initialize consumer client")
+	}
+
+	nextValidatorsHash := block.Block.NextValidatorsHash
+	timestamp := block.Block.Time
+	rootHash := block.Block.AppHash
+
+	page := int(0)
+	perPage := int(1000)
+	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
+
+	initialVals := make([]CCVInitialValidator, len(providerVals.Validators))
+
+	for _, val := range providerVals.Validators {
+		initialVals = append(initialVals, CCVInitialValidator{
+			PubKey: CCVInitialValidatorPubKey{
+				Ed25519: base64.StdEncoding.EncodeToString([]byte(val.PubKey.Bytes())),
+			},
+			Power: string(val.VotingPower),
+		})
+	}
+
+	// TODO populate genesis file ccvconsumer module state params, provider_client_state, provider_consensus_state, and initial_val_set with provider vals.
+
+	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
+
+	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
+
+	// populate initial_val_set with provider val pubkeys and power
+
+	genbz, err := validator0.genesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
+
+	if c.cfg.ModifyGenesis != nil {
+		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
+	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
+	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
+	if exportGenesis != "" && exportGenesisChain == c.cfg.Name {
+		c.log.Debug("Exporting genesis file",
+			zap.String("chain", exportGenesisChain),
+			zap.String("path", exportGenesis),
+		)
+		_ = os.WriteFile(exportGenesis, genbz, 0600)
+	}
+
+	chainNodes := c.Nodes()
+
+	for _, cn := range chainNodes {
+		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}

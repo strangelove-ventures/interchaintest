@@ -154,6 +154,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		if s.Version != "" && len(cfg.Images) > 0 {
 			cfg.Images[0].Version = s.Version
 		}
+		cfg.ICSType = s.ICSType
 	case "penumbra":
 		versionSplit := strings.Split(s.Version, ",")
 		if len(versionSplit) != 2 {

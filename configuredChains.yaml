@@ -73,6 +73,20 @@ juno:
       uid-gid: 1025:1025
   no-host-mount: false
 
+noble:
+  name: noble
+  type: cosmos
+  bin: nobled
+  bech32-prefix: noble
+  denom: token
+  gas-prices: 0.0token
+  gas-adjustment: 1.1
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/noble
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 osmosis:
   name: osmosis
   type: cosmos

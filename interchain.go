@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
 	"go.uber.org/zap"
@@ -29,6 +30,9 @@ type Interchain struct {
 	// Key: relayer and path name; Value: the two chains being linked.
 	links map[relayerPath]interchainLink
 
+	// Key: relayer and path name; Value: the provider and consumer chain link.
+	providerConsumerLinks map[relayerPath]providerConsumerLink
+
 	// Set to true after Build is called once.
 	built bool
 
@@ -45,6 +49,20 @@ type Interchain struct {
 
 type interchainLink struct {
 	chains [2]ibc.Chain
+	// If set, these options will be used when creating the client in the path link step.
+	// If a zero value initialization is used, e.g. CreateClientOptions{},
+	// then the default values will be used via ibc.DefaultClientOpts.
+	createClientOpts ibc.CreateClientOptions
+
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
+	createChannelOpts ibc.CreateChannelOptions
+}
+
+type providerConsumerLink struct {
+	provider, consumer ibc.Chain
+
 	// If set, these options will be used when creating the client in the path link step.
 	// If a zero value initialization is used, e.g. CreateClientOptions{},
 	// then the default values will be used via ibc.DefaultClientOpts.
@@ -158,6 +176,26 @@ type InterchainLink struct {
 	CreateChannelOpts ibc.CreateChannelOptions
 }
 
+type ProviderConsumerLink struct {
+	Provider, Consumer ibc.Chain
+
+	// Relayer to use for link.
+	Relayer ibc.Relayer
+
+	// Name of path to create.
+	Path string
+
+	// If set, these options will be used when creating the client in the path link step.
+	// If a zero value initialization is used, e.g. CreateClientOptions{},
+	// then the default values will be used via ibc.DefaultClientOpts.
+	CreateClientOpts ibc.CreateClientOptions
+
+	// If set, these options will be used when creating the channel in the path link step.
+	// If a zero value initialization is used, e.g. CreateChannelOptions{},
+	// then the default values will be used via ibc.DefaultChannelOpts.
+	CreateChannelOpts ibc.CreateChannelOptions
+}
+
 // AddLink adds the given link to the Interchain.
 // If any validation fails, AddLink panics.
 func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
@@ -188,6 +226,43 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 
 	ic.links[key] = interchainLink{
 		chains:            [2]ibc.Chain{link.Chain1, link.Chain2},
+		createChannelOpts: link.CreateChannelOpts,
+		createClientOpts:  link.CreateClientOpts,
+	}
+	return ic
+}
+
+// AddLink adds the given link to the Interchain.
+// If any validation fails, AddLink panics.
+func (ic *Interchain) AddProviderConsumerLink(link ProviderConsumerLink) *Interchain {
+	if _, exists := ic.chains[link.Provider]; !exists {
+		cfg := link.Provider.Config()
+		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
+	}
+	if _, exists := ic.chains[link.Consumer]; !exists {
+		cfg := link.Consumer.Config()
+		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
+	}
+	if _, exists := ic.relayers[link.Relayer]; !exists {
+		panic(fmt.Errorf("relayer %v was never added to Interchain", link.Relayer))
+	}
+
+	if link.Provider == link.Consumer {
+		panic(fmt.Errorf("chains must be different (both were %v)", link.Provider))
+	}
+
+	key := relayerPath{
+		Relayer: link.Relayer,
+		Path:    link.Path,
+	}
+
+	if _, exists := ic.links[key]; exists {
+		panic(fmt.Errorf("relayer %q already has a path named %q", key.Relayer, key.Path))
+	}
+
+	ic.providerConsumerLinks[key] = providerConsumerLink{
+		provider:          link.Provider,
+		consumer:          link.Consumer,
 		createChannelOpts: link.CreateChannelOpts,
 		createClientOpts:  link.CreateClientOpts,
 	}
@@ -229,6 +304,14 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		chains = append(chains, chain)
 	}
 	ic.cs = newChainSet(ic.log, chains)
+
+	// Consumer chains need to have the same number of validators as their provider.
+	// Consumer also needs reference to its provider chain.
+	for _, providerConsumerLink := range ic.providerConsumerLinks {
+		provider, consumer := providerConsumerLink.provider.(*cosmos.CosmosChain), providerConsumerLink.consumer.(*cosmos.CosmosChain)
+		consumer.NumValidators = provider.NumValidators
+		consumer.Provider = provider
+	}
 
 	// Initialize the chains (pull docker images, etc.).
 	if err := ic.cs.Initialize(ctx, opts.TestName, opts.Client, opts.NetworkID); err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/strangelove-ventures/interchaintest/v3/internal/blockdb"
 	"go.uber.org/multierr"
@@ -119,8 +120,23 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
+			chainCfg := c.Config()
+			if cosmosChain, ok := c.(*cosmos.CosmosChain); ok {
+				switch chainCfg.ICSType {
+				case ibc.ICSTypeProvider:
+					if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
+						return fmt.Errorf("failed to start chain %s: %w", chainCfg.Name, err)
+					}
+					// TODO gov proposal for consumer, or maybe happens below as part of consumer chain startup?
+					return nil
+				case ibc.ICSTypeConsumer:
+					// TODO need to wait for provider chain to be started up first
+					cosmosChain.StartConsumerChain(testName, egCtx, additionalGenesisWallets[c]...)
+					return nil
+				}
+			}
 			if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
-				return fmt.Errorf("failed to start chain %s: %w", c.Config().Name, err)
+				return fmt.Errorf("failed to start chain %s: %w", chainCfg.Name, err)
 			}
 
 			return nil
