@@ -556,7 +556,17 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	_, _, err := tn.ExecBin(ctx, "add-genesis-account", address, amount)
+	var command []string
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		tn.logger().Info("add-genesis-account with new genesis command")
+		command = append(command, "genesis")
+	} else {
+		tn.logger().Info("add-genesis-account WITHOUT new genesis command")
+	}
+
+	command = append(command, "add-genesis-account", address, amount)
+	_, _, err := tn.ExecBin(ctx, command...)
+
 	return err
 }
 
@@ -565,19 +575,27 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
-		"gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+	var command []string
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "genesis")
+	}
+
+	command = append(command, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID,
-	)
+		"--chain-id", tn.Chain.Config().ChainID)
+
+	_, _, err := tn.ExecBin(ctx, command...)
 	return err
 }
 
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
-		"--home", tn.HomeDir(),
+	command := []string{tn.Chain.Config().Bin}
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "genesis")
 	}
+
+	command = append(command, "collect-gentxs", "--home", tn.HomeDir())
 
 	tn.lock.Lock()
 	defer tn.lock.Unlock()

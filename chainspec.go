@@ -28,10 +28,11 @@ type ChainSpec struct {
 	// Must be set.
 	Version string
 
-	// GasAdjustment and NoHostMount are pointers in ChainSpec
+	// GasAdjustment, NoHostMount and UsingNewGenesisCommand are pointers in ChainSpec
 	// so zero-overrides can be detected from omitted overrides.
-	GasAdjustment *float64
-	NoHostMount   *bool
+	GasAdjustment          *float64
+	NoHostMount            *bool
+	UsingNewGenesisCommand *bool
 
 	// Embedded ChainConfig to allow for simple JSON definition of a ChainSpec.
 	ibc.ChainConfig
@@ -140,6 +141,9 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	}
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
+	}
+	if s.UsingNewGenesisCommand != nil {
+		cfg.UsingNewGenesisCommand = *s.UsingNewGenesisCommand
 	}
 
 	// Set the version depending on the chain type.

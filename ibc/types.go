@@ -40,6 +40,8 @@ type ChainConfig struct {
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
 	EncodingConfig *testutil.TestEncodingConfig
+
+	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
