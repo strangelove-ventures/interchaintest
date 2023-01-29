@@ -558,10 +558,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 
 	var command []string
 	if tn.Chain.Config().UsingNewGenesisCommand {
-		tn.logger().Info("add-genesis-account with new genesis command")
 		command = append(command, "genesis")
-	} else {
-		tn.logger().Info("add-genesis-account WITHOUT new genesis command")
 	}
 
 	command = append(command, "add-genesis-account", address, amount)
