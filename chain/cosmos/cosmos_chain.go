@@ -596,7 +596,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					return err
 				}
 			}
-			if c.cfg.SkipGenTx == nil || !*c.cfg.SkipGenTx {
+			if !c.cfg.SkipGenTx {
 				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
 			}
 			return nil
@@ -659,7 +659,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if c.cfg.SkipGenTx == nil || !*c.cfg.SkipGenTx {
+		if !c.cfg.SkipGenTx {
 			if err := validatorN.copyGentx(ctx, validator0); err != nil {
 				return err
 			}
@@ -672,7 +672,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if c.cfg.SkipGenTx == nil || !*c.cfg.SkipGenTx {
+	if !c.cfg.SkipGenTx {
 		if err := validator0.CollectGentxs(ctx); err != nil {
 			return err
 		}
