@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -561,15 +560,13 @@ type ValidatorWithIntPower struct {
 // If minValSet = true, only enough validators to reach a combined voting power of > 2/3 will be
 // initialized with given genesis file. The remaining validators will not not be incluced in test.
 func (c *CosmosChain) StartWithGenesisFile(
-	t *testing.T,
 	ctx context.Context,
-	home string,
-	cli *client.Client,
-	networkID string,
+	testName string,
 	genesisFilePath string,
 	minValSet bool,
 	additionalGenesisWallets ...ibc.WalletAmount,
 ) error {
+	chainCfg := c.Config()
 
 	genbz, err := ioutil.ReadFile(genesisFilePath)
 	if err != nil {
@@ -606,6 +603,10 @@ func (c *CosmosChain) StartWithGenesisFile(
 	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
 	totalConsensus := int64(0)
 
+	fn := c.getFullNode()
+	cli := fn.DockerClient
+	networkID := fn.NetworkID
+
 	c.numValidators = 0
 	c.Validators = []*ChainNode{}
 	for _, val := range validatorsWithPower {
@@ -616,7 +617,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 		}
 	}
 
-	if err = c.initializeChainNodes(ctx, t.Name(), cli, networkID); err != nil {
+	if err = c.initializeChainNodes(ctx, testName, cli, networkID); err != nil {
 		return err
 	}
 
@@ -651,7 +652,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 					return err
 				}
 			}
-			fr := dockerutil.NewFileRetriever(c.log, cli, t.Name())
+			fr := dockerutil.NewFileRetriever(c.log, cli, testName)
 			testNodePubKeyJsonBytes, err := fr.SingleFileContent(ctx, v.VolumeName, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
@@ -709,6 +710,13 @@ func (c *CosmosChain) StartWithGenesisFile(
 		return err
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	if c.cfg.ModifyGenesis != nil {
 		genbz, err = c.cfg.ModifyGenesis(c.Config(), genbz)
 		if err != nil {
@@ -728,6 +736,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 	}
 
 	validator0 := c.Validators[0]
+	// validator0 := c.FullNodes[0]
 	if err := validator0.OverwriteGenesisFile(ctx, genbz); err != nil {
 		return err
 	}

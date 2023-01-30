@@ -10,6 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v3/ibc"
 	"github.com/strangelove-ventures/ibctest/v3/internal/blockdb"
 	"go.uber.org/multierr"
@@ -118,15 +119,30 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 
 	for c := range cs.chains {
 		c := c
-		eg.Go(func() error {
-			if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
-				return fmt.Errorf("failed to start chain %s: %w", c.Config().Name, err)
-			}
+		chainConfig := c.Config()
+		genFilePath := chainConfig.GenesisFilePath
+		minValSet := chainConfig.MinValSet
+		if genFilePath == "" {
+			eg.Go(func() error {
+				if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
+					return fmt.Errorf("failed to start chain %s: %w", chainConfig.Name, err)
+				}
 
-			return nil
-		})
+				return nil
+			})
+		} else {
+			eg.Go(func() error {
+				cosmosChain, ok := c.(*cosmos.CosmosChain)
+				if !ok {
+					return fmt.Errorf("only type `*cosmos.CosmosChain` supported. Received %T", c)
+				}
+				if err := cosmosChain.StartWithGenesisFile(egCtx, testName, genFilePath, minValSet, additionalGenesisWallets[c]...); err != nil {
+					return fmt.Errorf("failed to start chain %s from genesis: %w", chainConfig.Name, err)
+				}
+				return nil
+			})
+		}
 	}
-
 	return eg.Wait()
 }
 

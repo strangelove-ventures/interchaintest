@@ -41,6 +41,11 @@ type ChainConfig struct {
 	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
+	// When provided, starts chain from given genesis file
+	GenesisFilePath string
+	// Used when starting from given genesis file. If minValSet = true, only enough validators to reach a combined voting power of > 2/3 will be
+	// initialized with given genesis file. The remaining validators will not not be incluced in test.
+	MinValSet bool
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
@@ -135,6 +140,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.PreGenesis != nil {
 		c.PreGenesis = other.PreGenesis
+	}
+
+	if other.GenesisFilePath != "" {
+		c.GenesisFilePath = other.GenesisFilePath
 	}
 
 	if other.ConfigFileOverrides != nil {
