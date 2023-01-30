@@ -16,8 +16,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// This test is meant to be used as a basic ibctest tutorial.
-// Code snippets are broken down in ./docs/upAndRunning.md
+// This tests Cosmos Interchain Security, spinning up a provider and a single consumer chain.
 func TestICS(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
