@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"sort"
@@ -568,7 +567,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 ) error {
 	chainCfg := c.Config()
 
-	genbz, err := ioutil.ReadFile(genesisFilePath)
+	genbz, err := os.ReadFile(genesisFilePath)
 	if err != nil {
 		return err
 	}
