@@ -8,7 +8,10 @@ import (
 
 	ibctest "github.com/strangelove-ventures/interchaintest/v3"
 	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer/rly"
 	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -26,38 +29,31 @@ func TestICS(t *testing.T) {
 
 	// Chain Factory
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
-		{Name: "gaia", Version: "v9.0.0-rc1", ChainConfig: ibc.ChainConfig{
-			GasPrices: "0.0uatom",
-		}},
-		{Name: "noble", Version: "v0.1.1", ChainConfig: ibc.ChainConfig{
-			GasPrices: "0.0token",
-		}},
+		{Name: "gaia", Version: "v9.0.0-rc1", ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5}},
+		{Name: "ics-consumer", Version: "v1.0.0-rc2"},
 	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
-	gaia, noble := chains[0], chains[1]
+	provider, consumer := chains[0], chains[1]
 
 	// Relayer Factory
 	client, network := ibctest.DockerSetup(t)
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
-		t, client, network)
+	r := ibctest.NewBuiltinRelayerFactory(
+		ibc.CosmosRly,
+		zaptest.NewLogger(t),
+		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "andrew-paths_update", rly.RlyDefaultUidGid),
+	).Build(t, client, network)
 
 	// Prep Interchain
 	const ibcPath = "ics-path"
 	ic := ibctest.NewInterchain().
-		AddChain(gaia).
-		AddChain(noble).
+		AddChain(provider).
+		AddChain(consumer).
 		AddRelayer(r, "relayer").
-		AddLink(ibctest.InterchainLink{
-			Chain1:  gaia,
-			Chain2:  noble,
-			Relayer: r,
-			Path:    ibcPath,
-		}).
 		AddProviderConsumerLink(ibctest.ProviderConsumerLink{
-			Provider: gaia,
-			Consumer: noble,
+			Provider: provider,
+			Consumer: consumer,
 			Relayer:  r,
 			Path:     ibcPath,
 		})
@@ -70,30 +66,16 @@ func TestICS(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	// Build interchain
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	err = ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 
-		SkipPathCreation: false},
-	),
-	)
+		SkipPathCreation: false,
+	})
+	require.NoError(t, err, "failed to build interchain")
 
-	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, noble)
-	gaiaUser := users[0]
-	nobleUser := users[1]
-
-	gaiaCfg := gaia.Config()
-	nobleCfg := noble.Config()
-
-	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaiaCfg.Bech32Prefix), gaiaCfg.Denom)
-	require.NoError(t, err)
-	require.Equal(t, fundAmount, gaiaUserBalInitial)
-
-	nobleUserBalInitial, err := noble.GetBalance(ctx, nobleUser.Bech32Address(nobleCfg.Bech32Prefix), nobleCfg.Denom)
-	require.NoError(t, err)
-	require.Equal(t, fundAmount, nobleUserBalInitial)
+	err = testutil.WaitForBlocks(ctx, 10, provider, consumer)
+	require.NoError(t, err, "failed to wait for blocks")
 }

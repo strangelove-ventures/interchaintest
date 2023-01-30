@@ -41,8 +41,8 @@ type Relayer interface {
 	// setup channels, connections, and clients
 	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
 
-	// update path channel filter
-	UpdatePath(ctx context.Context, rep RelayerExecReporter, pathName string, filter ChannelFilter) error
+	// update path channel filter or src/dst clients, conns, or chain IDs
+	UpdatePath(ctx context.Context, rep RelayerExecReporter, pathName string, opts PathUpdateOptions) error
 
 	// update clients, such as after new genesis
 	UpdateClients(ctx context.Context, rep RelayerExecReporter, pathName string) error
@@ -69,6 +69,10 @@ type Relayer interface {
 
 	// FlushAcknowledgements flushes any outstanding acknowledgements and then returns.
 	FlushAcknowledgements(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
+
+	// CreateClients performs the client handshake steps necessary for creating a light client
+	// on src that tracks the state of dst.
+	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID string, dstChainID string, pathName string, opts CreateClientOptions) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.

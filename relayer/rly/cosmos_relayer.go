@@ -142,10 +142,9 @@ func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, ho
 	}
 }
 
-// passing a value of 0 for customeClientTrustingPeriod will use default
-func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
+func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	return []string{
-		"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,
+		"rly", "tx", "client", srcChainID, dstChainID, pathName, "--client-tp", opts.TrustingPeriod,
 		"--home", homeDir,
 	}
 }
@@ -178,13 +177,38 @@ func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) 
 	}
 }
 
-func (commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
-	return []string{
+func (commander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
+	command := []string{
 		"rly", "paths", "update", pathName,
 		"--home", homeDir,
-		"--filter-rule", filter.Rule,
-		"--filter-channels", strings.Join(filter.ChannelList, ","),
 	}
+
+	if opts.ChannelFilter != nil {
+		command = append(command,
+			"--filter-rule", opts.ChannelFilter.Rule,
+			"--filter-channels", strings.Join(opts.ChannelFilter.ChannelList, ","))
+	}
+
+	if opts.SrcChainID != nil {
+		command = append(command, "--src-chain-id", *opts.SrcChainID)
+	}
+	if opts.DstChainID != nil {
+		command = append(command, "--dst-chain-id", *opts.DstChainID)
+	}
+	if opts.SrcClientID != nil {
+		command = append(command, "--src-client-id", *opts.SrcClientID)
+	}
+	if opts.DstClientID != nil {
+		command = append(command, "--dst-client-id", *opts.DstClientID)
+	}
+	if opts.SrcConnID != nil {
+		command = append(command, "--src-connection-id", *opts.SrcConnID)
+	}
+	if opts.DstConnID != nil {
+		command = append(command, "--dst-connection-id", *opts.DstConnID)
+	}
+
+	return command
 }
 
 func (commander) GetChannels(chainID, homeDir string) []string {

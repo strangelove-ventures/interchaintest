@@ -815,7 +815,11 @@ func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName strin
 
 	filePath := filepath.Join(tn.HomeDir(), fileName)
 
-	return tn.ExecTx(ctx, keyName, "gov", "submit-proposal", "consumer-addition", filePath, "-b", "block")
+	return tn.ExecTx(ctx, keyName,
+		"gov", "submit-proposal", "consumer-addition", filePath,
+		"-b", "block",
+		"--gas", "auto",
+	)
 }
 
 // DumpContractState dumps the state of a contract at a block height.

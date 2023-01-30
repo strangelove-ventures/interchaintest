@@ -41,7 +41,8 @@ import (
 )
 
 var (
-	defaultUpgradePath = []string{"upgrade", "upgradedIBCState"}
+	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
+	DefaultProviderUnbondingPeriod = 504 * time.Hour
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -601,7 +602,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// Initialize config and sign gentx for each validator.
 	for _, v := range c.Validators {
 		v := v
-		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
 				return err
@@ -633,7 +633,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// Initialize config for each full node.
 	for _, n := range c.FullNodes {
 		n := n
-		n.Validator = false
 		eg.Go(func() error {
 			if err := n.InitFullNodeFiles(ctx); err != nil {
 				return err
@@ -816,10 +815,10 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
 			Description:   "Proposal to add new consumer chain",
 			ChainId:       consumer.cfg.ChainID,
-			InitialHeight: clienttypes.Height{RevisionNumber: 0, RevisionHeight: 1},
+			InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
 			GenesisHash:   []byte("gen_hash"),
 			BinaryHash:    []byte("bin_hash"),
-			SpawnTime:     time.Now().Add(10 * time.Second),
+			SpawnTime:     time.Now(), // Client on provider tracking consumer will be created as soon as proposal passes
 
 			// TODO fetch or default variables
 			BlocksPerDistributionTransmission: 1000,
@@ -828,13 +827,13 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			ConsumerRedistributionFraction:    "0.75",
 			HistoricalEntries:                 10000,
 			UnbondingPeriod:                   1728000000000000,
-			Deposit:                           "10" + c.cfg.Denom,
+			Deposit:                           "100000000" + c.cfg.Denom,
 		}
 
-		// height, err := c.Height(ctx)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to query provider height before consumer addition proposal: %w", err)
-		// }
+		height, err := c.Height(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to query provider height before consumer addition proposal: %w", err)
+		}
 
 		propTx, err := c.ConsumerAdditionProposal(ctx, proposerKeyName, prop)
 		if err != nil {
@@ -845,17 +844,10 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		// TODO remove
-		if err := testutil.WaitForBlocks(ctx, 10, c); err != nil {
-			return err
+		_, err = PollForProposalStatus(ctx, c, height, height+10, propTx.ProposalID, ProposalStatusPassed)
+		if err != nil {
+			return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
 		}
-		// TODO end remove
-
-		// TODO uncomment
-		// _, err = PollForProposalStatus(ctx, c, height, height+10, propTx.ProposalID, ProposalStatusPassed)
-		// if err != nil {
-		// 	return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
-		// }
 	}
 
 	return nil
@@ -871,7 +863,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	// Initialize validators and fullnodes.
 	for _, v := range c.Nodes() {
 		v := v
-		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
 				return err
@@ -913,24 +904,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		}
 	}
 
-	// for the validators we need to collect the gentxs and the accounts
-	// to the first node's genesis file
 	validator0 := c.Validators[0]
-
-	// TODO: fund provider vals in genesis?
-	/*
-		for i := 1; i < len(c.Provider.Validators); i++ {
-			validatorN := c.Provider.Validators[i]
-
-			bech32, err := validatorN.AccountKeyBech32(ctx, valKey)
-			if err != nil {
-				return err
-			}
-
-			if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
-				return err
-			}
-		}*/
 
 	for _, wallet := range additionalGenesisWallets {
 		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
@@ -963,7 +937,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	timestamp := block.Block.Time
 	rootHash := block.Block.AppHash
 
-	page := int(0)
+	page := int(1)
 	perPage := int(1000)
 	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
 	if err != nil {
@@ -971,12 +945,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	}
 
 	initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
-
-	for _, val := range providerVals.Validators {
-		initialVals = append(initialVals, abcitypes.ValidatorUpdate{
+	for i, val := range providerVals.Validators {
+		initialVals[i] = abcitypes.ValidatorUpdate{
 			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{Ed25519: val.PubKey.Bytes()}},
 			Power:  val.VotingPower,
-		})
+		}
 	}
 
 	providerCfg := c.Provider.Config()
@@ -984,8 +957,8 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	clientState := ibctmtypes.NewClientState(
 		providerCfg.ChainID,
 		ibctmtypes.DefaultTrustLevel,
-		172800*time.Second, // TODO assemble as percentage of fetched unbonding period
-		345600*time.Second, // TODO fetch unbonding period or get as default from somewhere
+		DefaultProviderUnbondingPeriod/2,
+		DefaultProviderUnbondingPeriod, // Needs to match provider unbonding period
 		ccvprovidertypes.DefaultMaxClockDrift,
 		clienttypes.Height{
 			RevisionHeight: providerHeight,
@@ -1010,12 +983,24 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		ccvconsumertypes.DefaultParams(),
 	)
 
+	ccvState.Params.Enabled = true
+
+	ccvStateMarshaled, err := c.cfg.EncodingConfig.Marshaler.MarshalJSON(ccvState)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
+	}
+
+	var ccvStateUnmarshaled interface{}
+	if err := json.Unmarshal(ccvStateMarshaled, &ccvStateUnmarshaled); err != nil {
+		return fmt.Errorf("failed to unmarshal ccv state json: %w", err)
+	}
+
 	var genesisJson interface{}
 	if err := json.Unmarshal(genbz, &genesisJson); err != nil {
 		return fmt.Errorf("failed to unmarshal genesis json: %w", err)
 	}
 
-	if err := dyno.Set(genesisJson, ccvState, "app_state", "ccvconsumer"); err != nil {
+	if err := dyno.Set(genesisJson, ccvStateUnmarshaled, "app_state", "ccvconsumer"); err != nil {
 		return fmt.Errorf("failed to populate ccvconsumer genesis state: %w", err)
 	}
 

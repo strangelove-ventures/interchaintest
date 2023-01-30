@@ -188,6 +188,12 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
+func (r *DockerRelayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID string, dstChainID string, pathName string, opts ibc.CreateClientOptions) error {
+	cmd := r.c.CreateClient(srcChainID, dstChainID, pathName, opts, r.HomeDir())
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
+}
+
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -212,8 +218,8 @@ func (r *DockerRelayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecRep
 	return res.Err
 }
 
-func (r *DockerRelayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, filter ibc.ChannelFilter) error {
-	cmd := r.c.UpdatePath(pathName, r.HomeDir(), filter)
+func (r *DockerRelayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.PathUpdateOptions) error {
+	cmd := r.c.UpdatePath(pathName, r.HomeDir(), opts)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -523,11 +529,12 @@ type RelayerCommander interface {
 	AddKey(chainID, keyName, coinType, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
+	CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
 	FlushAcknowledgements(pathName, channelID, homeDir string) []string
 	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
-	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
+	UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
 	GetClients(chainID, homeDir string) []string

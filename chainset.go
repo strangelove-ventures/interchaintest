@@ -148,6 +148,8 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 		return err
 	}
 
+	eg, egCtx = errgroup.WithContext(ctx)
+
 	// Now startup any consumer chains
 	for c := range cs.chains {
 		c := c
