@@ -84,9 +84,16 @@ func TestICS(t *testing.T) {
 	fundAmount := int64(10_000_000)
 	users := ibctest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, noble)
 	gaiaUser := users[0]
-	// nobleUser := users[1]
+	nobleUser := users[1]
 
-	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaia.Config().Bech32Prefix), gaia.Config().Denom)
+	gaiaCfg := gaia.Config()
+	nobleCfg := noble.Config()
+
+	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.Bech32Address(gaiaCfg.Bech32Prefix), gaiaCfg.Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, gaiaUserBalInitial)
+
+	nobleUserBalInitial, err := noble.GetBalance(ctx, nobleUser.Bech32Address(nobleCfg.Bech32Prefix), nobleCfg.Denom)
+	require.NoError(t, err)
+	require.Equal(t, fundAmount, nobleUserBalInitial)
 }

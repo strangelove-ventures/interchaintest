@@ -85,7 +85,8 @@ func NewInterchain() *Interchain {
 		chains:   make(map[ibc.Chain]string),
 		relayers: make(map[ibc.Relayer]string),
 
-		links: make(map[relayerPath]interchainLink),
+		links:                 make(map[relayerPath]interchainLink),
+		providerConsumerLinks: make(map[relayerPath]providerConsumerLink),
 	}
 }
 
@@ -256,7 +257,7 @@ func (ic *Interchain) AddProviderConsumerLink(link ProviderConsumerLink) *Interc
 		Path:    link.Path,
 	}
 
-	if _, exists := ic.links[key]; exists {
+	if _, exists := ic.providerConsumerLinks[key]; exists {
 		panic(fmt.Errorf("relayer %q already has a path named %q", key.Relayer, key.Path))
 	}
 

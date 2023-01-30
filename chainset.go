@@ -128,10 +128,9 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 			if cosmosChain, ok := c.(*cosmos.CosmosChain); ok {
 				if len(cosmosChain.Consumers) > 0 {
 					// this is a provider chain
-					if err := c.Start(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
+					if err := cosmosChain.StartProvider(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
 						return fmt.Errorf("failed to start provider chain %s: %w", chainCfg.Name, err)
 					}
-					// TODO gov proposal for consumer, or maybe happens above as part of consumer chain startup?
 					return nil
 				}
 			}
@@ -145,13 +144,17 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 		})
 	}
 
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	// Now startup any consumer chains
 	for c := range cs.chains {
 		c := c
 		if cosmosChain, ok := c.(*cosmos.CosmosChain); ok && cosmosChain.Provider != nil {
 			eg.Go(func() error {
 				// this is a consumer chain
-				if err := cosmosChain.StartConsumerChain(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
+				if err := cosmosChain.StartConsumer(testName, egCtx, additionalGenesisWallets[c]...); err != nil {
 					return fmt.Errorf("failed to start consumer chain %s: %w", c.Config().Name, err)
 				}
 

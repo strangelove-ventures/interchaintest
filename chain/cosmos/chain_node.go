@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	ccvclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -148,6 +149,25 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
+}
+
+func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
+	}
+
+	return gen, nil
+}
+
+func (tn *ChainNode) overwritePrivValFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
+		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 	}
 
 	return nil
@@ -778,6 +798,24 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop Text
 		command = append(command, "--is-expedited=true")
 	}
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	return tn.ExecTx(ctx, keyName, "gov", "submit-proposal", "consumer-addition", filePath, "-b", "block")
 }
 
 // DumpContractState dumps the state of a contract at a block height.

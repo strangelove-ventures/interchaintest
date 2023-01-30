@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	ics23 "github.com/confio/ics23/go"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -22,6 +21,8 @@ import (
 	commitmenttypes "github.com/cosmos/ibc-go/v3/modules/core/23-commitment/types"
 	ibctmtypes "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
 	ccvconsumertypes "github.com/cosmos/interchain-security/x/ccv/consumer/types"
+	ccvclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
+	ccvprovidertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -37,6 +38,10 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+)
+
+var (
+	defaultUpgradePath = []string{"upgrade", "upgradedIBCState"}
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -95,14 +100,6 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		numFullNodes:  numFullNodes,
 		log:           log,
 	}
-}
-
-func (c *CosmosChain) SetNumValidators(numValidators int) {
-	c.NumValidators = numValidators
-}
-
-func (c *CosmosChain) GetNumValidators() int {
-	return c.NumValidators
 }
 
 // Nodes returns all nodes, including validators and fullnodes.
@@ -324,11 +321,22 @@ func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop Tex
 	return c.txProposal(txHash)
 }
 
+// TextProposal submits a text governance proposal to the chain.
+func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().ConsumerAdditionProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
+	}
+	fmt.Printf("Consumer addition tx submitted, tx hash: %s\n", txHash)
+	return c.txProposal(txHash)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
+	fmt.Printf("tx response: %+v\n", txResp)
 	tx.Height = uint64(txResp.Height)
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
@@ -766,8 +774,95 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
+// Bootstraps the provider chain and starts it from genesis
+func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	existingFunc := c.cfg.ModifyGenesis
+	c.cfg.ModifyGenesis = func(cc ibc.ChainConfig, b []byte) ([]byte, error) {
+		var err error
+		b, err = ModifyGenesisProposalTime("10s", "10s")(cc, b)
+		if err != nil {
+			return nil, err
+		}
+		if existingFunc != nil {
+			return existingFunc(cc, b)
+		}
+		return b, nil
+	}
+
+	const proposerKeyName = "proposer"
+	if err := c.CreateKey(ctx, proposerKeyName); err != nil {
+		return fmt.Errorf("failed to add proposer key: %s", err)
+	}
+
+	proposerAddr, err := c.getFullNode().AccountKeyBech32(ctx, proposerKeyName)
+	if err != nil {
+		return fmt.Errorf("failed to get proposer key: %s", err)
+	}
+
+	proposer := ibc.WalletAmount{
+		Address: proposerAddr,
+		Denom:   c.cfg.Denom,
+		Amount:  10_000_000_000_000,
+	}
+
+	additionalGenesisWallets = append(additionalGenesisWallets, proposer)
+
+	if err := c.Start(testName, ctx, additionalGenesisWallets...); err != nil {
+		return err
+	}
+
+	for _, consumer := range c.Consumers {
+		prop := ccvclient.ConsumerAdditionProposalJSON{
+			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
+			Description:   "Proposal to add new consumer chain",
+			ChainId:       consumer.cfg.ChainID,
+			InitialHeight: clienttypes.Height{RevisionNumber: 0, RevisionHeight: 1},
+			GenesisHash:   []byte("gen_hash"),
+			BinaryHash:    []byte("bin_hash"),
+			SpawnTime:     time.Now().Add(10 * time.Second),
+
+			// TODO fetch or default variables
+			BlocksPerDistributionTransmission: 1000,
+			CcvTimeoutPeriod:                  2419200000000000,
+			TransferTimeoutPeriod:             3600000000000,
+			ConsumerRedistributionFraction:    "0.75",
+			HistoricalEntries:                 10000,
+			UnbondingPeriod:                   1728000000000000,
+			Deposit:                           "10" + c.cfg.Denom,
+		}
+
+		// height, err := c.Height(ctx)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to query provider height before consumer addition proposal: %w", err)
+		// }
+
+		propTx, err := c.ConsumerAdditionProposal(ctx, proposerKeyName, prop)
+		if err != nil {
+			return err
+		}
+
+		if err := c.VoteOnProposalAllValidators(ctx, propTx.ProposalID, ProposalVoteYes); err != nil {
+			return err
+		}
+
+		// TODO remove
+		if err := testutil.WaitForBlocks(ctx, 10, c); err != nil {
+			return err
+		}
+		// TODO end remove
+
+		// TODO uncomment
+		// _, err = PollForProposalStatus(ctx, c, height, height+10, propTx.ProposalID, ProposalStatusPassed)
+		// if err != nil {
+		// 	return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
+		// }
+	}
+
+	return nil
+}
+
 // Bootstraps the consumer chain and starts it from genesis
-func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
@@ -805,6 +900,17 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 	// wait for this to finish
 	if err := eg.Wait(); err != nil {
 		return err
+	}
+
+	// Copy provider priv val keys to these nodes
+	for i, val := range c.Provider.Validators {
+		privVal, err := val.privValFileContent(ctx)
+		if err != nil {
+			return err
+		}
+		if err := c.Validators[i].overwritePrivValFile(ctx, privVal); err != nil {
+			return err
+		}
 	}
 
 	// for the validators we need to collect the gentxs and the accounts
@@ -860,12 +966,15 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 	page := int(0)
 	perPage := int(1000)
 	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
+	if err != nil {
+		return fmt.Errorf("failed to get provider validators: %w", err)
+	}
 
 	initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
 
 	for _, val := range providerVals.Validators {
 		initialVals = append(initialVals, abcitypes.ValidatorUpdate{
-			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{val.PubKey.Bytes()}},
+			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{Ed25519: val.PubKey.Bytes()}},
 			Power:  val.VotingPower,
 		})
 	}
@@ -877,49 +986,13 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 		ibctmtypes.DefaultTrustLevel,
 		172800*time.Second, // TODO assemble as percentage of fetched unbonding period
 		345600*time.Second, // TODO fetch unbonding period or get as default from somewhere
-		10*time.Second,     // TODO is this a default var somewhere?
+		ccvprovidertypes.DefaultMaxClockDrift,
 		clienttypes.Height{
 			RevisionHeight: providerHeight,
 			RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
 		},
-		[]*ics23.ProofSpec{
-			{
-				LeafSpec: &ics23.LeafOp{
-					Hash:         ics23.HashOp_SHA256,
-					PrehashKey:   ics23.HashOp_NO_HASH,
-					PrehashValue: ics23.HashOp_SHA256,
-					Length:       ics23.LengthOp_VAR_PROTO,
-					Prefix:       []byte{0x00},
-				},
-				InnerSpec: &ics23.InnerSpec{
-					ChildOrder:      []int32{0, 1},
-					ChildSize:       33,
-					MinPrefixLength: 4,
-					MaxPrefixLength: 12,
-					Hash:            ics23.HashOp_SHA256,
-				},
-				MaxDepth: 0,
-				MinDepth: 0,
-			},
-			{
-				LeafSpec: &ics23.LeafOp{
-					Hash:         ics23.HashOp_SHA256,
-					PrehashKey:   ics23.HashOp_NO_HASH,
-					PrehashValue: ics23.HashOp_SHA256,
-					Length:       ics23.LengthOp_VAR_PROTO,
-					Prefix:       []byte{0x00},
-				},
-				InnerSpec: &ics23.InnerSpec{
-					ChildOrder:      []int32{0, 1},
-					ChildSize:       32,
-					MinPrefixLength: 1,
-					MaxPrefixLength: 1,
-					Hash:            ics23.HashOp_SHA256,
-				},
-				MaxDepth: 0,
-			},
-		},
-		[]string{"upgrade", "upgradedIBCState"},
+		commitmenttypes.GetSDKSpecs(),
+		defaultUpgradePath,
 		true,
 		true,
 	)
