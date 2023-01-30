@@ -3,7 +3,7 @@ package cosmos
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,18 +13,26 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	ics23 "github.com/confio/ics23/go"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	commitmenttypes "github.com/cosmos/ibc-go/v3/modules/core/23-commitment/types"
+	ibctmtypes "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
+	ccvconsumertypes "github.com/cosmos/interchain-security/x/ccv/consumer/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v3/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/strangelove-ventures/interchaintest/v3/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v3/testutil"
+	abcitypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/proto/tendermint/crypto"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -758,15 +766,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
-type CCVInitialValidator struct {
-	PubKey CCVInitialValidatorPubKey `json:"pub_key"`
-	Power  string                    `json:"power"`
-}
-
-type CCVInitialValidatorPubKey struct {
-	Ed25519 string `json:"ed25519"`
-}
-
 // Bootstraps the consumer chain and starts it from genesis
 func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
@@ -844,10 +843,15 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 		return fmt.Errorf("failed to query provider block to initialize consumer client")
 	}
 
-	genbz, err := validator0.genesisFileContent(ctx)
+	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
+
+	// populate genesis file ccvconsumer module app_state.
+	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
+	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
+	// populate initial_val_set with provider val pubkeys and power
 
 	nextValidatorsHash := block.Block.NextValidatorsHash
 	timestamp := block.Block.Time
@@ -857,24 +861,94 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 	perPage := int(1000)
 	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
 
-	initialVals := make([]CCVInitialValidator, len(providerVals.Validators))
+	initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
 
 	for _, val := range providerVals.Validators {
-		initialVals = append(initialVals, CCVInitialValidator{
-			PubKey: CCVInitialValidatorPubKey{
-				Ed25519: base64.StdEncoding.EncodeToString([]byte(val.PubKey.Bytes())),
-			},
-			Power: string(val.VotingPower),
+		initialVals = append(initialVals, abcitypes.ValidatorUpdate{
+			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{val.PubKey.Bytes()}},
+			Power:  val.VotingPower,
 		})
 	}
 
-	// TODO populate genesis file ccvconsumer module state params, provider_client_state, provider_consensus_state, and initial_val_set with provider vals.
+	providerCfg := c.Provider.Config()
 
-	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
+	clientState := ibctmtypes.NewClientState(
+		providerCfg.ChainID,
+		ibctmtypes.DefaultTrustLevel,
+		172800*time.Second, // TODO assemble as percentage of fetched unbonding period
+		345600*time.Second, // TODO fetch unbonding period or get as default from somewhere
+		10*time.Second,     // TODO is this a default var somewhere?
+		clienttypes.Height{
+			RevisionHeight: providerHeight,
+			RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
+		},
+		[]*ics23.ProofSpec{
+			{
+				LeafSpec: &ics23.LeafOp{
+					Hash:         ics23.HashOp_SHA256,
+					PrehashKey:   ics23.HashOp_NO_HASH,
+					PrehashValue: ics23.HashOp_SHA256,
+					Length:       ics23.LengthOp_VAR_PROTO,
+					Prefix:       []byte{0x00},
+				},
+				InnerSpec: &ics23.InnerSpec{
+					ChildOrder:      []int32{0, 1},
+					ChildSize:       33,
+					MinPrefixLength: 4,
+					MaxPrefixLength: 12,
+					Hash:            ics23.HashOp_SHA256,
+				},
+				MaxDepth: 0,
+				MinDepth: 0,
+			},
+			{
+				LeafSpec: &ics23.LeafOp{
+					Hash:         ics23.HashOp_SHA256,
+					PrehashKey:   ics23.HashOp_NO_HASH,
+					PrehashValue: ics23.HashOp_SHA256,
+					Length:       ics23.LengthOp_VAR_PROTO,
+					Prefix:       []byte{0x00},
+				},
+				InnerSpec: &ics23.InnerSpec{
+					ChildOrder:      []int32{0, 1},
+					ChildSize:       32,
+					MinPrefixLength: 1,
+					MaxPrefixLength: 1,
+					Hash:            ics23.HashOp_SHA256,
+				},
+				MaxDepth: 0,
+			},
+		},
+		[]string{"upgrade", "upgradedIBCState"},
+		true,
+		true,
+	)
 
-	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
+	root := commitmenttypes.MerkleRoot{
+		Hash: rootHash,
+	}
 
-	// populate initial_val_set with provider val pubkeys and power
+	consensusState := ibctmtypes.NewConsensusState(timestamp, root, nextValidatorsHash)
+
+	ccvState := ccvconsumertypes.NewInitialGenesisState(
+		clientState,
+		consensusState,
+		initialVals,
+		ccvconsumertypes.DefaultParams(),
+	)
+
+	var genesisJson interface{}
+	if err := json.Unmarshal(genbz, &genesisJson); err != nil {
+		return fmt.Errorf("failed to unmarshal genesis json: %w", err)
+	}
+
+	if err := dyno.Set(genesisJson, ccvState, "app_state", "ccvconsumer"); err != nil {
+		return fmt.Errorf("failed to populate ccvconsumer genesis state: %w", err)
+	}
+
+	if genbz, err = json.Marshal(genesisJson); err != nil {
+		return fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+	}
 
 	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
 
@@ -899,7 +973,7 @@ func (c *CosmosChain) StartConsumerChain(testName string, ctx context.Context, a
 	chainNodes := c.Nodes()
 
 	for _, cn := range chainNodes {
-		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
+		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
