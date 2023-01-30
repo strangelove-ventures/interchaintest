@@ -328,7 +328,6 @@ func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName stri
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
 	}
-	fmt.Printf("Consumer addition tx submitted, tx hash: %s\n", txHash)
 	return c.txProposal(txHash)
 }
 
@@ -337,7 +336,6 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
-	fmt.Printf("tx response: %+v\n", txResp)
 	tx.Height = uint64(txResp.Height)
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
