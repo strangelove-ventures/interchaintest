@@ -9,7 +9,7 @@
 // you will just miss some detail in the external report.
 //
 // First, the reporter instance must be initialized and Closed.
-// The cmd/ibctest package does this in a MainTest function, similar to this:
+// The cmd/interchaintest package does this in a MainTest function, similar to this:
 //
 //	func TestMain(m *testing.M) {
 //	  f, _ := os.Create("/tmp/report.json")
