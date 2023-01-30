@@ -561,6 +561,23 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+	switch r.c.Name() {
+	case "hyperspace":
+		chainConfig := make(testutil.Toml)
+		chainConfig["wasm_code_id"] = hash
+		chainConfigFile := cfg.ChainID + ".config"
+		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
+		if err != nil {
+			return err
+		}
+	case "rly":
+		panic("[rly/SetClientContractHash] Implement me")
+	}
+
+	return nil
+}
+
 type RelayerCommander interface {
 	// Name is the name of the relayer, e.g. "rly" or "hermes".
 	Name() string

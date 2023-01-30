@@ -63,6 +63,8 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	ChannelWhitelist []string `toml:"channel_whitelist"`
 	FinalityProtocol string   `toml:"finality_protocol"`
 	KeyType          string   `toml:"key_type"`
+	WasmCodeId       string   `toml:"wasm_code_id"`
+	WasmClientType   string   `toml:"wasm_client_type"`
 }
 
 type KeyEntry struct {
@@ -73,21 +75,20 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
-	Type          string   `toml:"type"` //New
-	Name          string   `toml:"name"`
-	RPCUrl        string   `toml:"rpc_url"`
-	GRPCUrl       string   `toml:"grpc_url"`
-	WebsocketUrl  string   `toml:"websocket_url"`
-	ChainID       string   `toml:"chain_id"`
-	AccountPrefix string   `toml:"account_prefix"`
-	StorePrefix   string   `toml:"store_prefix"`
-	Mnemonic      string   `toml:"mnemonic"` //new
-	MaxTxSize     uint64   `toml:"max_tx_size"`
+	Type           string   `toml:"type"` //New
+	Name           string   `toml:"name"`
+	RPCUrl         string   `toml:"rpc_url"`
+	GRPCUrl        string   `toml:"grpc_url"`
+	WebsocketUrl   string   `toml:"websocket_url"`
+	ChainID        string   `toml:"chain_id"`
+	AccountPrefix  string   `toml:"account_prefix"`
+	StorePrefix    string   `toml:"store_prefix"`
+	MaxTxSize      uint64   `toml:"max_tx_size"`
+	WasmCodeId     string   `toml:"wasm_code_id"`
+	WasmClientType string   `toml:"wasm_client_type"`
 	//ConnectionId string `toml:"connection_id"` // connection-1
 	//ClientId string `toml:"client_id"` // 07-tendermint-0
-	//WasmCodeId string `toml:"wasm_code_id"` // "Hash"
-	//WasmClientType string `toml:"wasm_client_type` // 10-grandpa
-	Keybase       KeyEntry `toml:"keybase"`
+	Keybase        KeyEntry `toml:"keybase"`
 
 	//Debug          bool    `json:"debug" toml:"debug"`
 	//GasAdjustment  float64 `json:"gas-adjustment" toml:"gas_adjustment"`
@@ -168,13 +169,14 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 		}
 	} else if chainType == "cosmos" {
 		return HyperspaceRelayerCosmosChainConfig{
-			Name:          chainConfig.Name,
-			ChainID:       chainConfig.ChainID,
-			AccountPrefix: chainConfig.Bech32Prefix,
-			GRPCUrl:       gprcAddr,
-			RPCUrl:        rpcAddr,
-			StorePrefix:   "",
-			MaxTxSize:     200000,
+			Name:           chainConfig.Name,
+			ChainID:        chainConfig.ChainID,
+			AccountPrefix:  chainConfig.Bech32Prefix,
+			GRPCUrl:        gprcAddr,
+			RPCUrl:         rpcAddr,
+			StorePrefix:    "",
+			MaxTxSize:      200000,
+			WasmClientType: "10-grandpa",
 			//Debug:          true,
 			//GasAdjustment:  chainConfig.GasAdjustment,
 			//GasPrices:      chainConfig.GasPrices,
