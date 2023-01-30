@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
-
-	"github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/btcsuite/btcd/chaincfg"
+	
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	keys "github.com/cosmos/btcutil/hdkeychain"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
@@ -65,32 +65,6 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	KeyType          string   `toml:"key_type"`
 }
 
-/*
-	/// Chain name
-	pub name: String,
-	/// rpc url for cosmos
-	pub rpc_url: Url,
-	/// grpc url for cosmos
-	pub grpc_url: Url,
-	/// websocket url for cosmos
-	pub websocket_url: Url,
-	/// Cosmos chain Id
-	pub chain_id: String,
-	/// Light client id on counterparty chain
-	pub client_id: Option<String>,
-	/// Connection Id
-	pub connection_id: Option<String>,
-	/// Account prefix
-	pub account_prefix: String,
-	/// Store prefix
-	pub store_prefix: String,
-	/// Maximun transaction size
-	pub max_tx_size: usize,
-	/// The key that signs transactions
-	pub keybase: KeyEntry,
-
-*/
-
 type KeyEntry struct {
 	PublicKey  string `toml:"public_key"`
 	PrivateKey string `toml:"private_key"`
@@ -99,6 +73,7 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
+	Type          string   `toml:"type"` //New
 	Name          string   `toml:"name"`
 	RPCUrl        string   `toml:"rpc_url"`
 	GRPCUrl       string   `toml:"grpc_url"`
@@ -106,8 +81,12 @@ type HyperspaceRelayerCosmosChainConfig struct {
 	ChainID       string   `toml:"chain_id"`
 	AccountPrefix string   `toml:"account_prefix"`
 	StorePrefix   string   `toml:"store_prefix"`
-	Mnemonic      string   `toml:"mnemonic"`
+	Mnemonic      string   `toml:"mnemonic"` //new
 	MaxTxSize     uint64   `toml:"max_tx_size"`
+	//ConnectionId string `toml:"connection_id"` // connection-1
+	//ClientId string `toml:"client_id"` // 07-tendermint-0
+	//WasmCodeId string `toml:"wasm_code_id"` // "Hash"
+	//WasmClientType string `toml:"wasm_client_type` // 10-grandpa
 	Keybase       KeyEntry `toml:"keybase"`
 
 	//Debug          bool    `json:"debug" toml:"debug"`
@@ -134,58 +113,29 @@ func HyperspaceCapabilities() map[relayer.Capability]bool {
 	return nil // relayer.FullCapabilities()
 }
 
-func GenKey() KeyEntry {
-	testVec1MasterHex := "000102030405060708090a0b0c0d0e0f"
-	masterSeed, err := hex.DecodeString(testVec1MasterHex)
+func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
+	coinType64, err := strconv.ParseUint(coinType, 10, 32)
 	if err != nil {
-		panic(err)
+		return KeyEntry{}
 	}
-	net := chaincfg.SimNetParams
-	extKey, err := keys.NewMaster(masterSeed, &net)
+	algo := keyring.SignatureAlgo(hd.Secp256k1)
+	hdPath := hd.CreateHDPath(uint32(coinType64), 0, 0).String()
+
+	// create master key and derive first key for keyring
+	derivedPriv, err := algo.Derive()(mnemonic, "", hdPath)
 	if err != nil {
-		panic(err)
-	}
-	extKey, err = extKey.Derive(0)
-	if err != nil {
-		panic(err)
+		return KeyEntry{}
 	}
 
-	privStr := extKey.String()
-	pubKey, err := extKey.Neuter()
-	if err != nil {
-		panic(err)
-	}
-	pubKey, err = pubKey.Neuter()
-	if err != nil {
-		panic(err)
-	}
-	pubStr := pubKey.String()
-
-	address, err := pubKey.Address(&net)
-	if err != nil {
-		panic(err)
-	}
-	/*
-		addrBytes, err := c.GetAddress(egCtx, keyName)
-		b32, err := types.Bech32ifyAddressBytes(config.Bech32Prefix, addrBytes)
-	*/
-	//KeyBech32
-	account1 := types.MustBech32ifyAddressBytes("cosmos", address.ScriptAddress())
-	fmt.Println("account1", account1)
-
-	//account := address.EncodeAddress()
-	// sdk.AccAddressFromBech32(user.Bech32Address(b.chain.Config().Bech32Prefix))
-	account2, err := types.AccAddressFromBech32(address.EncodeAddress())
-	fmt.Println("account2", account2)
-	fmt.Println("account2", account2.String())
-	//account3, err := types.AccAddressFromBech32(address.)
-	//fmt.Println("account3", account3)
+	privKey := algo.Generate()(derivedPriv)
+	address := types.AccAddress(privKey.PubKey().Address())
+	bech32Addr := types.MustBech32ifyAddressBytes(bech32Prefix, address)
 
 	return KeyEntry{
-		PublicKey:  pubStr,
-		PrivateKey: privStr,
-		Account:    account2.String(),
-		Address:    address.ScriptAddress(),
+		PublicKey:  hex.EncodeToString(privKey.PubKey().Bytes()), //PubKeySecp256k1{0316AE4C34FB51C56AFB8126CB9AD725BCF0BD7FB4AD1684FD50DC45A67CBC0A7D}
+		PrivateKey: hex.EncodeToString(privKey.Bytes()),  // i.e. ac26db8374e68403a3cf38cc2b196d688d2f094cec0908978b2460d4442062f7
+		Account:    bech32Addr , // i.e. cosmos1g5r2vmnp6lta9cpst4lzc4syy3kcj2lj0nuhmy
+		Address:    address.Bytes(), // i.e. [69 6 166 110 97 215 215 210 224 48 93 126 44 86 4 36 109 137 43 242]
 	}
 }
 
@@ -205,11 +155,11 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 		return HyperspaceRelayerSubstrateChainConfig{
 			Type:             chainType,
 			Name:             chainConfig.Name,
-			ParaID:           2001,
+			ParaID:           2000,
 			ParachainRPCURL:  paraRpcAddr,
 			RelayChainRPCURL: relayRpcAddr,
-			ClientID:         "10-grandpa-0",
-			ConnectionID:     "connection-0",
+			//ClientID:         "10-grandpa-0",
+			//ConnectionID:     "connection-0",
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
 			SS58Version:      49,
@@ -225,7 +175,6 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "",
 			MaxTxSize:     200000,
-			Keybase:       GenKey(),
 			//Debug:          true,
 			//GasAdjustment:  chainConfig.GasAdjustment,
 			//GasPrices:      chainConfig.GasPrices,
@@ -402,8 +351,15 @@ func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.Cr
 
 // There is no hyperspace call to restore the key, so this can't return an executable.
 // DockerRelayer's RestoreKey will restore the key in the chain's config file
-func (hyperspaceCommander) RestoreKey(chainID, keyName, cointType, mnemonic, homeDir string) []string {
-	panic("[RestoreKey] Do not call me")
+// For now, we will hack this for cosmos chain's use case
+func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic, homeDir string) []string {
+	keyEntry := GenKeyEntry(bech32Prefix, coinType, mnemonic)
+	return []string{
+		keyEntry.Account,
+		keyEntry.PrivateKey,
+		keyEntry.PublicKey,
+		string(keyEntry.Address),
+	}
 }
 
 func (c hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {

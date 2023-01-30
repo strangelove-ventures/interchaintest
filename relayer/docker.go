@@ -308,12 +308,29 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
 	addrBytes := ""
+	chainID := cfg.ChainID
+	coinType := cfg.CoinType
+	chainType := cfg.Type
+
 	switch r.c.Name() {
 	case "hyperspace":
 		chainConfig := make(testutil.Toml)
-		chainConfig["private_key"] = mnemonic
+		switch chainType {
+		case "cosmos":
+			chainConfig["private_key"] = mnemonic
+			bech32Prefix := cfg.Bech32Prefix
+			keyEntry := r.c.RestoreKey(chainID, bech32Prefix, coinType, mnemonic, r.HomeDir())
+			keyEntryOverrides := make(testutil.Toml)
+			keyEntryOverrides["account"] = keyEntry[0]
+			keyEntryOverrides["private_key"] = keyEntry[1]
+			keyEntryOverrides["public_key"] = keyEntry[2]
+			keyEntryOverrides["address"] = []byte(keyEntry[3])
+			chainConfig["keybase"] = keyEntryOverrides
+		case "polkadot":
+			chainConfig["private_key"] = mnemonic
+		}
 		chainConfigFile := chainID + ".config"
 		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
 		if err != nil {

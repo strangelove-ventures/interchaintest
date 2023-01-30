@@ -121,6 +121,7 @@ func TestHyperspace(t *testing.T) {
 				GasPrices:      "0.00stake",
 				GasAdjustment:  1.3,
 				TrustingPeriod: "504h",
+				CoinType:       "118",
 				//EncodingConfig: WasmClientEncoding(),
 				NoHostMount: true,
 				ConfigFileOverrides: configFileOverrides,
