@@ -735,9 +735,9 @@ func (c *CosmosChain) StartWithGenesisFile(
 		_ = os.WriteFile(exportGenesis, genbz, 0600)
 	}
 
-	// validator0 := c.Validators[0]
+	validator0 := c.Validators[0]
 	// validator0 := c.FullNodes[0]
-	if err := fn.OverwriteGenesisFile(ctx, genbz); err != nil {
+	if err := validator0.OverwriteGenesisFile(ctx, genbz); err != nil {
 		return err
 	}
 
@@ -747,7 +747,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 		}
 	}
 
-	genbz, err = fn.GenesisFileContent(ctx)
+	genbz, err = validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
@@ -793,7 +793,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+	return testutil.WaitForBlocks(ctx, 5, fn)
 }
 
 // Bootstraps the chain and starts it from genesis
