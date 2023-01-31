@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v3/label"
+	"github.com/strangelove-ventures/interchaintest/v3/label"
 )
 
 // Message is the sentinel interface to all testreporter messages.
@@ -19,7 +19,7 @@ type Message interface {
 type BeginSuiteMessage struct {
 	StartedAt time.Time
 
-	// TODO: it would be nice to embed the ibctest commit in this message,
+	// TODO: it would be nice to embed the interchaintest commit in this message,
 	// but while https://github.com/golang/go/issues/33976 is outstanding,
 	// we'll have to fall back to ldflags to embed it.
 }
@@ -94,8 +94,10 @@ func (m ContinueTestMessage) typ() string {
 
 // TestErrorMessage is tracked when a Reporter's TestifyT().Errorf method is called.
 // This is the intended usage of a Reporter with require:
-//     req := require.New(rep.TestifyT(t))
-//     req.NoError(foo())
+//
+//	req := require.New(rep.TestifyT(t))
+//	req.NoError(foo())
+//
 // If req.NoError fails, then rep will track a TestErrorMessage.
 type TestErrorMessage struct {
 	Name    string

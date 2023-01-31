@@ -1,4 +1,4 @@
-## NOTICE: This file gets embedded into ibctest binary.
+## NOTICE: This file gets embedded into interchaintest binary.
 ## Set the environment variable: IBCTEST_CONFIGURED_CHAINS to a path
 ## to use custom versions of this file
 

@@ -1,19 +1,19 @@
-package ibctest_test
+package interchaintest_test
 
 import (
 	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
 func TestChainSpec_Config(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		s := ibctest.ChainSpec{
+		s := interchaintest.ChainSpec{
 			Name: "gaia",
 
 			Version: "v7.0.1",
@@ -24,7 +24,7 @@ func TestChainSpec_Config(t *testing.T) {
 	})
 
 	t.Run("omit name when all other fields provided", func(t *testing.T) {
-		s := ibctest.ChainSpec{
+		s := interchaintest.ChainSpec{
 			ChainName: "mychain",
 
 			ChainConfig: ibc.ChainConfig{
@@ -48,7 +48,7 @@ func TestChainSpec_Config(t *testing.T) {
 	})
 
 	t.Run("consistently generated config", func(t *testing.T) {
-		s := ibctest.ChainSpec{
+		s := interchaintest.ChainSpec{
 			Name: "gaia",
 
 			Version: "v7.0.1",
@@ -66,7 +66,7 @@ func TestChainSpec_Config(t *testing.T) {
 
 	t.Run("name and chain ID generation", func(t *testing.T) {
 		t.Run("same name and chain ID generated when ChainName and ChainID omitted", func(t *testing.T) {
-			s := ibctest.ChainSpec{
+			s := interchaintest.ChainSpec{
 				Name: "gaia",
 
 				Version: "v7.0.1",
@@ -80,7 +80,7 @@ func TestChainSpec_Config(t *testing.T) {
 		})
 
 		t.Run("chain ID generated from ChainName, when ChainName provided", func(t *testing.T) {
-			s := ibctest.ChainSpec{
+			s := interchaintest.ChainSpec{
 				Name:      "gaia",
 				ChainName: "mychain",
 
@@ -96,7 +96,7 @@ func TestChainSpec_Config(t *testing.T) {
 	})
 
 	t.Run("overrides", func(t *testing.T) {
-		baseSpec := &ibctest.ChainSpec{
+		baseSpec := &interchaintest.ChainSpec{
 			Name:    "gaia",
 			Version: "v7.0.1",
 
@@ -137,7 +137,7 @@ func TestChainSpec_Config(t *testing.T) {
 
 	t.Run("error cases", func(t *testing.T) {
 		t.Run("version required", func(t *testing.T) {
-			s := ibctest.ChainSpec{
+			s := interchaintest.ChainSpec{
 				Name: "gaia",
 			}
 
@@ -146,7 +146,7 @@ func TestChainSpec_Config(t *testing.T) {
 		})
 
 		t.Run("name required", func(t *testing.T) {
-			s := ibctest.ChainSpec{
+			s := interchaintest.ChainSpec{
 				Version: "v1.2.3",
 			}
 
@@ -155,7 +155,7 @@ func TestChainSpec_Config(t *testing.T) {
 		})
 
 		t.Run("name invalid", func(t *testing.T) {
-			s := ibctest.ChainSpec{
+			s := interchaintest.ChainSpec{
 				Name:    "invalid_chain",
 				Version: "v1.2.3",
 			}

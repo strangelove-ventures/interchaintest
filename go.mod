@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibctest/v3
+module github.com/strangelove-ventures/interchaintest/v3
 
 go 1.18
 

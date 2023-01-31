@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v3/examples/osmosis"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/relayer"
-	"github.com/strangelove-ventures/ibctest/v3/testreporter"
-	"github.com/strangelove-ventures/ibctest/v3/testutil"
+	"github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v3/examples/osmosis"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer"
+	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -24,7 +24,7 @@ func TestOsmosisGammPool(t *testing.T) {
 
 	t.Parallel()
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      "osmosis",
 			ChainName: "osmosis",
@@ -44,7 +44,7 @@ func TestOsmosisGammPool(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	chain, counterpartyChain := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
@@ -54,7 +54,7 @@ func TestOsmosisGammPool(t *testing.T) {
 	)
 
 	// Get a relayer instance
-	rf := ibctest.NewBuiltinRelayerFactory(
+	rf := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-p", "events"),
@@ -62,11 +62,11 @@ func TestOsmosisGammPool(t *testing.T) {
 
 	r := rf.Build(t, client, network)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain).
 		AddChain(counterpartyChain).
 		AddRelayer(r, relayerName).
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  chain,
 			Chain2:  counterpartyChain,
 			Relayer: r,
@@ -77,11 +77,11 @@ func TestOsmosisGammPool(t *testing.T) {
 
 	rep := testreporter.NewNopReporter().RelayerExecReporter(t)
 
-	require.NoError(t, ic.Build(ctx, rep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, rep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
-		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {
@@ -97,7 +97,7 @@ func TestOsmosisGammPool(t *testing.T) {
 	})
 
 	const userFunds = int64(10_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain, counterpartyChain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain, counterpartyChain)
 	chainUser, counterpartyChainUser := users[0], users[1]
 
 	counterpartyHeight, err := counterpartyChain.Height(ctx)

@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v3/examples/osmosis"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v3/examples/osmosis"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -29,7 +29,7 @@ func TestOsmosisExpeditedProposal(t *testing.T) {
 		minDeposit            = "10000000"
 		minExpeditedDeposit   = "50000000"
 	)
-	chainSpec := &ibctest.ChainSpec{
+	chainSpec := &interchaintest.ChainSpec{
 		Name:      "osmosis",
 		ChainName: "osmosis",
 		Version:   "main",
@@ -40,24 +40,24 @@ func TestOsmosisExpeditedProposal(t *testing.T) {
 		},
 	}
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{chainSpec})
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{chainSpec})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain)
 
 	ctx := context.Background()
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
-		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: true,
 	}))
 	t.Cleanup(func() {
@@ -65,7 +65,7 @@ func TestOsmosisExpeditedProposal(t *testing.T) {
 	})
 
 	const userFunds = int64(10_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
 	// submit non-expedited proposal first. will make assertions last, since this one should still
