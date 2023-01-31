@@ -902,6 +902,13 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		}
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	validator0 := c.Validators[0]
 
 	for _, wallet := range additionalGenesisWallets {
