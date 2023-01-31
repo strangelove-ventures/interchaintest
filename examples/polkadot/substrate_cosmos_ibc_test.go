@@ -53,7 +53,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						//UidGid: "1025:1025",
+						UidGid:     "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
@@ -118,13 +118,13 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	ic := interchaintest.NewInterchain().
 		AddChain(composable).
 		AddChain(simd) //.
-		//AddRelayer(r, relayerName).
-		/*AddLink(interchaintest.InterchainLink{
-			Chain1:  composable,
-			Chain2:  simd,
-			Relayer: r,
-			Path:    pathName,
-		})*/
+	//AddRelayer(r, relayerName).
+	/*AddLink(interchaintest.InterchainLink{
+		Chain1:  composable,
+		Chain2:  simd,
+		Relayer: r,
+		Path:    pathName,
+	})*/
 
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),

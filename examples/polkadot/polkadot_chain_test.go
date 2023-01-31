@@ -46,7 +46,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						//UidGid: "1025:1025",
+						UidGid:     "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
