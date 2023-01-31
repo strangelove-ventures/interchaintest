@@ -6,6 +6,7 @@ import (
 )
 
 var _ ibc.Wallet = &CosmosWallet{}
+var _ User = &CosmosWallet{}
 
 type CosmosWallet struct {
 	mnemonic string

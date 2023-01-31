@@ -27,7 +27,6 @@ type FactoryOpt func(factory tx.Factory) tx.Factory
 type User interface {
 	KeyName() string
 	FormattedAddress() string
-	FormattedAddressWithPrefix(prefix string) string
 }
 
 type Broadcaster struct {
@@ -80,7 +79,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return tx.Factory{}, err
 	}
@@ -115,7 +114,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return client.Context{}, err
 	}
@@ -153,7 +152,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
-		WithFrom(fromUser.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix)).
+		WithFrom(fromUser.FormattedAddress()).
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
@@ -206,18 +205,15 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 	}
 
 	err = testutil.WaitForCondition(time.Second*30, time.Second*5, func() (bool, error) {
-		_, err := broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+		var err error
+		txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+
 		if err != nil {
 			return false, nil
 		}
 		return true, nil
 	})
 
-	if err != nil {
-		return sdk.TxResponse{}, err
-	}
-
-	txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
 	if err != nil {
 		return sdk.TxResponse{}, err
 	}
@@ -229,7 +225,13 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 
 	resp, err := authTx.QueryTx(cc, respWithTxHash.TxHash)
 	if err != nil {
-		return sdk.TxResponse{}, err
+		// if we fail to query the tx, it means an error occurred with the original message broadcast.
+		// we should return this instead.
+		originalResp, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+		if err != nil {
+			return sdk.TxResponse{}, err
+		}
+		return originalResp, nil
 	}
 
 	return *resp, nil
