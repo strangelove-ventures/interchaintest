@@ -233,7 +233,7 @@ func (c *CosmosChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -301,7 +301,7 @@ func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop Tex
 }
 
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -362,7 +362,7 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
+func (c *CosmosChain) GetTransaction(txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
 	err := retry.Do(func() error {
