@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// T satisfies a subset of testing.TB useful for tests around how ibctest interacts with instances of testing.T.
+// T satisfies a subset of testing.TB useful for tests around how interchaintest interacts with instances of testing.T.
 //
 // The methods that are unique to T are RunCleanups and Simulate
 type T struct {

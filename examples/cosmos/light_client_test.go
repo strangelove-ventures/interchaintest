@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -23,7 +23,7 @@ func TestUpdateLightClients(t *testing.T) {
 	ctx := context.Background()
 
 	// Chains
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: gaiaVersion},
 		{Name: "osmosis", Version: osmosisVersion},
 	})
@@ -33,15 +33,15 @@ func TestUpdateLightClients(t *testing.T) {
 	gaia, osmosis := chains[0], chains[1]
 
 	// Relayer
-	client, network := ibctest.DockerSetup(t)
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	client, network := interchaintest.DockerSetup(t)
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia).
 		AddChain(osmosis).
 		AddRelayer(r, "relayer").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia,
 			Chain2:  osmosis,
 			Relayer: r,
@@ -51,7 +51,7 @@ func TestUpdateLightClients(t *testing.T) {
 	// Build interchain
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -67,7 +67,7 @@ func TestUpdateLightClients(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(10_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser, osmoUser := users[0], users[1]
 
 	// Get Channel ID

@@ -44,7 +44,7 @@ func (l Relayer) IsKnown() bool {
 	return exists
 }
 
-// RegisterRelayerLabel is available for external packages that may import ibctest,
+// RegisterRelayerLabel is available for external packages that may import interchaintest,
 // to register any external relayer implementations they may provide.
 func RegisterRelayerLabel(l Relayer) {
 	if _, exists := knownRelayerLabels[l]; exists {
@@ -85,7 +85,7 @@ var knownChainLabels = map[Chain]struct{}{
 	Penumbra: {},
 }
 
-// RegisterChainLabel is available for external packages that may import ibctest,
+// RegisterChainLabel is available for external packages that may import interchaintest,
 // to register any external chain implementations they may provide.
 func RegisterChainLabel(l Chain) {
 	if _, exists := knownChainLabels[l]; exists {

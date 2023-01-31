@@ -1,7 +1,7 @@
 package blockdb_test
 
 // This test is in a separate file, so it can be in the blockdb_test package,
-// so it can import ibctest without creating an import cycle.
+// so it can import interchaintest without creating an import cycle.
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/types"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -26,11 +26,11 @@ func TestMessagesView(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	const gaia0ChainID = "g0"
 	const gaia1ChainID = "g1"
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia0ChainID}},
 		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia1ChainID}},
 	})
@@ -40,27 +40,27 @@ func TestMessagesView(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	rf := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
+	rf := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t))
 	r := rf.Build(t, client, network)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia0).
 		AddChain(gaia1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia0,
 			Chain2:  gaia1,
 			Relayer: r,
 		})
 
-	dbDir := ibctest.TempDir(t)
+	dbDir := interchaintest.TempDir(t)
 	dbPath := filepath.Join(dbDir, "blocks.db")
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -248,7 +248,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 
 	t.Run("initiate transfer", func(t *testing.T) {
 		// Build the faucet address for gaia1, so that gaia0 can send it a transfer.
-		g1FaucetAddrBytes, err := gaia1.GetAddress(ctx, ibctest.FaucetAccountKeyName)
+		g1FaucetAddrBytes, err := gaia1.GetAddress(ctx, interchaintest.FaucetAccountKeyName)
 		require.NoError(t, err)
 		gaia1FaucetAddr, err := types.Bech32ifyAddressBytes(gaia1.Config().Bech32Prefix, g1FaucetAddrBytes)
 		require.NoError(t, err)
@@ -260,7 +260,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 			Denom:   gaia0.Config().Denom,
 			Amount:  txAmount,
 		}
-		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, ibctest.FaucetAccountKeyName, transfer, ibc.TransferOptions{})
+		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, interchaintest.FaucetAccountKeyName, transfer, ibc.TransferOptions{})
 		require.NoError(t, err)
 		require.NoError(t, tx.Validate())
 
