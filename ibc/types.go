@@ -141,11 +141,9 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 // It is possible for some fields, such as GasAdjustment and NoHostMount,
 // to be their respective zero values and for IsFullyConfigured to still report true.
 func (c ChainConfig) IsFullyConfigured() bool {
-	imagesFullyConfigured := true
 	for _, image := range c.Images {
 		if !image.IsFullyConfigured() {
-			imagesFullyConfigured = false
-			break
+			return false
 		}
 	}
 
@@ -153,7 +151,6 @@ func (c ChainConfig) IsFullyConfigured() bool {
 		c.Name != "" &&
 		c.ChainID != "" &&
 		len(c.Images) > 0 &&
-		imagesFullyConfigured &&
 		c.Bin != "" &&
 		c.Bech32Prefix != "" &&
 		c.Denom != "" &&
