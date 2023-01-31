@@ -10,7 +10,7 @@ Any tests that fail and skip cleanup will log a message like
 `Not removing temporary directory for test at: /tmp/...`.
 
 Test authors must use
-[`ibctest.TempDir`](https://pkg.go.dev/github.com/strangelove-ventures/ibctest#TempDir)
+[`interchaintest.TempDir`](https://pkg.go.dev/github.com/strangelove-ventures/interchaintest#TempDir)
 instead of `(*testing.T).Cleanup` to opt in to this behavior.
 
 By default, Docker volumes associated with tests are cleaned up at the end of each test run.

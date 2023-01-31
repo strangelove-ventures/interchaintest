@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -18,12 +18,12 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	nv := 5
 	nf := 3
 
-	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "composable",
 			Version: "polkadot:v0.9.19,composable:centauri",

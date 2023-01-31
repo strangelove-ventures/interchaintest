@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/strangelove-ventures/ibctest/v3/label"
-	"github.com/strangelove-ventures/ibctest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3/label"
+	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
 	"github.com/stretchr/testify/require"
 )
 

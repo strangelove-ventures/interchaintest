@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v3"
-	cosmosChain "github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos/wasm"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v3/relayer"
-	"github.com/strangelove-ventures/ibctest/v3/testreporter"
-	"github.com/strangelove-ventures/ibctest/v3/testutil"
+	"github.com/strangelove-ventures/interchaintest/v3"
+	cosmosChain "github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer"
+	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -39,8 +39,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		t.Skip()
 	}
 
-	client, network := ibctest.DockerSetup(t)
-	f, err := ibctest.CreateLogFile(fmt.Sprintf("wasm_ibc_test_%d.json", time.Now().Unix()))
+	client, network := interchaintest.DockerSetup(t)
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("wasm_ibc_test_%d.json", time.Now().Unix()))
 	require.NoError(t, err)
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
@@ -64,7 +64,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	}
 
 	minVal := 1
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainName:     "sender",
 			NumValidators: &minVal,
@@ -106,7 +106,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	chain1, chain2 := chains[0], chains[1]
 
 	// Get a relayer instance
-	r := ibctest.NewBuiltinRelayerFactory(
+	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		logger,
 		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
@@ -116,11 +116,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	const pathName = "test1-test2"
 	const relayerName = "relayer"
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain1).
 		AddChain(chain2).
 		AddRelayer(r, relayerName).
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  chain1,
 			Chain2:  chain2,
 			Relayer: r,
@@ -128,11 +128,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		})
 
 	logger.Info("ic.Build()")
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
-		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 
@@ -144,8 +144,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	// Fund user accounts so we can query balances
 	chain1UserAmt := int64(10_000_000_000)
 	chain2UserAmt := int64(99_999_999_999)
-	chain1User := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt, chain1)[0]
-	chain2User := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt, chain2)[0]
+	chain1User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt, chain1)[0]
+	chain2User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt, chain2)[0]
 
 	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)

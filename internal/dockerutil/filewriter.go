@@ -37,7 +37,7 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		return err
 	}
 
-	containerName := fmt.Sprintf("ibctest-writefile-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
+	containerName := fmt.Sprintf("interchaintest-writefile-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
 
 	cc, err := w.cli.ContainerCreate(
 		ctx,

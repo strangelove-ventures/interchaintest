@@ -9,7 +9,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 )
 
-// ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
+// ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
 	Type string `yaml:"type"`

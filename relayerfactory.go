@@ -1,14 +1,14 @@
-package ibctest
+package interchaintest
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/label"
-	"github.com/strangelove-ventures/ibctest/v3/relayer"
-	"github.com/strangelove-ventures/ibctest/v3/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/label"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer"
+	"github.com/strangelove-ventures/interchaintest/v3/relayer/rly"
 	"go.uber.org/zap"
 )
 

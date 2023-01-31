@@ -7,7 +7,7 @@ import (
 
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/strangelove-ventures/ibctest/v3/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/polkadot"
 	"github.com/stretchr/testify/require"
 )
 

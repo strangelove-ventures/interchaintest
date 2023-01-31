@@ -7,14 +7,14 @@ import (
 	"time"
 
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
-// This test is meant to be used as a basic ibctest tutorial.
+// This test is meant to be used as a basic interchaintest tutorial.
 // Code snippets are broken down in ./docs/upAndRunning.md
 func TestLearn(t *testing.T) {
 	if testing.Short() {
@@ -26,7 +26,7 @@ func TestLearn(t *testing.T) {
 	ctx := context.Background()
 
 	// Chain Factory
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v7.0.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0uatom",
 		}},
@@ -38,17 +38,17 @@ func TestLearn(t *testing.T) {
 	gaia, osmosis := chains[0], chains[1]
 
 	// Relayer Factory
-	client, network := ibctest.DockerSetup(t)
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	client, network := interchaintest.DockerSetup(t)
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network)
 
 	// Prep Interchain
 	const ibcPath = "gaia-osmo-demo"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia).
 		AddChain(osmosis).
 		AddRelayer(r, "relayer").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia,
 			Chain2:  osmosis,
 			Relayer: r,
@@ -56,18 +56,18 @@ func TestLearn(t *testing.T) {
 		})
 
 	// Log location
-	f, err := ibctest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
 	require.NoError(t, err)
 	// Reporter/logs
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 
 	// Build interchain
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
-		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),
@@ -75,7 +75,7 @@ func TestLearn(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(10_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 

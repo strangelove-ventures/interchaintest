@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/ibctest/v3/examples/osmosis
+module github.com/strangelove-ventures/interchaintest/v3/examples/osmosis
 
 go 1.18
 
@@ -7,7 +7,7 @@ require (
 	github.com/cosmos/ibc-go/v3 v3.2.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
 	github.com/osmosis-labs/osmosis/v12 v12.0.0-20220912021147-52cf5669ba68
-	github.com/strangelove-ventures/ibctest/v3 v3.2.0
+	github.com/strangelove-ventures/interchaintest/v3 v3.2.0
 	github.com/stretchr/testify v1.8.0
 	go.uber.org/zap v1.21.0
 )
@@ -198,8 +198,8 @@ replace (
 
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	// Use ibctest from this repo
-	github.com/strangelove-ventures/ibctest/v3 => ../../
+	// Use interchaintest from this repo
+	github.com/strangelove-ventures/interchaintest/v3 => ../../
 
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )

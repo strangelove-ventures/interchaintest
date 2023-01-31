@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v3"
-	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v3/chain/cosmos/wasm"
-	"github.com/strangelove-ventures/ibctest/v3/ibc"
-	"github.com/strangelove-ventures/ibctest/v3/testreporter"
-	"github.com/strangelove-ventures/ibctest/v3/testutil"
+	"github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -24,7 +24,7 @@ func TestWasmIbc(t *testing.T) {
 	ctx := context.Background()
 
 	// Chain Factory
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "juno", ChainName: "juno1", Version: "latest", ChainConfig: ibc.ChainConfig{
 			GasPrices:      "0.00ujuno",
 			EncodingConfig: wasm.WasmEncoding(),
@@ -40,17 +40,17 @@ func TestWasmIbc(t *testing.T) {
 	juno1, juno2 := chains[0], chains[1]
 
 	// Relayer Factory
-	client, network := ibctest.DockerSetup(t)
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	client, network := interchaintest.DockerSetup(t)
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network)
 
 	// Prep Interchain
 	const ibcPath = "wasmpath"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(juno1).
 		AddChain(juno2).
 		AddRelayer(r, "relayer").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  juno1,
 			Chain2:  juno2,
 			Relayer: r,
@@ -58,18 +58,18 @@ func TestWasmIbc(t *testing.T) {
 		})
 
 	// Log location
-	f, err := ibctest.CreateLogFile(fmt.Sprintf("wasm_ibc_test_%d.json", time.Now().Unix()))
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("wasm_ibc_test_%d.json", time.Now().Unix()))
 	require.NoError(t, err)
 	// Reporter/logs
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 
 	// Build interchain
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
-		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {
@@ -78,7 +78,7 @@ func TestWasmIbc(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(100_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), juno1, juno2)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), juno1, juno2)
 	juno1User := users[0]
 	juno2User := users[1]
 
