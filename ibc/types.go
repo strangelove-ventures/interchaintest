@@ -1,8 +1,10 @@
 package ibc
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
@@ -139,10 +141,19 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 // It is possible for some fields, such as GasAdjustment and NoHostMount,
 // to be their respective zero values and for IsFullyConfigured to still report true.
 func (c ChainConfig) IsFullyConfigured() bool {
+	imagesFullyConfigured := true
+	for _, image := range c.Images {
+		if !image.IsFullyConfigured() {
+			imagesFullyConfigured = false
+			break
+		}
+	}
+
 	return c.Type != "" &&
 		c.Name != "" &&
 		c.ChainID != "" &&
 		len(c.Images) > 0 &&
+		imagesFullyConfigured &&
 		c.Bin != "" &&
 		c.Bech32Prefix != "" &&
 		c.Denom != "" &&
@@ -154,6 +165,33 @@ type DockerImage struct {
 	Repository string `yaml:"repository"`
 	Version    string `yaml:"version"`
 	UidGid     string `yaml:"uid-gid"`
+}
+
+// IsFullyConfigured reports whether all of i's required fields are present.
+// Version is not required, as it can be superseded by a ChainSpec version.
+func (i DockerImage) IsFullyConfigured() bool {
+	return i.Validate() == nil
+}
+
+// Validate returns an error describing which of i's required fields are missing
+// and returns nil if all required fields are present. Version is not required,
+// as it can be superseded by a ChainSpec version.
+func (i DockerImage) Validate() error {
+	var missing []string
+
+	if i.Repository == "" {
+		missing = append(missing, "Repository")
+	}
+	if i.UidGid == "" {
+		missing = append(missing, "UidGid")
+	}
+
+	if len(missing) > 0 {
+		fields := strings.Join(missing, ", ")
+		return fmt.Errorf("DockerImage is missing fields: %s", fields)
+	}
+
+	return nil
 }
 
 // Ref returns the reference to use when e.g. creating a container.
