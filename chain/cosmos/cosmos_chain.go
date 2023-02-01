@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -280,6 +279,11 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return tx, nil
+}
+
+// Query returns the response from a query cmd string
+func (c *CosmosChain) Query(ctx context.Context, cmds []string) (stdOut []byte, stdErr []byte, err error) {
+	return c.getFullNode().ExecQuery(ctx, cmds...)
 }
 
 // QueryProposal returns the state and details of a governance proposal.
