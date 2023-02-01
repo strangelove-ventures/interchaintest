@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v7"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/relayer"
-	"github.com/strangelove-ventures/ibctest/v7/testreporter"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -25,7 +25,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -36,7 +36,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	nf := 3 // Number of full nodes
 
 	// Get both chains
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			//Name:    "composable",
 			//Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
@@ -101,7 +101,7 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	composable, simd := chains[0], chains[1]
 
 	// Get a relayer instance
-	r := ibctest.NewBuiltinRelayerFactory(
+	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
@@ -115,18 +115,18 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	const pathName = "composable-simd"
 	const relayerName = "relayer"
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(composable).
 		AddChain(simd) //.
 		//AddRelayer(r, relayerName).
-		/*AddLink(ibctest.InterchainLink{
+		/*AddLink(interchaintest.InterchainLink{
 			Chain1:  composable,
 			Chain2:  simd,
 			Relayer: r,
 			Path:    pathName,
 		})*/
 
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,

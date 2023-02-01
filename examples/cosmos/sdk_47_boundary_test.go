@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v7"
-	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v7/conformance"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/relayer"
-	"github.com/strangelove-ventures/ibctest/v7/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v7/testreporter"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/conformance"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -22,7 +22,7 @@ func TestSDK47Boundary(t *testing.T) {
 
 	t.Parallel()
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      "gaia",
 			ChainName: "gaia",
@@ -38,7 +38,7 @@ func TestSDK47Boundary(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	chain, counterpartyChain := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
@@ -48,7 +48,7 @@ func TestSDK47Boundary(t *testing.T) {
 	)
 
 	// Get a relayer instance
-	rf := ibctest.NewBuiltinRelayerFactory(
+	rf := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
@@ -58,11 +58,11 @@ func TestSDK47Boundary(t *testing.T) {
 
 	r := rf.Build(t, client, network)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain).
 		AddChain(counterpartyChain).
 		AddRelayer(r, relayerName).
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  chain,
 			Chain2:  counterpartyChain,
 			Relayer: r,
@@ -73,11 +73,11 @@ func TestSDK47Boundary(t *testing.T) {
 
 	rep := testreporter.NewNopReporter()
 
-	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  false,
 	}))
 	t.Cleanup(func() {

@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v7/label"
+	"github.com/strangelove-ventures/interchaintest/v7/label"
 )
 
 // T is a subset of testing.TB,
@@ -239,7 +239,7 @@ func NewNopReporter() *Reporter {
 	return NewReporter(newNopWriteCloser())
 }
 
-// nopWriteCloser is a no-op io.WriteCloser used to satisfy the ibctest TestReporter type.
+// nopWriteCloser is a no-op io.WriteCloser used to satisfy the interchaintest TestReporter type.
 // Because the relayer is used in-process, all logs are simply streamed to the test log.
 type nopWriteCloser struct {
 	io.Writer

@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v7"
-	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/testreporter"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	//simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
@@ -33,7 +33,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -62,7 +62,7 @@ func TestPushWasmClientCode(t *testing.T) {
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		/*{
 			Name: "ibc-go-simd",
 			Version: "feat/wasm-client",
@@ -102,15 +102,15 @@ func TestPushWasmClientCode(t *testing.T) {
 	simd := chains[0]
 
 	t.Logf("NewInterchain")
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(simd)
 
 	t.Logf("Interchain build options")
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
 
@@ -120,7 +120,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(100_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), simd)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), simd)
 	simd1User := users[0]
 
 	err = testutil.WaitForBlocks(ctx, 2, simd)

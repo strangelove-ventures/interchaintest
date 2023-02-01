@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/ibctest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -174,7 +174,7 @@ func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber u
 		WithGasAdjustment(chainConfig.GasAdjustment).
 		WithGas(flags.DefaultGasLimit).
 		WithGasPrices(chainConfig.GasPrices).
-		WithMemo("ibctest").
+		WithMemo("interchaintest").
 		WithTxConfig(clientCtx.TxConfig).
 		WithAccountRetriever(clientCtx.AccountRetriever).
 		WithKeybase(clientCtx.Keyring).
