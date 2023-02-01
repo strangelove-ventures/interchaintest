@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
 )
 
@@ -77,8 +77,12 @@ func Capabilities() map[relayer.Capability]bool {
 }
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
+	chainType := chainConfig.Type
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+		chainType = "substrate"
+	}
 	return CosmosRelayerChainConfig{
-		Type: chainConfig.Type,
+		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{
 			Key:            keyName,
 			ChainID:        chainConfig.ChainID,
@@ -264,9 +268,10 @@ func (commander) DefaultContainerVersion() string {
 }
 
 func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
-	var wallet ibc.Wallet
+	var wallet WalletModel
 	err := json.Unmarshal([]byte(stdout), &wallet)
-	return wallet, err
+	rlyWallet := NewWallet("", wallet.Address, wallet.Mnemonic)
+	return rlyWallet, err
 }
 
 func (commander) ParseRestoreKeyOutput(stdout, stderr string) string {
@@ -341,4 +346,8 @@ func (commander) Init(homeDir string) []string {
 		"rly", "config", "init",
 		"--home", homeDir,
 	}
+}
+
+func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+	return NewWallet(keyName, address, mnemonic)
 }

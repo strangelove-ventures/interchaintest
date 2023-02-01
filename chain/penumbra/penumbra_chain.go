@@ -9,13 +9,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -34,6 +39,7 @@ type PenumbraChain struct {
 	numValidators int
 	numFullNodes  int
 	PenumbraNodes PenumbraNodes
+	keyring       keyring.Keyring
 }
 
 type PenumbraValidatorDefinition struct {
@@ -58,12 +64,18 @@ type PenumbraGenesisAppStateAllocation struct {
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
+
 	return &PenumbraChain{
 		log:           log,
 		testName:      testName,
 		cfg:           chainConfig,
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
+		keyring:       kr,
 	}
 }
 
@@ -131,12 +143,62 @@ func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return fmt.Errorf("RecoverKey not implemented for PenumbraChain")
+	return c.getRelayerNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
+}
+
+// BuildWallet will return a Penumbra wallet
+// If mnemonic != "", it will restore using that mnemonic
+// If mnemonic == "", it will create a new key
+func (c *PenumbraChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
+	if mnemonic != "" {
+		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
+			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
+		}
+	} else {
+		if err := c.CreateKey(ctx, keyName); err != nil {
+			return nil, fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
+		}
+	}
+
+	addrBytes, err := c.GetAddress(ctx, keyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
+	}
+
+	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+}
+
+// BuildRelayerWallet will return a Penumbra wallet populated with the mnemonic so that the wallet can
+// be restored in the relayer node using the mnemonic. After it is built, that address is included in
+// genesis with some funds.
+func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
+	coinType, err := strconv.ParseUint(c.cfg.CoinType, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid coin type: %w", err)
+	}
+
+	info, mnemonic, err := c.keyring.NewMnemonic(
+		keyName,
+		keyring.English,
+		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
+		"", // Empty passphrase.
+		hd.Secp256k1,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
+	}
+
+	addrBytes, err := info.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address: %w", err)
+	}
+
+	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
 // Implements Chain interface
@@ -313,7 +375,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(egCtx); err != nil {
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, valKey); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
 

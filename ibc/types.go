@@ -5,11 +5,10 @@ import (
 	"strconv"
 
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 )
 
-// ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
+// ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
 	Type string `yaml:"type"`
@@ -215,19 +214,11 @@ type ClientState struct {
 
 type ClientOutputs []*ClientOutput
 
-type Wallet struct {
-	Mnemonic string `json:"mnemonic"`
-	Address  string `json:"address"`
-	KeyName  string
-	CoinType uint32
-}
-
-func (w *Wallet) GetKeyName() string {
-	return w.KeyName
-}
-
-func (w *Wallet) Bech32Address(bech32Prefix string) string {
-	return types.MustBech32ifyAddressBytes(bech32Prefix, []byte(w.Address))
+type Wallet interface {
+	KeyName() string
+	FormattedAddress() string
+	Mnemonic() string
+	Address() []byte
 }
 
 type RelayerImplementation int64

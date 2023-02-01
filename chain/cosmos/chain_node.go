@@ -27,10 +27,10 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -195,7 +195,7 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// SetTestConfig modifies the config to reasonable values for use within ibctest.
+// SetTestConfig modifies the config to reasonable values for use within interchaintest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	c := make(testutil.Toml)
 
@@ -718,6 +718,41 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 		return err
 	}
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(stdout), response)
+	return err
+}
+
+// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
+func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+
+	_, file := filepath.Split(fileName)
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	_, err = tn.ExecTx(ctx, keyName, "ibc", "wasm-client", "push-wasm", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	if err != nil {
+		return "", err
+	}
+
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+
+	//return stdout, nil
+	return codeHash, nil
+}
+
+// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
+func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
+	stdout, _, err := tn.ExecQuery(ctx, "ibc", "wasm-client", "code", codeHash)
 	if err != nil {
 		return err
 	}

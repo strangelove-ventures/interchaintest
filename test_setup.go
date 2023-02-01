@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/internal/version"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/version"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 //
 // The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
-// Alternatively, importers of the ibctest package may call KeepDockerVolumesOnFailure(true).
+// Alternatively, importers of the interchaintest package may call KeepDockerVolumesOnFailure(true).
 func KeepDockerVolumesOnFailure(b bool) {
 	dockerutil.KeepVolumesOnFailure = b
 }

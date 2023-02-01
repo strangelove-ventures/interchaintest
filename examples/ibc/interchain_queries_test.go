@@ -9,12 +9,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/icza/dyno"
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -28,7 +29,7 @@ func TestInterchainQueries(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -42,7 +43,7 @@ func TestInterchainQueries(t *testing.T) {
 	}
 
 	// Get both chains
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainName: "sender",
 			ChainConfig: ibc.ChainConfig{
@@ -80,7 +81,7 @@ func TestInterchainQueries(t *testing.T) {
 	chain1, chain2 := chains[0], chains[1]
 
 	// Get a relayer instance
-	r := ibctest.NewBuiltinRelayerFactory(
+	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
@@ -90,11 +91,11 @@ func TestInterchainQueries(t *testing.T) {
 	const pathName = "test1-test2"
 	const relayerName = "relayer"
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain1).
 		AddChain(chain2).
 		AddRelayer(r, relayerName).
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  chain1,
 			Chain2:  chain2,
 			Relayer: r,
@@ -107,7 +108,7 @@ func TestInterchainQueries(t *testing.T) {
 			},
 		})
 
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -120,7 +121,7 @@ func TestInterchainQueries(t *testing.T) {
 
 	// Fund user accounts, so we can query balances and make assertions.
 	const userFunds = int64(10_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain1, chain2)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain1, chain2)
 	chain1User := users[0]
 	chain2User := users[1]
 
@@ -153,10 +154,10 @@ func TestInterchainQueries(t *testing.T) {
 	chanID := channels[0].Counterparty.ChannelID
 	require.NotEmpty(t, chanID)
 
-	chain1Addr := chain1User.Bech32Address(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
 	require.NotEmpty(t, chain1Addr)
 
-	chain2Addr := chain2User.Bech32Address(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
 	require.NotEmpty(t, chain2Addr)
 
 	cmd := []string{"icq", "tx", "interquery", "send-query-all-balances", chanID, chain2Addr,

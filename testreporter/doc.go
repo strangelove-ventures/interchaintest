@@ -9,25 +9,26 @@
 // you will just miss some detail in the external report.
 //
 // First, the reporter instance must be initialized and Closed.
-// The cmd/ibctest package does this in a MainTest function, similar to this:
-//     func TestMain(m *testing.M) {
-//       f, _ := os.Create("/tmp/report.json")
-//       reporter := testreporter.NewReporter(f)
-//       code := m.Run()
-//       _ = reporter.Close()
-//       os.Exit(code)
-//     }
+// The cmd/interchaintest package does this in a MainTest function, similar to this:
+//
+//	func TestMain(m *testing.M) {
+//	  f, _ := os.Create("/tmp/report.json")
+//	  reporter := testreporter.NewReporter(f)
+//	  code := m.Run()
+//	  _ = reporter.Close()
+//	  os.Exit(code)
+//	}
 //
 // Next, every test that needs to be tracked must call TrackTest.
 // If you omit the call to TrackTest, then the test's start and end time,
 // and skip/fail status, will not be reported.
 //
-//     var reporter *testreporter.Reporter // Initialized somehow.
+//	var reporter *testreporter.Reporter // Initialized somehow.
 //
-//     func TestFoo(t *testing.T) {
-//       reporter.TrackTest(t)
-//       // Normal test usage continues...
-//     }
+//	func TestFoo(t *testing.T) {
+//	  reporter.TrackTest(t)
+//	  // Normal test usage continues...
+//	}
 //
 // Calling TrackTest tracks the test's start and finish time,
 // including whether the test was skipped or failed.
@@ -38,22 +39,22 @@
 // and when parallel execution resumes.
 // If you omit the call to TrackParallel, then at worst you have a misleading test duration.
 //
-//     func TestFooParallel(t *testing.T) {
-//       reporter.TrackTest(t)
-//       reporter.TrackParallel(t)
-//       // Normal test usage continues...
-//     }
+//	func TestFooParallel(t *testing.T) {
+//	  reporter.TrackTest(t)
+//	  reporter.TrackParallel(t)
+//	  // Normal test usage continues...
+//	}
 //
 // If a test needs to be skipped, the TrackSkip method will track the skip reason.
 // Like the other Track methods, calling t.Skip directly will still cause the test to be skipped,
 // and the reporter will note that the test was skipped,
 // but the reporter would not track the specific skip reason.
 //
-//     func TestFooSkip(t *testing.T) {
-//       if someReason() {
-//         reporter.TrackSkip(t, "skipping due to %s", whySkipped())
-//       }
-//     }
+//	func TestFooSkip(t *testing.T) {
+//	  if someReason() {
+//	    reporter.TrackSkip(t, "skipping due to %s", whySkipped())
+//	  }
+//	}
 //
 // Lastly, and perhaps most importantly, the reporter is designed to integrate
 // with testify's require and assert packages.
@@ -61,14 +62,14 @@
 // But if you connect the reporter with a require or assert instance,
 // any failed assertions are stored as error messages in the report.
 //
-//     func TestBar(t *testing.T) {
-//       reporter.TrackTest(t)
-//       req := require.New(reporter.TestifyT(t))
-//       t.Log("About to test Bar()") // Goes to "go test" output, but not included in report.
+//	func TestBar(t *testing.T) {
+//	  reporter.TrackTest(t)
+//	  req := require.New(reporter.TestifyT(t))
+//	  t.Log("About to test Bar()") // Goes to "go test" output, but not included in report.
 //
-//       // If this fails, the report includes a "TestErrorMessage" entry in the report.
-//       req.NoError(Bar(), "failure executing Bar()")
-//     }
+//	  // If this fails, the report includes a "TestErrorMessage" entry in the report.
+//	  req.NoError(Bar(), "failure executing Bar()")
+//	}
 //
 // If you use a plain require.NoError(t, err) call,
 // the report will note that the test failed, but the report will not include the error line.

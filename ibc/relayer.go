@@ -85,7 +85,7 @@ type Relayer interface {
 	//
 	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
 	//
-	// Relayer implementations provided by the ibctest module will report true,
+	// Relayer implementations provided by the interchaintest module will report true,
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
 

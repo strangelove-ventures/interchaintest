@@ -14,10 +14,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -68,15 +69,27 @@ func (pn *ParachainNode) NodeHome() string {
 	return "/home/heighliner"
 }
 
-// RawChainSpecFilePathFull returns the full path to the raw chain spec file
+// ParachainChainSpecFileName returns the relative path to the chain spec file
+// within the parachain container.
+func (pn *ParachainNode) ParachainChainSpecFileName() string {
+	return fmt.Sprintf("%s.json", pn.ChainID)
+}
+
+// ParachainChainSpecFilePathFull returns the full path to the chain spec file
+// within the parachain container
+func (pn *ParachainNode) ParachainChainSpecFilePathFull() string {
+	return filepath.Join(pn.NodeHome(), pn.ParachainChainSpecFileName())
+}
+
+// RawRelayChainSpecFilePathFull returns the full path to the raw relay chain spec file
 // within the container.
-func (pn *ParachainNode) RawChainSpecFilePathFull() string {
+func (pn *ParachainNode) RawRelayChainSpecFilePathFull() string {
 	return filepath.Join(pn.NodeHome(), fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID))
 }
 
-// RawChainSpecFilePathRelative returns the relative path to the raw chain spec file
+// RawRelayChainSpecFilePathRelative returns the relative path to the raw relay chain spec file
 // within the container.
-func (pn *ParachainNode) RawChainSpecFilePathRelative() string {
+func (pn *ParachainNode) RawRelayChainSpecFilePathRelative() string {
 	return fmt.Sprintf("%s-raw.json", pn.Chain.Config().ChainID)
 }
 
@@ -95,11 +108,60 @@ func (pn *ParachainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
 type GetParachainIDResponse struct {
 	ParachainID int `json:"para_id"`
+}
+
+// GenerateDefaultChainSpec runs build-spec to get the default chain spec into something malleable
+func (pn *ParachainNode) GenerateDefaultChainSpec(ctx context.Context) ([]byte, error) {
+	cmd := []string{
+		pn.Bin,
+		"build-spec",
+		fmt.Sprintf("--chain=%s", pn.ChainID),
+	}
+	res := pn.Exec(ctx, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
+	}
+	return res.Stdout, nil
+}
+
+// GenerateParachainGenesisFile creates the default chain spec, modifies it and returns it.
+// The modified chain spec is then written to each Parachain node
+func (pn *ParachainNode) GenerateParachainGenesisFile(ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) ([]byte, error) {
+	defaultChainSpec, err := pn.GenerateDefaultChainSpec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error generating default parachain chain spec: %w", err)
+	}
+
+	var chainSpec interface{}
+	err = json.Unmarshal(defaultChainSpec, &chainSpec)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling parachain chain spec: %w", err)
+	}
+
+	balances, err := dyno.GetSlice(chainSpec, "genesis", "runtime", "balances", "balances")
+	if err != nil {
+		return nil, fmt.Errorf("error getting balances from parachain chain spec: %w", err)
+	}
+
+	for _, wallet := range additionalGenesisWallets {
+		balances = append(balances,
+			[]interface{}{wallet.Address, wallet.Amount},
+		)
+	}
+	if err := dyno.Set(chainSpec, balances, "genesis", "runtime", "balances", "balances"); err != nil {
+		return nil, fmt.Errorf("error setting parachain balances: %w", err)
+	}
+	editedChainSpec, err := json.MarshalIndent(chainSpec, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling modified parachain chain spec: %w", err)
+	}
+
+	return editedChainSpec, nil
 }
 
 // ParachainID retrieves the node parachain ID.
@@ -125,7 +187,7 @@ func (pn *ParachainNode) ExportGenesisWasm(ctx context.Context) (string, error) 
 	cmd := []string{
 		pn.Bin,
 		"export-genesis-wasm",
-		fmt.Sprintf("--chain=%s", pn.ChainID),
+		fmt.Sprintf("--chain=%s", pn.ParachainChainSpecFilePathFull()),
 	}
 	res := pn.Exec(ctx, cmd, nil)
 	if res.Err != nil {
@@ -139,7 +201,7 @@ func (pn *ParachainNode) ExportGenesisState(ctx context.Context) (string, error)
 	cmd := []string{
 		pn.Bin,
 		"export-genesis-state",
-		fmt.Sprintf("--chain=%s", pn.ChainID),
+		fmt.Sprintf("--chain=%s", pn.ParachainChainSpecFilePathFull()),
 	}
 	res := pn.Exec(ctx, cmd, nil)
 	if res.Err != nil {
@@ -176,13 +238,13 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		"--prometheus-external",
 		"--rpc-cors=all",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(rpcPort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", pn.NodeHome(),
-		fmt.Sprintf("--chain=%s", pn.ChainID),
+		fmt.Sprintf("--chain=%s", pn.ParachainChainSpecFilePathFull()),
 	}
 	cmd = append(cmd, pn.Flags...)
-	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawChainSpecFilePathFull()))
+	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawRelayChainSpecFilePathFull()))
 	cmd = append(cmd, pn.RelayChainFlags...)
 	pn.logger().
 		Info("Running command",
@@ -247,6 +309,9 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 	pn.hostWsPort = dockerutil.GetHostPort(c, wsPort)
 	pn.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
 
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(pn.hostWsPort, "localhost", "127.0.0.1", 1))
+	pn.log.Info(explorerUrl, zap.String("container", pn.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -269,4 +334,35 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) d
 		User:  pn.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+	return GetBalance(pn.api, address)
+}
+
+// GetIbcBalance returns the Coins type of ibc coins in account
+// [Add back when we move from centrifuge -> ComposableFi's go-substrate-rpc-client (for ibc methods)]
+/*func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}*/
+
+// SendFunds sends funds to a wallet from a user account.
+// Implements Chain interface.
+func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	hash, err := SendFundsTx(pn.api, kp, amount)
+	if err != nil {
+		return err
+	}
+
+	pn.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+	return nil
 }

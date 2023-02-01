@@ -1,19 +1,12 @@
-package ibctest
+package interchaintest
 
 import (
 	"context"
 	"fmt"
-	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -40,7 +33,7 @@ type Interchain struct {
 	relayerWallets map[relayerChain]ibc.Wallet
 
 	// Map of chain to additional genesis wallets to include at chain start.
-	additionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount
+	AdditionalGenesisWallets map[ibc.Chain][]ibc.WalletAmount
 
 	// Set during Build and cleaned up in the Close method.
 	cs *chainSet
@@ -110,10 +103,10 @@ func (ic *Interchain) AddChain(chain ibc.Chain, additionalGenesisWallets ...ibc.
 		return ic
 	}
 
-	if ic.additionalGenesisWallets == nil {
-		ic.additionalGenesisWallets = make(map[ibc.Chain][]ibc.WalletAmount)
+	if ic.AdditionalGenesisWallets == nil {
+		ic.AdditionalGenesisWallets = make(map[ibc.Chain][]ibc.WalletAmount)
 	}
-	ic.additionalGenesisWallets[chain] = additionalGenesisWallets
+	ic.AdditionalGenesisWallets[chain] = additionalGenesisWallets
 
 	return ic
 }
@@ -238,7 +231,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 
-	ic.generateRelayerWallets() // Build the relayer wallet mapping.
+	err := ic.generateRelayerWallets(ctx) // Build the relayer wallet mapping.
+	if err != nil {
+		return err
+	}
+
 	walletAmounts, err := ic.genesisWalletAmounts(ctx)
 	if err != nil {
 		// Error already wrapped with appropriate detail.
@@ -358,8 +355,8 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			},
 		}
 
-		if ic.additionalGenesisWallets != nil {
-			walletAmounts[c] = append(walletAmounts[c], ic.additionalGenesisWallets[c]...)
+		if ic.AdditionalGenesisWallets != nil {
+			walletAmounts[c] = append(walletAmounts[c], ic.AdditionalGenesisWallets[c]...)
 		}
 	}
 
@@ -367,7 +364,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 	for rc, wallet := range ic.relayerWallets {
 		c := rc.C
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
-			Address: wallet.Address,
+			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
 			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
 		})
@@ -377,15 +374,10 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 }
 
 // generateRelayerWallets populates ic.relayerWallets.
-func (ic *Interchain) generateRelayerWallets() {
+func (ic *Interchain) generateRelayerWallets(ctx context.Context) error {
 	if ic.relayerWallets != nil {
 		panic(fmt.Errorf("cannot call generateRelayerWallets more than once"))
 	}
-
-	registry := codectypes.NewInterfaceRegistry()
-	cryptocodec.RegisterInterfaces(registry)
-	cdc := codec.NewProtoCodec(registry)
-	kr := keyring.NewInMemory(cdc)
 
 	relayerChains := ic.relayerChains()
 	ic.relayerWallets = make(map[relayerChain]ibc.Wallet, len(relayerChains))
@@ -393,10 +385,15 @@ func (ic *Interchain) generateRelayerWallets() {
 		for _, c := range chains {
 			// Just an ephemeral unique name, only for the local use of the keyring.
 			accountName := ic.relayers[r] + "-" + ic.chains[c]
-
-			ic.relayerWallets[relayerChain{R: r, C: c}] = BuildWallet(kr, accountName, c.Config())
+			newWallet, err := c.BuildRelayerWallet(ctx, accountName)
+			if err != nil {
+				return err
+			}
+			ic.relayerWallets[relayerChain{R: r, C: c}] = newWallet
 		}
 	}
+
+	return nil
 }
 
 // configureRelayerKeys adds the chain configuration for each relayer
@@ -425,7 +422,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 				rep,
 				c.Config().ChainID, chainName,
 				c.Config().CoinType,
-				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic,
+				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic(),
 			); err != nil {
 				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}
@@ -439,37 +436,6 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 type relayerChain struct {
 	R ibc.Relayer
 	C ibc.Chain
-}
-
-// BuildWallet will generate a random key for the key name in the provided keyring.
-// Returns the mnemonic and address in the bech32 format of the provided ChainConfig.
-func BuildWallet(kr keyring.Keyring, keyName string, config ibc.ChainConfig) ibc.Wallet {
-	coinType, err := strconv.ParseUint(config.CoinType, 10, 32)
-	if err != nil {
-		panic(fmt.Errorf("invalid coin type: %w", err))
-	}
-
-	info, mnemonic, err := kr.NewMnemonic(
-		keyName,
-		keyring.English,
-		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
-		"", // Empty passphrase.
-		hd.Secp256k1,
-	)
-	if err != nil {
-		panic(fmt.Errorf("failed to create mnemonic: %w", err))
-	}
-
-	addr, err := info.GetAddress()
-	if err != nil {
-		panic(fmt.Errorf("failed to get address: %w", err))
-	}
-
-	return ibc.Wallet{
-		Address:  types.MustBech32ifyAddressBytes(config.Bech32Prefix, addr.Bytes()),
-		Mnemonic: mnemonic,
-		CoinType: uint32(coinType),
-	}
 }
 
 // relayerChains builds a mapping of relayers to the chains they connect to.

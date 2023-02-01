@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"errors"
@@ -8,8 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/label"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/label"
 	"go.uber.org/zap"
 )
 
@@ -156,33 +156,42 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.Images[0].Version = versionSplit[1]
 		cfg.Images[1].Version = versionSplit[0]
 	case "polkadot":
-		versionSplit := strings.Split(s.Version, ",")
-		relayChainImageSplit := strings.Split(versionSplit[0], ":")
-		var relayChainVersion string
-		if len(relayChainImageSplit) > 1 {
-			if relayChainImageSplit[0] != "polkadot" {
-				return nil, fmt.Errorf("only polkadot is supported as the relay chain node. got: %s", relayChainImageSplit[0])
+		// Only set if ChainSpec's Version is set, if not, Version from Images must be set.
+		if s.Version != "" {
+			versionSplit := strings.Split(s.Version, ",")
+			relayChainImageSplit := strings.Split(versionSplit[0], ":")
+			var relayChainVersion string
+			if len(relayChainImageSplit) > 1 {
+				if relayChainImageSplit[0] != "seunlanlege/centauri-polkadot" &&
+					relayChainImageSplit[0] != "polkadot" {
+					return nil, fmt.Errorf("only polkadot is supported as the relay chain node. got: %s", relayChainImageSplit[0])
+				}
+				relayChainVersion = relayChainImageSplit[1]
+			} else {
+				relayChainVersion = relayChainImageSplit[0]
 			}
-			relayChainVersion = relayChainImageSplit[1]
+			cfg.Images[0].Version = relayChainVersion
+			switch {
+			case strings.Contains(s.Name, "composable"):
+				if len(versionSplit) != 2 {
+					return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
+				}
+				imageSplit := strings.Split(versionSplit[1], ":")
+				if len(imageSplit) != 2 {
+					return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[1])
+				}
+				if !strings.Contains(cfg.Images[1].Repository, imageSplit[0]) {
+					return nil, fmt.Errorf("unexpected parachain: %s", imageSplit[0])
+				}
+				cfg.Images[1].Version = imageSplit[1]
+			default:
+				return nil, fmt.Errorf("unexpected parachain: %s", s.Name)
+			}
 		} else {
-			relayChainVersion = relayChainImageSplit[0]
-		}
-		cfg.Images[0].Version = relayChainVersion
-		switch {
-		case strings.Contains(s.Name, "composable"):
-			if len(versionSplit) != 2 {
-				return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
+			// Ensure there are at least two images and check the 2nd version is populated
+			if len(s.ChainConfig.Images) < 2 || s.ChainConfig.Images[1].Version == "" {
+				return nil, fmt.Errorf("ChainCongfig.Images must be >1 and ChainConfig.Images[1].Version must not be empty")
 			}
-			imageSplit := strings.Split(versionSplit[1], ":")
-			if len(imageSplit) != 2 {
-				return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[1])
-			}
-			if !strings.Contains(cfg.Images[1].Repository, imageSplit[0]) {
-				return nil, fmt.Errorf("unexpected parachain: %s", imageSplit[0])
-			}
-			cfg.Images[1].Version = imageSplit[1]
-		default:
-			return nil, fmt.Errorf("unexpected parachain: %s", s.Name)
 		}
 	}
 
