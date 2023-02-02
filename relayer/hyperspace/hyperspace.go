@@ -3,8 +3,9 @@ package hyperspace
 
 import (
 	"context"
-	"encoding/hex"
+	//"encoding/hex"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	
@@ -34,12 +35,12 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 			c.extraStartFlags = o.Flags
 		}
 	}
-	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
+	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, &c, options...)
 	if err != nil {
 		panic(err) // TODO: return
 	}
 
-	c.dockerRelayer = dr
+	//c.dockerRelayer = dr
 
 	r := &HyperspaceRelayer{
 		DockerRelayer: dr,
@@ -54,8 +55,8 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	ParaID           uint32   `toml:"para_id"`
 	ParachainRPCURL  string   `toml:"parachain_rpc_url"`
 	RelayChainRPCURL string   `toml:"relay_chain_rpc_url"`
-	ClientID         string   `toml:"client_id"`
-	ConnectionID     string   `toml:"connection_id"`
+	//ClientID         string   `toml:"client_id"`
+	//ConnectionID     string   `toml:"connection_id"`
 	BeefyActivation  uint32   `toml:"beefy_activation_block"`
 	CommitmentPrefix string   `toml:"commitment_prefix"`
 	PrivateKey       string   `toml:"private_key"`
@@ -63,8 +64,8 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	ChannelWhitelist []string `toml:"channel_whitelist"`
 	FinalityProtocol string   `toml:"finality_protocol"`
 	KeyType          string   `toml:"key_type"`
-	WasmCodeId       string   `toml:"wasm_code_id"`
-	WasmClientType   string   `toml:"wasm_client_type"`
+	//WasmCodeId       string   `toml:"wasm_code_id"`
+	//WasmClientType   string   `toml:"wasm_client_type"`
 }
 
 type KeyEntry struct {
@@ -130,17 +131,23 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 
 	privKey := algo.Generate()(derivedPriv)
 	address := types.AccAddress(privKey.PubKey().Address())
-	bech32Addr := types.MustBech32ifyAddressBytes(bech32Prefix, address)
+	_ = types.MustBech32ifyAddressBytes(bech32Prefix, address)
+	//bech32Addr := types.MustBech32ifyAddressBytes(bech32Prefix, address)
 
+	// Use test keys temporarily
 	return KeyEntry{
-		PublicKey:  hex.EncodeToString(privKey.PubKey().Bytes()), //PubKeySecp256k1{0316AE4C34FB51C56AFB8126CB9AD725BCF0BD7FB4AD1684FD50DC45A67CBC0A7D}
-		PrivateKey: hex.EncodeToString(privKey.Bytes()),  // i.e. ac26db8374e68403a3cf38cc2b196d688d2f094cec0908978b2460d4442062f7
-		Account:    bech32Addr , // i.e. cosmos1g5r2vmnp6lta9cpst4lzc4syy3kcj2lj0nuhmy
-		Address:    address.Bytes(), // i.e. [69 6 166 110 97 215 215 210 224 48 93 126 44 86 4 36 109 137 43 242]
+		PublicKey:  "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn",
+		PrivateKey: "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr",
+		Account:    "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
+		Address:    []byte{156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30},
+		//PublicKey:  hex.EncodeToString(privKey.PubKey().Bytes()), // i.e. 02c1732ca9cb7c6efaa7c205887565b9787cab5ebdb7bc1dd872a21fc8c9efb56a
+		//PrivateKey: hex.EncodeToString(privKey.Bytes()),  // i.e. ac26db8374e68403a3cf38cc2b196d688d2f094cec0908978b2460d4442062f7
+		//Account:    bech32Addr , // i.e. cosmos1g5r2vmnp6lta9cpst4lzc4syy3kcj2lj0nuhmy
+		//Address:    address.Bytes(), // i.e. [69 6 166 110 97 215 215 210 224 48 93 126 44 86 4 36 109 137 43 242]
 	}
 }
 
-func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) interface{} {
+func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
 	chainType := chainConfig.Type
 	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
 		chainType = "parachain"
@@ -149,7 +156,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 	if chainType == "parachain" {
 		addrs := strings.Split(rpcAddr, ",")
 		paraRpcAddr := rpcAddr
-		relayRpcAddr := gprcAddr
+		relayRpcAddr := grpcAddr
 		if len(addrs) > 1 {
 			paraRpcAddr, relayRpcAddr = addrs[0], addrs[1]
 		}
@@ -157,26 +164,29 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			Type:             chainType,
 			Name:             chainConfig.Name,
 			ParaID:           2000,
-			ParachainRPCURL:  paraRpcAddr,
-			RelayChainRPCURL: relayRpcAddr,
+			ParachainRPCURL:  strings.Replace(strings.Replace(paraRpcAddr, "http", "ws", 1), "9933", "27451", 1),
+			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1),"9933", "27451", 1),
 			//ClientID:         "10-grandpa-0",
 			//ConnectionID:     "connection-0",
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
-			SS58Version:      49,
+			SS58Version:      polkadot.Ss58Format,
 			KeyType:          "sr25519",
-			FinalityProtocol: "grandpa",
+			FinalityProtocol: "Grandpa",
 		}
 	} else if chainType == "cosmos" {
+		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
 		return HyperspaceRelayerCosmosChainConfig{
+			Type:           chainType,
 			Name:           chainConfig.Name,
 			ChainID:        chainConfig.ChainID,
 			AccountPrefix:  chainConfig.Bech32Prefix,
-			GRPCUrl:        gprcAddr,
+			GRPCUrl:        "http://"+grpcAddr,
 			RPCUrl:         rpcAddr,
-			StorePrefix:    "",
+			StorePrefix:    "ibc",
 			MaxTxSize:      200000,
 			WasmClientType: "10-grandpa",
+			WebsocketUrl:   wsUrl,
 			//Debug:          true,
 			//GasAdjustment:  chainConfig.GasAdjustment,
 			//GasPrices:      chainConfig.GasPrices,
@@ -195,7 +205,7 @@ type hyperspaceCommander struct {
 	log               *zap.Logger
 	chainConfigPaths  []string
 	extraStartFlags   []string
-	dockerRelayer     *relayer.DockerRelayer
+	//dockerRelayer     *relayer.DockerRelayer
 }
 
 func (hyperspaceCommander) Name() string {
@@ -206,7 +216,7 @@ func (hyperspaceCommander) DockerUser() string {
 	return "501:20" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
-func (c hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
+func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
 	c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
 	return []string{
@@ -221,7 +231,7 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []
 	panic("[AddKey] Do not call me")
 }
 
-func (hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
+func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	panic("[CreateChannel] Implement me")
 	/*fmt.Println("[hyperspace] CreateChannel", pathName, opts, homeDir)
 	return []string{
@@ -237,30 +247,36 @@ func (hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannel
 	}*/
 }
 
-func (hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	panic("[CreateClients] Implement me")
-	/*fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
+func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
+	if(len(c.chainConfigPaths) < 2) {
+		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
+		panic("Hyperspace needs two chain configs")
+	}
 	return []string{
 		"hyperspace",
-		"-h",
-		//"rly", "tx", "clients", pathName, "--client-tp", opts.TrustingPeriod,
-		//"--home", homeDir,
-	}*/
+		"create-clients",
+		"--config-a",
+		c.chainConfigPaths[0],
+		"--config-b",
+		c.chainConfigPaths[1],
+		"--config-core",
+		path.Join(homeDir, "core.config"),
+		"--delay-period",
+		"10",
+		"--port-id",
+		"transfer",
+		"--order",
+		"unordered",
+	}
 }
 
-// CreateClient passing a value of 0 for customeClientTrustingPeriod will use default
-func (hyperspaceCommander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
-	panic("[CreateClient] Implement me")
-	/*fmt.Println("[hyperspace] CreateClient", pathName, homeDir, customeClientTrustingPeriod)
-	return []string{
-		"hyperspace",
-		"-h",
-		//"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,
-		//"--home", homeDir,
-	}*/
+// Hyperspace doesn't implement this
+func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingPeriod string) []string {
+	panic("[CreateClient] Do not use me")
 }
 
-func (hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
+func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	panic("[CreateConnections] Implement me")
 	/*fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
 	return []string{
@@ -281,28 +297,15 @@ func (hyperspaceCommander) FlushPackets(pathName, channelID, homeDir string) []s
 	panic("[FlushPackets] Do not call me")
 }
 
+// Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
-	panic("[GeneratePath] Implement me")
-	/*fmt.Println("[hyperspace] GeneratePath", srcChainID, dstChainID, pathName, homeDir)
-	return []string{
-		"hyperspace",
-		"-h",
-		// "rly", "paths", "new", srcChainID, dstChainID, pathName,
-		// "--home", homeDir,
-	}*/
+	panic("[GeneratePath] Do not call me")
 }
 
+// Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
-	panic("[UpdatePath] Implement me")
-	/*fmt.Println("[hyperspace] UpdatePath", pathName, homeDir, filter)
-	return []string{
-		"hyperspace",
-		"-h",
-		// "rly", "paths", "update", pathName,
-		// "--home", homeDir,
-		// "--filter-rule", filter.Rule,
-		// "--filter-channels", strings.Join(filter.ChannelList, ","),
-	}*/
+	panic("[UpdatePath] Do not call me")
+	
 }
 
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
@@ -334,21 +337,9 @@ func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
 	panic("[GetClients] Implement me")
 }
 
+// Hyperspace does not have link cmd, call create clients, create connection, and create channel
 func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
-	panic("[LinkPath] Implement me")
-	/*fmt.Println("[hyperspace] LinkPath", pathName, homeDir, channelOpts, clientOpt)
-	return []string{
-		"hyperspace",
-		"-h",
-		// "rly", "tx", "link", pathName,
-		// "--src-port", channelOpts.SourcePortName,
-		// "--dst-port", channelOpts.DestPortName,
-		// "--order", channelOpts.Order.String(),
-		// "--version", channelOpts.Version,
-		// "--client-tp", clientOpt.TrustingPeriod,
-
-		// "--home", homeDir,
-	}*/
+	panic("[LinkPath] Do not use me")
 }
 
 // There is no hyperspace call to restore the key, so this can't return an executable.
@@ -364,7 +355,7 @@ func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic,
 	}
 }
 
-func (c hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
+func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
 	panic("[StartRelayer] Implement me")
 	/*fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
 	if len(c.chainConfig) < 2 {
@@ -384,10 +375,10 @@ func (c hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) [
 
 // Hyperspace doesn't not have this functionality
 func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
-	panic("[UpdateClients] Implement me")
+	panic("[UpdateClients] Do not use me")
 }
 
-func (c hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
 	fmt.Println("[hyperspace] ConfigContent", cfg, keyName, rpcAddr, grpcAddr)
 	HyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	bytes, err := toml.Marshal(HyperspaceRelayerChainConfig)
@@ -417,7 +408,7 @@ func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 	panic("[ParseRestoreKeyOutput] Do not call me")
 }
 
-func (c hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
+func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
 	panic("[ParseGetChannelsOutput] Test me")
 	/*fmt.Println("[hyperspace] ParseGetChannelsOutput", stdout, stderr)
 	var channels []ibc.ChannelOutput
@@ -438,7 +429,7 @@ func (c hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ib
 	return channels, nil*/
 }
 
-func (c hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
+func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
 	panic("[ParseGetConnectionsOutput] Test me")
 	/*fmt.Println("[hyperspace] ParseGetConnectionsOutput", stdout, stderr)
 
@@ -463,11 +454,11 @@ func (c hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (i
 	return connections, nil*/
 }
 
-func (c hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
 	panic("[ParseGetClientsOutput] Implement me")
 }
 
-func (c hyperspaceCommander) Init(homeDir string) []string {
+func (hyperspaceCommander) Init(homeDir string) []string {
 	fmt.Println("[hyperspace] Init", homeDir)
 	// Return hyperspace help to ensure hyperspace binary is accessible
 	return []string{
@@ -476,7 +467,7 @@ func (c hyperspaceCommander) Init(homeDir string) []string {
 	}
 }
 
-func (c hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+func (hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	kp, err := signature.KeyringPairFromSecret(mnemonic, polkadot.Ss58Format)
 	if err != nil {
 		return NewWallet("", "", "")

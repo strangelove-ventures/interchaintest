@@ -99,7 +99,7 @@ type Relayer interface {
 
 	// Set the wasm client contract hash in the chain's config if the counterparty chain in a path used 08-wasm 
 	// to instantiate the client.
-	SetClientContractHash(ctx context.Context, rep RelayerExecReporter, cfg ChainConfig, hash string) error
+	SetClientContractHash(ctx context.Context, rep RelayerExecReporter, cfg, counterChainCfg ChainConfig, hash string) error
 }
 
 // GetTransferChannel will return the transfer channel assuming only one client,

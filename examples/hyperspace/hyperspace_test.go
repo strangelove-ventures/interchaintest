@@ -82,13 +82,13 @@ func TestHyperspace(t *testing.T) {
 				ChainID: "rococo-local",
 				Images: []ibc.DockerImage{
 					{
-						Repository: "seunlanlege/centauri-polkadot",
-						Version:    "v0.9.27",
+						Repository: "polkadot-node",
+						Version:    "local",
 						UidGid:     "1025:1025",
 					},
 					{
-						Repository: "seunlanlege/centauri-parachain",
-						Version:    "v0.9.27",
+						Repository: "parachain-node",
+						Version:    "local",
 						//UidGid: "1025:1025",
 					},
 				},
@@ -111,7 +111,8 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "ibc-go-simd",
-						Version:    "feat-wasm-client",
+						Version:    "local",
+						//Version:    "feat-wasm-clients",
 						UidGid:     "1025:1025",
 					},
 				},
@@ -153,7 +154,12 @@ func TestHyperspace(t *testing.T) {
 	fmt.Println("About to create interchain")
 	ic := ibctest.NewInterchain().
 		AddChain(polkadotChain).
-		AddChain(cosmosChain).
+		AddChain(cosmosChain, ibc.WalletAmount{
+			// Use test keys temporarily
+			Address: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
+			Denom: "stake",
+			Amount: 10_000_000_000_000,
+		}).
 		AddRelayer(r, relayerName).
 		AddLink(ibctest.InterchainLink{
 			Chain1:  polkadotChain,
@@ -215,12 +221,35 @@ func TestHyperspace(t *testing.T) {
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
 
-	r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), polkadotChain.Config(), codeHash)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
 
+	// Create new clients
+	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+	// Create a new connection
+	////err = r.CreateConnections(ctx, eRep, pathName)
+	////require.NoError(t, err)
+
+	////err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
+	////require.NoError(t, err)
+
+	// Query for the newly created connection
+	////connections, err := r.GetConnections(ctx, eRep, chain1.Config().ChainID)
+	////require.NoError(t, err)
+	////require.Equal(t, 1, len(connections))
 	//err = testutil.WaitForBlocks(ctx, 22, polkadotChain, cosmosChain)
 	//require.NoError(t, err)
 	// Add contract hash to hyperspace config and create clients, connection, and channel

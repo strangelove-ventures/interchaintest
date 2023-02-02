@@ -204,7 +204,9 @@ func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecRe
 
 func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
+	fmt.Println("Create Client cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
+	fmt.Println("CreateClientsOutput: ", string(res.Stdout))
 	return res.Err
 }
 
@@ -319,7 +321,7 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 		chainConfig := make(testutil.Toml)
 		switch chainType {
 		case "cosmos":
-			chainConfig["private_key"] = mnemonic
+			//chainConfig["private_key"] = mnemonic
 			bech32Prefix := cfg.Bech32Prefix
 			keyEntry := r.c.RestoreKey(chainID, bech32Prefix, coinType, mnemonic, r.HomeDir())
 			keyEntryOverrides := make(testutil.Toml)
@@ -329,7 +331,8 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 			keyEntryOverrides["address"] = []byte(keyEntry[3])
 			chainConfig["keybase"] = keyEntryOverrides
 		case "polkadot":
-			chainConfig["private_key"] = mnemonic
+			chainConfig["private_key"] = "//Alice"
+			//chainConfig["private_key"] = mnemonic
 		}
 		chainConfigFile := chainID + ".config"
 		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
@@ -561,13 +564,20 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
-func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg, counterChainCfg ibc.ChainConfig, hash string) error {
 	switch r.c.Name() {
 	case "hyperspace":
 		chainConfig := make(testutil.Toml)
 		chainConfig["wasm_code_id"] = hash
 		chainConfigFile := cfg.ChainID + ".config"
 		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
+		if err != nil {
+			return err
+		}
+		counterChainConfig := make(testutil.Toml)
+		counterChainConfig["counterparty_wasm_code_id"] = hash
+		counterChainConfigFile := counterChainCfg.ChainID + ".config"
+		err = testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, counterChainConfigFile, counterChainConfig)
 		if err != nil {
 			return err
 		}

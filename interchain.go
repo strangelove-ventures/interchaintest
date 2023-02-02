@@ -366,7 +366,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
 			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
-			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
+			Amount:  10_000_000_000_000, // Every wallet gets 1t units of denom.
 		})
 	}
 
