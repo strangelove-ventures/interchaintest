@@ -21,12 +21,12 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 		(*sdk.Msg)(nil),
 		&MsgPushNewWasmCode{},
 	)
-	/*cfg.InterfaceRegistry.RegisterImplementations(
-		*exported.ClientMessage)(nil),
-		&Misbehavior{},
+	registry.RegisterImplementations(
+		(*exported.ClientMessage)(nil),
+		&Misbehaviour{},
 	)
-	cfg.InterfaceRegistry.RegisterImplementations(
-		*exported.ClientMessage)(nil),
+	registry.RegisterImplementations(
+		(*exported.ClientMessage)(nil),
 		&Header{},
-	)*/
+	)
 }
