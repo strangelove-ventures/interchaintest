@@ -20,6 +20,7 @@ import (
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -354,7 +355,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	if err := dyno.Set(chainSpec, parachains, runtimeGenesisPath("paras", "paras")...); err != nil {
 		return fmt.Errorf("error setting parachains: %w", err)
 	}
-	if err := dyno.Set(chainSpec, 10, "genesis", "runtime", "session_length_in_blocks"); err != nil {
+	if err := dyno.Set(chainSpec, 40, "genesis", "runtime", "session_length_in_blocks"); err != nil {
 		return fmt.Errorf("error setting session_length_in_blocks: %w", err)
 	}
 	return nil
@@ -787,4 +788,9 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 	}
 
 	return kp, nil
+}
+
+// FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
+func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+	return []blockdb.Tx{}, nil
 }

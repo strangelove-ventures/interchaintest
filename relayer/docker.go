@@ -212,7 +212,9 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.HomeDir())
+	fmt.Println("Create connection cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
+	fmt.Println("CreateConnectionOutput: ", string(res.Stdout))
 	return res.Err
 }
 
@@ -564,20 +566,13 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
-func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg, counterChainCfg ibc.ChainConfig, hash string) error {
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
 	switch r.c.Name() {
 	case "hyperspace":
 		chainConfig := make(testutil.Toml)
 		chainConfig["wasm_code_id"] = hash
 		chainConfigFile := cfg.ChainID + ".config"
 		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
-		if err != nil {
-			return err
-		}
-		counterChainConfig := make(testutil.Toml)
-		counterChainConfig["counterparty_wasm_code_id"] = hash
-		counterChainConfigFile := counterChainCfg.ChainID + ".config"
-		err = testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, counterChainConfigFile, counterChainConfig)
 		if err != nil {
 			return err
 		}

@@ -58,12 +58,12 @@ func TestHyperspace(t *testing.T) {
 	configTomlOverrides := make(testutil.Toml)
 
 	apiOverrides := make(testutil.Toml)
-	apiOverrides["rpc-max-body-bytes"] = 1350000
+	apiOverrides["rpc-max-body-bytes"] = 1_800_000
 	appTomlOverrides["api"] = apiOverrides
 
 	rpcOverrides := make(testutil.Toml)
-	rpcOverrides["max_body_bytes"] = 1350000
-	rpcOverrides["max_header_bytes"] = 1400000
+	rpcOverrides["max_body_bytes"] = 1_800_000
+	rpcOverrides["max_header_bytes"] = 1_900_000
 	configTomlOverrides["rpc"] = rpcOverrides
 
 	//mempoolOverrides := make(testutil.Toml)
@@ -221,7 +221,7 @@ func TestHyperspace(t *testing.T) {
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
 
-	r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), polkadotChain.Config(), codeHash)
+	r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
@@ -231,47 +231,35 @@ func TestHyperspace(t *testing.T) {
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 3, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+	
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
+	
+	// Create a new connection
+	err = r.CreateConnections(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-	// Create a new connection
-	////err = r.CreateConnections(ctx, eRep, pathName)
-	////require.NoError(t, err)
-
-	////err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
-	////require.NoError(t, err)
-
+	
 	// Query for the newly created connection
-	////connections, err := r.GetConnections(ctx, eRep, chain1.Config().ChainID)
-	////require.NoError(t, err)
-	////require.Equal(t, 1, len(connections))
-	//err = testutil.WaitForBlocks(ctx, 22, polkadotChain, cosmosChain)
+	//cosmosConnections, err := r.GetConnections(ctx, eRep, cosmosChain.Config().ChainID)
 	//require.NoError(t, err)
-	// Add contract hash to hyperspace config and create clients, connection, and channel
-	// Then send ibc tx from cosmos -> substrate and vice versa
-
-
-	// Generate a new IBC path between the chains
-	// This is like running `rly paths new`
-	//err = r.GeneratePath(ctx, eRep, composable.Config().ChainID, simd.Config().ChainID, pathName)
+	//print cosmos connections
+	//polkadotConnections, err := r.GetConnections(ctx, eRep, polkadotChain.Config().ChainID)
 	//require.NoError(t, err)
+	//print polkadot connections
 
-	// Attempt to create the light clients for both chains on the counterparty chain
-	//err = r.CreateClients(ctx, rep.RelayerExecReporter(t), pathName, ibc.DefaultClientOpts())
+	// Create a new channel & get channels from each chain
+	//err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
 	//require.NoError(t, err)
-
-	// Once client, connection, and handshake logic is implemented for the Substrate provider
-	// we can link the path, start the relayer and attempt to send a token transfer via IBC.
-
-	//r.LinkPath()
-	//
-	//composable.SendIBCTransfer()
-	//
+	
+	// Start relayer
 	//r.StartRelayer()
 	//t.Cleanup(func() {
 	//	err = r.StopRelayer(ctx, eRep)
@@ -279,6 +267,11 @@ func TestHyperspace(t *testing.T) {
 	//		panic(err)
 	//	}
 	//})
+
+	// Then send ibc tx from cosmos -> substrate and vice versa
+	//polkadotChain.SendIBCTransfer(), verify
+	//cosmosChain.SendIBCTransfer(), verify
+
 }
 
 type GetCodeQueryMsgResponse struct {

@@ -65,7 +65,6 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	FinalityProtocol string   `toml:"finality_protocol"`
 	KeyType          string   `toml:"key_type"`
 	//WasmCodeId       string   `toml:"wasm_code_id"`
-	//WasmClientType   string   `toml:"wasm_client_type"`
 }
 
 type KeyEntry struct {
@@ -86,7 +85,6 @@ type HyperspaceRelayerCosmosChainConfig struct {
 	StorePrefix    string   `toml:"store_prefix"`
 	MaxTxSize      uint64   `toml:"max_tx_size"`
 	WasmCodeId     string   `toml:"wasm_code_id"`
-	WasmClientType string   `toml:"wasm_client_type"`
 	//ConnectionId string `toml:"connection_id"` // connection-1
 	//ClientId string `toml:"client_id"` // 07-tendermint-0
 	Keybase        KeyEntry `toml:"keybase"`
@@ -185,7 +183,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RPCUrl:         rpcAddr,
 			StorePrefix:    "ibc",
 			MaxTxSize:      200000,
-			WasmClientType: "10-grandpa",
+			//WasmClientType: "10-grandpa",
 			WebsocketUrl:   wsUrl,
 			//Debug:          true,
 			//GasAdjustment:  chainConfig.GasAdjustment,
@@ -277,14 +275,23 @@ func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingP
 }
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
-	panic("[CreateConnections] Implement me")
-	/*fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
+	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
 	return []string{
 		"hyperspace",
-		"-h",
-		//"rly", "tx", "connection", pathName,
-		//"--home", homeDir,
-	}*/
+		"create-connection",
+		"--config-a",
+		c.chainConfigPaths[0],
+		"--config-b",
+		c.chainConfigPaths[1],
+		"--config-core",
+		path.Join(homeDir, "core.config"),
+		"--delay-period",
+		"10",
+		"--port-id",
+		"transfer",
+		"--order",
+		"unordered",
+	}
 }
 
 // Hyperspace doesn't not have this functionality
@@ -334,7 +341,12 @@ func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 }
 
 func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
-	panic("[GetClients] Implement me")
+	fmt.Println("[hyperspace] Get Clients")
+	configFilePath := path.Join(homeDir, chainID + ".config")
+	return []string{
+		"cat",
+		configFilePath,
+	}
 }
 
 // Hyperspace does not have link cmd, call create clients, create connection, and create channel
@@ -455,7 +467,27 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 }
 
 func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	panic("[ParseGetClientsOutput] Implement me")
+	clientId := ""
+	chainId := ""
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "client_id") {
+			fields := strings.Split(line, "\"")
+			clientId = fields[1]
+		}
+		if strings.Contains(line, "chain_id") {
+			fields := strings.Split(line, "\"")
+			chainId = fields[1]
+		}
+	}
+	return ibc.ClientOutputs{
+		&ibc.ClientOutput{
+			ClientID: clientId,
+			ClientState: ibc.ClientState{
+				ChainID: chainId, 
+			},
+		},
+	}, nil
 }
 
 func (hyperspaceCommander) Init(homeDir string) []string {
