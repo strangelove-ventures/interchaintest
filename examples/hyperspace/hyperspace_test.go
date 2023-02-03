@@ -17,6 +17,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	//transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 )
 
 // TestHyperspace setup
@@ -231,7 +232,7 @@ func TestHyperspace(t *testing.T) {
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 3, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 	
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
@@ -241,33 +242,70 @@ func TestHyperspace(t *testing.T) {
 	err = r.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
 	
-	// Query for the newly created connection
-	//cosmosConnections, err := r.GetConnections(ctx, eRep, cosmosChain.Config().ChainID)
-	//require.NoError(t, err)
-	//print cosmos connections
-	//polkadotConnections, err := r.GetConnections(ctx, eRep, polkadotChain.Config().ChainID)
-	//require.NoError(t, err)
-	//print polkadot connections
-
 	// Create a new channel & get channels from each chain
+	err = r.CreateChannel(ctx, eRep, pathName, ibc.DefaultChannelOpts())
+	require.NoError(t, err)
+	
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
+	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
+	
+	// Hyperspace panics on "hyperspace query channels --config xxx", this is needed.
+	//_, err = r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
+	//require.NoError(t, err)
+	//fmt.Println("Cosmos connection: ", cosmosConnections[0].ID)
+	//_, err = r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
+	//require.NoError(t, err)
+	//fmt.Println("Polkadot connection: ", polkadotConnections[0].ID)
 	//err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
 	//require.NoError(t, err)
 	
 	// Start relayer
-	//r.StartRelayer()
-	//t.Cleanup(func() {
-	//	err = r.StopRelayer(ctx, eRep)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//})
+	/*r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err = r.StopRelayer(ctx, eRep)
+		if err != nil {
+			panic(err)
+		}
+	})
 
+	// Send Transaction
+	amountToSend := int64(177_000_000)
+	dstAddress := polkadotUser.FormattedAddress()
+	transfer := ibc.WalletAmount{
+		Address: dstAddress,
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  amountToSend,
+	}
+	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())	// test source wallet has decreased funds
+	
+	err = testutil.WaitForBlocks(ctx, 20, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	expectedBal := cosmosUserAmount - amountToSend
+	cosmosUserBalNew, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, expectedBal, cosmosUserBalNew)*/
+
+	// Trace IBC Denom
+	//srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", cosmosChain.Config().Denom))
+	//dstIbcDenom := srcDenomTrace.IBCDenom()
+
+	// Test destination wallet has increased funds
+	//polkadotUserBalNew, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), dstIbcDenom)
+	//require.NoError(t, err)
+	//require.Equal(t, amountToSend, polkadotUserBalNew)
 	// Then send ibc tx from cosmos -> substrate and vice versa
 	//polkadotChain.SendIBCTransfer(), verify
 	//cosmosChain.SendIBCTransfer(), verify

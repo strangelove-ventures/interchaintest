@@ -198,7 +198,9 @@ func (r *DockerRelayer) GetWallet(chainID string) (ibc.Wallet, bool) {
 
 func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	cmd := r.c.CreateChannel(pathName, opts, r.HomeDir())
+	fmt.Println("Create Channel cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
+	fmt.Println("CreateChannelOutput: ", string(res.Stdout))
 	return res.Err
 }
 

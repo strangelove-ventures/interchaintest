@@ -19,6 +19,8 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
 	"go.uber.org/zap"
+	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	types23 "github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
 )
 
 // HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
@@ -164,8 +166,6 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			ParaID:           2000,
 			ParachainRPCURL:  strings.Replace(strings.Replace(paraRpcAddr, "http", "ws", 1), "9933", "27451", 1),
 			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1),"9933", "27451", 1),
-			//ClientID:         "10-grandpa-0",
-			//ConnectionID:     "connection-0",
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
 			SS58Version:      polkadot.Ss58Format,
@@ -183,15 +183,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RPCUrl:         rpcAddr,
 			StorePrefix:    "ibc",
 			MaxTxSize:      200000,
-			//WasmClientType: "10-grandpa",
 			WebsocketUrl:   wsUrl,
-			//Debug:          true,
-			//GasAdjustment:  chainConfig.GasAdjustment,
-			//GasPrices:      chainConfig.GasPrices,
-			//KeyringBackend: "test",
-			//OutputFormat:   "toml",
-			//SignMode:       "direct",
-			//Timeout:        "10s",
 		}
 	} else {
 		panic(fmt.Sprintf("unsupported chain type %s", chainType))
@@ -230,19 +222,34 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []
 }
 
 func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	panic("[CreateChannel] Implement me")
-	/*fmt.Println("[hyperspace] CreateChannel", pathName, opts, homeDir)
+	fmt.Println("[hyperspace] CreateChannel", pathName, homeDir)
+	if(len(c.chainConfigPaths) < 2) {
+		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
+		panic("Hyperspace needs two chain configs")
+	}
+	// Temporarily force simd for chain A and rococo for chain B
+	simd := 1
+	if strings.Contains(c.chainConfigPaths[0], "simd") {
+		simd = 0
+	}
 	return []string{
 		"hyperspace",
-		"-h",
-		// "rly", "tx", "channel", pathName,
-		// "--src-port", opts.SourcePortName,
-		// "--dst-port", opts.DestPortName,
-		// "--order", opts.Order.String(),
-		// "--version", opts.Version,
-
-		// "--home", homeDir,
-	}*/
+		"create-channel",
+		"--config-a",
+		c.chainConfigPaths[simd],
+		"--config-b",
+		c.chainConfigPaths[(simd+1)%2],
+		"--config-core",
+		path.Join(homeDir, "core.config"),
+		"--delay-period",
+		"10",
+		"--port-id",
+		opts.SourcePortName,
+		"--order",
+		"unordered",
+		"--version",
+		opts.Version,
+	}
 }
 
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
@@ -281,6 +288,10 @@ func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingP
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
+	if(len(c.chainConfigPaths) < 2) {
+		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
+		panic("Hyperspace needs two chain configs")
+	}
 	// Temporarily force simd for chain A and rococo for chain B
 	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
@@ -326,30 +337,31 @@ func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.Chann
 }
 
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
-	panic("[GetChannels] Test me")
-	/*fmt.Println("[hyperspace] GetChannels", chainID, homeDir)
+	panic("Panic because hyperspace will panic")
+	/*fmt.Println("[hyperspace] Get Channels")
+	configFilePath := path.Join(homeDir, chainID + ".config")
 	return []string{
 		"hyperspace",
 		"query",
 		"channels",
-		chainID,
-		"--config", "rococo-local.config",
-		//"rly", "q", "channels", chainID,
-		//"--home", homeDir,
+		"--config",
+		configFilePath,
 	}*/
 }
 
+// Prints chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
-	panic("[GetConnections] Implement me")
-	/*fmt.Println("[hyperspace] GetConnections", chainID, homeDir)
+	fmt.Println("[hyperspace] Get Connections")
+	configFilePath := path.Join(homeDir, chainID + ".config")
 	return []string{
-		"hyperspace",
-		"-h",
-		//"rly", "q", "connections", chainID,
-		//"--home", homeDir,
-	}*/
+		"cat",
+		configFilePath,
+	}
 }
 
+// Prints chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Clients")
 	configFilePath := path.Join(homeDir, chainID + ".config")
@@ -378,21 +390,34 @@ func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic,
 }
 
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
-	panic("[StartRelayer] Implement me")
-	/*fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
-	if len(c.chainConfig) < 2 {
-		panic("[StartRelayer] Needs two chains to start")
+	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
+	if(len(c.chainConfigPaths) < 2) {
+		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
+		panic("Hyperspace needs two chain configs")
 	}
-	cmd := []string{
+	// Temporarily force simd for chain A and rococo for chain B
+	simd := 1
+	if strings.Contains(c.chainConfigPaths[0], "simd") {
+		simd = 0
+	}
+	return []string{
 		"hyperspace",
-		"relay",
-		"--config-a", c.chainConfigs[0],
-		"--config-b", c.chainConfigs[1]",
-		"--config-core", homeDir + "/core.config",
+		"create-channel",
+		"--config-a",
+		c.chainConfigPaths[simd],
+		"--config-b",
+		c.chainConfigPaths[(simd+1)%2],
+		"--config-core",
+		path.Join(homeDir, "core.config"),
+		"--delay-period",
+		"10",
+		"--port-id",
+		"transfer",
+		"--order",
+		"unordered",
+		"--version",
+		"ics20-1",
 	}
-	cmd = append(cmd, c.extraStartFlags...)
-	// cmd = append(cmd, pathNames...)
-	return cmd*/
 }
 
 // Hyperspace doesn't not have this functionality
@@ -431,51 +456,66 @@ func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 }
 
 func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
-	panic("[ParseGetChannelsOutput] Test me")
-	/*fmt.Println("[hyperspace] ParseGetChannelsOutput", stdout, stderr)
-	var channels []ibc.ChannelOutput
-	channelSplit := strings.Split(stdout, "\n")
-	for _, channel := range channelSplit {
-		if strings.TrimSpace(channel) == "" {
-			continue
-		}
-		var channelOutput ibc.ChannelOutput
-		err := json.Unmarshal([]byte(channel), &channelOutput)
-		if err != nil {
-			c.log.Error("Failed to parse channels json", zap.Error(err))
-			continue
-		}
-		channels = append(channels, channelOutput)
-	}
-
-	return channels, nil*/
+	panic("Re-add once hyperspace can query channels successfully")
+/*	fmt.Println("Channels output: ", stdout)
+	
+	return []ibc.ChannelOutput{
+		{
+			State: "",
+			Ordering: "",
+			Counterparty: ibc.ChannelCounterparty{
+				PortID: "",
+				ChannelID: "",
+			},
+			ConnectionHops: []string{},
+			Version: "",
+			PortID: "",
+			ChannelID: "",
+		},
+	}, nil*/
 }
 
+// Parses output of chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	panic("[ParseGetConnectionsOutput] Test me")
-	/*fmt.Println("[hyperspace] ParseGetConnectionsOutput", stdout, stderr)
-
-	var connections ibc.ConnectionOutputs
-	for _, connection := range strings.Split(stdout, "\n") {
-		if strings.TrimSpace(connection) == "" {
-			continue
+	clientId := ""
+	connectionId := ""
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "client_id") {
+			fields := strings.Split(line, "\"")
+			clientId = fields[1]
 		}
-
-		var connectionOutput ibc.ConnectionOutput
-		if err := json.Unmarshal([]byte(connection), &connectionOutput); err != nil {
-			c.log.Error(
-				"Error parsing connection json",
-				zap.Error(err),
-			)
-
-			continue
+		if strings.Contains(line, "connection_id") {
+			fields := strings.Split(line, "\"")
+			connectionId = fields[1]
 		}
-		connections = append(connections, &connectionOutput)
 	}
-
-	return connections, nil*/
+	return ibc.ConnectionOutputs{
+		&ibc.ConnectionOutput{
+			ID: connectionId,
+			ClientID: clientId,
+			Versions: []*ibcexported.Version{
+				{
+					Identifier: "",
+					Features: []string{},
+				},
+			},
+			State: "",
+			Counterparty: &ibcexported.Counterparty{
+				ClientId: "",
+				ConnectionId: "",
+				Prefix: types23.MerklePrefix{
+					KeyPrefix: []byte{},
+				},
+			},
+			DelayPeriod: "10",
+		},
+	}, nil
 }
 
+// Parses output of chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
 	clientId := ""
 	chainId := ""
