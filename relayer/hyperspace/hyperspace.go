@@ -251,13 +251,18 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
+	// Temporarily force simd for chain A and rococo for chain B
+	simd := 1
+	if strings.Contains(c.chainConfigPaths[0], "simd") {
+		simd = 0
+	}
 	return []string{
 		"hyperspace",
 		"create-clients",
 		"--config-a",
-		c.chainConfigPaths[0],
+		c.chainConfigPaths[simd],
 		"--config-b",
-		c.chainConfigPaths[1],
+		c.chainConfigPaths[(simd+1)%2],
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
@@ -276,13 +281,18 @@ func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingP
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
+	// Temporarily force simd for chain A and rococo for chain B
+	simd := 1
+	if strings.Contains(c.chainConfigPaths[0], "simd") {
+		simd = 0
+	}
 	return []string{
 		"hyperspace",
 		"create-connection",
 		"--config-a",
-		c.chainConfigPaths[0],
+		c.chainConfigPaths[simd],
 		"--config-b",
-		c.chainConfigPaths[1],
+		c.chainConfigPaths[(simd+1)%2],
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
