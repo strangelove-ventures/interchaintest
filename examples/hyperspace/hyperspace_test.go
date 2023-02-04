@@ -95,6 +95,7 @@ func TestHyperspace(t *testing.T) {
 	// Get both chains
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
+			ChainName: "composable", // Set ChainName so that a suffix with a "dash" is not appended (required for hyperspace)
 			ChainConfig: ibc.ChainConfig{
 				Type:    "polkadot",
 				Name:    "composable",
@@ -123,9 +124,10 @@ func TestHyperspace(t *testing.T) {
 			NumFullNodes:  &nf,
 		},
 		{
+			ChainName: "simd", // Set chain name so that a suffix with a "dash" is not appended (required for hyperspace)
 			ChainConfig: ibc.ChainConfig{
 				Type:    "cosmos",
-				Name:    "ibc-go-simd",
+				Name:    "simd",
 				ChainID: "simd",
 				Images: []ibc.DockerImage{
 					{
@@ -294,7 +296,7 @@ func TestHyperspace(t *testing.T) {
 			panic(err)
 		}
 	})
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 20, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	// Send Transaction
@@ -309,7 +311,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())	// test source wallet has decreased funds
 	
-	err = testutil.WaitForBlocks(ctx, 20, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 50, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	expectedBal := cosmosUserAmount - amountToSend

@@ -395,12 +395,8 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
-	return []string{
-		"sleep",
-		"500",
-	}
 	// Temporarily force simd for chain A and rococo for chain B
-	/*simd := 1
+	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
 	}
@@ -421,7 +417,7 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		"unordered",
 		"--version",
 		"ics20-1",
-	}*/
+	}
 }
 
 // Hyperspace doesn't not have this functionality
