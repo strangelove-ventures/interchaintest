@@ -21,10 +21,28 @@ import (
 )
 
 // TestHyperspace setup
-// * Uses simd docker image from heighliner built from feat/wasm-client branch (rebuild & publish if changed)
-// * Uses "seunlanlege/centauri-polkadot" v0.9.27 and "seunlanlege/centauri-parachain" v0.9.27
+// Must build local docker images of hyperspace, parachain, and polkadot
+// ###### hyperspace ######
+// * Repo: ComposableFi/centauri
+// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
+// * Commit: 043470ce1932c418d15df635480da8efb61d66d7
 // * Build local Hyperspace docker from centauri repo: 
-//       "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
+//    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
+//    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
+// ###### parachain ######
+// * Repo: ComposableFi/centauri
+// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
+// * Commit: 043470ce1932c418d15df635480da8efb61d66d7
+// * Build local parachain docker from centauri repo: 
+//     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
+// ###### polkadot ######
+// * Repo: paritytech/polkadot
+// * Branch: release-v0.9.33 
+// * Commit: c7d6c21242fc654f6f069e12c00951484dff334d
+// * Build local polkadot docker from  polkadot repo
+//     amd64: docker build -f scripts/ci/dockerfiles/polkadot/polkadot_builder.Dockerfile . -t polkadot-node:local
+//     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
+
 
 // TestHyperspace features
 // * sets up a Polkadot parachain 
@@ -32,7 +50,7 @@ import (
 // * sets up the Hyperspace relayer
 // * Funds a user wallet on both chains
 // * Pushes a wasm client contract to the Cosmos chain
-// * TODO: create client, connection, and channel in relayer
+// * create client, connection, and channel in relayer
 // * TODO: start relayer
 // * TODO: send transfer over ibc
 func TestHyperspace(t *testing.T) {
@@ -111,9 +129,8 @@ func TestHyperspace(t *testing.T) {
 				ChainID: "simd",
 				Images: []ibc.DockerImage{
 					{
-						Repository: "ibc-go-simd",
-						Version:    "local",
-						//Version:    "feat-wasm-clients",
+						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
+						Version:    "feat-wasm-client-230118",
 						UidGid:     "1025:1025",
 					},
 				},
@@ -269,7 +286,7 @@ func TestHyperspace(t *testing.T) {
 	//require.NoError(t, err)
 	
 	// Start relayer
-	/*r.StartRelayer(ctx, eRep, pathName)
+	r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err = r.StopRelayer(ctx, eRep)
@@ -277,6 +294,8 @@ func TestHyperspace(t *testing.T) {
 			panic(err)
 		}
 	})
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
 
 	// Send Transaction
 	amountToSend := int64(177_000_000)
@@ -296,7 +315,8 @@ func TestHyperspace(t *testing.T) {
 	expectedBal := cosmosUserAmount - amountToSend
 	cosmosUserBalNew, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, expectedBal, cosmosUserBalNew)*/
+	require.Equal(t, expectedBal, cosmosUserBalNew)
+	fmt.Println("Initial: ", cosmosUserAmount, "   Final:", cosmosUserBalNew)
 
 	// Trace IBC Denom
 	//srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", cosmosChain.Config().Denom))

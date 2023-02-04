@@ -200,7 +200,6 @@ func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecRe
 	cmd := r.c.CreateChannel(pathName, opts, r.HomeDir())
 	fmt.Println("Create Channel cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
-	fmt.Println("CreateChannelOutput: ", string(res.Stdout))
 	return res.Err
 }
 
@@ -208,7 +207,6 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
 	fmt.Println("Create Client cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
-	fmt.Println("CreateClientsOutput: ", string(res.Stdout))
 	return res.Err
 }
 
@@ -216,7 +214,6 @@ func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerEx
 	cmd := r.c.CreateConnections(pathName, r.HomeDir())
 	fmt.Println("Create connection cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
-	fmt.Println("CreateConnectionOutput: ", string(res.Stdout))
 	return res.Err
 }
 

@@ -355,7 +355,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	if err := dyno.Set(chainSpec, parachains, runtimeGenesisPath("paras", "paras")...); err != nil {
 		return fmt.Errorf("error setting parachains: %w", err)
 	}
-	if err := dyno.Set(chainSpec, 40, "genesis", "runtime", "session_length_in_blocks"); err != nil {
+	if err := dyno.Set(chainSpec, 20, "genesis", "runtime", "session_length_in_blocks"); err != nil {
 		return fmt.Errorf("error setting session_length_in_blocks: %w", err)
 	}
 	return nil

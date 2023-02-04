@@ -203,7 +203,7 @@ func (hyperspaceCommander) Name() string {
 }
 
 func (hyperspaceCommander) DockerUser() string {
-	return "501:20" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return "1000:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
@@ -395,14 +395,18 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
+	return []string{
+		"sleep",
+		"500",
+	}
 	// Temporarily force simd for chain A and rococo for chain B
-	simd := 1
+	/*simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
 	}
 	return []string{
 		"hyperspace",
-		"create-channel",
+		"relay",
 		"--config-a",
 		c.chainConfigPaths[simd],
 		"--config-b",
@@ -417,7 +421,7 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		"unordered",
 		"--version",
 		"ics20-1",
-	}
+	}*/
 }
 
 // Hyperspace doesn't not have this functionality
