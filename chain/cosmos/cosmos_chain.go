@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	chanTypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -370,6 +371,16 @@ func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop Tex
 	return c.txProposal(txHash)
 }
 
+// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().ParamChangeProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit param change proposal: %w", err)
+	}
+
+	return c.txProposal(txHash)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
@@ -450,6 +461,26 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	}
 
 	return res.Balance.Amount.Int64(), nil
+}
+
+// AllBalances fetches an account address's balance for all denoms it holds
+func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
+	params := bankTypes.QueryAllBalancesRequest{Address: address}
+	grpcAddress := c.getFullNode().hostGRPCPort
+	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	queryClient := bankTypes.NewQueryClient(conn)
+	res, err := queryClient.AllBalances(ctx, &params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res.GetBalances(), nil
 }
 
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
