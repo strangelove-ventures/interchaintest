@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"hash/fnv"
 	"os"
 	"path"
@@ -21,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -503,7 +503,7 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	return err
 }
 
-// WriteFile accepts an io.Reader instance and writes the contents to
+// WriteFile accepts file contents in a byte slice and writes the contents to
 // the docker filesystem. relPath describes the location of the file in the
 // docker volume relative to the home directory
 func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
@@ -835,16 +835,18 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	}
 
 	hash := sha256.Sum256(content)
-	filename := fmt.Sprintf("%x.json", hash)
-	err = tn.WriteFile(ctx, content, filename)
+	proposalFilename := fmt.Sprintf("%x.json", hash)
+	err = tn.WriteFile(ctx, content, proposalFilename)
 	if err != nil {
 		return "", fmt.Errorf("writing param change proposal: %w", err)
 	}
 
+	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
+
 	command := []string{
 		"gov", "submit-proposal",
 		"param-change",
-		filename,
+		proposalPath,
 	}
 
 	return tn.ExecTx(ctx, keyName, command...)
