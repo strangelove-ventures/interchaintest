@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	conntypes "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
@@ -92,7 +93,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		req := require.New(rep.TestifyT(t))
 
 		eRep := rep.RelayerExecReporter(t)
-		req.NoError(r.CreateConnections(ctx, eRep, pathName))
+		req.NoError(r.CreateConnections(ctx, eRep, pathName, ibc.CreateConnectionOptions{}))
 
 		// Assert against the singly created connections individually.
 		conns0, err := r.GetConnections(ctx, eRep, c0.Config().ChainID)

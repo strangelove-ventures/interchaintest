@@ -31,12 +31,12 @@ func (*Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecRe
 	return nil
 }
 
-func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
+func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions, connectionOpts ibc.CreateConnectionOptions) error {
 	if err := r.CreateClients(ctx, rep, pathName, clientOpts); err != nil {
 		return err
 	}
 
-	if err := r.CreateConnections(ctx, rep, pathName); err != nil {
+	if err := r.CreateConnections(ctx, rep, pathName, connectionOpts); err != nil {
 		return err
 	}
 
@@ -111,80 +111,155 @@ func (c commander) Init(homeDir string) []string {
 }
 
 func (c commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (c commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	// hermes keys add --chain foo --key-file <KEY_FILE>
-	panic("implement me")
+	return nil
 }
 
 func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-
-	// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --a-connection <A_CONNECTION_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID>
-	// return []string{name, "create", "channel", "--a-chain", "CHAIN_ID", "--a-connection", "<A_CONNECTION_ID>", "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName}
-	return []string{name, "create", "channel", "--a-chain", "?????", "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--new-client-connection"}
-
+	// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID> (--new-client-connection)
+	return []string{name, "create", "channel", "--a-chain", opts.ChainAID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir}
 }
 
 func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
+	// hermes create client [OPTIONS] --host-chain <HOST_CHAIN_ID> --reference-chain <REFERENCE_CHAIN_ID>
+	return nil
 }
 
-func (c commander) CreateConnections(pathName, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
+func (c commander) CreateConnections(_ string, connectionOptions ibc.CreateConnectionOptions, homeDir string) []string {
+	//DESCRIPTION:
+	//	Create a new connection between two chains
+	//
+	//USAGE:
+	//	hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID>
+	//
+	//		hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --a-client <A_CLIENT_ID> --b-client <B_CLIENT_ID>
+	//
+	//		OPTIONS:
+	//	--delay <DELAY>    Delay period parameter for the new connection (seconds) [default: 0]
+	//	-h, --help             Print help information
+	//
+	//	FLAGS:
+	//	--a-chain <A_CHAIN_ID>      Identifier of the side `a` chain for the new connection
+	//	--a-client <A_CLIENT_ID>    Identifier of client hosted on chain `a`; default: None (creates
+	//	a new client)
+	//	--b-chain <B_CHAIN_ID>      Identifier of the side `b` chain for the new connection
+	//	--b-client <B_CLIENT_ID>    Identifier of client hosted on chain `b`; default: None (creates
+	//	a new client)
+
+	//hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID>
+	//hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --a-client <A_CLIENT_ID> --b-client <B_CLIENT_ID>
+	return []string{name, "create", "connection", "--a-chain", connectionOptions.ChainAID, "--b-chain", connectionOptions.ChainBID, "--home", homeDir}
 }
 
 func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (c commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
-	panic("implement me")
+	return nil
 }
 
 func (c commander) GetChannels(chainID, homeDir string) []string {
+	//DESCRIPTION:
+	//	Query the identifiers of all channels on a given chain
+	//
+	//USAGE:
+	//	hermes query channels [OPTIONS] --chain <CHAIN_ID>
+	//
+	//		OPTIONS:
+	//	--counterparty-chain <COUNTERPARTY_CHAIN_ID>
+	//		Filter the query response by the this counterparty chain
+	//
+	//	-h, --help
+	//	Print help information
+	//
+	//	--show-counterparty
+	//	Show the counterparty chain, port, and channel
+	//
+	//	--verbose
+	//	Enable verbose output, displaying the client and connection ids for each channel in the
+	//	response
+	//
+	//REQUIRED:
+	//	--chain <CHAIN_ID>    Identifier of the chain to query
 	return []string{name, "query", "channels", "--home", homeDir, "--chain", chainID}
 }
 
 func (c commander) GetConnections(chainID, homeDir string) []string {
-	panic("implement me")
+	//DESCRIPTION:
+	//	Query the identifiers of all connections on a chain
+	//
+	//USAGE:
+	//	hermes query connections [OPTIONS] --chain <CHAIN_ID>
+	//
+	//		OPTIONS:
+	//	--counterparty-chain <COUNTERPARTY_CHAIN_ID>
+	//		Filter the query response by the counterparty chain
+	//
+	//	-h, --help
+	//	Print help information
+	//
+	//	--verbose
+	//	Enable verbose output, displaying the client for each connection in the response
+	//
+	//REQUIRED:
+	//	--chain <CHAIN_ID>    Identifier of the chain to query
+	return []string{name, "query", "connections", "--chain", chainID, "--home", homeDir}
 }
 
 func (c commander) GetClients(chainID, homeDir string) []string {
-	panic("implement me")
-}
-
-func (c commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string {
-	panic("implement me")
+	//DESCRIPTION:
+	//	Query the identifiers of all clients on a chain
+	//
+	//USAGE:
+	//	hermes query clients [OPTIONS] --host-chain <HOST_CHAIN_ID>
+	//
+	//		OPTIONS:
+	//	-h, --help
+	//	Print help information
+	//
+	//	--omit-chain-ids
+	//	Omit printing the reference (or target) chain for each client
+	//
+	//	--reference-chain <REFERENCE_CHAIN_ID>
+	//		Filter for clients which target a specific chain id (implies '--omit-chain-ids')
+	//
+	//REQUIRED:
+	//	--host-chain <HOST_CHAIN_ID>    Identifier of the chain to query
+	return []string{name, "query", "clients", "--host-chain", chainID, "--home", homeDir}
 }
 
 func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
-	panic("implement me")
+	return nil
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{"hermes", "start", "--full-scan", "--home", homeDir}
+	return []string{name, "start", "--full-scan", "--home", homeDir}
 }
 
 func (c commander) UpdateClients(pathName, homeDir string) []string {
-	panic("implement me")
+	return nil
 }
 
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
+}
+
+// Not in Hermes
+func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+	return nil
+}
+
+// Not in Hermes
+func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+	return nil
+}
+
+// Not in Hermes
+func (c commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions, connectionOpts ibc.CreateConnectionOptions) []string {
+	return nil
 }

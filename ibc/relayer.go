@@ -39,7 +39,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
 
 	// setup channels, connections, and clients
-	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
+	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions, connectionOpts CreateConnectionOptions) error
 
 	// update path channel filter
 	UpdatePath(ctx context.Context, rep RelayerExecReporter, pathName string, filter ChannelFilter) error
@@ -76,7 +76,7 @@ type Relayer interface {
 
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.
-	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string) error
+	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateConnectionOptions) error
 
 	// CreateChannel creates a channel on the given path with the provided options.
 	CreateChannel(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
@@ -198,10 +198,10 @@ type RelayerExecResult struct {
 
 // CreateChannelOptions contains the configuration for creating a channel.
 type CreateChannelOptions struct {
-	SourcePortName string
-	DestPortName   string
-
-	Order Order
+	SourcePortName     string
+	DestPortName       string
+	ChainAID, ChainBID string
+	Order              Order
 
 	Version string
 }
@@ -258,6 +258,11 @@ func (o Order) Validate() error {
 		return nil
 	}
 	return chantypes.ErrInvalidChannelOrdering
+}
+
+// CreateConnectionOptions contains the configuration for creating a connection.
+type CreateConnectionOptions struct {
+	ChainAID, ChainBID string
 }
 
 // CreateClientOptions contains the configuration for creating a client.

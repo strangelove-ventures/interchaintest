@@ -188,8 +188,8 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
-func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	cmd := r.c.CreateConnections(pathName, r.HomeDir())
+func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateConnectionOptions) error {
+	cmd := r.c.CreateConnections(pathName, opts, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -253,8 +253,8 @@ func (r *DockerRelayer) GetClients(ctx context.Context, rep ibc.RelayerExecRepor
 	return r.c.ParseGetClientsOutput(string(res.Stdout), string(res.Stderr))
 }
 
-func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
-	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts)
+func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions, connectionOpts ibc.CreateConnectionOptions) error {
+	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts, connectionOpts)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -523,7 +523,7 @@ type RelayerCommander interface {
 	AddKey(chainID, keyName, coinType, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
-	CreateConnections(pathName, homeDir string) []string
+	CreateConnections(pathName string, opts ibc.CreateConnectionOptions, homeDir string) []string
 	FlushAcknowledgements(pathName, channelID, homeDir string) []string
 	FlushPackets(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
@@ -531,7 +531,7 @@ type RelayerCommander interface {
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
 	GetClients(chainID, homeDir string) []string
-	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
+	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions, connectionOpts ibc.CreateConnectionOptions) []string
 	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
