@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	name                    = "hermes"
+	hermes                  = "hermes"
 	defaultContainerImage   = "foo"
 	defaultContainerVersion = "v1.0.0"
 
@@ -47,11 +47,6 @@ func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pat
 	return nil
 }
 
-func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
-	// generate path gets called in interchain.Build. Hermes doesn't have this concept so something will need to be changed here.
-	return nil
-}
-
 var _ relayer.RelayerCommander = &commander{}
 
 type commander struct {
@@ -59,7 +54,7 @@ type commander struct {
 }
 
 func (c commander) Name() string {
-	return name
+	return hermes
 }
 
 func (c commander) DefaultContainerImage() string {
@@ -105,7 +100,7 @@ func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutpu
 
 func (c commander) Init(homeDir string) []string {
 	return []string{
-		name, "config", "init",
+		hermes, "config", "init",
 		"--home", homeDir,
 	}
 }
@@ -121,7 +116,7 @@ func (c commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 
 func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID> (--new-client-connection)
-	return []string{name, "create", "channel", "--a-chain", opts.ChainAID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir}
+	return []string{hermes, "create", "channel", "--a-chain", opts.ChainAID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir}
 }
 
 func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
@@ -152,7 +147,7 @@ func (c commander) CreateConnections(_ string, connectionOptions ibc.CreateConne
 
 	//hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID>
 	//hermes create connection [OPTIONS] --a-chain <A_CHAIN_ID> --a-client <A_CLIENT_ID> --b-client <B_CLIENT_ID>
-	return []string{name, "create", "connection", "--a-chain", connectionOptions.ChainAID, "--b-chain", connectionOptions.ChainBID, "--home", homeDir}
+	return []string{hermes, "create", "connection", "--a-chain", connectionOptions.ChainAID, "--b-chain", connectionOptions.ChainBID, "--home", homeDir}
 }
 
 func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
@@ -186,7 +181,7 @@ func (c commander) GetChannels(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--chain <CHAIN_ID>    Identifier of the chain to query
-	return []string{name, "query", "channels", "--home", homeDir, "--chain", chainID}
+	return []string{hermes, "query", "channels", "--home", homeDir, "--chain", chainID}
 }
 
 func (c commander) GetConnections(chainID, homeDir string) []string {
@@ -208,7 +203,7 @@ func (c commander) GetConnections(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--chain <CHAIN_ID>    Identifier of the chain to query
-	return []string{name, "query", "connections", "--chain", chainID, "--home", homeDir}
+	return []string{hermes, "query", "connections", "--chain", chainID, "--home", homeDir}
 }
 
 func (c commander) GetClients(chainID, homeDir string) []string {
@@ -230,7 +225,7 @@ func (c commander) GetClients(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--host-chain <HOST_CHAIN_ID>    Identifier of the chain to query
-	return []string{name, "query", "clients", "--host-chain", chainID, "--home", homeDir}
+	return []string{hermes, "query", "clients", "--host-chain", chainID, "--home", homeDir}
 }
 
 func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
@@ -238,7 +233,7 @@ func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir stri
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{name, "start", "--full-scan", "--home", homeDir}
+	return []string{hermes, "start", "--full-scan", "--home", homeDir}
 }
 
 func (c commander) UpdateClients(pathName, homeDir string) []string {
@@ -247,6 +242,12 @@ func (c commander) UpdateClients(pathName, homeDir string) []string {
 
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
+}
+
+// Not in Hermes
+func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
+	// generate path gets called in interchain.Build. Hermes doesn't have this concept so something will need to be changed here.
+	return nil
 }
 
 // Not in Hermes
