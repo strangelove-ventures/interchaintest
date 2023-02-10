@@ -198,10 +198,9 @@ type RelayerExecResult struct {
 
 // CreateChannelOptions contains the configuration for creating a channel.
 type CreateChannelOptions struct {
-	SourcePortName     string
-	DestPortName       string
-	ChainAID, ChainBID string
-	Order              Order
+	SourcePortName string
+	DestPortName   string
+	Order          Order
 
 	Version string
 }

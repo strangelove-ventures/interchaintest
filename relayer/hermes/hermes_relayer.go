@@ -3,8 +3,11 @@ package hermes
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
 )
@@ -35,6 +38,31 @@ type pathChainConfig struct {
 	clientID string
 }
 
+func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) (*Relayer, error) {
+	c := commander{log: log}
+	//for _, opt := range options {
+	//	switch o := opt.(type) {
+	//	case relayer.RelayerOptionExtraStartFlags:
+	//c.extraStartFlags = o.Flags
+	//}
+	//}
+	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Relayer{
+		DockerRelayer: dr,
+	}, nil
+}
+
+func (r *Relayer) populatePathConfig(pathName string) error {
+	//, ok := r.paths[pathName]
+
+	// Query things
+	return nil
+}
+
 func (*Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	// We need a new implementation of AddChainConfiguration because the go relayer supports writing multiple chain config files
 	// but hermes has them all in a single toml file. This function will get called once per chain and so will need to build up state somewhere and write
@@ -52,15 +80,15 @@ func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pat
 	//	return err
 	//}
 
-	if err := r.CreateConnections(ctx, rep, pathName); err != nil {
-		return err
-	}
+	//if err := r.CreateConnections(ctx, rep, pathName); err != nil {
+	//	return err
+	//}
 
 	if err := r.CreateChannel(ctx, rep, pathName, channelOpts); err != nil {
 		return err
 	}
 
-	return nil
+	return r.populatePathConfig(pathName)
 }
 
 func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
@@ -95,6 +123,51 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	// TODO: parse res and update pathConfig?
 
 	return res.Err
+}
+
+func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
+	//DESCRIPTION:
+	//	Adds key to a configured chain or restores a key to a configured chain using a mnemonic
+	//
+	//USAGE:
+	//	hermes keys add [OPTIONS] --chain <CHAIN_ID> --key-file <KEY_FILE>
+	//
+	//		hermes keys add [OPTIONS] --chain <CHAIN_ID> --mnemonic-file <MNEMONIC_FILE>
+	//
+	//		OPTIONS:
+	//	-h, --help                   Print help information
+	//	--hd-path <HD_PATH>      Derivation path for this key [default: m/44'/118'/0'/0/0]
+	//	--key-name <KEY_NAME>    Name of the key (defaults to the `key_name` defined in the config)
+	//	--overwrite              Overwrite the key if there is already one with the same key name
+	//
+	//	FLAGS:
+	//	--chain <CHAIN_ID>                 Identifier of the chain
+	//	--key-file <KEY_FILE>              Path to the key file
+	//	--mnemonic-file <MNEMONIC_FILE>    Path to file containing mnemonic to restore the key from
+
+	relativeMnemonicFilePath := "mnemonic.txt"
+	fw := dockerutil.NewFileWriter(r.Logger(), r.Client(), r.TestName())
+	if err := fw.WriteFile(ctx, r.VolumeName(), relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
+		return fmt.Errorf("failed to write mnemoic file: %w", err)
+	}
+
+	cmd := []string{hermes, "keys", "add", "--chain", chainID, "--hd-path", coinType, "--mnemonic-file", fmt.Sprintf("/mnt/dockervolume/%s", relativeMnemonicFilePath)}
+
+	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
+	// to detect if Docker has hung.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+
+	addrBytes := commander{}.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
+
+	r.wallets[chainID] = commander{}.CreateWallet("", addrBytes, mnemonic)
+
+	return nil
 }
 
 var _ relayer.RelayerCommander = &commander{}
@@ -166,8 +239,9 @@ func (c commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 }
 
 func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
+	pathConfig := c.paths[pathName]
 	// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID> (--new-client-connection)
-	return []string{hermes, "--json", "create", "channel", "--a-chain", opts.ChainAID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir}
+	return []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir, "--new-client-connection"}
 }
 
 func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
@@ -281,11 +355,30 @@ func (c commander) GetClients(chainID, homeDir string) []string {
 }
 
 func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
-	return nil
+	//DESCRIPTION:
+	//	Adds key to a configured chain or restores a key to a configured chain using a mnemonic
+	//
+	//USAGE:
+	//	hermes keys add [OPTIONS] --chain <CHAIN_ID> --key-file <KEY_FILE>
+	//
+	//		hermes keys add [OPTIONS] --chain <CHAIN_ID> --mnemonic-file <MNEMONIC_FILE>
+	//
+	//		OPTIONS:
+	//	-h, --help                   Print help information
+	//	--hd-path <HD_PATH>      Derivation path for this key [default: m/44'/118'/0'/0/0]
+	//	--key-name <KEY_NAME>    Name of the key (defaults to the `key_name` defined in the config)
+	//	--overwrite              Overwrite the key if there is already one with the same key name
+	//
+	//	FLAGS:
+	//	--chain <CHAIN_ID>                 Identifier of the chain
+	//	--key-file <KEY_FILE>              Path to the key file
+	//	--mnemonic-file <MNEMONIC_FILE>    Path to file containing mnemonic to restore the key from
+
+	return []string{hermes, "keys", "add", "--chain", chainID, "--hd-path", coinType}
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{hermes, "--json", "start", "--full-scan", "--home", homeDir}
+	return []string{hermes, "start", "--full-scan", "--home", homeDir}
 }
 
 func (c commander) UpdateClients(pathName, homeDir string) []string {

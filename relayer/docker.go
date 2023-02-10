@@ -122,6 +122,22 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	return &r, nil
 }
 
+func (r *DockerRelayer) Logger() *zap.Logger {
+	return r.log
+}
+
+func (r *DockerRelayer) TestName() string {
+	return r.testName
+}
+
+func (r *DockerRelayer) VolumeName() string {
+	return r.volumeName
+}
+
+func (r *DockerRelayer) Client() *client.Client {
+	return r.client
+}
+
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	// For rly this file is json, but the file extension should not matter.
 	// Using .config to avoid implying any particular format.
