@@ -11,8 +11,8 @@ import (
 
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -24,6 +24,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // PolkadotChain implements the ibc.Chain interface for substrate chains.
@@ -728,7 +729,7 @@ func (c *PolkadotChain) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	panic("[SendIBCTransfer] not implemented yet")
+	return ibc.Tx{}, c.ParachainNodes[0][0].SendIbcFunds(ctx, channelID, keyName, amount, options)
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
@@ -737,6 +738,17 @@ func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom st
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
 	if denom == c.cfg.Denom {
 		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
+	} else if strings.HasPrefix(denom, "ibc/") {
+		coins, err := c.ParachainNodes[0][0].GetIbcBalance(ctx, []byte(address))
+		if err != nil {
+			return 0, err
+		}
+		for _, coin := range coins {
+			if coin.Denom == denom {
+				return coin.Amount.Int64(), nil
+			}
+		}
+		return 0, nil
 	}
 
 	return c.ParachainNodes[0][0].GetBalance(ctx, address, denom)
@@ -793,4 +805,19 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 // FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
 func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return []blockdb.Tx{}, nil
+}
+
+// GetIbcBalance returns the Coins type of ibc coins in account
+func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address)
+}
+
+// Turns on sending and receiving ibc transfers
+func (c *PolkadotChain) EnableIbcTransfers() error {
+	return c.ParachainNodes[0][0].EnableIbc()
+}
+
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
+	return c.ParachainNodes[0][0].MintFunds(keyName, amount)
 }

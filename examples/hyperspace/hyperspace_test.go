@@ -17,7 +17,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	//transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 )
 
 // TestHyperspace setup
@@ -51,8 +51,8 @@ import (
 // * Funds a user wallet on both chains
 // * Pushes a wasm client contract to the Cosmos chain
 // * create client, connection, and channel in relayer
-// * TODO: start relayer
-// * TODO: send transfer over ibc
+// * start relayer
+// * send transfer over ibc
 func TestHyperspace(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -225,6 +225,7 @@ func TestHyperspace(t *testing.T) {
 	fmt.Println("Cosmos user amount: ", cosmosUserAmount)
 	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
 	
+	// Store grandpa contract
 	codeHash, err := cosmosChain.StoreClientContract(ctx, cosmosUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm")
 	t.Logf("Contract codeHash: %s", codeHash)
 	require.NoError(t, err)
@@ -241,7 +242,9 @@ func TestHyperspace(t *testing.T) {
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
 
-	r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	// Set client contract hash in cosmos chain config
+	err = r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	require.NoError(t, err)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
@@ -251,7 +254,7 @@ func TestHyperspace(t *testing.T) {
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 	
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
@@ -287,6 +290,9 @@ func TestHyperspace(t *testing.T) {
 	//err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
 	//require.NoError(t, err)
 	
+	err = polkadotChain.EnableIbcTransfers()
+	require.NoError(t, err)
+
 	// Start relayer
 	r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
@@ -296,42 +302,95 @@ func TestHyperspace(t *testing.T) {
 			panic(err)
 		}
 	})
-	err = testutil.WaitForBlocks(ctx, 20, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
-	// Send Transaction
-	amountToSend := int64(177_000_000)
-	dstAddress := polkadotUser.FormattedAddress()
+	// Mint 100 UNIT for alice and "polkadotUser", not sure why the ~1.5M UNIT from balance/genesis doesn't work
+	mint := ibc.WalletAmount{
+		Address: polkadotUser.FormattedAddress(),
+		Denom:   "1",
+		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
+	}
+	err = polkadotChain.MintFunds("alice", mint)
+	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+	mint2 := ibc.WalletAmount{
+		Address: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Alice
+		Denom:   "1",
+		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
+	}
+	err = polkadotChain.MintFunds("alice", mint2)
+	require.NoError(t, err)
+
+	// Send IBC Transaction, from Cosmos to Parachain (stake)
+	amountToSend := int64(1_770_000)
 	transfer := ibc.WalletAmount{
-		Address: dstAddress,
+		Address: polkadotUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
 		Amount:  amountToSend,
 	}
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())	// test source wallet has decreased funds
-	
-	err = testutil.WaitForBlocks(ctx, 50, cosmosChain, polkadotChain)
+
+	err = testutil.WaitForBlocks(ctx, 10, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
+	// Verify cosmosUser balance went down 1.77M
 	expectedBal := cosmosUserAmount - amountToSend
 	cosmosUserBalNew, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, expectedBal, cosmosUserBalNew)
-	fmt.Println("Initial: ", cosmosUserAmount, "   Final:", cosmosUserBalNew)
 
+	// Trace IBC Denom of stake on parachain
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", cosmosChain.Config().Denom))
+	dstIbcDenom := srcDenomTrace.IBCDenom()
+	fmt.Println("Dst Ibc denom: ", dstIbcDenom)
+
+	// Test destination wallet has increased funds, this is not working
+	//pubKey, err := polkadot.DecodeAddressSS58(polkadotUser.FormattedAddress())
+	//polkadotUserIbcCoins2, err := polkadotChain.GetIbcBalance(ctx, pubKey)
+	//polkadotUserIbcCoins3, err := polkadotChain.GetIbcBalance(ctx, []byte(hex.EncodeToString(pubKey)))
+	polkadotUserIbcCoins, err := polkadotChain.GetIbcBalance(ctx, polkadotUser.Address())
+	fmt.Println("IbcCoins: ", polkadotUserIbcCoins.String(), "  -- this probably doesn't work, Error: ", err)
+	
+	// Send 1.18M stake from ParachainUser to CosmosUser
+	amountToSend2 := int64(1_180_000)
+	transfer2 := ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom:   "2", // stake
+		Amount:  amountToSend2,
+	}
+	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), transfer2, ibc.TransferOptions{})
+	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	// Send 1.88T "UNIT" from Alice to CosmosUser
+	amountToSend1 := int64(1_880_000_000_000)
+	transfer1 := ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom:   "1", // UNIT
+		Amount:  amountToSend1,
+	}
+	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", "alice", transfer1, ibc.TransferOptions{})
+	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 30, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	cosmosUserNativeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, expectedBal+amountToSend2, cosmosUserNativeBal)
+	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
 	// Trace IBC Denom
-	//srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", cosmosChain.Config().Denom))
-	//dstIbcDenom := srcDenomTrace.IBCDenom()
-
-	// Test destination wallet has increased funds
-	//polkadotUserBalNew, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), dstIbcDenom)
-	//require.NoError(t, err)
-	//require.Equal(t, amountToSend, polkadotUserBalNew)
-	// Then send ibc tx from cosmos -> substrate and vice versa
-	//polkadotChain.SendIBCTransfer(), verify
-	//cosmosChain.SendIBCTransfer(), verify
-
+	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
+	dstIbcDenom2 := srcDenomTrace2.IBCDenom()
+	fmt.Println("Dst Ibc denom:2 ", dstIbcDenom2)
+	cosmosUserIbcBal2, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), dstIbcDenom2)
+	require.NoError(t, err)
+	require.Equal(t, amountToSend1, cosmosUserIbcBal2)
+	fmt.Println("CosmosUserIbcBal2: ", cosmosUserIbcBal2)
 }
 
 type GetCodeQueryMsgResponse struct {

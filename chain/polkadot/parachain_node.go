@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -20,6 +21,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/dockerutil"
 	"go.uber.org/zap"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // ParachainNode defines the properties required for running a polkadot parachain node.
@@ -347,14 +349,13 @@ func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom s
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-// [Add back when we move from centrifuge -> ComposableFi's go-substrate-rpc-client (for ibc methods)]
-/*func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
 	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
-}*/
+}
 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
@@ -363,12 +364,88 @@ func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount i
 	if err != nil {
 		return err
 	}
-
+	pn.log.Info(
+		"ParachainNode SendFunds",
+		zap.String("From", kp.Address),
+		zap.String("To", amount.Address),
+		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+	)
 	hash, err := SendFundsTx(pn.api, kp, amount)
 	if err != nil {
 		return err
 	}
 
 	pn.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+	return nil
+}
+
+// Turns on sending and receiving ibc transfers
+func (pn *ParachainNode) EnableIbc() error {
+	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair("alice")
+	if err != nil {
+		return err
+	}
+
+	hash, err := EnableIbc(pn.api, kp)
+	if err != nil {
+		return err
+	}
+
+	pn.log.Info("Enable Ibc sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+	return nil
+}
+
+// SendIbcFunds sends funds to a wallet from a user account.
+func (pn *ParachainNode) SendIbcFunds(
+	ctx context.Context, 
+	channelID string,
+	keyName string, 
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+	) error {
+	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	pn.log.Info(
+		"ParachainNode SendIbcFunds",
+		zap.String("From", kp.Address),
+		zap.String("To", amount.Address),
+		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+	)
+	hash, err := SendIbcFundsTx(pn.api, kp, channelID, amount, options)
+	if err != nil {
+		pn.log.Info("IBC Transfer not sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+		return err
+	}
+
+	pn.log.Info("IBC Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+	return nil
+}
+
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+func (pn *ParachainNode) MintFunds(
+	keyName string, 
+	amount ibc.WalletAmount,
+	) error {
+	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	pn.log.Info(
+		"ParachainNode MintFunds",
+		zap.String("From", kp.Address),
+		zap.String("To", amount.Address),
+		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+	)
+	hash, err := MintFundsTx(pn.api, kp, amount)
+	if err != nil {
+		pn.log.Info("MintFunds not sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
+		return err
+	}
+
+	pn.log.Info("MintFunds sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
 	return nil
 }

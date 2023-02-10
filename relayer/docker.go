@@ -332,8 +332,8 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 			keyEntryOverrides["address"] = []byte(keyEntry[3])
 			chainConfig["keybase"] = keyEntryOverrides
 		case "polkadot":
-			chainConfig["private_key"] = "//Alice"
-			//chainConfig["private_key"] = mnemonic
+			//chainConfig["private_key"] = "//Alice"
+			chainConfig["private_key"] = mnemonic
 		}
 		chainConfigFile := chainID + ".config"
 		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)

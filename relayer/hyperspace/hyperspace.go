@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -242,7 +242,8 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
-		"10",
+		"0",
+		//"10",
 		"--port-id",
 		opts.SourcePortName,
 		"--order",
@@ -273,7 +274,8 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
-		"10",
+		"0",
+		//"10",
 		"--port-id",
 		"transfer",
 		"--order",
@@ -307,7 +309,8 @@ func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []stri
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
-		"10",
+		"0",
+		//"10",
 		"--port-id",
 		"transfer",
 		"--order",
@@ -410,7 +413,8 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
-		"10",
+		"0",
+		//"10",
 		"--port-id",
 		"transfer",
 		"--order",
