@@ -364,8 +364,6 @@ func TestHyperspace(t *testing.T) {
 	}
 	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), transfer2, ibc.TransferOptions{})
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
-	require.NoError(t, err)
 
 	// Send 1.88T "UNIT" from Alice to CosmosUser
 	amountToSend1 := int64(1_880_000_000_000)
@@ -376,12 +374,20 @@ func TestHyperspace(t *testing.T) {
 	}
 	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", "alice", transfer1, ibc.TransferOptions{})
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 30, cosmosChain, polkadotChain)
+
+	// Wait for MsgRecvPacket
+	pollForBalance := ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom: cosmosChain.Config().Denom,
+		Amount: expectedBal+amountToSend2,
+	}
+	err = cosmos.PollForBalance(ctx, cosmosChain, 30, pollForBalance)
 	require.NoError(t, err)
 
+	// Verify final balances
 	cosmosUserNativeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, expectedBal+amountToSend2, cosmosUserNativeBal)
+	require.Equal(t, pollForBalance.Amount, cosmosUserNativeBal)
 	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
 	// Trace IBC Denom
 	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
