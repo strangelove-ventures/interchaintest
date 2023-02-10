@@ -93,7 +93,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		req := require.New(rep.TestifyT(t))
 
 		eRep := rep.RelayerExecReporter(t)
-		req.NoError(r.CreateConnections(ctx, eRep, pathName, ibc.CreateConnectionOptions{}))
+		req.NoError(r.CreateConnections(ctx, eRep, pathName))
 
 		// Assert against the singly created connections individually.
 		conns0, err := r.GetConnections(ctx, eRep, c0.Config().ChainID)

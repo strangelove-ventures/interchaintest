@@ -155,7 +155,7 @@ func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod str
 	}
 }
 
-func (commander) CreateConnections(pathName string, opts ibc.CreateConnectionOptions, homeDir string) []string {
+func (commander) CreateConnections(pathName string, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
 		"--home", homeDir,
@@ -213,7 +213,7 @@ func (commander) GetClients(chainID, homeDir string) []string {
 	}
 }
 
-func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions, connectionOpts ibc.CreateConnectionOptions) []string {
+func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
 		"--src-port", channelOpts.SourcePortName,

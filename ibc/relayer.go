@@ -39,7 +39,7 @@ type Relayer interface {
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error
 
 	// setup channels, connections, and clients
-	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions, connectionOpts CreateConnectionOptions) error
+	LinkPath(ctx context.Context, rep RelayerExecReporter, pathName string, channelOpts CreateChannelOptions, clientOptions CreateClientOptions) error
 
 	// update path channel filter
 	UpdatePath(ctx context.Context, rep RelayerExecReporter, pathName string, filter ChannelFilter) error
@@ -76,7 +76,7 @@ type Relayer interface {
 
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.
-	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateConnectionOptions) error
+	CreateConnections(ctx context.Context, rep RelayerExecReporter, pathName string) error
 
 	// CreateChannel creates a channel on the given path with the provided options.
 	CreateChannel(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateChannelOptions) error
