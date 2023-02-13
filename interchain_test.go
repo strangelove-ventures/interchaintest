@@ -46,7 +46,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 

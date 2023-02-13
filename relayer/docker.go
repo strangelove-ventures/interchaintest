@@ -40,8 +40,10 @@ type DockerRelayer struct {
 	// The ID of the container created by StartRelayer.
 	containerID string
 
-	// wallets contains a mapping of chainID to relayer wallet
-	wallets map[string]ibc.Wallet
+	// Wallets contains a mapping of chainID to relayer wallet
+	Wallets map[string]ibc.Wallet
+
+	homeDir string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -61,8 +63,10 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 
 		testName: testName,
 
-		wallets: map[string]ibc.Wallet{},
+		Wallets: map[string]ibc.Wallet{},
 	}
+
+	r.homeDir = "/home/relayer"
 
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -70,6 +74,8 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
 			r.pullImage = o.Pull
+		case RelayerOptionHomeDir:
+			r.homeDir = o.HomeDir
 		}
 	}
 
@@ -183,12 +189,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 	if err != nil {
 		return nil, err
 	}
-	r.wallets[chainID] = wallet
+	r.Wallets[chainID] = wallet
 	return wallet, nil
 }
 
 func (r *DockerRelayer) GetWallet(chainID string) (ibc.Wallet, bool) {
-	wallet, ok := r.wallets[chainID]
+	wallet, ok := r.Wallets[chainID]
 	return wallet, ok
 }
 
@@ -319,7 +325,7 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 
 	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
-	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+	r.Wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
 
 	return nil
 }
@@ -485,7 +491,7 @@ func (r *DockerRelayer) Bind() []string {
 
 // HomeDir returns the home directory of the relayer on the underlying Docker container's filesystem.
 func (r *DockerRelayer) HomeDir() string {
-	return "/home/relayer"
+	return r.homeDir
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {

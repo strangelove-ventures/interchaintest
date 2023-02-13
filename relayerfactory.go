@@ -8,6 +8,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/label"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer/rly"
 	"go.uber.org/zap"
 )
@@ -65,6 +66,8 @@ func (f builtinRelayerFactory) Build(
 			networkID,
 			f.options...,
 		)
+	case ibc.Hermes:
+		return hermes.NewHermesRelayer(f.log, t.Name(), cli, networkID, f.options...)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -83,6 +86,8 @@ func (f builtinRelayerFactory) Name() string {
 			}
 		}
 		return "rly@" + rly.DefaultContainerVersion
+	case ibc.Hermes:
+		return "hermes@" + hermes.DefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
