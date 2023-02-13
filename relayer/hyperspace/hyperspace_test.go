@@ -13,8 +13,8 @@ func TestKeys(t *testing.T) {
 	mnemonic := "taste shoot adapt slow truly grape gift need suggest midnight burger horn whisper hat vast aspect exit scorpion jewel axis great area awful blind"
 
 	expectedKeyEntry := hyperspace.KeyEntry{
-		PublicKey: "02c1732ca9cb7c6efaa7c205887565b9787cab5ebdb7bc1dd872a21fc8c9efb56a",
-		PrivateKey: "ac26db8374e68403a3cf38cc2b196d688d2f094cec0908978b2460d4442062f7",
+		PublicKey: "xpub6G1GwQBqWwXuCRhri9q1JzxZ9eMWFazo2ssoZNkAsqusDTT6MPUXiPaXMJS9v4RVaSmYPhA1HK5RCD7WPutmUn3eeqXduM142X7YRVBx8bn",
+		PrivateKey: "xprvA31vXtewgZybywdPc8Hzws1pbcX1r8GwfexCkzLZKWNtLf7worAHAbG3W3F1SagK47ng5877ihXkDvmNfZnVHSGw7Ad1JkzyPTKEtSpmSxa",
 		Address: []byte{69, 6, 166, 110, 97, 215, 215, 210, 224, 48, 93, 126, 44, 86, 4, 36, 109, 137, 43, 242},
 		Account: "cosmos1g5r2vmnp6lta9cpst4lzc4syy3kcj2lj0nuhmy",
 	}

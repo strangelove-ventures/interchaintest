@@ -174,12 +174,7 @@ func TestHyperspace(t *testing.T) {
 	fmt.Println("About to create interchain")
 	ic := ibctest.NewInterchain().
 		AddChain(polkadotChain).
-		AddChain(cosmosChain, ibc.WalletAmount{
-			// Use test keys temporarily
-			Address: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
-			Denom: "stake",
-			Amount: 10_000_000_000_000,
-		}).
+		AddChain(cosmosChain).
 		AddRelayer(r, relayerName).
 		AddLink(ibctest.InterchainLink{
 			Chain1:  polkadotChain,

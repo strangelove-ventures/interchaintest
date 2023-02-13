@@ -3,24 +3,26 @@ package hyperspace
 
 import (
 	"context"
-	//"encoding/hex"
 	"fmt"
 	"path"
 	"strconv"
 	"strings"
-	
-	"github.com/misko9/go-substrate-rpc-client/v4/signature"
+
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+
+	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	types23 "github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
 	"github.com/docker/docker/client"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	bip32 "github.com/tyler-smith/go-bip32"
+	bip39 "github.com/tyler-smith/go-bip39"
 	"go.uber.org/zap"
-	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
-	types23 "github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
 )
 
 // HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
@@ -131,22 +133,24 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 
 	privKey := algo.Generate()(derivedPriv)
 	address := types.AccAddress(privKey.PubKey().Address())
-	_ = types.MustBech32ifyAddressBytes(bech32Prefix, address)
-	//bech32Addr := types.MustBech32ifyAddressBytes(bech32Prefix, address)
+	bech32Addr := types.MustBech32ifyAddressBytes(bech32Prefix, address)
 
-	// Use test keys temporarily
+	// Derive extended private key
+	seed := bip39.NewSeed(mnemonic, "")
+	masterKey, _ := bip32.NewMasterKey(seed)
+	purposeKey, _ := masterKey.NewChildKey(0x8000002C) // 44'
+	coinTypeKey, _ := purposeKey.NewChildKey(0x80000000 + uint32(coinType64)) // 118'
+	accountKey, _ := coinTypeKey.NewChildKey(0x80000000) // 0'
+	changeKey, _ := accountKey.NewChildKey(0) // 0
+	indexKey, _ := changeKey.NewChildKey(0) // 0
+
 	return KeyEntry{
-		PublicKey:  "spub4W7TSjsuqcUE17mSB2ajhZsbwkefsHWKsXCbERimu3z2QLN9EFgqqpppiBn4tTNPFoNVTo1b3BgCZAaFJuUgTZeFhzJjUHkK8X7kSC5c7yn",
-		PrivateKey: "sprv8H873EM21Euvndgy513jLRvsPipBTpnUWJGzS3KALiT3XY2zgiNbJ2WLrvPzRhg7GuAoujHd5d6cpBe887vTbJghja8kmRdkHoNgamx6WWr",
-		Account:    "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
-		Address:    []byte{156, 200, 27, 97, 35, 103, 35, 146, 182, 226, 202, 16, 25, 214, 215, 210, 149, 250, 224, 30},
-		//PublicKey:  hex.EncodeToString(privKey.PubKey().Bytes()), // i.e. 02c1732ca9cb7c6efaa7c205887565b9787cab5ebdb7bc1dd872a21fc8c9efb56a
-		//PrivateKey: hex.EncodeToString(privKey.Bytes()),  // i.e. ac26db8374e68403a3cf38cc2b196d688d2f094cec0908978b2460d4442062f7
-		//Account:    bech32Addr , // i.e. cosmos1g5r2vmnp6lta9cpst4lzc4syy3kcj2lj0nuhmy
-		//Address:    address.Bytes(), // i.e. [69 6 166 110 97 215 215 210 224 48 93 126 44 86 4 36 109 137 43 242]
+		PublicKey:  indexKey.PublicKey().B58Serialize(), // i.e. "xpub6GNKSnPmR5zN3Ef3EqYkSJTZzjzGecb1n1SqJRUNnoFPsyxviG7QyoVzjEjP3gfqRu7AvRrEZMfXJazz8pZgmYP6yvvdRqC2pWmWpeQTMBP"
+		PrivateKey: indexKey.B58Serialize(), // i.e. "xprvA3Ny3GrsaiS4pkaa8p1k5AWqSi9nF9sAQnXEW34mETiR1BdnAioAS1BWsx3uAXKT3NbY6cpY2mQL6N7R8se1GVHqNkpjwc7rv5VRaQ9x8EB"
+		Account:    bech32Addr, // i.e. "cosmos1pyxjp07wc207l7jecyr3wcmq9cr54tqwhcwugm"
+		Address:    address.Bytes(), // i.e. [9, 13, 32, 191, 206, 194, 159, 239, 250, 89, 193, 7, 23, 99, 96, 46, 7, 74, 172, 14]
 	}
 }
-
 func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
 	chainType := chainConfig.Type
 	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
