@@ -35,7 +35,7 @@ func CustomDockerImage(repository string, version string, uidGid string) Relayer
 	}
 }
 
-func RelayerHomeDir(homeDir string) RelayerOption {
+func HomeDir(homeDir string) RelayerOption {
 	return RelayerOptionHomeDir{HomeDir: homeDir}
 }
 

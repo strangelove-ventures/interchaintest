@@ -2,8 +2,10 @@ package hermes
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"regexp"
 
-	"github.com/pelletier/go-toml"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
@@ -11,9 +13,16 @@ import (
 
 var _ relayer.RelayerCommander = &commander{}
 
+var (
+
+	// parseRestoreKeyOutput extracts the address from the hermes output.
+	// SUCCESS Restored key 'g2-2' (cosmos1czklnpzwaq3hfxtv6ne4vas2p9m5q3p3fgkz8e) on chain g2-2
+	parseRestoreKeyOutput = regexp.MustCompile("\\((.*)\\)")
+)
+
 type commander struct {
 	log   *zap.Logger
-	paths map[string]pathConfiguration
+	paths map[string]*pathConfiguration
 }
 
 func (c commander) Name() string {
@@ -33,36 +42,79 @@ func (c commander) DockerUser() string {
 }
 
 func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	hermesConfig := NewConfig(keyName, rpcAddr, grpcAddr, cfg)
-	bz, err := toml.Marshal(hermesConfig)
-	if err != nil {
-		return nil, err
-	}
-	return bz, nil
+	panic("shouldn't be called::ConfigContent")
 }
 
 func (c commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
+	fmt.Println(stdout)
+	fmt.Println(stderr)
 	//TODO implement me
 	panic("implement me")
 }
 
+// ParseRestoreKeyOutput extracts the address from the hermes output.
 func (c commander) ParseRestoreKeyOutput(stdout, stderr string) string {
-	//TODO implement me
-	panic("implement me")
+	fullMatchIdx, addressGroupIdx := 0, 1
+	return parseRestoreKeyOutput.FindAllStringSubmatch(stdout, -1)[fullMatchIdx][addressGroupIdx]
+}
+
+type ChannelOutputResult struct {
+	Result []ChannelResult `json:"result"`
+	Status string          `json:"status"`
+}
+
+type ChannelResult struct {
+	ChannelEnd             ChannelEnd `json:"channel_end"`
+	CounterPartyChannelEnd ChannelEnd `json:"counterparty_channel_end"`
+}
+
+type ChannelEnd struct {
+	ConnectionHops []string         `json:"connection_hops"`
+	Ordering       string           `json:"ordering"`
+	State          string           `json:"state"`
+	Version        string           `json:"version"`
+	Remote         ChannelAndPortId `json:"remote"`
+}
+
+type ChannelAndPortId struct {
+	ChannelID string `json:"channel_id"`
+	PortID    string `json:"port_id"`
 }
 
 func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
-	//TODO implement me
-	panic("implement me")
+	var result ChannelOutputResult
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return nil, err
+	}
+
+	var ibcChannelOutput []ibc.ChannelOutput
+	for _, r := range result.Result {
+		ibcChannelOutput = append(ibcChannelOutput, ibc.ChannelOutput{
+			State:    r.ChannelEnd.State,
+			Ordering: r.ChannelEnd.Ordering,
+			Counterparty: ibc.ChannelCounterparty{
+				PortID:    r.CounterPartyChannelEnd.Remote.PortID,
+				ChannelID: r.CounterPartyChannelEnd.Remote.ChannelID,
+			},
+			ConnectionHops: r.ChannelEnd.ConnectionHops,
+			Version:        r.ChannelEnd.Version,
+			PortID:         r.ChannelEnd.Remote.PortID,
+			ChannelID:      r.ChannelEnd.Remote.ChannelID,
+		})
+	}
+
+	return ibcChannelOutput, nil
 }
 
 func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	//TODO implement me
+	fmt.Println(stdout)
+	fmt.Println(stderr)
 	panic("implement me")
 }
 
 func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	//TODO implement me
+	fmt.Println(stdout)
+	fmt.Println(stderr)
 	panic("implement me")
 }
 
@@ -80,9 +132,10 @@ func (c commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 }
 
 func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	pathConfig := c.paths[pathName]
-	// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID> (--new-client-connection)
-	return []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--home", homeDir, "--new-client-connection"}
+	panic("don't call me")
+	//pathConfig := c.paths[pathName]
+	//// hermes create channel [OPTIONS] --a-chain <A_CHAIN_ID> --b-chain <B_CHAIN_ID> --a-port <A_PORT_ID> --b-port <B_PORT_ID> (--new-client-connection)
+	//return []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--b-chain", pathConfig.chainB.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--new-client-connection"}
 }
 
 func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
@@ -118,11 +171,11 @@ func (c commander) CreateConnections(pathName string, homeDir string) []string {
 }
 
 func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	return nil
+	panic("implemented one layer above")
 }
 
 func (c commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	return nil
+	panic("implemented one layer above")
 }
 
 func (c commander) GetChannels(chainID, homeDir string) []string {
@@ -148,7 +201,7 @@ func (c commander) GetChannels(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--chain <CHAIN_ID>    Identifier of the chain to query
-	return []string{hermes, "--json", "query", "channels", "--home", homeDir, "--chain", chainID}
+	return []string{hermes, "--json", "query", "channels", "--chain", chainID, "--show-counterparty", "--verbose"}
 }
 
 func (c commander) GetConnections(chainID, homeDir string) []string {
@@ -170,7 +223,7 @@ func (c commander) GetConnections(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--chain <CHAIN_ID>    Identifier of the chain to query
-	return []string{hermes, "--json", "query", "connections", "--chain", chainID, "--home", homeDir}
+	return []string{hermes, "--json", "query", "connections", "--chain", chainID}
 }
 
 func (c commander) GetClients(chainID, homeDir string) []string {
@@ -192,7 +245,7 @@ func (c commander) GetClients(chainID, homeDir string) []string {
 	//
 	//REQUIRED:
 	//	--host-chain <HOST_CHAIN_ID>    Identifier of the chain to query
-	return []string{hermes, "--json", "query", "clients", "--host-chain", chainID, "--home", homeDir}
+	return []string{hermes, "--json", "query", "clients", "--host-chain", chainID}
 }
 
 func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
@@ -269,15 +322,15 @@ func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter,
 
 // Not in Hermes
 func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
-	panic("path does not exist in hermes")
+	panic("path does not exist in hermes::GeneratePath")
 }
 
 // Not in Hermes
 func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
-	panic("path does not exist in hermes")
+	panic("path does not exist in hermes::UpdatePath")
 }
 
 // Not in Hermes
 func (c commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string {
-	panic("path does not exist in hermes")
+	panic("path does not exist in hermes::LinkPath")
 }
