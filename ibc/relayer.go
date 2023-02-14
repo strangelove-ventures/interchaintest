@@ -200,7 +200,8 @@ type RelayerExecResult struct {
 type CreateChannelOptions struct {
 	SourcePortName string
 	DestPortName   string
-	Order          Order
+
+	Order Order
 
 	Version string
 }
