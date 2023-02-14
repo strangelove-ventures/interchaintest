@@ -15,8 +15,7 @@ import (
 var _ relayer.RelayerCommander = &commander{}
 
 type commander struct {
-	log   *zap.Logger
-	paths map[string]*pathConfiguration
+	log *zap.Logger
 }
 
 func (c commander) Name() string {
@@ -135,30 +134,6 @@ func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
 	return []string{hermes, "--json", "start", "--full-scan"}
 }
 
-func (c commander) UpdateClients(pathName, homeDir string) []string {
-	//DESCRIPTION:
-	//	Update an IBC client
-	//
-	//USAGE:
-	//	hermes update client [OPTIONS] --host-chain <HOST_CHAIN_ID> --client <CLIENT_ID>
-	//
-	//		OPTIONS:
-	//	-h, --help
-	//	Print help information
-	//
-	//	--height <REFERENCE_HEIGHT>
-	//		The target height of the client update. Leave unspecified for latest height.
-	//
-	//	--trusted-height <REFERENCE_TRUSTED_HEIGHT>
-	//		The trusted height of the client update. Leave unspecified for latest height.
-	//
-	//		REQUIRED:
-	//	--client <CLIENT_ID>            Identifier of the chain targeted by the client
-	//	--host-chain <HOST_CHAIN_ID>    Identifier of the chain that hosts the client
-	// TODO: implement
-	return nil
-}
-
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
 }
@@ -170,6 +145,10 @@ func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter
 
 // the following methods do not have a single command that cleanly maps to a single hermes command without
 // additional logic wrapping them. They have been implemented one layer up in the hermes relayer.
+
+func (c commander) UpdateClients(pathName, homeDir string) []string {
+	panic("update clients implemented in hermes relayer not the commander")
+}
 
 func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
 	panic("generate path implemented in hermes relayer not the commander")
