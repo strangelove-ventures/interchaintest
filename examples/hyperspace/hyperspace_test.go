@@ -173,12 +173,7 @@ func TestHyperspace(t *testing.T) {
 	fmt.Println("About to create interchain")
 	ic := ibctest.NewInterchain().
 		AddChain(polkadotChain).
-		AddChain(cosmosChain, ibc.WalletAmount{
-			// Use test keys temporarily
-			Address: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
-			Denom:   "stake",
-			Amount:  10_000_000_000_000,
-		}).
+		AddChain(cosmosChain).
 		AddRelayer(r, relayerName).
 		AddLink(ibctest.InterchainLink{
 			Chain1:  polkadotChain,
@@ -297,8 +292,8 @@ func TestHyperspace(t *testing.T) {
 	require.Equal(t, len(polkadotChannelOutput), 1)
 
 	//fmt.Println("Polkadot connection: ", polkadotConnections[0].ID)
-	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
-	require.NoError(t, err)
+	//	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
+	//	require.NoError(t, err)
 
 	err = polkadotChain.EnableIbcTransfers()
 	require.NoError(t, err)
@@ -340,7 +335,7 @@ func TestHyperspace(t *testing.T) {
 		Denom:   cosmosChain.Config().Denom,
 		Amount:  amountToSend,
 	}
-	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
+	tx, err := cosmosChain.SendIBCTransfer(ctx, cosmosChannelOutput[0].ChannelID, cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
 
@@ -354,7 +349,7 @@ func TestHyperspace(t *testing.T) {
 	require.Equal(t, expectedBal, cosmosUserBalNew)
 
 	// Trace IBC Denom of stake on parachain
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", cosmosChain.Config().Denom))
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, cosmosChain.Config().Denom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 	fmt.Println("Dst Ibc denom: ", dstIbcDenom)
 
@@ -372,7 +367,7 @@ func TestHyperspace(t *testing.T) {
 		Denom:   "2", // stake
 		Amount:  amountToSend2,
 	}
-	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), transfer2, ibc.TransferOptions{})
+	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, polkadotUser.KeyName(), transfer2, ibc.TransferOptions{})
 	require.NoError(t, err)
 
 	// Send 1.88T "UNIT" from Alice to CosmosUser
@@ -382,7 +377,7 @@ func TestHyperspace(t *testing.T) {
 		Denom:   "1", // UNIT
 		Amount:  amountToSend1,
 	}
-	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", "alice", transfer1, ibc.TransferOptions{})
+	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, "alice", transfer1, ibc.TransferOptions{})
 	require.NoError(t, err)
 
 	// Wait for MsgRecvPacket
@@ -400,7 +395,7 @@ func TestHyperspace(t *testing.T) {
 	require.Equal(t, pollForBalance.Amount, cosmosUserNativeBal)
 	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
 	// Trace IBC Denom
-	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
+	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, "UNIT"))
 	dstIbcDenom2 := srcDenomTrace2.IBCDenom()
 	fmt.Println("Dst Ibc denom:2 ", dstIbcDenom2)
 	cosmosUserIbcBal2, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), dstIbcDenom2)
