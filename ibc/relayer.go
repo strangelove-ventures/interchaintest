@@ -259,11 +259,6 @@ func (o Order) Validate() error {
 	return chantypes.ErrInvalidChannelOrdering
 }
 
-// CreateConnectionOptions contains the configuration for creating a connection.
-type CreateConnectionOptions struct {
-	ChainAID, ChainBID string
-}
-
 // CreateClientOptions contains the configuration for creating a client.
 type CreateClientOptions struct {
 	TrustingPeriod string

@@ -307,7 +307,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 				return err
 			}
 
-			// TODO: fix create connection options.
 			if err := rp.Relayer.LinkPath(ctx, rep, rp.Path, link.createChannelOpts, link.createClientOpts); err != nil {
 				return fmt.Errorf(
 					"failed to link path %s on relayer %s between chains %s and %s: %w",
