@@ -2,13 +2,14 @@ package hermes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
 )
@@ -23,7 +24,12 @@ const (
 	hermesConfigPath    = ".hermes/config.toml"
 )
 
-var _ ibc.Relayer = &Relayer{}
+var (
+	_ ibc.Relayer = &Relayer{}
+	// parseRestoreKeyOutputPattern extracts the address from the hermes output.
+	// SUCCESS Restored key 'g2-2' (cosmos1czklnpzwaq3hfxtv6ne4vas2p9m5q3p3fgkz8e) on chain g2-2
+	parseRestoreKeyOutputPattern = regexp.MustCompile("\\((.*)\\)")
+)
 
 // Relayer is the ibc.Relayer implementation for hermes.
 type Relayer struct {
@@ -32,20 +38,27 @@ type Relayer struct {
 	chainConfigs []ChainConfig
 }
 
+// ChainConfig holds all values required to write an entry in the "chains" section in the hermes config file.
 type ChainConfig struct {
 	cfg                        ibc.ChainConfig
 	keyName, rpcAddr, grpcAddr string
 }
 
+// pathConfiguration represents the concept of a "path" which is implemented at the interchain test level rather
+// than the hermes level.
 type pathConfiguration struct {
 	chainA, chainB pathChainConfig
 }
 
+// pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
-	chainID  string
-	clientID string
+	chainID      string
+	clientID     string
+	connectionID string
+	portID       string
 }
 
+// NewHermesRelayer returns a new hermes relayer.
 func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *Relayer {
 	c := commander{log: log}
 	options = append(options, relayer.HomeDir(hermesHome))
@@ -59,68 +72,71 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 	}
 }
 
-func (r *Relayer) populatePathConfig(pathName string) error {
-	//, ok := r.paths[pathName]
-
-	// Query things
-	return nil
-}
-
-func (r *Relayer) validateConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
-	cmd := []string{hermes, "--config", fmt.Sprintf("%s/%s", r.HomeDir(), hermesConfigPath), "config", "validate"}
-	res := r.Exec(ctx, rep, cmd, nil)
-	if res.Err != nil {
-		return res.Err
-	}
-	return nil
-}
-
-func (r *Relayer) configContent(cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	r.chainConfigs = append(r.chainConfigs, ChainConfig{
-		cfg:      cfg,
-		keyName:  keyName,
-		rpcAddr:  rpcAddr,
-		grpcAddr: grpcAddr,
-	})
-	hermesConfig := NewConfig(r.chainConfigs...)
-	bz, err := toml.Marshal(hermesConfig)
-	if err != nil {
-		return nil, err
-	}
-	return bz, nil
-}
-
+// AddChainConfiguration is called once per chain configuration, which means that in the case of hermes, the single
+// config file is overwritten with a new entry each time this function is called.
 func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	configContent, err := r.configContent(chainConfig, keyName, rpcAddr, grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
 
-	fw := dockerutil.NewFileWriter(r.Logger(), r.Client(), r.TestName())
-	if err := fw.WriteFile(ctx, r.VolumeName(), hermesConfigPath, configContent); err != nil {
-		return fmt.Errorf("failed to rly config: %w", err)
+	if err := r.WriteFileToHomeDir(ctx, hermesConfigPath, configContent); err != nil {
+		return fmt.Errorf("failed to write hermes config: %w", err)
 	}
 
 	return r.validateConfig(ctx, rep)
 }
 
+// LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
+// and establishing a channel. This happens across multiple operations rather than a single link path cli command.
 func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	_, ok := r.paths[pathName]
 	if !ok {
 		return fmt.Errorf("path %s not found", pathName)
 	}
 
+	if err := r.CreateClients(ctx, rep, pathName, clientOpts); err != nil {
+		return err
+	}
+
+	if err := r.CreateConnections(ctx, rep, pathName); err != nil {
+		return err
+	}
+
 	if err := r.CreateChannel(ctx, rep, pathName, channelOpts); err != nil {
 		return err
 	}
 
-	return r.populatePathConfig(pathName)
+	return nil
 }
 
 func (r *Relayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	pathConfig := r.paths[pathName]
-	cmd := []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--b-chain", pathConfig.chainB.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--new-client-connection", "--yes"}
+	cmd := []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--a-connection", pathConfig.chainA.connectionID}
 	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+	pathConfig.chainA.portID = opts.SourcePortName
+	pathConfig.chainB.portID = opts.DestPortName
+	return nil
+}
+
+func (r *Relayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
+	pathConfig := r.paths[pathName]
+	cmd := []string{hermes, "--json", "create", "connection", "--a-chain", pathConfig.chainA.chainID, "--a-client", pathConfig.chainA.clientID, "--b-client", pathConfig.chainB.clientID}
+
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+
+	chainAConnectionID, chainBConnectionID, err := getConnectionIDsFromStdout(res.Stdout)
+	if err != nil {
+		return err
+	}
+	pathConfig.chainA.connectionID = chainAConnectionID
+	pathConfig.chainB.connectionID = chainBConnectionID
 	return res.Err
 }
 
@@ -138,6 +154,9 @@ func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	return r.Exec(ctx, rep, updateChainBCmd, nil).Err
 }
 
+// CreateClients creates clients on both chains.
+// Note: in the go relayer this can be done with a single command using the path reference,
+// however in Hermes this needs to be done as two separate commands.
 func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	pathConfig := r.paths[pathName]
 	chainACreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainA.chainID, "--reference-chain", pathConfig.chainB.chainID}
@@ -146,41 +165,33 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 		return res.Err
 	}
 
-	// TODO: parse res and update pathConfig?
+	chainAClientId, err := getClientIdFromStdout(res.Stdout)
+	if err != nil {
+		return err
+	}
+	pathConfig.chainA.clientID = chainAClientId
 
 	chainBCreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainB.chainID, "--reference-chain", pathConfig.chainA.chainID}
 	res = r.Exec(ctx, rep, chainBCreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
-	// TODO: parse res and update pathConfig?
+
+	chainBClientId, err := getClientIdFromStdout(res.Stdout)
+	if err != nil {
+		return err
+	}
+	pathConfig.chainB.clientID = chainBClientId
 
 	return res.Err
 }
 
+// RestoreKey restores a key from a mnemonic. In hermes, you must provide a file containing the mnemonic. We need
+// to copy the contents of the mnemonic into a file on disk and then reference the newly created file.
 func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
-	//DESCRIPTION:
-	//	Adds key to a configured chain or restores a key to a configured chain using a mnemonic
-	//
-	//USAGE:
-	//	hermes keys add [OPTIONS] --chain <CHAIN_ID> --key-file <KEY_FILE>
-	//
-	//		hermes keys add [OPTIONS] --chain <CHAIN_ID> --mnemonic-file <MNEMONIC_FILE>
-	//
-	//		OPTIONS:
-	//	-h, --help                   Print help information
-	//	--hd-path <HD_PATH>      Derivation path for this key [default: m/44'/118'/0'/0/0]
-	//	--key-name <KEY_NAME>    Name of the key (defaults to the `key_name` defined in the config)
-	//	--overwrite              Overwrite the key if there is already one with the same key name
-	//
-	//	FLAGS:
-	//	--chain <CHAIN_ID>                 Identifier of the chain
-	//	--key-file <KEY_FILE>              Path to the key file
-	//	--mnemonic-file <MNEMONIC_FILE>    Path to file containing mnemonic to restore the key from
 
-	relativeMnemonicFilePath := "mnemonic.txt"
-	fw := dockerutil.NewFileWriter(r.Logger(), r.Client(), r.TestName())
-	if err := fw.WriteFile(ctx, r.VolumeName(), relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
+	relativeMnemonicFilePath := fmt.Sprintf("%s/mnemonic.txt", chainID)
+	if err := r.WriteFileToHomeDir(ctx, relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
 		return fmt.Errorf("failed to write mnemonic file: %w", err)
 	}
 
@@ -196,10 +207,8 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 		return res.Err
 	}
 
-	addrBytes := commander{}.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
-
-	r.Wallets[chainID] = NewWallet(chainID, addrBytes, mnemonic)
-
+	addrBytes := parseRestoreKeyOutput(string(res.Stdout))
+	r.AddWallet(chainID, NewWallet(chainID, addrBytes, mnemonic))
 	return nil
 }
 
@@ -208,31 +217,77 @@ func (r *Relayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExec
 }
 
 func (r *Relayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	//DESCRIPTION:
-	//	Clear outstanding packets (i.e., packet-recv and packet-ack) on a given channel in both directions.
-	//		The channel is identified by the chain, port, and channel IDs at one of its ends
-	//
-	//USAGE:
-	//	hermes clear packets [OPTIONS] --chain <CHAIN_ID> --port <PORT_ID> --channel <CHANNEL_ID>
-	//
-	//		OPTIONS:
-	//	--counterparty-key-name <COUNTERPARTY_KEY_NAME>
-	//		use the given signing key for the counterparty chain (default: `counterparty_key_name`
-	//	config)
-	//
-	//	-h, --help
-	//	Print help information
-	//
-	//	--key-name <KEY_NAME>
-	//	use the given signing key for the specified chain (default: `key_name` config)
-	//
-	//	REQUIRED:
-	//	--chain <CHAIN_ID>        Identifier of the chain
-	//	--channel <CHANNEL_ID>    Identifier of the channel
-	//	--port <PORT_ID>          Identifier of the port
-
 	path := r.paths[pathName]
-	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", "transfer"}
+	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", path.chainA.portID}
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
+}
+
+// GeneratePath establishes an in memory path representation. The concept does not exist in hermes, so it is handled
+// at the interchain test level.
+func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
+	if r.paths == nil {
+		r.paths = map[string]*pathConfiguration{}
+	}
+	r.paths[pathName] = &pathConfiguration{
+		chainA: pathChainConfig{
+			chainID: srcChainID,
+		},
+		chainB: pathChainConfig{
+			chainID: dstChainID,
+		},
+	}
+	return nil
+}
+
+// configContent returns the contents of the hermes config file as a byte array. Note: as hermes expects a single file
+// rather than multiple config files, we need to maintain a list of chain configs each time they are added to write the
+// full correct file update calling Relayer.AddChainConfiguration.
+func (r *Relayer) configContent(cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	r.chainConfigs = append(r.chainConfigs, ChainConfig{
+		cfg:      cfg,
+		keyName:  keyName,
+		rpcAddr:  rpcAddr,
+		grpcAddr: grpcAddr,
+	})
+	hermesConfig := NewConfig(r.chainConfigs...)
+	bz, err := toml.Marshal(hermesConfig)
+	if err != nil {
+		return nil, err
+	}
+	return bz, nil
+}
+
+// validateConfig validates the hermes config file. Any errors are propagated to the test.
+func (r *Relayer) validateConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
+	cmd := []string{hermes, "--config", fmt.Sprintf("%s/%s", r.HomeDir(), hermesConfigPath), "config", "validate"}
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+	return nil
+}
+
+// getClientIdFromStdout extracts the client ID from stdout.
+func getClientIdFromStdout(stdout []byte) (string, error) {
+	var clientCreationResult ClientCreationResponse
+	if err := json.Unmarshal(stdout, &clientCreationResult); err != nil {
+		return "", err
+	}
+	return clientCreationResult.Result.CreateClient.ClientID, nil
+}
+
+// getConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
+func getConnectionIDsFromStdout(stdout []byte) (string, string, error) {
+	var connectionResponse ConnectionResponse
+	if err := json.Unmarshal(stdout, &connectionResponse); err != nil {
+		return "", "", err
+	}
+	return connectionResponse.Result.ASide.ConnectionID, connectionResponse.Result.BSide.ConnectionID, nil
+}
+
+// parseRestoreKeyOutput extracts the address from the hermes output.
+func parseRestoreKeyOutput(stdout string) string {
+	fullMatchIdx, addressGroupIdx := 0, 1
+	return parseRestoreKeyOutputPattern.FindAllStringSubmatch(stdout, -1)[fullMatchIdx][addressGroupIdx]
 }

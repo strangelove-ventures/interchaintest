@@ -40,7 +40,7 @@ func TestLearn(t *testing.T) {
 
 	// Relayer Factory
 	client, network := interchaintest.DockerSetup(t)
-	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network)
 
 	// Prep Interchain

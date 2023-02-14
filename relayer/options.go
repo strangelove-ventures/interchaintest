@@ -16,6 +16,7 @@ type RelayerOptionDockerImage struct {
 	DockerImage ibc.DockerImage
 }
 
+// RelayerOptionHomeDir allows the configuration of the relayer home directory.
 type RelayerOptionHomeDir struct {
 	HomeDir string
 }

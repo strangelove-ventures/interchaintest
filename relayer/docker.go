@@ -20,6 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultRlyHomeDirectory = "/home/relayer"
+)
+
 // DockerRelayer provides a common base for relayer implementations
 // that run on Docker.
 type DockerRelayer struct {
@@ -40,8 +44,8 @@ type DockerRelayer struct {
 	// The ID of the container created by StartRelayer.
 	containerID string
 
-	// Wallets contains a mapping of chainID to relayer wallet
-	Wallets map[string]ibc.Wallet
+	// wallets contains a mapping of chainID to relayer wallet
+	wallets map[string]ibc.Wallet
 
 	homeDir string
 }
@@ -63,10 +67,10 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 
 		testName: testName,
 
-		Wallets: map[string]ibc.Wallet{},
+		wallets: map[string]ibc.Wallet{},
 	}
 
-	r.homeDir = "/home/relayer"
+	r.homeDir = defaultRlyHomeDirectory
 
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -128,20 +132,19 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	return &r, nil
 }
 
-func (r *DockerRelayer) Logger() *zap.Logger {
-	return r.log
+// WriteFileToHomeDir writes the given contents to a file at the relative path specified. The file is relative
+// to the home directory in the relayer container.
+func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath string, contents []byte) error {
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, relativePath, contents); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
 }
 
-func (r *DockerRelayer) TestName() string {
-	return r.testName
-}
-
-func (r *DockerRelayer) VolumeName() string {
-	return r.volumeName
-}
-
-func (r *DockerRelayer) Client() *client.Client {
-	return r.client
+// AddWallet adds a stores a wallet for the given chain ID.
+func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
+	r.wallets[chainID] = wallet
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
@@ -189,12 +192,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 	if err != nil {
 		return nil, err
 	}
-	r.Wallets[chainID] = wallet
+	r.wallets[chainID] = wallet
 	return wallet, nil
 }
 
 func (r *DockerRelayer) GetWallet(chainID string) (ibc.Wallet, bool) {
-	wallet, ok := r.Wallets[chainID]
+	wallet, ok := r.wallets[chainID]
 	return wallet, ok
 }
 
@@ -325,7 +328,7 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 
 	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
-	r.Wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
 
 	return nil
 }
