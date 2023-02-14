@@ -2,14 +2,14 @@ package hermes
 
 // ClientCreationResponse contains the minimum required values to extract the client id from the hermes response.
 type ClientCreationResponse struct {
-	Result ClientResult `json:"result"`
+	Result CreateClientResult `json:"result"`
 }
 
 type CreateClient struct {
 	ClientID string `json:"client_id"`
 }
 
-type ClientResult struct {
+type CreateClientResult struct {
 	CreateClient CreateClient `json:"CreateClient"`
 }
 
@@ -48,4 +48,47 @@ type ChannelEnd struct {
 type ChannelAndPortId struct {
 	ChannelID string `json:"channel_id"`
 	PortID    string `json:"port_id"`
+}
+
+type ConnectionQueryResult struct {
+	Result []Result `json:"result"`
+	Status string   `json:"status"`
+}
+
+type Counterparty struct {
+	ClientID     string `json:"client_id"`
+	ConnectionID string `json:"connection_id"`
+	Prefix       string `json:"prefix"`
+}
+
+type DelayPeriod struct {
+	Nanos int `json:"nanos"`
+	Secs  int `json:"secs"`
+}
+
+type Versions struct {
+	Features   []string `json:"features"`
+	Identifier string   `json:"identifier"`
+}
+
+type ConnectionEnd struct {
+	ClientID     string       `json:"client_id"`
+	Counterparty Counterparty `json:"counterparty"`
+	DelayPeriod  DelayPeriod  `json:"delay_period"`
+	State        string       `json:"state"`
+	Versions     []Versions   `json:"versions"`
+}
+
+type Result struct {
+	ConnectionEnd ConnectionEnd `json:"connection_end"`
+	ConnectionID  string        `json:"connection_id"`
+}
+
+type ClientQueryResult struct {
+	ClientResult []ClientResult `json:"result"`
+}
+
+type ClientResult struct {
+	ChainID  string `json:"chain_id"`
+	ClientID string `json:"client_id"`
 }

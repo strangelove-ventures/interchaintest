@@ -7,6 +7,9 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
+
+	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	"github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
 )
 
 var _ relayer.RelayerCommander = &commander{}
@@ -58,11 +61,56 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 }
 
 func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	panic("implement me")
+	var queryResult ConnectionQueryResult
+	if err := json.Unmarshal([]byte(stdout), &queryResult); err != nil {
+		return ibc.ConnectionOutputs{}, err
+	}
+
+	var outputs ibc.ConnectionOutputs
+	for _, r := range queryResult.Result {
+
+		var versions []*ibcexported.Version
+		for _, v := range r.ConnectionEnd.Versions {
+			versions = append(versions, &ibcexported.Version{
+				Identifier: v.Identifier,
+				Features:   v.Features,
+			})
+		}
+
+		outputs = append(outputs, &ibc.ConnectionOutput{
+			ID:       r.ConnectionID,
+			ClientID: r.ConnectionEnd.ClientID,
+			Versions: versions,
+			State:    r.ConnectionEnd.State,
+			Counterparty: &ibcexported.Counterparty{
+				ClientId:     r.ConnectionEnd.Counterparty.ClientID,
+				ConnectionId: r.ConnectionEnd.Counterparty.ConnectionID,
+				Prefix: types.MerklePrefix{
+					KeyPrefix: []byte(r.ConnectionEnd.Counterparty.Prefix),
+				},
+			},
+		})
+	}
+	return outputs, nil
 }
 
 func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	panic("implement me")
+	var queryResult ClientQueryResult
+	if err := json.Unmarshal([]byte(stdout), &queryResult); err != nil {
+		return ibc.ClientOutputs{}, err
+	}
+
+	var clientOutputs []*ibc.ClientOutput
+	for _, r := range queryResult.ClientResult {
+		clientOutputs = append(clientOutputs, &ibc.ClientOutput{
+			ClientID: r.ClientID,
+			ClientState: ibc.ClientState{
+				ChainID: r.ChainID,
+			},
+		})
+	}
+
+	return clientOutputs, nil
 }
 
 func (c commander) Init(homeDir string) []string {
@@ -76,33 +124,14 @@ func (c commander) GetChannels(chainID, homeDir string) []string {
 }
 
 func (c commander) GetConnections(chainID, homeDir string) []string {
-	return []string{hermes, "--json", "query", "connections", "--chain", chainID}
+	return []string{hermes, "--json", "query", "connections", "--chain", chainID, "--verbose"}
 }
 
 func (c commander) GetClients(chainID, homeDir string) []string {
-	//DESCRIPTION:
-	//	Query the identifiers of all clients on a chain
-	//
-	//USAGE:
-	//	hermes query clients [OPTIONS] --host-chain <HOST_CHAIN_ID>
-	//
-	//		OPTIONS:
-	//	-h, --help
-	//	Print help information
-	//
-	//	--omit-chain-ids
-	//	Omit printing the reference (or target) chain for each client
-	//
-	//	--reference-chain <REFERENCE_CHAIN_ID>
-	//		Filter for clients which target a specific chain id (implies '--omit-chain-ids')
-	//
-	//REQUIRED:
-	//	--host-chain <HOST_CHAIN_ID>    Identifier of the chain to query
 	return []string{hermes, "--json", "query", "clients", "--host-chain", chainID}
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	// TODO: only look at paths (probably needs to happen at relayer level not commander)
 	return []string{hermes, "--json", "start", "--full-scan"}
 }
 
@@ -139,12 +168,12 @@ func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter
 	panic("implement me")
 }
 
+// the following methods do not have a single command that cleanly maps to a single hermes command without
+// additional logic wrapping them. They have been implemented one layer up in the hermes relayer.
+
 func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
 	panic("generate path implemented in hermes relayer not the commander")
 }
-
-// the following methods do not have a single command that cleanly maps to a single hermes command without
-// additional logic wrapping them. They have been implemented one layer up in the hermes relayer.
 
 func (c commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string {
 	panic("link path implemented in hermes relayer not the commander")
