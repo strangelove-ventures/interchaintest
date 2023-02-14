@@ -395,7 +395,7 @@ func TestHyperspace(t *testing.T) {
 	require.Equal(t, pollForBalance.Amount, cosmosUserNativeBal)
 	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
 	// Trace IBC Denom
-	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, "UNIT"))
+	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(polkadotChannelOutput[0].PortID, polkadotChannelOutputChannelOutput[0].ChannelID, "UNIT"))
 	dstIbcDenom2 := srcDenomTrace2.IBCDenom()
 	fmt.Println("Dst Ibc denom:2 ", dstIbcDenom2)
 	cosmosUserIbcBal2, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), dstIbcDenom2)
