@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
@@ -17,35 +18,33 @@ import (
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 )
 
 // TestHyperspace setup
 // Must build local docker images of hyperspace, parachain, and polkadot
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
-// * Commit: 043470ce1932c418d15df635480da8efb61d66d7
-// * Build local Hyperspace docker from centauri repo: 
+// * Branch: edjroz/add-query-channels
+// * Commit: 2996275ce29a2d7411af7bf3b1d65bc66a719da8
+// * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
+// * Branch: edjroz/add-query-channels
 // * Commit: 043470ce1932c418d15df635480da8efb61d66d7
-// * Build local parachain docker from centauri repo: 
+// * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
 // ###### polkadot ######
 // * Repo: paritytech/polkadot
-// * Branch: release-v0.9.33 
+// * Branch: release-v0.9.33
 // * Commit: c7d6c21242fc654f6f069e12c00951484dff334d
 // * Build local polkadot docker from  polkadot repo
 //     amd64: docker build -f scripts/ci/dockerfiles/polkadot/polkadot_builder.Dockerfile . -t polkadot-node:local
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
 
-
 // TestHyperspace features
-// * sets up a Polkadot parachain 
+// * sets up a Polkadot parachain
 // * sets up a Cosmos chain
 // * sets up the Hyperspace relayer
 // * Funds a user wallet on both chains
@@ -118,7 +117,7 @@ func TestHyperspace(t *testing.T) {
 				GasPrices:      "",
 				GasAdjustment:  0,
 				TrustingPeriod: "",
-				CoinType:		"354",
+				CoinType:       "354",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &nf,
@@ -144,7 +143,7 @@ func TestHyperspace(t *testing.T) {
 				TrustingPeriod: "504h",
 				CoinType:       "118",
 				//EncodingConfig: WasmClientEncoding(),
-				NoHostMount: true,
+				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
 			},
 		},
@@ -174,7 +173,12 @@ func TestHyperspace(t *testing.T) {
 	fmt.Println("About to create interchain")
 	ic := ibctest.NewInterchain().
 		AddChain(polkadotChain).
-		AddChain(cosmosChain).
+		AddChain(cosmosChain, ibc.WalletAmount{
+			// Use test keys temporarily
+			Address: "cosmos1nnypkcfrvu3e9dhzeggpn4kh622l4cq7wwwrn0",
+			Denom:   "stake",
+			Amount:  10_000_000_000_000,
+		}).
 		AddRelayer(r, relayerName).
 		AddLink(ibctest.InterchainLink{
 			Chain1:  polkadotChain,
@@ -185,11 +189,11 @@ func TestHyperspace(t *testing.T) {
 
 	fmt.Println("About to build interchain")
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
+		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
 	fmt.Println("Interchain built")
 
@@ -219,7 +223,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Cosmos user amount: ", cosmosUserAmount)
 	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
-	
+
 	// Store grandpa contract
 	codeHash, err := cosmosChain.StoreClientContract(ctx, cosmosUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm")
 	t.Logf("Contract codeHash: %s", codeHash)
@@ -251,10 +255,10 @@ func TestHyperspace(t *testing.T) {
 
 	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
 	require.NoError(t, err)
-	
+
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	
+
 	// Create a new connection
 	err = r.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
@@ -264,27 +268,38 @@ func TestHyperspace(t *testing.T) {
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	
+
 	// Create a new channel & get channels from each chain
 	err = r.CreateChannel(ctx, eRep, pathName, ibc.DefaultChannelOpts())
 	require.NoError(t, err)
-	
+
 	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
 	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	
+
 	// Hyperspace panics on "hyperspace query channels --config xxx", this is needed.
-	//_, err = r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
-	//require.NoError(t, err)
+	cosmosChannelOutput, err := r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, len(cosmosChannelOutput), 1)
+
+	require.Equal(t, cosmosChannelOutput[0].ChannelID, "channel-0")
+	require.Equal(t, cosmosChannelOutput[0].PortID, "transfer")
+
 	//fmt.Println("Cosmos connection: ", cosmosConnections[0].ID)
-	//_, err = r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
-	//require.NoError(t, err)
+	polkadotChannelOutput, err := r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
+	require.NoError(t, err)
+
+	require.Equal(t, polkadotChannelOutput[0].ChannelID, "channel-0")
+	require.Equal(t, polkadotChannelOutput[0].PortID, "transfer")
+
+	require.Equal(t, len(polkadotChannelOutput), 1)
+
 	//fmt.Println("Polkadot connection: ", polkadotConnections[0].ID)
-	//err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
-	//require.NoError(t, err)
-	
+	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
+	require.NoError(t, err)
+
 	err = polkadotChain.EnableIbcTransfers()
 	require.NoError(t, err)
 
@@ -327,7 +342,7 @@ func TestHyperspace(t *testing.T) {
 	}
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
-	require.NoError(t, tx.Validate())	// test source wallet has decreased funds
+	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
 
 	err = testutil.WaitForBlocks(ctx, 10, cosmosChain, polkadotChain)
 	require.NoError(t, err)
@@ -349,7 +364,7 @@ func TestHyperspace(t *testing.T) {
 	//polkadotUserIbcCoins3, err := polkadotChain.GetIbcBalance(ctx, []byte(hex.EncodeToString(pubKey)))
 	polkadotUserIbcCoins, err := polkadotChain.GetIbcBalance(ctx, polkadotUser.Address())
 	fmt.Println("IbcCoins: ", polkadotUserIbcCoins.String(), "  -- this probably doesn't work, Error: ", err)
-	
+
 	// Send 1.18M stake from ParachainUser to CosmosUser
 	amountToSend2 := int64(1_180_000)
 	transfer2 := ibc.WalletAmount{
@@ -373,8 +388,8 @@ func TestHyperspace(t *testing.T) {
 	// Wait for MsgRecvPacket
 	pollForBalance := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
-		Denom: cosmosChain.Config().Denom,
-		Amount: expectedBal+amountToSend2,
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  expectedBal + amountToSend2,
 	}
 	err = cosmos.PollForBalance(ctx, cosmosChain, 30, pollForBalance)
 	require.NoError(t, err)

@@ -11,7 +11,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 	types23 "github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
 	"github.com/docker/docker/client"
@@ -54,11 +53,11 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 }
 
 type HyperspaceRelayerSubstrateChainConfig struct {
-	Type             string   `toml:"type"`
-	Name             string   `toml:"name"`
-	ParaID           uint32   `toml:"para_id"`
-	ParachainRPCURL  string   `toml:"parachain_rpc_url"`
-	RelayChainRPCURL string   `toml:"relay_chain_rpc_url"`
+	Type             string `toml:"type"`
+	Name             string `toml:"name"`
+	ParaID           uint32 `toml:"para_id"`
+	ParachainRPCURL  string `toml:"parachain_rpc_url"`
+	RelayChainRPCURL string `toml:"relay_chain_rpc_url"`
 	//ClientID         string   `toml:"client_id"`
 	//ConnectionID     string   `toml:"connection_id"`
 	BeefyActivation  uint32   `toml:"beefy_activation_block"`
@@ -79,19 +78,19 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
-	Type           string   `toml:"type"` //New
-	Name           string   `toml:"name"`
-	RPCUrl         string   `toml:"rpc_url"`
-	GRPCUrl        string   `toml:"grpc_url"`
-	WebsocketUrl   string   `toml:"websocket_url"`
-	ChainID        string   `toml:"chain_id"`
-	AccountPrefix  string   `toml:"account_prefix"`
-	StorePrefix    string   `toml:"store_prefix"`
-	MaxTxSize      uint64   `toml:"max_tx_size"`
-	WasmCodeId     string   `toml:"wasm_code_id"`
+	Type          string `toml:"type"` //New
+	Name          string `toml:"name"`
+	RPCUrl        string `toml:"rpc_url"`
+	GRPCUrl       string `toml:"grpc_url"`
+	WebsocketUrl  string `toml:"websocket_url"`
+	ChainID       string `toml:"chain_id"`
+	AccountPrefix string `toml:"account_prefix"`
+	StorePrefix   string `toml:"store_prefix"`
+	MaxTxSize     uint64 `toml:"max_tx_size"`
+	WasmCodeId    string `toml:"wasm_code_id"`
 	//ConnectionId string `toml:"connection_id"` // connection-1
 	//ClientId string `toml:"client_id"` // 07-tendermint-0
-	Keybase        KeyEntry `toml:"keybase"`
+	Keybase KeyEntry `toml:"keybase"`
 
 	//Debug          bool    `json:"debug" toml:"debug"`
 	//GasAdjustment  float64 `json:"gas-adjustment" toml:"gas_adjustment"`
@@ -138,17 +137,17 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 	// Derive extended private key
 	seed := bip39.NewSeed(mnemonic, "")
 	masterKey, _ := bip32.NewMasterKey(seed)
-	purposeKey, _ := masterKey.NewChildKey(0x8000002C) // 44'
+	purposeKey, _ := masterKey.NewChildKey(0x8000002C)                        // 44'
 	coinTypeKey, _ := purposeKey.NewChildKey(0x80000000 + uint32(coinType64)) // 118'
-	accountKey, _ := coinTypeKey.NewChildKey(0x80000000) // 0'
-	changeKey, _ := accountKey.NewChildKey(0) // 0
-	indexKey, _ := changeKey.NewChildKey(0) // 0
+	accountKey, _ := coinTypeKey.NewChildKey(0x80000000)                      // 0'
+	changeKey, _ := accountKey.NewChildKey(0)                                 // 0
+	indexKey, _ := changeKey.NewChildKey(0)                                   // 0
 
 	return KeyEntry{
 		PublicKey:  indexKey.PublicKey().B58Serialize(), // i.e. "xpub6GNKSnPmR5zN3Ef3EqYkSJTZzjzGecb1n1SqJRUNnoFPsyxviG7QyoVzjEjP3gfqRu7AvRrEZMfXJazz8pZgmYP6yvvdRqC2pWmWpeQTMBP"
-		PrivateKey: indexKey.B58Serialize(), // i.e. "xprvA3Ny3GrsaiS4pkaa8p1k5AWqSi9nF9sAQnXEW34mETiR1BdnAioAS1BWsx3uAXKT3NbY6cpY2mQL6N7R8se1GVHqNkpjwc7rv5VRaQ9x8EB"
-		Account:    bech32Addr, // i.e. "cosmos1pyxjp07wc207l7jecyr3wcmq9cr54tqwhcwugm"
-		Address:    address.Bytes(), // i.e. [9, 13, 32, 191, 206, 194, 159, 239, 250, 89, 193, 7, 23, 99, 96, 46, 7, 74, 172, 14]
+		PrivateKey: indexKey.B58Serialize(),             // i.e. "xprvA3Ny3GrsaiS4pkaa8p1k5AWqSi9nF9sAQnXEW34mETiR1BdnAioAS1BWsx3uAXKT3NbY6cpY2mQL6N7R8se1GVHqNkpjwc7rv5VRaQ9x8EB"
+		Account:    bech32Addr,                          // i.e. "cosmos1pyxjp07wc207l7jecyr3wcmq9cr54tqwhcwugm"
+		Address:    address.Bytes(),                     // i.e. [9, 13, 32, 191, 206, 194, 159, 239, 250, 89, 193, 7, 23, 99, 96, 46, 7, 74, 172, 14]
 	}
 }
 func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
@@ -169,7 +168,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			Name:             chainConfig.Name,
 			ParaID:           2000,
 			ParachainRPCURL:  strings.Replace(strings.Replace(paraRpcAddr, "http", "ws", 1), "9933", "27451", 1),
-			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1),"9933", "27451", 1),
+			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1), "9933", "27451", 1),
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
 			SS58Version:      polkadot.Ss58Format,
@@ -179,15 +178,15 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 	} else if chainType == "cosmos" {
 		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
 		return HyperspaceRelayerCosmosChainConfig{
-			Type:           chainType,
-			Name:           chainConfig.Name,
-			ChainID:        chainConfig.ChainID,
-			AccountPrefix:  chainConfig.Bech32Prefix,
-			GRPCUrl:        "http://"+grpcAddr,
-			RPCUrl:         rpcAddr,
-			StorePrefix:    "ibc",
-			MaxTxSize:      200000,
-			WebsocketUrl:   wsUrl,
+			Type:          chainType,
+			Name:          chainConfig.Name,
+			ChainID:       chainConfig.ChainID,
+			AccountPrefix: chainConfig.Bech32Prefix,
+			GRPCUrl:       "http://" + grpcAddr,
+			RPCUrl:        rpcAddr,
+			StorePrefix:   "ibc",
+			MaxTxSize:     200000,
+			WebsocketUrl:  wsUrl,
 		}
 	} else {
 		panic(fmt.Sprintf("unsupported chain type %s", chainType))
@@ -196,9 +195,9 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
 type hyperspaceCommander struct {
-	log               *zap.Logger
-	chainConfigPaths  []string
-	extraStartFlags   []string
+	log              *zap.Logger
+	chainConfigPaths []string
+	extraStartFlags  []string
 	//dockerRelayer     *relayer.DockerRelayer
 }
 
@@ -219,7 +218,6 @@ func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir s
 	}
 }
 
-
 // Hyperspace doesn't not have this functionality
 func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	panic("[AddKey] Do not call me")
@@ -227,7 +225,7 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []
 
 func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateChannel", pathName, homeDir)
-	if(len(c.chainConfigPaths) < 2) {
+	if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -259,7 +257,7 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
-	if(len(c.chainConfigPaths) < 2) {
+	if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -294,7 +292,7 @@ func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingP
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
-	if(len(c.chainConfigPaths) < 2) {
+	if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -340,27 +338,27 @@ func (hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDi
 // Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
 	panic("[UpdatePath] Do not call me")
-	
+
 }
 
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
-	panic("Panic because hyperspace will panic")
-	/*fmt.Println("[hyperspace] Get Channels")
-	configFilePath := path.Join(homeDir, chainID + ".config")
+	//panic("Panic because hyperspace will panic")
+	fmt.Println("[hyperspace] Get Channels")
+	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"hyperspace",
 		"query",
 		"channels",
 		"--config",
 		configFilePath,
-	}*/
+	}
 }
 
 // Prints chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Connections")
-	configFilePath := path.Join(homeDir, chainID + ".config")
+	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"cat",
 		configFilePath,
@@ -371,7 +369,7 @@ func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 // Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Clients")
-	configFilePath := path.Join(homeDir, chainID + ".config")
+	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"cat",
 		configFilePath,
@@ -398,7 +396,7 @@ func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic,
 
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
 	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
-	if(len(c.chainConfigPaths) < 2) {
+	if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -464,23 +462,29 @@ func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 }
 
 func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
-	panic("Re-add once hyperspace can query channels successfully")
-/*	fmt.Println("Channels output: ", stdout)
-	
-	return []ibc.ChannelOutput{
-		{
-			State: "",
-			Ordering: "",
-			Counterparty: ibc.ChannelCounterparty{
-				PortID: "",
-				ChannelID: "",
-			},
-			ConnectionHops: []string{},
-			Version: "",
-			PortID: "",
-			ChannelID: "",
-		},
-	}, nil*/
+	outputs := make([]ibc.ChannelOutput, 0)
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, ": ") {
+			channel := strings.Split(line, ": ")
+			channelId := channel[0]
+			portId := channel[1]
+
+			outputs = append(outputs, ibc.ChannelOutput{
+				State:    "",
+				Ordering: "",
+				Counterparty: ibc.ChannelCounterparty{ // TODO: retrieve from hyperspace
+					PortID:    "",
+					ChannelID: "",
+				},
+				ConnectionHops: []string{},
+				Version:        "",
+				PortID:         portId,
+				ChannelID:      channelId,
+			})
+		}
+	}
+	return outputs, nil
 }
 
 // Parses output of chain config which is populated by hyperspace
@@ -501,17 +505,17 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 	}
 	return ibc.ConnectionOutputs{
 		&ibc.ConnectionOutput{
-			ID: connectionId,
+			ID:       connectionId,
 			ClientID: clientId,
 			Versions: []*ibcexported.Version{
 				{
 					Identifier: "",
-					Features: []string{},
+					Features:   []string{},
 				},
 			},
 			State: "",
 			Counterparty: &ibcexported.Counterparty{
-				ClientId: "",
+				ClientId:     "",
 				ConnectionId: "",
 				Prefix: types23.MerklePrefix{
 					KeyPrefix: []byte{},
@@ -542,7 +546,7 @@ func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.Cli
 		&ibc.ClientOutput{
 			ClientID: clientId,
 			ClientState: ibc.ClientState{
-				ChainID: chainId, 
+				ChainID: chainId,
 			},
 		},
 	}, nil
