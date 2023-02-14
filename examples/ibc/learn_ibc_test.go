@@ -6,13 +6,12 @@ import (
 	"testing"
 	"time"
 
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 )
 
 // This test is meant to be used as a basic interchaintest tutorial.
