@@ -3,6 +3,8 @@ package cosmos
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -19,11 +21,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	chanTypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/ibctest/v6/chain/internal/tendermint"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/internal/blockdb"
@@ -347,6 +352,29 @@ func (c *CosmosChain) SendIBCTransfer(
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
+}
+
+// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
+func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
+	tx := TxProposal{}
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return tx, "", err
+	}
+	message := wasmclienttypes.MsgPushNewWasmCode{
+		Signer: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		Code: content,
+	}
+	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
+	prop.Messages = append(prop.Messages, msg)
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, "", fmt.Errorf("failed to submit wasm client proposal: %w", err)
+	}
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+	tx, err = c.txProposal(txHash)
+	return tx, codeHash, err
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.

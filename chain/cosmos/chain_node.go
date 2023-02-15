@@ -764,7 +764,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote,
+		proposalID, vote, "--gas", "auto",
 	)
 	return err
 }
@@ -783,6 +783,26 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 	return &proposal, nil
 }
 
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
+	// Write msg to container
+	file := "proposal.json"
+	propJson, err := json.MarshalIndent(prop, "", " ")
+	if err != nil {
+		return "", err
+	}
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	command := []string{
+		"gov", "submit-proposal",
+		path.Join(tn.HomeDir(), file), "--gas", "auto",
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
+}
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
