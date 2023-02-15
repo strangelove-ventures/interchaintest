@@ -48,7 +48,7 @@ gaia:
 gravitybridge:
   name: gravitybridge
   type: cosmos
-  bin: gravityd
+  bin: gravity
   bech32-prefix: gravity
   denom: ustake
   gas-prices: 0.01ustake
@@ -119,7 +119,7 @@ penumbra:
 sommelier:
   name: sommelier
   type: cosmos
-  bin: sommelierd
+  bin: sommelier
   bech32-prefix: somm
   denom: usomm
   gas-prices: 0.01usomm
