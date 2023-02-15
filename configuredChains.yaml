@@ -44,6 +44,20 @@ gaia:
     - repository: ghcr.io/strangelove-ventures/heighliner/gaia
       uid-gid: 1025:1025
   no-host-mount: false
+  
+gravitybridge:
+  name: gravitybridge
+  type: cosmos
+  bin: gravityd
+  bech32-prefix: gravity
+  denom: ustake
+  gas-prices: 0.01ustake
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/gravitybridge
+      uid-gid: 1025:1025
+  no-host-mount: false
 
 icad:
   name: icad
@@ -101,3 +115,17 @@ penumbra:
       uid-gid: 1025:1025
     - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
       uid-gid: 1025:1025
+      
+sommelier:
+  name: sommelier
+  type: cosmos
+  bin: sommelierd
+  bech32-prefix: somm
+  denom: usomm
+  gas-prices: 0.01usomm
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/sommelier
+      uid-gid: 1025:1025
+  no-host-mount: false
