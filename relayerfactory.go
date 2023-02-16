@@ -110,6 +110,9 @@ func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.Capabilities()
+	case ibc.Hermes:
+		// TODO: specify capability for hermes.
+		return rly.Capabilities()
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
