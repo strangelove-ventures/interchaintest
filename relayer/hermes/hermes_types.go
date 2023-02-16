@@ -6,7 +6,8 @@ type ClientCreationResponse struct {
 }
 
 type CreateClient struct {
-	ClientID string `json:"client_id"`
+	ClientID   string `json:"client_id"`
+	ClientType string `json:"client_type"`
 }
 
 type CreateClientResult struct {

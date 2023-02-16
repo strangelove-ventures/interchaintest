@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -268,10 +269,23 @@ func (r *Relayer) validateConfig(ctx context.Context, rep ibc.RelayerExecReporte
 	return nil
 }
 
+// extractJsonResult extracts the json result for the hermes query.
+func extractJsonResult(stdout []byte) []byte {
+	stdoutLines := strings.Split(string(stdout), "\n")
+	var jsonOutput string
+	for _, line := range stdoutLines {
+		if strings.Contains(line, "result") {
+			jsonOutput = line
+			break
+		}
+	}
+	return []byte(jsonOutput)
+}
+
 // getClientIdFromStdout extracts the client ID from stdout.
 func getClientIdFromStdout(stdout []byte) (string, error) {
 	var clientCreationResult ClientCreationResponse
-	if err := json.Unmarshal(stdout, &clientCreationResult); err != nil {
+	if err := json.Unmarshal(extractJsonResult(stdout), &clientCreationResult); err != nil {
 		return "", err
 	}
 	return clientCreationResult.Result.CreateClient.ClientID, nil
@@ -280,7 +294,7 @@ func getClientIdFromStdout(stdout []byte) (string, error) {
 // getConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
 func getConnectionIDsFromStdout(stdout []byte) (string, string, error) {
 	var connectionResponse ConnectionResponse
-	if err := json.Unmarshal(stdout, &connectionResponse); err != nil {
+	if err := json.Unmarshal(extractJsonResult(stdout), &connectionResponse); err != nil {
 		return "", "", err
 	}
 	return connectionResponse.Result.ASide.ConnectionID, connectionResponse.Result.BSide.ConnectionID, nil
