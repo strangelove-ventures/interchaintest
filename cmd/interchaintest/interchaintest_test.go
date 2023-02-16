@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	defaultRelativeCIMatrixFile = "cmd/interchaintest/example_matrix.json"
+	defaultRelativeCIMatrixFile = "example_matrix.json"
 )
 
 func init() {
