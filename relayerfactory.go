@@ -97,6 +97,8 @@ func (f builtinRelayerFactory) Labels() []label.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
 		return []label.Relayer{label.Rly}
+	case ibc.Hermes:
+		return []label.Relayer{label.Hermes}
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
