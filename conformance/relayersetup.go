@@ -161,14 +161,14 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		// Piecemeal assertions against each channel.
 		// Not asserting against ConnectionHops or ChannelID.
-		req.Equal(ch0.State, "STATE_OPEN")
-		req.Equal(ch0.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch0.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch0.Ordering})
 		req.Equal(ch0.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID})
 		req.Equal(ch0.Version, "ics20-1")
 		req.Equal(ch0.PortID, "transfer")
 
-		req.Equal(ch1.State, "STATE_OPEN")
-		req.Equal(ch1.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch1.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch1.Ordering})
 		req.Equal(ch1.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID})
 		req.Equal(ch1.Version, "ics20-1")
 		req.Equal(ch1.PortID, "transfer")
