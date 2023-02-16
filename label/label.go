@@ -66,30 +66,15 @@ func (l Chain) IsKnown() bool {
 const (
 	// Cosmos-based chains should include this label.
 	Cosmos Chain = "cosmos"
-
-	// Specific chains follow.
-
-	Gaia    Chain = "gaia"
-	Osmosis Chain = "osmosis"
-	Juno    Chain = "juno"
-	Agoric  Chain = "agoric"
-
-	Penumbra Chain = "penumbra"
 )
 
-var knownChainLabels = map[Chain]struct{}{
-	Gaia:     {},
-	Osmosis:  {},
-	Juno:     {},
-	Agoric:   {},
-	Penumbra: {},
-}
+var knownChainLabels = map[Chain]struct{}{}
 
 // RegisterChainLabel is available for external packages that may import interchaintest,
 // to register any external chain implementations they may provide.
 func RegisterChainLabel(l Chain) {
 	if _, exists := knownChainLabels[l]; exists {
-		panic(fmt.Errorf("chain label %q already exists and must not be double registered", l))
+		return
 	}
 
 	knownChainLabels[l] = struct{}{}

@@ -81,6 +81,9 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		return nil, fmt.Errorf("failed to get pre-configured chains: %w", err)
 	}
 
+	// Register chain label as chain name. These labels help filter through the test reporter.
+	label.RegisterChainLabel(label.Chain(s.Name))
+
 	// Get built-in config.
 	// If chain doesn't have built in config, but is fully configured, register chain label.
 	cfg, ok := builtinChainConfigs[s.Name]
@@ -93,10 +96,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 			sort.Strings(availableChains)
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
-		}
-		chainLabel := label.Chain(s.Name)
-		if !chainLabel.IsKnown() {
-			label.RegisterChainLabel(chainLabel)
 		}
 		cfg = ibc.ChainConfig{}
 	}
