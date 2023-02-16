@@ -122,7 +122,7 @@ func setUpTestMatrix() error {
 	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
-		testMatrix.Relayers = []string{"hermes"}
+		testMatrix.Relayers = []string{"rly"}
 		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
 				{Name: "gaia", Version: "v7.0.1"},
