@@ -9,6 +9,7 @@ import (
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
@@ -100,9 +101,14 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 		afterFlushHeight, err := c0.Height(ctx)
 		req.NoError(err)
 
+		//flush packets and flush acks are the same command in hermes and are not separated as in the go relayer
 		// Ack shouldn't happen yet.
 		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
-		req.ErrorIs(err, testutil.ErrNotFound)
+		if _, isHermes := r.(*hermes.Relayer); isHermes {
+			req.NoError(err)
+		} else {
+			req.ErrorIs(err, testutil.ErrNotFound)
+		}
 	})
 
 	t.Run("flush acks", func(t *testing.T) {
