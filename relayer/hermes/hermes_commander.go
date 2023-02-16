@@ -35,8 +35,9 @@ func (c commander) DockerUser() string {
 }
 
 func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
+	jsonBz := extractJsonResult([]byte(stdout))
 	var result ChannelOutputResult
-	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+	if err := json.Unmarshal(jsonBz, &result); err != nil {
 		return nil, err
 	}
 
