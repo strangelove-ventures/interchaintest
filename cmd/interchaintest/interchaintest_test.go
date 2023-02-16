@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	defaultCIMatrixFile = "cmd/interchaintest/example_matrix.json"
+	defaultRelativeCIMatrixFile = "cmd/interchaintest/example_matrix.json"
 )
 
 func init() {
@@ -112,7 +113,11 @@ var extraFlags mainFlags
 // or with a small reasonable default of rly against one gaia-osmosis set.
 func setUpTestMatrix() error {
 	if extraFlags.MatrixFile == "" && isRunningInCI() {
-		extraFlags.MatrixFile = defaultCIMatrixFile
+		currentDir, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		extraFlags.MatrixFile = path.Join(currentDir, defaultRelativeCIMatrixFile)
 	}
 
 	if extraFlags.MatrixFile == "" {
