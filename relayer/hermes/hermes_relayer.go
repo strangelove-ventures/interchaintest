@@ -17,7 +17,7 @@ import (
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "docker.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.0.0"
+	DefaultContainerVersion = "1.2.0"
 
 	hermesDefaultUidGid = "1000:1000"
 	hermesHome          = "/home/hermes"
