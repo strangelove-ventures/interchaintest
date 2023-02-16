@@ -23,7 +23,6 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 				StartedAt: time.Now(),
 				Labels: testreporter.LabelSet{
 					Relayer: []label.Relayer{label.Rly},
-					Chain:   []label.Chain{label.Gaia},
 					Test:    []label.Test{label.Timeout},
 				},
 			},

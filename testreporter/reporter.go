@@ -73,7 +73,7 @@ func (r *Reporter) Close() error {
 
 // TrackParameters is intended to be called from the outermost layer of tests.
 // It tracks the test run including labels indicative of what relayers and chains are used.
-func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabels []label.Chain) {
+func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer) {
 	for _, l := range relayerLabels {
 		if !l.IsKnown() {
 			panic(fmt.Errorf("illegal use of unknown relayer label %q", l))
@@ -83,7 +83,6 @@ func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabe
 
 	r.trackTest(t, LabelSet{
 		Relayer: relayerLabels,
-		Chain:   chainLabels,
 	})
 }
 

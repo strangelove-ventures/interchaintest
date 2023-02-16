@@ -240,7 +240,7 @@ func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, 
 
 						t.Run(rf.Name(), func(t *testing.T) {
 							// Record the labels for this nested test.
-							rep.TrackParameters(t, rf.Labels(), cf.Labels())
+							rep.TrackParameters(t, rf.Labels())
 							rep.TrackParallel(t)
 
 							t.Run("relayer setup", func(t *testing.T) {

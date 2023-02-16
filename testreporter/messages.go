@@ -49,7 +49,6 @@ type BeginTestMessage struct {
 // LabelSet is the set of labels that can be associated with a test.
 type LabelSet struct {
 	Relayer []label.Relayer `json:",omitempty"`
-	Chain   []label.Chain   `json:",omitempty"`
 
 	Test []label.Test `json:",omitempty"`
 }
