@@ -60,8 +60,9 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 }
 
 func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
+	jsonBz := extractJsonResult([]byte(stdout))
 	var queryResult ConnectionQueryResult
-	if err := json.Unmarshal([]byte(stdout), &queryResult); err != nil {
+	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
 		return ibc.ConnectionOutputs{}, err
 	}
 
@@ -94,8 +95,9 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 }
 
 func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+	jsonBz := extractJsonResult([]byte(stdout))
 	var queryResult ClientQueryResult
-	if err := json.Unmarshal([]byte(stdout), &queryResult); err != nil {
+	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
 		return ibc.ClientOutputs{}, err
 	}
 
