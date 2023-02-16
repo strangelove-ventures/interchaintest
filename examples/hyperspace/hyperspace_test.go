@@ -24,15 +24,15 @@ import (
 // Must build local docker images of hyperspace, parachain, and polkadot
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Branch: edjroz/add-query-channels
-// * Commit: 2996275ce29a2d7411af7bf3b1d65bc66a719da8
+// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
+// * Commit: 1880a8439ccc480b0b16e07a6e37840893df4344
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Branch: edjroz/add-query-channels
-// * Commit: 043470ce1932c418d15df635480da8efb61d66d7
+// * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
+// * Commit: 1880a8439ccc480b0b16e07a6e37840893df4344
 // * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
 // ###### polkadot ######
@@ -395,7 +395,7 @@ func TestHyperspace(t *testing.T) {
 	require.Equal(t, pollForBalance.Amount, cosmosUserNativeBal)
 	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
 	// Trace IBC Denom
-	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(polkadotChannelOutput[0].PortID, polkadotChannelOutputChannelOutput[0].ChannelID, "UNIT"))
+	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(polkadotChannelOutput[0].PortID, polkadotChannelOutput[0].ChannelID, "UNIT"))
 	dstIbcDenom2 := srcDenomTrace2.IBCDenom()
 	fmt.Println("Dst Ibc denom:2 ", dstIbcDenom2)
 	cosmosUserIbcBal2, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), dstIbcDenom2)
