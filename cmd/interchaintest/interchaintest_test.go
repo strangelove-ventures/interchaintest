@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,10 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultCIMatrixFile = "cmd/interchaintest/example_matrix.json"
 )
 
 func init() {
@@ -94,12 +99,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// isRunningInCI returns true if this test is running in CI.
+// Note: On Github, all runners are passed an environment variable of "CI" with a value of "true".
+func isRunningInCI() bool {
+	return strings.ToLower(os.Getenv("CI")) == "true"
+}
+
 var extraFlags mainFlags
 
 // setUpTestMatrix populates the testMatrix singleton with
 // the parsed contents of the file referenced by the matrix flag,
 // or with a small reasonable default of rly against one gaia-osmosis set.
 func setUpTestMatrix() error {
+	if extraFlags.MatrixFile == "" && isRunningInCI() {
+		extraFlags.MatrixFile = defaultCIMatrixFile
+	}
+
 	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
