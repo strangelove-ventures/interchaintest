@@ -87,6 +87,12 @@ func (f builtinRelayerFactory) Name() string {
 		}
 		return "rly@" + rly.DefaultContainerVersion
 	case ibc.Hermes:
+		for _, opt := range f.options {
+			switch o := opt.(type) {
+			case relayer.RelayerOptionDockerImage:
+				return "hermes@" + o.DockerImage.Version
+			}
+		}
 		return "hermes@" + hermes.DefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
