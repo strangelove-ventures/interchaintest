@@ -71,7 +71,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 			Packets: Packets{
 				Enabled:        true,
 				ClearInterval:  0,
-				ClearOnStart:   false,
+				ClearOnStart:   true,
 				TxConfirmation: false,
 			},
 		},

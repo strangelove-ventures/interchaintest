@@ -3,6 +3,7 @@ package hermes
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/relayer"
@@ -126,15 +127,15 @@ func (c commander) GetChannels(chainID, homeDir string) []string {
 }
 
 func (c commander) GetConnections(chainID, homeDir string) []string {
-	return []string{hermes, "--json", "query", "connections", "--chain", chainID, "--verbose"}
+	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "--json", "query", "connections", "--chain", chainID, "--verbose"}
 }
 
 func (c commander) GetClients(chainID, homeDir string) []string {
-	return []string{hermes, "--json", "query", "clients", "--host-chain", chainID}
+	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "--json", "query", "clients", "--host-chain", chainID}
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{hermes, "--json", "start", "--full-scan"}
+	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "start", "--full-scan"}
 }
 
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
