@@ -9,14 +9,14 @@ import (
 	"encoding/json"
 
 	"github.com/icza/dyno"
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	"github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -66,7 +66,7 @@ func TestHyperspace(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -99,7 +99,7 @@ func TestHyperspace(t *testing.T) {
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
 	// Get both chains
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainName: "composable", // Set ChainName so that a suffix with a "dash" is not appended (required for hyperspace)
 			ChainConfig: ibc.ChainConfig{
@@ -164,7 +164,7 @@ func TestHyperspace(t *testing.T) {
 	cosmosChain := chains[1].(*cosmos.CosmosChain)
 
 	// Get a relayer instance
-	r := ibctest.NewBuiltinRelayerFactory(
+	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.Hyperspace,
 		zaptest.NewLogger(t),
 		// These two fields are used to pass in a custom Docker image built locally
@@ -176,22 +176,22 @@ func TestHyperspace(t *testing.T) {
 	const pathName = "composable-simd"
 	const relayerName = "hyperspace"
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(polkadotChain).
 		AddChain(cosmosChain).
 		AddRelayer(r, relayerName).
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  polkadotChain,
 			Chain2:  cosmosChain,
 			Relayer: r,
 			Path:    pathName,
 		})
 
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
 	fmt.Println("Interchain built")
@@ -334,7 +334,7 @@ type GetCodeQueryMsgResponse struct {
 func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
 	// Set up cosmos user for pushing new wasm code msg via governance
 	fundAmountForGov := int64(10_000_000_000)
-	contractUsers := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmountForGov), cosmosChain)
+	contractUsers := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmountForGov), cosmosChain)
 	contractUser := contractUsers[0]
 
 	contractUserBalInitial, err := cosmosChain.GetBalance(ctx, contractUser.FormattedAddress(), cosmosChain.Config().Denom)
@@ -376,7 +376,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 }
 
 func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain)(ibc.Wallet, ibc.Wallet) {
-	users := ibctest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
 	polkadotUser, cosmosUser := users[0], users[1]
 	err := testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
 	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")

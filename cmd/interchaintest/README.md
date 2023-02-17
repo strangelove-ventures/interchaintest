@@ -1,4 +1,4 @@
-# ibctest
+# interchaintest
 
 This directory contains a test that can be parameterized at runtime,
 allowing a user to pick and choose what combinations of relayers and chains to test.

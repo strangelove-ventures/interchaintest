@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v6"
-	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/testreporter"
-	"github.com/strangelove-ventures/ibctest/v6/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -21,7 +21,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -31,7 +31,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	nv := 5
 	nf := 3
 
-	chains, err := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainConfig: ibc.ChainConfig{
 				Type:    "polkadot",
@@ -67,10 +67,10 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.Len(t, chains, 1)
 	chain := chains[0]
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain)
 
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -150,13 +150,13 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	// Fund user1 on both relay and parachain, must wait a block to fund user2 due to same faucet address
 	fundAmount := int64(12_333_000_000_000)
-	users1 := ibctest.GetAndFundTestUsers(t, ctx, "user1", fundAmount, polkadotChain)
+	users1 := interchaintest.GetAndFundTestUsers(t, ctx, "user1", fundAmount, polkadotChain)
 	user1 := users1[0]
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 
 	// Fund user2 on both relay and parachain, check that user1 was funded properly
-	users2 := ibctest.GetAndFundTestUsers(t, ctx, "user2", fundAmount, polkadotChain)
+	users2 := interchaintest.GetAndFundTestUsers(t, ctx, "user2", fundAmount, polkadotChain)
 	user2 := users2[0]
 	polkadotUser1Amount, err := polkadotChain.GetBalance(ctx, user1.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)

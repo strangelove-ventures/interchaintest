@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ type TempDirTestingT interface {
 //
 // The KeepTempDirOnFailure function is the public API to access this value.
 // We export the function instead of the package-level variable
-// for a consistent API in ibctest with the KeepDockerVolumesOnFailure function,
+// for a consistent API in interchaintest with the KeepDockerVolumesOnFailure function,
 // which references a variable in an internal package.
 var keepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 
@@ -35,7 +35,7 @@ var keepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 //
 // The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
-// Alternatively, importers of the ibctest package may set the variable to true.
+// Alternatively, importers of the interchaintest package may set the variable to true.
 func KeepTempDirOnFailure(b bool) {
 	keepTempDirOnFailure = b
 }

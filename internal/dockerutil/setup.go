@@ -30,7 +30,7 @@ type DockerSetupTestingT interface {
 
 // CleanupLabel is a docker label key targeted by DockerSetup when it cleans up docker resources.
 //
-// "ibctest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
+// "interchaintest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
 // with the hyphen. Otherwise, we run the risk of causing "container already exists" errors because DockerSetup
 // is unable to clean old resources from docker engine.
 const CleanupLabel = "ibc-test"
@@ -40,8 +40,8 @@ const CleanupLabel = "ibc-test"
 // https://docs.docker.com/config/labels-custom-metadata/#key-format-recommendations.
 
 const (
-	// LabelPrefix is the reverse DNS format "namespace" for ibctest Docker labels.
-	LabelPrefix = "ventures.strangelove.ibctest."
+	// LabelPrefix is the reverse DNS format "namespace" for interchaintest Docker labels.
+	LabelPrefix = "ventures.strangelove.interchaintest."
 
 	// NodeOwnerLabel indicates the logical node owning a particular object (probably a volume).
 	NodeOwnerLabel = LabelPrefix + "node-owner"
@@ -54,7 +54,7 @@ const (
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the dockerutil package may set the variable to true.
 // Because dockerutil is an internal package, the public API for setting this value
-// is ibctest.KeepDockerVolumesOnFailure(bool).
+// is interchaintest.KeepDockerVolumesOnFailure(bool).
 var KeepVolumesOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
@@ -75,7 +75,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	// e.g. if the test was interrupted.
 	dockerCleanup(t, cli)()
 
-	name := fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8))
+	name := fmt.Sprintf("interchaintest-%s", RandLowerCaseLetterString(8))
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
 		CheckDuplicate: true,
 

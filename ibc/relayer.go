@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	chantypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
-	ptypes "github.com/cosmos/ibc-go/v6/modules/core/05-port/types"
-	host "github.com/cosmos/ibc-go/v6/modules/core/24-host"
+	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	ptypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
+	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 )
 
 // Relayer represents an instance of a relayer that can be support IBC.
@@ -85,7 +85,7 @@ type Relayer interface {
 	//
 	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
 	//
-	// Relayer implementations provided by the ibctest module will report true,
+	// Relayer implementations provided by the interchaintest module will report true,
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
 

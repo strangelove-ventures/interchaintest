@@ -6,8 +6,8 @@ package wasmclienttypes
 import (
 	fmt "fmt"
 	_go "github.com/confio/ics23/go"
-	types "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
-	types1 "github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
+	types "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	types1 "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"

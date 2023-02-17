@@ -1,4 +1,4 @@
-## NOTICE: This file gets embedded into ibctest binary.
+## NOTICE: This file gets embedded into interchaintest binary.
 ## Set the environment variable: IBCTEST_CONFIGURED_CHAINS to a path
 ## to use custom versions of this file
 
@@ -56,6 +56,20 @@ icad:
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/icad
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+ibc-go-simd:
+  name: ibc-go-simd
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: photon
+  gas-prices: 0.0photon
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/ibc-go-simd
       uid-gid: 1025:1025
   no-host-mount: false
 

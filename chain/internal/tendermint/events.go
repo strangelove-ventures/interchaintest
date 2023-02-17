@@ -1,6 +1,8 @@
 package tendermint
 
 import (
+	"encoding/base64"
+
 	abcitypes "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -13,8 +15,21 @@ func AttributeValue(events []abcitypes.Event, eventType, attrKey string) (string
 			continue
 		}
 		for _, attr := range event.Attributes {
-			if string(attr.Key) == attrKey {
-				return string(attr.Value), true
+			if attr.Key == attrKey {
+				return attr.Value, true
+			}
+
+			// tendermint < v0.37-alpha returns base64 encoded strings in events.
+			key, err := base64.StdEncoding.DecodeString(attr.Key)
+			if err != nil {
+				continue
+			}
+			if string(key) == attrKey {
+				value, err := base64.StdEncoding.DecodeString(attr.Value)
+				if err != nil {
+					continue
+				}
+				return string(value), true
 			}
 		}
 	}

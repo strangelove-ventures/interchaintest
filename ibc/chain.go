@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/docker/docker/client"
-	//"github.com/strangelove-ventures/ibctest/v6/ibc"
+	//"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 type Chain interface {

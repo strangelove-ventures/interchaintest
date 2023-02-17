@@ -1,7 +1,7 @@
 package wasmclienttypes
 
 import (
-	exported "github.com/cosmos/ibc-go/v6/modules/core/exported"
+	exported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 )
 
 var (

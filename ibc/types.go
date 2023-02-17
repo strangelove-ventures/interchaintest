@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"strconv"
 
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
 
-// ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
+// ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
 	Type string `yaml:"type"`
@@ -39,7 +39,7 @@ type ChainConfig struct {
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
-	EncodingConfig *simappparams.EncodingConfig
+	EncodingConfig *testutil.TestEncodingConfig
 }
 
 func (c ChainConfig) Clone() ChainConfig {

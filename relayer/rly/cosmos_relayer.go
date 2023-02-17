@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
-	"github.com/strangelove-ventures/ibctest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"go.uber.org/zap"
 )
 
@@ -64,7 +64,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.1.2"
+	DefaultContainerVersion = "v2.2.0-rc3"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -221,6 +221,7 @@ func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChanne
 		"--order", channelOpts.Order.String(),
 		"--version", channelOpts.Version,
 		"--client-tp", clientOpt.TrustingPeriod,
+		"--debug",
 
 		"--home", homeDir,
 	}

@@ -38,7 +38,7 @@ func (r *FileRetriever) SingleFileContent(ctx context.Context, volumeName, relPa
 		return nil, err
 	}
 
-	containerName := fmt.Sprintf("ibctest-getfile-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
+	containerName := fmt.Sprintf("interchaintest-getfile-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
 
 	cc, err := r.cli.ContainerCreate(
 		ctx,

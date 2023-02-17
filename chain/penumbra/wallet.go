@@ -2,7 +2,7 @@ package penumbra
 
 import (
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 var _ ibc.Wallet = &PenumbraWallet{}
