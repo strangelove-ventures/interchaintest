@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -111,18 +112,18 @@ var extraFlags mainFlags
 // the parsed contents of the file referenced by the matrix flag,
 // or with a small reasonable default of rly against one gaia-osmosis set.
 func setUpTestMatrix() error {
-	//if extraFlags.MatrixFile == "" && isRunningInCI() {
-	//	currentDir, err := os.Getwd()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	extraFlags.MatrixFile = path.Join(currentDir, defaultRelativeCIMatrixFile)
-	//}
+	if extraFlags.MatrixFile == "" && isRunningInCI() {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		extraFlags.MatrixFile = path.Join(currentDir, defaultRelativeCIMatrixFile)
+	}
 
 	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
-		testMatrix.Relayers = []string{"hermes"}
+		testMatrix.Relayers = []string{"rly"}
 		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
 				{Name: "gaia", Version: "v7.0.1"},
