@@ -6,14 +6,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"encoding/json"
 
+	"github.com/icza/dyno"
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/ibctest/v6"
 	"github.com/strangelove-ventures/ibctest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v6/chain/polkadot"
 	"github.com/strangelove-ventures/ibctest/v6/ibc"
 	"github.com/strangelove-ventures/ibctest/v6/relayer"
-	"github.com/strangelove-ventures/ibctest/v6/relayer/hyperspace"
 	"github.com/strangelove-ventures/ibctest/v6/testreporter"
 	"github.com/strangelove-ventures/ibctest/v6/testutil"
 	"github.com/stretchr/testify/require"
@@ -42,6 +43,12 @@ import (
 // * Build local polkadot docker from  polkadot repo
 //     amd64: docker build -f scripts/ci/dockerfiles/polkadot/polkadot_builder.Dockerfile . -t polkadot-node:local
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
+
+const (
+	heightDelta    = uint64(20)
+	votingPeriod       = "30s"
+	maxDepositPeriod   = "10s"
+)
 
 // TestHyperspace features
 // * sets up a Polkadot parachain
@@ -131,7 +138,7 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-						Version:    "feat-wasm-client-230118",
+						Version:    "feat-wasm-client-230215v6",
 						UidGid:     "1025:1025",
 					},
 				},
@@ -145,6 +152,7 @@ func TestHyperspace(t *testing.T) {
 				//EncodingConfig: WasmClientEncoding(),
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
+				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
 	})
@@ -155,7 +163,6 @@ func TestHyperspace(t *testing.T) {
 	polkadotChain := chains[0].(*polkadot.PolkadotChain)
 	cosmosChain := chains[1].(*cosmos.CosmosChain)
 
-	fmt.Println("About to build relayer factory")
 	// Get a relayer instance
 	r := ibctest.NewBuiltinRelayerFactory(
 		ibc.Hyperspace,
@@ -163,14 +170,12 @@ func TestHyperspace(t *testing.T) {
 		// These two fields are used to pass in a custom Docker image built locally
 		relayer.ImagePull(false),
 		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"),
-		//relayer.CustomDockerImage("hyperspace", "local", "501:20"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
 	const pathName = "composable-simd"
 	const relayerName = "hyperspace"
 
-	fmt.Println("About to create interchain")
 	ic := ibctest.NewInterchain().
 		AddChain(polkadotChain).
 		AddChain(cosmosChain).
@@ -182,7 +187,6 @@ func TestHyperspace(t *testing.T) {
 			Path:    pathName,
 		})
 
-	fmt.Println("About to build interchain")
 	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
@@ -196,35 +200,167 @@ func TestHyperspace(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
-	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks1")
+	// Create a proposal, vote, and wait for it to pass. Return code hash for relayer.
+	codeHash := pushWasmContractViaGov(t, ctx, cosmosChain)
 
-	// Fund user1 on both relay and parachain, must wait a block to fund user2 due to same faucet address
+	// Set client contract hash in cosmos chain config
+	err = r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	require.NoError(t, err)
+
+	// Ensure parachain has started (starts 1 session/epoch after relay chain)
+	err = testutil.WaitForBlocks(ctx, 1, polkadotChain)
+	require.NoError(t, err, "polkadot chain failed to make blocks")
+
+	// Enable IBC transfers on parachain
+	err = polkadotChain.EnableIbcTransfers()
+	require.NoError(t, err)
+	
+	// Fund users on both cosmos and parachain, mints Asset 1 for Alice
 	fundAmount := int64(12_333_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, "user1", fundAmount, polkadotChain, cosmosChain)
-	polkadotUser, cosmosUser := users[0], users[1]
-	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
-	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks2")
+	polkadotUser, cosmosUser := fundUsers(t, ctx, fundAmount, polkadotChain, cosmosChain)
 
-	polkadotUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), polkadotChain.Config().Denom)
+	// Create new clients
+	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
-	fmt.Println("Polkadot user amount: ", polkadotUserAmount)
-	require.Equal(t, fundAmount, polkadotUserAmount, "Initial polkadot user amount not expected")
-	parachainUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), "")
-	require.NoError(t, err)
-	fmt.Println("Parachain user amount: ", parachainUserAmount)
-	require.Equal(t, fundAmount, parachainUserAmount, "Initial parachain user amount not expected")
-	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
-	require.NoError(t, err)
-	fmt.Println("Cosmos user amount: ", cosmosUserAmount)
-	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
-
-	// Store grandpa contract
-	codeHash, err := cosmosChain.StoreClientContract(ctx, cosmosUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm")
-	t.Logf("Contract codeHash: %s", codeHash)
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain) // these 1 block waits may be needed, not sure
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
+	// Create a new connection
+	err = r.CreateConnections(ctx, eRep, pathName)
+	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	// Create a new channel & get channels from each chain
+	err = r.CreateChannel(ctx, eRep, pathName, ibc.DefaultChannelOpts())
+	require.NoError(t, err)
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	// Get channels
+	cosmosChannelOutput, err := r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, len(cosmosChannelOutput), 1)
+	require.Equal(t, cosmosChannelOutput[0].ChannelID, "channel-0")
+	require.Equal(t, cosmosChannelOutput[0].PortID, "transfer")
+
+	polkadotChannelOutput, err := r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
+	require.NoError(t, err)
+	require.Equal(t, len(polkadotChannelOutput), 1)
+	require.Equal(t, polkadotChannelOutput[0].ChannelID, "channel-0")
+	require.Equal(t, polkadotChannelOutput[0].PortID, "transfer")
+
+	// Start relayer
+	r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err = r.StopRelayer(ctx, eRep)
+		if err != nil {
+			panic(err)
+		}
+	})
+	//err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
+	//require.NoError(t, err)
+
+	// Send 1.77 stake from cosmosUser to parachainUser
+	amountToSend := int64(1_770_000)
+	transfer := ibc.WalletAmount{
+		Address: polkadotUser.FormattedAddress(),
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  amountToSend,
+	}
+	tx, err := cosmosChain.SendIBCTransfer(ctx, cosmosChannelOutput[0].ChannelID, cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
+	/*// Trace IBC Denom of stake on parachain
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, cosmosChain.Config().Denom))
+	dstIbcDenom := srcDenomTrace.IBCDenom()
+	fmt.Println("Dst Ibc denom: ", dstIbcDenom)
+
+	// Test destination wallet has increased funds, this is not working, want to verify IBC balance on parachain
+	//pubKey, err := polkadot.DecodeAddressSS58(polkadotUser.FormattedAddress())
+	//polkadotUserIbcCoins2, err := polkadotChain.GetIbcBalance(ctx, pubKey)
+	//polkadotUserIbcCoins3, err := polkadotChain.GetIbcBalance(ctx, []byte(hex.EncodeToString(pubKey)))
+	polkadotUserIbcCoins, err := polkadotChain.GetIbcBalance(ctx, polkadotUser.Address())
+	fmt.Println("IbcCoins: ", polkadotUserIbcCoins.String(), "  -- this probably doesn't work, Error: ", err)*/
+
+	// Send 1.16 stake from parachainUser to cosmosUser
+	amountToReflect := int64(1_160_000)
+	reflectTransfer := ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom:   "2", // stake
+		Amount:  amountToReflect,
+	}
+	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, polkadotUser.KeyName(), reflectTransfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+
+	// Send 1.88 "UNIT" from Alice to cosmosUser
+	amountUnits := int64(1_880_000_000_000)
+	unitTransfer := ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom:   "1", // UNIT
+		Amount:  amountUnits,
+	}
+	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, "alice", unitTransfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+
+	// Wait for MsgRecvPacket on cosmos chain
+	finalStakeBal := fundAmount - amountToSend + amountToReflect
+	err = cosmos.PollForBalance(ctx, cosmosChain, 20, ibc.WalletAmount{
+		Address: cosmosUser.FormattedAddress(),
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  finalStakeBal,
+	})
+	require.NoError(t, err)
+
+	// Verify final cosmos user "stake" balance
+	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, finalStakeBal, cosmosUserStakeBal)
+	// Verify final cosmos user "unit" balance
+	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(polkadotChannelOutput[0].PortID, polkadotChannelOutput[0].ChannelID, "UNIT"))
+	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
+	require.NoError(t, err)
+	require.Equal(t, amountUnits, cosmosUserUnitBal)
+}
+
+type GetCodeQueryMsgResponse struct {
+	Code []byte `json:"code"`
+}
+
+func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
+	// Set up cosmos user for pushing new wasm code msg via governance
+	fundAmountForGov := int64(10_000_000_000)
+	contractUsers := ibctest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmountForGov), cosmosChain)
+	contractUser := contractUsers[0]
+
+	contractUserBalInitial, err := cosmosChain.GetBalance(ctx, contractUser.FormattedAddress(), cosmosChain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, fundAmountForGov, contractUserBalInitial)
+
+	proposal := cosmos.TxProposalv1{
+		Metadata: "none",
+		Deposit: "500000000" + cosmosChain.Config().Denom, // greater than min deposit
+		Title: "Grandpa Contract",
+		Summary: "new grandpa contract",
+	}
+
+	proposalTx, codeHash, err := cosmosChain.PushNewWasmClientProposal(ctx, contractUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm", proposal)
+	require.NoError(t, err, "error submitting new wasm contract proposal tx")
+
+	height, err := cosmosChain.Height(ctx)
+	require.NoError(t, err, "error fetching height before submit upgrade proposal")
+	
+	err = cosmosChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
+	require.NoError(t, err, "failed to submit votes")
+
+	_, err = cosmos.PollForProposalStatus(ctx, cosmosChain, height, height+heightDelta, proposalTx.ProposalID, cosmos.ProposalStatusPassed)
+	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
+
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain)
 	require.NoError(t, err)
 
 	var getCodeQueryMsgRsp GetCodeQueryMsgResponse
@@ -236,174 +372,57 @@ func TestHyperspace(t *testing.T) {
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
 
-	// Set client contract hash in cosmos chain config
-	err = r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	return codeHash
+}
+
+func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain)(ibc.Wallet, ibc.Wallet) {
+	users := ibctest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
+	polkadotUser, cosmosUser := users[0], users[1]
+	err := testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
+	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")
+
+	// Check balances are correct
+	polkadotUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
-
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintCoreConfig(ctx, eRep)
-
-	// Create new clients
-	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
+	require.Equal(t, fundAmount, polkadotUserAmount, "Initial polkadot user amount not expected")
+	parachainUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), "")
 	require.NoError(t, err)
-
-	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
+	require.Equal(t, fundAmount, parachainUserAmount, "Initial parachain user amount not expected")
+	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-
-	// Create a new connection
-	err = r.CreateConnections(ctx, eRep, pathName)
-	require.NoError(t, err)
-
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-
-	// Create a new channel & get channels from each chain
-	err = r.CreateChannel(ctx, eRep, pathName, ibc.DefaultChannelOpts())
-	require.NoError(t, err)
-
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, cosmosChain.Config().ChainID)
-	r.(*hyperspace.HyperspaceRelayer).DockerRelayer.PrintConfigs(ctx, eRep, polkadotChain.Config().ChainID)
-
-	// Hyperspace panics on "hyperspace query channels --config xxx", this is needed.
-	cosmosChannelOutput, err := r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
-	require.NoError(t, err)
-	require.Equal(t, len(cosmosChannelOutput), 1)
-
-	require.Equal(t, cosmosChannelOutput[0].ChannelID, "channel-0")
-	require.Equal(t, cosmosChannelOutput[0].PortID, "transfer")
-
-	//fmt.Println("Cosmos connection: ", cosmosConnections[0].ID)
-	polkadotChannelOutput, err := r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
-	require.NoError(t, err)
-
-	require.Equal(t, polkadotChannelOutput[0].ChannelID, "channel-0")
-	require.Equal(t, polkadotChannelOutput[0].PortID, "transfer")
-
-	require.Equal(t, len(polkadotChannelOutput), 1)
-
-	//fmt.Println("Polkadot connection: ", polkadotConnections[0].ID)
-	//	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain)
-	//	require.NoError(t, err)
-
-	err = polkadotChain.EnableIbcTransfers()
-	require.NoError(t, err)
-
-	// Start relayer
-	r.StartRelayer(ctx, eRep, pathName)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		err = r.StopRelayer(ctx, eRep)
-		if err != nil {
-			panic(err)
-		}
-	})
-	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-
-	// Mint 100 UNIT for alice and "polkadotUser", not sure why the ~1.5M UNIT from balance/genesis doesn't work
+	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
+	
+	// Mint 100 "UNIT"/"Asset 1" for alice , not sure why the ~1.5M UNIT from balance/genesis doesn't work
 	mint := ibc.WalletAmount{
-		Address: polkadotUser.FormattedAddress(),
-		Denom:   "1",
-		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
-	}
-	err = polkadotChain.MintFunds("alice", mint)
-	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-	mint2 := ibc.WalletAmount{
 		Address: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Alice
 		Denom:   "1",
 		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
 	}
-	err = polkadotChain.MintFunds("alice", mint2)
+	err = polkadotChain.(*polkadot.PolkadotChain).MintFunds("alice", mint)
 	require.NoError(t, err)
 
-	// Send IBC Transaction, from Cosmos to Parachain (stake)
-	amountToSend := int64(1_770_000)
-	transfer := ibc.WalletAmount{
-		Address: polkadotUser.FormattedAddress(),
-		Denom:   cosmosChain.Config().Denom,
-		Amount:  amountToSend,
-	}
-	tx, err := cosmosChain.SendIBCTransfer(ctx, cosmosChannelOutput[0].ChannelID, cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
-	require.NoError(t, err)
-	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
-
-	err = testutil.WaitForBlocks(ctx, 10, cosmosChain, polkadotChain)
-	require.NoError(t, err)
-
-	// Verify cosmosUser balance went down 1.77M
-	expectedBal := cosmosUserAmount - amountToSend
-	cosmosUserBalNew, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, expectedBal, cosmosUserBalNew)
-
-	// Trace IBC Denom of stake on parachain
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, cosmosChain.Config().Denom))
-	dstIbcDenom := srcDenomTrace.IBCDenom()
-	fmt.Println("Dst Ibc denom: ", dstIbcDenom)
-
-	// Test destination wallet has increased funds, this is not working
-	//pubKey, err := polkadot.DecodeAddressSS58(polkadotUser.FormattedAddress())
-	//polkadotUserIbcCoins2, err := polkadotChain.GetIbcBalance(ctx, pubKey)
-	//polkadotUserIbcCoins3, err := polkadotChain.GetIbcBalance(ctx, []byte(hex.EncodeToString(pubKey)))
-	polkadotUserIbcCoins, err := polkadotChain.GetIbcBalance(ctx, polkadotUser.Address())
-	fmt.Println("IbcCoins: ", polkadotUserIbcCoins.String(), "  -- this probably doesn't work, Error: ", err)
-
-	// Send 1.18M stake from ParachainUser to CosmosUser
-	amountToSend2 := int64(1_180_000)
-	transfer2 := ibc.WalletAmount{
-		Address: cosmosUser.FormattedAddress(),
-		Denom:   "2", // stake
-		Amount:  amountToSend2,
-	}
-	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, polkadotUser.KeyName(), transfer2, ibc.TransferOptions{})
-	require.NoError(t, err)
-
-	// Send 1.88T "UNIT" from Alice to CosmosUser
-	amountToSend1 := int64(1_880_000_000_000)
-	transfer1 := ibc.WalletAmount{
-		Address: cosmosUser.FormattedAddress(),
-		Denom:   "1", // UNIT
-		Amount:  amountToSend1,
-	}
-	_, err = polkadotChain.SendIBCTransfer(ctx, polkadotChannelOutput[0].ChannelID, "alice", transfer1, ibc.TransferOptions{})
-	require.NoError(t, err)
-
-	// Wait for MsgRecvPacket
-	pollForBalance := ibc.WalletAmount{
-		Address: cosmosUser.FormattedAddress(),
-		Denom:   cosmosChain.Config().Denom,
-		Amount:  expectedBal + amountToSend2,
-	}
-	err = cosmos.PollForBalance(ctx, cosmosChain, 30, pollForBalance)
-	require.NoError(t, err)
-
-	// Verify final balances
-	cosmosUserNativeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, pollForBalance.Amount, cosmosUserNativeBal)
-	fmt.Println("Initial: ", cosmosUserAmount, "   Middle:", cosmosUserBalNew, "  Final: ", cosmosUserNativeBal)
-	// Trace IBC Denom
-	srcDenomTrace2 := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(polkadotChannelOutput[0].PortID, polkadotChannelOutput[0].ChannelID, "UNIT"))
-	dstIbcDenom2 := srcDenomTrace2.IBCDenom()
-	fmt.Println("Dst Ibc denom:2 ", dstIbcDenom2)
-	cosmosUserIbcBal2, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), dstIbcDenom2)
-	require.NoError(t, err)
-	require.Equal(t, amountToSend1, cosmosUserIbcBal2)
-	fmt.Println("CosmosUserIbcBal2: ", cosmosUserIbcBal2)
+	return polkadotUser, cosmosUser
 }
 
-type GetCodeQueryMsgResponse struct {
-	Code []byte `json:"code"`
+func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) func(ibc.ChainConfig, []byte) ([]byte, error) {
+	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
+		g := make(map[string]interface{})
+		if err := json.Unmarshal(genbz, &g); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
+		}
+		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "deposit_params", "min_deposit", 0, "denom"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		out, err := json.Marshal(g)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+		}
+		return out, nil
+	}
 }
