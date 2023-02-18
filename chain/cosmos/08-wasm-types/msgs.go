@@ -1,4 +1,4 @@
-package wasmclienttypes
+package wasm
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"

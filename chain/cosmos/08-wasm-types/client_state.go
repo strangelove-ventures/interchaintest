@@ -1,7 +1,6 @@
-package wasmclienttypes
+package wasm
 
 import (
-	ics23 "github.com/confio/ics23/go"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
@@ -55,7 +54,7 @@ func (c ClientState) VerifyMembership(
 	delayTimePeriod uint64,
 	delayBlockPeriod uint64,
 	proof []byte,
-	path []byte,
+	path exported.Path,
 	value []byte,
 ) error {
 	return nil
@@ -69,7 +68,7 @@ func (c ClientState) VerifyNonMembership(
 	delayTimePeriod uint64,
 	delayBlockPeriod uint64,
 	proof []byte,
-	path []byte,
+	path exported.Path,
 ) error {
 	return nil
 }
@@ -114,17 +113,11 @@ func (c ClientState) VerifyUpgradeAndUpdateState(
 	return nil
 }
 
-func (c *ClientState) GetProofSpecs() []*ics23.ProofSpec {
-	return c.ProofSpecs
-}
-
 // NewClientState creates a new ClientState instance.
 func NewClientState(latestSequence uint64, consensusState *ConsensusState) *ClientState {
 	return &ClientState{
 		Data:         []byte{0},
 		CodeId:       []byte{},
 		LatestHeight: clienttypes.Height{},
-		ProofSpecs:   []*ics23.ProofSpec{},
-		Repository:   "",
 	}
 }

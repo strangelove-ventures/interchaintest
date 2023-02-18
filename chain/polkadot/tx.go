@@ -86,8 +86,9 @@ func SendIbcFundsTx(
 	height := gstypes.NewOptionU64(gstypes.NewU64(3000)) // Must set timestamp or height
 	assetId := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewU128(*big.NewInt(amount.Amount))
+	memo := gstypes.NewU8(0)
 
-	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetId, amount2)
+	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetId, amount2, memo)
 	if err != nil {
 		return hash, err
 	}
@@ -107,7 +108,7 @@ func MintFundsTx(
 		return hash, err
 	}
 
-	assetNum, err := strconv.ParseUint(amount.Denom, 10, 64)
+	assetNum, err := strconv.ParseInt(amount.Denom, 10, 64)
 	if err != nil {
 		return hash, err
 	}
@@ -122,7 +123,7 @@ func MintFundsTx(
 		return hash, err
 	}
 
-	assetId := gstypes.NewUCompactFromUInt(assetNum)
+	assetId := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewUCompactFromUInt(uint64(amount.Amount))
 
 	call, err := gstypes.NewCall(meta, "Assets.mint", assetId, receiver, amount2)

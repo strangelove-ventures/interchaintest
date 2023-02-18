@@ -26,20 +26,20 @@ import (
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
 // * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
-// * Commit: 1880a8439ccc480b0b16e07a6e37840893df4344
+// * Commit: 617a8b6b8e71b00cbed05498d87e43db2b6df952
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
 // * Branch: vmarkushin/cosmos-client+ics10-grandpa-cw
-// * Commit: 1880a8439ccc480b0b16e07a6e37840893df4344
+// * Commit: 617a8b6b8e71b00cbed05498d87e43db2b6df952
 // * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
 // ###### polkadot ######
 // * Repo: paritytech/polkadot
-// * Branch: release-v0.9.33
-// * Commit: c7d6c21242fc654f6f069e12c00951484dff334d
+// * Branch: release-v0.9.36
+// * Commit: dc25abc712e42b9b51d87ad1168e453a42b5f0bc
 // * Build local polkadot docker from  polkadot repo
 //     amd64: docker build -f scripts/ci/dockerfiles/polkadot/polkadot_builder.Dockerfile . -t polkadot-node:local
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
@@ -138,7 +138,7 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-						Version:    "feat-wasm-client-230215v6",
+						Version:    "feat-wasm-clients",
 						UidGid:     "1025:1025",
 					},
 				},
@@ -410,14 +410,14 @@ func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) f
 		if err := json.Unmarshal(genbz, &g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
 		}
-		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
+		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "params", "voting_period"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
-		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
-			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "params", "max_deposit_period"); err != nil {
+			return nil, fmt.Errorf("failed to set max deposit period in genesis json: %w", err)
 		}
-		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "deposit_params", "min_deposit", 0, "denom"); err != nil {
-			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "params", "min_deposit", 0, "denom"); err != nil {
+			return nil, fmt.Errorf("failed to set min deposit in genesis json: %w", err)
 		}
 		out, err := json.Marshal(g)
 		if err != nil {

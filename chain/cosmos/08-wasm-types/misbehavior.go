@@ -1,4 +1,4 @@
-package wasmclienttypes
+package wasm
 
 import (
 	exported "github.com/cosmos/ibc-go/v7/modules/core/exported"

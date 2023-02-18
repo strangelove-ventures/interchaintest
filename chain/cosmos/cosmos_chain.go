@@ -361,7 +361,7 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 	if err != nil {
 		return tx, "", err
 	}
-	message := wasmclienttypes.MsgPushNewWasmCode{
+	message := wasm.MsgPushNewWasmCode{
 		Signer: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		Code: content,
 	}

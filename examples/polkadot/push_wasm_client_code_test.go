@@ -69,7 +69,7 @@ func TestPushWasmClientCode(t *testing.T) {
 			Images: []ibc.DockerImage{
 				{
 					Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-					Version:    "feat-wasm-client-230215v6",
+					Version:    "feat-wasm-clients",
 					UidGid:     "1025:1025",
 				},
 			},
@@ -108,7 +108,7 @@ func TestPushWasmClientCode(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(100_000_000)
+	fundAmount := int64(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), simd)
 	simd1User := users[0]
 
@@ -164,13 +164,13 @@ func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) f
 		if err := json.Unmarshal(genbz, &g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
 		}
-		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "voting_params", "voting_period"); err != nil {
+		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "params", "voting_period"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
-		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "deposit_params", "max_deposit_period"); err != nil {
+		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "params", "max_deposit_period"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
-		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "deposit_params", "min_deposit", 0, "denom"); err != nil {
+		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "params", "min_deposit", 0, "denom"); err != nil {
 			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
 		}
 		out, err := json.Marshal(g)
