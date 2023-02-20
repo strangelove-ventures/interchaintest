@@ -223,7 +223,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create new clients
-	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
+	err = r.CreateClients(ctx, eRep, pathName, ibc.DefaultClientOpts())
 	require.NoError(t, err)
 	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain) // these 1 block waits may be needed, not sure
 	require.NoError(t, err)
@@ -262,8 +262,6 @@ func TestHyperspace(t *testing.T) {
 			panic(err)
 		}
 	})
-	//err = testutil.WaitForBlocks(ctx, 2, cosmosChain, polkadotChain)
-	//require.NoError(t, err)
 
 	// Send 1.77 stake from cosmosUser to parachainUser
 	amountToSend := int64(1_770_000)

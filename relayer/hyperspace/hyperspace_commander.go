@@ -20,7 +20,6 @@ import (
 type hyperspaceCommander struct {
 	log              *zap.Logger
 	paths            map[string]*pathConfiguration
-	//chainConfigPaths []string
 	extraStartFlags  []string
 }
 
@@ -62,15 +61,10 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []
 
 func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateChannel", pathName, homeDir)
-	/*if len(c.chainConfigPaths) < 2 {
-		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
-		panic("Hyperspace needs two chain configs")
+	_, ok := c.paths[pathName]
+	if !ok {
+		panic(fmt.Sprintf("path %s not found", pathName))
 	}
-	// Temporarily force simd for chain A and rococo for chain B
-	simd := 1
-	if strings.Contains(c.chainConfigPaths[0], "simd") {
-		simd = 0
-	}*/
 	return []string{
 		"hyperspace",
 		"create-channel",
@@ -93,15 +87,10 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
-	/*if len(c.chainConfigPaths) < 2 {
-		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
-		panic("Hyperspace needs two chain configs")
+	_, ok := c.paths[pathName]
+	if !ok {
+		panic(fmt.Sprintf("path %s not found", pathName))
 	}
-	// Temporarily force simd for chain A and rococo for chain B
-	simd := 1
-	if strings.Contains(c.chainConfigPaths[0], "simd") {
-		simd = 0
-	}*/
 	return []string{
 		"hyperspace",
 		"create-clients",
@@ -120,22 +109,12 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 	}
 }
 
-// Hyperspace doesn't implement this
-//func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingPeriod string) []string {
-//	panic("[CreateClient] Do not use me")
-//}
-
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
-	/*if len(c.chainConfigPaths) < 2 {
-		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
-		panic("Hyperspace needs two chain configs")
+	_, ok := c.paths[pathName]
+	if !ok {
+		panic(fmt.Sprintf("path %s not found", pathName))
 	}
-	// Temporarily force simd for chain A and rococo for chain B
-	simd := 1
-	if strings.Contains(c.chainConfigPaths[0], "simd") {
-		simd = 0
-	}*/
 	return []string{
 		"hyperspace",
 		"create-connection",
@@ -232,18 +211,17 @@ func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic,
 	panic("[RestoreKey] Do not use me")
 }
 
+// hyperspace can only start 1 path
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
 	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
-	/*if len(c.chainConfigPaths) < 2 {
-		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
-		panic("Hyperspace needs two chain configs")
+	if len(pathNames) != 1 {
+		panic("Hyperspace's StartRelayer list of paths can only have 1 path")
 	}
-	// Temporarily force simd for chain A and rococo for chain B
-	simd := 1
-	if strings.Contains(c.chainConfigPaths[0], "simd") {
-		simd = 0
-	}*/
 	pathName := pathNames[0]
+	_, ok := c.paths[pathName]
+	if !ok {
+		panic(fmt.Sprintf("path %s not found", pathName))
+	}
 	return []string{
 		"hyperspace",
 		"relay",
@@ -255,7 +233,6 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
 		"0",
-		//"10",
 		"--port-id",
 		"transfer",
 		"--order",

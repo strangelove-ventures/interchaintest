@@ -20,7 +20,6 @@ var _ ibc.Relayer = &HyperspaceRelayer{}
 // FlushAcknowledgements() - no hyperspace implementation yet
 // FlushPackets() - no hypersapce implementation yet
 // UpdatePath() - hyperspace doesn't understand paths, may not be needed.
-// LinkPath() - doesn't make sense for hyperspace, interchaintest.Build() will fail because of parachain setup time (if used with parachain)
 // UpdateClients() - no hyperspace implementation yet
 // AddKey() - no hyperspace implementation yet
 
@@ -29,7 +28,6 @@ var _ ibc.Relayer = &HyperspaceRelayer{}
 type HyperspaceRelayer struct {
 	// Embedded DockerRelayer so commands just work.
 	*relayer.DockerRelayer
-	hc *hyperspaceCommander
 }
 
 func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *HyperspaceRelayer {
@@ -59,7 +57,6 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 
 	r := &HyperspaceRelayer{
 		DockerRelayer: dr,
-		hc: &c,
 	}
 
 	return r
@@ -72,6 +69,25 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 func HyperspaceCapabilities() map[relayer.Capability]bool {
 	// RC1 matches the full set of capabilities as of writing.
 	return nil // relayer.FullCapabilities()
+}
+
+// LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
+// and establishing a channel. This happens across multiple operations rather than a single link path cli command.
+// Parachains need a Polkadot epoch/session before starting, do not link in interchain.Build()
+func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
+	if err := r.CreateClients(ctx, rep, pathName, clientOpts); err != nil {
+		return err
+	}
+
+	if err := r.CreateConnections(ctx, rep, pathName); err != nil {
+		return err
+	}
+
+	if err := r.CreateChannel(ctx, rep, pathName, channelOpts); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
