@@ -15,6 +15,10 @@ import (
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
+type HyperspaceRelayerCoreConfig struct {
+	PrometheusEndpoint string
+}
+
 type HyperspaceRelayerSubstrateChainConfig struct {
 	Type             string `toml:"type"`
 	Name             string `toml:"name"`

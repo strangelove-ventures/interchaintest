@@ -19,9 +19,23 @@ import (
 // hyperspaceCommander satisfies relayer.RelayerCommander.
 type hyperspaceCommander struct {
 	log              *zap.Logger
-	chainConfigPaths []string
+	paths            map[string]*pathConfiguration
+	//chainConfigPaths []string
 	extraStartFlags  []string
-	//dockerRelayer     *relayer.DockerRelayer
+}
+
+// pathConfiguration represents the concept of a "path" which is implemented at the interchain test level rather
+// than the hyperspace level.
+type pathConfiguration struct {
+	chainA, chainB pathChainConfig
+}
+
+// pathChainConfig holds all values that will be required when interacting with a path.
+type pathChainConfig struct {
+	chainID      string
+	clientID     string
+	connectionID string
+	portID       string
 }
 
 func (hyperspaceCommander) Name() string {
@@ -34,7 +48,7 @@ func (hyperspaceCommander) DockerUser() string {
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
-	c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
+	//c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
 	return []string{
 		"hyperspace",
 		"-h",
@@ -48,7 +62,7 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []
 
 func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateChannel", pathName, homeDir)
-	if len(c.chainConfigPaths) < 2 {
+	/*if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -56,19 +70,18 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
-	}
+	}*/
 	return []string{
 		"hyperspace",
 		"create-channel",
 		"--config-a",
-		c.chainConfigPaths[simd],
+		configPath(homeDir, c.paths[pathName].chainA.chainID),
 		"--config-b",
-		c.chainConfigPaths[(simd+1)%2],
+		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
 		"0",
-		//"10",
 		"--port-id",
 		opts.SourcePortName,
 		"--order",
@@ -80,7 +93,7 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
-	if len(c.chainConfigPaths) < 2 {
+	/*if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -88,19 +101,18 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
-	}
+	}*/
 	return []string{
 		"hyperspace",
 		"create-clients",
 		"--config-a",
-		c.chainConfigPaths[simd],
+		configPath(homeDir, c.paths[pathName].chainA.chainID),
 		"--config-b",
-		c.chainConfigPaths[(simd+1)%2],
+		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
 		"0",
-		//"10",
 		"--port-id",
 		"transfer",
 		"--order",
@@ -109,13 +121,13 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 }
 
 // Hyperspace doesn't implement this
-func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingPeriod string) []string {
-	panic("[CreateClient] Do not use me")
-}
+//func (hyperspaceCommander) CreateClient(pathName, homeDir, customClientTrustingPeriod string) []string {
+//	panic("[CreateClient] Do not use me")
+//}
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
-	if len(c.chainConfigPaths) < 2 {
+	/*if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -123,19 +135,18 @@ func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []stri
 	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
-	}
+	}*/
 	return []string{
 		"hyperspace",
 		"create-connection",
 		"--config-a",
-		c.chainConfigPaths[simd],
+		configPath(homeDir, c.paths[pathName].chainA.chainID),
 		"--config-b",
-		c.chainConfigPaths[(simd+1)%2],
+		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
 		"0",
-		//"10",
 		"--port-id",
 		"transfer",
 		"--order",
@@ -153,9 +164,20 @@ func (hyperspaceCommander) FlushPackets(pathName, channelID, homeDir string) []s
 	panic("[FlushPackets] Do not call me")
 }
 
-// Hyperspace does not have paths, just two configs
-func (hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
-	panic("[GeneratePath] Do not call me")
+// GeneratePath establishes an in memory path representation. The concept does not exist in hyperspace.
+func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+	if c.paths == nil {
+		c.paths = map[string]*pathConfiguration{}
+	}
+	c.paths[pathName] = &pathConfiguration{
+		chainA: pathChainConfig{
+			chainID: srcChainID,
+		},
+		chainB: pathChainConfig{
+			chainID: dstChainID,
+		},
+	}
+	return []string{"true"}
 }
 
 // Hyperspace does not have paths, just two configs
@@ -205,21 +227,14 @@ func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.Cr
 }
 
 // There is no hyperspace call to restore the key, so this can't return an executable.
-// DockerRelayer's RestoreKey will restore the key in the chain's config file
-// For now, we will hack this for cosmos chain's use case
+// HyperspaceRelayer's RestoreKey will restore the key in the chain's config file
 func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic, homeDir string) []string {
-	keyEntry := GenKeyEntry(bech32Prefix, coinType, mnemonic)
-	return []string{
-		keyEntry.Account,
-		keyEntry.PrivateKey,
-		keyEntry.PublicKey,
-		string(keyEntry.Address),
-	}
+	panic("[RestoreKey] Do not use me")
 }
 
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
 	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
-	if len(c.chainConfigPaths) < 2 {
+	/*if len(c.chainConfigPaths) < 2 {
 		fmt.Println("ChainConfigPaths length: ", len(c.chainConfigPaths))
 		panic("Hyperspace needs two chain configs")
 	}
@@ -227,14 +242,15 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 	simd := 1
 	if strings.Contains(c.chainConfigPaths[0], "simd") {
 		simd = 0
-	}
+	}*/
+	pathName := pathNames[0]
 	return []string{
 		"hyperspace",
 		"relay",
 		"--config-a",
-		c.chainConfigPaths[simd],
+		configPath(homeDir, c.paths[pathName].chainA.chainID),
 		"--config-b",
-		c.chainConfigPaths[(simd+1)%2],
+		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
@@ -390,4 +406,9 @@ func (hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.W
 		return NewWallet("", "", "")
 	}
 	return NewWallet("", kp.Address, mnemonic)
+}
+
+func configPath(homeDir, chainID string) string {
+	chainConfigFile := chainID + ".config"
+	return path.Join(homeDir, chainConfigFile)
 }

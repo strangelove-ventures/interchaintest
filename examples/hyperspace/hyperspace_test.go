@@ -219,6 +219,9 @@ func TestHyperspace(t *testing.T) {
 	fundAmount := int64(12_333_000_000_000)
 	polkadotUser, cosmosUser := fundUsers(t, ctx, fundAmount, polkadotChain, cosmosChain)
 
+	err = r.GeneratePath(ctx, eRep, cosmosChain.Config().ChainID, polkadotChain.Config().ChainID, pathName)
+	require.NoError(t, err)
+
 	// Create new clients
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)

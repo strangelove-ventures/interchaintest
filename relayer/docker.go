@@ -15,7 +15,6 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
@@ -44,10 +43,6 @@ type DockerRelayer struct {
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
-}
-
-type HyperspaceRelayerCoreConfig struct {
-	PrometheusEndpoint string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -125,21 +120,27 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		}
 	}
 
-	if r.c.Name() == "hyperspace" {
-		coreConfig := HyperspaceRelayerCoreConfig{
-			PrometheusEndpoint: "",
-		}
-		bytes, err := toml.Marshal(coreConfig)
-		if err != nil {
-			return nil, err
-		}
-		fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
-		if err := fw.WriteFile(ctx, r.volumeName, "core.config", bytes); err != nil {
-			return nil, fmt.Errorf("failed writing core config: %w", err)
-		}
-	}
-
 	return &r, nil
+}
+
+// WriteFileToHomeDir writes the given contents to a file at the relative path specified. The file is relative
+// to the home directory in the relayer container.
+func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath string, contents []byte) error {
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, relativePath, contents); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
+// Modify a toml config file in relayer home directory
+func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
+	return  testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)
+}
+
+// AddWallet adds a stores a wallet for the given chain ID.
+func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
+	r.wallets[chainID] = wallet
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
@@ -198,21 +199,18 @@ func (r *DockerRelayer) GetWallet(chainID string) (ibc.Wallet, bool) {
 
 func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	cmd := r.c.CreateChannel(pathName, opts, r.HomeDir())
-	fmt.Println("Create Channel cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
 
 func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
-	fmt.Println("Create Client cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
 
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.HomeDir())
-	fmt.Println("Create connection cmd: ", cmd)
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -312,84 +310,24 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 }
 
 func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
-	addrBytes := ""
 	chainID := cfg.ChainID
 	coinType := cfg.CoinType
-	chainType := cfg.Type
 
-	switch r.c.Name() {
-	case "hyperspace":
-		chainConfig := make(testutil.Toml)
-		switch chainType {
-		case "cosmos":
-			//chainConfig["private_key"] = mnemonic
-			bech32Prefix := cfg.Bech32Prefix
-			keyEntry := r.c.RestoreKey(chainID, bech32Prefix, coinType, mnemonic, r.HomeDir())
-			keyEntryOverrides := make(testutil.Toml)
-			keyEntryOverrides["account"] = keyEntry[0]
-			keyEntryOverrides["private_key"] = keyEntry[1]
-			keyEntryOverrides["public_key"] = keyEntry[2]
-			keyEntryOverrides["address"] = []byte(keyEntry[3])
-			chainConfig["keybase"] = keyEntryOverrides
-		case "polkadot":
-			//chainConfig["private_key"] = "//Alice"
-			chainConfig["private_key"] = mnemonic
-		}
-		chainConfigFile := chainID + ".config"
-		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
-		if err != nil {
-			return err
-		}
-	case "rly":
-		cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
+	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
-		// Restoring a key should be near-instantaneous, so add a 1-minute timeout
-		// to detect if Docker has hung.
-		ctx, cancel := context.WithTimeout(ctx, time.Minute)
-		defer cancel()
+	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
+	// to detect if Docker has hung.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
 
-		res := r.Exec(ctx, rep, cmd, nil)
-		if res.Err != nil {
-			return res.Err
-		}
-		addrBytes = r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return res.Err
 	}
-
+	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
 	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
 
-	return nil
-}
-
-func (r *DockerRelayer) PrintCoreConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
-	cmd := []string{
-		"cat",
-		path.Join(r.HomeDir(), "core.config"),
-	}
-		
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	res := r.Exec(ctx, rep, cmd, nil)
-	if res.Err != nil {
-		return res.Err
-	}
-	fmt.Println(string(res.Stdout))
-	return nil
-}
-
-func (r *DockerRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) error {
-	cmd := []string{
-		"cat",
-		path.Join(r.HomeDir(), chainID+".config"),
-	}
-		
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-	res := r.Exec(ctx, rep, cmd, nil)
-	if res.Err != nil {
-		return res.Err
-	}
-	fmt.Println(string(res.Stdout))
 	return nil
 }
 
@@ -566,20 +504,7 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 }
 
 func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
-	switch r.c.Name() {
-	case "hyperspace":
-		chainConfig := make(testutil.Toml)
-		chainConfig["wasm_code_id"] = hash
-		chainConfigFile := cfg.ChainID + ".config"
-		err := testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, chainConfigFile, chainConfig)
-		if err != nil {
-			return err
-		}
-	case "rly":
-		panic("[rly/SetClientContractHash] Implement me")
-	}
-
-	return nil
+	panic("[rly/SetClientContractHash] Implement me")
 }
 
 type RelayerCommander interface {
