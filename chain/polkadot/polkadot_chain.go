@@ -27,6 +27,9 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
+// Increase polkadot scaled wallet amounts relative to cosmos
+const polkadotScaling = int64(1_000_000)
+
 // PolkadotChain implements the ibc.Chain interface for substrate chains.
 type PolkadotChain struct {
 	log                *zap.Logger
@@ -296,7 +299,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	}
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount},
+			[]interface{}{wallet.Address, wallet.Amount * polkadotScaling},
 		)
 	}
 
