@@ -64,11 +64,8 @@ type Relayer interface {
 	// StopRelayer stops a relayer that started work through StartRelayer.
 	StopRelayer(ctx context.Context, rep RelayerExecReporter) error
 
-	// FlushPackets flushes any outstanding packets and then returns.
-	FlushPackets(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
-
-	// FlushAcknowledgements flushes any outstanding acknowledgements and then returns.
-	FlushAcknowledgements(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
+	// Flush flushes any outstanding packets and then returns.
+	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.

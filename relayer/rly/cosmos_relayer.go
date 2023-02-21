@@ -162,18 +162,16 @@ func (commander) CreateConnections(pathName, homeDir string) []string {
 	}
 }
 
-func (commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-acks", pathName, channelID,
-		"--home", homeDir,
+func (commander) Flush(pathName, channelID, homeDir string) []string {
+	cmd := []string{"rly", "tx", "flush"}
+	if pathName != "" {
+		cmd = append(cmd, pathName)
+		if channelID != "" {
+			cmd = append(cmd, channelID)
+		}
 	}
-}
-
-func (commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-pkts", pathName, channelID,
-		"--home", homeDir,
-	}
+	cmd = append(cmd, "--home", homeDir)
+	return cmd
 }
 
 func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
