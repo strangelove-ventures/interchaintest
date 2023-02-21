@@ -68,7 +68,7 @@ type ChainNodes []*ChainNode
 
 const (
 	valKey      = "validator"
-	blockTime   = 6 // seconds
+	blockTime   = 2 // seconds
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"

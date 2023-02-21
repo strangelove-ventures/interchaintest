@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 	"encoding/json"
 
 	"github.com/icza/dyno"
@@ -89,7 +90,15 @@ func TestHyperspace(t *testing.T) {
 	rpcOverrides := make(testutil.Toml)
 	rpcOverrides["max_body_bytes"] = 1_800_000
 	rpcOverrides["max_header_bytes"] = 1_900_000
+	
+	consensusOverrides := make(testutil.Toml)
+	blockTime   := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
+	blockT := (time.Duration(blockTime) * time.Second).String()
+	consensusOverrides["timeout_commit"] = blockT
+	consensusOverrides["timeout_propose"] = blockT
+
 	configTomlOverrides["rpc"] = rpcOverrides
+	configTomlOverrides["consensus"] = consensusOverrides
 
 	//mempoolOverrides := make(testutil.Toml)
 	//mempoolOverrides["max_tx_bytes"] = 6000000
