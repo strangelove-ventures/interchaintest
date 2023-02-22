@@ -110,8 +110,8 @@ func TestPacket_Equal(t *testing.T) {
 		require.Equal(t, tt.WantEqual, tt.Left.Equal(tt.Right), tt)
 		require.Equal(t, tt.WantEqual, tt.Right.Equal(tt.Left), tt)
 
-		require.True(t, tt.Left.Equal(tt.Left))
-		require.True(t, tt.Right.Equal(tt.Right))
+		require.True(t, tt.Left.Equal(tt.Left))   //nolint:gocritic
+		require.True(t, tt.Right.Equal(tt.Right)) //nolint:gocritic
 	}
 }
 

@@ -24,7 +24,7 @@ func CustomDockerImage(repository string, version string, uidGid string) Option 
 		DockerImage: ibc.DockerImage{
 			Repository: repository,
 			Version:    version,
-			UidGid:     uidGid,
+			UIDGid:     uidGid,
 		},
 	}
 }

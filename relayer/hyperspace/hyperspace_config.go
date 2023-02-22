@@ -97,11 +97,11 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 
 func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
 	chainType := chainConfig.Type
-	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" { //nolint:goconst
 		chainType = "parachain"
 	}
 
-	if chainType == "parachain" {
+	if chainType == "parachain" { //nolint:gocritic
 		addrs := strings.Split(rpcAddr, ",")
 		paraRPCAddr := rpcAddr
 		relayRPCAddr := grpcAddr

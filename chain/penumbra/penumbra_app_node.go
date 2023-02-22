@@ -224,7 +224,7 @@ func (p *AppNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     p.Image.UidGid,
+			User:     p.Image.UIDGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -278,7 +278,7 @@ func (p *AppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte,
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGid,
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err

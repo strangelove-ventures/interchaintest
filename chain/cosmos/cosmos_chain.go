@@ -76,7 +76,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 		Images: []ibc.DockerImage{
 			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-				UidGid:     dockerutil.GetHeighlinerUserString(),
+				UIDGid:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: binary,
@@ -577,7 +577,7 @@ func (c *Chain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGid:     image.UidGid,
+		UIDGid:     image.UIDGid,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}

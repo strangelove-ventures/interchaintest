@@ -32,9 +32,9 @@ type pathConfiguration struct {
 // pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
 	chainID      string
-	clientID     string
-	connectionID string
-	portID       string
+	clientID     string //nolint:unused
+	connectionID string //nolint:unused
+	portID       string //nolint:unused
 }
 
 func (hyperspaceCommander) Name() string {
@@ -281,8 +281,8 @@ func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.
 	for _, line := range lines {
 		if strings.Contains(line, ": ") {
 			channel := strings.Split(line, ": ")
-			channelId := channel[0]
-			portId := channel[1]
+			channelID := channel[0]
+			portID := channel[1]
 
 			outputs = append(outputs, ibc.ChannelOutput{
 				State:    "",
@@ -293,8 +293,8 @@ func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.
 				},
 				ConnectionHops: []string{},
 				Version:        "",
-				PortID:         portId,
-				ChannelID:      channelId,
+				PortID:         portID,
+				ChannelID:      channelID,
 			})
 		}
 	}
@@ -304,23 +304,23 @@ func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	clientId := ""
-	connectionId := ""
+	clientID := ""
+	connectionID := ""
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "client_id") {
 			fields := strings.Split(line, "\"")
-			clientId = fields[1]
+			clientID = fields[1]
 		}
 		if strings.Contains(line, "connection_id") {
 			fields := strings.Split(line, "\"")
-			connectionId = fields[1]
+			connectionID = fields[1]
 		}
 	}
 	return ibc.ConnectionOutputs{
 		&ibc.ConnectionOutput{
-			ID:       connectionId,
-			ClientID: clientId,
+			ID:       connectionID,
+			ClientID: clientID,
 			Versions: []*ibcexported.Version{
 				{
 					Identifier: "",
@@ -343,24 +343,24 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	clientId := ""
-	chainId := ""
+	clientID := ""
+	chainID := ""
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "client_id") {
 			fields := strings.Split(line, "\"")
-			clientId = fields[1]
+			clientID = fields[1]
 		}
 		if strings.Contains(line, "chain_id") {
 			fields := strings.Split(line, "\"")
-			chainId = fields[1]
+			chainID = fields[1]
 		}
 	}
 	return ibc.ClientOutputs{
 		&ibc.ClientOutput{
-			ClientID: clientId,
+			ClientID: clientID,
 			ClientState: ibc.ClientState{
-				ChainID: chainId,
+				ChainID: chainID,
 			},
 		},
 	}, nil

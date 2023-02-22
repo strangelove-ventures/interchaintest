@@ -181,7 +181,7 @@ func (pn *ParachainNode) ParachainID(ctx context.Context) (int, error) {
 		return -1, res.Err
 	}
 	out := GetParachainIDResponse{}
-	if err := json.Unmarshal([]byte(res.Stdout), &out); err != nil {
+	if err := json.Unmarshal(res.Stdout, &out); err != nil {
 		return -1, err
 	}
 	return out.ParachainID, nil
@@ -272,7 +272,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: pn.HostName(),
-			User:     pn.Image.UidGid,
+			User:     pn.Image.UIDGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: pn.TestName},
 
@@ -320,9 +320,9 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 	pn.hostWsPort = dockerutil.GetHostPort(c, wsPort)
 	pn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
 
-	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+	explorerURL := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(pn.hostWsPort, "localhost", "127.0.0.1", 1))
-	pn.log.Info(explorerUrl, zap.String("container", pn.Name()))
+	pn.log.Info(explorerURL, zap.String("container", pn.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -342,7 +342,7 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: pn.Bind(),
 		Env:   env,
-		User:  pn.Image.UidGid,
+		User:  pn.Image.UIDGid,
 	}
 	return job.Run(ctx, cmd, opts)
 }

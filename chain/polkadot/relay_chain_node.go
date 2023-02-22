@@ -45,7 +45,7 @@ type RelayChainNode struct {
 
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
-	hostRpcPort string
+	hostRPCPort string
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -125,14 +125,14 @@ func (p *RelayChainNode) EcdsaAddress() (string, error) {
 
 // MultiAddress returns the p2p multiaddr of the node.
 func (p *RelayChainNode) MultiAddress() (string, error) {
-	peerId, err := p.PeerID()
+	peerID, err := p.PeerID()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerID), nil
 }
 
-func (c *RelayChainNode) logger() *zap.Logger {
+func (c *RelayChainNode) logger() *zap.Logger { //nolint:revive
 	return c.log.With(
 		zap.String("chain_id", c.Chain.Config().ChainID),
 		zap.String("test", c.TestName),
@@ -239,7 +239,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			Cmd:        cmd,
 
 			Hostname: p.HostName(),
-			User:     p.Image.UidGid,
+			User:     p.Image.UIDGid,
 
 			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
 
@@ -285,12 +285,12 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 
 	// Set the host ports once since they will not change after the container has started.
 	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
-	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+	explorerURL := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
-	p.log.Info(explorerUrl, zap.String("container", p.Name()))
+	p.log.Info(explorerURL, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -312,7 +312,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGid,
 	}
 	return job.Run(ctx, cmd, opts)
 }

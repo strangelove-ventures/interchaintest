@@ -39,7 +39,7 @@ func TestInterchainQueries(t *testing.T) {
 	dockerImage := ibc.DockerImage{
 		Repository: "ghcr.io/strangelove-ventures/heighliner/icqd",
 		Version:    "latest",
-		UidGid:     dockerutil.GetHeighlinerUserString(),
+		UIDGid:     dockerutil.GetHeighlinerUserString(),
 	}
 
 	// Get both chains

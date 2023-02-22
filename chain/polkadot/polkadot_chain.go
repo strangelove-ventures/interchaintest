@@ -74,7 +74,7 @@ type ParachainConfig struct {
 // IndexedName is a slice of the substrate dev key names used for key derivation.
 var (
 	IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-	IndexedUri  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+	IndexedURI  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
 )
 
 // NewChain returns an uninitialized Chain, which implements the ibc.Chain interface.
@@ -139,14 +139,14 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 		}
 
 		accountKeyName := IndexedName[i]
-		accountKeyUri := IndexedUri[i]
+		accountKeyURI := IndexedURI[i]
 		stashKeyName := accountKeyName + "stash"
-		stashKeyUri := accountKeyUri + "//stash"
-		err = c.RecoverKey(ctx, accountKeyName, accountKeyUri)
+		stashKeyURI := accountKeyURI + "//stash"
+		err = c.RecoverKey(ctx, accountKeyName, accountKeyURI)
 		if err != nil {
 			return err
 		}
-		err = c.RecoverKey(ctx, stashKeyName, stashKeyUri)
+		err = c.RecoverKey(ctx, stashKeyName, stashKeyURI)
 		if err != nil {
 			return err
 		}
@@ -188,7 +188,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 			VolumeName: v.Name,
 			ImageRef:   chainCfg.Images[0].Ref(),
 			TestName:   testName,
-			UIDGid:     chainCfg.Images[0].UidGid,
+			UIDGid:     chainCfg.Images[0].UIDGid,
 		}); err != nil {
 			return fmt.Errorf("set volume owner: %w", err)
 		}
@@ -235,7 +235,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 				VolumeName: v.Name,
 				ImageRef:   parachainConfig.Image.Ref(),
 				TestName:   testName,
-				UIDGid:     parachainConfig.Image.UidGid,
+				UIDGid:     parachainConfig.Image.UIDGid,
 			}); err != nil {
 				return fmt.Errorf("set volume owner: %w", err)
 			}
@@ -507,9 +507,9 @@ func (c *Chain) GetRPCAddress() string {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
 	relaychainHostName := c.RelayChainNodes[0].HostName()
-	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
-	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
-	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
+	parachainURL := fmt.Sprintf("http://%s:%s", parachainHostName, port)
+	relaychainURL := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
+	return fmt.Sprintf("%s,%s", parachainURL, relaychainURL)
 	// return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
 }
 
@@ -529,7 +529,7 @@ func (c *Chain) GetHostRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		return c.ParachainNodes[0][0].hostRPCPort
 	}
-	return c.RelayChainNodes[0].hostRpcPort
+	return c.RelayChainNodes[0].hostRPCPort
 }
 
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.

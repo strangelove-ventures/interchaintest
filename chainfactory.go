@@ -139,9 +139,9 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
 		return penumbra.NewChain(log, testName, cfg, nv, nf), nil
-	case "polkadot":
+	case "polkadot": //nolint:goconst
 		// TODO Clean this up. RelayChain config should only reference cfg.Images[0] and parachains should iterate through the remaining
-		// Maybe just pass everything in like NewCosmosChain and NewPenumbraChain, let NewPolkadotChain figure it out
+		// Maybe just pass everything in like cosmos.NewChain and penumbra.NewChain, let polkadot.NewChain figure it out
 		// Or parachains and ICS consumer chains maybe should be their own chain
 		switch {
 		case strings.Contains(cfg.Name, "composable"):

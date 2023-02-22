@@ -152,7 +152,7 @@ func (c ChainConfig) IsFullyConfigured() bool {
 type DockerImage struct {
 	Repository string `yaml:"repository"`
 	Version    string `yaml:"version"`
-	UidGid     string `yaml:"uid-gid"`
+	UIDGid     string `yaml:"uid-gid"`
 }
 
 // Ref returns the reference to use when e.g. creating a container.

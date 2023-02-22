@@ -119,12 +119,12 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "polkadot-node",
 						Version:    "local",
-						UidGid:     "1025:1025",
+						UIDGid:     "1025:1025",
 					},
 					{
 						Repository: "parachain-node",
 						Version:    "local",
-						// UidGid: "1025:1025",
+						// UIDGid: "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
@@ -148,7 +148,7 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
 						Version:    "feat-wasm-clients",
-						UidGid:     "1025:1025",
+						UIDGid:     "1025:1025",
 					},
 				},
 				Bin:            "simd",

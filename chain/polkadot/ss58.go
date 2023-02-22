@@ -40,7 +40,7 @@ func DecodeAddressSS58(address string) ([]byte, error) {
 		return nil, err
 	}
 	var checksumLength int
-	if IntInSlice(len(ss58AddrDecoded), []int{3, 4, 6, 10}) {
+	if IntInSlice(len(ss58AddrDecoded), []int{3, 4, 6, 10}) { //nolint:gocritic
 		checksumLength = 1
 	} else if IntInSlice(len(ss58AddrDecoded), []int{5, 7, 11, 35}) {
 		checksumLength = 2
@@ -61,7 +61,7 @@ func DecodeAddressSS58(address string) ([]byte, error) {
 	}
 	bss := ss58AddrDecoded[0 : len(ss58AddrDecoded)-checksumLength]
 	checksum, _ := blake2b.New(64, []byte{})
-	w := append(checksumPrefix, bss...)
+	w := append(checksumPrefix, bss...) //nolint:gocritic
 	_, err = checksum.Write(w)
 	if err != nil {
 		return nil, err

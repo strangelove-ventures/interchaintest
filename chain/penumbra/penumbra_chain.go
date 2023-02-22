@@ -290,7 +290,7 @@ func (c *Chain) initializeChainNodes(
 			VolumeName: tn.VolumeName,
 			ImageRef:   tn.Image.Ref(),
 			TestName:   tn.TestName,
-			UIDGid:     tn.Image.UidGid,
+			UIDGid:     tn.Image.UIDGid,
 		}); err != nil {
 			return fmt.Errorf("set tendermint volume owner: %w", err)
 		}
@@ -318,7 +318,7 @@ func (c *Chain) initializeChainNodes(
 			VolumeName: pn.VolumeName,
 			ImageRef:   pn.Image.Ref(),
 			TestName:   pn.TestName,
-			UIDGid:     tn.Image.UidGid,
+			UIDGid:     tn.Image.UIDGid,
 		}); err != nil {
 			return fmt.Errorf("set penumbra volume owner: %w", err)
 		}
