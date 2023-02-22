@@ -87,7 +87,7 @@ func (f builtinRelayerFactory) Name() string {
 		// to subtest paths, when the factory name is used in calls to t.Run.
 		for _, opt := range f.options {
 			switch o := opt.(type) {
-			case relayer.RelayerOptionDockerImage:
+			case relayer.OptionDockerImage:
 				return "rly@" + o.DockerImage.Version
 			}
 		}

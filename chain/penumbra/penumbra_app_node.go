@@ -128,8 +128,8 @@ func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error
 func (p *PenumbraAppNode) GenerateGenesisFile(
 	ctx context.Context,
 	chainID string,
-	validators []PenumbraValidatorDefinition,
-	allocations []PenumbraGenesisAppStateAllocation,
+	validators []ValidatorDefinition,
+	allocations []GenesisAppStateAllocation,
 ) error {
 	validatorsJson, err := json.Marshal(validators)
 	if err != nil {

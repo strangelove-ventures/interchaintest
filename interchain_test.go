@@ -283,7 +283,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	})
 
 	t.Run("broadcast success", func(t *testing.T) {
-		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
+		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.Chain))
 		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sdk.NewInt(sendAmount)}
 		memo := ""
 
@@ -292,12 +292,12 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 			"channel-0",
 			transferAmount,
 			testUser.FormattedAddress(),
-			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
+			testUser.(*cosmos.Wallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
 			clienttypes.NewHeight(1, 1000),
 			0,
 			memo,
 		)
-		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
+		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.Wallet), msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})
@@ -308,7 +308,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.Wallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.Equal(t, sendAmount, dstFinalBalance)
 	})

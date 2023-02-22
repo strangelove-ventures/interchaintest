@@ -150,12 +150,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	// will send ibc transfers from user wallet on both chains to their own respective wallet on the other chain
 
 	testCoinSrcToDst := ibc.WalletAmount{
-		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
+		Address: srcUser.(*cosmos.Wallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
-		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
+		Address: dstUser.(*cosmos.Wallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
 		Amount:  testCoinAmount,
 	}
@@ -422,10 +422,10 @@ func testPacketRelaySuccess(
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.Wallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.Wallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -454,10 +454,10 @@ func testPacketRelaySuccess(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.Wallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.Wallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
@@ -507,10 +507,10 @@ func testPacketRelayFail(
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.Wallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, srcUser.(*cosmos.Wallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstIbcDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
@@ -534,10 +534,10 @@ func testPacketRelayFail(
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
 
-		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
+		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.Wallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
-		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
+		dstFinalBalance, err := dstChain.GetBalance(ctx, dstUser.(*cosmos.Wallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix), dstDenom)
 		req.NoError(err, "failed to get balance from destination chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)

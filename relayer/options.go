@@ -12,7 +12,7 @@ type Option interface {
 }
 type Options []Option
 
-type RelayerOptionDockerImage struct {
+type OptionDockerImage struct {
 	DockerImage ibc.DockerImage
 }
 
@@ -20,7 +20,7 @@ type RelayerOptionDockerImage struct {
 // uidGid is the uid:gid format owner that should be used within the container.
 // If uidGid is empty, root user will be assumed.
 func CustomDockerImage(repository string, version string, uidGid string) Option {
-	return RelayerOptionDockerImage{
+	return OptionDockerImage{
 		DockerImage: ibc.DockerImage{
 			Repository: repository,
 			Version:    version,
@@ -29,7 +29,7 @@ func CustomDockerImage(repository string, version string, uidGid string) Option 
 	}
 }
 
-func (opt RelayerOptionDockerImage) relayerOption() {}
+func (opt OptionDockerImage) relayerOption() {}
 
 type RelayerOptionImagePull struct {
 	Pull bool
@@ -43,15 +43,15 @@ func ImagePull(pull bool) Option {
 
 func (opt RelayerOptionImagePull) relayerOption() {}
 
-type RelayerOptionExtraStartFlags struct {
+type OptionExtraStartFlags struct {
 	Flags []string
 }
 
 // StartupFlags appends additional flags when starting the relayer.
 func StartupFlags(flags ...string) Option {
-	return RelayerOptionExtraStartFlags{
+	return OptionExtraStartFlags{
 		Flags: flags,
 	}
 }
 
-func (opt RelayerOptionExtraStartFlags) relayerOption() {}
+func (opt OptionExtraStartFlags) relayerOption() {}

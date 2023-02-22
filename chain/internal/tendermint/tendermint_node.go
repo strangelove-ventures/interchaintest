@@ -26,7 +26,7 @@ import (
 )
 
 // TendermintNode represents a node in the test network that is being created
-type TendermintNode struct {
+type Node struct {
 	Log *zap.Logger
 
 	VolumeName   string
@@ -42,7 +42,7 @@ type TendermintNode struct {
 }
 
 // TendermintNodes is a collection of TendermintNode
-type TendermintNodes []*TendermintNode
+type Nodes []*Node
 
 const (
 	// BlockTimeSeconds (in seconds) is approx time to create a block
@@ -63,8 +63,8 @@ var sentryPorts = nat.PortSet{
 	nat.Port(privValPort): {},
 }
 
-// NewClient creates and assigns a new Tendermint RPC client to the TendermintNode
-func (tn *TendermintNode) NewClient(addr string) error {
+// NewClient creates and assigns a new Tendermint RPC client to the Node
+func (tn *Node) NewClient(addr string) error {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
 		return err
@@ -81,15 +81,15 @@ func (tn *TendermintNode) NewClient(addr string) error {
 }
 
 // Name is the hostname of the test node container
-func (tn *TendermintNode) Name() string {
+func (tn *Node) Name() string {
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
-func (tn *TendermintNode) HostName() string {
+func (tn *Node) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
+func (tn *Node) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
 	if err != nil {
@@ -99,7 +99,7 @@ func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error
 	return gen, nil
 }
 
-func (tn *TendermintNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
+func (tn *Node) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
@@ -120,16 +120,16 @@ type PrivValidatorKeyFile struct {
 }
 
 // Bind returns the home folder bind point for running the node
-func (tn *TendermintNode) Bind() []string {
+func (tn *Node) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
 
-func (tn *TendermintNode) HomeDir() string {
+func (tn *Node) HomeDir() string {
 	return path.Join("/var/tendermint", tn.Chain.Config().Name)
 }
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
-func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
+func (tn *Node) SetConfigAndPeers(ctx context.Context, peers string) error {
 	c := make(testutil.Toml)
 
 	sep, err := tn.GetConfigSeparator()
@@ -177,7 +177,7 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 // Tenderment deprecate snake_case in config for hyphen-case in v0.34.1
 // https://github.com/tendermint/tendermint/blob/main/CHANGELOG.md#v0341
-func (tn *TendermintNode) GetConfigSeparator() (string, error) {
+func (tn *Node) GetConfigSeparator() (string, error) {
 	sep := "_"
 
 	currentTnVersion, err := version.NewVersion(tn.Image.Version[1:])
@@ -195,7 +195,7 @@ func (tn *TendermintNode) GetConfigSeparator() (string, error) {
 	return sep, nil
 }
 
-func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
+func (tn *Node) Height(ctx context.Context) (uint64, error) {
 	stat, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint client status: %w", err)
@@ -204,7 +204,7 @@ func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
 }
 
 // InitHomeFolder initializes a home folder for the given node
-func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error {
+func (tn *Node) InitHomeFolder(ctx context.Context, mode string) error {
 	command := []string{
 		tn.Chain.Config().Bin, "init", mode,
 		"--home", tn.HomeDir(),
@@ -213,7 +213,7 @@ func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error
 	return err
 }
 
-func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFlags ...string) error {
+func (tn *Node) CreateNodeContainer(ctx context.Context, additionalFlags ...string) error {
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
@@ -254,12 +254,12 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	return nil
 }
 
-func (tn *TendermintNode) StopContainer(ctx context.Context) error {
+func (tn *Node) StopContainer(ctx context.Context) error {
 	timeout := 30 * time.Second
 	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
 }
 
-func (tn *TendermintNode) StartContainer(ctx context.Context) error {
+func (tn *Node) StartContainer(ctx context.Context) error {
 	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
 		return err
 	}
@@ -294,16 +294,16 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
-func (tn *TendermintNode) InitValidatorFiles(ctx context.Context) error {
+func (tn *Node) InitValidatorFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx, "validator")
 }
 
-func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
+func (tn *Node) InitFullNodeFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx, "full")
 }
 
 // NodeID returns the node of a given node
-func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
+func (tn *Node) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
@@ -322,7 +322,7 @@ func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
 }
 
 // PeerString returns the string for connecting the nodes passed in
-func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) string {
+func (tn Nodes) PeerString(ctx context.Context, node *Node) string {
 	addrs := make([]string, len(tn))
 	for i, n := range tn {
 		if n == node {
@@ -344,7 +344,7 @@ func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) 
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes
-func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
+func (tn Nodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range tn {
 		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
@@ -355,7 +355,7 @@ func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
 	return nil
 }
 
-func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
+func (tn *Node) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewImage(tn.Log, tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
@@ -365,7 +365,7 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 	return res.Stdout, res.Stderr, res.Err
 }
 
-func (tn *TendermintNode) logger() *zap.Logger {
+func (tn *Node) logger() *zap.Logger {
 	return tn.Log.With(
 		zap.String("chain_id", tn.Chain.Config().ChainID),
 		zap.String("test", tn.TestName),

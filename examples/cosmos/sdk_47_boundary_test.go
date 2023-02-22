@@ -40,7 +40,7 @@ func TestSDK47Boundary(t *testing.T) {
 
 	client, network := interchaintest.DockerSetup(t)
 
-	chain, counterpartyChain := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
+	chain, counterpartyChain := chains[0].(*cosmos.Chain), chains[1].(*cosmos.Chain)
 
 	const (
 		path        = "ibc-path"

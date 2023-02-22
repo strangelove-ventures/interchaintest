@@ -67,7 +67,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case RelayerOptionDockerImage:
+		case OptionDockerImage:
 			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
 			r.pullImage = o.Pull

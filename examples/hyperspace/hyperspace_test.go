@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
-	"encoding/json"
 
-	"github.com/icza/dyno"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
@@ -46,9 +46,9 @@ import (
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
 
 const (
-	heightDelta    = uint64(20)
-	votingPeriod       = "30s"
-	maxDepositPeriod   = "10s"
+	heightDelta      = uint64(20)
+	votingPeriod     = "30s"
+	maxDepositPeriod = "10s"
 )
 
 // TestHyperspace features
@@ -90,9 +90,9 @@ func TestHyperspace(t *testing.T) {
 	rpcOverrides := make(testutil.Toml)
 	rpcOverrides["max_body_bytes"] = 1_800_000
 	rpcOverrides["max_header_bytes"] = 1_900_000
-	
+
 	consensusOverrides := make(testutil.Toml)
-	blockTime   := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
+	blockTime := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensusOverrides["timeout_commit"] = blockT
 	consensusOverrides["timeout_propose"] = blockT
@@ -100,9 +100,9 @@ func TestHyperspace(t *testing.T) {
 	configTomlOverrides["rpc"] = rpcOverrides
 	configTomlOverrides["consensus"] = consensusOverrides
 
-	//mempoolOverrides := make(testutil.Toml)
-	//mempoolOverrides["max_tx_bytes"] = 6000000
-	//configTomlOverrides["mempool"] = mempoolOverrides
+	// mempoolOverrides := make(testutil.Toml)
+	// mempoolOverrides["max_tx_bytes"] = 6000000
+	// configTomlOverrides["mempool"] = mempoolOverrides
 
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 	configFileOverrides["config/config.toml"] = configTomlOverrides
@@ -124,7 +124,7 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "parachain-node",
 						Version:    "local",
-						//UidGid: "1025:1025",
+						// UidGid: "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
@@ -158,10 +158,10 @@ func TestHyperspace(t *testing.T) {
 				GasAdjustment:  1.3,
 				TrustingPeriod: "504h",
 				CoinType:       "118",
-				//EncodingConfig: WasmClientEncoding(),
+				// EncodingConfig: WasmClientEncoding(),
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
-				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
 	})
@@ -170,7 +170,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	polkadotChain := chains[0].(*polkadot.PolkadotChain)
-	cosmosChain := chains[1].(*cosmos.CosmosChain)
+	cosmosChain := chains[1].(*cosmos.Chain)
 
 	// Get a relayer instance
 	r := interchaintest.NewBuiltinRelayerFactory(
@@ -223,7 +223,7 @@ func TestHyperspace(t *testing.T) {
 	// Enable IBC transfers on parachain
 	err = polkadotChain.EnableIbcTransfers()
 	require.NoError(t, err)
-	
+
 	// Fund users on both cosmos and parachain, mints Asset 1 for Alice
 	fundAmount := int64(12_333_000_000_000)
 	polkadotUser, cosmosUser := fundUsers(t, ctx, fundAmount, polkadotChain, cosmosChain)
@@ -341,7 +341,7 @@ type GetCodeQueryMsgResponse struct {
 	Code []byte `json:"code"`
 }
 
-func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
+func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.Chain) string {
 	// Set up cosmos user for pushing new wasm code msg via governance
 	fundAmountForGov := int64(10_000_000_000)
 	contractUsers := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmountForGov), cosmosChain)
@@ -353,9 +353,9 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
-		Deposit: "500000000" + cosmosChain.Config().Denom, // greater than min deposit
-		Title: "Grandpa Contract",
-		Summary: "new grandpa contract",
+		Deposit:  "500000000" + cosmosChain.Config().Denom, // greater than min deposit
+		Title:    "Grandpa Contract",
+		Summary:  "new grandpa contract",
 	}
 
 	proposalTx, codeHash, err := cosmosChain.PushNewWasmClientProposal(ctx, contractUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm", proposal)
@@ -363,7 +363,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	height, err := cosmosChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
-	
+
 	err = cosmosChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
@@ -385,7 +385,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 	return codeHash
 }
 
-func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain)(ibc.Wallet, ibc.Wallet) {
+func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain) (ibc.Wallet, ibc.Wallet) {
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
 	polkadotUser, cosmosUser := users[0], users[1]
 	err := testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
@@ -401,7 +401,7 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
-	
+
 	// Mint 100 "UNIT"/"Asset 1" for alice , not sure why the ~1.5M UNIT from balance/genesis doesn't work
 	mint := ibc.WalletAmount{
 		Address: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", // Alice

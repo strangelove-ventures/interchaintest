@@ -136,9 +136,9 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 
 	switch cfg.Type {
 	case "cosmos":
-		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
+		return cosmos.NewChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
-		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
+		return penumbra.NewChain(log, testName, cfg, nv, nf), nil
 	case "polkadot":
 		// TODO Clean this up. RelayChain config should only reference cfg.Images[0] and parachains should iterate through the remaining
 		// Maybe just pass everything in like NewCosmosChain and NewPenumbraChain, let NewPolkadotChain figure it out

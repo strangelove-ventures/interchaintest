@@ -48,7 +48,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	chain := chains[0].(*cosmos.CosmosChain)
+	chain := chains[0].(*cosmos.Chain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(chain)

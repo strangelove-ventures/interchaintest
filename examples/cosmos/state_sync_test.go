@@ -61,7 +61,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	chain := chains[0].(*cosmos.CosmosChain)
+	chain := chains[0].(*cosmos.Chain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(chain)

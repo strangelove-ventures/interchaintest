@@ -11,7 +11,7 @@ import (
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
-func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status string) (ProposalResponse, error) {
+func PollForProposalStatus(ctx context.Context, chain *Chain, startHeight, maxHeight uint64, proposalID string, status string) (ProposalResponse, error) {
 	var zero ProposalResponse
 	doPoll := func(ctx context.Context, height uint64) (ProposalResponse, error) {
 		p, err := chain.QueryProposal(ctx, proposalID)
@@ -29,7 +29,7 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 
 // PollForMessage searches every transaction for a message. Must pass a coded registry capable of decoding the cosmos transaction.
 // fn is optional. Return true from the fn to stop polling and return the found message. If fn is nil, returns the first message to match type T.
-func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry codectypes.InterfaceRegistry, startHeight, maxHeight uint64, fn func(found T) bool) (T, error) {
+func PollForMessage[T any](ctx context.Context, chain *Chain, registry codectypes.InterfaceRegistry, startHeight, maxHeight uint64, fn func(found T) bool) (T, error) {
 	var zero T
 	if fn == nil {
 		fn = func(T) bool { return true }
@@ -61,7 +61,7 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 }
 
 // PollForBalance polls until the balance matches
-func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64, balance ibc.WalletAmount) error {
+func PollForBalance(ctx context.Context, chain *Chain, deltaBlocks uint64, balance ibc.WalletAmount) error {
 	h, err := chain.Height(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get height: %w", err)

@@ -79,7 +79,7 @@ func TestUpdateLightClients(t *testing.T) {
 	require.NoError(t, err)
 
 	amountToSend := int64(553255) // Unique amount to make log searching easier.
-	dstAddress := osmoUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(osmosis.Config().Bech32Prefix)
+	dstAddress := osmoUser.(*cosmos.Wallet).FormattedAddressWithPrefix(osmosis.Config().Bech32Prefix)
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
@@ -89,7 +89,7 @@ func TestUpdateLightClients(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 
-	chain := osmosis.(*cosmos.CosmosChain)
+	chain := osmosis.(*cosmos.Chain)
 	reg := chain.Config().EncodingConfig.InterfaceRegistry
 	msg, err := cosmos.PollForMessage[*clienttypes.MsgUpdateClient](ctx, chain, reg, height, height+10, nil)
 	require.NoError(t, err)

@@ -34,7 +34,7 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 	c := hyperspaceCommander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
+		case relayer.OptionExtraStartFlags:
 			c.extraStartFlags = o.Flags
 		}
 	}

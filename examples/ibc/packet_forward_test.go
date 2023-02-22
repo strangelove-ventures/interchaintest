@@ -56,7 +56,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	chainA, chainB, chainC, chainD := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain), chains[2].(*cosmos.CosmosChain), chains[3].(*cosmos.CosmosChain)
+	chainA, chainB, chainC, chainD := chains[0].(*cosmos.Chain), chains[1].(*cosmos.Chain), chains[2].(*cosmos.Chain), chains[3].(*cosmos.Chain)
 
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,

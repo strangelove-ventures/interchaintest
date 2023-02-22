@@ -19,7 +19,7 @@ type OsmosisPoolParams struct {
 	FutureGovernor string `json:"future-governor"`
 }
 
-func OsmosisCreatePool(c *CosmosChain, ctx context.Context, keyName string, params OsmosisPoolParams) (string, error) {
+func OsmosisCreatePool(c *Chain, ctx context.Context, keyName string, params OsmosisPoolParams) (string, error) {
 	tn := c.getFullNode()
 	poolbz, err := json.Marshal(params)
 	if err != nil {
@@ -56,7 +56,7 @@ func OsmosisCreatePool(c *CosmosChain, ctx context.Context, keyName string, para
 	return numPools, nil
 }
 
-func OsmosisSwapExactAmountIn(c *CosmosChain, ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
+func OsmosisSwapExactAmountIn(c *Chain, ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
 	return c.getFullNode().ExecTx(ctx, keyName,
 		"gamm", "swap-exact-amount-in",
 		coinIn, minAmountOut,

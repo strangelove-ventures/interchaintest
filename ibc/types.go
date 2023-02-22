@@ -62,13 +62,12 @@ func (c ChainConfig) VerifyCoinType() (string, error) {
 			return "", err
 		}
 		return coinType, nil
-	} else {
-		_, err := strconv.ParseUint(c.CoinType, 10, 32)
-		if err != nil {
-			return "", err
-		}
-		return c.CoinType, nil
 	}
+	_, err := strconv.ParseUint(c.CoinType, 10, 32)
+	if err != nil {
+		return "", err
+	}
+	return c.CoinType, nil
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {

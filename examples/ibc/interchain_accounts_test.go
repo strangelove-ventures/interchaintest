@@ -60,7 +60,7 @@ func TestInterchainAccounts(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
+		relayer.OptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -115,7 +115,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.Equal(t, 1, len(connections))
 
 	// Register a new interchain account on chain2, on behalf of the user acc on chain1
-	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
+	chain1Addr := chain1User.(*cosmos.Wallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
 
 	registerICA := []string{
 		chain1.Config().Bin, "tx", "intertx", "register",
@@ -161,7 +161,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NotEmpty(t, icaAddr)
 
 	// Get initial account balances
-	chain2Addr := chain2User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
+	chain2Addr := chain2User.(*cosmos.Wallet).FormattedAddressWithPrefix(chain2.Config().Bech32Prefix)
 
 	chain2OrigBal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)

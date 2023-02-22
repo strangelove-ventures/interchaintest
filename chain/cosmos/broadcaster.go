@@ -37,7 +37,7 @@ type Broadcaster struct {
 	keyrings map[User]keyring.Keyring
 
 	// chain is a reference to the CosmosChain instance which will be the target of the messages.
-	chain *CosmosChain
+	chain *Chain
 	// t is the testing.T for the current test.
 	t *testing.T
 
@@ -49,7 +49,7 @@ type Broadcaster struct {
 
 // NewBroadcaster returns a instance of Broadcaster which can be used with broadcast.Tx to
 // broadcast messages sdk messages.
-func NewBroadcaster(t *testing.T, chain *CosmosChain) *Broadcaster {
+func NewBroadcaster(t *testing.T, chain *Chain) *Broadcaster {
 	return &Broadcaster{
 		t:        t,
 		chain:    chain,

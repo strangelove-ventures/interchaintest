@@ -26,7 +26,7 @@ func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 	c := commander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
+		case relayer.OptionExtraStartFlags:
 			c.extraStartFlags = o.Flags
 		}
 	}
