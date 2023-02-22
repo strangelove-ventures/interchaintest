@@ -124,7 +124,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 	}
 	for i := 0; i < c.numRelayChainNodes; i++ {
 		seed := make([]byte, 32)
-		rand.Read(seed) 
+		rand.Read(seed)
 
 		nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
 		if err != nil {
