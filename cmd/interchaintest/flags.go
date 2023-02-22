@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/strangelove-ventures/ibctest/v5"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,7 +31,7 @@ func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
 		w = os.Stdout
 		lc.FilePath = "stdout"
 	default:
-		file, err := ibctest.CreateLogFile(f.LogFile)
+		file, err := interchaintest.CreateLogFile(f.LogFile)
 		if err != nil {
 			return lc, fmt.Errorf("create log file: %w", err)
 		}

@@ -32,7 +32,7 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 
 	// Start a one-off container to chmod and chown the volume.
 
-	containerName := fmt.Sprintf("ibctest-volumeowner-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
+	containerName := fmt.Sprintf("interchaintest-volumeowner-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
 
 	if err := ensureBusybox(ctx, opts.Client); err != nil {
 		return err

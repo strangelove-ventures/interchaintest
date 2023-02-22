@@ -4,14 +4,17 @@ package rly
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer"
 	"go.uber.org/zap"
 )
+
+const RlyDefaultUidGid = "100:1000"
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
@@ -74,8 +77,12 @@ func Capabilities() map[relayer.Capability]bool {
 }
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
+	chainType := chainConfig.Type
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+		chainType = "substrate"
+	}
 	return CosmosRelayerChainConfig{
-		Type: chainConfig.Type,
+		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{
 			Key:            keyName,
 			ChainID:        chainConfig.ChainID,
@@ -104,7 +111,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return "100:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return RlyDefaultUidGid // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
@@ -114,10 +121,10 @@ func (commander) AddChainConfiguration(containerFilePath, homeDir string) []stri
 	}
 }
 
-func (commander) AddKey(chainID, keyName, homeDir string) []string {
+func (commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	return []string{
 		"rly", "keys", "add", chainID, keyName,
-		"--home", homeDir,
+		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
 	}
 }
 
@@ -199,6 +206,13 @@ func (commander) GetConnections(chainID, homeDir string) []string {
 	}
 }
 
+func (commander) GetClients(chainID, homeDir string) []string {
+	return []string{
+		"rly", "q", "clients", chainID,
+		"--home", homeDir,
+	}
+}
+
 func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	return []string{
 		"rly", "tx", "link", pathName,
@@ -212,10 +226,10 @@ func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChanne
 	}
 }
 
-func (commander) RestoreKey(chainID, keyName, mnemonic, homeDir string) []string {
+func (commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
 	return []string{
 		"rly", "keys", "restore", chainID, keyName, mnemonic,
-		"--home", homeDir,
+		"--coin-type", fmt.Sprint(coinType), "--home", homeDir,
 	}
 }
 
@@ -254,9 +268,10 @@ func (commander) DefaultContainerVersion() string {
 }
 
 func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
-	var wallet ibc.Wallet
+	var wallet WalletModel
 	err := json.Unmarshal([]byte(stdout), &wallet)
-	return wallet, err
+	rlyWallet := NewWallet("", wallet.Address, wallet.Mnemonic)
+	return rlyWallet, err
 }
 
 func (commander) ParseRestoreKeyOutput(stdout, stderr string) string {
@@ -304,9 +319,35 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 	return connections, nil
 }
 
+func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+	var clients ibc.ClientOutputs
+	for _, client := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(client) == "" {
+			continue
+		}
+
+		var clientOutput ibc.ClientOutput
+		if err := json.Unmarshal([]byte(client), &clientOutput); err != nil {
+			c.log.Error(
+				"Error parsing client json",
+				zap.Error(err),
+			)
+
+			continue
+		}
+		clients = append(clients, &clientOutput)
+	}
+
+	return clients, nil
+}
+
 func (commander) Init(homeDir string) []string {
 	return []string{
 		"rly", "config", "init",
 		"--home", homeDir,
 	}
+}
+
+func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+	return NewWallet(keyName, address, mnemonic)
 }

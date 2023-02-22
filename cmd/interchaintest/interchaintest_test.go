@@ -1,5 +1,5 @@
-// Command ibctest allows running the relayer tests with command-line configuration.
-package ibctest
+// Command interchaintest allows running the relayer tests with command-line configuration.
+package interchaintest
 
 import (
 	"context"
@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/conformance"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/ibctest/v5/internal/blockdb/tui"
-	"github.com/strangelove-ventures/ibctest/v5/internal/version"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/conformance"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
+	blockdbtui "github.com/strangelove-ventures/interchaintest/v6/internal/blockdb/tui"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/version"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
 	"go.uber.org/zap"
 )
 
@@ -45,7 +45,7 @@ func init() {
 var testMatrix struct {
 	Relayers []string
 
-	ChainSets [][]*ibctest.ChainSpec
+	ChainSets [][]*interchaintest.ChainSpec
 }
 
 var debugFlagSet = flag.NewFlagSet("debug", flag.ExitOnError)
@@ -104,7 +104,7 @@ func setUpTestMatrix() error {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
 		testMatrix.Relayers = []string{"rly"}
-		testMatrix.ChainSets = [][]*ibctest.ChainSpec{
+		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
 				{Name: "gaia", Version: "v7.0.1"},
 				{Name: "osmosis", Version: "v7.2.0"},
@@ -152,7 +152,7 @@ func configureTestReporter() error {
 	if err != nil {
 		return fmt.Errorf("failed to get user home dir: %w", err)
 	}
-	fpath := filepath.Join(home, ".ibctest", "reports")
+	fpath := filepath.Join(home, ".interchaintest", "reports")
 	err = os.MkdirAll(fpath, 0755)
 	if err != nil {
 		return fmt.Errorf("mkdirall: %w", err)
@@ -169,22 +169,22 @@ func configureTestReporter() error {
 	return nil
 }
 
-func getRelayerFactory(name string, logger *zap.Logger) (ibctest.RelayerFactory, error) {
+func getRelayerFactory(name string, logger *zap.Logger) (interchaintest.RelayerFactory, error) {
 	switch name {
 	case "rly", "cosmos/relayer":
-		return ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger, relayer.StartupFlags("-b", "100")), nil
+		return interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, logger, relayer.StartupFlags("-b", "100")), nil
 	case "hermes":
-		return ibctest.NewBuiltinRelayerFactory(ibc.Hermes, logger), nil
+		return interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, logger), nil
 	default:
 		return nil, fmt.Errorf("unknown relayer type %q (valid types: rly, hermes)", name)
 	}
 }
 
-func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.ChainFactory, error) {
+func getChainFactory(log *zap.Logger, chainSpecs []*interchaintest.ChainSpec) (interchaintest.ChainFactory, error) {
 	if len(chainSpecs) != 2 {
 		return nil, fmt.Errorf("chain specs must have length 2 (found a chain set of length %d)", len(chainSpecs))
 	}
-	return ibctest.NewBuiltinChainFactory(log, chainSpecs), nil
+	return interchaintest.NewBuiltinChainFactory(log, chainSpecs), nil
 }
 
 // TestConformance is the root test for the ibc conformance tests.
@@ -192,6 +192,10 @@ func getChainFactory(log *zap.Logger, chainSpecs []*ibctest.ChainSpec) (ibctest.
 // if this is too taxing on a system, the -test.parallel flag
 // can be used to reduce how many tests actively run at once.
 func TestConformance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping conformance tests in short mode")
+	}
+
 	t.Parallel()
 
 	ctx := context.Background()
@@ -206,7 +210,7 @@ func TestConformance(t *testing.T) {
 	log := logger.Logger
 
 	// Build a set of chain factories from the provided chain sets.
-	chainFactories := make([]ibctest.ChainFactory, 0, len(testMatrix.ChainSets))
+	chainFactories := make([]interchaintest.ChainFactory, 0, len(testMatrix.ChainSets))
 	for _, cs := range testMatrix.ChainSets {
 		cf, err := getChainFactory(log, cs)
 		if err != nil {
@@ -217,7 +221,7 @@ func TestConformance(t *testing.T) {
 	}
 
 	// Materialize all the relayer factories.
-	relayerFactories := make([]ibctest.RelayerFactory, len(testMatrix.Relayers))
+	relayerFactories := make([]interchaintest.RelayerFactory, len(testMatrix.Relayers))
 	for i, r := range testMatrix.Relayers {
 		rf, err := getRelayerFactory(r, log)
 		if err != nil {
@@ -239,12 +243,12 @@ func TestConformance(t *testing.T) {
 // We can revisit if necessary.
 func addFlags() {
 	flag.StringVar(&extraFlags.MatrixFile, "matrix", "", "Path to matrix file defining what configurations to test")
-	flag.StringVar(&extraFlags.LogFile, "log-file", "ibctest.log", "File to write chain and relayer logs. If a file name, logs written to $HOME/.ibctest/logs directory. Use 'stderr' or 'stdout' to print logs in line tests.")
+	flag.StringVar(&extraFlags.LogFile, "log-file", "interchaintest.log", "File to write chain and relayer logs. If a file name, logs written to $HOME/.interchaintest/logs directory. Use 'stderr' or 'stdout' to print logs in line tests.")
 	flag.StringVar(&extraFlags.LogFormat, "log-format", "console", "Chain and relayer log format: console|json")
 	flag.StringVar(&extraFlags.LogLevel, "log-level", "info", "Chain and relayer log level: debug|info|error")
-	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where test report will be stored. Defaults to $HOME/.ibctest/reports/$TIMESTAMP.json")
+	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where test report will be stored. Defaults to $HOME/.interchaintest/reports/$TIMESTAMP.json")
 
-	debugFlagSet.StringVar(&extraFlags.BlockDatabaseFile, "block-db", ibctest.DefaultBlockDatabaseFilepath(), "Path to database sqlite file that tracks blocks and transactions.")
+	debugFlagSet.StringVar(&extraFlags.BlockDatabaseFile, "block-db", interchaintest.DefaultBlockDatabaseFilepath(), "Path to database sqlite file that tracks blocks and transactions.")
 }
 
 func parseFlags() {

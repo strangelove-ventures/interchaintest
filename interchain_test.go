@@ -1,4 +1,4 @@
-package ibctest_test
+package interchaintest_test
 
 import (
 	"context"
@@ -12,18 +12,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
+	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain(t *testing.T) {
@@ -33,9 +33,9 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
 		{Name: "gaia", ChainName: "g1", Version: "v7.0.1"},
 		{Name: "gaia", ChainName: "g2", Version: "v7.0.1"},
@@ -46,15 +46,15 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia0).
 		AddChain(gaia1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia0,
 			Chain2:  gaia1,
 			Relayer: r,
@@ -64,7 +64,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -81,9 +81,9 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
 		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
@@ -94,15 +94,15 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia0).
 		AddChain(gaia1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia0,
 			Chain2:  gaia1,
 			Relayer: r,
@@ -112,7 +112,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -129,20 +129,20 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 	t.Run("Chain one wallet is returned", func(t *testing.T) {
 		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g1Wallet.Address)
-		require.NotEmpty(t, g1Wallet.Mnemonic)
+		require.NotEmpty(t, g1Wallet.Address())
+		require.NotEmpty(t, g1Wallet.Mnemonic())
 	})
 
 	t.Run("Chain two wallet is returned", func(t *testing.T) {
 		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
 		require.True(t, walletFound)
-		require.NotEmpty(t, g2Wallet.Address)
-		require.NotEmpty(t, g2Wallet.Mnemonic)
+		require.NotEmpty(t, g2Wallet.Address())
+		require.NotEmpty(t, g2Wallet.Mnemonic())
 	})
 
 	t.Run("Different wallets are returned", func(t *testing.T) {
-		require.NotEqual(t, g1Wallet.Address, g2Wallet.Address)
-		require.NotEqual(t, g1Wallet.Mnemonic, g2Wallet.Mnemonic)
+		require.NotEqual(t, g1Wallet.Address(), g2Wallet.Address())
+		require.NotEqual(t, g1Wallet.Mnemonic(), g2Wallet.Mnemonic())
 	})
 
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
@@ -160,9 +160,9 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
 		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 	})
@@ -172,14 +172,14 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	gaia0 := chains[0]
 
-	ic := ibctest.NewInterchain().AddChain(gaia0)
+	ic := interchaintest.NewInterchain().AddChain(gaia0)
 	defer ic.Close()
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -204,13 +204,13 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, mnemonic)
 
-		user, err := ibctest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
+		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
 		require.NoError(t, err)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
-		require.NotEmpty(t, user.Address)
-		require.NotEmpty(t, user.KeyName)
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
+		require.NotEmpty(t, user.Address())
+		require.NotEmpty(t, user.KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, user.Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 
@@ -218,13 +218,13 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
-		users := ibctest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
-		require.NoError(t, test.WaitForBlocks(ctx, 2, gaia0))
+		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
-		require.NotEmpty(t, users[0].Address)
-		require.NotEmpty(t, users[0].KeyName)
+		require.NotEmpty(t, users[0].Address())
+		require.NotEmpty(t, users[0].KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, users[0].Bech32Address(gaia0.Config().Bech32Prefix), gaia0.Config().Denom)
+		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
 	})
@@ -237,9 +237,9 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
 		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
@@ -250,16 +250,16 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := ibctest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
 	pathName := "p"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia0).
 		AddChain(gaia1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			Chain1:  gaia0,
 			Chain2:  gaia1,
 			Relayer: r,
@@ -270,13 +270,13 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
 	}))
 
-	testUser := ibctest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
+	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
 
 	sendAmount := int64(10000)
 
@@ -288,25 +288,34 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
 		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
 
-		msg := transfertypes.NewMsgTransfer("transfer", "channel-0", transferAmount, testUser.Bech32Address(gaia0.Config().Bech32Prefix), testUser.Bech32Address(gaia1.Config().Bech32Prefix), clienttypes.NewHeight(1, 1000), 0)
-		resp, err := cosmos.BroadcastTx(ctx, b, testUser, msg)
+		msg := transfertypes.NewMsgTransfer(
+			"transfer",
+			"channel-0",
+			transferAmount,
+			testUser.FormattedAddress(),
+			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
+			clienttypes.NewHeight(1, 1000),
+			0,
+			"",
+		)
+		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
 		require.NoError(t, err)
 		assertTransactionIsValid(t, resp)
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, test.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.Bech32Address(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.Equal(t, sendAmount, dstFinalBalance)
 	})
 }
 
-// An external package that imports ibctest may not provide a GitSha when they provide a BlockDatabaseFile.
+// An external package that imports interchaintest may not provide a GitSha when they provide a BlockDatabaseFile.
 // The GitSha field is documented as optional, so this should succeed.
 func TestInterchain_OmitGitSHA(t *testing.T) {
 	if testing.Short() {
@@ -315,9 +324,9 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v7.0.1"},
 	})
 
@@ -325,13 +334,13 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	require.NoError(t, err)
 	gaia := chains[0]
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(gaia)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 	ctx := context.Background()
-	require.NoError(t, ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -345,7 +354,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("duplicate chain", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 		})
 
@@ -355,12 +364,12 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 
 		exp := fmt.Sprintf("chain %v was already added", chain)
 		require.PanicsWithError(t, exp, func() {
-			_ = ibctest.NewInterchain().AddChain(chain).AddChain(chain)
+			_ = interchaintest.NewInterchain().AddChain(chain).AddChain(chain)
 		})
 	})
 
 	t.Run("chain name", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Different ChainID, but explicit ChainName used twice.
 			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
@@ -370,12 +379,12 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 		require.NoError(t, err)
 
 		require.PanicsWithError(t, "a chain with name g already exists", func() {
-			_ = ibctest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
+			_ = interchaintest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
 		})
 	})
 
 	t.Run("chain ID", func(t *testing.T) {
-		cf := ibctest.NewBuiltinChainFactory(zap.NewNop(), []*ibctest.ChainSpec{
+		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Valid ChainName but duplicate ChainID.
 			{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
 			{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
@@ -385,7 +394,7 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 		require.NoError(t, err)
 
 		require.PanicsWithError(t, "a chain with ID cosmoshub-0 already exists", func() {
-			_ = ibctest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
+			_ = interchaintest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
 		})
 	})
 
@@ -394,7 +403,7 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 
 		exp := fmt.Sprintf("relayer %v was already added", &r)
 		require.PanicsWithError(t, exp, func() {
-			_ = ibctest.NewInterchain().AddRelayer(&r, "r1").AddRelayer(&r, "r2")
+			_ = interchaintest.NewInterchain().AddRelayer(&r, "r1").AddRelayer(&r, "r2")
 		})
 	})
 
@@ -402,18 +411,18 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 		var r1, r2 rly.CosmosRelayer
 
 		require.PanicsWithError(t, "a relayer with name r already exists", func() {
-			_ = ibctest.NewInterchain().AddRelayer(&r1, "r").AddRelayer(&r2, "r")
+			_ = interchaintest.NewInterchain().AddRelayer(&r1, "r").AddRelayer(&r2, "r")
 		})
 	})
 }
 
 func TestInterchain_AddNil(t *testing.T) {
 	require.PanicsWithError(t, "cannot add nil chain", func() {
-		_ = ibctest.NewInterchain().AddChain(nil)
+		_ = interchaintest.NewInterchain().AddChain(nil)
 	})
 
 	require.PanicsWithError(t, "cannot add nil relayer", func() {
-		_ = ibctest.NewInterchain().AddRelayer(nil, "r")
+		_ = interchaintest.NewInterchain().AddRelayer(nil, "r")
 	})
 }
 

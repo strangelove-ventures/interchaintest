@@ -1,4 +1,4 @@
-package configutil
+package testutil
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 )
 

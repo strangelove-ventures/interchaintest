@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	conntypes "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
-func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.ChainFactory, rf interchaintest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -33,11 +33,11 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 	r := rf.Build(t, client, network)
 
 	const pathName = "p"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(c0).
 		AddChain(c1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			// We are adding a link here so that the interchain object creates appropriate relayer wallets,
 			// but we call ic.Build with SkipPathCreation=true, so the link won't be created.
 			Chain1:  c0,
@@ -49,7 +49,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 
 	eRep := rep.RelayerExecReporter(t)
 
-	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	req.NoError(ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -85,7 +85,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 	}
 
 	// The client isn't created immediately -- wait for two blocks to ensure the clients are ready.
-	req.NoError(test.WaitForBlocks(ctx, 2, c0, c1))
+	req.NoError(testutil.WaitForBlocks(ctx, 2, c0, c1))
 
 	t.Run("create connections", func(t *testing.T) {
 		rep.TrackTest(t)

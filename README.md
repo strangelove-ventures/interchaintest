@@ -1,16 +1,18 @@
 <div align="center">
-<h1>ibctest</h1>
+<h1>interchaintest</h1>
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/ibctest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/ibctest@main)
-[![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/ibctest.svg?style=flat-square)](https://github.com/strangelove-ventures/ibctest/blob/main/create-test-readme/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/strangelove-ventures/ibctest)](https://goreportcard.com/report/github.com/strangelove-ventures/ibctest)
+Formerly known as `ibctest`.
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/interchaintest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/interchaintest@main)
+[![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/interchaintest.svg?style=flat-square)](https://github.com/strangelove-ventures/interchaintest/blob/main/create-test-readme/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/strangelove-ventures/interchaintest)](https://goreportcard.com/report/github.com/strangelove-ventures/interchaintest)
 
 
 
-`ibctest` orchestrates Go tests that utilize Docker containers for multiple
+`interchaintest` orchestrates Go tests that utilize Docker containers for multiple
 [IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
 
-It allows users to quickly spin up custom testnets and dev environments to test IBC and chain infrastructures.
+It allows users to quickly spin up custom testnets and dev environments to test IBC, chain infrastructures, smart contracts, etc.
 </div>
 
 ### -- Features --
@@ -39,12 +41,12 @@ While it is not necessary to build the binary, sometimes it can be more convenie
 
 Building binary:
 ```shell
-git clone https://github.com/strangelove-ventures/ibctest.git
-cd ibctest
-make ibctest
+git clone https://github.com/strangelove-ventures/interchaintest.git
+cd interchaintest
+make interchaintest
 ```
 
-This places the binary in `ibctest/.bin/ibctest`
+This places the binary in `interchaintest/.bin/interchaintest`
 
 Note that this is not in your Go path.
 
@@ -57,7 +59,7 @@ Please read the [logging style guide](./docs/logging.md).
 
 ## Trophies
 
-Significant bugs that were more easily fixed with `ibctest`:
+Significant bugs that were more easily fixed with `interchaintest`:
 
-- [Juno network halt reproduction](https://github.com/strangelove-ventures/ibctest/pull/7)
-- [Juno network halt fix confirmation](https://github.com/strangelove-ventures/ibctest/pull/8)
+- [Juno network halt reproduction](https://github.com/strangelove-ventures/interchaintest/pull/7)
+- [Juno network halt fix confirmation](https://github.com/strangelove-ventures/interchaintest/pull/8)

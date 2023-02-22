@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"context"
@@ -8,10 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -72,33 +71,22 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 //
 // The keys are created concurrently because creating keys on one chain
 // should have no effect on any other chain.
-func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bech32 map[ibc.Chain]string, err error) {
+func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (faucetAddresses map[ibc.Chain]string, err error) {
 	var mu sync.Mutex
-	bech32 = make(map[ibc.Chain]string, len(cs.chains))
+	faucetAddresses = make(map[ibc.Chain]string, len(cs.chains))
 
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
-			config := c.Config()
-
-			if err := c.CreateKey(egCtx, keyName); err != nil {
-				return fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			addrBytes, err := c.GetAddress(egCtx, keyName)
+			wallet, err := c.BuildWallet(egCtx, keyName, "")
 			if err != nil {
-				return fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			b32, err := types.Bech32ifyAddressBytes(config.Bech32Prefix, addrBytes)
-			if err != nil {
-				return fmt.Errorf("failed to Bech32ifyAddressBytes on chain %s: %w", config.Name, err)
+				return err
 			}
 
 			mu.Lock()
-			bech32[c] = b32
+			faucetAddresses[c] = wallet.FormattedAddress()
 			mu.Unlock()
 
 			return nil
@@ -109,7 +97,7 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (be
 		return nil, fmt.Errorf("failed to create common account with name %s: %w", keyName, err)
 	}
 
-	return bech32, nil
+	return faucetAddresses, nil
 }
 
 // Start concurrently calls Start against each chain in the set.
