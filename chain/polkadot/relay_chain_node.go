@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -52,7 +52,7 @@ type RelayChainNodes []*RelayChainNode
 
 const (
 	wsPort = "27451/tcp"
-	//rpcPort        = "27452/tcp"
+
 	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"

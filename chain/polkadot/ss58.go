@@ -57,11 +57,11 @@ func DecodeAddressSS58(address string) ([]byte, error) {
 	} else if IntInSlice(len(ss58AddrDecoded), []int{17}) {
 		checksumLength = 8
 	} else {
-		return nil, fmt.Errorf("Cannot get checksum length")
+		return nil, fmt.Errorf("cannot get checksum length")
 	}
 	bss := ss58AddrDecoded[0 : len(ss58AddrDecoded)-checksumLength]
 	checksum, _ := blake2b.New(64, []byte{})
-	w := append(checksumPrefix[:], bss[:]...)
+	w := append(checksumPrefix, bss...)
 	_, err = checksum.Write(w)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func DecodeAddressSS58(address string) ([]byte, error) {
 
 	h := checksum.Sum(nil)
 	if BytesToHex(h[0:checksumLength]) != BytesToHex(ss58AddrDecoded[len(ss58AddrDecoded)-checksumLength:]) {
-		return nil, fmt.Errorf("Checksum incorrect")
+		return nil, fmt.Errorf("checksum incorrect")
 	}
 	return ss58AddrDecoded[1 : len(ss58AddrDecoded)-checksumLength], nil
 }

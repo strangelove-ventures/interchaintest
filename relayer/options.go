@@ -6,11 +6,11 @@ import (
 
 // RelayerOption is used to customize the relayer configuration, whether constructed with the
 // RelayerFactory or with the more specific NewDockerRelayer or NewCosmosRelayer methods.
-type RelayerOption interface {
+type Option interface {
 	// relayerOption is a no-op to be more restrictive on what types can be used as RelayerOptions
 	relayerOption()
 }
-type RelayerOptions []RelayerOption
+type Options []Option
 
 type RelayerOptionDockerImage struct {
 	DockerImage ibc.DockerImage
@@ -19,7 +19,7 @@ type RelayerOptionDockerImage struct {
 // CustomDockerImage overrides the default relayer docker image.
 // uidGid is the uid:gid format owner that should be used within the container.
 // If uidGid is empty, root user will be assumed.
-func CustomDockerImage(repository string, version string, uidGid string) RelayerOption {
+func CustomDockerImage(repository string, version string, uidGid string) Option {
 	return RelayerOptionDockerImage{
 		DockerImage: ibc.DockerImage{
 			Repository: repository,
@@ -35,7 +35,7 @@ type RelayerOptionImagePull struct {
 	Pull bool
 }
 
-func ImagePull(pull bool) RelayerOption {
+func ImagePull(pull bool) Option {
 	return RelayerOptionImagePull{
 		Pull: pull,
 	}
@@ -48,7 +48,7 @@ type RelayerOptionExtraStartFlags struct {
 }
 
 // StartupFlags appends additional flags when starting the relayer.
-func StartupFlags(flags ...string) RelayerOption {
+func StartupFlags(flags ...string) Option {
 	return RelayerOptionExtraStartFlags{
 		Flags: flags,
 	}

@@ -11,10 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	//go:embed testdata/sample_txs.json
-	txsFixture []byte
-)
+//go:embed testdata/sample_txs.json
+var txsFixture []byte
 
 func TestQuery_CurrentSchemaVersion(t *testing.T) {
 	t.Parallel()

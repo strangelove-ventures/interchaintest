@@ -18,9 +18,9 @@ import (
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
 type hyperspaceCommander struct {
-	log              *zap.Logger
-	paths            map[string]*pathConfiguration
-	extraStartFlags  []string
+	log             *zap.Logger
+	paths           map[string]*pathConfiguration
+	extraStartFlags []string
 }
 
 // pathConfiguration represents the concept of a "path" which is implemented at the interchain test level rather
@@ -47,7 +47,7 @@ func (hyperspaceCommander) DockerUser() string {
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
-	//c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
+
 	return []string{
 		"hyperspace",
 		"-h",
@@ -162,11 +162,9 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 // Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
 	panic("[UpdatePath] Do not call me")
-
 }
 
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
-	//panic("Panic because hyperspace will panic")
 	fmt.Println("[hyperspace] Get Channels")
 	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{

@@ -52,7 +52,7 @@ func nodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter
 	}
 	for _, h := range nodeHeights {
 		if h < chainHeight {
-			return fmt.Errorf("Node is not yet in sync: %d < %d", h, chainHeight)
+			return fmt.Errorf("node is not yet in sync: %d < %d", h, chainHeight)
 		}
 	}
 	// all nodes >= chainHeight

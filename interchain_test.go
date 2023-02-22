@@ -212,7 +212,6 @@ func TestInterchain_CreateUser(t *testing.T) {
 		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
 		require.Equal(t, int64(10000), actualBalance)
-
 	})
 
 	t.Run("without mnemonic", func(t *testing.T) {

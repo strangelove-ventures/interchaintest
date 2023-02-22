@@ -20,11 +20,11 @@ type HyperspaceRelayerCoreConfig struct {
 }
 
 type HyperspaceRelayerSubstrateChainConfig struct {
-	Type             string `toml:"type"`
-	Name             string `toml:"name"`
-	ParaID           uint32 `toml:"para_id"`
-	ParachainRPCURL  string `toml:"parachain_rpc_url"`
-	RelayChainRPCURL string `toml:"relay_chain_rpc_url"`
+	Type             string   `toml:"type"`
+	Name             string   `toml:"name"`
+	ParaID           uint32   `toml:"para_id"`
+	ParachainRPCURL  string   `toml:"parachain_rpc_url"`
+	RelayChainRPCURL string   `toml:"relay_chain_rpc_url"`
 	BeefyActivation  uint32   `toml:"beefy_activation_block"`
 	CommitmentPrefix string   `toml:"commitment_prefix"`
 	PrivateKey       string   `toml:"private_key"`
@@ -42,24 +42,23 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
-	Type          string `toml:"type"` //New
-	Name          string `toml:"name"`
-	RPCUrl        string `toml:"rpc_url"`
-	GRPCUrl       string `toml:"grpc_url"`
-	WebsocketUrl  string `toml:"websocket_url"`
-	ChainID       string `toml:"chain_id"`
-	AccountPrefix string `toml:"account_prefix"`
-	StorePrefix   string `toml:"store_prefix"`
-	MaxTxSize     uint64 `toml:"max_tx_size"`
-	WasmCodeId    string `toml:"wasm_code_id"`
-	Keybase KeyEntry `toml:"keybase"`
+	Type          string   `toml:"type"`
+	Name          string   `toml:"name"`
+	RPCUrl        string   `toml:"rpc_url"`
+	GRPCUrl       string   `toml:"grpc_url"`
+	WebsocketUrl  string   `toml:"websocket_url"`
+	ChainID       string   `toml:"chain_id"`
+	AccountPrefix string   `toml:"account_prefix"`
+	StorePrefix   string   `toml:"store_prefix"`
+	MaxTxSize     uint64   `toml:"max_tx_size"`
+	WasmCodeId    string   `toml:"wasm_code_id"`
+	Keybase       KeyEntry `toml:"keybase"`
 }
 
 const (
 	HyperspaceDefaultContainerImage   = "hyperspace"
 	HyperspaceDefaultContainerVersion = "local"
 )
-
 
 func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 	coinType64, err := strconv.ParseUint(coinType, 10, 32)
@@ -95,6 +94,7 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 		Address:    address.Bytes(),                     // i.e. [9, 13, 32, 191, 206, 194, 159, 239, 250, 89, 193, 7, 23, 99, 96, 46, 7, 74, 172, 14]
 	}
 }
+
 func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
 	chainType := chainConfig.Type
 	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {

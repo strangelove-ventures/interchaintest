@@ -8,6 +8,4 @@ const (
 	errorTextColor  = tcell.ColorRed
 )
 
-var (
-	textStyle = tcell.Style{}.Foreground(textColor)
-)
+var textStyle = tcell.Style{}.Foreground(textColor)

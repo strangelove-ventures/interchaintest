@@ -76,15 +76,13 @@ const (
 	privValPort = "1234/tcp"
 )
 
-var (
-	sentryPorts = nat.PortSet{
-		nat.Port(p2pPort):     {},
-		nat.Port(rpcPort):     {},
-		nat.Port(grpcPort):    {},
-		nat.Port(apiPort):     {},
-		nat.Port(privValPort): {},
-	}
-)
+var sentryPorts = nat.PortSet{
+	nat.Port(p2pPort):     {},
+	nat.Port(rpcPort):     {},
+	nat.Port(grpcPort):    {},
+	nat.Port(apiPort):     {},
+	nat.Port(privValPort): {},
+}
 
 // NewClient creates and assigns a new Tendermint RPC client to the ChainNode
 func (tn *ChainNode) NewClient(addr string) error {
@@ -329,8 +327,8 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for k, attr := range e.Attributes {
 				attrs[k] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
+					Key:   attr.Key,
+					Value: attr.Value,
 				}
 			}
 			newTx.Events[j] = blockdb.Event{
@@ -349,8 +347,8 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for j, attr := range e.Attributes {
 				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
+					Key:   attr.Key,
+					Value: attr.Value,
 				}
 			}
 			beginBlockTx.Events[i] = blockdb.Event{
@@ -369,8 +367,8 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for j, attr := range e.Attributes {
 				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
+					Key:   attr.Key,
+					Value: attr.Value,
 				}
 			}
 			endBlockTx.Events[i] = blockdb.Event{
@@ -407,8 +405,8 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err != nil {
 		return "", err
 	}
-	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
+	output := Tx{}
+	err = json.Unmarshal(stdout, &output)
 	if err != nil {
 		return "", err
 	}
@@ -575,7 +573,8 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
+	command := []string{
+		tn.Chain.Config().Bin, "collect-gentxs",
 		"--home", tn.HomeDir(),
 	}
 
@@ -586,7 +585,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	return err
 }
 
-type CosmosTx struct {
+type Tx struct {
 	TxHash string `json:"txhash"`
 	Code   int    `json:"code"`
 	RawLog string `json:"raw_log"`
@@ -679,7 +678,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	}
 
 	res := CodeInfosResponse{}
-	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
+	if err := json.Unmarshal(stdout, &res); err != nil {
 		return "", err
 	}
 
@@ -703,7 +702,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 	}
 
 	contactsRes := QueryContractResponse{}
-	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
+	if err := json.Unmarshal(stdout, &contactsRes); err != nil {
 		return "", err
 	}
 
@@ -729,7 +728,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal([]byte(stdout), response)
+	err = json.Unmarshal(stdout, response)
 	return err
 }
 
@@ -754,7 +753,6 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 	codeHashByte32 := sha256.Sum256(content)
 	codeHash := hex.EncodeToString(codeHashByte32[:])
 
-	//return stdout, nil
 	return codeHash, nil
 }
 
@@ -764,7 +762,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal([]byte(stdout), response)
+	err = json.Unmarshal(stdout, response)
 	return err
 }
 
@@ -811,6 +809,7 @@ func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop Tx
 
 	return tn.ExecTx(ctx, keyName, command...)
 }
+
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
@@ -855,7 +854,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	}
 
 	res := new(DumpContractStateResponse)
-	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+	if err := json.Unmarshal(stdout, res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -1033,7 +1032,8 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
 // bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
 func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
+	command := []string{
+		tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
 	}

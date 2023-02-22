@@ -13,7 +13,7 @@ func CreateLogFile(name string) (*os.File, error) {
 		return nil, fmt.Errorf("user home dir: %w", err)
 	}
 	fpath := filepath.Join(home, ".interchaintest", "logs")
-	err = os.MkdirAll(fpath, 0755)
+	err = os.MkdirAll(fpath, 0o755)
 	if err != nil {
 		return nil, fmt.Errorf("mkdirall: %w", err)
 	}

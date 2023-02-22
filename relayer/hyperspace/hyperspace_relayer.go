@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}
+
 // ******* DockerRelayer methods that will panic in hyperspace commander, no overrides yet *******
 // FlushAcknowledgements() - no hyperspace implementation yet
 // FlushPackets() - no hypersapce implementation yet
@@ -23,14 +24,13 @@ var _ ibc.Relayer = &HyperspaceRelayer{}
 // UpdateClients() - no hyperspace implementation yet
 // AddKey() - no hyperspace implementation yet
 
-
 // HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
 type HyperspaceRelayer struct {
 	// Embedded DockerRelayer so commands just work.
 	*relayer.DockerRelayer
 }
 
-func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *HyperspaceRelayer {
+func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.Option) *HyperspaceRelayer {
 	c := hyperspaceCommander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -99,7 +99,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 	chainConfig := make(testutil.Toml)
 	switch chainType {
 	case "cosmos":
-		//chainConfig["private_key"] = mnemonic
+
 		bech32Prefix := cfg.Bech32Prefix
 		keyEntry := GenKeyEntry(bech32Prefix, coinType, mnemonic)
 		keyEntryOverrides := make(testutil.Toml)
@@ -109,7 +109,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 		keyEntryOverrides["address"] = keyEntry.Address
 		chainConfig["keybase"] = keyEntryOverrides
 	case "polkadot":
-		//chainConfig["private_key"] = "//Alice"
+
 		chainConfig["private_key"] = mnemonic
 	}
 	chainConfigFile := chainID + ".config"
@@ -140,7 +140,7 @@ func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.Relayer
 		"cat",
 		path.Join(r.HomeDir(), "core.config"),
 	}
-		
+
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -156,7 +156,7 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 		"cat",
 		path.Join(r.HomeDir(), chainID+".config"),
 	}
-		
+
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	res := r.Exec(ctx, rep, cmd, nil)

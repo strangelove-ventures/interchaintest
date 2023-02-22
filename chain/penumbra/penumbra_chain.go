@@ -266,8 +266,10 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &tendermint.TendermintNode{Log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
+		tn := &tendermint.TendermintNode{
+			Log: c.log, Index: i, Chain: c,
+			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0],
+		}
 
 		tv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 			Labels: map[string]string{
@@ -293,8 +295,10 @@ func (c *PenumbraChain) initializeChainNodes(
 			return fmt.Errorf("set tendermint volume owner: %w", err)
 		}
 
-		pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
+		pn := &PenumbraAppNode{
+			log: c.log, Index: i, Chain: c,
+			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1],
+		}
 		pv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 			Labels: map[string]string{
 				dockerutil.CleanupLabel: testName,

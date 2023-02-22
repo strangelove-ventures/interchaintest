@@ -6,22 +6,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Increase parachain scaled wallet amounts relative to cosmos
@@ -400,12 +400,12 @@ func (pn *ParachainNode) EnableIbc() error {
 
 // SendIbcFunds sends funds to a wallet from a user account.
 func (pn *ParachainNode) SendIbcFunds(
-	ctx context.Context, 
+	ctx context.Context,
 	channelID string,
-	keyName string, 
+	keyName string,
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
-	) error {
+) error {
 	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
@@ -429,9 +429,9 @@ func (pn *ParachainNode) SendIbcFunds(
 
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
 func (pn *ParachainNode) MintFunds(
-	keyName string, 
+	keyName string,
 	amount ibc.WalletAmount,
-	) error {
+) error {
 	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
 	if err != nil {
 		return err

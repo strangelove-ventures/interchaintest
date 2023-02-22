@@ -51,7 +51,7 @@ var testMatrix struct {
 var debugFlagSet = flag.NewFlagSet("debug", flag.ExitOnError)
 
 func TestMain(m *testing.M) {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
 	addFlags()
 	parseFlags()
 
@@ -153,7 +153,7 @@ func configureTestReporter() error {
 		return fmt.Errorf("failed to get user home dir: %w", err)
 	}
 	fpath := filepath.Join(home, ".interchaintest", "reports")
-	err = os.MkdirAll(fpath, 0755)
+	err = os.MkdirAll(fpath, 0o755)
 	if err != nil {
 		return fmt.Errorf("mkdirall: %w", err)
 	}

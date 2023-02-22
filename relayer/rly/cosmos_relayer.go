@@ -22,7 +22,7 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.Option) *CosmosRelayer {
 	c := commander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {

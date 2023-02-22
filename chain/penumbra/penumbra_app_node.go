@@ -195,7 +195,6 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 		}
 	}
 	return "", errors.New("address not found")
-
 }
 
 func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {

@@ -39,7 +39,7 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 // to attempt to create a Docker network with the same random suffix
 // due to unintentionally both using the default seed.
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
 }
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")

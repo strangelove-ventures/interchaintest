@@ -30,7 +30,7 @@ type DockerSetupTestingT interface {
 
 // CleanupLabel is a docker label key targeted by DockerSetup when it cleans up docker resources.
 //
-// "interchaintest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
+// "interchaintest" is perhaps a better name. However, for backwards compatibility we preserve the original name of "ibc-test"
 // with the hyphen. Otherwise, we run the risk of causing "container already exists" errors because DockerSetup
 // is unable to clean old resources from docker engine.
 const CleanupLabel = "ibc-test"
@@ -187,7 +187,6 @@ func pruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *clie
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune volumes during docker cleanup: %v", err)
 		return
@@ -221,7 +220,6 @@ func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune networks during docker cleanup: %v", err)
 		return

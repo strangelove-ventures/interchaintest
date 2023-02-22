@@ -8,8 +8,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
 	"go.uber.org/zap"
 )
 
@@ -44,10 +44,10 @@ type RelayerFactory interface {
 type builtinRelayerFactory struct {
 	impl    ibc.RelayerImplementation
 	log     *zap.Logger
-	options relayer.RelayerOptions
+	options relayer.Options
 }
 
-func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger, options ...relayer.RelayerOption) RelayerFactory {
+func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger, options ...relayer.Option) RelayerFactory {
 	return builtinRelayerFactory{impl: impl, log: logger, options: options}
 }
 

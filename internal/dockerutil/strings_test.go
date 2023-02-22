@@ -53,10 +53,10 @@ func TestGetHostPort(t *testing.T) {
 func TestRandLowerCaseLetterString(t *testing.T) {
 	require.Empty(t, RandLowerCaseLetterString(0))
 
-	rand.Seed(1)
+	rand.Seed(1) //nolint:staticcheck
 	require.Equal(t, "xvlbzgbaicmr", RandLowerCaseLetterString(12))
 
-	rand.Seed(1)
+	rand.Seed(1) //nolint:staticcheck
 	require.Equal(t, "xvlbzgbaicmrajwwhthctcuaxhxkqf", RandLowerCaseLetterString(30))
 }
 

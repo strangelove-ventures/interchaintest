@@ -11,20 +11,20 @@ import (
 
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	"github.com/misko9/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Increase polkadot scaled wallet amounts relative to cosmos
@@ -72,8 +72,10 @@ type ParachainConfig struct {
 }
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
-var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-var IndexedUri = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+var (
+	IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
+	IndexedUri  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+)
 
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
 func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
@@ -122,7 +124,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 	}
 	for i := 0; i < c.numRelayChainNodes; i++ {
 		seed := make([]byte, 32)
-		rand.Read(seed)
+		rand.Read(seed) //nolint:staticcheck
 
 		nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
 		if err != nil {
@@ -468,7 +470,7 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 				if err := fw.WriteFile(ctx, n.VolumeName, n.RawRelayChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
 					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
-				//fmt.Print(string(rawChainSpecBytes))
+				// fmt.Print(string(rawChainSpecBytes))
 				c.logger().Info("Creating container", zap.String("name", n.Name()))
 				if err := n.CreateNodeContainer(ctx); err != nil {
 					return err
@@ -500,7 +502,7 @@ func (c *PolkadotChain) GetRPCAddress() string {
 
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		parachainHostName = c.ParachainNodes[0][0].HostName()
-		//return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
+		// return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
 	} else {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
@@ -508,7 +510,7 @@ func (c *PolkadotChain) GetRPCAddress() string {
 	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
 	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
 	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
-	//return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
+	// return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
@@ -589,7 +591,7 @@ func NewMnemonic() (string, error) {
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	mnemonic, err := NewMnemonic()
