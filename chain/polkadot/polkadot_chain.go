@@ -30,8 +30,8 @@ import (
 // Increase polkadot scaled wallet amounts relative to cosmos
 const polkadotScaling = int64(1_000_000)
 
-// PolkadotChain implements the ibc.Chain interface for substrate chains.
-type PolkadotChain struct {
+// Chain implements the ibc.Chain interface for substrate chains.
+type Chain struct {
 	log                *zap.Logger
 	testName           string
 	cfg                ibc.ChainConfig
@@ -77,9 +77,9 @@ var (
 	IndexedUri  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
 )
 
-// NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
-func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
-	return &PolkadotChain{
+// NewChain returns an uninitialized Chain, which implements the ibc.Chain interface.
+func NewChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *Chain {
+	return &Chain{
 		log:                log,
 		testName:           testName,
 		cfg:                chainConfig,
@@ -91,13 +91,13 @@ func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 
 // Config fetches the chain configuration.
 // Implements Chain interface.
-func (c *PolkadotChain) Config() ibc.ChainConfig {
+func (c *Chain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
 // Implements Chain interface.
-func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	relayChainNodes := []*RelayChainNode{}
 	chainCfg := c.Config()
 	images := []ibc.DockerImage{}
@@ -253,7 +253,7 @@ func runtimeGenesisPath(path ...interface{}) []interface{} {
 	return fullPath
 }
 
-func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec interface{}, additionalGenesisWallets []ibc.WalletAmount) error {
+func (c *Chain) modifyRelayChainGenesis(ctx context.Context, chainSpec interface{}, additionalGenesisWallets []ibc.WalletAmount) error {
 	bootNodes := []string{}
 	authorities := [][]interface{}{}
 	balances := [][]interface{}{}
@@ -367,7 +367,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	return nil
 }
 
-func (c *PolkadotChain) logger() *zap.Logger {
+func (c *Chain) logger() *zap.Logger {
 	return c.log.With(
 		zap.String("chain_id", c.cfg.ChainID),
 		zap.String("test", c.testName),
@@ -376,7 +376,7 @@ func (c *PolkadotChain) logger() *zap.Logger {
 
 // Start sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis.
 // Implements Chain interface.
-func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	var eg errgroup.Group
 	// Generate genesis file for each set of parachains
 	for _, parachainNodes := range c.ParachainNodes {
@@ -489,14 +489,14 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 
 // Exec runs an arbitrary command using Chain's docker environment.
 // Implements Chain interface.
-func (c *PolkadotChain) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
+func (c *Chain) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	res := c.RelayChainNodes[0].Exec(ctx, cmd, env)
 	return res.Stdout, res.Stderr, res.Err
 }
 
 // GetRPCAddress retrieves the rpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.
-func (c *PolkadotChain) GetRPCAddress() string {
+func (c *Chain) GetRPCAddress() string {
 	var parachainHostName string
 	port := strings.Split(rpcPort, "/")[0]
 
@@ -515,7 +515,7 @@ func (c *PolkadotChain) GetRPCAddress() string {
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.
-func (c *PolkadotChain) GetGRPCAddress() string {
+func (c *Chain) GetGRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(wsPort, "/")[0])
 	}
@@ -525,7 +525,7 @@ func (c *PolkadotChain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 // Implements Chain interface.
-func (c *PolkadotChain) GetHostRPCAddress() string {
+func (c *Chain) GetHostRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		return c.ParachainNodes[0][0].hostRpcPort
 	}
@@ -535,7 +535,7 @@ func (c *PolkadotChain) GetHostRPCAddress() string {
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 // Implements Chain interface.
-func (c *PolkadotChain) GetHostGRPCAddress() string {
+func (c *Chain) GetHostGRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		return c.ParachainNodes[0][0].hostWsPort
 	}
@@ -544,7 +544,7 @@ func (c *PolkadotChain) GetHostGRPCAddress() string {
 
 // Height returns the current block height or an error if unable to get current height.
 // Implements Chain interface.
-func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
+func (c *Chain) Height(ctx context.Context) (uint64, error) {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		block, err := c.ParachainNodes[0][0].api.RPC.Chain.GetBlockLatest()
 		if err != nil {
@@ -561,14 +561,14 @@ func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
 
 // ExportState exports the chain state at specific height.
 // Implements Chain interface.
-func (c *PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
+func (c *Chain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("[ExportState] not implemented yet")
 }
 
 // HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
 // the container's filesystem (not the host).
 // Implements Chain interface.
-func (c *PolkadotChain) HomeDir() string {
+func (c *Chain) HomeDir() string {
 	panic("[HomeDir] not implemented yet")
 }
 
@@ -588,7 +588,7 @@ func NewMnemonic() (string, error) {
 
 // CreateKey creates a test key in the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
-func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
+func (c *Chain) CreateKey(ctx context.Context, keyName string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
 		return fmt.Errorf("key already exists: %s", keyName)
@@ -618,7 +618,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 
 // RecoverKey recovers an existing user from a given mnemonic.
 // Implements Chain interface.
-func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+func (c *Chain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
 		return fmt.Errorf("key already exists: %s", keyName)
@@ -643,7 +643,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 
 // GetAddress fetches the address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
-func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+func (c *Chain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	krItem, err := c.keyring.Get(keyName)
 	if err != nil {
 		return nil, err
@@ -658,7 +658,7 @@ func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte,
 	return []byte(kp.Address), nil
 }
 
-func (c *PolkadotChain) GetPublicKey(keyName string) ([]byte, error) {
+func (c *Chain) GetPublicKey(keyName string) ([]byte, error) {
 	krItem, err := c.keyring.Get(keyName)
 	if err != nil {
 		return nil, err
@@ -676,7 +676,7 @@ func (c *PolkadotChain) GetPublicKey(keyName string) ([]byte, error) {
 // BuildWallet will return a Polkadot wallet
 // If mnemonic != "", it will restore using that mnemonic
 // If mnemonic == "", it will create a new key
-func (c *PolkadotChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
+func (c *Chain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
 			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
@@ -698,7 +698,7 @@ func (c *PolkadotChain) BuildWallet(ctx context.Context, keyName string, mnemoni
 // BuildRelayerWallet will return a Polkadot wallet populated with the mnemonic so that the wallet can
 // be restored in the relayer node using the mnemonic. After it is built, that address is included in
 // genesis with some funds.
-func (c *PolkadotChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
+func (c *Chain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	mnemonic, err := NewMnemonic()
 	if err != nil {
 		return nil, err
@@ -709,7 +709,7 @@ func (c *PolkadotChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
-func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+func (c *Chain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	// If denom == polkadot denom, it is a relay chain tx, else parachain tx
 	if amount.Denom == c.cfg.Denom {
 		// If keyName == faucet, also fund parachain's user until relay chain and parachains are their own chains
@@ -727,7 +727,7 @@ func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ib
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
-func (c *PolkadotChain) SendIBCTransfer(
+func (c *Chain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
 	keyName string,
@@ -739,7 +739,7 @@ func (c *PolkadotChain) SendIBCTransfer(
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *Chain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
 	if denom == c.cfg.Denom {
 		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
@@ -775,24 +775,24 @@ type AccountInfo struct {
 
 // GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
 // Implements Chain interface.
-func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
+func (c *Chain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	panic("[GetGasFeesInNativeDenom] not implemented yet")
 }
 
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *Chain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	panic("[Acknowledgements] not implemented yet")
 }
 
 // Timeouts returns all timeouts in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *Chain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("[Timeouts] not implemented yet")
 }
 
 // GetKeyringPair returns the keyring pair from the keyring using keyName
-func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, error) {
+func (c *Chain) GetKeyringPair(keyName string) (signature.KeyringPair, error) {
 	kp := signature.KeyringPair{}
 	krItem, err := c.keyring.Get(keyName)
 	if err != nil {
@@ -808,21 +808,21 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 }
 
 // FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
-func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (c *Chain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return []blockdb.Tx{}, nil
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+func (c *Chain) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
 	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address)
 }
 
 // Turns on sending and receiving ibc transfers
-func (c *PolkadotChain) EnableIbcTransfers() error {
+func (c *Chain) EnableIbcTransfers() error {
 	return c.ParachainNodes[0][0].EnableIbc()
 }
 
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
-func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
+func (c *Chain) MintFunds(keyName string, amount ibc.WalletAmount) error {
 	return c.ParachainNodes[0][0].MintFunds(keyName, amount)
 }

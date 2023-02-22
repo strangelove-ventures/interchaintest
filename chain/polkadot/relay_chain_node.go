@@ -320,7 +320,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	kp, err := p.Chain.(*Chain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
 	}

@@ -46,7 +46,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						//UidGid: "1025:1025",
+						// UidGid: "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
@@ -78,7 +78,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
 	}))
 
-	polkadotChain := chain.(*polkadot.PolkadotChain)
+	polkadotChain := chain.(*polkadot.Chain)
 
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
@@ -86,7 +86,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	PARACHAIN_DEFAULT_AMOUNT := 1_152_921_504_606_847_000
 	RELAYCHAIN_DEFAULT_AMOUNT := 1_100_000_000_000_000_000
 	FAUCET_AMOUNT := 100_000_000_000_000 // set in interchain.go/global
-	//RELAYER_AMOUNT :=                   1_000_000_000_000 // set in interchain.go/global
+	// RELAYER_AMOUNT :=                   1_000_000_000_000 // set in interchain.go/global
 
 	// Check the faucet amounts
 	polkadotFaucetAddress, err := polkadotChain.GetAddress(ctx, "faucet")
@@ -216,5 +216,4 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Parachain user2 amount: ", parachainUser2Amount)
 	require.Equal(t, fundAmount+txAmount, parachainUser2Amount, "Final parachain user2 amount not expected")
-
 }

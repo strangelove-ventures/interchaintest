@@ -139,7 +139,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	srcChain ibc.Chain,
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
-	timeout *ibc.IBCTimeout,
+	timeout *ibc.Timeout,
 ) {
 	srcChainCfg := srcChain.Config()
 	srcUser := testCase.Users[0]
@@ -369,21 +369,21 @@ func preRelayerStart_RelayPacket(ctx context.Context, t *testing.T, testCase *Re
 }
 
 func preRelayerStart_NoTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
-	ibcTimeoutDisabled := ibc.IBCTimeout{Height: 0, NanoSeconds: 0}
+	ibcTimeoutDisabled := ibc.Timeout{Height: 0, NanoSeconds: 0}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutDisabled)
 	// TODO should we wait here to make sure it successfully relays a packet beyond the default timeout period?
 	// would need to shorten the chain default timeouts somehow to make that a feasible test
 }
 
 func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
-	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
+	ibcTimeoutHeight := ibc.Timeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
 	require.NoError(t, testutil.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
 }
 
 func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
-	ibcTimeoutTimestamp := ibc.IBCTimeout{NanoSeconds: uint64((1 * time.Second).Nanoseconds())}
+	ibcTimeoutTimestamp := ibc.Timeout{NanoSeconds: uint64((1 * time.Second).Nanoseconds())}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutTimestamp)
 	// wait for 15 seconds to expire timeout
 	time.Sleep(15 * time.Second)

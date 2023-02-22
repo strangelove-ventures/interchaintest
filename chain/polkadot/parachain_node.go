@@ -363,7 +363,7 @@ func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdk
 // SendFunds sends funds to a wallet from a user account.
 // Implements Chain interface.
 func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	kp, err := pn.Chain.(*Chain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount i
 
 // Turns on sending and receiving ibc transfers
 func (pn *ParachainNode) EnableIbc() error {
-	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair("alice")
+	kp, err := pn.Chain.(*Chain).GetKeyringPair("alice")
 	if err != nil {
 		return err
 	}
@@ -406,7 +406,7 @@ func (pn *ParachainNode) SendIbcFunds(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) error {
-	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	kp, err := pn.Chain.(*Chain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
 	}
@@ -432,7 +432,7 @@ func (pn *ParachainNode) MintFunds(
 	keyName string,
 	amount ibc.WalletAmount,
 ) error {
-	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	kp, err := pn.Chain.(*Chain).GetKeyringPair(keyName)
 	if err != nil {
 		return err
 	}

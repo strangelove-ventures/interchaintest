@@ -26,8 +26,8 @@ import (
 )
 
 type Node struct {
-	TendermintNode  *tendermint.Node
-	PenumbraAppNode *PenumbraAppNode
+	TendermintNode *tendermint.Node
+	AppNode        *AppNode
 }
 
 type Nodes []Node
@@ -99,7 +99,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 
 // Exec implements chain interface.
 func (c *Chain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.getRelayerNode().PenumbraAppNode.Exec(ctx, cmd, env)
+	return c.getRelayerNode().AppNode.Exec(ctx, cmd, env)
 }
 
 func (c *Chain) getRelayerNode() Node {
@@ -124,13 +124,13 @@ func (c *Chain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *Chain) GetHostRPCAddress() string {
-	return "http://" + c.getRelayerNode().PenumbraAppNode.hostRPCPort
+	return "http://" + c.getRelayerNode().AppNode.hostRPCPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *Chain) GetHostGRPCAddress() string {
-	return c.getRelayerNode().PenumbraAppNode.hostGRPCPort
+	return c.getRelayerNode().AppNode.hostGRPCPort
 }
 
 func (c *Chain) HomeDir() string {
@@ -139,16 +139,16 @@ func (c *Chain) HomeDir() string {
 
 // Implements Chain interface
 func (c *Chain) CreateKey(ctx context.Context, keyName string) error {
-	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
+	return c.getRelayerNode().AppNode.CreateKey(ctx, keyName)
 }
 
 func (c *Chain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return c.getRelayerNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
+	return c.getRelayerNode().AppNode.RecoverKey(ctx, name, mnemonic)
 }
 
 // Implements Chain interface
 func (c *Chain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
+	return c.getRelayerNode().AppNode.GetAddress(ctx, keyName)
 }
 
 // BuildWallet will return a Penumbra wallet
@@ -203,7 +203,7 @@ func (c *Chain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wal
 
 // Implements Chain interface
 func (c *Chain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, amount)
+	return c.getRelayerNode().AppNode.SendFunds(ctx, keyName, amount)
 }
 
 // Implements Chain interface
@@ -214,7 +214,7 @@ func (c *Chain) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
+	return c.getRelayerNode().AppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 }
 
 // Implements Chain interface
@@ -295,7 +295,7 @@ func (c *Chain) initializeChainNodes(
 			return fmt.Errorf("set tendermint volume owner: %w", err)
 		}
 
-		pn := &PenumbraAppNode{
+		pn := &AppNode{
 			log: c.log, Index: i, Chain: c,
 			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1],
 		}
@@ -323,7 +323,7 @@ func (c *Chain) initializeChainNodes(
 			return fmt.Errorf("set penumbra volume owner: %w", err)
 		}
 
-		penumbraNodes = append(penumbraNodes, Node{TendermintNode: tn, PenumbraAppNode: pn})
+		penumbraNodes = append(penumbraNodes, Node{TendermintNode: tn, AppNode: pn})
 	}
 	c.PenumbraNodes = penumbraNodes
 
@@ -376,17 +376,17 @@ func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWal
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
-			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
+			if err := v.AppNode.CreateKey(egCtx, valKey); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, valKey); err != nil {
+			if err := v.AppNode.InitValidatorFile(egCtx, valKey); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
 
-			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
+			// In all likelihood, the AppNode and TendermintNode have the same DockerClient and TestName,
 			// but instantiate a new FileRetriever to be defensive.
-			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
-			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.json")
+			fr = dockerutil.NewFileRetriever(c.log, v.AppNode.DockerClient, v.AppNode.TestName)
+			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.AppNode.VolumeName, "validator.json")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
@@ -437,7 +437,7 @@ func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWal
 	}
 
 	firstVal := c.PenumbraNodes[0]
-	if err := firstVal.PenumbraAppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
+	if err := firstVal.AppNode.GenerateGenesisFile(ctx, chainCfg.ChainID, validatorDefinitions, allocations); err != nil {
 		return fmt.Errorf("generating genesis file: %w", err)
 	}
 
@@ -450,13 +450,13 @@ func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWal
 		eg.Go(func() error {
 			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/tendermint/config/priv_validator_key.json", i)
 
-			fr := dockerutil.NewFileRetriever(c.log, firstVal.PenumbraAppNode.DockerClient, firstVal.PenumbraAppNode.TestName)
-			pk, err := fr.SingleFileContent(egCtx, firstVal.PenumbraAppNode.VolumeName, firstValPrivKeyRelPath)
+			fr := dockerutil.NewFileRetriever(c.log, firstVal.AppNode.DockerClient, firstVal.AppNode.TestName)
+			pk, err := fr.SingleFileContent(egCtx, firstVal.AppNode.VolumeName, firstValPrivKeyRelPath)
 			if err != nil {
 				return fmt.Errorf("error getting validator private key content: %w", err)
 			}
 
-			fw := dockerutil.NewFileWriter(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			fw := dockerutil.NewFileWriter(c.log, val.AppNode.DockerClient, val.AppNode.TestName)
 			if err := fw.WriteFile(egCtx, val.TendermintNode.VolumeName, "config/priv_validator_key.json", pk); err != nil {
 				return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 			}
@@ -475,7 +475,7 @@ func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWal
 // Bootstraps the chain and starts it from genesis
 func (c *Chain) start(ctx context.Context) error {
 	// Copy the penumbra genesis to all tendermint nodes.
-	genesisContent, err := c.PenumbraNodes[0].PenumbraAppNode.genesisFileContent(ctx)
+	genesisContent, err := c.PenumbraNodes[0].AppNode.genesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
@@ -504,12 +504,12 @@ func (c *Chain) start(ctx context.Context) error {
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
+				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.AppNode.HostName()),
 				"--rpc.laddr=tcp://0.0.0.0:26657",
 			)
 		})
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer(egCtx)
+			return n.AppNode.CreateNodeContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -527,9 +527,9 @@ func (c *Chain) start(ctx context.Context) error {
 			}
 			return n.TendermintNode.StartContainer(egCtx)
 		})
-		c.log.Info("Starting penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
+		c.log.Info("Starting penumbra container", zap.String("container", n.AppNode.Name()))
 		eg.Go(func() error {
-			return n.PenumbraAppNode.StartContainer(egCtx)
+			return n.AppNode.StartContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {

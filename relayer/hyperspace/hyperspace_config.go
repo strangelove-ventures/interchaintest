@@ -15,11 +15,11 @@ import (
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
-type HyperspaceRelayerCoreConfig struct {
+type RelayerCoreConfig struct {
 	PrometheusEndpoint string
 }
 
-type HyperspaceRelayerSubstrateChainConfig struct {
+type RelayerSubstrateChainConfig struct {
 	Type             string   `toml:"type"`
 	Name             string   `toml:"name"`
 	ParaID           uint32   `toml:"para_id"`
@@ -108,7 +108,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 		if len(addrs) > 1 {
 			paraRpcAddr, relayRpcAddr = addrs[0], addrs[1]
 		}
-		return HyperspaceRelayerSubstrateChainConfig{
+		return RelayerSubstrateChainConfig{
 			Type:             chainType,
 			Name:             chainConfig.Name,
 			ParaID:           2000,

@@ -155,7 +155,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 				Flags:           []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},
 				RelayChainFlags: []string{"--execution=wasm"},
 			}}
-			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
+			return polkadot.NewChain(log, testName, cfg, nv, parachains), nil
 		default:
 			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
 		}

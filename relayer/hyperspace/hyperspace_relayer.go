@@ -43,7 +43,7 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 		panic(err) // TODO: return
 	}
 
-	coreConfig := HyperspaceRelayerCoreConfig{
+	coreConfig := RelayerCoreConfig{
 		PrometheusEndpoint: "",
 	}
 	bytes, err := toml.Marshal(coreConfig)
@@ -66,7 +66,7 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 //
 // Note, this API may change if the rly package eventually needs
 // to distinguish between multiple rly versions.
-func HyperspaceCapabilities() map[relayer.Capability]bool {
+func Capabilities() map[relayer.Capability]bool {
 	// RC1 matches the full set of capabilities as of writing.
 	return nil // relayer.FullCapabilities()
 }

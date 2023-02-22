@@ -169,7 +169,7 @@ func TestHyperspace(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	polkadotChain := chains[0].(*polkadot.PolkadotChain)
+	polkadotChain := chains[0].(*polkadot.Chain)
 	cosmosChain := chains[1].(*cosmos.Chain)
 
 	// Get a relayer instance
@@ -408,7 +408,7 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 		Denom:   "1",
 		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
 	}
-	err = polkadotChain.(*polkadot.PolkadotChain).MintFunds("alice", mint)
+	err = polkadotChain.(*polkadot.Chain).MintFunds("alice", mint)
 	require.NoError(t, err)
 
 	return polkadotUser, cosmosUser

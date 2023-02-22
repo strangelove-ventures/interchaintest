@@ -170,7 +170,7 @@ type WalletAmount struct {
 	Amount  int64
 }
 
-type IBCTimeout struct {
+type Timeout struct {
 	NanoSeconds uint64
 	Height      uint64
 }

@@ -31,17 +31,17 @@ func CustomDockerImage(repository string, version string, uidGid string) Option 
 
 func (opt OptionDockerImage) relayerOption() {}
 
-type RelayerOptionImagePull struct {
+type OptionImagePull struct {
 	Pull bool
 }
 
 func ImagePull(pull bool) Option {
-	return RelayerOptionImagePull{
+	return OptionImagePull{
 		Pull: pull,
 	}
 }
 
-func (opt RelayerOptionImagePull) relayerOption() {}
+func (opt OptionImagePull) relayerOption() {}
 
 type OptionExtraStartFlags struct {
 	Flags []string
