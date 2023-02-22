@@ -27,7 +27,7 @@ type DockerRelayer struct {
 	log *zap.Logger
 
 	// c defines all the commands to run inside the container.
-	c RelayerCommander
+	c Commander
 
 	networkID  string
 	client     *client.Client
@@ -48,7 +48,7 @@ type DockerRelayer struct {
 var _ ibc.Relayer = (*DockerRelayer)(nil)
 
 // NewDockerRelayer returns a new DockerRelayer.
-func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli *client.Client, networkID string, c RelayerCommander, options ...Option) (*DockerRelayer, error) {
+func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli *client.Client, networkID string, c Commander, options ...Option) (*DockerRelayer, error) {
 	r := DockerRelayer{
 		log: log,
 
@@ -507,7 +507,7 @@ func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.Relay
 	panic("[rly/SetClientContractHash] Implement me")
 }
 
-type RelayerCommander interface {
+type Commander interface {
 	// Name is the name of the relayer, e.g. "rly" or "hermes".
 	Name() string
 

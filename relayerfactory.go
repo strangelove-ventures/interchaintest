@@ -67,7 +67,7 @@ func (f builtinRelayerFactory) Build(
 			f.options...,
 		)
 	case ibc.Hyperspace:
-		return hyperspace.NewHyperspaceRelayer(
+		return hyperspace.NewRelayer(
 			f.log,
 			t.Name(),
 			cli,

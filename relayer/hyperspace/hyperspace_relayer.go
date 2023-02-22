@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var _ ibc.Relayer = &HyperspaceRelayer{}
+var _ ibc.Relayer = &Relayer{}
 
 // ******* DockerRelayer methods that will panic in hyperspace commander, no overrides yet *******
 // FlushAcknowledgements() - no hyperspace implementation yet
@@ -24,13 +24,13 @@ var _ ibc.Relayer = &HyperspaceRelayer{}
 // UpdateClients() - no hyperspace implementation yet
 // AddKey() - no hyperspace implementation yet
 
-// HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
-type HyperspaceRelayer struct {
+// Relayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
+type Relayer struct {
 	// Embedded DockerRelayer so commands just work.
 	*relayer.DockerRelayer
 }
 
-func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.Option) *HyperspaceRelayer {
+func NewRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.Option) *Relayer {
 	c := hyperspaceCommander{log: log}
 	for _, opt := range options {
 		switch o := opt.(type) {
@@ -55,7 +55,7 @@ func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, 
 		panic(err) // TODO: return
 	}
 
-	r := &HyperspaceRelayer{
+	r := &Relayer{
 		DockerRelayer: dr,
 	}
 
@@ -74,7 +74,7 @@ func Capabilities() map[relayer.Capability]bool {
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
 // and establishing a channel. This happens across multiple operations rather than a single link path cli command.
 // Parachains need a Polkadot epoch/session before starting, do not link in interchain.Build()
-func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
+func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	if err := r.CreateClients(ctx, rep, pathName, clientOpts); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecRep
 	return nil
 }
 
-func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
 	addrBytes := ""
 	chainID := cfg.ChainID
 	coinType := cfg.CoinType
@@ -123,7 +123,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 	return nil
 }
 
-func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+func (r *Relayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
 	chainConfig := make(testutil.Toml)
 	chainConfig["wasm_code_id"] = hash
 	chainConfigFile := cfg.ChainID + ".config"
@@ -135,7 +135,7 @@ func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.R
 	return nil
 }
 
-func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
+func (r *Relayer) PrintCoreConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
 	cmd := []string{
 		"cat",
 		path.Join(r.HomeDir(), "core.config"),
@@ -151,7 +151,7 @@ func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.Relayer
 	return nil
 }
 
-func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) error {
+func (r *Relayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) error {
 	cmd := []string{
 		"cat",
 		path.Join(r.HomeDir(), chainID+".config"),

@@ -41,7 +41,7 @@ type KeyEntry struct {
 	Address    []byte `toml:"address"`
 }
 
-type HyperspaceRelayerCosmosChainConfig struct {
+type RelayerCosmosChainConfig struct {
 	Type          string   `toml:"type"`
 	Name          string   `toml:"name"`
 	RPCUrl        string   `toml:"rpc_url"`
@@ -122,7 +122,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 		}
 	} else if chainType == "cosmos" {
 		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
-		return HyperspaceRelayerCosmosChainConfig{
+		return RelayerCosmosChainConfig{
 			Type:          chainType,
 			Name:          chainConfig.Name,
 			ChainID:       chainConfig.ChainID,

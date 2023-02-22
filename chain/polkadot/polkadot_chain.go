@@ -43,7 +43,7 @@ type Chain struct {
 }
 
 // PolkadotAuthority is used when constructing the validator authorities in the substrate chain spec.
-type PolkadotAuthority struct {
+type Authority struct {
 	Grandpa            string `json:"grandpa"`
 	Babe               string `json:"babe"`
 	IMOnline           string `json:"im_online"`
@@ -55,7 +55,7 @@ type PolkadotAuthority struct {
 }
 
 // PolkadotParachainSpec is used when constructing substrate chain spec for parachains.
-type PolkadotParachainSpec struct {
+type ParachainSpec struct {
 	GenesisHead    string `json:"genesis_head"`
 	ValidationCode string `json:"validation_code"`
 	Parachain      bool   `json:"parachain"`
@@ -287,7 +287,7 @@ func (c *Chain) modifyRelayChainGenesis(ctx context.Context, chainSpec interface
 		if i == 0 {
 			sudoAddress = string(accountAddress)
 		}
-		authority := []interface{}{string(stashAddress), string(stashAddress), PolkadotAuthority{
+		authority := []interface{}{string(stashAddress), string(stashAddress), Authority{
 			Grandpa:            grandpaAddress,
 			Babe:               string(accountAddress),
 			IMOnline:           string(accountAddress),
@@ -350,7 +350,7 @@ func (c *Chain) modifyRelayChainGenesis(ctx context.Context, chainSpec interface
 			return fmt.Errorf("error exporting genesis wasm: %w", err)
 		}
 
-		composableParachain := []interface{}{parachainID, PolkadotParachainSpec{
+		composableParachain := []interface{}{parachainID, ParachainSpec{
 			GenesisHead:    genesisState,
 			ValidationCode: genesisWasm,
 			Parachain:      true,
