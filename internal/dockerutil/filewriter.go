@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"path"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -48,10 +47,10 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 			Cmd: []string{
 				// Take the uid and gid of the mount path,
 				// and set that as the owner of the new relative path.
-				`chown "$(stat -c '%u:%g' "$1")" "$2"`,
+				`chown -R "$(stat -c '%u:%g' "$1")" "$2"`,
 				"_", // Meaningless arg0 for sh -c with positional args.
 				mountPath,
-				path.Join(mountPath, relPath),
+				mountPath,
 			},
 
 			// Use root user to avoid permission issues when reading files from the volume.

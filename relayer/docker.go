@@ -20,6 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultRlyHomeDirectory = "/home/relayer"
+)
+
 // DockerRelayer provides a common base for relayer implementations
 // that run on Docker.
 type DockerRelayer struct {
@@ -42,6 +46,8 @@ type DockerRelayer struct {
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
+
+	homeDir string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -64,12 +70,16 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		wallets: map[string]ibc.Wallet{},
 	}
 
+	r.homeDir = defaultRlyHomeDirectory
+
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case RelayerOptionDockerImage:
 			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
 			r.pullImage = o.Pull
+		case RelayerOptionHomeDir:
+			r.homeDir = o.HomeDir
 		}
 	}
 
@@ -120,6 +130,21 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	}
 
 	return &r, nil
+}
+
+// WriteFileToHomeDir writes the given contents to a file at the relative path specified. The file is relative
+// to the home directory in the relayer container.
+func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath string, contents []byte) error {
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, relativePath, contents); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
+// AddWallet adds a stores a wallet for the given chain ID.
+func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
+	r.wallets[chainID] = wallet
 }
 
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
@@ -469,7 +494,7 @@ func (r *DockerRelayer) Bind() []string {
 
 // HomeDir returns the home directory of the relayer on the underlying Docker container's filesystem.
 func (r *DockerRelayer) HomeDir() string {
-	return "/home/relayer"
+	return r.homeDir
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
