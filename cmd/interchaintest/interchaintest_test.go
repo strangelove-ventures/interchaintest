@@ -51,7 +51,7 @@ var testMatrix struct {
 var debugFlagSet = flag.NewFlagSet("debug", flag.ExitOnError)
 
 func TestMain(m *testing.M) {
-	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck
+	rand.Seed(time.Now().UnixNano()) 
 	addFlags()
 	parseFlags()
 
