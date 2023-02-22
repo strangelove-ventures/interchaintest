@@ -46,12 +46,12 @@ type RelayerCosmosChainConfig struct {
 	Name          string   `toml:"name"`
 	RPCUrl        string   `toml:"rpc_url"`
 	GRPCUrl       string   `toml:"grpc_url"`
-	WebsocketUrl  string   `toml:"websocket_url"`
+	WebsocketURL  string   `toml:"websocket_url"`
 	ChainID       string   `toml:"chain_id"`
 	AccountPrefix string   `toml:"account_prefix"`
 	StorePrefix   string   `toml:"store_prefix"`
 	MaxTxSize     uint64   `toml:"max_tx_size"`
-	WasmCodeId    string   `toml:"wasm_code_id"`
+	WasmCodeID    string   `toml:"wasm_code_id"`
 	Keybase       KeyEntry `toml:"keybase"`
 }
 
@@ -103,17 +103,17 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 
 	if chainType == "parachain" {
 		addrs := strings.Split(rpcAddr, ",")
-		paraRpcAddr := rpcAddr
-		relayRpcAddr := grpcAddr
+		paraRPCAddr := rpcAddr
+		relayRPCAddr := grpcAddr
 		if len(addrs) > 1 {
-			paraRpcAddr, relayRpcAddr = addrs[0], addrs[1]
+			paraRPCAddr, relayRPCAddr = addrs[0], addrs[1]
 		}
 		return RelayerSubstrateChainConfig{
 			Type:             chainType,
 			Name:             chainConfig.Name,
 			ParaID:           2000,
-			ParachainRPCURL:  strings.Replace(strings.Replace(paraRpcAddr, "http", "ws", 1), "9933", "27451", 1),
-			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1), "9933", "27451", 1),
+			ParachainRPCURL:  strings.Replace(strings.Replace(paraRPCAddr, "http", "ws", 1), "9933", "27451", 1),
+			RelayChainRPCURL: strings.Replace(strings.Replace(relayRPCAddr, "http", "ws", 1), "9933", "27451", 1),
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
 			SS58Version:      polkadot.Ss58Format,
@@ -121,7 +121,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			FinalityProtocol: "Grandpa",
 		}
 	} else if chainType == "cosmos" {
-		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
+		wsURL := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
 		return RelayerCosmosChainConfig{
 			Type:          chainType,
 			Name:          chainConfig.Name,
@@ -131,7 +131,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "ibc",
 			MaxTxSize:     200000,
-			WebsocketUrl:  wsUrl,
+			WebsocketURL:  wsURL,
 		}
 	} else {
 		panic(fmt.Sprintf("unsupported chain type %s", chainType))

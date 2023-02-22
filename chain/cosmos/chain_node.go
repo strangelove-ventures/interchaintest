@@ -793,12 +793,12 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
 	// Write msg to container
 	file := "proposal.json"
-	propJson, err := json.MarshalIndent(prop, "", " ")
+	propJSON, err := json.MarshalIndent(prop, "", " ")
 	if err != nil {
 		return "", err
 	}
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJSON); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 

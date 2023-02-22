@@ -577,7 +577,7 @@ func (c *Chain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UIDGid:     image.UidGid,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}

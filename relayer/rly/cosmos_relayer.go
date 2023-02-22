@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const RlyDefaultUidGid = "100:1000"
+const RlyDefaultUIDGid = "100:1000"
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
@@ -111,7 +111,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return RlyDefaultUidGid // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return RlyDefaultUIDGid // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {

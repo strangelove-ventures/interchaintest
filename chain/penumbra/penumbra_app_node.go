@@ -131,12 +131,12 @@ func (p *AppNode) GenerateGenesisFile(
 	validators []ValidatorDefinition,
 	allocations []GenesisAppStateAllocation,
 ) error {
-	validatorsJson, err := json.Marshal(validators)
+	validatorsJSON, err := json.Marshal(validators)
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
 	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
-	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
+	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJSON); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)

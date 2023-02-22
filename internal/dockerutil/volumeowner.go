@@ -20,12 +20,12 @@ type VolumeOwnerOptions struct {
 	VolumeName string
 	ImageRef   string
 	TestName   string
-	UidGid     string
+	UIDGid     string
 }
 
 // SetVolumeOwner configures the owner of a volume to match the default user in the supplied image reference.
 func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
-	owner := opts.UidGid
+	owner := opts.UIDGid
 	if owner == "" {
 		owner = GetRootUserString()
 	}

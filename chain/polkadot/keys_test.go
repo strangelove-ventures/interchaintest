@@ -22,11 +22,11 @@ func TestNodeKeyPeerID(t *testing.T) {
 
 	id, err := peer.IDFromPrivateKey(privKey)
 	require.NoError(t, err, "error getting peer id from private key")
-	peerId := peer.Encode(id)
-	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerId)
+	peerID := peer.Encode(id)
+	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerID)
 }
 
-func Test_DeriveEd25519FromName(t *testing.T) {
+func TestDeriveEd25519FromName(t *testing.T) {
 	privKey, err := polkadot.DeriveEd25519FromName("Alice")
 	require.NoError(t, err, "error deriving ed25519 private key")
 

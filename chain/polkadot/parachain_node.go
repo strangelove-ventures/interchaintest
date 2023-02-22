@@ -48,7 +48,7 @@ type ParachainNode struct {
 
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
-	hostRpcPort string
+	hostRPCPort string
 }
 
 type ParachainNodes []*ParachainNode
@@ -109,11 +109,11 @@ func (pn *ParachainNode) PeerID() (string, error) {
 
 // MultiAddress returns the p2p multiaddr of the node.
 func (pn *ParachainNode) MultiAddress() (string, error) {
-	peerId, err := pn.PeerID()
+	peerID, err := pn.PeerID()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerID), nil
 }
 
 type GetParachainIDResponse struct {
@@ -318,7 +318,7 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 
 	// Set the host ports once since they will not change after the container has started.
 	pn.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	pn.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	pn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
 
 	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(pn.hostWsPort, "localhost", "127.0.0.1", 1))

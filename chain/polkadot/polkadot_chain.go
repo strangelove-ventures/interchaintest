@@ -188,7 +188,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 			VolumeName: v.Name,
 			ImageRef:   chainCfg.Images[0].Ref(),
 			TestName:   testName,
-			UidGid:     chainCfg.Images[0].UidGid,
+			UIDGid:     chainCfg.Images[0].UidGid,
 		}); err != nil {
 			return fmt.Errorf("set volume owner: %w", err)
 		}
@@ -235,7 +235,7 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 				VolumeName: v.Name,
 				ImageRef:   parachainConfig.Image.Ref(),
 				TestName:   testName,
-				UidGid:     parachainConfig.Image.UidGid,
+				UIDGid:     parachainConfig.Image.UidGid,
 			}); err != nil {
 				return fmt.Errorf("set volume owner: %w", err)
 			}
@@ -527,7 +527,7 @@ func (c *Chain) GetGRPCAddress() string {
 // Implements Chain interface.
 func (c *Chain) GetHostRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
-		return c.ParachainNodes[0][0].hostRpcPort
+		return c.ParachainNodes[0][0].hostRPCPort
 	}
 	return c.RelayChainNodes[0].hostRpcPort
 }

@@ -52,7 +52,7 @@ func TestSDK47Boundary(t *testing.T) {
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
-		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "andrew-tendermint_v0.37", rly.RlyDefaultUidGid),
+		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "andrew-tendermint_v0.37", rly.RlyDefaultUIDGid),
 		relayer.ImagePull(false),
 	)
 
