@@ -17,4 +17,3 @@ func (m MsgPushNewWasmCode) GetSigners() []sdk.AccAddress {
 	}
 	return []sdk.AccAddress{signer}
 }
-
