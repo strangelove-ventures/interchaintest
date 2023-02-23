@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v7"
-	"github.com/strangelove-ventures/ibctest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -46,7 +46,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      chainName,
 			ChainName: chainName,
@@ -63,17 +63,17 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain)
 
 	ctx := context.Background()
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true,
 	}))
 	t.Cleanup(func() {

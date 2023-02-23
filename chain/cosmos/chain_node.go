@@ -27,10 +27,10 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/p2p"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
@@ -195,7 +195,7 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// SetTestConfig modifies the config to reasonable values for use within ibctest.
+// SetTestConfig modifies the config to reasonable values for use within interchaintest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	c := make(testutil.Toml)
 

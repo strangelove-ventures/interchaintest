@@ -17,10 +17,10 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v7/chain/internal/tendermint"
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
-	"github.com/strangelove-ventures/ibctest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -143,7 +143,7 @@ func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return fmt.Errorf("RecoverKey not implemented for PenumbraChain")
+	return c.getRelayerNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
 // Implements Chain interface
@@ -375,7 +375,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(egCtx); err != nil {
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, valKey); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
 

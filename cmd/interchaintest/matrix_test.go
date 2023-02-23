@@ -1,11 +1,11 @@
-package ibctest_test
+package interchaintest_test
 
 import (
 	_ "embed"
 	"encoding/json"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v7"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -21,7 +21,7 @@ var (
 
 func TestMatrixValid(t *testing.T) {
 	type matrix struct {
-		ChainSets [][]*ibctest.ChainSpec
+		ChainSets [][]*interchaintest.ChainSpec
 	}
 
 	for _, tc := range []struct {

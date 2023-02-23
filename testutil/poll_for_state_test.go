@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/stretchr/testify/require"
 )
 

@@ -21,13 +21,13 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: checkout ibctest
+      - name: checkout interchaintest
         uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
-          rm -rf ~/.ibctest
+          rm -rf ~/.interchaintest
 
       # run tests
       - name: run unit tests
@@ -43,17 +43,17 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: checkout ibctest
+      - name: checkout interchaintest
         uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
-          rm -rf ~/.ibctest
+          rm -rf ~/.interchaintest
 
       # run tests
       - name: run conformance tests
-        run: (go test -race -timeout 30m -v -p 2 ./cmd/ibctest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (go test -race -timeout 30m -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
   test-ibc-examples:
     name: test-ibc-examples
     runs-on: [self-hosted, linux]
@@ -64,13 +64,13 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: checkout ibctest
+      - name: checkout interchaintest
         uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
-          rm -rf ~/.ibctest
+          rm -rf ~/.interchaintest
 
       # run tests
       - name: run example ibc tests
@@ -85,13 +85,13 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: checkout ibctest
+      - name: checkout interchaintest
         uses: actions/checkout@v3
 
       # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
-          rm -rf ~/.ibctest
+          rm -rf ~/.interchaintest
 
       # run tests
       - name: run example cosmos tests
