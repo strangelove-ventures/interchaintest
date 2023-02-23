@@ -25,7 +25,15 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 )
 
-func TestInterchain_DuplicateChain(t *testing.T) {
+func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
+	duplicateChainTest(t, ibc.CosmosRly)
+}
+
+func TestInterchain_DuplicateChain_HermesRelayer(t *testing.T) {
+	duplicateChainTest(t, ibc.Hermes)
+}
+
+func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -45,7 +53,7 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
@@ -73,7 +81,15 @@ func TestInterchain_DuplicateChain(t *testing.T) {
 	_ = ic.Close()
 }
 
-func TestInterchain_GetRelayerWallets(t *testing.T) {
+func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) {
+	getRelayerWalletsTest(t, ibc.CosmosRly)
+}
+
+func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) {
+	getRelayerWalletsTest(t, ibc.Hermes)
+}
+
+func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -93,7 +109,7 @@ func TestInterchain_GetRelayerWallets(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
@@ -229,7 +245,15 @@ func TestInterchain_CreateUser(t *testing.T) {
 	})
 }
 
-func TestCosmosChain_BroadcastTx(t *testing.T) {
+func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) {
+	broadcastTxCosmosChainTest(t, ibc.CosmosRly)
+}
+
+func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) {
+	broadcastTxCosmosChainTest(t, ibc.Hermes)
+}
+
+func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -249,7 +273,7 @@ func TestCosmosChain_BroadcastTx(t *testing.T) {
 
 	gaia0, gaia1 := chains[0], chains[1]
 
-	r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)).Build(
+	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
