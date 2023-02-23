@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
@@ -102,7 +103,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		conn0 := conns0[0]
 		req.NotEmpty(conn0.ID)
 		req.NotEmpty(conn0.ClientID)
-		req.Equal(conn0.State, conntypes.OPEN.String())
+		req.Subset([]string{conntypes.OPEN.String(), "Open"}, []string{conn0.State})
 
 		conns1, err := r.GetConnections(ctx, eRep, c1.Config().ChainID)
 		req.NoError(err)
@@ -111,7 +112,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		conn1 := conns1[0]
 		req.NotEmpty(conn1.ID)
 		req.NotEmpty(conn1.ClientID)
-		req.Equal(conn1.State, conntypes.OPEN.String())
+		req.Subset([]string{conntypes.OPEN.String(), "Open"}, []string{conn1.State})
 
 		// Now validate counterparties.
 		req.Equal(conn0.Counterparty.ClientId, conn1.ClientID)
@@ -160,14 +161,14 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		// Piecemeal assertions against each channel.
 		// Not asserting against ConnectionHops or ChannelID.
-		req.Equal(ch0.State, "STATE_OPEN")
-		req.Equal(ch0.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch0.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch0.Ordering})
 		req.Equal(ch0.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID})
 		req.Equal(ch0.Version, "ics20-1")
 		req.Equal(ch0.PortID, "transfer")
 
-		req.Equal(ch1.State, "STATE_OPEN")
-		req.Equal(ch1.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch1.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch1.Ordering})
 		req.Equal(ch1.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID})
 		req.Equal(ch1.Version, "ics20-1")
 		req.Equal(ch1.PortID, "transfer")
