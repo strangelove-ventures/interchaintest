@@ -14,7 +14,9 @@ import (
 	"go.uber.org/zap"
 )
 
-const RlyDefaultUidGid = "100:1000"
+const (
+	RlyDefaultUidGid = "100:1000"
+)
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
@@ -155,7 +157,7 @@ func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod str
 	}
 }
 
-func (commander) CreateConnections(pathName, homeDir string) []string {
+func (commander) CreateConnections(pathName string, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
 		"--home", homeDir,
