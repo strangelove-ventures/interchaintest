@@ -4,7 +4,7 @@ import (
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	balancertypes "github.com/osmosis-labs/osmosis/v12/x/gamm/pool-models/balancer"
 	gammtypes "github.com/osmosis-labs/osmosis/v12/x/gamm/types"
-	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 )
 
 func OsmosisEncoding() *simappparams.EncodingConfig {

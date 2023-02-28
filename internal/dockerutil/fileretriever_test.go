@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v3"
-	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v4"
+	"github.com/strangelove-ventures/interchaintest/v4/internal/dockerutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
