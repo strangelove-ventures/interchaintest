@@ -13,7 +13,7 @@ require (
 	github.com/cometbft/cometbft v0.37.0-rc3
 	github.com/cosmos/cosmos-sdk v0.47.0-rc3
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v7 v7.0.0-20230227202603-3d0a69eecbc7
+	github.com/cosmos/ibc-go/v7 v7.0.0-20230301203348-9d0682254443
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.19+incompatible
@@ -25,7 +25,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.15.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.6.0
