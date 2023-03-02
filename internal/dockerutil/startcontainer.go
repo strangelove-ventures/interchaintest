@@ -10,9 +10,8 @@ import (
 )
 
 // StartContainer attempts to start the container with the given ID.
-// If the request times out, it retries a certain number of times before failing.
-// Any other failure modes stop immediately.
 func StartContainer(ctx context.Context, cli *client.Client, id string) error {
+	// add a deadline for the request if the calling context does not provide one
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)

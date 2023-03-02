@@ -128,7 +128,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			cancel()
 
 			if t.Failed() || showContainerLogs {
-				logTail := "500"
+				logTail := "50"
 				if containerLogTail != "" {
 					logTail = containerLogTail
 				}
