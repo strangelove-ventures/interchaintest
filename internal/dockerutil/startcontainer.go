@@ -16,7 +16,7 @@ import (
 func StartContainer(ctx context.Context, cli *client.Client, id string) error {
 	return retry.Do(
 		func() error {
-			retryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			retryCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
 			err := cli.ContainerStart(retryCtx, id, types.ContainerStartOptions{})
