@@ -3,8 +3,8 @@ package tendermint
 import (
 	"testing"
 
+	abcitypes "github.com/cometbft/cometbft/abci/types"
 	"github.com/stretchr/testify/require"
-	abcitypes "github.com/tendermint/tendermint/abci/types"
 )
 
 func TestAttributeValue(t *testing.T) {
