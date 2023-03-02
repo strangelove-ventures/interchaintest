@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
@@ -20,7 +19,7 @@ func StartContainer(ctx context.Context, cli *client.Client, id string) error {
 
 	err := cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
 	if err != nil {
-		return retry.Unrecoverable(err)
+		return err
 	}
 
 	return nil
