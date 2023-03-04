@@ -249,8 +249,7 @@ Notice, how it waits for blocks. Sometimes this is necessary.
 Here we instruct the relayer to flush packets and acknowledgments.
 
 ```go
-require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
-require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, gaiaChannelID))
+require.NoError(t, r.Flush(ctx, eRep, ibcPath, osmoChannelID))
 ```
 
 This could have also been accomplished by starting the relayer on a loop:
