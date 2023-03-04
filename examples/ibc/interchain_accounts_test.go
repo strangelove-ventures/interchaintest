@@ -268,12 +268,12 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1Chans, err := r.GetChannels(ctx, eRep, chain1.Config().ChainID)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(chain1Chans))
-	require.Equal(t, "STATE_CLOSED", chain1Chans[0].State)
+	require.Subset(t, []string{"STATE_CLOSED", "Closed"}, []string{chain1Chans[0].State})
 
 	chain2Chans, err := r.GetChannels(ctx, eRep, chain2.Config().ChainID)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(chain2Chans))
-	require.Equal(t, "STATE_CLOSED", chain2Chans[0].State)
+	require.Subset(t, []string{"STATE_CLOSED", "Closed"}, []string{chain2Chans[0].State})
 
 	// Attempt to open another channel for the same ICA
 	_, _, err = chain1.Exec(ctx, registerICA, nil)
@@ -294,12 +294,12 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1Chans, err = r.GetChannels(ctx, eRep, chain1.Config().ChainID)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(chain1Chans))
-	require.Equal(t, "STATE_OPEN", chain1Chans[1].State)
+	require.Subset(t, []string{"STATE_OPEN", "Open"}, []string{chain1Chans[1].State})
 
 	chain2Chans, err = r.GetChannels(ctx, eRep, chain2.Config().ChainID)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(chain2Chans))
-	require.Equal(t, "STATE_OPEN", chain2Chans[1].State)
+	require.Subset(t, []string{"STATE_OPEN", "Open"}, []string{chain2Chans[1].State})
 }
 
 // parseInterchainAccountField takes a slice of bytes which should be returned when querying for an ICA via
