@@ -186,12 +186,8 @@ func (c commander) CreateConnections(pathName string, homeDir string) []string {
 	panic("create connections implemented in hermes relayer not the commander")
 }
 
-func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	panic("flush acks implemented in hermes relayer not the commander")
-}
-
-func (c commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	panic("flush packets implemented in hermes relayer not the commander")
+func (c commander) Flush(pathName, channelID, homeDir string) []string {
+	panic("flush implemented in hermes relayer not the commander")
 }
 
 func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
