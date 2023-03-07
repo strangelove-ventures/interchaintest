@@ -35,7 +35,7 @@ func TestSeiStrideConformance(t *testing.T) {
 	consensus["timeout-propose"] = seiBlockT
 	seiConfigTomlOverrides["consensus"] = consensus
 
-	seiConfigFileOverrides[filepath.Join("config", "app.toml")] = seiConfigTomlOverrides
+	seiConfigFileOverrides[filepath.Join("config", "config.toml")] = seiConfigTomlOverrides
 
 	nf := 0
 
