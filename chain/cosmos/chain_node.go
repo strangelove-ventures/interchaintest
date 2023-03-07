@@ -62,6 +62,8 @@ type ChainNode struct {
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+
+	cachedNodeID string
 }
 
 // ChainNodes is a collection of ChainNode
@@ -202,12 +204,16 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Set Log Level to info
 	c["log_level"] = "info"
+	c["log-level"] = "info"
 
 	p2p := make(testutil.Toml)
 
 	// Allow p2p strangeness
 	p2p["allow_duplicate_ip"] = true
+	p2p["allow-duplicate-ip"] = true
+
 	p2p["addr_book_strict"] = false
+	p2p["addr-book-strict"] = false
 
 	c["p2p"] = p2p
 
@@ -215,7 +221,10 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensus["timeout_commit"] = blockT
+	consensus["timeout-commit"] = blockT
+
 	consensus["timeout_propose"] = blockT
+	consensus["timeout-propose"] = blockT
 
 	c["consensus"] = consensus
 
@@ -266,6 +275,7 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 
 	// Set peers
 	p2p["persistent_peers"] = peers
+	p2p["persistent-peers"] = peers
 	c["p2p"] = p2p
 
 	return testutil.ModifyTomlConfigFile(
@@ -1028,6 +1038,10 @@ func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
 
 // NodeID returns the persistent ID of a given node.
 func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
+	if tn.cachedNodeID != "" {
+		return tn.cachedNodeID, nil
+	}
+
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
@@ -1043,7 +1057,9 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("unmarshaling node_key.json: %w", err)
 	}
 
-	return string(nk.ID()), nil
+	tn.cachedNodeID = string(nk.ID())
+
+	return tn.cachedNodeID, nil
 }
 
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
