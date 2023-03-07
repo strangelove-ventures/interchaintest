@@ -22,19 +22,26 @@ func TestSeiStrideConformance(t *testing.T) {
 	log := zaptest.NewLogger(t)
 
 	seiConfigFileOverrides := make(map[string]any)
-	seiAppTomlOverrides := make(testutil.Toml)
+	seiConfigTomlOverrides := make(testutil.Toml)
+
+	seiConfigTomlOverrides["mode"] = "validator"
 
 	seiBlockTime := 100 * time.Millisecond
 
-	seiBlockT := seiBlockTime.String()
-	seiAppTomlOverrides["timeout-commit"] = seiBlockT
-	seiAppTomlOverrides["timeout-propose"] = seiBlockT
+	consensus := make(testutil.Toml)
 
-	seiConfigFileOverrides[filepath.Join("config", "app.toml")] = seiAppTomlOverrides
+	seiBlockT := seiBlockTime.String()
+	consensus["timeout-commit"] = seiBlockT
+	consensus["timeout-propose"] = seiBlockT
+	seiConfigFileOverrides["consensus"] = consensus
+
+	seiConfigFileOverrides[filepath.Join("config", "app.toml")] = seiConfigTomlOverrides
+
+	nf := 0
 
 	cf := interchaintest.NewBuiltinChainFactory(log, []*interchaintest.ChainSpec{
 		{Name: "stride", Version: "v6.0.0"},
-		{Name: "sei", Version: "2.0.39beta-internal-2", ChainConfig: ibc.ChainConfig{
+		{Name: "sei", Version: "2.0.39beta-internal-2", NumFullNodes: &nf, ChainConfig: ibc.ChainConfig{
 			ConfigFileOverrides: seiConfigFileOverrides,
 		}},
 	})
