@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/conformance"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer/rly"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/conformance"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap/zaptest"
 )
 
