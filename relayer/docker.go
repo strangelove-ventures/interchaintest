@@ -173,8 +173,8 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	return res.Err
 }
 
-func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType string) (ibc.Wallet, error) {
-	cmd := r.c.AddKey(chainID, keyName, coinType, r.HomeDir())
+func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, signingAlgorithm string) (ibc.Wallet, error) {
+	cmd := r.c.AddKey(chainID, keyName, coinType, signingAlgorithm, r.HomeDir())
 
 	// Adding a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -305,8 +305,8 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
-	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, signingAlgorithm, mnemonic string) error {
+	cmd := r.c.RestoreKey(chainID, keyName, coinType, signingAlgorithm, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -515,7 +515,7 @@ type RelayerCommander interface {
 	// The remaining methods produce the command to run inside the container.
 
 	AddChainConfiguration(containerFilePath, homeDir string) []string
-	AddKey(chainID, keyName, coinType, homeDir string) []string
+	AddKey(chainID, keyName, coinType, signingAlgorithm, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
@@ -526,7 +526,7 @@ type RelayerCommander interface {
 	GetConnections(chainID, homeDir string) []string
 	GetClients(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
-	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
+	RestoreKey(chainID, keyName, coinType, signingAlgorithm, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
 	CreateWallet(keyName, address, mnemonic string) ibc.Wallet
