@@ -73,6 +73,8 @@ const (
 	Osmosis Chain = "osmosis"
 	Juno    Chain = "juno"
 	Agoric  Chain = "agoric"
+	Sei     Chain = "sei"
+	Stride  Chain = "stride"
 
 	Penumbra Chain = "penumbra"
 )
@@ -83,6 +85,8 @@ var knownChainLabels = map[Chain]struct{}{
 	Juno:     {},
 	Agoric:   {},
 	Penumbra: {},
+	Sei:      {},
+	Stride:   {},
 }
 
 // RegisterChainLabel is available for external packages that may import interchaintest,

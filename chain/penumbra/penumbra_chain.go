@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -43,18 +44,25 @@ type PenumbraChain struct {
 }
 
 type PenumbraValidatorDefinition struct {
-	IdentityKey    string                           `json:"identity_key"`
-	ConsensusKey   string                           `json:"consensus_key"`
-	Name           string                           `json:"name"`
-	Website        string                           `json:"website"`
-	Description    string                           `json:"description"`
-	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams"`
-	SequenceNumber int64                            `json:"sequence_number"`
+	SequenceNumber int                              `json:"sequence_number" toml:"sequence_number"`
+	Enabled        bool                             `json:"enabled" toml:"enabled"`
+	Name           string                           `json:"name" toml:"name"`
+	Website        string                           `json:"website" toml:"website"`
+	Description    string                           `json:"description" toml:"description"`
+	IdentityKey    string                           `json:"identity_key" toml:"identity_key"`
+	GovernanceKey  string                           `json:"governance_key" toml:"governance_key"`
+	ConsensusKey   PenumbraConsensusKey             `json:"consensus_key" toml:"consensus_key"`
+	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams" toml:"funding_stream"`
+}
+
+type PenumbraConsensusKey struct {
+	Type  string `json:"type" toml:"type"`
+	Value string `json:"value" toml:"value"`
 }
 
 type PenumbraValidatorFundingStream struct {
-	Address string `json:"address"`
-	RateBPS int64  `json:"rate_bps"`
+	Address string `json:"address" toml:"address"`
+	RateBPS int64  `json:"rate_bps" toml:"rate_bps"`
 }
 
 type PenumbraGenesisAppStateAllocation struct {
@@ -382,15 +390,17 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
 			// but instantiate a new FileRetriever to be defensive.
 			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
-			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.json")
+			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.toml")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
 			validatorTemplateDefinition := PenumbraValidatorDefinition{}
-			if err := json.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
+			if err := toml.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
 				return fmt.Errorf("error unmarshaling validator definition template key: %v", err)
 			}
-			validatorTemplateDefinition.ConsensusKey = privValKey.PubKey.Value
+			validatorTemplateDefinition.SequenceNumber = i
+			validatorTemplateDefinition.Enabled = true
+			validatorTemplateDefinition.ConsensusKey.Value = privValKey.PubKey.Value
 			validatorTemplateDefinition.Name = fmt.Sprintf("validator-%d", i)
 			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
 			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)

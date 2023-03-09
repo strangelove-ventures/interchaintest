@@ -104,7 +104,7 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName stri
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return filepath.Join(p.HomeDir(), "validator.json")
+	return filepath.Join(p.HomeDir(), "validator.toml")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {

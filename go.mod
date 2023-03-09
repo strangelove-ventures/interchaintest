@@ -10,10 +10,10 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.0.4
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
-	github.com/cometbft/cometbft v0.37.0-rc3
+	github.com/cometbft/cometbft v0.37.0
 	github.com/cosmos/cosmos-sdk v0.47.0-rc3
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v7 v7.0.0-20230301203348-9d0682254443
+	github.com/cosmos/ibc-go/v7 v7.0.0-rc1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.19+incompatible

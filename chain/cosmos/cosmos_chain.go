@@ -818,14 +818,20 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	peers := chainNodes.PeerString(ctx)
-
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
 		n := n
+
+		peerNodes := make(ChainNodes, 0, len(chainNodes)-1)
+		for _, cn := range chainNodes {
+			if cn != n {
+				peerNodes = append(peerNodes, cn)
+			}
+		}
+
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
-			if err := n.SetPeers(egCtx, peers); err != nil {
+			if err := n.SetPeers(egCtx, peerNodes.PeerString(ctx)); err != nil {
 				return err
 			}
 			return n.StartContainer(egCtx)

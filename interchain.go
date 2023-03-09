@@ -418,10 +418,13 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}
 
+			cc := c.Config()
+
 			if err := r.RestoreKey(ctx,
 				rep,
-				c.Config().ChainID, chainName,
-				c.Config().CoinType,
+				cc.ChainID, chainName,
+				cc.CoinType,
+				cc.SigningAlgorithm,
 				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic(),
 			); err != nil {
 				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
