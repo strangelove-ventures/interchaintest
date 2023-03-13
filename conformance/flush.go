@@ -90,7 +90,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 		req := require.New(rep.TestifyT(t))
 
 		// Should trigger MsgRecvPacket.
-		req.NoError(r.Flush(ctx, eRep, pathName, ""))
+		req.NoError(r.Flush(ctx, eRep, pathName, c0ChannelID))
 
 		afterFlushHeight, err := c0.Height(ctx)
 		req.NoError(err)
