@@ -695,10 +695,12 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, admin *string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
-	if needsNoAdminFlag {
+	if admin == nil {
 		command = append(command, "--no-admin")
+	} else {
+		command = append(command, "--admin", *admin)
 	}
 	_, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
