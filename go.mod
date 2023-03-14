@@ -28,7 +28,7 @@ require (
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/stretchr/testify v1.8.1
 	github.com/tendermint/tendermint v0.34.21
-	go.uber.org/multierr v1.8.0
+	go.uber.org/multierr v1.10.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
