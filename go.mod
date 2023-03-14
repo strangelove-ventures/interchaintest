@@ -8,7 +8,7 @@ require (
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/avast/retry-go/v4 v4.0.4
+	github.com/avast/retry-go/v4 v4.3.3
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.46.2
 	github.com/cosmos/go-bip39 v1.0.0
