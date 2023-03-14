@@ -17,7 +17,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
+	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-version v1.6.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
@@ -130,7 +130,7 @@ require (
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b // indirect
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 // indirect
@@ -160,7 +160,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/regen-network/cosmos-proto v0.3.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/sasha-s/go-deadlock v0.2.1-0.20190427202633-1595213edefa // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
@@ -189,9 +189,9 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220726230323-06994584191e // indirect
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2 // indirect
-	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6 // indirect
-	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/api v0.93.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
