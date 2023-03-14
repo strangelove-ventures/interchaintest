@@ -136,8 +136,7 @@ func (tn *ChainNode) HostName() string {
 }
 
 func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
+	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
@@ -162,8 +161,7 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 
 	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
 
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gentx, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
+	gentx, err := tn.ReadFile(ctx, relPath)
 	if err != nil {
 		return fmt.Errorf("getting gentx content: %w", err)
 	}
@@ -1042,9 +1040,7 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
-
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
+	j, err := tn.ReadFile(ctx, "config/node_key.json")
 	if err != nil {
 		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}
