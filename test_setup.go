@@ -128,10 +128,8 @@ func StopStartRelayerWithPreStartFuncs(
 			return nil, fmt.Errorf("failed to start relayer: %w", err)
 		}
 	} else {
-		for _, path := range pathNames {
-			if err := relayerImpl.StartRelayer(ctx, eRep, path); err != nil {
-				return nil, fmt.Errorf("failed to start relayer: %w", err)
-			}
+		if err := relayerImpl.StartRelayer(ctx, eRep, pathNames...); err != nil {
+			return nil, fmt.Errorf("failed to start relayer: %w", err)
 		}
 	}
 

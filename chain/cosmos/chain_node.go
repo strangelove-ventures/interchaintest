@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -145,8 +146,8 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 }
 
 func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
+	err := tn.WriteFile(ctx, content, "config/genesis.json")
+	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
 
@@ -167,8 +168,8 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 		return fmt.Errorf("getting gentx content: %w", err)
 	}
 
-	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
-	if err := fw.WriteFile(ctx, destVal.VolumeName, relPath, gentx); err != nil {
+	err = destVal.WriteFile(ctx, gentx, relPath)
+	if err != nil {
 		return fmt.Errorf("overwriting gentx: %w", err)
 	}
 
@@ -503,6 +504,25 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	return err
 }
 
+// WriteFile accepts file contents in a byte slice and writes the contents to
+// the docker filesystem. relPath describes the location of the file in the
+// docker volume relative to the home directory
+func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	return fw.WriteFile(ctx, tn.VolumeName, relPath, content)
+}
+
+// CopyFile adds a file from the host filesystem to the docker filesystem
+// relPath describes the location of the file in the docker volume relative to
+// the home directory
+func (tn *ChainNode) CopyFile(ctx context.Context, srcPath, dstPath string) error {
+	content, err := os.ReadFile(srcPath)
+	if err != nil {
+		return err
+	}
+	return tn.WriteFile(ctx, content, dstPath)
+}
+
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
@@ -646,14 +666,9 @@ type CodeInfosResponse struct {
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-
 	_, file := filepath.Split(fileName)
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
+	err := tn.CopyFile(ctx, fileName, file)
+	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
@@ -729,13 +744,9 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-
 	_, file := filepath.Split(fileName)
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
+	err = tn.WriteFile(ctx, content, file)
+	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
@@ -814,6 +825,31 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop Text
 	if prop.Expedited {
 		command = append(command, "--is-expedited=true")
 	}
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
+	content, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(content)
+	proposalFilename := fmt.Sprintf("%x.json", hash)
+	err = tn.WriteFile(ctx, content, proposalFilename)
+	if err != nil {
+		return "", fmt.Errorf("writing param change proposal: %w", err)
+	}
+
+	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
+
+	command := []string{
+		"gov", "submit-proposal",
+		"param-change",
+		proposalPath,
+	}
+
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
