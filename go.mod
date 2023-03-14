@@ -26,7 +26,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pelletier/go-toml/v2 v2.0.5
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/tendermint v0.34.21
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.21.0
