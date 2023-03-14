@@ -141,6 +141,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
 	}
+	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
 
 	// Set the version depending on the chain type.
 	switch cfg.Type {
