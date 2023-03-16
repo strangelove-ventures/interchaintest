@@ -124,14 +124,26 @@ func (commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 }
 
 func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	return []string{
-		"rly", "tx", "channel", pathName,
-		"--src-port", opts.SourcePortName,
-		"--dst-port", opts.DestPortName,
-		"--order", opts.Order.String(),
-		"--version", opts.Version,
+	if opts.Override {
+		return []string{
+			"rly", "tx", "channel", pathName,
+			"--src-port", opts.SourcePortName,
+			"--dst-port", opts.DestPortName,
+			"--order", opts.Order.String(),
+			"--version", opts.Version,
+			"--override",
+			"--home", homeDir,
+		}
+	} else {
+		return []string{
+			"rly", "tx", "channel", pathName,
+			"--src-port", opts.SourcePortName,
+			"--dst-port", opts.DestPortName,
+			"--order", opts.Order.String(),
+			"--version", opts.Version,
 
-		"--home", homeDir,
+			"--home", homeDir,
+		}
 	}
 }
 

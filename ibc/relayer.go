@@ -208,6 +208,8 @@ type CreateChannelOptions struct {
 	Order Order
 
 	Version string
+
+	Override bool
 }
 
 // DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
@@ -217,6 +219,7 @@ func DefaultChannelOpts() CreateChannelOptions {
 		DestPortName:   "transfer",
 		Order:          Unordered,
 		Version:        "ics20-1",
+		Override:       false,
 	}
 }
 
