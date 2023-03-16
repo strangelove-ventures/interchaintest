@@ -216,6 +216,11 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
+	pb, err := dockerutil.GeneratePortBindings(exposedPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -233,6 +238,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           p.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},

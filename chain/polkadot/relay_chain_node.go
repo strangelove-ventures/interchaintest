@@ -228,6 +228,11 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("container", p.Name()),
 		)
 
+	pb, err := dockerutil.GeneratePortBindings(exposedPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -245,6 +250,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           p.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},

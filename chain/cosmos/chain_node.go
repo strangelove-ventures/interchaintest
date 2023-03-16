@@ -935,6 +935,11 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("image", imageRef),
 		)
 
+	pb, err := dockerutil.GeneratePortBindings(sentryPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -951,6 +956,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           tn.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},

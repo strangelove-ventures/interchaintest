@@ -252,6 +252,11 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("container", pn.Name()),
 		)
 
+	pb, err := dockerutil.GeneratePortBindings(exposedPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
 	cc, err := pn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -269,6 +274,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           pn.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},

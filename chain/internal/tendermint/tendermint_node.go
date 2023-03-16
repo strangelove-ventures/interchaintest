@@ -220,6 +220,11 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	cmd = append(cmd, additionalFlags...)
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
+	pb, err := dockerutil.GeneratePortBindings(sentryPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -236,6 +241,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 		},
 		&container.HostConfig{
 			Binds:           tn.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
