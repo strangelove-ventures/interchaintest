@@ -506,15 +506,15 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
-func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, repo, version string) {
+func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, ContainerRepo, version string) {
 	c.cfg.Images[0].Version = version
 	for _, n := range c.Validators {
 		n.Image.Version = version
-		n.Image.Repository = repo
+		n.Image.Repository = ContainerRepo
 	}
 	for _, n := range c.FullNodes {
 		n.Image.Version = version
-		n.Image.Repository = repo
+		n.Image.Repository = ContainerRepo
 	}
 	c.pullImages(ctx, cli)
 }

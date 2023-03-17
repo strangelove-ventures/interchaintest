@@ -24,10 +24,10 @@ const (
 )
 
 func TestJunoUpgrade(t *testing.T) {
-	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "https://github.com/CosmosContracts/juno", "multiverse")
+	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "multiverse")
 }
 
-func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeRepo, upgradeVersion, upgradeName string) {
+func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeContainerRepo, upgradeVersion, upgradeName string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -113,7 +113,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeRepo
 	require.NoError(t, err, "error stopping node(s)")
 
 	// upgrade version on all nodes
-	chain.UpgradeVersion(ctx, client, upgradeRepo, upgradeVersion)
+	chain.UpgradeVersion(ctx, client, upgradeContainerRepo, upgradeVersion)
 
 	// start all nodes back up.
 	// validators reach consensus on first block after upgrade height
