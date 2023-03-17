@@ -62,6 +62,8 @@ type ChainNode struct {
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 // ChainNodes is a collection of ChainNode
@@ -935,10 +937,12 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("image", imageRef),
 		)
 
-	pb, err := dockerutil.GeneratePortBindings(sentryPorts)
+	pb, listeners, err := dockerutil.GeneratePortBindings(sentryPorts)
 	if err != nil {
 		return fmt.Errorf("failed to generate port bindings: %w", err)
 	}
+
+	tn.preStartListeners = listeners
 
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
@@ -970,6 +974,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		tn.Name(),
 	)
 	if err != nil {
+		tn.preStartListeners.CloseAll()
 		return err
 	}
 	tn.containerID = cc.ID
@@ -977,7 +982,11 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	dockerutil.LockPortAssignment()
+	tn.preStartListeners.CloseAll()
+	err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID)
+	dockerutil.UnlockPortAssignment()
+	if err != nil {
 		return err
 	}
 

@@ -34,6 +34,8 @@ type PenumbraAppNode struct {
 	// Set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 const (
@@ -216,10 +218,12 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
 	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
-	pb, err := dockerutil.GeneratePortBindings(exposedPorts)
+	pb, listeners, err := dockerutil.GeneratePortBindings(exposedPorts)
 	if err != nil {
 		return fmt.Errorf("failed to generate port bindings: %w", err)
 	}
+
+	p.preStartListeners = listeners
 
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
@@ -252,6 +256,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 		p.Name(),
 	)
 	if err != nil {
+		p.preStartListeners.CloseAll()
 		return err
 	}
 	p.containerID = cc.ID
@@ -264,7 +269,11 @@ func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	dockerutil.LockPortAssignment()
+	p.preStartListeners.CloseAll()
+	err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID)
+	dockerutil.UnlockPortAssignment()
+	if err != nil {
 		return err
 	}
 

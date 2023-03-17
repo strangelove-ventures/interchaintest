@@ -3,9 +3,28 @@ package dockerutil
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/docker/go-connections/nat"
 )
+
+var mu sync.Mutex
+
+type Listeners []net.Listener
+
+func (l Listeners) CloseAll() {
+	for _, listener := range l {
+		listener.Close()
+	}
+}
+
+func LockPortAssignment() {
+	mu.Lock()
+}
+
+func UnlockPortAssignment() {
+	mu.Unlock()
+}
 
 // openListenerOnFreePort opens the next free port
 func openListenerOnFreePort() (*net.TCPListener, error) {
@@ -14,6 +33,8 @@ func openListenerOnFreePort() (*net.TCPListener, error) {
 		return nil, err
 	}
 
+	LockPortAssignment()
+	defer UnlockPortAssignment()
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -41,22 +62,19 @@ func nextAvailablePort() (nat.PortBinding, *net.TCPListener, error) {
 
 // GeneratePortBindings will find open ports on the local
 // machine and create a PortBinding for every port in the portSet.
-func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, error) {
+func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, []net.Listener, error) {
 	m := make(nat.PortMap)
-	listeners := make([]*net.TCPListener, 0, len(portSet))
+	listeners := make(Listeners, 0, len(portSet))
 
 	for p := range portSet {
 		pb, l, err := nextAvailablePort()
 		if err != nil {
-			return nat.PortMap{}, err
+			listeners.CloseAll()
+			return nat.PortMap{}, nil, err
 		}
 		listeners = append(listeners, l)
 		m[p] = []nat.PortBinding{pb}
 	}
 
-	for _, l := range listeners {
-		l.Close()
-	}
-
-	return m, nil
+	return m, listeners, nil
 }
