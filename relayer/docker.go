@@ -15,8 +15,8 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -219,14 +219,8 @@ func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerEx
 	return res.Err
 }
 
-func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.HomeDir())
-	res := r.Exec(ctx, rep, cmd, nil)
-	return res.Err
-}
-
-func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushPackets(pathName, channelID, r.HomeDir())
+func (r *DockerRelayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.Flush(pathName, channelID, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -549,8 +543,7 @@ type RelayerCommander interface {
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
-	FlushAcknowledgements(pathName, channelID, homeDir string) []string
-	FlushPackets(pathName, channelID, homeDir string) []string
+	Flush(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string

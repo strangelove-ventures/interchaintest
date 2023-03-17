@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -13,8 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -24,7 +27,6 @@ type FactoryOpt func(factory tx.Factory) tx.Factory
 type User interface {
 	KeyName() string
 	FormattedAddress() string
-	FormattedAddressWithPrefix(prefix string) string
 }
 
 type Broadcaster struct {
@@ -77,7 +79,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return tx.Factory{}, err
 	}
@@ -112,7 +114,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddressWithPrefix(chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return client.Context{}, err
 	}
@@ -150,13 +152,13 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
-		WithFrom(fromUser.FormattedAddressWithPrefix(b.chain.Config().Bech32Prefix)).
+		WithFrom(fromUser.FormattedAddress()).
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
-		WithBroadcastMode(flags.BroadcastBlock).
+		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)
 
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
@@ -202,5 +204,35 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
-	return broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	err = testutil.WaitForCondition(time.Second*30, time.Second*5, func() (bool, error) {
+		var err error
+		txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
+
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	resp, err := authTx.QueryTx(cc, respWithTxHash.TxHash)
+	if err != nil {
+		// if we fail to query the tx, it means an error occurred with the original message broadcast.
+		// we should return this instead.
+		originalResp, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+		if err != nil {
+			return sdk.TxResponse{}, err
+		}
+		return originalResp, nil
+	}
+
+	return *resp, nil
 }

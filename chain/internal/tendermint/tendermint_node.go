@@ -9,19 +9,19 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	"github.com/tendermint/tendermint/p2p"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 )
 
@@ -178,7 +178,7 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 }
 
 // Tenderment deprecate snake_case in config for hyphen-case in v0.34.1
-// https://github.com/tendermint/tendermint/blob/main/CHANGELOG.md#v0341
+// https://github.com/cometbft/cometbft/blob/main/CHANGELOG.md#v0341
 func (tn *TendermintNode) GetConfigSeparator() (string, error) {
 	var sep = "_"
 
