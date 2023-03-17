@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
 	github.com/libp2p/go-libp2p-core v0.15.1
-	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230217174116-8dfe4633df0f
+	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230316181816-6037bb49fa8d
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pelletier/go-toml/v2 v2.0.6
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8

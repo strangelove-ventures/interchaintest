@@ -29,9 +29,9 @@ type HyperspaceRelayerSubstrateChainConfig struct {
 	CommitmentPrefix string   `toml:"commitment_prefix"`
 	PrivateKey       string   `toml:"private_key"`
 	SS58Version      uint8    `toml:"ss58_version"`
-	ChannelWhitelist []string `toml:"channel_whitelist"`
 	FinalityProtocol string   `toml:"finality_protocol"`
 	KeyType          string   `toml:"key_type"`
+	ChannelWhitelist []string `toml:"channel_whitelist"`
 }
 
 type KeyEntry struct {
@@ -42,17 +42,21 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
-	Type          string `toml:"type"` //New
+	Type          string `toml:"type"`
 	Name          string `toml:"name"`
 	RPCUrl        string `toml:"rpc_url"`
 	GRPCUrl       string `toml:"grpc_url"`
 	WebsocketUrl  string `toml:"websocket_url"`
 	ChainID       string `toml:"chain_id"`
 	AccountPrefix string `toml:"account_prefix"`
+	FeeDenom      string `toml:"fee_denom"`
+	FeeAmount     string `toml:"fee_amount"`
+	GasLimit      uint64 `toml:"gas_limit"`
 	StorePrefix   string `toml:"store_prefix"`
 	MaxTxSize     uint64 `toml:"max_tx_size"`
 	WasmCodeId    string `toml:"wasm_code_id"`
 	Keybase KeyEntry `toml:"keybase"`
+	ChannelWhitelist []string `toml:"channel_whitelist"`
 }
 
 const (
@@ -127,6 +131,9 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			Name:          chainConfig.Name,
 			ChainID:       chainConfig.ChainID,
 			AccountPrefix: chainConfig.Bech32Prefix,
+			FeeDenom: "stake",
+			FeeAmount: "4000",
+			GasLimit: 100_000_000_000_000, // Temporary, until wasmvm gas fees are fixed
 			GRPCUrl:       "http://" + grpcAddr,
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "ibc",

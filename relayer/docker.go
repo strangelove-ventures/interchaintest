@@ -133,6 +133,17 @@ func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath str
 	return nil
 }
 
+// ReadFileFromHomeDir reads a file at the relative path specified and returns the contents. The file is
+// relative to the home directory in the relayer container.
+func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(r.log, r.client, r.testName)
+	bytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve %s: %w", relativePath, err)
+	}
+	return bytes, nil
+}
+
 // Modify a toml config file in relayer home directory
 func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
 	return  testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)

@@ -613,6 +613,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	if options.Memo != "" {
 		command = append(command, "--memo", options.Memo)
 	}
+	command = append(command, "--gas", "10000000000") // Temporary for wasm client until wasmvm gas is scaled
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
@@ -746,7 +747,7 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	_, err = tn.ExecTx(ctx, keyName, "ibc", "wasm-client", "push-wasm", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	_, err = tn.ExecTx(ctx, keyName, "08-wasm", "push-wasm", path.Join(tn.HomeDir(), file), "--gas", "auto")
 	if err != nil {
 		return "", err
 	}
@@ -760,7 +761,7 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
 func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
-	stdout, _, err := tn.ExecQuery(ctx, "ibc", "wasm-client", "code", codeHash)
+	stdout, _, err := tn.ExecQuery(ctx, "08-wasm", "code", codeHash)
 	if err != nil {
 		return err
 	}

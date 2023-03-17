@@ -1,4 +1,4 @@
-package wasm
+package types
 
 import (
 	exported "github.com/cosmos/ibc-go/v7/modules/core/exported"

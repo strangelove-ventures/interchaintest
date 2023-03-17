@@ -24,11 +24,11 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
@@ -361,8 +361,8 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 	if err != nil {
 		return tx, "", err
 	}
-	message := wasm.MsgPushNewWasmCode{
-		Signer: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	message := wasmtypes.MsgPushNewWasmCode{
+		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
 		Code: content,
 	}
 	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)

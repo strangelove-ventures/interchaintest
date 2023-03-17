@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	Ss58Format = 42
+	Ss58Format = 49
 	ss58Prefix = "SS58PRE"
 )
 

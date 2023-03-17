@@ -248,6 +248,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		"--log=ibc_transfer=trace,pallet_ibc=trace,grandpa-verifier=trace,runtime=trace",
 		"--force-authoring",
 		"--enable-offchain-indexing=true",
+		"--pruning=archive",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
 		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
@@ -352,10 +353,10 @@ func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom s
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address []byte) (sdktypes.Coins, error) {
+func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address string) (sdktypes.Coin, error) {
 	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address)
 	if err != nil {
-		return nil, err
+		return sdktypes.Coin{}, err
 	}
 	return res, nil
 }

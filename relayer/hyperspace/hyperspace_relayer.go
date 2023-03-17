@@ -10,7 +10,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 )
@@ -96,24 +95,20 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 	coinType := cfg.CoinType
 	chainType := cfg.Type
 
-	chainConfig := make(testutil.Toml)
+	chainConfigFile := chainID + ".config"
+	config, err := r.GetRelayerChainConfig(ctx, chainConfigFile, chainType)
+	if err != nil {
+		return err
+	}
 	switch chainType {
 	case "cosmos":
-		//chainConfig["private_key"] = mnemonic
 		bech32Prefix := cfg.Bech32Prefix
-		keyEntry := GenKeyEntry(bech32Prefix, coinType, mnemonic)
-		keyEntryOverrides := make(testutil.Toml)
-		keyEntryOverrides["account"] = keyEntry.Account
-		keyEntryOverrides["private_key"] = keyEntry.PrivateKey
-		keyEntryOverrides["public_key"] = keyEntry.PublicKey
-		keyEntryOverrides["address"] = keyEntry.Address
-		chainConfig["keybase"] = keyEntryOverrides
+		config.(*HyperspaceRelayerCosmosChainConfig).Keybase = GenKeyEntry(bech32Prefix, coinType, mnemonic)
 	case "polkadot":
-		//chainConfig["private_key"] = "//Alice"
-		chainConfig["private_key"] = mnemonic
+		config.(*HyperspaceRelayerSubstrateChainConfig).PrivateKey = mnemonic
 	}
-	chainConfigFile := chainID + ".config"
-	err := r.DockerRelayer.ModifyTomlConfigFile(ctx, chainConfigFile, chainConfig)
+
+	err = r.SetRelayerChainConfig(ctx, chainConfigFile, config)
 	if err != nil {
 		return err
 	}
@@ -124,15 +119,19 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 }
 
 func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
-	chainConfig := make(testutil.Toml)
-	chainConfig["wasm_code_id"] = hash
-	chainConfigFile := cfg.ChainID + ".config"
-	err := r.ModifyTomlConfigFile(ctx, chainConfigFile, chainConfig)
+	chainID := cfg.ChainID
+	chainType := cfg.Type
+	chainConfigFile := chainID + ".config"
+	config, err := r.GetRelayerChainConfig(ctx, chainConfigFile, chainType)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	switch chainType {
+	case "cosmos":
+		config.(*HyperspaceRelayerCosmosChainConfig).WasmCodeId = hash
+	}
+	
+	return r.SetRelayerChainConfig(ctx, chainConfigFile, config)
 }
 
 func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.RelayerExecReporter) error {
@@ -165,4 +164,44 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 	}
 	fmt.Println(string(res.Stdout))
 	return nil
+}
+
+
+func (r *HyperspaceRelayer) GetRelayerChainConfig(
+	ctx context.Context,
+	filePath string,
+	chainType string,
+) (interface{}, error) {
+	configRaw, err := r.ReadFileFromHomeDir(ctx, filePath)
+	if err != nil {
+		return nil, err
+	}
+	
+	switch chainType {
+		case "cosmos":
+			var config HyperspaceRelayerCosmosChainConfig
+			if err := toml.Unmarshal(configRaw, &config); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
+			}
+			return &config, nil
+		case "polkadot":
+			var config HyperspaceRelayerSubstrateChainConfig
+			if err := toml.Unmarshal(configRaw, &config); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
+			}
+			return &config, nil
+	}
+	return nil, fmt.Errorf("unsupported chain config: %s", chainType)
+}
+func (r *HyperspaceRelayer) SetRelayerChainConfig(
+	ctx context.Context,
+	filePath string,
+	config interface{},
+) error {
+	bytes, err := toml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	return r.WriteFileToHomeDir(ctx, filePath, bytes)
 }
