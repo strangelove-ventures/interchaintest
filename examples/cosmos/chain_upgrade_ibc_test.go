@@ -17,7 +17,7 @@ import (
 )
 
 func TestJunoUpgradeIBC(t *testing.T) {
-	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "https://github.com/CosmosContracts/juno", "v8.0.0", "multiverse")
+	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "v8.0.0", "multiverse")
 }
 
 func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeContainerRepo, upgradeVersion string, upgradeName string) {
