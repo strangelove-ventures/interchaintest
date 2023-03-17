@@ -20,7 +20,7 @@ func TestJunoUpgradeIBC(t *testing.T) {
 	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "https://github.com/CosmosContracts/juno", "v8.0.0", "multiverse")
 }
 
-func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeRepo, upgradeVersion string, upgradeName string) {
+func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeContainerRepo, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -139,7 +139,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeR
 	require.NoError(t, err, "error stopping node(s)")
 
 	// upgrade version on all nodes
-	chain.UpgradeVersion(ctx, client, upgradeRepo, upgradeVersion)
+	chain.UpgradeVersion(ctx, client, upgradeContainerRepo, upgradeVersion)
 
 	// start all nodes back up.
 	// validators reach consensus on first block after upgrade height
