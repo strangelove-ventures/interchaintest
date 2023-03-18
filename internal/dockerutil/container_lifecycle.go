@@ -45,10 +45,10 @@ func (c *ContainerLifecycle) CreateContainer(
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(
-		"Running command",
-		zap.String("command", strings.Join(cmd, " ")),
-		zap.String("container", c.containerName),
+		"Will run command",
 		zap.String("image", imageRef),
+		zap.String("container", c.containerName),
+		zap.String("command", strings.Join(cmd, " ")),
 	)
 
 	pb, listeners, err := GeneratePortBindings(ports)
@@ -99,20 +99,18 @@ func (c *ContainerLifecycle) CreateContainer(
 func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 	// lock port allocation for the time between freeing the ports from the
 	// temporary listeners to the consumption of the ports by the container
-	LockPortAssignment()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	c.preStartListeners.CloseAll()
 	c.preStartListeners = []net.Listener{}
 
-	err := StartContainer(ctx, c.client, c.id)
-
-	UnlockPortAssignment()
-
-	if err != nil {
+	if err := StartContainer(ctx, c.client, c.id); err != nil {
 		return err
 	}
 
 	c.log.Info("Container started", zap.String("container", c.containerName))
+
 	return nil
 }
 
