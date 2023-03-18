@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
@@ -246,6 +247,75 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
+// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
+// with docker volumes created.
+func (c *PenumbraChain) NewChainNode(
+	ctx context.Context,
+	i int,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	tendermintImage ibc.DockerImage,
+	penumbraImage ibc.DockerImage,
+) (PenumbraNode, error) {
+	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
+
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: tn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating tendermint volume: %w", err)
+	}
+	tn.VolumeName = tv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: tn.VolumeName,
+		ImageRef:   tn.Image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set tendermint volume owner: %w", err)
+	}
+
+	pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: penumbraImage}
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating penumbra volume: %w", err)
+	}
+	pn.VolumeName = pv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: pn.VolumeName,
+		ImageRef:   pn.Image.Ref(),
+		TestName:   pn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set penumbra volume owner: %w", err)
+	}
+
+	return PenumbraNode{
+		TendermintNode:  tn,
+		PenumbraAppNode: pn,
+	}, nil
+}
+
 // creates the test node objects required for bootstrapping tests
 func (c *PenumbraChain) initializeChainNodes(
 	ctx context.Context,
@@ -274,60 +344,11 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &tendermint.TendermintNode{Log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
-
-		tv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
-
-				dockerutil.NodeOwnerLabel: tn.Name(),
-			},
-		})
+		pn, err := c.NewChainNode(ctx, i, cli, networkID, testName, chainCfg.Images[0], chainCfg.Images[1])
 		if err != nil {
-			return fmt.Errorf("creating tendermint volume: %w", err)
+			return err
 		}
-		tn.VolumeName = tv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-			Log: c.log,
-
-			Client: cli,
-
-			VolumeName: tn.VolumeName,
-			ImageRef:   tn.Image.Ref(),
-			TestName:   tn.TestName,
-			UidGid:     tn.Image.UidGid,
-		}); err != nil {
-			return fmt.Errorf("set tendermint volume owner: %w", err)
-		}
-
-		pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
-		pv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
-
-				dockerutil.NodeOwnerLabel: pn.Name(),
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("creating penumbra volume: %w", err)
-		}
-		pn.VolumeName = pv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-			Log: c.log,
-
-			Client: cli,
-
-			VolumeName: pn.VolumeName,
-			ImageRef:   pn.Image.Ref(),
-			TestName:   pn.TestName,
-			UidGid:     tn.Image.UidGid,
-		}); err != nil {
-			return fmt.Errorf("set penumbra volume owner: %w", err)
-		}
-
-		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
+		penumbraNodes = append(penumbraNodes, pn)
 	}
 	c.PenumbraNodes = penumbraNodes
 

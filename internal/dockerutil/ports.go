@@ -62,7 +62,7 @@ func nextAvailablePort() (nat.PortBinding, *net.TCPListener, error) {
 
 // GeneratePortBindings will find open ports on the local
 // machine and create a PortBinding for every port in the portSet.
-func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, []net.Listener, error) {
+func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, Listeners, error) {
 	m := make(nat.PortMap)
 	listeners := make(Listeners, 0, len(portSet))
 
