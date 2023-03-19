@@ -387,7 +387,7 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithInsecure)
+	conn, err := grpc.Dial(grpcAddress, grpc.WithInsecure())
 	if err != nil {
 		return 0, err
 	}
