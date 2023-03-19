@@ -133,7 +133,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			AccountPrefix: chainConfig.Bech32Prefix,
 			FeeDenom: "stake",
 			FeeAmount: "4000",
-			GasLimit: 100_000_000_000_000, // Temporary, until wasmvm gas fees are fixed
+			GasLimit: 10_000_000,
 			GRPCUrl:       "http://" + grpcAddr,
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "ibc",

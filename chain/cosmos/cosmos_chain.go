@@ -361,6 +361,12 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 	if err != nil {
 		return tx, "", err
 	}
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+	content, err = testutil.GzipIt(content)
+	if err != nil {
+		return tx, "", err
+	}
 	message := wasmtypes.MsgPushNewWasmCode{
 		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
 		Code: content,
@@ -371,8 +377,6 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 	if err != nil {
 		return tx, "", fmt.Errorf("failed to submit wasm client proposal: %w", err)
 	}
-	codeHashByte32 := sha256.Sum256(content)
-	codeHash := hex.EncodeToString(codeHashByte32[:])
 	tx, err = c.txProposal(txHash)
 	return tx, codeHash, err
 }

@@ -77,34 +77,16 @@ func TestHyperspace(t *testing.T) {
 	nv := 5 // Number of validators
 	nf := 3 // Number of full nodes
 
-	// Override config files to support an ~2.5MB contract
-	configFileOverrides := make(map[string]any)
-
-	appTomlOverrides := make(testutil.Toml)
-	configTomlOverrides := make(testutil.Toml)
-
-	apiOverrides := make(testutil.Toml)
-	apiOverrides["rpc-max-body-bytes"] = 1_800_000
-	appTomlOverrides["api"] = apiOverrides
-
-	rpcOverrides := make(testutil.Toml)
-	rpcOverrides["max_body_bytes"] = 1_800_000
-	rpcOverrides["max_header_bytes"] = 1_900_000
-	
 	consensusOverrides := make(testutil.Toml)
 	blockTime   := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensusOverrides["timeout_commit"] = blockT
 	consensusOverrides["timeout_propose"] = blockT
 
-	configTomlOverrides["rpc"] = rpcOverrides
+	configTomlOverrides := make(testutil.Toml)
 	configTomlOverrides["consensus"] = consensusOverrides
-
-	//mempoolOverrides := make(testutil.Toml)
-	//mempoolOverrides["max_tx_bytes"] = 6000000
-	//configTomlOverrides["mempool"] = mempoolOverrides
-
-	configFileOverrides["config/app.toml"] = appTomlOverrides
+	
+	configFileOverrides := make(map[string]any)
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
 	// Get both chains

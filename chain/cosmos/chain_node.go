@@ -613,7 +613,6 @@ func (tn *ChainNode) SendIBCTransfer(
 	if options.Memo != "" {
 		command = append(command, "--memo", options.Memo)
 	}
-	command = append(command, "--gas", "10000000000") // Temporary for wasm client until wasmvm gas is scaled
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
