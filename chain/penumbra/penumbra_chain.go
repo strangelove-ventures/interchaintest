@@ -286,6 +286,9 @@ func (c *PenumbraChain) NewChainNode(
 
 	pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
 		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: penumbraImage}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
+
 	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
