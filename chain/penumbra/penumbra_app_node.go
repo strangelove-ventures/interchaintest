@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
@@ -20,7 +21,7 @@ type PenumbraAppNode struct {
 
 	Index        int
 	VolumeName   string
-	Chain        ibc.Chain
+	Chain        *PenumbraChain
 	TestName     string
 	NetworkID    string
 	DockerClient *client.Client
@@ -35,11 +36,27 @@ type PenumbraAppNode struct {
 	preStartListeners dockerutil.Listeners
 }
 
+func NewPenumbraAppNode(
+	log *zap.Logger,
+	chain *PenumbraChain,
+	index int,
+	testName string,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+) *PenumbraAppNode {
+	pn := &PenumbraAppNode{log: log, Index: index, Chain: chain,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
+	return pn
+}
+
 const (
 	valKey         = "validator"
 	rpcPort        = "26657/tcp"
 	tendermintPort = "26658/tcp"
-	grpcPort       = "9090/tcp"
+	grpcPort       = "8080/tcp"
 )
 
 var exposedPorts = nat.PortSet{
@@ -66,6 +83,7 @@ func (p *PenumbraAppNode) HomeDir() string {
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
+	// TODO go through pclientd instead/also?
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
@@ -78,6 +96,7 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 
 // RecoverKey restores a key from a given mnemonic.
 func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	// TODO go through pclientd instead/also?
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
@@ -195,20 +214,6 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 	}
 	return "", errors.New("address not found")
 
-}
-
-func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return errors.New("not yet implemented")
-}
-
-func (p *PenumbraAppNode) SendIBCTransfer(
-	ctx context.Context,
-	channelID string,
-	keyName string,
-	amount ibc.WalletAmount,
-	options ibc.TransferOptions,
-) (ibc.Tx, error) {
-	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
