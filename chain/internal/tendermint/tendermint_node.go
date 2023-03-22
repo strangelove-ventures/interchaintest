@@ -39,6 +39,8 @@ type TendermintNode struct {
 	Image        ibc.DockerImage
 
 	containerID string
+
+	preStartListeners dockerutil.Listeners
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -220,6 +222,13 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	cmd = append(cmd, additionalFlags...)
 	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
+	pb, listeners, err := dockerutil.GeneratePortBindings(sentryPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
+	tn.preStartListeners = listeners
+
 	cc, err := tn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -236,6 +245,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 		},
 		&container.HostConfig{
 			Binds:           tn.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
@@ -249,6 +259,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 		tn.Name(),
 	)
 	if err != nil {
+		tn.preStartListeners.CloseAll()
 		return err
 	}
 	tn.containerID = cc.ID
@@ -261,7 +272,11 @@ func (tn *TendermintNode) StopContainer(ctx context.Context) error {
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	dockerutil.LockPortAssignment()
+	tn.preStartListeners.CloseAll()
+	err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID)
+	dockerutil.UnlockPortAssignment()
+	if err != nil {
 		return err
 	}
 
