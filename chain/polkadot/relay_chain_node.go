@@ -46,6 +46,8 @@ type RelayChainNode struct {
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -228,6 +230,13 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("container", p.Name()),
 		)
 
+	pb, listeners, err := dockerutil.GeneratePortBindings(exposedPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
+	p.preStartListeners = listeners
+
 	cc, err := p.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -245,6 +254,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           p.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
@@ -258,6 +268,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		p.Name(),
 	)
 	if err != nil {
+		p.preStartListeners.CloseAll()
 		return err
 	}
 	p.containerID = cc.ID
@@ -272,7 +283,11 @@ func (p *RelayChainNode) StopContainer(ctx context.Context) error {
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	dockerutil.LockPortAssignment()
+	p.preStartListeners.CloseAll()
+	err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID)
+	dockerutil.UnlockPortAssignment()
+	if err != nil {
 		return err
 	}
 
