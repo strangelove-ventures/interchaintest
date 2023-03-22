@@ -44,6 +44,8 @@ type ParachainNode struct {
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 type ParachainNodes []*ParachainNode
@@ -252,6 +254,13 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 			zap.String("container", pn.Name()),
 		)
 
+	pb, listeners, err := dockerutil.GeneratePortBindings(exposedPorts)
+	if err != nil {
+		return fmt.Errorf("failed to generate port bindings: %w", err)
+	}
+
+	pn.preStartListeners = listeners
+
 	cc, err := pn.DockerClient.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -269,6 +278,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		},
 		&container.HostConfig{
 			Binds:           pn.Bind(),
+			PortBindings:    pb,
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
@@ -282,6 +292,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 		pn.Name(),
 	)
 	if err != nil {
+		pn.preStartListeners.CloseAll()
 		return err
 	}
 	pn.containerID = cc.ID
@@ -296,7 +307,11 @@ func (pn *ParachainNode) StopContainer(ctx context.Context) error {
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (pn *ParachainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, pn.DockerClient, pn.containerID); err != nil {
+	dockerutil.LockPortAssignment()
+	pn.preStartListeners.CloseAll()
+	err := dockerutil.StartContainer(ctx, pn.DockerClient, pn.containerID)
+	dockerutil.UnlockPortAssignment()
+	if err != nil {
 		return err
 	}
 
