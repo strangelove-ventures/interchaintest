@@ -14,10 +14,6 @@ func (m ConsensusState) GetTimestamp() uint64 {
 	return m.Timestamp
 }
 
-func (m ConsensusState) GetRoot() exported.Root {
-	return m.Root
-}
-
 func (m ConsensusState) ValidateBasic() error {
 	return nil
 }

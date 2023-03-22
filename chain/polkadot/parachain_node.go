@@ -383,22 +383,6 @@ func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount i
 	return nil
 }
 
-// Turns on sending and receiving ibc transfers
-func (pn *ParachainNode) EnableIbc() error {
-	kp, err := pn.Chain.(*PolkadotChain).GetKeyringPair("alice")
-	if err != nil {
-		return err
-	}
-
-	hash, err := EnableIbc(pn.api, kp)
-	if err != nil {
-		return err
-	}
-
-	pn.log.Info("Enable Ibc sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", pn.Name()))
-	return nil
-}
-
 // SendIbcFunds sends funds to a wallet from a user account.
 func (pn *ParachainNode) SendIbcFunds(
 	ctx context.Context, 

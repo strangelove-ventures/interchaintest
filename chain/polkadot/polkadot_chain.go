@@ -807,11 +807,6 @@ func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string) (sdkt
 	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address)
 }
 
-// Turns on sending and receiving ibc transfers
-func (c *PolkadotChain) EnableIbcTransfers() error {
-	return c.ParachainNodes[0][0].EnableIbc()
-}
-
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
 func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
 	return c.ParachainNodes[0][0].MintFunds(keyName, amount)

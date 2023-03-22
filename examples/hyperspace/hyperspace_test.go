@@ -26,15 +26,15 @@ import (
 // Must build local docker images of hyperspace, parachain, and polkadot
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/wasm
-// * Commit: 64f26da7a4fa3a301c5c147df363c5b5aef83c7d
+// * Branch: PR #247
+// * Commit: 65fc11606cc1811e65fd997a63a1d8c15a3a6c83
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/wasm
-// * Commit: 64f26da7a4fa3a301c5c147df363c5b5aef83c7d
+// * Branch: PR #247
+// * Commit: 65fc11606cc1811e65fd997a63a1d8c15a3a6c83
 // * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
 // ###### polkadot ######
@@ -202,10 +202,6 @@ func TestHyperspace(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 1, polkadotChain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 
-	// Enable IBC transfers on parachain
-	err = polkadotChain.EnableIbcTransfers()
-	require.NoError(t, err)
-	
 	// Fund users on both cosmos and parachain, mints Asset 1 for Alice
 	fundAmount := int64(12_333_000_000_000)
 	polkadotUser, cosmosUser := fundUsers(t, ctx, fundAmount, polkadotChain, cosmosChain)
