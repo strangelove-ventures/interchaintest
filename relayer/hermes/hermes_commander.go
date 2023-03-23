@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"go.uber.org/zap"
 
-	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
-	"github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	"github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 )
 
 var _ relayer.RelayerCommander = &commander{}
@@ -186,12 +186,8 @@ func (c commander) CreateConnections(pathName string, homeDir string) []string {
 	panic("create connections implemented in hermes relayer not the commander")
 }
 
-func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	panic("flush acks implemented in hermes relayer not the commander")
-}
-
-func (c commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	panic("flush packets implemented in hermes relayer not the commander")
+func (c commander) Flush(pathName, channelID, homeDir string) []string {
+	panic("flush implemented in hermes relayer not the commander")
 }
 
 func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {

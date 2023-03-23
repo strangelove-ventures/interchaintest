@@ -21,15 +21,15 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	chanTypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -506,13 +506,15 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
-func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, version string) {
+func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
 	c.cfg.Images[0].Version = version
 	for _, n := range c.Validators {
 		n.Image.Version = version
+		n.Image.Repository = containerRepo
 	}
 	for _, n := range c.FullNodes {
 		n.Image.Version = version
+		n.Image.Repository = containerRepo
 	}
 	c.pullImages(ctx, cli)
 }

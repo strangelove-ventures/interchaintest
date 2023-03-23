@@ -10,8 +10,8 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"go.uber.org/zap"
 )
 
@@ -213,11 +213,7 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 	return nil
 }
 
-func (r *Relayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	return r.FlushPackets(ctx, rep, pathName, channelID)
-}
-
-func (r *Relayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelID string) error {
 	path := r.paths[pathName]
 	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", path.chainA.portID}
 	res := r.Exec(ctx, rep, cmd, nil)

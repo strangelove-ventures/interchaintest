@@ -6,7 +6,7 @@ help: ## Print this help message
 
 .PHONY: interchaintest
 interchaintest: gen ## Build interchaintest binary into ./bin
-	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v6/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
+	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v7/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
 
 .PHONY: test
 test: ## Run unit tests

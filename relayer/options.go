@@ -1,7 +1,7 @@
 package relayer
 
 import (
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 // RelayerOption is used to customize the relayer configuration, whether constructed with the
