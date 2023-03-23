@@ -44,6 +44,8 @@ type RelayChainNode struct {
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode

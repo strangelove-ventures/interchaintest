@@ -58,6 +58,8 @@ type ChainNode struct {
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
