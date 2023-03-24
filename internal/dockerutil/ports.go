@@ -8,7 +8,7 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
-var mu sync.Mutex
+var mu sync.RWMutex
 
 type Listeners []net.Listener
 
@@ -18,14 +18,6 @@ func (l Listeners) CloseAll() {
 	}
 }
 
-func LockPortAssignment() {
-	mu.Lock()
-}
-
-func UnlockPortAssignment() {
-	mu.Unlock()
-}
-
 // openListenerOnFreePort opens the next free port
 func openListenerOnFreePort() (*net.TCPListener, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
@@ -33,8 +25,8 @@ func openListenerOnFreePort() (*net.TCPListener, error) {
 		return nil, err
 	}
 
-	LockPortAssignment()
-	defer UnlockPortAssignment()
+	mu.Lock()
+	defer mu.Unlock()
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -62,7 +54,7 @@ func nextAvailablePort() (nat.PortBinding, *net.TCPListener, error) {
 
 // GeneratePortBindings will find open ports on the local
 // machine and create a PortBinding for every port in the portSet.
-func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, []net.Listener, error) {
+func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, Listeners, error) {
 	m := make(nat.PortMap)
 	listeners := make(Listeners, 0, len(portSet))
 
