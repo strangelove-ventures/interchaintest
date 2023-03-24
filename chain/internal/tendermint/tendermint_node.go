@@ -14,8 +14,6 @@ import (
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
@@ -38,9 +36,16 @@ type TendermintNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
+}
 
-	preStartListeners dockerutil.Listeners
+func NewTendermintNode(log *zap.Logger, i int, c ibc.Chain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage) *TendermintNode {
+	tn := &TendermintNode{Log: log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+
+	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
+
+	return tn
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -220,75 +225,26 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
-	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
-	pb, listeners, err := dockerutil.GeneratePortBindings(sentryPorts)
-	if err != nil {
-		return fmt.Errorf("failed to generate port bindings: %w", err)
-	}
-
-	tn.preStartListeners = listeners
-
-	cc, err := tn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: tn.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: tn.HostName(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
-
-			ExposedPorts: sentryPorts,
-		},
-		&container.HostConfig{
-			Binds:           tn.Bind(),
-			PortBindings:    pb,
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				tn.NetworkID: {},
-			},
-		},
-		nil,
-		tn.Name(),
-	)
-	if err != nil {
-		tn.preStartListeners.CloseAll()
-		return err
-	}
-	tn.containerID = cc.ID
-	return nil
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
 }
 
 func (tn *TendermintNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	dockerutil.LockPortAssignment()
-	tn.preStartListeners.CloseAll()
-	err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID)
-	dockerutil.UnlockPortAssignment()
-	if err != nil {
+	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort)
 	if err != nil {
 		return err
 	}
+	rpcPort := hostPorts[0]
 
-	port := dockerutil.GetHostPort(c, rpcPort)
-	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
-
-	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
+	err = tn.NewClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err
 	}

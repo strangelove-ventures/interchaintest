@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/avast/retry-go/v4"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
@@ -28,11 +25,11 @@ type ParachainNode struct {
 	TestName string
 	Index    int
 
-	NetworkID    string
-	containerID  string
-	VolumeName   string
-	DockerClient *client.Client
-	Image        ibc.DockerImage
+	NetworkID          string
+	containerLifecycle *dockerutil.ContainerLifecycle
+	VolumeName         string
+	DockerClient       *client.Client
+	Image              ibc.DockerImage
 
 	Chain           ibc.Chain
 	Bin             string
@@ -248,81 +245,28 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 	cmd = append(cmd, pn.Flags...)
 	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawRelayChainSpecFilePathFull()))
 	cmd = append(cmd, pn.RelayChainFlags...)
-	pn.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", pn.Name()),
-		)
 
-	pb, listeners, err := dockerutil.GeneratePortBindings(exposedPorts)
-	if err != nil {
-		return fmt.Errorf("failed to generate port bindings: %w", err)
-	}
-
-	pn.preStartListeners = listeners
-
-	cc, err := pn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: pn.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: pn.HostName(),
-			User:     pn.Image.UidGid,
-
-			Labels: map[string]string{dockerutil.CleanupLabel: pn.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           pn.Bind(),
-			PortBindings:    pb,
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				pn.NetworkID: {},
-			},
-		},
-		nil,
-		pn.Name(),
-	)
-	if err != nil {
-		pn.preStartListeners.CloseAll()
-		return err
-	}
-	pn.containerID = cc.ID
-	return nil
+	return pn.containerLifecycle.CreateContainer(ctx, pn.TestName, pn.NetworkID, pn.Image, exposedPorts, pn.Bind(), pn.HostName(), cmd)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.
 func (pn *ParachainNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return pn.DockerClient.ContainerStop(ctx, pn.containerID, &timeout)
+	return pn.containerLifecycle.StopContainer(ctx)
 }
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (pn *ParachainNode) StartContainer(ctx context.Context) error {
-	dockerutil.LockPortAssignment()
-	pn.preStartListeners.CloseAll()
-	err := dockerutil.StartContainer(ctx, pn.DockerClient, pn.containerID)
-	dockerutil.UnlockPortAssignment()
-	if err != nil {
+	if err := pn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := pn.DockerClient.ContainerInspect(ctx, pn.containerID)
+	hostPorts, err := pn.containerLifecycle.GetHostPorts(ctx, wsPort, rpcPort)
 	if err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	pn.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	pn.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	pn.hostWsPort, pn.hostRpcPort = hostPorts[0], hostPorts[1]
 
 	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(pn.hostWsPort, "localhost", "127.0.0.1", 1))

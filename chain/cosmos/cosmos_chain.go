@@ -547,20 +547,11 @@ func (c *CosmosChain) NewChainNode(
 	networkID string,
 	image ibc.DockerImage,
 	validator bool,
+	index int,
 ) (*ChainNode, error) {
 	// Construct the ChainNode first so we can access its name.
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
-	tn := &ChainNode{
-		log: c.log,
-
-		Validator: validator,
-
-		Chain:        c,
-		DockerClient: cli,
-		NetworkID:    networkID,
-		TestName:     testName,
-		Image:        image,
-	}
+	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 		Labels: map[string]string{
@@ -609,11 +600,10 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.Validators); i < c.numValidators; i++ {
 		i := i
 		eg.Go(func() error {
-			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true)
+			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true, i)
 			if err != nil {
 				return err
 			}
-			val.Index = i
 			newVals[i] = val
 			return nil
 		})
@@ -621,11 +611,10 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
 		i := i
 		eg.Go(func() error {
-			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false)
+			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false, i)
 			if err != nil {
 				return err
 			}
-			fn.Index = i
 			newFullNodes[i] = fn
 			return nil
 		})
