@@ -10,8 +10,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
@@ -30,11 +28,11 @@ type RelayChainNode struct {
 	TestName string
 	Index    int
 
-	NetworkID    string
-	containerID  string
-	VolumeName   string
-	DockerClient *client.Client
-	Image        ibc.DockerImage
+	NetworkID          string
+	containerLifecycle *dockerutil.ContainerLifecycle
+	VolumeName         string
+	DockerClient       *client.Client
+	Image              ibc.DockerImage
 
 	Chain             ibc.Chain
 	NodeKey           p2pCrypto.PrivKey
@@ -224,81 +222,27 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
-	p.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", p.Name()),
-		)
-
-	pb, listeners, err := dockerutil.GeneratePortBindings(exposedPorts)
-	if err != nil {
-		return fmt.Errorf("failed to generate port bindings: %w", err)
-	}
-
-	p.preStartListeners = listeners
-
-	cc, err := p.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: p.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: p.HostName(),
-			User:     p.Image.UidGid,
-
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           p.Bind(),
-			PortBindings:    pb,
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				p.NetworkID: {},
-			},
-		},
-		nil,
-		p.Name(),
-	)
-	if err != nil {
-		p.preStartListeners.CloseAll()
-		return err
-	}
-	p.containerID = cc.ID
-	return nil
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.
 func (p *RelayChainNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
+	return p.containerLifecycle.StopContainer(ctx)
 }
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	dockerutil.LockPortAssignment()
-	p.preStartListeners.CloseAll()
-	err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID)
-	dockerutil.UnlockPortAssignment()
-	if err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, wsPort, rpcPort)
 	if err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostWsPort, p.hostRpcPort = hostPorts[0], hostPorts[1]
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
 	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
