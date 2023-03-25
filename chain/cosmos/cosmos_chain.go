@@ -37,7 +37,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -69,7 +68,8 @@ func NewCosmosHeighlinerChainConfig(name string,
 	gasPrices string,
 	gasAdjustment float64,
 	trustingPeriod string,
-	noHostMount bool) ibc.ChainConfig {
+	noHostMount bool,
+) ibc.ChainConfig {
 	return ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           name,
@@ -387,7 +387,7 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(grpcAddress, grpc.WithInsecure())
 	if err != nil {
 		return 0, err
 	}
@@ -395,7 +395,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.Balance(ctx, params)
-
 	if err != nil {
 		return 0, err
 	}
@@ -724,7 +723,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
+		_ = os.WriteFile(exportGenesis, genbz, 0o600)
 	}
 
 	chainNodes := c.Nodes()
@@ -1030,7 +1029,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
+		_ = os.WriteFile(exportGenesis, genbz, 0o600)
 	}
 
 	chainNodes := c.Nodes()
