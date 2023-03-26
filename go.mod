@@ -9,7 +9,7 @@ require (
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.3.3
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
+	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/cometbft/cometbft v0.37.0
 	github.com/cosmos/cosmos-sdk v0.47.0
 	github.com/cosmos/go-bip39 v1.0.0
