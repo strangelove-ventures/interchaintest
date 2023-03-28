@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"go.uber.org/zap"
 )
 
@@ -66,7 +66,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.1.2"
+	DefaultContainerVersion = "andrew-fix_ordered_channel_closure"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -164,18 +164,16 @@ func (commander) CreateConnections(pathName string, homeDir string) []string {
 	}
 }
 
-func (commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-acks", pathName, channelID,
-		"--home", homeDir,
+func (commander) Flush(pathName, channelID, homeDir string) []string {
+	cmd := []string{"rly", "tx", "flush"}
+	if pathName != "" {
+		cmd = append(cmd, pathName)
+		if channelID != "" {
+			cmd = append(cmd, channelID)
+		}
 	}
-}
-
-func (commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-pkts", pathName, channelID,
-		"--home", homeDir,
-	}
+	cmd = append(cmd, "--home", homeDir)
+	return cmd
 }
 
 func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
@@ -223,6 +221,7 @@ func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChanne
 		"--order", channelOpts.Order.String(),
 		"--version", channelOpts.Version,
 		"--client-tp", clientOpt.TrustingPeriod,
+		"--debug",
 
 		"--home", homeDir,
 	}

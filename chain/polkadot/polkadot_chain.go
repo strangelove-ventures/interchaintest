@@ -2,11 +2,11 @@ package polkadot
 
 import (
 	"context"
+	"crypto/rand"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"strings"
 
 	"github.com/99designs/keyring"
@@ -17,10 +17,11 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -88,6 +89,148 @@ func (c *PolkadotChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
+func (c *PolkadotChain) NewRelayChainNode(
+	ctx context.Context,
+	i int,
+	chain *PolkadotChain,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	image ibc.DockerImage,
+) (*RelayChainNode, error) {
+	seed := make([]byte, 32)
+	if _, err := rand.Read(seed); err != nil {
+		return nil, err
+	}
+
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("error generating node key: %w", err)
+	}
+
+	nameCased := namecase.New().NameCase(IndexedName[i])
+
+	ed25519PrivKey, err := DeriveEd25519FromName(nameCased)
+	if err != nil {
+		return nil, err
+	}
+
+	accountKeyName := IndexedName[i]
+	accountKeyUri := IndexedUri[i]
+	stashKeyName := accountKeyName + "stash"
+	stashKeyUri := accountKeyUri + "//stash"
+
+	if err := c.RecoverKey(ctx, accountKeyName, accountKeyUri); err != nil {
+		return nil, err
+	}
+
+	if err := c.RecoverKey(ctx, stashKeyName, stashKeyUri); err != nil {
+		return nil, err
+	}
+
+	ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
+	if err != nil {
+		return nil, fmt.Errorf("error generating secp256k1 private key: %w", err)
+	}
+
+	pn := &RelayChainNode{
+		log:               c.log,
+		Index:             i,
+		Chain:             c,
+		DockerClient:      dockerClient,
+		NetworkID:         networkID,
+		TestName:          testName,
+		Image:             image,
+		NodeKey:           nodeKey,
+		Ed25519PrivateKey: ed25519PrivKey,
+		AccountKeyName:    accountKeyName,
+		StashKeyName:      stashKeyName,
+		EcdsaPrivateKey:   *ecdsaPrivKey,
+	}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
+
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating volume for chain node: %w", err)
+	}
+	pn.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log:        c.log,
+		Client:     dockerClient,
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set volume owner: %w", err)
+	}
+
+	return pn, nil
+}
+
+func (c *PolkadotChain) NewParachainNode(
+	ctx context.Context,
+	i int,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	parachainConfig ParachainConfig,
+) (*ParachainNode, error) {
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("error generating node key: %w", err)
+	}
+	pn := &ParachainNode{
+		log:             c.log,
+		Index:           i,
+		Chain:           c,
+		DockerClient:    dockerClient,
+		NetworkID:       networkID,
+		TestName:        testName,
+		NodeKey:         nodeKey,
+		Image:           parachainConfig.Image,
+		Bin:             parachainConfig.Bin,
+		ChainID:         parachainConfig.ChainID,
+		Flags:           parachainConfig.Flags,
+		RelayChainFlags: parachainConfig.RelayChainFlags,
+	}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
+
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating volume for chain node: %w", err)
+	}
+	pn.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log:        c.log,
+		Client:     dockerClient,
+		VolumeName: v.Name,
+		ImageRef:   parachainConfig.Image.Ref(),
+		TestName:   testName,
+		UidGid:     parachainConfig.Image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set volume owner: %w", err)
+	}
+
+	return pn, nil
+}
+
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
 // Implements Chain interface.
 func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
@@ -116,121 +259,19 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		}
 	}
 	for i := 0; i < c.numRelayChainNodes; i++ {
-		seed := make([]byte, 32)
-		rand.Read(seed)
-
-		nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
-		if err != nil {
-			return fmt.Errorf("error generating node key: %w", err)
-		}
-
-		nameCased := namecase.New().NameCase(IndexedName[i])
-
-		ed25519PrivKey, err := DeriveEd25519FromName(nameCased)
+		pn, err := c.NewRelayChainNode(ctx, i, c, cli, networkID, testName, chainCfg.Images[0])
 		if err != nil {
 			return err
 		}
-
-		accountKeyName := IndexedName[i]
-		accountKeyUri := IndexedUri[i]
-		stashKeyName := accountKeyName + "stash"
-		stashKeyUri := accountKeyUri + "//stash"
-		err = c.RecoverKey(ctx, accountKeyName, accountKeyUri)
-		if err != nil {
-			return err
-		}
-		err = c.RecoverKey(ctx, stashKeyName, stashKeyUri)
-		if err != nil {
-			return err
-		}
-
-		ecdsaPrivKey, err := DeriveSecp256k1FromName(nameCased)
-		if err != nil {
-			return fmt.Errorf("error generating secp256k1 private key: %w", err)
-		}
-		pn := &RelayChainNode{
-			log:               c.log,
-			Index:             i,
-			Chain:             c,
-			DockerClient:      cli,
-			NetworkID:         networkID,
-			TestName:          testName,
-			Image:             chainCfg.Images[0],
-			NodeKey:           nodeKey,
-			Ed25519PrivateKey: ed25519PrivKey,
-			AccountKeyName:    accountKeyName,
-			StashKeyName:      stashKeyName,
-			EcdsaPrivateKey:   *ecdsaPrivKey,
-		}
-
-		v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
-
-				dockerutil.NodeOwnerLabel: pn.Name(),
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("creating volume for chain node: %w", err)
-		}
-		pn.VolumeName = v.Name
-
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-			Log:        c.log,
-			Client:     cli,
-			VolumeName: v.Name,
-			ImageRef:   chainCfg.Images[0].Ref(),
-			TestName:   testName,
-			UidGid:     chainCfg.Images[0].UidGid,
-		}); err != nil {
-			return fmt.Errorf("set volume owner: %w", err)
-		}
-
 		relayChainNodes = append(relayChainNodes, pn)
 	}
 	c.RelayChainNodes = relayChainNodes
-	for _, parachainConfig := range c.parachainConfig {
+	for _, pc := range c.parachainConfig {
 		parachainNodes := []*ParachainNode{}
-		for i := 0; i < parachainConfig.NumNodes; i++ {
-			nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+		for i := 0; i < pc.NumNodes; i++ {
+			pn, err := c.NewParachainNode(ctx, i, cli, networkID, testName, pc)
 			if err != nil {
-				return fmt.Errorf("error generating node key: %w", err)
-			}
-			pn := &ParachainNode{
-				log:             c.log,
-				Index:           i,
-				Chain:           c,
-				DockerClient:    cli,
-				NetworkID:       networkID,
-				TestName:        testName,
-				NodeKey:         nodeKey,
-				Image:           parachainConfig.Image,
-				Bin:             parachainConfig.Bin,
-				ChainID:         parachainConfig.ChainID,
-				Flags:           parachainConfig.Flags,
-				RelayChainFlags: parachainConfig.RelayChainFlags,
-			}
-			v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-				Labels: map[string]string{
-					dockerutil.CleanupLabel: testName,
-
-					dockerutil.NodeOwnerLabel: pn.Name(),
-				},
-			})
-			if err != nil {
-				return fmt.Errorf("creating volume for chain node: %w", err)
-			}
-			pn.VolumeName = v.Name
-
-			if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-				Log:        c.log,
-				Client:     cli,
-				VolumeName: v.Name,
-				ImageRef:   parachainConfig.Image.Ref(),
-				TestName:   testName,
-				UidGid:     parachainConfig.Image.UidGid,
-			}); err != nil {
-				return fmt.Errorf("set volume owner: %w", err)
+				return err
 			}
 			parachainNodes = append(parachainNodes, pn)
 		}

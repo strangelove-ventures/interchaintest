@@ -10,20 +10,19 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer/rly"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 )
 
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
@@ -212,7 +211,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		_, mnemonic, err := kr.NewMnemonic(
 			keyName,
 			keyring.English,
-			hd.CreateHDPath(types.CoinType, 0, 0).String(),
+			hd.CreateHDPath(sdk.CoinType, 0, 0).String(),
 			"", // Empty passphrase.
 			hd.Secp256k1,
 		)
@@ -310,7 +309,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	t.Run("broadcast success", func(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
-		transferAmount := types.Coin{Denom: gaia0.Config().Denom, Amount: types.NewInt(sendAmount)}
+		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sdk.NewInt(sendAmount)}
+		memo := ""
 
 		msg := transfertypes.NewMsgTransfer(
 			"transfer",
@@ -320,7 +320,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
 			clienttypes.NewHeight(1, 1000),
 			0,
-			"",
+			memo,
 		)
 		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
 		require.NoError(t, err)
