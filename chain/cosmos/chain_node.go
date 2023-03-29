@@ -28,6 +28,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -49,6 +50,9 @@ type ChainNode struct {
 	Client       rpcclient.Client
 	TestName     string
 	Image        ibc.DockerImage
+
+	// Additional processes that need to be run on a per-validator basis.
+	Sidecars SidecarProcesses
 
 	lock sync.Mutex
 	log  *zap.Logger
@@ -119,6 +123,46 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 	return nil
+}
+
+func (tn *ChainNode) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	testName string,
+	cli *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+	ports []string,
+	startCmd []string,
+) (*SidecarProcess, error) {
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, testName, image, tn.Index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   testName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: tn.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set volume owner: %w", err)
+	}
+
+	return s, nil
 }
 
 // CliContext creates a new Cosmos SDK client context
@@ -952,6 +996,14 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if s.preStart {
+			if err := s.StartContainer(ctx); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
@@ -984,10 +1036,20 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.StopContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.RemoveContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
