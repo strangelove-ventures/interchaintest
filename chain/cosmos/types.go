@@ -62,6 +62,19 @@ type ProposalResponse struct {
 	VotingEndTime    string                   `json:"voting_end_time"`
 }
 
+type ParamChange struct {
+	Subspace string `json:"subspace"`
+	Key      string `json:"key"`
+	Value    any    `json:"value"`
+}
+
+type ParamChangeProposal struct {
+	Title       string        `json:"title"`
+	Description string        `json:"description"`
+	Changes     []ParamChange `json:"changes"`
+	Deposit     string        `json:"deposit"`
+}
+
 type ProposalContent struct {
 	Type        string `json:"@type"`
 	Title       string `json:"title"`
