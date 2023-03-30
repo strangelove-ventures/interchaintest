@@ -3,6 +3,7 @@ package cosmos_test
 import (
 	"context"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/strangelove-ventures/interchaintest/v4"
@@ -70,7 +71,8 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	require.Equal(t, "100", param.Value, "MaxValidators value is not 100")
 
 	current_directory, _ := os.Getwd()
-	param_change_path := current_directory + "/params/IncreaseValidatorsParam.json"
+	param_change_path := path.Join(current_directory, "params", "IncreaseValidatorsParam.json")
+
 	paramTx, err := chain.ParamChangeProposal(ctx, chainUser.KeyName, param_change_path)
 	require.NoError(t, err, "error submitting param change proposal tx")
 
