@@ -25,8 +25,11 @@ type SidecarProcess struct {
 	// If true this process is scoped to a specific validator, otherwise it is scoped at the chain level.
 	validatorProcess bool
 
-	// If true this process should be started before the chain or validator, otherwise it will be started after.
+	// If true this process should be started before the chain or validator, otherwise it should be explicitly started after.
 	preStart bool
+
+	// Set to true in StartContainer call so that we do not accidentally kick off the same process more than once.
+	started bool
 
 	ProcessName string
 	TestName    string
@@ -101,6 +104,7 @@ func (s *SidecarProcess) CreateContainer(ctx context.Context) error {
 }
 
 func (s *SidecarProcess) StartContainer(ctx context.Context) error {
+	s.started = true
 	return s.containerLifecycle.StartContainer(ctx)
 }
 

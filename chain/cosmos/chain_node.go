@@ -135,7 +135,7 @@ func (tn *ChainNode) NewSidecarProcess(
 	image ibc.DockerImage,
 	ports []string,
 	startCmd []string,
-) (*SidecarProcess, error) {
+) error {
 	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, testName, image, tn.Index, ports, startCmd)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
@@ -145,7 +145,7 @@ func (tn *ChainNode) NewSidecarProcess(
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("creating volume for sidecar process: %w", err)
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
 	}
 	s.VolumeName = v.Name
 
@@ -159,10 +159,12 @@ func (tn *ChainNode) NewSidecarProcess(
 		TestName:   testName,
 		UidGid:     image.UidGid,
 	}); err != nil {
-		return nil, fmt.Errorf("set volume owner: %w", err)
+		return fmt.Errorf("set volume owner: %w", err)
 	}
 
-	return s, nil
+	tn.Sidecars = append(tn.Sidecars, s)
+
+	return nil
 }
 
 // CliContext creates a new Cosmos SDK client context
@@ -997,7 +999,11 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	for _, s := range tn.Sidecars {
-		if s.preStart {
+		if s.preStart && !s.started {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+
 			if err := s.StartContainer(ctx); err != nil {
 				return err
 			}
