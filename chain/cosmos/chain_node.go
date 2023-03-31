@@ -767,6 +767,20 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 	return &proposal, nil
 }
 
+// QueryParam returns the state and details of a subspace param.
+func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "params", "subspace", subspace, key)
+	if err != nil {
+		return nil, err
+	}
+	var param ParamChange
+	err = json.Unmarshal(stdout, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &param, nil
+}
+
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
@@ -782,6 +796,29 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 		command = append(command, "--upgrade-info", prop.Info)
 	}
 
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// ParamChangeProposal submits a param-change governance proposal to the chain.
+func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, prop ParamChangeProposal) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "param-change.json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	command := []string{
+		"gov", "submit-proposal",
+		"param-change", filePath,
+	}
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
