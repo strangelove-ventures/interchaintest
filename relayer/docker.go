@@ -355,6 +355,9 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 }
 
 func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecReporter) error {
+	if r.containerLifecycle == nil {
+		return nil
+	}
 	if err := r.containerLifecycle.StopContainer(ctx); err != nil {
 		return err
 	}
