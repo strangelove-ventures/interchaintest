@@ -5,17 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"strings"
-	"time"
-
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
 	"go.uber.org/zap"
+	"path/filepath"
+	"strings"
 )
 
 type PenumbraAppNode struct {
@@ -29,7 +25,7 @@ type PenumbraAppNode struct {
 	DockerClient *client.Client
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Set during StartContainer.
 	hostRPCPort  string
@@ -193,61 +189,24 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
-	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
-
-	cc, err := p.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: p.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           p.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				p.NetworkID: {},
-			},
-		},
-		nil,
-		p.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	p.containerID = cc.ID
-	return nil
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
+	return p.containerLifecycle.StopContainer(ctx)
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
 	if err != nil {
 		return err
 	}
 
-	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	p.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
+	p.hostRPCPort, p.hostGRPCPort = hostPorts[0], hostPorts[1]
 
 	return nil
 }

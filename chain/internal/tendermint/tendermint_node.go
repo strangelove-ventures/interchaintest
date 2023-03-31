@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
@@ -39,7 +37,16 @@ type TendermintNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
+}
+
+func NewTendermintNode(log *zap.Logger, i int, c ibc.Chain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage) *TendermintNode {
+	tn := &TendermintNode{Log: log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+
+	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
+
+	return tn
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -194,66 +201,28 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
-	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
-
-	cc, err := tn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: tn.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: tn.HostName(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
-
-			ExposedPorts: sentryPorts,
-		},
-		&container.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				tn.NetworkID: {},
-			},
-		},
-		nil,
-		tn.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	tn.containerID = cc.ID
-	return nil
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
 }
 
 func (tn *TendermintNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort)
 	if err != nil {
 		return err
 	}
+	rpcPort := hostPorts[0]
 
-	port := dockerutil.GetHostPort(c, rpcPort)
-	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
-
-	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
+	err = tn.NewClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err
 	}
-
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
@@ -261,7 +230,7 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 			// tn.t.Log(err)
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)

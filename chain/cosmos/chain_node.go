@@ -21,11 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
@@ -57,11 +53,30 @@ type ChainNode struct {
 	lock sync.Mutex
 	log  *zap.Logger
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+}
+
+func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
+	tn := &ChainNode{
+		log: log,
+
+		Validator: validator,
+
+		Chain:        chain,
+		DockerClient: dockerClient,
+		NetworkID:    networkID,
+		TestName:     testName,
+		Image:        image,
+		Index:        index,
+	}
+
+	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
+
+	return tn
 }
 
 // ChainNodes is a collection of ChainNode
@@ -777,67 +792,30 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
-	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+
+	var cmd []string
 	if chainCfg.NoHostMount {
 		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
+	} else {
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
-	imageRef := tn.Image.Ref()
-	tn.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", tn.Name()),
-			zap.String("image", imageRef),
-		)
 
-	cc, err := tn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: imageRef,
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: tn.HostName(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
-
-			ExposedPorts: sentryPorts,
-		},
-		&container.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				tn.NetworkID: {},
-			},
-		},
-		nil,
-		tn.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	tn.containerID = cc.ID
-	return nil
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
+	// Set the host ports once since they will not change after the container has started.
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
 	if err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	tn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	tn.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
-
+	tn.hostRPCPort, tn.hostGRPCPort = hostPorts[0], hostPorts[1]
 	tn.logger().Info("Cosmos chain node started", zap.String("container", tn.Name()), zap.String("rpc_port", tn.hostRPCPort))
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
@@ -851,7 +829,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
@@ -861,19 +839,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
-	err := tn.DockerClient.ContainerRemove(ctx, tn.containerID, dockertypes.ContainerRemoveOptions{
-		Force:         true,
-		RemoveVolumes: true,
-	})
-	if err != nil && !errdefs.IsNotFound(err) {
-		return fmt.Errorf("remove container %s: %w", tn.Name(), err)
-	}
-	return nil
+	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction

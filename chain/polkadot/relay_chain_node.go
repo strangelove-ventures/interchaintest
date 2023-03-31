@@ -10,12 +10,9 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
-	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"go.uber.org/zap"
@@ -31,22 +28,24 @@ type RelayChainNode struct {
 	TestName string
 	Index    int
 
-	NetworkID    string
-	containerID  string
-	VolumeName   string
-	DockerClient *client.Client
-	Image        ibc.DockerImage
+	NetworkID          string
+	containerLifecycle *dockerutil.ContainerLifecycle
+	VolumeName         string
+	DockerClient       *client.Client
+	Image              ibc.DockerImage
 
 	Chain             ibc.Chain
 	NodeKey           p2pCrypto.PrivKey
-	AccountKey        *schnorrkel.MiniSecretKey
-	StashKey          *schnorrkel.MiniSecretKey
+	AccountKeyName    string
+	StashKeyName      string
 	Ed25519PrivateKey p2pCrypto.PrivKey
 	EcdsaPrivateKey   secp256k1.PrivateKey
 
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
+
+	preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -104,24 +103,6 @@ func (p *RelayChainNode) GrandpaAddress() (string, error) {
 	pubKey, err := p.Ed25519PrivateKey.GetPublic().Raw()
 	if err != nil {
 		return "", fmt.Errorf("error fetching pubkey bytes: %w", err)
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// AccountAddress returns the ss58 encoded account address.
-func (p *RelayChainNode) AccountAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.AccountKey.Public().Encode() {
-		pubKey[i] = mkByte
-	}
-	return EncodeAddressSS58(pubKey)
-}
-
-// StashAddress returns the ss58 encoded stash address.
-func (p *RelayChainNode) StashAddress() (string, error) {
-	pubKey := make([]byte, 32)
-	for i, mkByte := range p.StashKey.Public().Encode() {
-		pubKey[i] = mkByte
 	}
 	return EncodeAddressSS58(pubKey)
 }
@@ -235,69 +216,32 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
-	p.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", p.Name()),
-		)
-
-	cc, err := p.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: p.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           p.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				p.NetworkID: {},
-			},
-		},
-		nil,
-		p.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	p.containerID = cc.ID
-	return nil
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.
 func (p *RelayChainNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
+	return p.containerLifecycle.StopContainer(ctx)
 }
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, wsPort, rpcPort)
 	if err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostWsPort, p.hostRpcPort = hostPorts[0], hostPorts[1]
 
+	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
+	p.log.Info(explorerUrl, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -306,9 +250,8 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr); err != nil {
 		return err
 	}
-
+	p.logger().Info("Done", zap.String("container", p.Name()))
 	p.api = api
-
 	return nil
 }
 
