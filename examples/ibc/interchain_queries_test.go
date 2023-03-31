@@ -23,7 +23,7 @@ import (
 // of interchain queries. See: https://github.com/quasar-finance/interchain-query-demo
 func TestInterchainQueries(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()
