@@ -304,11 +304,36 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
+// QueryParam returns the param state of a given key.
+func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	return c.getFullNode().QueryParam(ctx, subspace, key)
+}
+
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
+// ParamChangeProposal submits a param-change governance proposal to the chain.
+func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName, fileLocation string) (tx TxProposal, _ error) {
+	dat, err := os.ReadFile(fileLocation)
+	if err != nil {
+		return tx, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var paramChange ParamChangeProposal
+	err = json.Unmarshal(dat, &paramChange)
+	if err != nil {
+		return tx, fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	txHash, err := c.getFullNode().ParamChangeProposal(ctx, keyName, paramChange)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit param-change proposal: %w", err)
 	}
 	return c.txProposal(txHash)
 }

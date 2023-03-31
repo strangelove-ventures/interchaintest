@@ -10,7 +10,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.0.4
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.4
-	github.com/cosmos/cosmos-sdk v0.45.11
+	github.com/cosmos/cosmos-sdk v0.45.15
 	github.com/cosmos/ibc-go/v3 v3.4.0
 	github.com/cosmos/interchain-security v1.0.0-rc2
 	github.com/davecgh/go-spew v1.1.1

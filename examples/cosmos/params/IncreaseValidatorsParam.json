@@ -1,0 +1,12 @@
+{
+    "title": "Increase validator set to 110",
+    "description": ".",
+    "changes": [
+      {
+        "subspace": "staking",
+        "key": "MaxValidators",
+        "value": 110
+      }
+    ],
+    "deposit": "10000000ujuno"
+}
