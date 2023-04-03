@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/ibctest/v5"
+	interchaintest "github.com/strangelove-ventures/ibctest/v5"
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -24,17 +24,17 @@ const (
 )
 
 func TestJunoUpgrade(t *testing.T) {
-	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "v8.0.0", "multiverse")
+	CosmosChainUpgradeTest(t, "juno", "v6.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "v8.0.0", "multiverse")
 }
 
-func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVersion string, upgradeName string) {
+func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeContainerRepo, upgradeVersion, upgradeName string) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()
 
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      chainName,
 			ChainName: chainName,
@@ -50,17 +50,17 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(chain)
 
 	ctx := context.Background()
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
+	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true,
 	}))
 	t.Cleanup(func() {
@@ -68,7 +68,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	})
 
 	const userFunds = int64(10_000_000_000)
-	users := ibctest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
 	height, err := chain.Height(ctx)
@@ -84,7 +84,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 		Height:      haltHeight,
 	}
 
-	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName, proposal)
+	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName(), proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, cosmos.ProposalVoteYes)
@@ -100,7 +100,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	require.NoError(t, err, "error fetching height before upgrade")
 
 	// this should timeout due to chain halt at upgrade height.
-	_ = test.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
+	_ = testutil.WaitForBlocks(timeoutCtx, int(haltHeight-height)+1, chain)
 
 	height, err = chain.Height(ctx)
 	require.NoError(t, err, "error fetching height after chain should have halted")
@@ -113,7 +113,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	require.NoError(t, err, "error stopping node(s)")
 
 	// upgrade version on all nodes
-	chain.UpgradeVersion(ctx, client, upgradeVersion)
+	chain.UpgradeVersion(ctx, client, upgradeContainerRepo, upgradeVersion)
 
 	// start all nodes back up.
 	// validators reach consensus on first block after upgrade height
@@ -124,7 +124,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	timeoutCtx, timeoutCtxCancel = context.WithTimeout(ctx, time.Second*45)
 	defer timeoutCtxCancel()
 
-	err = test.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
+	err = testutil.WaitForBlocks(timeoutCtx, int(blocksAfterUpgrade), chain)
 	require.NoError(t, err, "chain did not produce blocks after upgrade")
 
 	height, err = chain.Height(ctx)

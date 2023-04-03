@@ -23,14 +23,14 @@ func emptyDB() *sql.DB {
 
 func migratedDB() *sql.DB {
 	db := emptyDB()
-	if err := Migrate(db, "test"); err != nil {
+	if err := Migrate(db, "testutil"); err != nil {
 		panic(err)
 	}
 	return db
 }
 
 func TestConnectDB(t *testing.T) {
-	file := filepath.Join(t.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "test", t.Name()+".db")
+	file := filepath.Join(t.TempDir(), strconv.FormatInt(time.Now().UnixMilli(), 10), "testutil", t.Name()+".db")
 	db, err := ConnectDB(context.Background(), file)
 
 	require.NoError(t, err)
@@ -78,15 +78,15 @@ func TestDB_Concurrency(t *testing.T) {
 			<-beginWrites
 
 			for j := 0; j < nTestCases; j++ {
-				tc, err := CreateTestCase(egCtx, db, fmt.Sprintf("test-%d-%d", i, j), sha)
+				tc, err := CreateTestCase(egCtx, db, fmt.Sprintf("testutil-%d-%d", i, j), sha)
 				if err != nil {
-					return fmt.Errorf("writer %d failed to create test case %d/%d: %w", i, j+1, nTestCases, err)
+					return fmt.Errorf("writer %d failed to create testutil case %d/%d: %w", i, j+1, nTestCases, err)
 				}
 				time.Sleep(time.Millisecond)
 
 				_, err = tc.AddChain(egCtx, fmt.Sprintf("chain-%d-%d", i, j), "cosmos")
 				if err != nil {
-					return fmt.Errorf("writer %d failed to add chain to test case %d/%d: %w", i, j+1, nTestCases, err)
+					return fmt.Errorf("writer %d failed to add chain to testutil case %d/%d: %w", i, j+1, nTestCases, err)
 				}
 				time.Sleep(time.Millisecond)
 			}
@@ -117,12 +117,12 @@ func TestDB_Concurrency(t *testing.T) {
 
 				// Deliberately using context.Background() here so that
 				// canceling the writers does not cause an "interrupted" error
-				// when querying the recent test cases.
+				// when querying the recent testutil cases.
 				// (This must be an sqlite implementation detail, as that error
 				// is distinct from context.Canceled.)
 				_, err := q.RecentTestCases(context.Background(), nTestCases*nWriters)
 				if err != nil {
-					return fmt.Errorf("error in querier %d retrieving test cases: %w", i, err)
+					return fmt.Errorf("error in querier %d retrieving testutil cases: %w", i, err)
 				}
 			}
 		})
@@ -136,13 +136,13 @@ func TestDB_Concurrency(t *testing.T) {
 	cancel()
 	require.NoError(t, egQueries.Wait())
 
-	// Final assertions against written number of test cases.
+	// Final assertions against written number of testutil cases.
 	db, err := ConnectDB(context.Background(), dbPath)
 	require.NoErrorf(t, err, "failed to connect to db for final assertion")
 	defer db.Close()
 
 	tcs, err := NewQuery(db).RecentTestCases(context.Background(), nTestCases*nWriters)
-	require.NoError(t, err, "failed to collect recent test cases")
+	require.NoError(t, err, "failed to collect recent testutil cases")
 
-	require.Len(t, tcs, nTestCases*nWriters, "incorrect count on final written test cases")
+	require.Len(t, tcs, nTestCases*nWriters, "incorrect count on final written testutil cases")
 }

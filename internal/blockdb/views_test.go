@@ -97,7 +97,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 		&txID, &tx,
 	))
 
-	// Same test case and chain.
+	// Same testutil case and chain.
 	require.Equal(t, tcID, tc.id)
 	require.Equal(t, chainKeyID, chain.id)
 
@@ -121,7 +121,7 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 		&txID, &tx,
 	))
 
-	// Same test case and chain.
+	// Same testutil case and chain.
 	require.Equal(t, tcID, tc.id)
 	require.Equal(t, chainKeyID, chain.id)
 

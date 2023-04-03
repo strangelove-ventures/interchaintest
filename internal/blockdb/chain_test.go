@@ -25,9 +25,9 @@ func TestChain_SaveBlock(t *testing.T) {
 
 	var (
 		ctx = context.Background()
-		tx1 = Tx{Data: []byte(`{"test":0}`)}
+		tx1 = Tx{Data: []byte(`{"testutil":0}`)}
 		tx2 = Tx{
-			Data: []byte(`{"test":1}`),
+			Data: []byte(`{"testutil":1}`),
 			Events: []Event{
 				{
 					Type: "e1",
@@ -82,7 +82,7 @@ func TestChain_SaveBlock(t *testing.T) {
 			)
 			require.NoError(t, rows.Scan(&gotData, &gotBlockID))
 			require.Equal(t, 1, gotBlockID)
-			require.JSONEq(t, fmt.Sprintf(`{"test":%d}`, i), gotData)
+			require.JSONEq(t, fmt.Sprintf(`{"testutil":%d}`, i), gotData)
 			i++
 		}
 		require.Equal(t, 2, i)
@@ -98,7 +98,7 @@ ORDER BY tendermint_event_attr.id`)
 		for i = 0; rows.Next(); i++ {
 			var gotData, gotType, gotKey, gotValue string
 			require.NoError(t, rows.Scan(&gotData, &gotType, &gotKey, &gotValue))
-			require.Equal(t, gotData, `{"test":1}`)
+			require.Equal(t, gotData, `{"testutil":1}`)
 			switch i {
 			case 0:
 				require.Equal(t, gotType, "e1")

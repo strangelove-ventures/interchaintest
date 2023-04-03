@@ -42,7 +42,7 @@ func TestDockerSetup_KeepVolumes(t *testing.T) {
 			state = "passed"
 		}
 
-		testName := fmt.Sprintf("keep=%t, test %s", tc.keep, state)
+		testName := fmt.Sprintf("keep=%t, testutil %s", tc.keep, state)
 		t.Run(testName, func(t *testing.T) {
 			dockerutil.KeepVolumesOnFailure = tc.keep
 			mt := mocktesting.NewT(t.Name())

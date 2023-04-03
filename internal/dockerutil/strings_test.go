@@ -20,27 +20,27 @@ func TestGetHostPort(t *testing.T) {
 				NetworkSettings: &types.NetworkSettings{
 					NetworkSettingsBase: types.NetworkSettingsBase{
 						Ports: nat.PortMap{
-							nat.Port("test"): []nat.PortBinding{
+							nat.Port("testutil"): []nat.PortBinding{
 								{HostIP: "1.2.3.4", HostPort: "8080"},
 								{HostIP: "0.0.0.0", HostPort: "9999"},
 							},
 						},
 					},
 				},
-			}, "test", "1.2.3.4:8080",
+			}, "testutil", "1.2.3.4:8080",
 		},
 		{
 			types.ContainerJSON{
 				NetworkSettings: &types.NetworkSettings{
 					NetworkSettingsBase: types.NetworkSettingsBase{
 						Ports: nat.PortMap{
-							nat.Port("test"): []nat.PortBinding{
+							nat.Port("testutil"): []nat.PortBinding{
 								{HostIP: "0.0.0.0", HostPort: "3000"},
 							},
 						},
 					},
 				},
-			}, "test", "localhost:3000",
+			}, "testutil", "localhost:3000",
 		},
 
 		{types.ContainerJSON{}, "", ""},
@@ -65,7 +65,7 @@ func TestCondenseHostName(t *testing.T) {
 		HostName, Want string
 	}{
 		{"", ""},
-		{"test", "test"},
+		{"testutil", "testutil"},
 		{"some-really-very-incredibly-long-hostname-that-is-greater-than-64-characters", "some-really-very-incredibly-lo_._-is-greater-than-64-characters"},
 	} {
 		require.Equal(t, tt.Want, CondenseHostName(tt.HostName), tt)

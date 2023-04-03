@@ -24,10 +24,10 @@ import (
 // but the report will be missing details.
 type Relayer interface {
 	// restore a mnemonic to be used as a relayer wallet for a chain
-	RestoreKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, mnemonic string) error
+	RestoreKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error
 
 	// generate a new key
-	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName string) (Wallet, error)
+	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType string) (Wallet, error)
 
 	// GetWallet returns a Wallet for that relayer on the given chain and a boolean indicating if it was found.
 	GetWallet(chainID string) (Wallet, bool)
@@ -53,6 +53,9 @@ type Relayer interface {
 	// GetConnections returns a slice of IBC connection details composed of the details for each connection on a specified chain.
 	GetConnections(ctx context.Context, rep RelayerExecReporter, chainID string) (ConnectionOutputs, error)
 
+	// GetClients returns a slice of IBC client details composed of the details for each client on a specified chain.
+	GetClients(ctx context.Context, rep RelayerExecReporter, chainID string) (ClientOutputs, error)
+
 	// After configuration is initialized, begin relaying.
 	// This method is intended to create a background worker that runs the relayer.
 	// You must call StopRelayer to cleanly stop the relaying.
@@ -61,11 +64,8 @@ type Relayer interface {
 	// StopRelayer stops a relayer that started work through StartRelayer.
 	StopRelayer(ctx context.Context, rep RelayerExecReporter) error
 
-	// FlushPackets flushes any outstanding packets and then returns.
-	FlushPackets(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
-
-	// FlushAcknowledgements flushes any outstanding acknowledgements and then returns.
-	FlushAcknowledgements(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
+	// Flush flushes any outstanding packets and then returns.
+	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
@@ -82,7 +82,7 @@ type Relayer interface {
 	//
 	// If false, the relayer will connect to the localhost-exposed ports instead of the docker hosts.
 	//
-	// Relayer implementations provided by the ibctest module will report true,
+	// Relayer implementations provided by the interchaintest module will report true,
 	// but custom implementations may report false.
 	UseDockerNetwork() bool
 
@@ -93,6 +93,82 @@ type Relayer interface {
 	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
 	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) RelayerExecResult
+}
+
+// GetTransferChannel will return the transfer channel assuming only one client,
+// one connection, and one channel with "transfer" port exists between two chains.
+func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter, srcChainID, dstChainID string) (*ChannelOutput, error) {
+	srcClients, err := r.GetClients(ctx, rep, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get clients on source chain: %w", err)
+	}
+
+	if len(srcClients) == 0 {
+		return nil, fmt.Errorf("no clients exist on source chain: %w", err)
+	}
+
+	var srcClientID string
+	for _, client := range srcClients {
+		// TODO continue for expired clients
+		if client.ClientState.ChainID == dstChainID {
+			if srcClientID != "" {
+				return nil, fmt.Errorf("found multiple clients on %s tracking %s", srcChainID, dstChainID)
+			}
+			srcClientID = client.ClientID
+		}
+	}
+
+	if srcClientID == "" {
+		return nil, fmt.Errorf("unable to find client on %s tracking %s", srcChainID, dstChainID)
+	}
+
+	srcConnections, err := r.GetConnections(ctx, rep, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connections on source chain: %w", err)
+	}
+
+	if len(srcConnections) == 0 {
+		return nil, fmt.Errorf("no connections exist on source chain: %w", err)
+	}
+
+	var srcConnectionID string
+	for _, connection := range srcConnections {
+		if connection.ClientID == srcClientID {
+			if srcConnectionID != "" {
+				return nil, fmt.Errorf("found multiple connections on %s for client %s", srcChainID, srcClientID)
+			}
+			srcConnectionID = connection.ID
+		}
+	}
+
+	if srcConnectionID == "" {
+		return nil, fmt.Errorf("unable to find connection on %s for client %s", srcChainID, srcClientID)
+	}
+
+	srcChannels, err := r.GetChannels(ctx, rep, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get channels on source chain: %w", err)
+	}
+
+	if len(srcChannels) == 0 {
+		return nil, fmt.Errorf("no channels exist on source chain: %w", err)
+	}
+
+	var srcChan *ChannelOutput
+	for _, channel := range srcChannels {
+		if len(channel.ConnectionHops) == 1 && channel.ConnectionHops[0] == srcConnectionID && channel.PortID == "transfer" {
+			if srcChan != nil {
+				return nil, fmt.Errorf("found multiple transfer channels on %s for connection %s", srcChainID, srcConnectionID)
+			}
+			srcChan = &channel
+		}
+	}
+
+	if srcChan == nil {
+		return nil, fmt.Errorf("no transfer channel found between chains: %s - %s", srcChainID, dstChainID)
+	}
+
+	return srcChan, nil
 }
 
 // RelyaerExecResult holds the details of a call to Relayer.Exec.

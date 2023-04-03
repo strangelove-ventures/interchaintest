@@ -20,6 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultRlyHomeDirectory = "/home/relayer"
+)
+
 // DockerRelayer provides a common base for relayer implementations
 // that run on Docker.
 type DockerRelayer struct {
@@ -42,6 +46,8 @@ type DockerRelayer struct {
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
+
+	homeDir string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -64,12 +70,16 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		wallets: map[string]ibc.Wallet{},
 	}
 
+	r.homeDir = defaultRlyHomeDirectory
+
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case RelayerOptionDockerImage:
 			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
 			r.pullImage = o.Pull
+		case RelayerOptionHomeDir:
+			r.homeDir = o.HomeDir
 		}
 	}
 
@@ -122,6 +132,21 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	return &r, nil
 }
 
+// WriteFileToHomeDir writes the given contents to a file at the relative path specified. The file is relative
+// to the home directory in the relayer container.
+func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath string, contents []byte) error {
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, relativePath, contents); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
+// AddWallet adds a stores a wallet for the given chain ID.
+func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
+	r.wallets[chainID] = wallet
+}
+
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	// For rly this file is json, but the file extension should not matter.
 	// Using .config to avoid implying any particular format.
@@ -150,8 +175,8 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	return res.Err
 }
 
-func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.Wallet, error) {
-	cmd := r.c.AddKey(chainID, keyName, r.HomeDir())
+func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType string) (ibc.Wallet, error) {
+	cmd := r.c.AddKey(chainID, keyName, coinType, r.HomeDir())
 
 	// Adding a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -160,12 +185,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
-		return ibc.Wallet{}, res.Err
+		return nil, res.Err
 	}
 
 	wallet, err := r.c.ParseAddKeyOutput(string(res.Stdout), string(res.Stderr))
 	if err != nil {
-		return ibc.Wallet{}, err
+		return nil, err
 	}
 	r.wallets[chainID] = wallet
 	return wallet, nil
@@ -194,14 +219,8 @@ func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerEx
 	return res.Err
 }
 
-func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.HomeDir())
-	res := r.Exec(ctx, rep, cmd, nil)
-	return res.Err
-}
-
-func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushPackets(pathName, channelID, r.HomeDir())
+func (r *DockerRelayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.Flush(pathName, channelID, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -243,6 +262,16 @@ func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecR
 	return r.c.ParseGetConnectionsOutput(string(res.Stdout), string(res.Stderr))
 }
 
+func (r *DockerRelayer) GetClients(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ClientOutputs, error) {
+	cmd := r.c.GetClients(chainID, r.HomeDir())
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
+	}
+
+	return r.c.ParseGetClientsOutput(string(res.Stdout), string(res.Stderr))
+}
+
 func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts)
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -278,8 +307,8 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
-	cmd := r.c.RestoreKey(chainID, keyName, mnemonic, r.HomeDir())
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
+	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -291,10 +320,10 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 		return res.Err
 	}
 
-	r.wallets[chainID] = ibc.Wallet{
-		Mnemonic: mnemonic,
-		Address:  r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr)),
-	}
+	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
+
+	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+
 	return nil
 }
 
@@ -459,7 +488,7 @@ func (r *DockerRelayer) Bind() []string {
 
 // HomeDir returns the home directory of the relayer on the underlying Docker container's filesystem.
 func (r *DockerRelayer) HomeDir() string {
-	return "/home/relayer"
+	return r.homeDir
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
@@ -478,7 +507,7 @@ type RelayerCommander interface {
 	DefaultContainerVersion() string
 
 	// The Docker user to use in created container.
-	// For ibctest, must be of the format: uid:gid.
+	// For interchaintest, must be of the format: uid:gid.
 	DockerUser() string
 
 	// ConfigContent generates the content of the config file that will be passed to AddChainConfiguration.
@@ -499,6 +528,10 @@ type RelayerCommander interface {
 	// to produce the connection output values.
 	ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error)
 
+	// ParseGetClientsOutput processes the output of GetClients
+	// to produce the client output values.
+	ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error)
+
 	// Init is the command to run on the first call to AddChainConfiguration.
 	// If the returned command is nil or empty, nothing will be executed.
 	Init(homeDir string) []string
@@ -506,18 +539,19 @@ type RelayerCommander interface {
 	// The remaining methods produce the command to run inside the container.
 
 	AddChainConfiguration(containerFilePath, homeDir string) []string
-	AddKey(chainID, keyName, homeDir string) []string
+	AddKey(chainID, keyName, coinType, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
-	FlushAcknowledgements(pathName, channelID, homeDir string) []string
-	FlushPackets(pathName, channelID, homeDir string) []string
+	Flush(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
+	GetClients(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
-	RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
+	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
+	CreateWallet(keyName, address, mnemonic string) ibc.Wallet
 }

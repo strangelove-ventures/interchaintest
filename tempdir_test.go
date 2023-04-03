@@ -20,7 +20,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 	t.Run("keep=true", func(t *testing.T) {
 		ibctest.KeepTempDirOnFailure(true)
 
-		t.Run("test passed", func(t *testing.T) {
+		t.Run("testutil passed", func(t *testing.T) {
 			mt := mocktesting.NewT("t")
 
 			dir := ibctest.TempDir(mt)
@@ -32,7 +32,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 			require.Empty(t, mt.Logs)
 		})
 
-		t.Run("test failed", func(t *testing.T) {
+		t.Run("testutil failed", func(t *testing.T) {
 			mt := mocktesting.NewT("t")
 
 			dir := ibctest.TempDir(mt)
@@ -56,8 +56,8 @@ func TestTempDir_Cleanup(t *testing.T) {
 		ibctest.KeepTempDirOnFailure(false)
 
 		for name, failed := range map[string]bool{
-			"test passed": false,
-			"test failed": true,
+			"testutil passed": false,
+			"testutil failed": true,
 		} {
 			failed := failed
 			t.Run(name, func(t *testing.T) {

@@ -1,12 +1,14 @@
 package ibc
 
 import (
+	"reflect"
+	"strconv"
+
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
 )
 
-// ChainConfig defines the chain parameters requires to run an ibctest testnet for a chain.
+// ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
 	Type string `yaml:"type"`
@@ -22,6 +24,8 @@ type ChainConfig struct {
 	Bech32Prefix string `yaml:"bech32-prefix"`
 	// Denomination of native currency, e.g. uatom.
 	Denom string `yaml:"denom"`
+	// Coin type
+	CoinType string `default:"118" yaml:"coin-type"`
 	// Minimum gas prices for sending transactions, in native currency denom.
 	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
@@ -36,6 +40,8 @@ type ChainConfig struct {
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
 	EncodingConfig *simappparams.EncodingConfig
+	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
+	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -44,6 +50,27 @@ func (c ChainConfig) Clone() ChainConfig {
 	copy(images, c.Images)
 	x.Images = images
 	return x
+}
+
+func (c ChainConfig) VerifyCoinType() (string, error) {
+	// If coin-type is left blank in the ChainConfig,
+	// the Cosmos SDK default of 118 is used.
+	if c.CoinType == "" {
+		typ := reflect.TypeOf(c)
+		f, _ := typ.FieldByName("CoinType")
+		coinType := f.Tag.Get("default")
+		_, err := strconv.ParseUint(coinType, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		return coinType, nil
+	} else {
+		_, err := strconv.ParseUint(c.CoinType, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		return c.CoinType, nil
+	}
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
@@ -75,6 +102,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.Denom != "" {
 		c.Denom = other.Denom
+	}
+
+	if other.CoinType != "" {
+		c.CoinType = other.CoinType
 	}
 
 	if other.GasPrices != "" {
@@ -174,18 +205,22 @@ type ConnectionOutput struct {
 
 type ConnectionOutputs []*ConnectionOutput
 
-type Wallet struct {
-	Mnemonic string `json:"mnemonic"`
-	Address  string `json:"address"`
-	KeyName  string
+type ClientOutput struct {
+	ClientID    string      `json:"client_id"`
+	ClientState ClientState `json:"client_state"`
 }
 
-func (w *Wallet) GetKeyName() string {
-	return w.KeyName
+type ClientState struct {
+	ChainID string `json:"chain_id"`
 }
 
-func (w *Wallet) Bech32Address(bech32Prefix string) string {
-	return types.MustBech32ifyAddressBytes(bech32Prefix, []byte(w.Address))
+type ClientOutputs []*ClientOutput
+
+type Wallet interface {
+	KeyName() string
+	FormattedAddress() string
+	Mnemonic() string
+	Address() []byte
 }
 
 type RelayerImplementation int64

@@ -15,7 +15,7 @@ type Message interface {
 
 // BeginSuiteMessage indicates when the Reporter was initialized,
 // which should correlate with the beginning of a TestMain function,
-// or an init function in a normal test suite.
+// or an init function in a normal testutil suite.
 type BeginSuiteMessage struct {
 	StartedAt time.Time
 
@@ -28,7 +28,7 @@ func (m BeginSuiteMessage) typ() string {
 	return "BeginSuite"
 }
 
-// FinishSuiteMessage indicates the time the test suite has finished.
+// FinishSuiteMessage indicates the time the testutil suite has finished.
 type FinishSuiteMessage struct {
 	FinishedAt time.Time
 }
@@ -37,8 +37,8 @@ func (m FinishSuiteMessage) typ() string {
 	return "FinishSuite"
 }
 
-// BeginTestMessage indicates the beginning of a single test.
-// If the test uses t.Parallel (via (*Reporter).TrackParallel),
+// BeginTestMessage indicates the beginning of a single testutil.
+// If the testutil uses t.Parallel (via (*Reporter).TrackParallel),
 // the reporter will also track a PauseTestMessage and a ContinueTestMessage.
 type BeginTestMessage struct {
 	Name      string
@@ -46,7 +46,7 @@ type BeginTestMessage struct {
 	Labels    LabelSet
 }
 
-// LabelSet is the set of labels that can be associated with a test.
+// LabelSet is the set of labels that can be associated with a testutil.
 type LabelSet struct {
 	Relayer []label.Relayer `json:",omitempty"`
 	Chain   []label.Chain   `json:",omitempty"`
@@ -58,7 +58,7 @@ func (m BeginTestMessage) typ() string {
 	return "BeginTest"
 }
 
-// FinishTestMessage is tracked at the end of a single test.
+// FinishTestMessage is tracked at the end of a single testutil.
 type FinishTestMessage struct {
 	Name       string
 	FinishedAt time.Time
@@ -70,7 +70,7 @@ func (m FinishTestMessage) typ() string {
 	return "FinishTest"
 }
 
-// PauseTestMessage indicates that a test is entering parallel mode
+// PauseTestMessage indicates that a testutil is entering parallel mode
 // and waiting for its turn to continue execution.
 type PauseTestMessage struct {
 	Name string
@@ -81,7 +81,7 @@ func (m PauseTestMessage) typ() string {
 	return "PauseTest"
 }
 
-// ContinueTestMessage indicates that a test has resumed execution
+// ContinueTestMessage indicates that a testutil has resumed execution
 // after a call to t.Parallel.
 type ContinueTestMessage struct {
 	Name string
@@ -94,8 +94,10 @@ func (m ContinueTestMessage) typ() string {
 
 // TestErrorMessage is tracked when a Reporter's TestifyT().Errorf method is called.
 // This is the intended usage of a Reporter with require:
-//     req := require.New(rep.TestifyT(t))
-//     req.NoError(foo())
+//
+//	req := require.New(rep.TestifyT(t))
+//	req.NoError(foo())
+//
 // If req.NoError fails, then rep will track a TestErrorMessage.
 type TestErrorMessage struct {
 	Name    string
@@ -108,7 +110,7 @@ func (m TestErrorMessage) typ() string {
 }
 
 // TestSkipMessage is tracked when a Reporter's TrackSkip method is called.
-// This allows the report to track the reason a test was skipped.
+// This allows the report to track the reason a testutil was skipped.
 type TestSkipMessage struct {
 	Name    string
 	When    time.Time

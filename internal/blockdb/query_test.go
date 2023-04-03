@@ -51,7 +51,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		_, err = tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
 
-		_, err = CreateTestCase(ctx, db, "empty", "empty-test")
+		_, err = CreateTestCase(ctx, db, "empty", "empty-testutil")
 		require.NoError(t, err)
 
 		results, err := NewQuery(db).RecentTestCases(ctx, 10)
@@ -99,7 +99,7 @@ func TestQuery_RecentTestCases(t *testing.T) {
 		require.Len(t, got, 1)
 	})
 
-	t.Run("no test cases", func(t *testing.T) {
+	t.Run("no testutil cases", func(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
@@ -118,7 +118,7 @@ func TestQuery_CosmosMessages(t *testing.T) {
 	db := migratedDB()
 	defer db.Close()
 
-	tc, err := CreateTestCase(ctx, db, "test", "sha")
+	tc, err := CreateTestCase(ctx, db, "testutil", "sha")
 	require.NoError(t, err)
 	chain, err := tc.AddChain(ctx, "chain1", "cosmos")
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestQuery_Transactions(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
-		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		tc, err := CreateTestCase(ctx, db, "testutil", "abc123")
 		require.NoError(t, err)
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestQuery_Transactions(t *testing.T) {
 		db := migratedDB()
 		defer db.Close()
 
-		tc, err := CreateTestCase(ctx, db, "test", "abc123")
+		tc, err := CreateTestCase(ctx, db, "testutil", "abc123")
 		require.NoError(t, err)
 		chain, err := tc.AddChain(ctx, "chain-a", "cosmos")
 		require.NoError(t, err)

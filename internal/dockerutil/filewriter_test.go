@@ -40,9 +40,9 @@ func TestFileWriter(t *testing.T) {
 		require.NoError(t, fw.WriteFile(context.Background(), v.Name, "hello.txt", []byte("hello world")))
 		res := img.Run(
 			ctx,
-			[]string{"sh", "-c", "cat /mnt/test/hello.txt"},
+			[]string{"sh", "-c", "cat /mnt/testutil/hello.txt"},
 			dockerutil.ContainerOptions{
-				Binds: []string{v.Name + ":/mnt/test"},
+				Binds: []string{v.Name + ":/mnt/testutil"},
 				User:  dockerutil.GetRootUserString(),
 			},
 		)
@@ -55,9 +55,9 @@ func TestFileWriter(t *testing.T) {
 		require.NoError(t, fw.WriteFile(context.Background(), v.Name, "a/b/c/d.txt", []byte(":D")))
 		res := img.Run(
 			ctx,
-			[]string{"sh", "-c", "cat /mnt/test/a/b/c/d.txt"},
+			[]string{"sh", "-c", "cat /mnt/testutil/a/b/c/d.txt"},
 			dockerutil.ContainerOptions{
-				Binds: []string{v.Name + ":/mnt/test"},
+				Binds: []string{v.Name + ":/mnt/testutil"},
 				User:  dockerutil.GetRootUserString(),
 			},
 		)

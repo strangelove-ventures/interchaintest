@@ -72,7 +72,7 @@ func (r *Reporter) Close() error {
 }
 
 // TrackParameters is intended to be called from the outermost layer of tests.
-// It tracks the test run including labels indicative of what relayers and chains are used.
+// It tracks the testutil run including labels indicative of what relayers and chains are used.
 func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabels []label.Chain) {
 	for _, l := range relayerLabels {
 		if !l.IsKnown() {
@@ -91,7 +91,7 @@ func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabe
 func (r *Reporter) TrackTest(t T, labels ...label.Test) {
 	for _, l := range labels {
 		if !l.IsKnown() {
-			panic(fmt.Errorf("illegal use of unknown test label %q", l))
+			panic(fmt.Errorf("illegal use of unknown testutil label %q", l))
 		}
 	}
 
@@ -100,8 +100,8 @@ func (r *Reporter) TrackTest(t T, labels ...label.Test) {
 	})
 }
 
-// trackTest tracks the test start and finish time.
-// It also records which labels are present on the test.
+// trackTest tracks the testutil start and finish time.
+// It also records which labels are present on the testutil.
 func (r *Reporter) trackTest(t T, labels LabelSet) {
 	name := t.Name()
 	r.in <- BeginTestMessage{
@@ -120,7 +120,7 @@ func (r *Reporter) trackTest(t T, labels LabelSet) {
 	})
 }
 
-// TrackParallel tracks when the pause begins for a parallel test
+// TrackParallel tracks when the pause begins for a parallel testutil
 // and when it continues to resume.
 func (r *Reporter) TrackParallel(t T) {
 	name := t.Name()
@@ -135,7 +135,7 @@ func (r *Reporter) TrackParallel(t T) {
 	}
 }
 
-// TrackSkip records a the reason for a test being skipped,
+// TrackSkip records a the reason for a testutil being skipped,
 // and calls t.Skip.
 func (r *Reporter) TrackSkip(t T, format string, args ...any) {
 	now := time.Now()
@@ -188,11 +188,12 @@ func (r *RelayerExecReporter) TrackRelayerExec(
 	}
 }
 
-// TestifyT returns a TestifyReporter which will track logged errors in test.
+// TestifyT returns a TestifyReporter which will track logged errors in testutil.
 // Typically you will use this with the New method on the require or assert package:
-//     req := require.New(reporter.TestifyT(t))
-//     // ...
-//     req.NoError(err, "failed to foo the bar")
+//
+//	req := require.New(reporter.TestifyT(t))
+//	// ...
+//	req.NoError(err, "failed to foo the bar")
 func (r *Reporter) TestifyT(t TestifyT) *TestifyReporter {
 	return &TestifyReporter{r: r, t: t}
 }
@@ -228,7 +229,7 @@ func (r *TestifyReporter) Errorf(format string, args ...any) {
 
 // FailNow passes through to r's TestifyT.
 // It does not need to log another message
-// because r's Reporter should be tracking the test already.
+// because r's Reporter should be tracking the testutil already.
 func (r *TestifyReporter) FailNow() {
 	r.t.FailNow()
 }
@@ -239,7 +240,7 @@ func NewNopReporter() *Reporter {
 }
 
 // nopWriteCloser is a no-op io.WriteCloser used to satisfy the ibctest TestReporter type.
-// Because the relayer is used in-process, all logs are simply streamed to the test log.
+// Because the relayer is used in-process, all logs are simply streamed to the testutil log.
 type nopWriteCloser struct {
 	io.Writer
 }

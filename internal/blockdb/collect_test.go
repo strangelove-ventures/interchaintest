@@ -131,8 +131,8 @@ func TestCollector_Collect(t *testing.T) {
 }
 
 func TestCollector_Stop(t *testing.T) {
-	// Synchronization control to allow test to progress without a data race.
-	// Begins locked, unlocks from the finder, and the test blocks trying to re-lock it.
+	// Synchronization control to allow testutil to progress without a data race.
+	// Begins locked, unlocks from the finder, and the testutil blocks trying to re-lock it.
 	var foundMu sync.Mutex
 	foundMu.Lock()
 
@@ -162,7 +162,7 @@ func TestCollector_Stop(t *testing.T) {
 	c.Stop()
 
 	// require.Eventually would be nice here, but that starts its own goroutine,
-	// which defeats the purpose of this test.
+	// which defeats the purpose of this testutil.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if runtime.NumGoroutine() == n {

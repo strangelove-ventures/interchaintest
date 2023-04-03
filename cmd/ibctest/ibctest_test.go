@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	// Because we use the test binary, we use this hack to customize the help usage.
+	// Because we use the testutil binary, we use this hack to customize the help usage.
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()
 		fmt.Fprintf(out, "Usage of %s:\n", os.Args[0])
@@ -40,7 +40,7 @@ func init() {
 	}
 }
 
-// The value of the test matrix.
+// The value of the testutil matrix.
 var testMatrix struct {
 	Relayers []string
 
@@ -69,7 +69,7 @@ func TestMain(m *testing.M) {
 	}
 
 	if err := setUpTestMatrix(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to build test matrix: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to build testutil matrix: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -79,14 +79,14 @@ func TestMain(m *testing.M) {
 	}
 
 	if err := configureTestReporter(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failure configuring test reporter: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failure configuring testutil reporter: %v\n", err)
 		os.Exit(1)
 	}
 
 	code := m.Run()
 
 	if err := reporter.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failure closing test reporter: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failure closing testutil reporter: %v\n", err)
 		// Don't os.Exit here, since we already have an exit code from running the tests.
 	}
 
@@ -186,9 +186,9 @@ func getChainFactory(log *zap.Logger, chainSpecs []*interchaintest.ChainSpec) (i
 	return interchaintest.NewBuiltinChainFactory(log, chainSpecs), nil
 }
 
-// TestConformance is the root test for the ibc conformance tests.
+// TestConformance is the root testutil for the ibc conformance tests.
 // It runs many subtests in parallel;
-// if this is too taxing on a system, the -test.parallel flag
+// if this is too taxing on a system, the -testutil.parallel flag
 // can be used to reduce how many tests actively run at once.
 func TestConformance(t *testing.T) {
 	if testing.Short() {
@@ -231,7 +231,7 @@ func TestConformance(t *testing.T) {
 		relayerFactories[i] = rf
 	}
 
-	// Begin test execution, which will spawn many parallel subtests.
+	// Begin testutil execution, which will spawn many parallel subtests.
 	conformance.Test(t, ctx, chainFactories, relayerFactories, reporter)
 }
 
@@ -241,11 +241,11 @@ func TestConformance(t *testing.T) {
 // testing flags, so I fell back to plain Go standard library flags.
 // We can revisit if necessary.
 func addFlags() {
-	flag.StringVar(&extraFlags.MatrixFile, "matrix", "", "Path to matrix file defining what configurations to test")
+	flag.StringVar(&extraFlags.MatrixFile, "matrix", "", "Path to matrix file defining what configurations to testutil")
 	flag.StringVar(&extraFlags.LogFile, "log-file", "interchaintest.log", "File to write chain and relayer logs. If a file name, logs written to $HOME/.interchaintest/logs directory. Use 'stderr' or 'stdout' to print logs in line tests.")
 	flag.StringVar(&extraFlags.LogFormat, "log-format", "console", "Chain and relayer log format: console|json")
 	flag.StringVar(&extraFlags.LogLevel, "log-level", "info", "Chain and relayer log level: debug|info|error")
-	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where test report will be stored. Defaults to $HOME/.interchaintest/reports/$TIMESTAMP.json")
+	flag.StringVar(&extraFlags.ReportFile, "report-file", "", "Path where testutil report will be stored. Defaults to $HOME/.interchaintest/reports/$TIMESTAMP.json")
 
 	debugFlagSet.StringVar(&extraFlags.BlockDatabaseFile, "block-db", interchaintest.DefaultBlockDatabaseFilepath(), "Path to database sqlite file that tracks blocks and transactions.")
 }
@@ -290,10 +290,10 @@ func runDebugTerminalUI(ctx context.Context) error {
 
 	testCases, err := querySvc.RecentTestCases(ctx, 100)
 	if err != nil {
-		return fmt.Errorf("query recent test cases: %w", err)
+		return fmt.Errorf("query recent testutil cases: %w", err)
 	}
 	if len(testCases) == 0 {
-		return fmt.Errorf("no test cases found in database %s", dbPath)
+		return fmt.Errorf("no testutil cases found in database %s", dbPath)
 	}
 
 	app := tview.NewApplication()

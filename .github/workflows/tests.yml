@@ -24,16 +24,16 @@ jobs:
       - name: checkout ibctest
         uses: actions/checkout@v3
 
-      # cleanup environment on self-hosted test runner
+      # cleanup environment on self-hosted testutil runner
       - name: clean
         run: |-
           rm -rf ~/.ibctest
 
       # run tests
       - name: run unit tests
-        run: go test -race -timeout 30m -v -p 2 ./...
+        run: go testutil -race -timeout 30m -v -p 2 ./...
   test-cmd-ibctest:
-    name: test-cmd-ibctest
+    name: testutil-cmd-ibctest
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -45,16 +45,16 @@ jobs:
       - name: checkout ibctest
         uses: actions/checkout@v3
 
-      # cleanup environment on self-hosted test runner
+      # cleanup environment on self-hosted testutil runner
       - name: clean
         run: |-
           rm -rf ~/.ibctest
 
       # run tests
       - name: run conformance tests
-        run: (cd cmd/ibctest && go test -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
+        run: (cd cmd/ibctest && go testutil -race -timeout 30m -v -p 2 ./...) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.ibctest/logs/ibctest.log" && exit 1)
   test-ibc-examples:
-    name: test-ibc-examples
+    name: testutil-ibc-examples
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -66,16 +66,16 @@ jobs:
       - name: checkout ibctest
         uses: actions/checkout@v3
 
-      # cleanup environment on self-hosted test runner
+      # cleanup environment on self-hosted testutil runner
       - name: clean
         run: |-
           rm -rf ~/.ibctest
 
       # run tests
       - name: run example ibc tests
-        run: cd examples/ibc && go test -race -timeout 30m -v -p 2 ./...
+        run: cd examples/ibc && go testutil -race -timeout 30m -v -p 2 ./...
   test-cosmos-examples:
-    name: test-cosmos-examples
+    name: testutil-cosmos-examples
     runs-on: [self-hosted, linux]
     steps:
       # Install and setup go
@@ -87,11 +87,11 @@ jobs:
       - name: checkout ibctest
         uses: actions/checkout@v3
 
-      # cleanup environment on self-hosted test runner
+      # cleanup environment on self-hosted testutil runner
       - name: clean
         run: |-
           rm -rf ~/.ibctest
 
       # run tests
       - name: run example cosmos tests
-        run: cd examples/cosmos && go test -race -timeout 30m -v -p 2 ./...
+        run: cd examples/cosmos && go testutil -race -timeout 30m -v -p 2 ./...

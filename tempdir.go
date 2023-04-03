@@ -22,7 +22,7 @@ type TempDirTestingT interface {
 }
 
 // keepTempDirOnFailure determines whether a directory created by TempDir
-// is retained or deleted following a test failure.
+// is retained or deleted following a testutil failure.
 //
 // The KeepTempDirOnFailure function is the public API to access this value.
 // We export the function instead of the package-level variable
@@ -31,7 +31,7 @@ type TempDirTestingT interface {
 var keepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // KeepTempDirOnFailure sets whether a directory created by TempDir
-// is retained or deleted following a test failure.
+// is retained or deleted following a testutil failure.
 //
 // The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
@@ -50,7 +50,7 @@ func KeepingTempDirOnFailure() bool {
 // keeps the temporary directory on disk, and it uses a new temporary directory
 // on each invocation instead of adjacent directories with an incrementing numeric suffix.
 //
-// If the test passes, or if KeepTempDirOnFailure is set to false,
+// If the testutil passes, or if KeepTempDirOnFailure is set to false,
 // the directory will be removed.
 func TempDir(t TempDirTestingT) string {
 	t.Helper()
@@ -65,7 +65,7 @@ func TempDir(t TempDirTestingT) string {
 
 	t.Cleanup(func() {
 		if keepTempDirOnFailure && t.Failed() {
-			t.Logf("Not removing temporary directory for test at: %s", dir)
+			t.Logf("Not removing temporary directory for testutil at: %s", dir)
 			return
 		}
 
@@ -74,7 +74,7 @@ func TempDir(t TempDirTestingT) string {
 			// If the directory can't be cleaned up,
 			// that usually indicates something is subtly wrong.
 			// Most often it seems to be something still writing to the directory
-			// even though the test has ostensibly finished.
+			// even though the testutil has ostensibly finished.
 			t.Errorf("TempDir RemoveAll cleanup: %v", err)
 		}
 	})

@@ -36,18 +36,18 @@ func TestFileRetriever(t *testing.T) {
 
 	res := img.Run(
 		ctx,
-		[]string{"sh", "-c", "chmod 0700 /mnt/test && printf 'hello world' > /mnt/test/hello.txt"},
+		[]string{"sh", "-c", "chmod 0700 /mnt/testutil && printf 'hello world' > /mnt/testutil/hello.txt"},
 		dockerutil.ContainerOptions{
-			Binds: []string{v.Name + ":/mnt/test"},
+			Binds: []string{v.Name + ":/mnt/testutil"},
 			User:  dockerutil.GetRootUserString(),
 		},
 	)
 	require.NoError(t, res.Err)
 	res = img.Run(
 		ctx,
-		[]string{"sh", "-c", "mkdir -p /mnt/test/foo/bar/ && printf 'test' > /mnt/test/foo/bar/baz.txt"},
+		[]string{"sh", "-c", "mkdir -p /mnt/testutil/foo/bar/ && printf 'testutil' > /mnt/testutil/foo/bar/baz.txt"},
 		dockerutil.ContainerOptions{
-			Binds: []string{v.Name + ":/mnt/test"},
+			Binds: []string{v.Name + ":/mnt/testutil"},
 			User:  dockerutil.GetRootUserString(),
 		},
 	)
@@ -64,6 +64,6 @@ func TestFileRetriever(t *testing.T) {
 	t.Run("nested file", func(t *testing.T) {
 		b, err := fr.SingleFileContent(ctx, v.Name, "foo/bar/baz.txt")
 		require.NoError(t, err)
-		require.Equal(t, string(b), "test")
+		require.Equal(t, string(b), "testutil")
 	})
 }

@@ -75,7 +75,7 @@ func TestTestCase_AddChain(t *testing.T) {
 		require.Equal(t, 1, gotTestID)
 		require.EqualValues(t, 1, gotPrimaryKey)
 
-		_, err = tc.AddChain(ctx, "my-chain2", "test")
+		_, err = tc.AddChain(ctx, "my-chain2", "testutil")
 		require.NoError(t, err)
 	})
 

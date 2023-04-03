@@ -51,8 +51,10 @@ type RelayChainNode struct {
 type RelayChainNodes []*RelayChainNode
 
 const (
-	wsPort         = "27451/tcp"
-	rpcPort        = "27452/tcp"
+	wsPort = "27451/tcp"
+	//rpcPort        = "27452/tcp"
+	nodePort       = "27452/tcp"
+	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"
 )
 
@@ -66,6 +68,7 @@ var exposedPorts = map[nat.Port]struct{}{
 	nat.Port(wsPort):         {},
 	nat.Port(rpcPort):        {},
 	nat.Port(prometheusPort): {},
+	nat.Port(nodePort):       {},
 }
 
 // Name returns the name of the test node.
@@ -86,7 +89,7 @@ func (p *RelayChainNode) Bind() []string {
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
 func (p *RelayChainNode) NodeHome() string {
-	return fmt.Sprintf("/home/.%s", p.Chain.Config().Name)
+	return "/home/heighliner"
 }
 
 // PeerID returns the public key of the node key for p2p.
@@ -126,7 +129,7 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
 func (c *RelayChainNode) logger() *zap.Logger {
@@ -206,13 +209,16 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--ws-port=%s", strings.Split(wsPort, "/")[0]),
 		fmt.Sprintf("--%s", IndexedName[p.Index]),
 		fmt.Sprintf("--node-key=%s", hex.EncodeToString(nodeKey[0:32])),
+		// "--validator",
+		"--ws-external",
+		"--rpc-external",
 		"--beefy",
 		"--rpc-cors=all",
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(rpcPort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
@@ -250,8 +256,10 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr); err != nil {
 		return err
 	}
+
 	p.logger().Info("Done", zap.String("container", p.Name()))
 	p.api = api
+
 	return nil
 }
 
@@ -261,7 +269,30 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+// SendFunds sends funds to a wallet from a user account.
+// Implements Chain interface.
+func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	hash, err := SendFundsTx(p.api, kp, amount)
+	if err != nil {
+		return err
+	}
+
+	p.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", p.Name()))
+	return nil
+}
+
+// GetBalance fetches the current balance for a specific account address and denom.
+// Implements Chain interface.
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+	return GetBalance(p.api, address)
 }

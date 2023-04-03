@@ -19,7 +19,7 @@ func TestAttributeValue(t *testing.T) {
 		}},
 	}
 
-	_, ok := AttributeValue(nil, "test", "")
+	_, ok := AttributeValue(nil, "testutil", "")
 	require.False(t, ok)
 
 	_, ok = AttributeValue(events, "key_not_there", "ignored")

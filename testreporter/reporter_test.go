@@ -45,7 +45,7 @@ func ReporterMessages(t *testing.T, r io.Reader) []testreporter.Message {
 	}
 }
 
-// Check message content and timestamps for a typical, basic, passing test.
+// Check message content and timestamps for a typical, basic, passing testutil.
 func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	t.Parallel()
 
@@ -167,7 +167,7 @@ func TestReporter_TrackParallel(t *testing.T) {
 	require.Equal(t, finishTestMsg.Name, "my_test")
 }
 
-// Check that TrackSkip skips the underlying test.
+// Check that TrackSkip skips the underlying testutil.
 func TestReporter_TrackSkip(t *testing.T) {
 	t.Parallel()
 

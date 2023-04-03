@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
@@ -20,7 +19,7 @@ import (
 // chainSet is an unordered collection of ibc.Chain,
 // to group methods that apply actions against all chains in the set.
 //
-// The main purpose of the chainSet is to unify test setup when working with any number of chains.
+// The main purpose of the chainSet is to unify testutil setup when working with any number of chains.
 type chainSet struct {
 	log *zap.Logger
 
@@ -72,33 +71,22 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 //
 // The keys are created concurrently because creating keys on one chain
 // should have no effect on any other chain.
-func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (bech32 map[ibc.Chain]string, err error) {
+func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (faucetAddresses map[ibc.Chain]string, err error) {
 	var mu sync.Mutex
-	bech32 = make(map[ibc.Chain]string, len(cs.chains))
+	faucetAddresses = make(map[ibc.Chain]string, len(cs.chains))
 
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for c := range cs.chains {
 		c := c
 		eg.Go(func() error {
-			config := c.Config()
-
-			if err := c.CreateKey(egCtx, keyName); err != nil {
-				return fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			addrBytes, err := c.GetAddress(egCtx, keyName)
+			wallet, err := c.BuildWallet(egCtx, keyName, "")
 			if err != nil {
-				return fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, config.Name, err)
-			}
-
-			b32, err := types.Bech32ifyAddressBytes(config.Bech32Prefix, addrBytes)
-			if err != nil {
-				return fmt.Errorf("failed to Bech32ifyAddressBytes on chain %s: %w", config.Name, err)
+				return err
 			}
 
 			mu.Lock()
-			bech32[c] = b32
+			faucetAddresses[c] = wallet.FormattedAddress()
 			mu.Unlock()
 
 			return nil
@@ -109,7 +97,7 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (be
 		return nil, fmt.Errorf("failed to create common account with name %s: %w", keyName, err)
 	}
 
-	return bech32, nil
+	return faucetAddresses, nil
 }
 
 // Start concurrently calls Start against each chain in the set.
@@ -132,7 +120,7 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 
 // TrackBlocks initializes database tables and polls for transactions to be saved in the database.
 // This method is a nop if dbPath is blank.
-// The gitSha is used to pin a git commit to a test invocation. Thus, when a user is looking at historical
+// The gitSha is used to pin a git commit to a testutil invocation. Thus, when a user is looking at historical
 // data they are able to determine which version of the code produced the results.
 // Expected to be called after Start.
 func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha string) error {
@@ -158,7 +146,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
 	if err != nil {
 		_ = db.Close()
-		return fmt.Errorf("create test case in sqlite database: %w", err)
+		return fmt.Errorf("create testutil case in sqlite database: %w", err)
 	}
 
 	// TODO (nix - 6/1/22) Need logger instead of fmt.Fprint

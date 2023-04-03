@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// The value of the extra flags this test supports.
+// The value of the extra flags this testutil supports.
 type mainFlags struct {
 	LogFile           string
 	LogFormat         string

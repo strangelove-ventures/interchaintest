@@ -17,14 +17,14 @@ import (
 )
 
 // NewLocalKeyringFromDockerContainer copies the contents of the given container directory into a specified local directory.
-// This allows test hosts to sign transactions on behalf of test users.
+// This allows testutil hosts to sign transactions on behalf of testutil users.
 func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
 	reader, _, err := dc.CopyFromContainer(ctx, containerId, containerKeyringDir)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := os.Mkdir(filepath.Join(localDirectory, "keyring-test"), os.ModePerm); err != nil {
+	if err := os.Mkdir(filepath.Join(localDirectory, "keyring-testutil"), os.ModePerm); err != nil {
 		return nil, err
 	}
 	tr := tar.NewReader(reader)
@@ -49,7 +49,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 			continue
 		}
 
-		filePath := filepath.Join(localDirectory, "keyring-test", extractedFileName)
+		filePath := filepath.Join(localDirectory, "keyring-testutil", extractedFileName)
 		if err := os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm); err != nil {
 			return nil, err
 		}

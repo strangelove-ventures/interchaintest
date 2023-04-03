@@ -12,22 +12,24 @@ import (
 // Migrate migrates db in an idempotent manner.
 // If an error is returned, it's acceptable to delete the database and start over.
 // The basic ERD is as follows:
-//  ┌────────────────────┐          ┌────────────────────┐         ┌────────────────────┐          ┌────────────────────┐
-//  │                    │          │                    │         │                    │          │                    │
-//  │                    │         ╱│                    │        ╱│                    │         ╱│                    │
-//  │     Test Case      │───────┼──│       Chain        │───────○─│       Block        │────────○─│         Tx         │
-//  │                    │         ╲│                    │        ╲│                    │         ╲│                    │
-//  │                    │          │                    │         │                    │          │                    │
-//  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
+//
+//	┌────────────────────┐          ┌────────────────────┐         ┌────────────────────┐          ┌────────────────────┐
+//	│                    │          │                    │         │                    │          │                    │
+//	│                    │         ╱│                    │        ╱│                    │         ╱│                    │
+//	│     Test Case      │───────┼──│       Chain        │───────○─│       Block        │────────○─│         Tx         │
+//	│                    │         ╲│                    │        ╲│                    │         ╲│                    │
+//	│                    │          │                    │         │                    │          │                    │
+//	└────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
+//
 // The gitSha ensures we can trace back to the version of the codebase that produced the schema.
 // Warning: Typical best practice wraps each migration step into its own transaction. For simplicity given
 // this is an embedded database, we omit transactions.
 func Migrate(db *sql.DB, gitSha string) error {
 	// If a timeout is encountered, sleep and try again,
 	// up until the provided number of milliseconds.
-	// A 3000ms timeout worked fine on my workstation but failed the concurrency test on CI.
+	// A 3000ms timeout worked fine on my workstation but failed the concurrency testutil on CI.
 	//
-	// Setting this makes it practical to have multiple test instances
+	// Setting this makes it practical to have multiple testutil instances
 	// writing to the same database file.
 	//
 	// https://www.sqlite.org/pragma.html#pragma_busy_timeout
@@ -36,7 +38,7 @@ func Migrate(db *sql.DB, gitSha string) error {
 		return fmt.Errorf("pragma busy_timeout: %w", err)
 	}
 
-	// Only setting the busy_timeout pragma is insufficient to get the concurrency test to pass.
+	// Only setting the busy_timeout pragma is insufficient to get the concurrency testutil to pass.
 	// The WAL journal mode, supported by SQLite version 3.7.0 (2010-07-21) or later,
 	// is more forgiving about concurrent reads and writes:
 	// "WAL provides more concurrency as readers do not block writers and a writer does not block readers."

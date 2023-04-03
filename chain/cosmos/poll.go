@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
@@ -20,7 +20,7 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 		}
 		return *p, nil
 	}
-	bp := test.BlockPoller{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller{CurrentHeight: chain.Height, PollFunc: doPoll}
 	p, err := bp.DoPoll(ctx, startHeight, maxHeight)
 	if err != nil {
 		return zero, err

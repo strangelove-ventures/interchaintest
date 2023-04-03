@@ -30,10 +30,10 @@ type DockerSetupTestingT interface {
 
 // CleanupLabel is a docker label key targeted by DockerSetup when it cleans up docker resources.
 //
-// "ibctest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
+// "ibctest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-testutil"
 // with the hyphen. Otherwise, we run the risk of causing "container already exists" errors because DockerSetup
 // is unable to clean old resources from docker engine.
-const CleanupLabel = "ibc-test"
+const CleanupLabel = "ibc-testutil"
 
 // CleanupLabel is the "old" format.
 // Note that any new labels should follow the reverse DNS format suggested at
@@ -47,8 +47,8 @@ const (
 	NodeOwnerLabel = LabelPrefix + "node-owner"
 )
 
-// KeepVolumesOnFailure determines whether volumes associated with a test
-// using DockerSetup are retained or deleted following a test failure.
+// KeepVolumesOnFailure determines whether volumes associated with a testutil
+// using DockerSetup are retained or deleted following a testutil failure.
 //
 // The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
@@ -59,7 +59,7 @@ var KeepVolumesOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
 //
-// If any part of the setup fails, DockerSetup panics because the test cannot continue.
+// If any part of the setup fails, DockerSetup panics because the testutil cannot continue.
 func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	t.Helper()
 
@@ -68,11 +68,11 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 		panic(fmt.Errorf("failed to create docker client: %v", err))
 	}
 
-	// Clean up docker resources at end of test.
+	// Clean up docker resources at end of testutil.
 	t.Cleanup(dockerCleanup(t, cli))
 
-	// Also eagerly clean up any leftover resources from a previous test run,
-	// e.g. if the test was interrupted.
+	// Also eagerly clean up any leftover resources from a previous testutil run,
+	// e.g. if the testutil was interrupted.
 	dockerCleanup(t, cli)()
 
 	name := fmt.Sprintf("ibctest-%s", RandLowerCaseLetterString(8))

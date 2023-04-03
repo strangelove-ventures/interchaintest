@@ -15,7 +15,7 @@ ibctest
 
 To run same tests from source code:
 ```shell
-go test -v ./cmd/ibctest/
+go testutil -v ./cmd/ibctest/
 ```
 ### Custom Environment
 Using the binary allows for easy custom chain pairs and custom testing environments.
@@ -74,27 +74,27 @@ Logs, reports and a SQLite3 database files containing block info will be exporte
 You may focus on a specific tests using the `-test.run=<regex>` flag.
 
 ```shell
-ibctest -test.run=/<test category>/<chain combination>/<relayer>/<test subcategory>/<test name>
+ibctest -testutil.run=/<test category>/<chain combination>/<relayer>/<testutil subcategory>/<testutil name>
 ```
 
 If you want to focus on a specific test:
 
 ```shell
-ibctest -test.run=/////relay_packet
-ibctest -test.run=/////no_timeout
-ibctest -test.run=/////height_timeout
-ibctest -test.run=/////timestamp_timeout
+ibctest -testutil.run=/////relay_packet
+ibctest -testutil.run=/////no_timeout
+ibctest -testutil.run=/////height_timeout
+ibctest -testutil.run=/////timestamp_timeout
 ```
 
 Example of narrowing your focus even more:
 
 ```shell
 # run all tests for Go relayer
-ibctest -test.run=///rly/
+ibctest -testutil.run=///rly/
 
 # run all tests for Go relayer and gaia chains
-ibctest -test.run=//gaia/rly/
+ibctest -testutil.run=//gaia/rly/
 
-# only run no_timeout test for Go relayer and gaia chains
-ibctest -test.run=//gaia/rly/conformance/no_timeout
+# only run no_timeout testutil for Go relayer and gaia chains
+ibctest -testutil.run=//gaia/rly/conformance/no_timeout
 ```

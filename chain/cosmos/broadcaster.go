@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -13,8 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/ibctest/v5/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -22,20 +25,20 @@ type ClientContextOpt func(clientContext client.Context) client.Context
 type FactoryOpt func(factory tx.Factory) tx.Factory
 
 type User interface {
-	GetKeyName() string
-	Bech32Address(bech32Prefix string) string
+	KeyName() string
+	FormattedAddress() string
 }
 
 type Broadcaster struct {
 	// buf stores the output sdk.TxResponse when broadcast.Tx is invoked.
 	buf *bytes.Buffer
-	// keyrings is a mapping of keyrings which point to a temporary test directory. The contents
+	// keyrings is a mapping of keyrings which point to a temporary testutil directory. The contents
 	// of this directory are copied from the node container for the specific user.
 	keyrings map[User]keyring.Keyring
 
 	// chain is a reference to the CosmosChain instance which will be the target of the messages.
 	chain *CosmosChain
-	// t is the testing.T for the current test.
+	// t is the testing.T for the current testutil.
 	t *testing.T
 
 	// factoryOptions is a slice of broadcast.FactoryOpt which enables arbitrary configuration of the tx.Factory.
@@ -76,7 +79,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.Bech32Address(b.chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return tx.Factory{}, err
 	}
@@ -103,7 +106,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 	_, ok := b.keyrings[user]
 	if !ok {
 		localDir := b.t.TempDir()
-		containerKeyringDir := path.Join(cn.HomeDir(), "keyring-test")
+		containerKeyringDir := path.Join(cn.HomeDir(), "keyring-testutil")
 		kr, err := dockerutil.NewLocalKeyringFromDockerContainer(ctx, cn.DockerClient, localDir, containerKeyringDir, cn.containerLifecycle.ContainerID())
 		if err != nil {
 			return client.Context{}, err
@@ -111,7 +114,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.Bech32Address(chain.Config().Bech32Prefix))
+	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return client.Context{}, err
 	}
@@ -149,17 +152,17 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	cn := b.chain.getFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
-		WithFrom(fromUser.Bech32Address(b.chain.Config().Bech32Prefix)).
+		WithFrom(fromUser.FormattedAddress()).
 		WithFromAddress(sdkAdd).
-		WithFromName(fromUser.GetKeyName()).
+		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
-		WithBroadcastMode(flags.BroadcastBlock).
+		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)
 
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
-	// but that field no longer exists and the test against Broadcaster still passes without it.
+	// but that field no longer exists and the testutil against Broadcaster still passes without it.
 }
 
 // defaultTxFactory creates a new Factory with default configuration.
@@ -171,7 +174,7 @@ func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber u
 		WithGasAdjustment(chainConfig.GasAdjustment).
 		WithGas(flags.DefaultGasLimit).
 		WithGasPrices(chainConfig.GasPrices).
-		WithMemo("ibctest").
+		WithMemo("interchaintest").
 		WithTxConfig(clientCtx.TxConfig).
 		WithAccountRetriever(clientCtx.AccountRetriever).
 		WithKeybase(clientCtx.Keyring).
@@ -182,12 +185,6 @@ func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber u
 // BroadcastTx uses the provided Broadcaster to broadcast all the provided messages which will be signed
 // by the User provided. The sdk.TxResponse and an error are returned.
 func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser User, msgs ...sdk.Msg) (sdk.TxResponse, error) {
-	for _, msg := range msgs {
-		if err := msg.ValidateBasic(); err != nil {
-			return sdk.TxResponse{}, err
-		}
-	}
-
 	f, err := broadcaster.GetFactory(ctx, broadcastingUser)
 	if err != nil {
 		return sdk.TxResponse{}, err
@@ -207,5 +204,35 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
-	return broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	err = testutil.WaitForCondition(time.Second*30, time.Second*5, func() (bool, error) {
+		var err error
+		txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
+
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
+
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	if err != nil {
+		return sdk.TxResponse{}, err
+	}
+
+	resp, err := authTx.QueryTx(cc, respWithTxHash.TxHash)
+	if err != nil {
+		// if we fail to query the tx, it means an error occurred with the original message broadcast.
+		// we should return this instead.
+		originalResp, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+		if err != nil {
+			return sdk.TxResponse{}, err
+		}
+		return originalResp, nil
+	}
+
+	return *resp, nil
 }

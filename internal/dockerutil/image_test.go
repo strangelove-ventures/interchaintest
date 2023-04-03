@@ -69,14 +69,14 @@ func TestImage_Run(t *testing.T) {
 echo -n hi from stderr >> /dev/stderr
 `
 		tmpDir := t.TempDir()
-		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0777)
+		err := os.WriteFile(filepath.Join(tmpDir, "testutil.sh"), []byte(scriptBody), 0777)
 		require.NoError(t, err)
 
 		opts := ContainerOptions{
-			Binds: []string{tmpDir + ":/test"},
+			Binds: []string{tmpDir + ":/testutil"},
 		}
 
-		res := image.Run(ctx, []string{"/test/test.sh"}, opts)
+		res := image.Run(ctx, []string{"/testutil/testutil.sh"}, opts)
 		stdout, stderr, err := res.Stdout, res.Stderr, res.Err
 
 		require.NoError(t, err)

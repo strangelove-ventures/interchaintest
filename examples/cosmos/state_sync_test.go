@@ -11,7 +11,7 @@ import (
 	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/ibctest/v5/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -82,7 +82,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	})
 
 	// Wait for blocks so that nodes have a few state sync snapshot available
-	require.NoError(t, test.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))
+	require.NoError(t, testutil.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))
 
 	latestHeight, err := chain.Height(ctx)
 	require.NoError(t, err, "failed to fetch latest chain height")
@@ -117,5 +117,5 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	// Wait for new node to be in sync.
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	require.NoError(t, test.WaitForInSync(ctx, chain, chain.FullNodes[len(chain.FullNodes)-1]))
+	require.NoError(t, testutil.WaitForInSync(ctx, chain, chain.FullNodes[len(chain.FullNodes)-1]))
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-// Test is a label associated with an individual test.
-// All test labels are known at compile time.
+// Test is a label associated with an individual testutil.
+// All testutil labels are known at compile time.
 type Test string
 
 const (

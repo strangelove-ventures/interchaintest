@@ -48,11 +48,11 @@ func (q *Query) CurrentSchemaVersion(ctx context.Context) (SchemaVersionResult, 
 	return res, nil
 }
 
-// TestCaseResult is a combination of a single test case and single chain associated with the test case.
+// TestCaseResult is a combination of a single testutil case and single chain associated with the testutil case.
 type TestCaseResult struct {
 	ID          int64
 	Name        string
-	GitSha      string // Git commit that ran the test.
+	GitSha      string // Git commit that ran the testutil.
 	CreatedAt   time.Time
 	ChainPKey   int64  // chain primary key
 	ChainID     string // E.g. osmosis-1001
@@ -61,7 +61,7 @@ type TestCaseResult struct {
 	TxTotal     sql.NullInt64
 }
 
-// RecentTestCases returns aggregated data for each test case and chain combination.
+// RecentTestCases returns aggregated data for each testutil case and chain combination.
 func (q *Query) RecentTestCases(ctx context.Context, limit int) ([]TestCaseResult, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT 
         test_case_id, test_case_created_at, test_case_name, test_case_git_sha, chain_kid, chain_id, chain_type, chain_height, tx_total
