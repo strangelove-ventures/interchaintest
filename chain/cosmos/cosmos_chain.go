@@ -898,7 +898,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	for _, s := range c.Sidecars {
 		s := s
 
-		if s.preStart && !s.started {
+		err = s.containerLifecycle.Running(ctx)
+		if s.preStart && err != nil {
 			eg.Go(func() error {
 				if err := s.CreateContainer(egCtx); err != nil {
 					return err
@@ -1085,7 +1086,8 @@ func (c *CosmosChain) StartAllSidecars(ctx context.Context) error {
 	for _, s := range c.Sidecars {
 		s := s
 
-		if s.started {
+		err := s.containerLifecycle.Running(ctx)
+		if err == nil {
 			continue
 		}
 
@@ -1111,7 +1113,8 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 		for _, s := range v.Sidecars {
 			s := s
 
-			if s.started {
+			err := s.containerLifecycle.Running(ctx)
+			if err == nil {
 				continue
 			}
 

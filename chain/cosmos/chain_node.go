@@ -999,7 +999,9 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	for _, s := range tn.Sidecars {
-		if s.preStart && !s.started {
+		err := s.containerLifecycle.Running(ctx)
+
+		if s.preStart && err != nil {
 			if err := s.CreateContainer(ctx); err != nil {
 				return err
 			}
