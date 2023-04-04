@@ -922,12 +922,12 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, _, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
+	stdout, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
 	if err != nil {
 		return "", err
 	}
-
-	return string(stdout), nil
+	// output comes to stderr on older versions
+	return string(stdout) + string(stderr), nil
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
