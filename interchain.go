@@ -9,7 +9,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v3/ibc"
 	"github.com/strangelove-ventures/interchaintest/v3/testreporter"
 	"go.uber.org/zap"
@@ -29,9 +28,6 @@ type Interchain struct {
 
 	// Key: relayer and path name; Value: the two chains being linked.
 	links map[relayerPath]interchainLink
-
-	// Key: relayer and path name; Value: the provider and consumer chain link.
-	providerConsumerLinks map[relayerPath]providerConsumerLink
 
 	// Set to true after Build is called once.
 	built bool
@@ -60,20 +56,6 @@ type interchainLink struct {
 	createChannelOpts ibc.CreateChannelOptions
 }
 
-type providerConsumerLink struct {
-	provider, consumer ibc.Chain
-
-	// If set, these options will be used when creating the client in the path link step.
-	// If a zero value initialization is used, e.g. CreateClientOptions{},
-	// then the default values will be used via ibc.DefaultClientOpts.
-	createClientOpts ibc.CreateClientOptions
-
-	// If set, these options will be used when creating the channel in the path link step.
-	// If a zero value initialization is used, e.g. CreateChannelOptions{},
-	// then the default values will be used via ibc.DefaultChannelOpts.
-	createChannelOpts ibc.CreateChannelOptions
-}
-
 // NewInterchain returns a new Interchain.
 //
 // Typical usage involves multiple calls to AddChain, one or more calls to AddRelayer,
@@ -85,8 +67,7 @@ func NewInterchain() *Interchain {
 		chains:   make(map[ibc.Chain]string),
 		relayers: make(map[ibc.Relayer]string),
 
-		links:                 make(map[relayerPath]interchainLink),
-		providerConsumerLinks: make(map[relayerPath]providerConsumerLink),
+		links: make(map[relayerPath]interchainLink),
 	}
 }
 
@@ -177,26 +158,6 @@ type InterchainLink struct {
 	CreateChannelOpts ibc.CreateChannelOptions
 }
 
-type ProviderConsumerLink struct {
-	Provider, Consumer ibc.Chain
-
-	// Relayer to use for link.
-	Relayer ibc.Relayer
-
-	// Name of path to create.
-	Path string
-
-	// If set, these options will be used when creating the client in the path link step.
-	// If a zero value initialization is used, e.g. CreateClientOptions{},
-	// then the default values will be used via ibc.DefaultClientOpts.
-	CreateClientOpts ibc.CreateClientOptions
-
-	// If set, these options will be used when creating the channel in the path link step.
-	// If a zero value initialization is used, e.g. CreateChannelOptions{},
-	// then the default values will be used via ibc.DefaultChannelOpts.
-	CreateChannelOpts ibc.CreateChannelOptions
-}
-
 // AddLink adds the given link to the Interchain.
 // If any validation fails, AddLink panics.
 func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
@@ -227,43 +188,6 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 
 	ic.links[key] = interchainLink{
 		chains:            [2]ibc.Chain{link.Chain1, link.Chain2},
-		createChannelOpts: link.CreateChannelOpts,
-		createClientOpts:  link.CreateClientOpts,
-	}
-	return ic
-}
-
-// AddLink adds the given link to the Interchain.
-// If any validation fails, AddLink panics.
-func (ic *Interchain) AddProviderConsumerLink(link ProviderConsumerLink) *Interchain {
-	if _, exists := ic.chains[link.Provider]; !exists {
-		cfg := link.Provider.Config()
-		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
-	}
-	if _, exists := ic.chains[link.Consumer]; !exists {
-		cfg := link.Consumer.Config()
-		panic(fmt.Errorf("chain with name=%s and id=%s was never added to Interchain", cfg.Name, cfg.ChainID))
-	}
-	if _, exists := ic.relayers[link.Relayer]; !exists {
-		panic(fmt.Errorf("relayer %v was never added to Interchain", link.Relayer))
-	}
-
-	if link.Provider == link.Consumer {
-		panic(fmt.Errorf("chains must be different (both were %v)", link.Provider))
-	}
-
-	key := relayerPath{
-		Relayer: link.Relayer,
-		Path:    link.Path,
-	}
-
-	if _, exists := ic.providerConsumerLinks[key]; exists {
-		panic(fmt.Errorf("relayer %q already has a path named %q", key.Relayer, key.Path))
-	}
-
-	ic.providerConsumerLinks[key] = providerConsumerLink{
-		provider:          link.Provider,
-		consumer:          link.Consumer,
 		createChannelOpts: link.CreateChannelOpts,
 		createClientOpts:  link.CreateClientOpts,
 	}
@@ -305,15 +229,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		chains = append(chains, chain)
 	}
 	ic.cs = newChainSet(ic.log, chains)
-
-	// Consumer chains need to have the same number of validators as their provider.
-	// Consumer also needs reference to its provider chain.
-	for _, providerConsumerLink := range ic.providerConsumerLinks {
-		provider, consumer := providerConsumerLink.provider.(*cosmos.CosmosChain), providerConsumerLink.consumer.(*cosmos.CosmosChain)
-		consumer.NumValidators = provider.NumValidators
-		consumer.Provider = provider
-		provider.Consumers = append(provider.Consumers, consumer)
-	}
 
 	// Initialize the chains (pull docker images, etc.).
 	if err := ic.cs.Initialize(ctx, opts.TestName, opts.Client, opts.NetworkID); err != nil {
@@ -361,135 +276,9 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		}
 	}
 
-	// For every provider consumer link, teach the relayer about the link and create the link.
-	for rp, link := range ic.providerConsumerLinks {
-		rp := rp
-		link := link
-		p := link.provider
-		c := link.consumer
-
-		if err := rp.Relayer.GeneratePath(ctx, rep, c.Config().ChainID, p.Config().ChainID, rp.Path); err != nil {
-			return fmt.Errorf(
-				"failed to generate path %s on relayer %s between chains %s and %s: %w",
-				rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-			)
-		}
-	}
-
+	// Now link the paths in parallel
+	// Creates clients, connections, and channels for each link/path.
 	var eg errgroup.Group
-
-	// Now link the paths in parallel
-	// Creates clients, connections, and channels for each link/path.
-	for rp, link := range ic.providerConsumerLinks {
-		rp := rp
-		link := link
-		p := link.provider
-		c := link.consumer
-		eg.Go(func() error {
-			// If the user specifies a zero value CreateClientOptions struct then we fall back to the default
-			// client options.
-			if link.createClientOpts == (ibc.CreateClientOptions{}) {
-				link.createClientOpts = ibc.DefaultClientOpts()
-			}
-
-			// Check that the client creation options are valid and fully specified.
-			if err := link.createClientOpts.Validate(); err != nil {
-				return err
-			}
-
-			// If the user specifies a zero value CreateChannelOptions struct then we fall back to the default
-			// channel options for an ics20 fungible token transfer channel.
-			if link.createChannelOpts == (ibc.CreateChannelOptions{}) {
-				link.createChannelOpts = ibc.DefaultChannelOpts()
-			}
-
-			// Check that the channel creation options are valid and fully specified.
-			if err := link.createChannelOpts.Validate(); err != nil {
-				return err
-			}
-
-			consumerClients, err := rp.Relayer.GetClients(ctx, rep, c.Config().ChainID)
-			if err != nil {
-				return fmt.Errorf(
-					"failed to fetch consumer clients while linking path %s on relayer %s between chains %s and %s: %w",
-					rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-				)
-			}
-			var consumerClient *ibc.ClientOutput
-			for _, client := range consumerClients {
-				if client.ClientState.ChainID == p.Config().ChainID {
-					consumerClient = client
-					break
-				}
-			}
-			if consumerClient == nil {
-				return fmt.Errorf(
-					"consumer chain %s does not have a client tracking the provider chain %s for path %s on relayer %s",
-					ic.chains[c], ic.chains[p], rp.Path, rp.Relayer,
-				)
-			}
-			consumerClientID := consumerClients[0].ClientID
-
-			providerClients, err := rp.Relayer.GetClients(ctx, rep, p.Config().ChainID)
-			if err != nil {
-				return fmt.Errorf(
-					"failed to fetch provider clients while linking path %s on relayer %s between chains %s and %s: %w",
-					rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-				)
-			}
-			var providerClient *ibc.ClientOutput
-			for _, client := range providerClients {
-				if client.ClientState.ChainID == c.Config().ChainID {
-					providerClient = client
-					break
-				}
-			}
-			if providerClient == nil {
-				return fmt.Errorf(
-					"provider chain %s does not have a client tracking the consumer chain %s for path %s on relayer %s",
-					ic.chains[p], ic.chains[c], rp.Path, rp.Relayer,
-				)
-			}
-			providerClientID := providerClients[0].ClientID
-
-			// Update relayer config with client IDs
-			if err := rp.Relayer.UpdatePath(ctx, rep, rp.Path, ibc.PathUpdateOptions{
-				SrcClientID: &consumerClientID,
-				DstClientID: &providerClientID,
-			}); err != nil {
-				return fmt.Errorf(
-					"failed to update path %s on relayer %s between chains %s and %s: %w",
-					rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-				)
-			}
-
-			// Connection handshake
-			if err := rp.Relayer.CreateConnections(ctx, rep, rp.Path); err != nil {
-				return fmt.Errorf(
-					"failed to create connections on path %s on relayer %s between chains %s and %s: %w",
-					rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-				)
-			}
-
-			// Create the provider/consumer channel for relaying val set updates
-			if err := rp.Relayer.CreateChannel(ctx, rep, rp.Path, ibc.CreateChannelOptions{
-				SourcePortName: "consumer",
-				DestPortName:   "provider",
-				Order:          ibc.Ordered,
-				Version:        "1",
-			}); err != nil {
-				return fmt.Errorf(
-					"failed to create ccv channels on path %s on relayer %s between chains %s and %s: %w",
-					rp.Path, rp.Relayer, ic.chains[p], ic.chains[c], err,
-				)
-			}
-
-			return nil
-		})
-	}
-
-	// Now link the paths in parallel
-	// Creates clients, connections, and channels for each link/path.
 	for rp, link := range ic.links {
 		rp := rp
 		link := link
@@ -688,15 +477,6 @@ func (ic *Interchain) relayerChains() map[ibc.Relayer][]ibc.Chain {
 		}
 		uniq[r][link.chains[0]] = struct{}{}
 		uniq[r][link.chains[1]] = struct{}{}
-	}
-
-	for rp, link := range ic.providerConsumerLinks {
-		r := rp.Relayer
-		if uniq[r] == nil {
-			uniq[r] = make(map[ibc.Chain]struct{}, 2) // Adding at least 2 chains per relayer.
-		}
-		uniq[r][link.provider] = struct{}{}
-		uniq[r][link.consumer] = struct{}{}
 	}
 
 	// Then convert the sets to slices.

@@ -59,20 +59,6 @@ icad:
       uid-gid: 1025:1025
   no-host-mount: false
 
-ics-consumer:
-  name: ics-consumer
-  type: cosmos
-  bin: interchain-security-cd
-  bech32-prefix: cosmos
-  denom: stake
-  gas-prices: 0.0stake
-  gas-adjustment: 1.1
-  trusting-period: 96h
-  images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/ics
-      uid-gid: 1025:1025
-  no-host-mount: false
-
 juno:
   name: juno
   type: cosmos
