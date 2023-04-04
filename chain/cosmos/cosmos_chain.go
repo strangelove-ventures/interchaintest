@@ -354,8 +354,8 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
-func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
-	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
+func (c *CosmosChain) LegacyUpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().LegacyUpgradeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
@@ -363,19 +363,29 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 }
 
 // TextProposal submits a text governance proposal to the chain.
-func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop TextProposal) (tx TxProposal, _ error) {
-	txHash, err := c.getFullNode().TextProposal(ctx, keyName, prop)
+func (c *CosmosChain) LegacyTextProposal(ctx context.Context, keyName string, prop TextProposal) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().LegacyTextProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
 	return c.txProposal(txHash)
 }
 
-// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
-func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (tx TxProposal, _ error) {
-	txHash, err := c.getFullNode().ParamChangeProposal(ctx, keyName, prop)
+// LegacyParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (c *CosmosChain) LegacyParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().LegacyParamChangeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit param change proposal: %w", err)
+	}
+
+	return c.txProposal(txHash)
+}
+
+// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop *Proposal) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit proposal: %w", err)
 	}
 
 	return c.txProposal(txHash)

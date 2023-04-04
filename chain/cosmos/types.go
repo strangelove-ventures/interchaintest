@@ -1,5 +1,7 @@
 package cosmos
 
+import "encoding/json"
+
 const (
 	ProposalVoteYes        = "yes"
 	ProposalVoteNo         = "no"
@@ -13,6 +15,16 @@ const (
 	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
 	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
 )
+
+// proposal defines the new Msg-based proposal.
+type Proposal struct {
+	// Msgs defines an array of sdk.Msgs proto-JSON-encoded as Anys.
+	Messages []json.RawMessage `json:"messages,omitempty"`
+	Metadata string            `json:"metadata"`
+	Deposit  string            `json:"deposit"`
+	Title    string            `json:"title"`
+	Summary  string            `json:"summary"`
+}
 
 // TxProposal contains chain proposal transaction details.
 type TxProposal struct {

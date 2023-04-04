@@ -447,7 +447,6 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
 	return append(command,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--chain-id", tn.Chain.Config().ChainID,
 	)
 }
 
@@ -663,6 +662,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
+		"--chain-id", tn.Chain.Config().ChainID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
 	if options.Timeout != nil {
@@ -680,7 +680,11 @@ func (tn *ChainNode) SendIBCTransfer(
 
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
-		keyName, "bank", "send", keyName,
+		keyName,
+		"bank",
+		"send",
+		keyName,
+		"--chain-id", tn.Chain.Config().ChainID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	)
 	return err
@@ -809,7 +813,6 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 	codeHashByte32 := sha256.Sum256(content)
 	codeHash := hex.EncodeToString(codeHashByte32[:])
 
-	//return stdout, nil
 	return codeHash, nil
 }
 
@@ -847,9 +850,9 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
-func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
+func (tn *ChainNode) LegacyUpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
 	command := []string{
-		"gov", "submit-proposal",
+		"gov", "submit-legacy-proposal",
 		"software-upgrade", prop.Name,
 		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
 		"--title", prop.Title,
@@ -865,9 +868,9 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 }
 
 // TextProposal submits a text governance proposal to the chain.
-func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
+func (tn *ChainNode) LegacyTextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
 	command := []string{
-		"gov", "submit-proposal",
+		"gov", "submit-legacy-proposal",
 		"--type", "text",
 		"--title", prop.Title,
 		"--description", prop.Description,
@@ -880,7 +883,7 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop Text
 }
 
 // ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
-func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
+func (tn *ChainNode) LegacyParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
 	content, err := json.Marshal(prop)
 	if err != nil {
 		return "", err
@@ -896,8 +899,33 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
 
 	command := []string{
-		"gov", "submit-proposal",
+		"gov", "submit-legacy-proposal",
 		"param-change",
+		proposalPath,
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop *Proposal) (string, error) {
+	content, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(content)
+	proposalFilename := fmt.Sprintf("%x.json", hash)
+	err = tn.WriteFile(ctx, content, proposalFilename)
+	if err != nil {
+		return "", fmt.Errorf("writing proposal: %w", err)
+	}
+
+	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
+
+	command := []string{
+		"gov", "submit-proposal",
+		"--chain-id", tn.Chain.Config().ChainID,
 		proposalPath,
 	}
 
