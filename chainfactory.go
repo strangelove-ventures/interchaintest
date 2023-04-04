@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
@@ -135,6 +136,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	}
 
 	switch cfg.Type {
+	case "avalanche":
+		return avalanche.NewAvalancheChain(log, testName, cfg, nv, nf)
 	case "cosmos":
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
