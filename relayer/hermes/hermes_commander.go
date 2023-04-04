@@ -154,7 +154,7 @@ func (c commander) UpdateClients(pathName, homeDir string) []string {
 	panic("update clients implemented in hermes relayer not the commander")
 }
 
-func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string, hopChainID ...string) []string {
 	panic("generate path implemented in hermes relayer not the commander")
 }
 

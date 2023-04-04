@@ -176,11 +176,11 @@ func (commander) Flush(pathName, channelID, homeDir string) []string {
 	return cmd
 }
 
-func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
-	return []string{
+func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string, hopChainID ...string) []string {
+	return append([]string{
 		"rly", "paths", "new", srcChainID, dstChainID, pathName,
 		"--home", homeDir,
-	}
+	}, hopChainID...)
 }
 
 func (commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {

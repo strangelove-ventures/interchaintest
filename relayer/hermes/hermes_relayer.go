@@ -222,7 +222,7 @@ func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathNa
 
 // GeneratePath establishes an in memory path representation. The concept does not exist in hermes, so it is handled
 // at the interchain test level.
-func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
+func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, hopChainID ...string) error {
 	if r.paths == nil {
 		r.paths = map[string]*pathConfiguration{}
 	}
