@@ -72,8 +72,8 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 		}
 	}
 	var prevNode *AvalancheNode = nil
-	for i := 0; i < count; i++ {
-		n, err := NewAvalancheNode(ctx, i, cli, networkID, testName, chainCfg.Images[0], prevNode)
+	for i := 0; i < count*2; i += 2 {
+		n, err := NewAvalancheNode(ctx, i/2, 9650+i, 9650+i+1, cli, networkID, testName, chainCfg.Images[0], prevNode)
 		if err != nil {
 			return err
 		}

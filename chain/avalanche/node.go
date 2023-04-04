@@ -16,7 +16,9 @@ type (
 
 func NewAvalancheNode(
 	ctx context.Context,
-	i int,
+	idx int,
+	httpPort int,
+	stakingPort int,
 	dockerClient *dockerclient.Client,
 	networkID string,
 	testName string,
@@ -48,12 +50,12 @@ func NewAvalancheNode(
 	// For N node
 	// avalanchego
 	//		--public-ip=127.0.0.1
-	//		--http-port=<9650+(i)>
-	//    --staking-port=<9650+(i+1)>
-	//		--db-dir=db/node<i>
+	//		--http-port=<httpPort>
+	//    --staking-port=<stakingPort>
+	//		--db-dir=db/node<idx>
 	//    --network-id=local
-	//    --bootstrap-ips=127.0.0.1:<9650+i-1>
-	//    --bootstrap-ids=<prev node id>
+	//    --bootstrap-ips=127.0.0.1:<prevNode.StackingPort()>
+	//    --bootstrap-ids=<prevNode.NodeId()>
 	//    --staking-tls-cert-file=$(pwd)/staking/local/staker<n>.crt
 	//    --staking-tls-key-file=$(pwd)/staking/local/staker<n>.key
 	//
