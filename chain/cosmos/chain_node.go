@@ -926,6 +926,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	if err != nil {
 		return "", err
 	}
+
 	return string(stdout), nil
 }
 
