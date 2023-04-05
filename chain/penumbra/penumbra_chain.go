@@ -52,9 +52,13 @@ type PenumbraConsensusKey struct {
 	Value string `json:"value" toml:"value"`
 }
 
+type PenumbraCustodyKey struct {
+	SpendKey string `json:"spend_key"`
+}
+
 type PenumbraValidatorFundingStream struct {
-	Address string `json:"address" toml:"address"`
-	RateBPS int64  `json:"rate_bps" toml:"rate_bps"`
+	Recipient string `json:"address" toml:"recipient"`
+	RateBPS   int64  `json:"rate_bps" toml:"rate_bps"`
 }
 
 type PenumbraGenesisAppStateAllocation struct {
@@ -360,6 +364,9 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
 			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)
 
+			fundingStream := validatorTemplateDefinition.FundingStreams[0]
+			validatorTemplateDefinition.FundingStreams = []PenumbraValidatorFundingStream{fundingStream}
+
 			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
 			validatorDefinitions[i] = validatorTemplateDefinition
 
@@ -367,13 +374,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			allocations[2*i] = PenumbraGenesisAppStateAllocation{
 				Amount:  100_000_000_000,
 				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
-				Address: validatorTemplateDefinition.FundingStreams[0].Address,
+				Address: fundingStream.Recipient,
 			}
 			// liquid
 			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
 				Amount:  1_000_000_000_000,
 				Denom:   chainCfg.Denom,
-				Address: validatorTemplateDefinition.FundingStreams[0].Address,
+				Address: fundingStream.Recipient,
 			}
 
 			return nil
@@ -462,15 +469,16 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		tmPort := strings.Split(rpcPort, "/")[0]
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
 				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
-				"--rpc.laddr=tcp://0.0.0.0:26657",
+				"--rpc.laddr=tcp://0.0.0.0:"+tmPort,
 			)
 		})
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer(egCtx)
+			return n.PenumbraAppNode.CreateNodeContainer(egCtx, n.TendermintNode.HostName()+":"+tmPort)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -497,6 +505,47 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		return err
 	}
 
-	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode().TendermintNode)
+	if err := testutil.WaitForBlocks(ctx, 5, c.getFullNode().TendermintNode); err != nil {
+		return err
+	}
+
+	eg, egCtx = errgroup.WithContext(ctx)
+	for i, val := range c.PenumbraNodes[:c.numValidators] {
+		val := val
+		i := i
+		eg.Go(func() error {
+			fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			ckbz, err := fr.SingleFileContent(egCtx, val.PenumbraAppNode.VolumeName, "keys/validator/custody.json")
+			if err != nil {
+				return fmt.Errorf("error getting validator custody key content: %w", err)
+			}
+			var ck PenumbraCustodyKey
+			if err := json.Unmarshal(ckbz, &ck); err != nil {
+				return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
+			}
+
+			fvk, err := val.PenumbraAppNode.FullViewingKey(egCtx, valKey)
+			if err != nil {
+				return fmt.Errorf("error getting validator full viewing key: %w", err)
+			}
+
+			if err := val.CreateClientNode(
+				egCtx,
+				c.log,
+				val.PenumbraAppNode.DockerClient,
+				val.PenumbraAppNode.NetworkID,
+				val.PenumbraAppNode.Image,
+				c.testName,
+				i,
+				valKey,
+				ck.SpendKey,
+				fvk,
+			); err != nil {
+				return fmt.Errorf("error creating pclientd node: %w", err)
+			}
+
+			return nil
+		})
+	}
+	return eg.Wait()
 }

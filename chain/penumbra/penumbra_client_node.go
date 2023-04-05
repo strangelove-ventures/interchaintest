@@ -3,11 +3,11 @@ package penumbra
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -19,6 +19,7 @@ import (
 type PenumbraClientNode struct {
 	log *zap.Logger
 
+	KeyName      string
 	Index        int
 	VolumeName   string
 	Chain        ibc.Chain
@@ -33,14 +34,55 @@ type PenumbraClientNode struct {
 	hostGRPCPort string
 }
 
-func NewClientNode(log *zap.Logger, chain *PenumbraChain, index int, testName string, image ibc.DockerImage) *PenumbraClientNode {
-	return &PenumbraClientNode{
-		log:      log,
-		Index:    index,
-		Chain:    chain,
-		TestName: testName,
-		Image:    image,
+func NewClientNode(
+	ctx context.Context,
+	log *zap.Logger,
+	chain *PenumbraChain,
+	keyName string,
+	index int,
+	testName string,
+	image ibc.DockerImage,
+	dockerClient *client.Client,
+	networkID string,
+) (*PenumbraClientNode, error) {
+	p := &PenumbraClientNode{
+		log:          log,
+		KeyName:      keyName,
+		Index:        index,
+		Chain:        chain,
+		TestName:     testName,
+		Image:        image,
+		DockerClient: dockerClient,
+		NetworkID:    networkID,
 	}
+
+	p.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, p.Name())
+
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: p.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating pclientd volume: %w", err)
+	}
+	p.VolumeName = tv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: log,
+
+		Client: dockerClient,
+
+		VolumeName: p.VolumeName,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set pclientd volume owner: %w", err)
+	}
+
+	return p, nil
 }
 
 const (
@@ -53,7 +95,7 @@ var pclientdPorts = nat.PortSet{
 
 // Name of the test node container
 func (p *PenumbraClientNode) Name() string {
-	return fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
+	return fmt.Sprintf("pclientd-%d-%s-%s-%s", p.Index, p.KeyName, p.Chain.Config().ChainID, p.TestName)
 }
 
 // the hostname of the test node container
@@ -104,16 +146,13 @@ func (p *PenumbraClientNode) WriteFile(ctx context.Context, content []byte, relP
 }
 
 // Initialize loads the view and spend keys into the pclientd config.
-func (p *PenumbraClientNode) Initialize(ctx context.Context, spendKey string, fullViewingKey []byte) error {
+func (p *PenumbraClientNode) Initialize(ctx context.Context, spendKey, fullViewingKey string) error {
 	c := make(testutil.Toml)
 
 	kmsConfig := make(testutil.Toml)
 	kmsConfig["spend_key"] = spendKey
 	c["kms_config"] = kmsConfig
-
-	fvk := make(testutil.Toml)
-	fvk["inner"] = base64.StdEncoding.EncodeToString(fullViewingKey)
-	c["fvk"] = fvk
+	c["fvk"] = fullViewingKey
 
 	buf := new(bytes.Buffer)
 	if err := toml.NewEncoder(buf).Encode(c); err != nil {
@@ -123,15 +162,13 @@ func (p *PenumbraClientNode) Initialize(ctx context.Context, spendKey string, fu
 	return p.WriteFile(ctx, buf.Bytes(), "config.toml")
 }
 
-func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress, tendermintRPCAddress string) error {
+func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress string) error {
 	cmd := []string{
 		"pclientd",
 		"--home", p.HomeDir(),
 		"--node", pdAddress,
-		// "--tm-node", tendermintRPCAddress, // This flag does not exist but we need something like this.
 		"start",
-		"--host", "0.0.0.0",
-		"--view-port", strings.Split(pclientdPort, "/")[0],
+		"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
 	}
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd)

@@ -14,6 +14,7 @@ import (
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
@@ -39,13 +40,46 @@ type TendermintNode struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 }
 
-func NewTendermintNode(log *zap.Logger, i int, c ibc.Chain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage) *TendermintNode {
+func NewTendermintNode(
+	ctx context.Context,
+	log *zap.Logger,
+	i int,
+	c ibc.Chain,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	image ibc.DockerImage,
+) (*TendermintNode, error) {
 	tn := &TendermintNode{Log: log, Index: i, Chain: c,
 		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
 
-	return tn
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: tn.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating tendermint volume: %w", err)
+	}
+	tn.VolumeName = tv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: log,
+
+		Client: dockerClient,
+
+		VolumeName: tn.VolumeName,
+		ImageRef:   tn.Image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set tendermint volume owner: %w", err)
+	}
+
+	return tn, nil
 }
 
 // TendermintNodes is a collection of TendermintNode

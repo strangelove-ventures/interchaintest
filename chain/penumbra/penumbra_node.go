@@ -2,15 +2,13 @@ package penumbra
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
-	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"go.uber.org/zap"
 )
 
 type PenumbraNode struct {
@@ -34,56 +32,14 @@ func NewPenumbraNode(
 	tendermintImage ibc.DockerImage,
 	penumbraImage ibc.DockerImage,
 ) (PenumbraNode, error) {
-	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
-
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
-			dockerutil.NodeOwnerLabel: tn.Name(),
-		},
-	})
+	tn, err := tendermint.NewTendermintNode(ctx, c.log, i, c, dockerClient, networkID, testName, tendermintImage)
 	if err != nil {
-		return PenumbraNode{}, fmt.Errorf("creating tendermint volume: %w", err)
-	}
-	tn.VolumeName = tv.Name
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
-
-		Client: dockerClient,
-
-		VolumeName: tn.VolumeName,
-		ImageRef:   tn.Image.Ref(),
-		TestName:   tn.TestName,
-		UidGid:     tn.Image.UidGid,
-	}); err != nil {
-		return PenumbraNode{}, fmt.Errorf("set tendermint volume owner: %w", err)
+		return PenumbraNode{}, err
 	}
 
-	pn := NewPenumbraAppNode(c.log, c, i, testName, dockerClient, networkID, penumbraImage)
-
-	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
-			dockerutil.NodeOwnerLabel: pn.Name(),
-		},
-	})
+	pn, err := NewPenumbraAppNode(ctx, c.log, c, i, testName, dockerClient, networkID, penumbraImage)
 	if err != nil {
-		return PenumbraNode{}, fmt.Errorf("creating penumbra volume: %w", err)
-	}
-	pn.VolumeName = pv.Name
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
-
-		Client: dockerClient,
-
-		VolumeName: pn.VolumeName,
-		ImageRef:   pn.Image.Ref(),
-		TestName:   pn.TestName,
-		UidGid:     tn.Image.UidGid,
-	}); err != nil {
-		return PenumbraNode{}, fmt.Errorf("set penumbra volume owner: %w", err)
+		return PenumbraNode{}, err
 	}
 
 	return PenumbraNode{
@@ -94,9 +50,34 @@ func NewPenumbraNode(
 	}, nil
 }
 
-func (p *PenumbraNode) CreateClientNode(ctx context.Context, keyName string, spendKey string, fullViewingKey []byte) error {
+func (p *PenumbraNode) CreateClientNode(
+	ctx context.Context,
+	log *zap.Logger,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+	testName string,
+	index int,
+	keyName string,
+	spendKey string,
+	fullViewingKey string,
+) error {
 	p.clientsMu.Lock()
-	clientNode := NewClientNode(p.PenumbraAppNode.log, p.PenumbraAppNode.Chain, len(p.PenumbraClientNodes), p.PenumbraAppNode.TestName, p.PenumbraAppNode.Image)
+	clientNode, err := NewClientNode(
+		ctx,
+		log,
+		p.PenumbraAppNode.Chain,
+		keyName,
+		index,
+		testName,
+		image,
+		dockerClient,
+		networkID,
+	)
+	if err != nil {
+		p.clientsMu.Unlock()
+		return err
+	}
 	p.PenumbraClientNodes[keyName] = clientNode
 	p.clientsMu.Unlock()
 
@@ -106,8 +87,7 @@ func (p *PenumbraNode) CreateClientNode(ctx context.Context, keyName string, spe
 
 	if err := clientNode.CreateNodeContainer(
 		ctx,
-		p.PenumbraAppNode.HostName()+":"+strings.Split(grpcPort, "/")[0],
-		p.TendermintNode.HostName()+":"+strings.Split(rpcPort, "/")[0],
+		"tcp://"+p.PenumbraAppNode.HostName()+":"+strings.Split(grpcPort, "/")[0],
 	); err != nil {
 		return err
 	}

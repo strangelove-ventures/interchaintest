@@ -25,7 +25,7 @@ func TestPenumbraChainStart(t *testing.T) {
 		{
 			Name: "penumbra",
 			// Version: "040-themisto.1,v0.34.23",
-			Version: "045-metis,v0.34.23",
+			Version: "049-pasiphae.1,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -37,6 +38,7 @@ type PenumbraAppNode struct {
 }
 
 func NewPenumbraAppNode(
+	ctx context.Context,
 	log *zap.Logger,
 	chain *PenumbraChain,
 	index int,
@@ -44,23 +46,51 @@ func NewPenumbraAppNode(
 	dockerClient *dockerclient.Client,
 	networkID string,
 	image ibc.DockerImage,
-) *PenumbraAppNode {
+) (*PenumbraAppNode, error) {
 	pn := &PenumbraAppNode{log: log, Index: index, Chain: chain,
 		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
-	return pn
+
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating penumbra volume: %w", err)
+	}
+	pn.VolumeName = pv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: log,
+
+		Client: dockerClient,
+
+		VolumeName: pn.VolumeName,
+		ImageRef:   pn.Image.Ref(),
+		TestName:   pn.TestName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set penumbra volume owner: %w", err)
+	}
+
+	return pn, nil
 }
 
 const (
-	valKey         = "validator"
-	rpcPort        = "26657/tcp"
-	tendermintPort = "26658/tcp"
-	grpcPort       = "8080/tcp"
+	valKey      = "validator"
+	rpcPort     = "26657/tcp"
+	abciPort    = "26658/tcp"
+	grpcPort    = "8080/tcp"
+	metricsPort = "9000/tcp"
 )
 
 var exposedPorts = nat.PortSet{
-	nat.Port(tendermintPort): {},
+	nat.Port(abciPort):    {},
+	nat.Port(grpcPort):    {},
+	nat.Port(metricsPort): {},
 }
 
 // Name of the test node container
@@ -92,6 +122,19 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 	return nil
+}
+
+func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "export", "full-viewing-key"}
+	stdout, _, err := p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	split := strings.Split(string(stdout), "\n")
+
+	return split[len(split)-2], nil
 }
 
 // RecoverKey restores a key from a given mnemonic.
@@ -216,8 +259,15 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 
 }
 
-func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
-	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
+func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAddress string) error {
+	cmd := []string{
+		"pd", "start",
+		"--abci-bind", "0.0.0.0:" + strings.Split(abciPort, "/")[0],
+		"--grpc-bind", "0.0.0.0:" + strings.Split(grpcPort, "/")[0],
+		"--metrics-bind", "0.0.0.0:" + strings.Split(metricsPort, "/")[0],
+		"--tendermint-addr", tendermintAddress,
+		"--home", p.HomeDir(),
+	}
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
