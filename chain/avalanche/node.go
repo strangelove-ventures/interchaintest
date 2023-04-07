@@ -33,40 +33,16 @@ func NewAvalancheNode(
 	containerID int,
 	options *AvalancheNodeOpts,
 ) (*AvalancheNode, error) {
-	// ToDo: implement me
-	// For first node
 	// avalanchego
-	// 		--public-ip=127.0.0.1
-	//    --http-port=9650
-	//    --staking-port=9651
-	//    --db-dir=db/node1
-	//    --network-id=local
-	//    --staking-tls-cert-file=$(pwd)/staking/local/staker1.crt
-	//    --staking-tls-key-file=$(pwd)/staking/local/staker1.key
-	// For second node
-	// avalanchego
-	//    --public-ip=127.0.0.1
-	//		--http-port=9652
-	//		--staking-port=9653
-	//		--db-dir=db/node2
-	//		--network-id=local
-	//		--bootstrap-ips=127.0.0.1:9651
-	//		--bootstrap-ids=NodeID-7Xhw2mDxuDS44j42TCB6U5579esbSt3Lg
-	//		--staking-tls-cert-file=$(pwd)/staking/local/staker2.crt
-	//		--staking-tls-key-file=$(pwd)/staking/local/staker2.key
-	// ....
-	// For N node
-	// avalanchego
-	//		--public-ip=<options.PublicIP>
-	//		--http-port=<options.HttpPort>
-	//    --staking-port=<options.StakingPort>
-	//		--db-dir=db/node<idx>
-	//    --network-id=<options.NetworkID>
-	//    --bootstrap-ips=<options.Bootstrap[0].Addr>
-	//    --bootstrap-ids=<options.Bootstrap[0].ID>
-	//    --staking-tls-cert-file=$(pwd)/staking/local/staker<n>.crt
-	//    --staking-tls-key-file=$(pwd)/staking/local/staker<n>.key
-	//
+	//   --public-ip=<options.PublicIP>
+	//   --http-port=<options.HttpPort>
+	//   --staking-port=<options.StakingPort>
+	//   --db-dir=db/node<idx>
+	//   --network-id=<options.NetworkID>
+	//   [--bootstrap-ips=<options.Bootstrap[0].Addr>]
+	//   [--bootstrap-ids=<options.Bootstrap[0].ID>]
+	//   --staking-tls-cert-file=$(pwd)/staking/local/staker<n>.crt
+	//   --staking-tls-key-file=$(pwd)/staking/local/staker<n>.key
 	// staking-tls-cert-file and staking-tls-key-file can be generated using NewCertAndKeyBytes
 	return nil, nil
 }
@@ -121,7 +97,7 @@ func (n AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc
 }
 
 func (n AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	panic("ToDo: implement me")
+	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
 func (c AvalancheNode) Height(ctx context.Context) (uint64, error) {
