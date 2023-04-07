@@ -377,7 +377,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 }
 
 func removeAtIndex(s []string, index, count int) []string {
-	ret := make([]string, 0)
+	ret := make([]string, 0, len(s)-count)
 	ret = append(ret, s[:index]...)
 	return append(ret, s[index+count:]...)
 }
