@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestPenumbraChainStart(t *testing.T) {
+func TestAvalancheChainStart(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}

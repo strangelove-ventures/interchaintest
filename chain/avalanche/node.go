@@ -9,6 +9,17 @@ import (
 )
 
 type (
+	AvalancheNodeBootstrapOpts struct {
+		ID   string
+		Addr string
+	}
+	AvalancheNodeOpts struct {
+		NetworkID   string
+		PublicIP    string
+		HttpPort    string
+		StakingPort string
+		Bootstrap   []AvalancheNodeBootstrapOpts
+	}
 	AvalancheNode struct {
 	}
 	AvalancheNodes []AvalancheNode
@@ -16,14 +27,11 @@ type (
 
 func NewAvalancheNode(
 	ctx context.Context,
-	idx int,
-	httpPort int,
-	stakingPort int,
-	dockerClient *dockerclient.Client,
-	networkID string,
 	testName string,
+	dockerClient *dockerclient.Client,
 	image ibc.DockerImage,
-	prevNode *AvalancheNode,
+	containerID int,
+	options *AvalancheNodeOpts,
 ) (*AvalancheNode, error) {
 	// ToDo: implement me
 	// For first node
@@ -49,21 +57,17 @@ func NewAvalancheNode(
 	// ....
 	// For N node
 	// avalanchego
-	//		--public-ip=127.0.0.1
-	//		--http-port=<httpPort>
-	//    --staking-port=<stakingPort>
+	//		--public-ip=<options.PublicIP>
+	//		--http-port=<options.HttpPort>
+	//    --staking-port=<options.StakingPort>
 	//		--db-dir=db/node<idx>
-	//    --network-id=local
-	//    --bootstrap-ips=127.0.0.1:<prevNode.StackingPort()>
-	//    --bootstrap-ids=<prevNode.NodeId()>
+	//    --network-id=<options.NetworkID>
+	//    --bootstrap-ips=<options.Bootstrap[0].Addr>
+	//    --bootstrap-ids=<options.Bootstrap[0].ID>
 	//    --staking-tls-cert-file=$(pwd)/staking/local/staker<n>.crt
 	//    --staking-tls-key-file=$(pwd)/staking/local/staker<n>.key
 	//
-	// Example key generation:
-	// import "github.com/ava-labs/avalanchego/staking"
-	// certBytes, keyBytes, err := staking.NewCertAndKeyBytes()
-	//
-	// openssl req -x509 -newkey rsa:4096 -keyout staker.key -out staker.crt -days 36500 -nodes -subj '/CN=localhost' -set_serial 0
+	// staking-tls-cert-file and staking-tls-key-file can be generated using NewCertAndKeyBytes
 	return nil, nil
 }
 

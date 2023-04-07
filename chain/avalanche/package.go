@@ -71,14 +71,27 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			_ = rc.Close()
 		}
 	}
-	var prevNode *AvalancheNode = nil
 	for i := 0; i < count*2; i += 2 {
-		n, err := NewAvalancheNode(ctx, i/2, 9650+i, 9650+i+1, cli, networkID, testName, chainCfg.Images[0], prevNode)
+		var bootstrapOpt []AvalancheNodeBootstrapOpts = nil
+		if i > 0 {
+			n := c.nodes[len(c.nodes)-1]
+			bootstrapOpt = []AvalancheNodeBootstrapOpts{
+				{
+					ID:   n.NodeId(),
+					Addr: fmt.Sprintf("%s:%s", n.HostName(), n.StackingPort()),
+				},
+			}
+		}
+		n, err := NewAvalancheNode(ctx, testName, cli, chainCfg.Images[0], i/2, &AvalancheNodeOpts{
+			NetworkID:   networkID,
+			HttpPort:    fmt.Sprintf("%d", 9650+i),
+			StakingPort: fmt.Sprintf("%d", 9650+i+1),
+			Bootstrap:   bootstrapOpt,
+		})
 		if err != nil {
 			return err
 		}
 		c.nodes[i] = *n
-		prevNode = n
 	}
 	return nil
 }
