@@ -1,4 +1,4 @@
-package avalanche
+package utils
 
 import (
 	"bytes"
