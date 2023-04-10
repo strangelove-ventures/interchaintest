@@ -11,7 +11,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
-	ccvprovidertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
 )
 
 func DefaultEncoding() simappparams.EncodingConfig {
@@ -26,7 +25,6 @@ func DefaultEncoding() simappparams.EncodingConfig {
 	banktypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	ibctypes.RegisterInterfaces(cfg.InterfaceRegistry)
 	transfertypes.RegisterInterfaces(cfg.InterfaceRegistry)
-	ccvprovidertypes.RegisterInterfaces(cfg.InterfaceRegistry)
 
 	return cfg
 }
