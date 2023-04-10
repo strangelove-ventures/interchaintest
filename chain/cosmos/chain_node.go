@@ -396,6 +396,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	return txs, nil
 }
 
+func removeAtIndex(s []string, index, count int) []string {
+	ret := make([]string, 0, len(s)-count)
+	ret = append(ret, s[:index]...)
+	return append(ret, s[index+count:]...)
+}
+
 // TxCommand is a helper to retrieve a full command for broadcasting a tx
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
@@ -405,8 +411,14 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		switch command[i] {
 		case "--gas-prices":
 			gasPrices = command[i+1]
+			fmt.Println("Removing command:", command[i])
+			command = removeAtIndex(command, i, 2)
+			i--
 		case "--gas-adjustment":
 			gasAdjustment = command[i+1]
+			fmt.Println("Removing command:", command[i])
+			command = removeAtIndex(command, i, 2)
+			i--
 		}
 	}
 	return tn.NodeCommand(append(command,
