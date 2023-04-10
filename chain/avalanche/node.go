@@ -36,6 +36,8 @@ func NewAvalancheNode(
 	options *AvalancheNodeOpts,
 ) (*AvalancheNode, error) {
 	// avalanchego
+	//   --plugin-dir=<Sets the directory for VM plugins. The default value is $HOME/.avalanchego/plugins>
+	//   --vm-aliases-file=<Path to JSON file that defines aliases for Virtual Machine IDs. Defaults to ~/.avalanchego/configs/vms/aliases.json>
 	//   --public-ip=<options.PublicIP>
 	//   --http-port=<options.HttpPort>
 	//   --staking-port=<options.StakingPort>
@@ -105,6 +107,9 @@ func (n AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc
 	// ToDo: send some amount to keyName from rootAddress
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/cross-chain-transfers.md
+	// IF allocated chain subnet config:
+	//   - Blockchain Handlers: /ext/bc/[chainID]
+	//   - VM Handlers: /ext/vm/[vmID]
 	panic("ToDo: implement me")
 }
 
@@ -130,5 +135,6 @@ func (c AvalancheNode) GetBalance(ctx context.Context, address string, denom str
 		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-the-c-chain-balance
 		panic("ToDo: implement me")
 	}
+	// if allocated subnet, we must call /ext/bc/[chainID]
 	return 0, fmt.Errorf("address should be have prefix X, P, 0x. current address: %s", address)
 }
