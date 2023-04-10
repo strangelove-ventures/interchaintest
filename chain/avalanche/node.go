@@ -3,6 +3,8 @@ package avalanche
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -44,6 +46,9 @@ func NewAvalancheNode(
 	//   --staking-tls-cert-file=$(pwd)/staking/local/staker<n>.crt
 	//   --staking-tls-key-file=$(pwd)/staking/local/staker<n>.key
 	// staking-tls-cert-file and staking-tls-key-file can be generated using NewCertAndKeyBytes
+	//
+	// links to genesis config https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/nodes/maintain/avalanchego-config-flags.md#genesis
+	// https://github.com/ava-labs/avalanchego/blob/master/genesis/genesis_local.json
 	return nil, nil
 }
 
@@ -78,21 +83,28 @@ func (n *AvalancheNode) GRPCPort() string {
 
 func (n *AvalancheNode) CreateKey(ctx context.Context, keyName string) error {
 	// ToDo: create key
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/multisig-utxos-with-avalanchejs.md#setup-keychains-with-private-keys
 	panic("ToDo: implement me")
 }
 
 func (n AvalancheNode) RecoverKey(ctx context.Context, name, mnemonic string) error {
 	// ToDo: recover key from mnemonic
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/multisig-utxos-with-avalanchejs.md#setup-keychains-with-private-keys
 	panic("ToDo: implement me")
 }
 
 func (n AvalancheNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	// ToDo: get address for keyname
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
 	panic("ToDo: implement me")
 }
 
 func (n AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	// ToDo: send some amount to keyName from rootAddress
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
+	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/cross-chain-transfers.md
 	panic("ToDo: implement me")
 }
 
@@ -105,6 +117,18 @@ func (c AvalancheNode) Height(ctx context.Context) (uint64, error) {
 }
 
 func (c AvalancheNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	// ToDo: get balance for given address
-	panic("ToDo: implement me")
+	if strings.HasPrefix(address, "X-") {
+		// ToDo: call /ext/bc/X (method avm.getBalance)
+		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-x-chain-balance
+		panic("ToDo: implement me")
+	} else if strings.HasPrefix(address, "P-") {
+		// ToDo: call /ext/bc/P (method platform.getBalance)
+		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-p-chain-balance
+		panic("ToDo: implement me")
+	} else if strings.HasPrefix(address, "0x") {
+		// ToDo: call /ext/bc/C/rpc (method eth_getBalance)
+		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-the-c-chain-balance
+		panic("ToDo: implement me")
+	}
+	return 0, fmt.Errorf("address should be have prefix X, P, 0x. current address: %s", address)
 }
