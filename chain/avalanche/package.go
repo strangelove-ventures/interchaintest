@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -71,6 +72,22 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			_ = rc.Close()
 		}
 	}
+	var subnetOpts *AvalancheNodeSubnetOpts
+	if c.cfg.AvalancheSubnet != nil && len(c.cfg.AvalancheSubnet.Name) > 0 {
+		subnetOpts = &AvalancheNodeSubnetOpts{Name: c.cfg.AvalancheSubnet.Name}
+		if len(c.cfg.AvalancheSubnet.VMFile) > 0 {
+			file, err := os.Open(c.cfg.AvalancheSubnet.VMFile)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			vmFileContent, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			subnetOpts.VM = vmFileContent
+		}
+	}
 	for i := 0; i < count*2; i += 2 {
 		var bootstrapOpt []AvalancheNodeBootstrapOpts = nil
 		if i > 0 {
@@ -87,6 +104,7 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			HttpPort:    fmt.Sprintf("%d", 9650+i),
 			StakingPort: fmt.Sprintf("%d", 9650+i+1),
 			Bootstrap:   bootstrapOpt,
+			Subnet:      subnetOpts,
 		})
 		if err != nil {
 			return err

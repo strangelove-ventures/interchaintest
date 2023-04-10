@@ -15,11 +15,16 @@ type (
 		ID   string
 		Addr string
 	}
+	AvalancheNodeSubnetOpts struct {
+		Name string
+		VM   []byte
+	}
 	AvalancheNodeOpts struct {
 		NetworkID   string
 		PublicIP    string
 		HttpPort    string
 		StakingPort string
+		Subnet      *AvalancheNodeSubnetOpts
 		Bootstrap   []AvalancheNodeBootstrapOpts
 	}
 	AvalancheNode struct {
@@ -51,6 +56,8 @@ func NewAvalancheNode(
 	//
 	// links to genesis config https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/nodes/maintain/avalanchego-config-flags.md#genesis
 	// https://github.com/ava-labs/avalanchego/blob/master/genesis/genesis_local.json
+	//
+	// Vm ID can be generated as zero-extended in a 32 byte array and encoded in CB58([32]byte(subnet.Name))
 	return nil, nil
 }
 
