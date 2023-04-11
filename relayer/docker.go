@@ -322,10 +322,7 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
-	chainID := cfg.ChainID
-	coinType := cfg.CoinType
-
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
 	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
