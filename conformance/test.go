@@ -47,8 +47,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
-
-	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 )
 
 const (

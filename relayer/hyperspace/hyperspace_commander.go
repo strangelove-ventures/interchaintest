@@ -18,9 +18,9 @@ import (
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
 type hyperspaceCommander struct {
-	log              *zap.Logger
-	paths            map[string]*pathConfiguration
-	extraStartFlags  []string
+	log             *zap.Logger
+	paths           map[string]*pathConfiguration
+	extraStartFlags []string
 }
 
 // pathConfiguration represents the concept of a "path" which is implemented at the interchain test level rather
@@ -383,6 +383,10 @@ func (hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.W
 		return NewWallet("", "", "")
 	}
 	return NewWallet("", kp.Address, mnemonic)
+}
+
+func (hyperspaceCommander) Flush(pathName, channelID, homeDir string) []string {
+	panic("flush implemented in hyperspace not the commander")
 }
 
 func configPath(homeDir, chainID string) string {
