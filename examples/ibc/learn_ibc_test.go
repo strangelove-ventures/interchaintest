@@ -104,9 +104,8 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 
-	// relay packets and acknoledgments
-	require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
-	require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, gaiaChannelID))
+	// relay MsgRecvPacket to osmosis, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
 
 	// test source wallet has decreased funds
 	expectedBal := gaiaUserBalInitial - amountToSend
@@ -115,7 +114,7 @@ func TestLearn(t *testing.T) {
 	require.Equal(t, expectedBal, gaiaUserBalNew)
 
 	// Trace IBC Denom
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, gaia.Config().Denom))
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, gaia.Config().Denom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	// Test destination wallet has increased funds

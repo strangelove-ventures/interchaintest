@@ -60,8 +60,8 @@ func EnableIbc(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair) (gs
 
 // SendIbcFundsTx sends funds to a wallet using the SubstrateAPI
 func SendIbcFundsTx(
-	api *gsrpc.SubstrateAPI, 
-	senderKeypair signature.KeyringPair, 
+	api *gsrpc.SubstrateAPI,
+	senderKeypair signature.KeyringPair,
 	channelID string,
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
@@ -78,7 +78,7 @@ func SendIbcFundsTx(
 	}
 
 	raw := gstypes.NewU8(1)
-	size := gstypes.NewU8(uint8(len(amount.Address) *4))
+	size := gstypes.NewU8(uint8(len(amount.Address) * 4))
 	to := gstypes.NewStorageDataRaw([]byte(amount.Address))
 	channel := gstypes.NewU64(0) // Parse channel number from string
 	timeout := gstypes.NewU8(1)
@@ -98,8 +98,8 @@ func SendIbcFundsTx(
 
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
 func MintFundsTx(
-	api *gsrpc.SubstrateAPI, 
-	senderKeypair signature.KeyringPair, 
+	api *gsrpc.SubstrateAPI,
+	senderKeypair signature.KeyringPair,
 	amount ibc.WalletAmount,
 ) (gstypes.Hash, error) {
 	hash := gstypes.Hash{}
@@ -136,7 +136,7 @@ func MintFundsTx(
 
 // Common tx function to create an extrinsic and sign/submit it
 func CreateSignSubmitExt(
-	api *gsrpc.SubstrateAPI, 
+	api *gsrpc.SubstrateAPI,
 	meta *gstypes.Metadata,
 	senderKeypair signature.KeyringPair,
 	call gstypes.Call,

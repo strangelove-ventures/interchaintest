@@ -47,6 +47,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 )
 
 const (
@@ -328,6 +330,7 @@ func TestChainPair(
 	}
 
 	if relayerImpl == nil {
+		t.Logf("creating relayer: %s", rf.Name())
 		// startup both chains.
 		// creates wallets in the relayer for src and dst chain.
 		// funds relayer src and dst wallets on respective chain in genesis.
