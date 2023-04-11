@@ -72,20 +72,23 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			_ = rc.Close()
 		}
 	}
-	var subnetOpts *AvalancheNodeSubnetOpts
-	if c.cfg.AvalancheSubnet != nil && len(c.cfg.AvalancheSubnet.Name) > 0 {
-		subnetOpts = &AvalancheNodeSubnetOpts{Name: c.cfg.AvalancheSubnet.Name}
-		if len(c.cfg.AvalancheSubnet.VMFile) > 0 {
-			file, err := os.Open(c.cfg.AvalancheSubnet.VMFile)
-			if err != nil {
-				return err
+	var subnetOpts []AvalancheNodeSubnetOpts = nil
+	if len(c.cfg.AvalancheSubnets) > 0 {
+		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
+		for i := range c.cfg.AvalancheSubnets {
+			subnetOpts[i].Name = c.cfg.AvalancheSubnets[i].Name
+			if len(c.cfg.AvalancheSubnets[i].VMFile) > 0 {
+				file, err := os.Open(c.cfg.AvalancheSubnets[i].VMFile)
+				if err != nil {
+					return err
+				}
+				file.Close()
+				vmFileContent, err := io.ReadAll(file)
+				if err != nil {
+					return err
+				}
+				subnetOpts[i].VM = vmFileContent
 			}
-			defer file.Close()
-			vmFileContent, err := io.ReadAll(file)
-			if err != nil {
-				return err
-			}
-			subnetOpts.VM = vmFileContent
 		}
 	}
 	for i := 0; i < count*2; i += 2 {
@@ -104,7 +107,7 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			HttpPort:    fmt.Sprintf("%d", 9650+i),
 			StakingPort: fmt.Sprintf("%d", 9650+i+1),
 			Bootstrap:   bootstrapOpt,
-			Subnet:      subnetOpts,
+			Subnets:     subnetOpts,
 		})
 		if err != nil {
 			return err

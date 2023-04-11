@@ -48,7 +48,7 @@ type ChainConfig struct {
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 	//
-	AvalancheSubnet *AvalancheSubnetConfig `yaml:"avalanche-subnet"`
+	AvalancheSubnets []AvalancheSubnetConfig `yaml:"avalanche-subnet"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {

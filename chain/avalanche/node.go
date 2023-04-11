@@ -24,7 +24,7 @@ type (
 		PublicIP    string
 		HttpPort    string
 		StakingPort string
-		Subnet      *AvalancheNodeSubnetOpts
+		Subnets     []AvalancheNodeSubnetOpts
 		Bootstrap   []AvalancheNodeBootstrapOpts
 	}
 	AvalancheNode struct {
