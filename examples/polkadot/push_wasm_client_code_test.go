@@ -4,24 +4,24 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"testing"
 	"encoding/json"
 	"fmt"
+	"testing"
 
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"github.com/icza/dyno"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
 const (
-	heightDelta    = uint64(20)
-	votingPeriod       = "30s"
-	maxDepositPeriod   = "10s"
+	heightDelta      = uint64(20)
+	votingPeriod     = "30s"
+	maxDepositPeriod = "10s"
 )
 
 // Spin up a simd chain, push a contract, and get that contract code from chain
@@ -82,7 +82,7 @@ func TestPushWasmClientCode(t *testing.T) {
 			//EncodingConfig: WasmClientEncoding(),
 			NoHostMount:         true,
 			ConfigFileOverrides: configFileOverrides,
-			ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+			ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 		},
 		},
 	})
@@ -121,12 +121,12 @@ func TestPushWasmClientCode(t *testing.T) {
 	// Verify a normal user cannot push a wasm light client contract
 	_, err = simdChain.StoreClientContract(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm")
 	require.ErrorContains(t, err, "invalid authority")
-	
+
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
-		Deposit: "500000000" + simdChain.Config().Denom, // greater than min deposit
-		Title: "Grandpa Contract",
-		Summary: "new grandpa contract",
+		Deposit:  "500000000" + simdChain.Config().Denom, // greater than min deposit
+		Title:    "Grandpa Contract",
+		Summary:  "new grandpa contract",
 	}
 
 	proposalTx, codeHash, err := simdChain.PushNewWasmClientProposal(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm", proposal)
@@ -134,7 +134,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	height, err := simdChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
-	
+
 	err = simdChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 

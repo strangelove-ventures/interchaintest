@@ -8,20 +8,20 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}
+
 // ******* DockerRelayer methods that will panic in hyperspace commander, no overrides yet *******
 // FlushAcknowledgements() - no hyperspace implementation yet
 // FlushPackets() - no hypersapce implementation yet
 // UpdatePath() - hyperspace doesn't understand paths, may not be needed.
 // UpdateClients() - no hyperspace implementation yet
 // AddKey() - no hyperspace implementation yet
-
 
 // HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
 type HyperspaceRelayer struct {
@@ -130,7 +130,7 @@ func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.R
 	case "cosmos":
 		config.(*HyperspaceRelayerCosmosChainConfig).WasmCodeId = hash
 	}
-	
+
 	return r.SetRelayerChainConfig(ctx, chainConfigFile, config)
 }
 
@@ -139,7 +139,7 @@ func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.Relayer
 		"cat",
 		path.Join(r.HomeDir(), "core.config"),
 	}
-		
+
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -155,7 +155,7 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 		"cat",
 		path.Join(r.HomeDir(), chainID+".config"),
 	}
-		
+
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -166,7 +166,6 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 	return nil
 }
 
-
 func (r *HyperspaceRelayer) GetRelayerChainConfig(
 	ctx context.Context,
 	filePath string,
@@ -176,20 +175,20 @@ func (r *HyperspaceRelayer) GetRelayerChainConfig(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch chainType {
-		case "cosmos":
-			var config HyperspaceRelayerCosmosChainConfig
-			if err := toml.Unmarshal(configRaw, &config); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
-			}
-			return &config, nil
-		case "polkadot":
-			var config HyperspaceRelayerSubstrateChainConfig
-			if err := toml.Unmarshal(configRaw, &config); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
-			}
-			return &config, nil
+	case "cosmos":
+		var config HyperspaceRelayerCosmosChainConfig
+		if err := toml.Unmarshal(configRaw, &config); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
+		}
+		return &config, nil
+	case "polkadot":
+		var config HyperspaceRelayerSubstrateChainConfig
+		if err := toml.Unmarshal(configRaw, &config); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
+		}
+		return &config, nil
 	}
 	return nil, fmt.Errorf("unsupported chain config: %s", chainType)
 }

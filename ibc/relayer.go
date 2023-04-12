@@ -64,11 +64,8 @@ type Relayer interface {
 	// StopRelayer stops a relayer that started work through StartRelayer.
 	StopRelayer(ctx context.Context, rep RelayerExecReporter) error
 
-	// FlushPackets flushes any outstanding packets and then returns.
-	FlushPackets(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
-
-	// FlushAcknowledgements flushes any outstanding acknowledgements and then returns.
-	FlushAcknowledgements(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
+	// Flush flushes any outstanding packets and then returns.
+	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
@@ -97,7 +94,7 @@ type Relayer interface {
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
 	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) RelayerExecResult
 
-	// Set the wasm client contract hash in the chain's config if the counterparty chain in a path used 08-wasm 
+	// Set the wasm client contract hash in the chain's config if the counterparty chain in a path used 08-wasm
 	// to instantiate the client.
 	SetClientContractHash(ctx context.Context, rep RelayerExecReporter, cfg ChainConfig, hash string) error
 }

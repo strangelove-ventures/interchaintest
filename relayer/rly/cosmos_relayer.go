@@ -14,7 +14,9 @@ import (
 	"go.uber.org/zap"
 )
 
-const RlyDefaultUidGid = "100:1000"
+const (
+	RlyDefaultUidGid = "100:1000"
+)
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
 type CosmosRelayer struct {
@@ -64,7 +66,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.2.0-rc3"
+	DefaultContainerVersion = "andrew-config_file_lock_for_all_writes"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -155,25 +157,23 @@ func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod str
 	}
 }
 
-func (commander) CreateConnections(pathName, homeDir string) []string {
+func (commander) CreateConnections(pathName string, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
 		"--home", homeDir,
 	}
 }
 
-func (commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-acks", pathName, channelID,
-		"--home", homeDir,
+func (commander) Flush(pathName, channelID, homeDir string) []string {
+	cmd := []string{"rly", "tx", "flush"}
+	if pathName != "" {
+		cmd = append(cmd, pathName)
+		if channelID != "" {
+			cmd = append(cmd, channelID)
+		}
 	}
-}
-
-func (commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	return []string{
-		"rly", "tx", "relay-pkts", pathName, channelID,
-		"--home", homeDir,
-	}
+	cmd = append(cmd, "--home", homeDir)
+	return cmd
 }
 
 func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {

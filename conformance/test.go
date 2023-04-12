@@ -328,6 +328,7 @@ func TestChainPair(
 	}
 
 	if relayerImpl == nil {
+		t.Logf("creating relayer: %s", rf.Name())
 		// startup both chains.
 		// creates wallets in the relayer for src and dst chain.
 		// funds relayer src and dst wallets on respective chain in genesis.
