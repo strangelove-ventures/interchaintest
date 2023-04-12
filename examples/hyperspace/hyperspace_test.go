@@ -101,7 +101,7 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "polkadot-node",
 						Version:    "local",
-						UidGid:     "1025:1025",
+						UidGid:     "1000:1000",
 					},
 					{
 						Repository: "parachain-node",
