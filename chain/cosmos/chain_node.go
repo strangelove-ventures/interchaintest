@@ -59,7 +59,7 @@ type ChainNode struct {
 	hostRPCPort  string
 	hostGRPCPort string
 
-	preStartListeners dockerutil.Listeners
+	// preStartListeners dockerutil.Listeners
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {

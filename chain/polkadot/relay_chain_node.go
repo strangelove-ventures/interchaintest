@@ -45,7 +45,7 @@ type RelayChainNode struct {
 	hostWsPort  string
 	hostRpcPort string
 
-	preStartListeners dockerutil.Listeners
+	// preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode
