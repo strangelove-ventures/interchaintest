@@ -20,11 +20,11 @@ type HyperspaceRelayerCoreConfig struct {
 }
 
 type HyperspaceRelayerSubstrateChainConfig struct {
-	Type             string `toml:"type"`
-	Name             string `toml:"name"`
-	ParaID           uint32 `toml:"para_id"`
-	ParachainRPCURL  string `toml:"parachain_rpc_url"`
-	RelayChainRPCURL string `toml:"relay_chain_rpc_url"`
+	Type             string   `toml:"type"`
+	Name             string   `toml:"name"`
+	ParaID           uint32   `toml:"para_id"`
+	ParachainRPCURL  string   `toml:"parachain_rpc_url"`
+	RelayChainRPCURL string   `toml:"relay_chain_rpc_url"`
 	BeefyActivation  uint32   `toml:"beefy_activation_block"`
 	CommitmentPrefix string   `toml:"commitment_prefix"`
 	PrivateKey       string   `toml:"private_key"`
@@ -42,20 +42,20 @@ type KeyEntry struct {
 }
 
 type HyperspaceRelayerCosmosChainConfig struct {
-	Type          string `toml:"type"`
-	Name          string `toml:"name"`
-	RPCUrl        string `toml:"rpc_url"`
-	GRPCUrl       string `toml:"grpc_url"`
-	WebsocketUrl  string `toml:"websocket_url"`
-	ChainID       string `toml:"chain_id"`
-	AccountPrefix string `toml:"account_prefix"`
-	FeeDenom      string `toml:"fee_denom"`
-	FeeAmount     string `toml:"fee_amount"`
-	GasLimit      uint64 `toml:"gas_limit"`
-	StorePrefix   string `toml:"store_prefix"`
-	MaxTxSize     uint64 `toml:"max_tx_size"`
-	WasmCodeId    string `toml:"wasm_code_id"`
-	Keybase KeyEntry `toml:"keybase"`
+	Type             string   `toml:"type"`
+	Name             string   `toml:"name"`
+	RPCUrl           string   `toml:"rpc_url"`
+	GRPCUrl          string   `toml:"grpc_url"`
+	WebsocketUrl     string   `toml:"websocket_url"`
+	ChainID          string   `toml:"chain_id"`
+	AccountPrefix    string   `toml:"account_prefix"`
+	FeeDenom         string   `toml:"fee_denom"`
+	FeeAmount        string   `toml:"fee_amount"`
+	GasLimit         uint64   `toml:"gas_limit"`
+	StorePrefix      string   `toml:"store_prefix"`
+	MaxTxSize        uint64   `toml:"max_tx_size"`
+	WasmCodeId       string   `toml:"wasm_code_id"`
+	Keybase          KeyEntry `toml:"keybase"`
 	ChannelWhitelist []string `toml:"channel_whitelist"`
 }
 
@@ -63,7 +63,6 @@ const (
 	HyperspaceDefaultContainerImage   = "hyperspace"
 	HyperspaceDefaultContainerVersion = "local"
 )
-
 
 func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 	coinType64, err := strconv.ParseUint(coinType, 10, 32)
@@ -131,9 +130,9 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			Name:          chainConfig.Name,
 			ChainID:       chainConfig.ChainID,
 			AccountPrefix: chainConfig.Bech32Prefix,
-			FeeDenom: "stake",
-			FeeAmount: "4000",
-			GasLimit: 10_000_000,
+			FeeDenom:      "stake",
+			FeeAmount:     "4000",
+			GasLimit:      10_000_000,
 			GRPCUrl:       "http://" + grpcAddr,
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "ibc",

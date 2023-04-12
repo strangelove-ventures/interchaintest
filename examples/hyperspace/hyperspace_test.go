@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
-	"encoding/json"
 
-	"github.com/icza/dyno"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
@@ -46,9 +46,9 @@ import (
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
 
 const (
-	heightDelta    = uint64(20)
-	votingPeriod       = "30s"
-	maxDepositPeriod   = "10s"
+	heightDelta      = uint64(20)
+	votingPeriod     = "30s"
+	maxDepositPeriod = "10s"
 )
 
 // TestHyperspace features
@@ -78,14 +78,14 @@ func TestHyperspace(t *testing.T) {
 	nf := 3 // Number of full nodes
 
 	consensusOverrides := make(testutil.Toml)
-	blockTime   := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
+	blockTime := 5 // seconds, parachain is 12 second blocks, don't make relayer work harder than needed
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensusOverrides["timeout_commit"] = blockT
 	consensusOverrides["timeout_propose"] = blockT
 
 	configTomlOverrides := make(testutil.Toml)
 	configTomlOverrides["consensus"] = consensusOverrides
-	
+
 	configFileOverrides := make(map[string]any)
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
@@ -143,7 +143,7 @@ func TestHyperspace(t *testing.T) {
 				//EncodingConfig: WasmClientEncoding(),
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
-				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
 		},
 	})
@@ -341,9 +341,9 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
-		Deposit: "500000000" + cosmosChain.Config().Denom, // greater than min deposit
-		Title: "Grandpa Contract",
-		Summary: "new grandpa contract",
+		Deposit:  "500000000" + cosmosChain.Config().Denom, // greater than min deposit
+		Title:    "Grandpa Contract",
+		Summary:  "new grandpa contract",
 	}
 
 	proposalTx, codeHash, err := cosmosChain.PushNewWasmClientProposal(ctx, contractUser.KeyName(), "../polkadot/ics10_grandpa_cw.wasm", proposal)
@@ -351,7 +351,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	height, err := cosmosChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
-	
+
 	err = cosmosChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
@@ -373,7 +373,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 	return codeHash
 }
 
-func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain)(ibc.Wallet, ibc.Wallet) {
+func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain) (ibc.Wallet, ibc.Wallet) {
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
 	polkadotUser, cosmosUser := users[0], users[1]
 	err := testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
@@ -389,7 +389,7 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
-	
+
 	// Mint 100 "UNIT"/"Asset 1" for alice , not sure why the ~1.5M UNIT from balance/genesis doesn't work
 	mint := ibc.WalletAmount{
 		Address: "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL",

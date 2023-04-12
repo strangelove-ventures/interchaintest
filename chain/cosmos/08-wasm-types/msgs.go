@@ -12,7 +12,6 @@ func (m MsgPushNewWasmCode) ValidateBasic() error {
 	return nil
 }
 
-
 func (m MsgPushNewWasmCode) GetSigners() []sdk.AccAddress {
 	signer, err := sdk.AccAddressFromBech32(m.Signer)
 	if err != nil {
@@ -20,4 +19,3 @@ func (m MsgPushNewWasmCode) GetSigners() []sdk.AccAddress {
 	}
 	return []sdk.AccAddress{signer}
 }
-
