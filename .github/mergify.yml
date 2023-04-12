@@ -6,7 +6,10 @@ pull_request_rules:
     actions:
       backport:
         branches:
-          - bp_test
+          - v3
+          - v3-ics
+          - v4
+          - v5
         assignees: 
             - "{{ author }}"
         labels:
