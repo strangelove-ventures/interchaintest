@@ -12,6 +12,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+
+	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
