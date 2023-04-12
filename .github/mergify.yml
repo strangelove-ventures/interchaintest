@@ -1,4 +1,4 @@
-backport_PR_rules:
+pull_request_rules:
   - name: backport to maintained branches (v3, v3-ics, v4)
     conditions:
       - base=main
@@ -7,18 +7,16 @@ backport_PR_rules:
       backport:
         branches:
           - bp_test
-        assignees: {{author}}
+        assignees: 
+            - "{{ author }}"
         labels:
           - automerge
           - backport
 
-automerge_backported_PRs:
   - name: automerge backported PR's for maintained branches (v3, v3-ics, v4)
     conditions:
       - label=automerge
-      - or:
-        base:
-          - bp_test
+      - base=(bp_test)
     actions:
       merge:
         method: squash
