@@ -785,8 +785,8 @@ github.com/minio/highwayhash v1.0.2 h1:Aak5U0nElisjDCfPSG79Tgzkn2gl66NxOMspRrKnA
 github.com/minio/highwayhash v1.0.2/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
 github.com/minio/sha256-simd v1.0.0 h1:v1ta+49hkWZyvaKwrQB8elexRqm6Y0aMLjCNsrYxo6g=
 github.com/minio/sha256-simd v1.0.0/go.mod h1:OuYzVNI5vcoYIAmbIvHPl3N3jUzVedXbKy5RFepssQM=
-github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230316181816-6037bb49fa8d h1:4F9ELzQO+EH/UXBVav0C+xcEjkGXFYRW/+9e1OwK6yM=
-github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230316181816-6037bb49fa8d/go.mod h1:XexEkZgpnQ3sqUYz84DFoVUcDake6G/tYHrwdbdERhM=
+github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230413215336-5bd2aea337ae h1:ZYbJh4TLwfSuSQe6DT/1982SfNNBcmvzrX5FycfSrmo=
+github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230413215336-5bd2aea337ae/go.mod h1:XexEkZgpnQ3sqUYz84DFoVUcDake6G/tYHrwdbdERhM=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/go-homedir v1.0.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG+4E0Y=

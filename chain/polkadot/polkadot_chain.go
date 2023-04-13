@@ -782,9 +782,6 @@ func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom st
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
 	if denom == c.cfg.Denom {
 		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
-	} else if strings.HasPrefix(denom, "ibc/") {
-		coin, err := c.ParachainNodes[0][0].GetIbcBalance(ctx, address)
-		return coin.Amount.Int64(), err
 	}
 
 	return c.ParachainNodes[0][0].GetBalance(ctx, address, denom)
@@ -844,8 +841,8 @@ func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.T
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string) (sdktypes.Coin, error) {
-	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address)
+func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string, denom uint64) (sdktypes.Coin, error) {
+	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address, denom)
 }
 
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset

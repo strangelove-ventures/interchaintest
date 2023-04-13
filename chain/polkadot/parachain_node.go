@@ -312,8 +312,8 @@ func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom s
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account
-func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address string) (sdktypes.Coin, error) {
-	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address)
+func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address string, denom uint64) (sdktypes.Coin, error) {
+	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address, denom)
 	if err != nil {
 		return sdktypes.Coin{}, err
 	}

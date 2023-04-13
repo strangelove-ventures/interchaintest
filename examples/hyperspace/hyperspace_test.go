@@ -26,15 +26,15 @@ import (
 // Must build local docker images of hyperspace, parachain, and polkadot
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Branch: PR #247
-// * Commit: 65fc11606cc1811e65fd997a63a1d8c15a3a6c83
+// * Branch: vmarkushin/wasm
+// * Commit: 00ee58381df66b035be75721e6e16c2bbf82f076
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Branch: PR #247
-// * Commit: 65fc11606cc1811e65fd997a63a1d8c15a3a6c83
+// * Branch: vmarkushin/wasm
+// * Commit: 00ee58381df66b035be75721e6e16c2bbf82f076
 // * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
 // ###### polkadot ######
@@ -49,6 +49,7 @@ const (
 	heightDelta      = uint64(20)
 	votingPeriod     = "30s"
 	maxDepositPeriod = "10s"
+	aliceAddress     = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL"
 )
 
 // TestHyperspace features
@@ -212,7 +213,7 @@ func TestHyperspace(t *testing.T) {
 	// Create new clients
 	err = r.CreateClients(ctx, eRep, pathName, ibc.DefaultClientOpts())
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain) // these 1 block waits may be needed, not sure
+	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain) // these 1 block waits seem to be needed to reduce flakiness
 	require.NoError(t, err)
 
 	// Create a new connection
@@ -263,16 +264,10 @@ func TestHyperspace(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
-	/*// Trace IBC Denom of stake on parachain
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(cosmosChannelOutput[0].PortID, cosmosChannelOutput[0].ChannelID, cosmosChain.Config().Denom))
-	dstIbcDenom := srcDenomTrace.IBCDenom()
-	fmt.Println("Dst Ibc denom: ", dstIbcDenom)
-
-	// Test destination wallet has increased funds, this is not working, want to verify IBC balance on parachain
-	polkadotUserIbcCoins, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()))
-	fmt.Println("UserIbcCoins: ", polkadotUserIbcCoins.String())
-	aliceIbcCoins, err := polkadotChain.GetIbcBalance(ctx, "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL")
-	fmt.Println("AliceIbcCoins: ", aliceIbcCoins.String())*/
+	// Verify tokens arrived on parachain user
+	parachainUserStake, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
+	require.NoError(t, err)
+	require.Equal(t, amountToSend, parachainUserStake.Amount.Int64(), "parachain user's stake amount not expected after first tx")
 
 	// Send 1.16 stake from parachainUser to cosmosUser
 	amountToReflect := int64(1_160_000)
@@ -303,26 +298,30 @@ func TestHyperspace(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Verify final cosmos user "stake" balance
+	// Verify cosmos user's final "stake" balance
 	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, finalStakeBal, cosmosUserStakeBal)
-	// Verify final cosmos user "unit" balance
+	
+	// Verify cosmos user's final "unit" balance
 	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
 	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
 	require.NoError(t, err)
 	require.Equal(t, amountUnits, cosmosUserUnitBal)
-	/*polkadotUserIbcCoins, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()))
-	fmt.Println("UserIbcCoins: ", polkadotUserIbcCoins.String())
-	aliceIbcCoins, err = polkadotChain.GetIbcBalance(ctx, "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL")
-	fmt.Println("AliceIbcCoins: ", aliceIbcCoins.String())*/
+	
+	// Verify parachain user's final "unit" balance (will be less than expected due gas costs for stake tx)
+	parachainUserUnits, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 1)
+	require.NoError(t, err)
+	require.LessOrEqual(t, parachainUserUnits.Amount.Int64(), fundAmount, "parachain user's final unit amount not expected")
+	
+	// Verify parachain user's final "stake" balance 
+	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
+	require.NoError(t, err)
+	require.Equal(t, amountToSend-amountToReflect, parachainUserStake.Amount.Int64(), "parachain user's final stake amount not expected")
 
 	fmt.Println("********************************")
 	fmt.Println("********* Test passed **********")
 	fmt.Println("********************************")
-
-	//err = testutil.WaitForBlocks(ctx, 50, cosmosChain, polkadotChain)
-	//require.NoError(t, err)
 }
 
 type GetCodeQueryMsgResponse struct {
@@ -365,7 +364,6 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 	err = cosmosChain.QueryClientContractCode(ctx, codeHash, &getCodeQueryMsgRsp)
 	codeHashByte32 := sha256.Sum256(getCodeQueryMsgRsp.Code)
 	codeHash2 := hex.EncodeToString(codeHashByte32[:])
-	t.Logf("Contract codeHash from code: %s", codeHash2)
 	require.NoError(t, err)
 	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
 	require.Equal(t, codeHash, codeHash2)
@@ -389,25 +387,6 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
-
-	// Mint 100 "UNIT"/"Asset 1" for alice , not sure why the ~1.5M UNIT from balance/genesis doesn't work
-	mint := ibc.WalletAmount{
-		Address: "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL",
-		Denom:   "1",
-		Amount:  int64(100_000_000_000_000), // 100 UNITS, not 100T
-	}
-	err = polkadotChain.(*polkadot.PolkadotChain).MintFunds("alice", mint)
-	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
-	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")
-	// Mint 100 "UNIT"/"Asset 1" for alice , not sure why the ~1.5M UNIT from balance/genesis doesn't work
-	mint2 := ibc.WalletAmount{
-		Address: polkadotUser.FormattedAddress(), // Alice
-		Denom:   "1",
-		Amount:  int64(123_789_000_000_000), // 100 UNITS, not 100T
-	}
-	err = polkadotChain.(*polkadot.PolkadotChain).MintFunds("alice", mint2)
-	require.NoError(t, err)
 
 	return polkadotUser, cosmosUser
 }
