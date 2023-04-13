@@ -380,19 +380,23 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	var gasPrices, gasAdjustment string = tn.Chain.Config().GasPrices, fmt.Sprint(tn.Chain.Config().GasAdjustment)
+	var gasPriceFound, gasAdjustmentFound = false, false
 	for i := 0; i < len(command); i++ {
-		switch command[i] {
-		case "--gas-prices":
-			gasPrices = command[i+1]
-		case "--gas-adjustment":
-			gasAdjustment = command[i+1]
+		if command[i] == "--gas-prices" {
+			gasPriceFound = true
 		}
+		if command[i] == "--gas-adjustment" {
+			gasAdjustmentFound = true
+		}
+	}
+	if !gasPriceFound {
+		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
+	}
+	if !gasAdjustmentFound {
+		command = append(command, "--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment))
 	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
-		"--gas-prices", gasPrices,
-		"--gas-adjustment", gasAdjustment,
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
