@@ -305,10 +305,6 @@ func TestHyperspace(t *testing.T) {
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend-amountToReflect, parachainUserStake.Amount.Int64(), "parachain user's final stake amount not expected")
-
-	fmt.Println("********************************")
-	fmt.Println("********* Test passed **********")
-	fmt.Println("********************************")
 }
 
 type GetCodeQueryMsgResponse struct {
