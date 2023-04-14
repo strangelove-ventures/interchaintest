@@ -371,7 +371,7 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 	if err != nil {
 		return tx, "", err
 	}
-	message := wasmtypes.MsgPushNewWasmCode{
+	message := wasmtypes.MsgStoreCode{
 		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
 		Code:   content,
 	}

@@ -1,4 +1,4 @@
-// Package rly provides an interface to the cosmos relayer running in a Docker container.
+// Package hyperspace provides an interface to the hyperspace relayer running in a Docker container.
 package hyperspace
 
 import (
