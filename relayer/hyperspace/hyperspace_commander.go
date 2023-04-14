@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"strings"
 
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	types23 "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
@@ -165,15 +164,13 @@ func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.Chann
 
 }
 
+// Prints chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
-	//panic("Panic because hyperspace will panic")
 	fmt.Println("[hyperspace] Get Channels")
 	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
-		"hyperspace",
-		"query",
-		"channels",
-		"--config",
+		"cat",
 		configFilePath,
 	}
 }
@@ -277,52 +274,56 @@ func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 	panic("[ParseRestoreKeyOutput] Do not call me")
 }
 
-func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
-	outputs := make([]ibc.ChannelOutput, 0)
-	lines := strings.Split(stdout, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, ": ") {
-			channel := strings.Split(line, ": ")
-			channelId := channel[0]
-			portId := channel[1]
-
-			outputs = append(outputs, ibc.ChannelOutput{
-				State:    "",
-				Ordering: "",
-				Counterparty: ibc.ChannelCounterparty{ // TODO: retrieve from hyperspace
-					PortID:    "",
-					ChannelID: "",
-				},
-				ConnectionHops: []string{},
-				Version:        "",
-				PortID:         portId,
-				ChannelID:      channelId,
-			})
-		}
-	}
-	return outputs, nil
+type ChannelsOutput struct {
+	Channels   [][]string `toml:"channel_whitelist"`
 }
 
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
-func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	clientId := ""
-	connectionId := ""
-	lines := strings.Split(stdout, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "client_id") {
-			fields := strings.Split(line, "\"")
-			clientId = fields[1]
-		}
-		if strings.Contains(line, "connection_id") {
-			fields := strings.Split(line, "\"")
-			connectionId = fields[1]
-		}
+func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
+	var cfg ChannelsOutput
+	err := toml.Unmarshal([]byte(stdout), &cfg)
+	if err != nil {
+      return nil, err
 	}
+
+	outputs := make([]ibc.ChannelOutput, 0)
+	for _, channel := range cfg.Channels {
+		outputs = append(outputs, ibc.ChannelOutput{
+			State:    "",
+			Ordering: "",
+			Counterparty: ibc.ChannelCounterparty{ // TODO: retrieve from hyperspace
+				PortID:    "",
+				ChannelID: "",
+			},
+			ConnectionHops: []string{},
+			Version:        "",
+			PortID:         channel[1],
+			ChannelID:      channel[0],
+		})
+	}
+	return outputs, nil
+}
+
+type ConnectionsOutput struct {
+	ConnectionID   string `toml:"connection_id"`
+	ClientID  string `toml:"client_id"`
+}
+
+// Parses output of chain config which is populated by hyperspace
+// Ideally, there should be a command from hyperspace to get this output
+// Only supports 1 connection and limited info
+func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
+	var cfg ConnectionsOutput
+	err := toml.Unmarshal([]byte(stdout), &cfg)
+	if err != nil {
+      return nil, err
+	}
+
 	return ibc.ConnectionOutputs{
 		&ibc.ConnectionOutput{
-			ID:       connectionId,
-			ClientID: clientId,
+			ID:       cfg.ConnectionID,
+			ClientID: cfg.ClientID,
 			Versions: []*ibcexported.Version{
 				{
 					Identifier: "",
@@ -337,32 +338,31 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 					KeyPrefix: []byte{},
 				},
 			},
-			DelayPeriod: "10",
+			DelayPeriod: "0",
 		},
 	}, nil
 }
 
+type ClientOutput struct {
+	ChainID   string `toml:"chain_id"`
+	ClientID  string `toml:"client_id"`
+}
+
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
+// Only supports 1 client
 func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	clientId := ""
-	chainId := ""
-	lines := strings.Split(stdout, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "client_id") {
-			fields := strings.Split(line, "\"")
-			clientId = fields[1]
-		}
-		if strings.Contains(line, "chain_id") {
-			fields := strings.Split(line, "\"")
-			chainId = fields[1]
-		}
+	var cfg ClientOutput
+	err := toml.Unmarshal([]byte(stdout), &cfg)
+	if err != nil {
+      return nil, err
 	}
+
 	return ibc.ClientOutputs{
 		&ibc.ClientOutput{
-			ClientID: clientId,
+			ClientID: cfg.ClientID,
 			ClientState: ibc.ClientState{
-				ChainID: chainId,
+				ChainID: cfg.ChainID,
 			},
 		},
 	}, nil

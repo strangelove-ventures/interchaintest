@@ -228,19 +228,6 @@ func TestHyperspace(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
-	// Get channels - Query channels was removed
-	/*cosmosChannelOutput, err := r.GetChannels(ctx, eRep, cosmosChain.Config().ChainID)
-	require.NoError(t, err)
-	require.Equal(t, len(cosmosChannelOutput), 1)
-	require.Equal(t, cosmosChannelOutput[0].ChannelID, "channel-0")
-	require.Equal(t, cosmosChannelOutput[0].PortID, "transfer")
-
-	polkadotChannelOutput, err := r.GetChannels(ctx, eRep, polkadotChain.Config().ChainID)
-	require.NoError(t, err)
-	require.Equal(t, len(polkadotChannelOutput), 1)
-	require.Equal(t, polkadotChannelOutput[0].ChannelID, "channel-0")
-	require.Equal(t, polkadotChannelOutput[0].PortID, "transfer")*/
-
 	// Start relayer
 	r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
