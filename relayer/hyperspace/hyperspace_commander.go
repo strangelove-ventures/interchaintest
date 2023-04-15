@@ -31,9 +31,6 @@ type pathConfiguration struct {
 // pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
 	chainID      string
-	clientID     string
-	connectionID string
-	portID       string
 }
 
 func (hyperspaceCommander) Name() string {

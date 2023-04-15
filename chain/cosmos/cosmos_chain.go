@@ -376,6 +376,9 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 		Code:   content,
 	}
 	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
+	if err != nil {
+		return tx, "", err
+	}
 	prop.Messages = append(prop.Messages, msg)
 	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
 	if err != nil {

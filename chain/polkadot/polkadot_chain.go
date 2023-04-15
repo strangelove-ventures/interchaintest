@@ -18,7 +18,7 @@ import (
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
-	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
+	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
