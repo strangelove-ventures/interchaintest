@@ -31,8 +31,6 @@ type PenumbraAppNode struct {
 	// Set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
-
-	// preStartListeners dockerutil.Listeners
 }
 
 const (

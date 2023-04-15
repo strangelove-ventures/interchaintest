@@ -41,8 +41,6 @@ type ParachainNode struct {
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
-
-	// preStartListeners dockerutil.Listeners
 }
 
 type ParachainNodes []*ParachainNode
