@@ -289,19 +289,19 @@ func TestHyperspace(t *testing.T) {
 	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, finalStakeBal, cosmosUserStakeBal)
-	
+
 	// Verify cosmos user's final "unit" balance
 	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
 	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
 	require.NoError(t, err)
 	require.Equal(t, amountUnits, cosmosUserUnitBal)
-	
+
 	// Verify parachain user's final "unit" balance (will be less than expected due gas costs for stake tx)
 	parachainUserUnits, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 1)
 	require.NoError(t, err)
 	require.LessOrEqual(t, parachainUserUnits.Amount.Int64(), fundAmount, "parachain user's final unit amount not expected")
-	
-	// Verify parachain user's final "stake" balance 
+
+	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
 	require.Equal(t, amountToSend-amountToReflect, parachainUserStake.Amount.Int64(), "parachain user's final stake amount not expected")

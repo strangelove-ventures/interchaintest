@@ -275,7 +275,7 @@ func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 }
 
 type ChannelsOutput struct {
-	Channels   [][]string `toml:"channel_whitelist"`
+	Channels [][]string `toml:"channel_whitelist"`
 }
 
 // Parses output of chain config which is populated by hyperspace
@@ -284,7 +284,7 @@ func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.
 	var cfg ChannelsOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)
 	if err != nil {
-      return nil, err
+		return nil, err
 	}
 
 	outputs := make([]ibc.ChannelOutput, 0)
@@ -306,8 +306,8 @@ func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.
 }
 
 type ConnectionsOutput struct {
-	ConnectionID   string `toml:"connection_id"`
-	ClientID  string `toml:"client_id"`
+	ConnectionID string `toml:"connection_id"`
+	ClientID     string `toml:"client_id"`
 }
 
 // Parses output of chain config which is populated by hyperspace
@@ -317,7 +317,7 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 	var cfg ConnectionsOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)
 	if err != nil {
-      return nil, err
+		return nil, err
 	}
 
 	return ibc.ConnectionOutputs{
@@ -344,8 +344,8 @@ func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc
 }
 
 type ClientOutput struct {
-	ChainID   string `toml:"chain_id"`
-	ClientID  string `toml:"client_id"`
+	ChainID  string `toml:"chain_id"`
+	ClientID string `toml:"client_id"`
 }
 
 // Parses output of chain config which is populated by hyperspace
@@ -355,7 +355,7 @@ func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.Cli
 	var cfg ClientOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)
 	if err != nil {
-      return nil, err
+		return nil, err
 	}
 
 	return ibc.ClientOutputs{
