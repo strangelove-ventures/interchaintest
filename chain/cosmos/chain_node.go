@@ -59,7 +59,7 @@ type ChainNode struct {
 	hostRPCPort  string
 	hostGRPCPort string
 
-	preStartListeners dockerutil.Listeners
+	// preStartListeners dockerutil.Listeners
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -792,6 +792,9 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
 	_, file := filepath.Split(fileName)
 	err = tn.WriteFile(ctx, content, file)
 	if err != nil {

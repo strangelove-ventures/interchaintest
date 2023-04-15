@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
@@ -45,7 +45,7 @@ type RelayChainNode struct {
 	hostWsPort  string
 	hostRpcPort string
 
-	preStartListeners dockerutil.Listeners
+	// preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -98,7 +98,7 @@ func (p *RelayChainNode) PeerID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return peer.Encode(id), nil
+	return id.String(), nil
 }
 
 // GrandpaAddress returns the ss58 encoded grandpa (consensus) address.
