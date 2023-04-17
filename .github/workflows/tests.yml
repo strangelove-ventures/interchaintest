@@ -17,7 +17,7 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.19
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.19
 
@@ -39,7 +39,7 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.19
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.19
 
@@ -60,7 +60,7 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.19
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.19
 
@@ -81,7 +81,7 @@ jobs:
     steps:
       # Install and setup go
       - name: Set up Go 1.19
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: 1.19
 

@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +22,7 @@ func TestNodeKeyPeerID(t *testing.T) {
 
 	id, err := peer.IDFromPrivateKey(privKey)
 	require.NoError(t, err, "error getting peer id from private key")
-	peerId := peer.Encode(id)
+	peerId := id.String()
 	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerId)
 }
 

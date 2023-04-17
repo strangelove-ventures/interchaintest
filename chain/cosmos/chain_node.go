@@ -58,8 +58,6 @@ type ChainNode struct {
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
-
-	preStartListeners dockerutil.Listeners
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -799,6 +797,9 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
 	_, file := filepath.Split(fileName)
 	err = tn.WriteFile(ctx, content, file)
 	if err != nil {
@@ -953,12 +954,12 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
+	stdout, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
 	if err != nil {
 		return "", err
 	}
-	// output comes to stderr for some reason
-	return string(stderr), nil
+	// output comes to stderr on older versions
+	return string(stdout) + string(stderr), nil
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
