@@ -19,7 +19,9 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -43,15 +45,16 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	VolumeName   string
-	Index        int
-	Chain        ibc.Chain
-	Validator    bool
-	NetworkID    string
-	DockerClient *dockerclient.Client
-	Client       rpcclient.Client
-	TestName     string
-	Image        ibc.DockerImage
+	VolumeName       string
+	Index            int
+	Chain            ibc.Chain
+	Validator        bool
+	NetworkID        string
+	DockerClient     *dockerclient.Client
+	TendermintClient rpcclient.Client
+	CosmosClient     client.Context
+	TestName         string
+	Image            ibc.DockerImage
 
 	lock sync.Mutex
 	log  *zap.Logger
@@ -87,34 +90,36 @@ var (
 )
 
 // NewClient creates and assigns a new Tendermint RPC client to the ChainNode
-func (tn *ChainNode) NewClient(addr string) error {
+func NewTendermintClient(addr string) (rpcclient.Client, error) {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	httpClient.Timeout = 10 * time.Second
 	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tn.Client = rpcClient
-	return nil
+	return rpcClient, nil
 }
 
 // CliContext creates a new Cosmos SDK client context
-func (tn *ChainNode) CliContext() client.Context {
-	cfg := tn.Chain.Config()
+func NewCosmosClient(
+	chainID string,
+	tendermintClient rpcclient.Client,
+	encodingConfig simappparams.EncodingConfig,
+) client.Context {
 	return client.Context{
-		Client:            tn.Client,
-		ChainID:           cfg.ChainID,
-		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
+		Client:            tendermintClient,
+		ChainID:           chainID,
+		InterfaceRegistry: encodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
 		OutputFormat:      "json",
-		LegacyAmino:       cfg.EncodingConfig.Amino,
-		TxConfig:          cfg.EncodingConfig.TxConfig,
+		LegacyAmino:       encodingConfig.Amino,
+		TxConfig:          encodingConfig.TxConfig,
 	}
 }
 
@@ -271,7 +276,7 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
-	res, err := tn.Client.Status(ctx)
+	res, err := tn.TendermintClient.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
@@ -286,11 +291,11 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	var blockRes *coretypes.ResultBlockResults
 	var block *coretypes.ResultBlock
 	eg.Go(func() (err error) {
-		blockRes, err = tn.Client.BlockResults(ctx, &h)
+		blockRes, err = tn.TendermintClient.BlockResults(ctx, &h)
 		return err
 	})
 	eg.Go(func() (err error) {
-		block, err = tn.Client.Block(ctx, &h)
+		block, err = tn.TendermintClient.Block(ctx, &h)
 		return err
 	})
 	if err := eg.Wait(); err != nil {
@@ -374,6 +379,23 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 	}
 
 	return txs, nil
+}
+
+func (tn *ChainNode) Transaction(txHash string) (*types.TxResponse, error) {
+	// Retry because sometimes the tx is not committed to state yet.
+	var txResp *types.TxResponse
+	err := retry.Do(func() error {
+		var err error
+		txResp, err = authTx.QueryTx(tn.CosmosClient, txHash)
+		return err
+	},
+		// retry for total of 3 seconds
+		retry.Attempts(15),
+		retry.Delay(200*time.Millisecond),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	)
+	return txResp, err
 }
 
 // TxCommand is a helper to retrieve a full command for broadcasting a tx
@@ -932,14 +954,17 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 
 	tn.logger().Info("Cosmos chain node started", zap.String("container", tn.Name()), zap.String("rpc_port", tn.hostRPCPort))
 
-	err = tn.NewClient("tcp://" + tn.hostRPCPort)
+	tmClient, err := NewTendermintClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
 		return err
 	}
+	tn.TendermintClient = tmClient
+	chainCfg := tn.Chain.Config()
+	tn.CosmosClient = NewCosmosClient(chainCfg.ChainID, tmClient, *chainCfg.EncodingConfig)
 
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
-		stat, err := tn.Client.Status(ctx)
+		stat, err := tn.TendermintClient.Status(ctx)
 		if err != nil {
 			return err
 		}

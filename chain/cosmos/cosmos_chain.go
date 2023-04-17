@@ -10,11 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/types"
-	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
@@ -239,7 +236,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.getFullNode().Transaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -332,7 +329,7 @@ func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop Tex
 }
 
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.getFullNode().Transaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -403,23 +400,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
-	// Retry because sometimes the tx is not committed to state yet.
-	var txResp *types.TxResponse
-	err := retry.Do(func() error {
-		var err error
-		txResp, err = authTx.QueryTx(c.getFullNode().CliContext(), txHash)
-		return err
-	},
-		// retry for total of 3 seconds
-		retry.Attempts(15),
-		retry.Delay(200*time.Millisecond),
-		retry.DelayType(retry.FixedDelay),
-		retry.LastErrorOnly(true),
-	)
-	return txResp, err
-}
-
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
@@ -458,7 +438,9 @@ func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
 }
 
 // NewChainNode constructs a new cosmos chain node with a docker volume.
-func (c *CosmosChain) NewChainNode(
+func NewCosmosChainNode(
+	log *zap.Logger,
+	chain ibc.Chain,
 	ctx context.Context,
 	testName string,
 	cli *client.Client,
@@ -469,11 +451,11 @@ func (c *CosmosChain) NewChainNode(
 	// Construct the ChainNode first so we can access its name.
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := &ChainNode{
-		log: c.log,
+		log: log,
 
 		Validator: validator,
 
-		Chain:        c,
+		Chain:        chain,
 		DockerClient: cli,
 		NetworkID:    networkID,
 		TestName:     testName,
@@ -493,7 +475,7 @@ func (c *CosmosChain) NewChainNode(
 	tn.VolumeName = v.Name
 
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
+		Log: log,
 
 		Client: cli,
 
@@ -527,7 +509,7 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.Validators); i < c.numValidators; i++ {
 		i := i
 		eg.Go(func() error {
-			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true)
+			val, err := NewCosmosChainNode(c.log, c, egCtx, testName, cli, networkID, image, true)
 			if err != nil {
 				return err
 			}
@@ -539,7 +521,7 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
 		i := i
 		eg.Go(func() error {
-			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false)
+			fn, err := NewCosmosChainNode(c.log, c, egCtx, testName, cli, networkID, image, false)
 			if err != nil {
 				return err
 			}
@@ -781,7 +763,7 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().TendermintClient, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
 		if ok {
 			acks = append(acks, found)
@@ -814,7 +796,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
 func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().TendermintClient, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
 		if ok {
 			timeouts = append(timeouts, found)

@@ -16,7 +16,9 @@ type ChainConfig struct {
 	// Chain name, e.g. cosmoshub.
 	Name string `yaml:"name"`
 	// Chain ID, e.g. cosmoshub-4
-	ChainID string `yaml:"chain-id"`
+	ChainID string
+	// Address if required for external chains
+	Address string
 	// Docker images required for running chain nodes.
 	Images []DockerImage `yaml:"images"`
 	// Binary to execute for the chain node daemon.
@@ -143,6 +145,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.EncodingConfig != nil {
 		c.EncodingConfig = other.EncodingConfig
+	}
+
+	if other.Address != "" {
+		c.Address = other.Address
 	}
 
 	return c
