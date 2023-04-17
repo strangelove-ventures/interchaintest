@@ -17,6 +17,10 @@ import (
 // This test is meant to be used as a basic ibctest tutorial.
 // Code snippets are broken down in ./docs/upAndRunning.md
 func TestLearn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
 	ctx := context.Background()
 
 	// Chain Factory

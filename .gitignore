@@ -3,3 +3,6 @@
 ibctest.test
 
 /bin
+
+# ide
+.idea/

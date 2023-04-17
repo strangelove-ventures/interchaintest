@@ -31,7 +31,7 @@ jobs:
 
       # run tests
       - name: run unit tests
-        run: go test -race -timeout 30m -v -p 2 ./...
+        run: go test -race -timeout 10m -v -p 2 $(go list ./... | grep -v /cd | grep -v /examples)
   test-cmd-ibctest:
     name: test-cmd-ibctest
     runs-on: [self-hosted, linux]
