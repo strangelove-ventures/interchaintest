@@ -3,9 +3,9 @@ package polkadot
 import (
 	"encoding/hex"
 
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
