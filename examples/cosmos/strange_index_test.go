@@ -1,14 +1,14 @@
-package ibctest
+package cosmos_test
 
 import (
 	"context"
 	"testing"
 
-	ibctest "github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/chain/cosmos"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	ibctest "github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -69,6 +69,6 @@ func TestStrangeIndex(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	require.NoError(t, test.WaitForBlocks(ctx, 2000, chain))
+	require.NoError(t, testutil.WaitForBlocks(ctx, 2000, chain))
 
 }
