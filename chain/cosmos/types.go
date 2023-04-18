@@ -1,5 +1,9 @@
 package cosmos
 
+import (
+	"encoding/json"
+)
+
 const (
 	ProposalVoteYes        = "yes"
 	ProposalVoteNo         = "no"
@@ -13,6 +17,15 @@ const (
 	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
 	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
 )
+
+// TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)
+type TxProposalv1 struct {
+	Messages []json.RawMessage `json:"messages"`
+	Metadata string            `json:"metadata"`
+	Deposit  string            `json:"deposit"`
+	Title    string            `json:"title"`
+	Summary  string            `json:"summary"`
+}
 
 // TxProposal contains chain proposal transaction details.
 type TxProposal struct {

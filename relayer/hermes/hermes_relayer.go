@@ -198,8 +198,8 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 
 // RestoreKey restores a key from a mnemonic. In hermes, you must provide a file containing the mnemonic. We need
 // to copy the contents of the mnemonic into a file on disk and then reference the newly created file.
-func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
-
+func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+	chainID := cfg.ChainID
 	relativeMnemonicFilePath := fmt.Sprintf("%s/mnemonic.txt", chainID)
 	if err := r.WriteFileToHomeDir(ctx, relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
 		return fmt.Errorf("failed to write mnemonic file: %w", err)
