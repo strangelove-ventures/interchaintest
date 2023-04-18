@@ -84,7 +84,7 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeCont
 		Height:      haltHeight,
 	}
 
-	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName(), proposal)
+	upgradeTx, err := chain.LegacyUpgradeProposal(ctx, chainUser.KeyName(), proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
 	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, cosmos.ProposalVoteYes)
