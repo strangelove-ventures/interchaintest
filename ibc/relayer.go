@@ -262,8 +262,12 @@ func (o Order) Validate() error {
 }
 
 // CreateClientOptions contains the configuration for creating a client.
+// Wasm code id is used to create 08-wasm clients with the respective code id of each chain.
+// Default is empty and if empty, wasm clients will not be used.
 type CreateClientOptions struct {
-	TrustingPeriod string
+	TrustingPeriod     string
+	SrcChainWasmCodeID string
+	DstChainWasmCodeID string
 }
 
 // DefaultClientOpts returns the default settings for creating clients.
@@ -271,6 +275,8 @@ type CreateClientOptions struct {
 func DefaultClientOpts() CreateClientOptions {
 	return CreateClientOptions{
 		TrustingPeriod: "0",
+		SrcChainWasmCodeID: "",
+		DstChainWasmCodeID: "",
 	}
 }
 

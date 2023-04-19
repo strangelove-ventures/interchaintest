@@ -57,6 +57,7 @@ type CosmosRelayerChainConfigValue struct {
 	RPCAddr        string  `json:"rpc-addr"`
 	SignMode       string  `json:"sign-mode"`
 	Timeout        string  `json:"timeout"`
+	MinGasAmount   uint64  `json:"min-gas-amount"`
 }
 
 type CosmosRelayerChainConfig struct {
@@ -98,6 +99,7 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 			Timeout:        "10s",
 			OutputFormat:   "json",
 			SignMode:       "direct",
+			MinGasAmount:   1,
 		},
 	}
 }
@@ -137,16 +139,22 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 		"--dst-port", opts.DestPortName,
 		"--order", opts.Order.String(),
 		"--version", opts.Version,
-
 		"--home", homeDir,
 	}
 }
 
 func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	return []string{
+	cmd := []string{
 		"rly", "tx", "clients", pathName, "--client-tp", opts.TrustingPeriod,
 		"--home", homeDir,
 	}
+	if opts.SrcChainWasmCodeID != "" {
+		cmd = append(cmd, "--src-wasm-code-id", opts.SrcChainWasmCodeID)
+	}
+	if opts.DstChainWasmCodeID != "" {
+		cmd = append(cmd, "--dst-wasm-code-id", opts.DstChainWasmCodeID)
+	}
+	return cmd
 }
 
 // passing a value of 0 for customeClientTrustingPeriod will use default
