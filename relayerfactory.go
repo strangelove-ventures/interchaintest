@@ -9,6 +9,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
 	"go.uber.org/zap"
 )
@@ -60,6 +61,14 @@ func (f builtinRelayerFactory) Build(
 	switch f.impl {
 	case ibc.CosmosRly:
 		return rly.NewCosmosRelayer(
+			f.log,
+			t.Name(),
+			cli,
+			networkID,
+			f.options...,
+		)
+	case ibc.Hyperspace:
+		return hyperspace.NewHyperspaceRelayer(
 			f.log,
 			t.Name(),
 			cli,
