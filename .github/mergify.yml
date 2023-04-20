@@ -1,0 +1,27 @@
+pull_request_rules:
+  - name: backport to maintained branches
+    conditions:
+      - base=main
+      - label!=dont_backport
+    actions:
+      backport:
+        branches:
+          - v3
+          - v3-ics
+          - v4
+          - v5
+          - v6
+        assignees: 
+            - "{{ author }}"
+        labels:
+          - automerge
+          - backport
+        title: "[BP `{{ destination_branch }}` <- `#{{ number }}`] {{ title }}"
+
+  - name: automerge backported PR's for maintained branches
+    conditions:
+      - label=automerge
+      - base~=^(v3|v3-ics|v4|v5|v6)$
+    actions:
+      merge:
+        method: squash
