@@ -22,25 +22,25 @@ func TestStrangeIndex(t *testing.T) {
 
 	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
 		{
-			Name:      "strange",
-			ChainName: "strange",
+			Name:      "noble",
+			ChainName: "noble",
 			ChainConfig: ibc.ChainConfig{
 				Type:         "cosmos_external",
-				Name:         "strange",
-				Address:      "http://strange.goc.strange.love:26657",
-				ChainID:      "strange-1",
-				Denom:        "ustrange",
-				Bech32Prefix: "cosmos",
+				Name:         "noble",
+				Address:      "https://rpc.testnet.noble.strange.love:443",
+				ChainID:      "grand-1",
+				Denom:        "uusdc",
+				Bech32Prefix: "noble",
 
 				Images: []ibc.DockerImage{{
-					Repository: "ghcr.io/strangelove-ventures/heighliner/strange",
-					Version:    "v0.1.0",
+					Repository: "ghcr.io/strangelove-ventures/heighliner/noble",
+					Version:    "v0.5.1",
 					UidGid:     dockerutil.GetHeighlinerUserString(),
 				}},
 
-				Bin:            "stranged",
+				Bin:            "nobled",
 				TrustingPeriod: "504h",
-				GasPrices:      "0.0025ustrange",
+				GasPrices:      "0.00uusdc",
 				GasAdjustment:  1.1,
 			},
 		},
@@ -59,11 +59,11 @@ func TestStrangeIndex(t *testing.T) {
 	client, network := ibctest.DockerSetup(t)
 
 	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  true,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: true,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()

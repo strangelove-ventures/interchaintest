@@ -622,7 +622,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,

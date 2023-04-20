@@ -27,7 +27,7 @@ type CosmosExternalChain struct {
 	CosmosClient     cosmosclient.Context
 	cfg              ibc.ChainConfig
 	log              *zap.Logger
-	fullNode         *ChainNode
+	FullNode         *ChainNode
 }
 
 func NewCosmosExternalChain(log *zap.Logger, cfg ibc.ChainConfig) (*CosmosExternalChain, error) {
@@ -81,8 +81,12 @@ func (c *CosmosExternalChain) Initialize(ctx context.Context, testName string, c
 		return err
 	}
 	fn.TendermintClient = c.TendermintClient
-	c.fullNode = fn
+	c.FullNode = fn
 	return nil
+}
+
+func (c *CosmosExternalChain) getFullNode() *ChainNode {
+	return c.FullNode
 }
 
 // Implements Chain interface
@@ -93,7 +97,7 @@ func (c *CosmosExternalChain) Start(testName string, ctx context.Context, additi
 
 // FindTxs implements blockdb.BlockSaver.
 func (c *CosmosExternalChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
-	return c.fullNode.FindTxs(ctx, height)
+	return c.FullNode.FindTxs(ctx, height)
 }
 
 // Implements Chain interface
@@ -103,62 +107,62 @@ func (c *CosmosExternalChain) FindTxs(ctx context.Context, height uint64) ([]blo
 //
 // "env" are environment variables in the format "MY_ENV_VAR=value"
 func (c *CosmosExternalChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.fullNode.Exec(ctx, cmd, env)
+	return c.FullNode.Exec(ctx, cmd, env)
 }
 
 // Implements Chain interface
 // ExportState exports the chain state at specific height.
 func (c *CosmosExternalChain) ExportState(ctx context.Context, height int64) (string, error) {
-	return c.fullNode.ExportState(ctx, height)
+	return c.FullNode.ExportState(ctx, height)
 }
 
 // Implements Chain interface
 func (c *CosmosExternalChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.fullNode.HostName())
+	return fmt.Sprintf("http://%s:26657", c.FullNode.HostName())
 }
 
 // Implements Chain interface
 func (c *CosmosExternalChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", c.fullNode.HostName())
+	return fmt.Sprintf("%s:9090", c.FullNode.HostName())
 }
 
 // Implements Chain interface
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosExternalChain) GetHostRPCAddress() string {
-	return "http://" + c.fullNode.hostRPCPort
+	return "http://" + c.FullNode.hostRPCPort
 }
 
 // Implements Chain interface
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosExternalChain) GetHostGRPCAddress() string {
-	return c.fullNode.hostGRPCPort
+	return c.FullNode.hostGRPCPort
 }
 
 // Implements Chain interface
 // HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
 // the container's filesystem (not the host).
 func (c *CosmosExternalChain) HomeDir() string {
-	return c.fullNode.HomeDir()
+	return c.FullNode.HomeDir()
 }
 
 // Implements Chain interface
-// CreateKey creates a test key in the "user" node (either the first fullnode or the first validator if no fullnodes).
+// CreateKey creates a test key in the "user" node (either the first FullNode or the first validator if no fullnodes).
 func (c *CosmosExternalChain) CreateKey(ctx context.Context, keyName string) error {
-	return c.fullNode.CreateKey(ctx, keyName)
+	return c.FullNode.CreateKey(ctx, keyName)
 }
 
 // Implements Chain interface
 // RecoverKey recovers an existing user from a given mnemonic.
 func (c *CosmosExternalChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return c.fullNode.RecoverKey(ctx, name, mnemonic)
+	return c.FullNode.RecoverKey(ctx, name, mnemonic)
 }
 
 // Implements Chain interface
-// GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
+// GetAddress fetches the bech32 address for a test key on the "user" node (either the first FullNode or the first validator if no fullnodes).
 func (c *CosmosExternalChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	b32Addr, err := c.fullNode.KeyBech32(ctx, keyName)
+	b32Addr, err := c.FullNode.KeyBech32(ctx, keyName, "")
 	if err != nil {
 		return nil, err
 	}
@@ -169,17 +173,17 @@ func (c *CosmosExternalChain) GetAddress(ctx context.Context, keyName string) ([
 // Implements Chain interface
 // Implements Chain interface
 func (c *CosmosExternalChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.fullNode.SendFunds(ctx, keyName, amount)
+	return c.FullNode.SendFunds(ctx, keyName, amount)
 }
 
 // Implements Chain interface
 // Implements Chain interface
-func (c *CosmosExternalChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (tx ibc.Tx, _ error) {
-	txHash, err := c.fullNode.SendIBCTransfer(ctx, channelID, keyName, amount, timeout)
+func (c *CosmosExternalChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (tx ibc.Tx, _ error) {
+	txHash, err := c.FullNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.fullNode.Transaction(txHash)
+	txResp, err := c.FullNode.Transaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -223,13 +227,32 @@ func (c *CosmosExternalChain) SendIBCTransfer(ctx context.Context, channelID, ke
 	return tx, nil
 }
 
-// Implements Chain interface
-func (c *CosmosExternalChain) UpgradeProposal(ctx context.Context, keyName string, prop ibc.SoftwareUpgradeProposal) (tx ibc.SoftwareUpgradeTx, _ error) {
-	txHash, err := c.fullNode.UpgradeProposal(ctx, keyName, prop)
+// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+func (c *CosmosExternalChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
-	txResp, err := c.fullNode.Transaction(txHash)
+	return c.txProposal(txHash)
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (c *CosmosExternalChain) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+	return c.FullNode.InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag)
+}
+
+// Implements Chain interface
+func (c *CosmosExternalChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
+	return c.FullNode.ExecuteContract(ctx, keyName, contractAddress, message)
+}
+
+// Implements Chain interface
+func (c *CosmosExternalChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
+	return c.FullNode.DumpContractState(ctx, contractAddress, height)
+}
+
+func (c *CosmosExternalChain) txProposal(txHash string) (tx TxProposal, _ error) {
+	txResp, err := c.getFullNode().Transaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -249,29 +272,9 @@ func (c *CosmosExternalChain) UpgradeProposal(ctx context.Context, keyName strin
 }
 
 // Implements Chain interface
-func (c *CosmosExternalChain) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	return c.fullNode.InstantiateContract(ctx, keyName, amount, fileName, initMessage, needsNoAdminFlag)
-}
-
-// Implements Chain interface
-func (c *CosmosExternalChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	return c.fullNode.ExecuteContract(ctx, keyName, contractAddress, message)
-}
-
-// Implements Chain interface
-func (c *CosmosExternalChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*ibc.DumpContractStateResponse, error) {
-	return c.fullNode.DumpContractState(ctx, contractAddress, height)
-}
-
-// Implements Chain interface
-func (c *CosmosExternalChain) CreatePool(ctx context.Context, keyName string, contractAddress string, swapFee float64, exitFee float64, assets []ibc.WalletAmount) error {
-	return c.fullNode.CreatePool(ctx, keyName, contractAddress, swapFee, exitFee, assets)
-}
-
-// Implements Chain interface
 func (c *CosmosExternalChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := c.fullNode.hostGRPCPort
+	grpcAddress := c.FullNode.hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return 0, err

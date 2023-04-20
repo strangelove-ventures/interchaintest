@@ -51,6 +51,7 @@ type ChainNode struct {
 	Validator        bool
 	NetworkID        string
 	DockerClient     *dockerclient.Client
+	Client           rpcclient.Client
 	TendermintClient rpcclient.Client
 	CosmosClient     client.Context
 	TestName         string
