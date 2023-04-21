@@ -39,6 +39,7 @@ var knownRelayerLabels = map[Relayer]struct{}{
 	Rly:    {},
 	Hermes: {},
 }
+var mu sync.Mutex
 
 func (l Relayer) IsKnown() bool {
 	_, exists := knownRelayerLabels[l]
@@ -48,6 +49,9 @@ func (l Relayer) IsKnown() bool {
 // RegisterRelayerLabel is available for external packages that may import interchaintest,
 // to register any external relayer implementations they may provide.
 func RegisterRelayerLabel(l Relayer) {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if _, exists := knownRelayerLabels[l]; exists {
 		panic(fmt.Errorf("relayer label %q already exists and must not be double registered", l))
 	}
@@ -74,12 +78,11 @@ var knownChainLabels = map[Chain]struct{}{}
 // RegisterChainLabel is available for external packages that may import interchaintest,
 // to register any external chain implementations they may provide.
 func RegisterChainLabel(l Chain) {
-	var mu sync.Mutex
+	mu.Lock()
+	defer mu.Unlock()
 
 	if _, exists := knownChainLabels[l]; exists {
 		return
 	}
-	mu.Lock()
 	knownChainLabels[l] = struct{}{}
-	mu.Unlock()
 }
