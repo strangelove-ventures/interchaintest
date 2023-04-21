@@ -1,7 +1,5 @@
 package tendermint
 
-// this package applies to chains that use tendermint >= v0.35.0, likely separate from the abci app
-
 import (
 	"context"
 	"crypto/sha256"
@@ -11,18 +9,17 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	"github.com/tendermint/tendermint/p2p"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"github.com/hashicorp/go-version"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 )
 
@@ -39,7 +36,16 @@ type TendermintNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
+}
+
+func NewTendermintNode(log *zap.Logger, i int, c ibc.Chain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage) *TendermintNode {
+	tn := &TendermintNode{Log: log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+
+	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
+
+	return tn
 }
 
 // TendermintNodes is a collection of TendermintNode
@@ -133,36 +139,41 @@ func (tn *TendermintNode) HomeDir() string {
 
 // SetConfigAndPeers modifies the config for a validator node to start a chain
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
-	c := make(configutil.Toml)
+	c := make(testutil.Toml)
+
+	sep, err := tn.GetConfigSeparator()
+	if err != nil {
+		return err
+	}
 
 	// Set Log Level to info
-	c["log-level"] = "info"
+	c[fmt.Sprintf("log%slevel", sep)] = "info"
 
-	p2p := make(configutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Allow p2p strangeness
-	p2p["allow-duplicate-ip"] = true
-	p2p["addr-book-strict"] = false
-	p2p["persistent-peers"] = peers
+	p2p[fmt.Sprintf("allow%sduplicate%sip", sep, sep)] = true
+	p2p[fmt.Sprintf("addr%sbook%sstrict", sep, sep)] = false
+	p2p[fmt.Sprintf("persistent%speers", sep)] = peers
 
 	c["p2p"] = p2p
 
-	consensus := make(configutil.Toml)
+	consensus := make(testutil.Toml)
 
 	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
-	consensus["timeout-commit"] = blockT
-	consensus["timeout-propose"] = blockT
+	consensus[fmt.Sprintf("timeout%scommit", sep)] = blockT
+	consensus[fmt.Sprintf("timeout%spropose", sep)] = blockT
 
 	c["consensus"] = consensus
 
-	rpc := make(configutil.Toml)
+	rpc := make(testutil.Toml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return configutil.ModifyTomlConfigFile(
+	return testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -171,6 +182,26 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 		"config/config.toml",
 		c,
 	)
+}
+
+// Tenderment deprecate snake_case in config for hyphen-case in v0.34.1
+// https://github.com/cometbft/cometbft/blob/main/CHANGELOG.md#v0341
+func (tn *TendermintNode) GetConfigSeparator() (string, error) {
+	var sep = "_"
+
+	currentTnVersion, err := version.NewVersion(tn.Image.Version[1:])
+	if err != nil {
+		return "", err
+	}
+	tnVersion34_1, err := version.NewVersion("0.34.1")
+	if err != nil {
+		return "", err
+	}
+	// if currentVersion >= 0.34.1
+	if tnVersion34_1.GreaterThanOrEqual(currentTnVersion) {
+		sep = "-"
+	}
+	return sep, nil
 }
 
 func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
@@ -194,62 +225,26 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	chainCfg := tn.Chain.Config()
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
-	fmt.Printf("{%s} -> '%s'\n", tn.Name(), strings.Join(cmd, " "))
 
-	cc, err := tn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: tn.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: tn.HostName(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
-
-			ExposedPorts: sentryPorts,
-		},
-		&container.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				tn.NetworkID: {},
-			},
-		},
-		nil,
-		tn.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	tn.containerID = cc.ID
-	return nil
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
 }
 
 func (tn *TendermintNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *TendermintNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
+	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort)
 	if err != nil {
 		return err
 	}
+	rpcPort := hostPorts[0]
 
-	port := dockerutil.GetHostPort(c, rpcPort)
-	fmt.Printf("{%s} RPC => %s\n", tn.Name(), port)
-
-	err = tn.NewClient(fmt.Sprintf("tcp://%s", port))
+	err = tn.NewClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err
 	}

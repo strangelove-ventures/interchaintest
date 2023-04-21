@@ -1,4 +1,4 @@
-package ibctest_test
+package interchaintest_test
 
 import (
 	"os"
@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/internal/mocktesting"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTempDir_Cleanup(t *testing.T) {
-	origKeep := ibctest.KeepingTempDirOnFailure()
+	origKeep := interchaintest.KeepingTempDirOnFailure()
 	defer func() {
-		ibctest.KeepTempDirOnFailure(origKeep)
+		interchaintest.KeepTempDirOnFailure(origKeep)
 	}()
 
 	t.Run("keep=true", func(t *testing.T) {
-		ibctest.KeepTempDirOnFailure(true)
+		interchaintest.KeepTempDirOnFailure(true)
 
 		t.Run("test passed", func(t *testing.T) {
 			mt := mocktesting.NewT("t")
 
-			dir := ibctest.TempDir(mt)
+			dir := interchaintest.TempDir(mt)
 			require.DirExists(t, dir)
 
 			mt.RunCleanups()
@@ -35,7 +35,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 		t.Run("test failed", func(t *testing.T) {
 			mt := mocktesting.NewT("t")
 
-			dir := ibctest.TempDir(mt)
+			dir := interchaintest.TempDir(mt)
 			require.DirExists(t, dir)
 			defer func() { _ = os.RemoveAll(dir) }()
 
@@ -53,7 +53,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 	})
 
 	t.Run("keep=false", func(t *testing.T) {
-		ibctest.KeepTempDirOnFailure(false)
+		interchaintest.KeepTempDirOnFailure(false)
 
 		for name, failed := range map[string]bool{
 			"test passed": false,
@@ -63,7 +63,7 @@ func TestTempDir_Cleanup(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				mt := mocktesting.NewT("t")
 
-				dir := ibctest.TempDir(mt)
+				dir := interchaintest.TempDir(mt)
 				require.DirExists(t, dir)
 
 				if failed {
@@ -92,7 +92,7 @@ func TestTempDir_Naming(t *testing.T) {
 	} {
 		wantDir := filepath.Join(tmpRoot, testNamePrefix+expDir)
 		t.Run(name, func(t *testing.T) {
-			dir := ibctest.TempDir(t)
+			dir := interchaintest.TempDir(t)
 
 			require.Truef(
 				t,

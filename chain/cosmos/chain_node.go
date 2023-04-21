@@ -17,27 +17,23 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/blockdb"
-	"github.com/strangelove-ventures/ibctest/v5/internal/configutil"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	"github.com/tendermint/tendermint/p2p"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	coretypes "github.com/tendermint/tendermint/rpc/core/types"
-	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -57,11 +53,30 @@ type ChainNode struct {
 	lock sync.Mutex
 	log  *zap.Logger
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
+}
+
+func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
+	tn := &ChainNode{
+		log: log,
+
+		Validator: validator,
+
+		Chain:        chain,
+		DockerClient: dockerClient,
+		NetworkID:    networkID,
+		TestName:     testName,
+		Image:        image,
+		Index:        index,
+	}
+
+	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
+
+	return tn
 }
 
 // ChainNodes is a collection of ChainNode
@@ -136,8 +151,7 @@ func (tn *ChainNode) HostName() string {
 }
 
 func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
+	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
@@ -146,8 +160,8 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 }
 
 func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, "config/genesis.json", content); err != nil {
+	err := tn.WriteFile(ctx, content, "config/genesis.json")
+	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
 	}
 
@@ -162,14 +176,13 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 
 	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
 
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gentx, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
+	gentx, err := tn.ReadFile(ctx, relPath)
 	if err != nil {
 		return fmt.Errorf("getting gentx content: %w", err)
 	}
 
-	fw := dockerutil.NewFileWriter(destVal.logger(), destVal.DockerClient, destVal.TestName)
-	if err := fw.WriteFile(ctx, destVal.VolumeName, relPath, gentx); err != nil {
+	err = destVal.WriteFile(ctx, gentx, relPath)
+	if err != nil {
 		return fmt.Errorf("overwriting gentx: %w", err)
 	}
 
@@ -196,14 +209,14 @@ func (tn *ChainNode) HomeDir() string {
 	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
 }
 
-// SetTestConfig modifies the config to reasonable values for use within ibctest.
+// SetTestConfig modifies the config to reasonable values for use within interchaintest.
 func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
-	c := make(configutil.Toml)
+	c := make(testutil.Toml)
 
 	// Set Log Level to info
 	c["log_level"] = "info"
 
-	p2p := make(configutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Allow p2p strangeness
 	p2p["allow_duplicate_ip"] = true
@@ -211,7 +224,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["p2p"] = p2p
 
-	consensus := make(configutil.Toml)
+	consensus := make(testutil.Toml)
 
 	blockT := (time.Duration(blockTime) * time.Second).String()
 	consensus["timeout_commit"] = blockT
@@ -219,14 +232,14 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	c["consensus"] = consensus
 
-	rpc := make(configutil.Toml)
+	rpc := make(testutil.Toml)
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 
 	c["rpc"] = rpc
 
-	return configutil.ModifyTomlConfigFile(
+	if err := testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -234,19 +247,41 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 		tn.VolumeName,
 		"config/config.toml",
 		c,
+	); err != nil {
+		return err
+	}
+
+	a := make(testutil.Toml)
+	a["minimum-gas-prices"] = tn.Chain.Config().GasPrices
+
+	grpc := make(testutil.Toml)
+
+	// Enable public GRPC
+	grpc["address"] = "0.0.0.0:9090"
+
+	a["grpc"] = grpc
+
+	return testutil.ModifyTomlConfigFile(
+		ctx,
+		tn.logger(),
+		tn.DockerClient,
+		tn.TestName,
+		tn.VolumeName,
+		"config/app.toml",
+		a,
 	)
 }
 
 // SetPeers modifies the config persistent_peers for a node
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
-	c := make(configutil.Toml)
-	p2p := make(configutil.Toml)
+	c := make(testutil.Toml)
+	p2p := make(testutil.Toml)
 
 	// Set peers
 	p2p["persistent_peers"] = peers
 	c["p2p"] = p2p
 
-	return configutil.ModifyTomlConfigFile(
+	return testutil.ModifyTomlConfigFile(
 		ctx,
 		tn.logger(),
 		tn.DockerClient,
@@ -394,7 +429,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := test.WaitForBlocks(ctx, 2, tn); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
 	}
 	return output.TxHash, nil
@@ -489,6 +524,36 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	return err
 }
 
+// WriteFile accepts file contents in a byte slice and writes the contents to
+// the docker filesystem. relPath describes the location of the file in the
+// docker volume relative to the home directory
+func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	return fw.WriteFile(ctx, tn.VolumeName, relPath, content)
+}
+
+// CopyFile adds a file from the host filesystem to the docker filesystem
+// relPath describes the location of the file in the docker volume relative to
+// the home directory
+func (tn *ChainNode) CopyFile(ctx context.Context, srcPath, dstPath string) error {
+	content, err := os.ReadFile(srcPath)
+	if err != nil {
+		return err
+	}
+	return tn.WriteFile(ctx, content, dstPath)
+}
+
+// ReadFile reads the contents of a single file at the specified path in the docker filesystem.
+// relPath describes the location of the file in the docker volume relative to the home directory.
+func (tn *ChainNode) ReadFile(ctx context.Context, relPath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file at %s: %w", relPath, err)
+	}
+	return gen, nil
+}
+
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
@@ -496,6 +561,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 	_, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
+		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
 	)
 	return err
@@ -506,7 +572,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.HomeDir()),
+		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
 	tn.lock.Lock()
@@ -534,7 +600,14 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	_, _, err := tn.ExecBin(ctx, "add-genesis-account", address, amount)
+	var command []string
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "genesis")
+	}
+
+	command = append(command, "add-genesis-account", address, amount)
+	_, _, err := tn.ExecBin(ctx, command...)
+
 	return err
 }
 
@@ -543,19 +616,27 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
-		"gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+	var command []string
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "genesis")
+	}
+
+	command = append(command, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID,
-	)
+		"--chain-id", tn.Chain.Config().ChainID)
+
+	_, _, err := tn.ExecBin(ctx, command...)
 	return err
 }
 
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin, "collect-gentxs",
-		"--home", tn.HomeDir(),
+	command := []string{tn.Chain.Config().Bin}
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "genesis")
 	}
+
+	command = append(command, "collect-gentxs", "--home", tn.HomeDir())
 
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -570,17 +651,26 @@ type CosmosTx struct {
 	RawLog string `json:"raw_log"`
 }
 
-func (tn *ChainNode) SendIBCTransfer(ctx context.Context, channelID string, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (string, error) {
+func (tn *ChainNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
-	if timeout != nil {
-		if timeout.NanoSeconds > 0 {
-			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(timeout.NanoSeconds))
-		} else if timeout.Height > 0 {
-			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", timeout.Height))
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
+		} else if options.Timeout.Height > 0 {
+			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
 		}
+	}
+	if options.Memo != "" {
+		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
 }
@@ -620,23 +710,19 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-
+// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
+func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	_, file := filepath.Split(fileName)
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
+	err := tn.CopyFile(ctx, fileName, file)
+	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
 		return "", err
 	}
 
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
+	err = testutil.WaitForBlocks(ctx, 5, tn.Chain)
 	if err != nil {
 		return "", fmt.Errorf("wait for blocks: %w", err)
 	}
@@ -651,17 +737,21 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", err
 	}
 
-	codeID := res.CodeInfos[0].CodeID
-	command := []string{"wasm", "instantiate", codeID, initMessage}
+	return res.CodeInfos[0].CodeID, nil
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-	_, err = tn.ExecTx(ctx, keyName, command...)
+	_, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
 	}
 
-	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
 		return "", err
 	}
@@ -675,6 +765,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 	return contractAddress, nil
 }
 
+// ExecuteContract executes a contract transaction with a message using it's address.
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"wasm", "execute", contractAddress, message,
@@ -682,11 +773,59 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return err
 }
 
+// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
+func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
+	query, err := json.Marshal(queryMsg)
+	if err != nil {
+		return err
+	}
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(stdout), response)
+	return err
+}
+
+// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
+func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+	_, file := filepath.Split(fileName)
+	err = tn.WriteFile(ctx, content, file)
+	if err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	_, err = tn.ExecTx(ctx, keyName, "ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	if err != nil {
+		return "", err
+	}
+
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+
+	//return stdout, nil
+	return codeHash, nil
+}
+
+// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
+func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
+	stdout, _, err := tn.ExecQuery(ctx, "ibc-wasm", "code", codeHash)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(stdout), response)
+	return err
+}
+
 // VoteOnProposal submits a vote for the specified proposal.
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote,
+		proposalID, vote, "--gas", "auto",
 	)
 	return err
 }
@@ -703,6 +842,27 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 		return nil, err
 	}
 	return &proposal, nil
+}
+
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
+	// Write msg to container
+	file := "proposal.json"
+	propJson, err := json.MarshalIndent(prop, "", " ")
+	if err != nil {
+		return "", err
+	}
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	command := []string{
+		"gov", "submit-proposal",
+		path.Join(tn.HomeDir(), file), "--gas", "auto",
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
@@ -738,6 +898,31 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop Text
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
+// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
+	content, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(content)
+	proposalFilename := fmt.Sprintf("%x.json", hash)
+	err = tn.WriteFile(ctx, content, proposalFilename)
+	if err != nil {
+		return "", fmt.Errorf("writing param change proposal: %w", err)
+	}
+
+	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
+
+	command := []string{
+		"gov", "submit-proposal",
+		"param-change",
+		proposalPath,
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
 // DumpContractState dumps the state of a contract at a block height.
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
@@ -759,12 +944,12 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
+	stdout, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
 	if err != nil {
 		return "", err
 	}
-	// output comes to stderr for some reason
-	return string(stderr), nil
+	// output comes to stderr on older versions
+	return string(stdout) + string(stderr), nil
 }
 
 func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
@@ -777,68 +962,28 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
-	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+
+	var cmd []string
 	if chainCfg.NoHostMount {
 		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
+	} else {
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
-	imageRef := tn.Image.Ref()
-	tn.logger().
-		Info("Running command",
-			zap.String("command", strings.Join(cmd, " ")),
-			zap.String("container", tn.Name()),
-			zap.String("image", imageRef),
-		)
 
-	cc, err := tn.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: imageRef,
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: tn.HostName(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: tn.TestName},
-
-			ExposedPorts: sentryPorts,
-		},
-		&container.HostConfig{
-			Binds:           tn.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				tn.NetworkID: {},
-			},
-		},
-		nil,
-		tn.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	tn.containerID = cc.ID
-	return nil
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, tn.DockerClient, tn.containerID); err != nil {
-		return err
-	}
-
-	c, err := tn.DockerClient.ContainerInspect(ctx, tn.containerID)
-	if err != nil {
+	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	tn.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	tn.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
-
-	tn.logger().Info("Cosmos chain node started", zap.String("container", tn.Name()), zap.String("rpc_port", tn.hostRPCPort))
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
+	if err != nil {
+		return err
+	}
+	tn.hostRPCPort, tn.hostGRPCPort = hostPorts[0], hostPorts[1]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
@@ -861,19 +1006,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return tn.DockerClient.ContainerStop(ctx, tn.containerID, &timeout)
+	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
-	err := tn.DockerClient.ContainerRemove(ctx, tn.containerID, dockertypes.ContainerRemoveOptions{
-		Force:         true,
-		RemoveVolumes: true,
-	})
-	if err != nil && !errdefs.IsNotFound(err) {
-		return fmt.Errorf("remove container %s: %w", tn.Name(), err)
-	}
-	return nil
+	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
 // InitValidatorFiles creates the node files and signs a genesis transaction
@@ -909,9 +1046,7 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
-
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
+	j, err := tn.ReadFile(ctx, "config/node_key.json")
 	if err != nil {
 		return "", fmt.Errorf("getting node_key.json content: %w", err)
 	}

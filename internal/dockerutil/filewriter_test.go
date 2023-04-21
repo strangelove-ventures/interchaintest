@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -18,7 +18,7 @@ func TestFileWriter(t *testing.T) {
 
 	t.Parallel()
 
-	cli, network := ibctest.DockerSetup(t)
+	cli, network := interchaintest.DockerSetup(t)
 
 	ctx := context.Background()
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{

@@ -1,0 +1,36 @@
+{
+  "Relayers": ["rly", "hermes"],
+
+  "ChainSets": [
+    [
+      {
+        "Name": "gaia",
+        "Version": "latest"
+      },
+      {
+        "Name": "osmosis",
+        "Version": "latest"
+      }
+    ],
+    [
+      {
+        "Name": "gaia",
+        "Version": "latest"
+      },
+      {
+        "Name": "juno",
+        "Version": "latest"
+      }
+    ],
+    [
+      {
+        "Name": "gaia",
+        "Version": "latest"
+      },
+      {
+        "Name": "agoric",
+        "Version": "latest"
+      }
+    ]
+  ]
+}

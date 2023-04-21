@@ -1,39 +1,16 @@
-package ibctest
+package interchaintest
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/test"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
-
-// generateUserWallet creates a new user wallet with the given key name on the given chain.
-// a user is recovered if a mnemonic is specified.
-func generateUserWallet(ctx context.Context, keyName, mnemonic string, chain ibc.Chain) (*ibc.Wallet, error) {
-	if mnemonic != "" {
-		if err := chain.RecoverKey(ctx, keyName, mnemonic); err != nil {
-			return nil, fmt.Errorf("failed to recover key on source chain: %w", err)
-		}
-	} else {
-		if err := chain.CreateKey(ctx, keyName); err != nil {
-			return nil, fmt.Errorf("failed to create key on source chain: %w", err)
-		}
-	}
-	userAccountAddressBytes, err := chain.GetAddress(ctx, keyName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get source user account address: %w", err)
-	}
-	user := ibc.Wallet{
-		KeyName: keyName,
-		Address: string(userAccountAddressBytes),
-	}
-	return &user, nil
-}
 
 // GetAndFundTestUserWithMnemonic restores a user using the given mnemonic
 // and funds it with the native chain denom.
@@ -43,16 +20,16 @@ func GetAndFundTestUserWithMnemonic(
 	keyNamePrefix, mnemonic string,
 	amount int64,
 	chain ibc.Chain,
-) (*ibc.Wallet, error) {
+) (ibc.Wallet, error) {
 	chainCfg := chain.Config()
 	keyName := fmt.Sprintf("%s-%s-%s", keyNamePrefix, chainCfg.ChainID, dockerutil.RandLowerCaseLetterString(3))
-	user, err := generateUserWallet(ctx, keyName, mnemonic, chain)
+	user, err := chain.BuildWallet(ctx, keyName, mnemonic)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source user wallet: %w", err)
 	}
 
 	err = chain.SendFunds(ctx, FaucetAccountKeyName, ibc.WalletAmount{
-		Address: user.Bech32Address(chainCfg.Bech32Prefix),
+		Address: user.FormattedAddress(),
 		Amount:  amount,
 		Denom:   chainCfg.Denom,
 	})
@@ -70,8 +47,8 @@ func GetAndFundTestUsers(
 	keyNamePrefix string,
 	amount int64,
 	chains ...ibc.Chain,
-) []*ibc.Wallet {
-	users := make([]*ibc.Wallet, len(chains))
+) []ibc.Wallet {
+	users := make([]ibc.Wallet, len(chains))
 	var eg errgroup.Group
 	for i, chain := range chains {
 		i := i
@@ -88,7 +65,7 @@ func GetAndFundTestUsers(
 	require.NoError(t, eg.Wait())
 
 	// TODO(nix 05-17-2022): Map with generics once using go 1.18
-	chainHeights := make([]test.ChainHeighter, len(chains))
+	chainHeights := make([]testutil.ChainHeighter, len(chains))
 	for i := range chains {
 		chainHeights[i] = chains[i]
 	}

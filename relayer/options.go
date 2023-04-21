@@ -1,7 +1,7 @@
 package relayer
 
 import (
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 // RelayerOption is used to customize the relayer configuration, whether constructed with the
@@ -16,6 +16,13 @@ type RelayerOptionDockerImage struct {
 	DockerImage ibc.DockerImage
 }
 
+// RelayerOptionHomeDir allows the configuration of the relayer home directory.
+type RelayerOptionHomeDir struct {
+	HomeDir string
+}
+
+func (r RelayerOptionHomeDir) relayerOption() {}
+
 // CustomDockerImage overrides the default relayer docker image.
 // uidGid is the uid:gid format owner that should be used within the container.
 // If uidGid is empty, root user will be assumed.
@@ -27,6 +34,10 @@ func CustomDockerImage(repository string, version string, uidGid string) Relayer
 			UidGid:     uidGid,
 		},
 	}
+}
+
+func HomeDir(homeDir string) RelayerOption {
+	return RelayerOptionHomeDir{HomeDir: homeDir}
 }
 
 func (opt RelayerOptionDockerImage) relayerOption() {}

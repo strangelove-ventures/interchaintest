@@ -1,4 +1,4 @@
-package ibctest
+package interchaintest
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/ibctest/v5/internal/version"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/version"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 //
 // The value is false by default, but can be initialized to true by setting the
 // environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
-// Alternatively, importers of the ibctest package may call KeepDockerVolumesOnFailure(true).
+// Alternatively, importers of the interchaintest package may call KeepDockerVolumesOnFailure(true).
 func KeepDockerVolumesOnFailure(b bool) {
 	dockerutil.KeepVolumesOnFailure = b
 }
@@ -128,10 +128,8 @@ func StopStartRelayerWithPreStartFuncs(
 			return nil, fmt.Errorf("failed to start relayer: %w", err)
 		}
 	} else {
-		for _, path := range pathNames {
-			if err := relayerImpl.StartRelayer(ctx, eRep, path); err != nil {
-				return nil, fmt.Errorf("failed to start relayer: %w", err)
-			}
+		if err := relayerImpl.StartRelayer(ctx, eRep, pathNames...); err != nil {
+			return nil, fmt.Errorf("failed to start relayer: %w", err)
 		}
 	}
 

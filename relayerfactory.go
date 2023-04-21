@@ -1,14 +1,16 @@
-package ibctest
+package interchaintest
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/label"
-	"github.com/strangelove-ventures/ibctest/v5/relayer"
-	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/label"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
 	"go.uber.org/zap"
 )
 
@@ -65,6 +67,16 @@ func (f builtinRelayerFactory) Build(
 			networkID,
 			f.options...,
 		)
+	case ibc.Hyperspace:
+		return hyperspace.NewHyperspaceRelayer(
+			f.log,
+			t.Name(),
+			cli,
+			networkID,
+			f.options...,
+		)
+	case ibc.Hermes:
+		return hermes.NewHermesRelayer(f.log, t.Name(), cli, networkID, f.options...)
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -83,6 +95,14 @@ func (f builtinRelayerFactory) Name() string {
 			}
 		}
 		return "rly@" + rly.DefaultContainerVersion
+	case ibc.Hermes:
+		for _, opt := range f.options {
+			switch o := opt.(type) {
+			case relayer.RelayerOptionDockerImage:
+				return "hermes@" + o.DockerImage.Version
+			}
+		}
+		return "hermes@" + hermes.DefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -92,6 +112,8 @@ func (f builtinRelayerFactory) Labels() []label.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
 		return []label.Relayer{label.Rly}
+	case ibc.Hermes:
+		return []label.Relayer{label.Hermes}
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -102,6 +124,9 @@ func (f builtinRelayerFactory) Labels() []label.Relayer {
 func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
 	switch f.impl {
 	case ibc.CosmosRly:
+		return rly.Capabilities()
+	case ibc.Hermes:
+		// TODO: specify capability for hermes.
 		return rly.Capabilities()
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))

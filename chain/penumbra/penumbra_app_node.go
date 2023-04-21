@@ -7,14 +7,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +26,7 @@ type PenumbraAppNode struct {
 	DockerClient *client.Client
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Set during StartContainer.
 	hostRPCPort  string
@@ -63,11 +60,24 @@ func (p *PenumbraAppNode) Bind() []string {
 }
 
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/root"
+	return "/home/heighliner"
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "wallet", "generate"}
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
+	_, stderr, err := p.Exec(ctx, cmd, nil)
+	// already exists error is okay
+	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
+		return err
+	}
+	return nil
+}
+
+// RecoverKey restores a key from a given mnemonic.
+func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
@@ -78,11 +88,12 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 
 // initializes validator definition template file
 // wallet must be generated first
-func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
+func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName string) error {
+	keyPath := filepath.Join(p.HomeDir(), "keys", valKeyName)
 	cmd := []string{
 		"pcli",
-		"-d", p.HomeDir(),
-		"validator", "template-definition",
+		"-d", keyPath,
+		"validator", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
 	_, _, err := p.Exec(ctx, cmd, nil)
@@ -90,7 +101,7 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context) error {
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return filepath.Join(p.HomeDir(), "validator.json")
+	return filepath.Join(p.HomeDir(), "validator.toml")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
@@ -181,73 +192,44 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 		}
 	}
 	return "", errors.New("address not found")
+
 }
 
 func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, timeout *ibc.IBCTimeout) (ibc.Tx, error) {
+func (p *PenumbraAppNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
-	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
-	cc, err := p.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: p.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: p.HostName(),
-			User:     dockerutil.GetRootUserString(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           p.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				p.NetworkID: {},
-			},
-		},
-		nil,
-		p.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	p.containerID = cc.ID
-	return nil
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
+	return p.containerLifecycle.StopContainer(ctx)
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
 	if err != nil {
 		return err
 	}
 
-	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	p.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
+	p.hostRPCPort, p.hostGRPCPort = hostPorts[0], hostPorts[1]
 
 	return nil
 }
@@ -258,7 +240,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  dockerutil.GetRootUserString(),
+		User:  p.Image.UidGid,
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err

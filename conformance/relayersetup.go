@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"testing"
 
-	conntypes "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
-	"github.com/strangelove-ventures/ibctest/v5"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/test"
-	"github.com/strangelove-ventures/ibctest/v5/testreporter"
+	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
-func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory, rf ibctest.RelayerFactory, rep *testreporter.Reporter) {
+func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.ChainFactory, rf interchaintest.RelayerFactory, rep *testreporter.Reporter) {
 	rep.TrackTest(t)
 
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
 	chains, err := cf.Chains(t.Name())
@@ -33,11 +33,11 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 	r := rf.Build(t, client, network)
 
 	const pathName = "p"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(c0).
 		AddChain(c1).
 		AddRelayer(r, "r").
-		AddLink(ibctest.InterchainLink{
+		AddLink(interchaintest.InterchainLink{
 			// We are adding a link here so that the interchain object creates appropriate relayer wallets,
 			// but we call ic.Build with SkipPathCreation=true, so the link won't be created.
 			Chain1:  c0,
@@ -49,7 +49,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 
 	eRep := rep.RelayerExecReporter(t)
 
-	req.NoError(ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	req.NoError(ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
 		Client:    client,
 		NetworkID: network,
@@ -85,7 +85,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 	}
 
 	// The client isn't created immediately -- wait for two blocks to ensure the clients are ready.
-	req.NoError(test.WaitForBlocks(ctx, 2, c0, c1))
+	req.NoError(testutil.WaitForBlocks(ctx, 2, c0, c1))
 
 	t.Run("create connections", func(t *testing.T) {
 		rep.TrackTest(t)
@@ -102,7 +102,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 		conn0 := conns0[0]
 		req.NotEmpty(conn0.ID)
 		req.NotEmpty(conn0.ClientID)
-		req.Equal(conn0.State, conntypes.OPEN.String())
+		req.Subset([]string{conntypes.OPEN.String(), "Open"}, []string{conn0.State})
 
 		conns1, err := r.GetConnections(ctx, eRep, c1.Config().ChainID)
 		req.NoError(err)
@@ -111,7 +111,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 		conn1 := conns1[0]
 		req.NotEmpty(conn1.ID)
 		req.NotEmpty(conn1.ClientID)
-		req.Equal(conn1.State, conntypes.OPEN.String())
+		req.Subset([]string{conntypes.OPEN.String(), "Open"}, []string{conn1.State})
 
 		// Now validate counterparties.
 		req.Equal(conn0.Counterparty.ClientId, conn1.ClientID)
@@ -160,14 +160,14 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf ibctest.ChainFactory
 
 		// Piecemeal assertions against each channel.
 		// Not asserting against ConnectionHops or ChannelID.
-		req.Equal(ch0.State, "STATE_OPEN")
-		req.Equal(ch0.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch0.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch0.Ordering})
 		req.Equal(ch0.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID})
 		req.Equal(ch0.Version, "ics20-1")
 		req.Equal(ch0.PortID, "transfer")
 
-		req.Equal(ch1.State, "STATE_OPEN")
-		req.Equal(ch1.Ordering, "ORDER_UNORDERED")
+		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch1.State})
+		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch1.Ordering})
 		req.Equal(ch1.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID})
 		req.Equal(ch1.Version, "ics20-1")
 		req.Equal(ch1.PortID, "transfer")

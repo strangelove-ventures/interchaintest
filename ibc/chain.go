@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/docker/docker/client"
+	//"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 type Chain interface {
@@ -57,7 +58,7 @@ type Chain interface {
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
 
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
-	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, timeout *IBCTimeout) (Tx, error)
+	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, options TransferOptions) (Tx, error)
 
 	// Height returns the current block height or an error if unable to get current height.
 	Height(ctx context.Context) (uint64, error)
@@ -73,4 +74,20 @@ type Chain interface {
 
 	// Timeouts returns all timeouts in a block at height.
 	Timeouts(ctx context.Context, height uint64) ([]PacketTimeout, error)
+
+	// BuildWallet will return a chain-specific wallet
+	// If mnemonic != "", it will restore using that mnemonic
+	// If mnemonic == "", it will create a new key, mnemonic will not be populated
+	BuildWallet(ctx context.Context, keyName string, mnemonic string) (Wallet, error)
+
+	// BuildRelayerWallet will return a chain-specific wallet populated with the mnemonic so that the wallet can
+	// be restored in the relayer node using the mnemonic. After it is built, that address is included in
+	// genesis with some funds.
+	BuildRelayerWallet(ctx context.Context, keyName string) (Wallet, error)
+}
+
+// TransferOptions defines the options for an IBC packet transfer.
+type TransferOptions struct {
+	Timeout *IBCTimeout
+	Memo    string
 }

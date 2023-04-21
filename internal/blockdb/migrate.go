@@ -12,13 +12,15 @@ import (
 // Migrate migrates db in an idempotent manner.
 // If an error is returned, it's acceptable to delete the database and start over.
 // The basic ERD is as follows:
-//  ┌────────────────────┐          ┌────────────────────┐         ┌────────────────────┐          ┌────────────────────┐
-//  │                    │          │                    │         │                    │          │                    │
-//  │                    │         ╱│                    │        ╱│                    │         ╱│                    │
-//  │     Test Case      │───────┼──│       Chain        │───────○─│       Block        │────────○─│         Tx         │
-//  │                    │         ╲│                    │        ╲│                    │         ╲│                    │
-//  │                    │          │                    │         │                    │          │                    │
-//  └────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
+//
+//	┌────────────────────┐          ┌────────────────────┐         ┌────────────────────┐          ┌────────────────────┐
+//	│                    │          │                    │         │                    │          │                    │
+//	│                    │         ╱│                    │        ╱│                    │         ╱│                    │
+//	│     Test Case      │───────┼──│       Chain        │───────○─│       Block        │────────○─│         Tx         │
+//	│                    │         ╲│                    │        ╲│                    │         ╲│                    │
+//	│                    │          │                    │         │                    │          │                    │
+//	└────────────────────┘          └────────────────────┘         └────────────────────┘          └────────────────────┘
+//
 // The gitSha ensures we can trace back to the version of the codebase that produced the schema.
 // Warning: Typical best practice wraps each migration step into its own transaction. For simplicity given
 // this is an embedded database, we omit transactions.

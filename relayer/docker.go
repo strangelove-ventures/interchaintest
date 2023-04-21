@@ -1,7 +1,6 @@
 package relayer
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,14 +10,17 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/strangelove-ventures/ibctest/v5/ibc"
-	"github.com/strangelove-ventures/ibctest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultRlyHomeDirectory = "/home/relayer"
 )
 
 // DockerRelayer provides a common base for relayer implementations
@@ -39,10 +41,12 @@ type DockerRelayer struct {
 	pullImage   bool
 
 	// The ID of the container created by StartRelayer.
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
+
+	homeDir string
 }
 
 var _ ibc.Relayer = (*DockerRelayer)(nil)
@@ -65,12 +69,16 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		wallets: map[string]ibc.Wallet{},
 	}
 
+	r.homeDir = defaultRlyHomeDirectory
+
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case RelayerOptionDockerImage:
 			r.customImage = &o.DockerImage
 		case RelayerOptionImagePull:
 			r.pullImage = o.Pull
+		case RelayerOptionHomeDir:
+			r.homeDir = o.HomeDir
 		}
 	}
 
@@ -123,6 +131,37 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 	return &r, nil
 }
 
+// WriteFileToHomeDir writes the given contents to a file at the relative path specified. The file is relative
+// to the home directory in the relayer container.
+func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath string, contents []byte) error {
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, relativePath, contents); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
+// ReadFileFromHomeDir reads a file at the relative path specified and returns the contents. The file is
+// relative to the home directory in the relayer container.
+func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(r.log, r.client, r.testName)
+	bytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve %s: %w", relativePath, err)
+	}
+	return bytes, nil
+}
+
+// Modify a toml config file in relayer home directory
+func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
+	return testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)
+}
+
+// AddWallet adds a stores a wallet for the given chain ID.
+func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
+	r.wallets[chainID] = wallet
+}
+
 func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	// For rly this file is json, but the file extension should not matter.
 	// Using .config to avoid implying any particular format.
@@ -135,13 +174,9 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
 
-	tar, err := r.generateConfigTar(chainConfigFile, configContent)
-	if err != nil {
-		return fmt.Errorf("generating tar for configuration: %w", err)
-	}
-
-	if err := r.untarIntoNodeHome(ctx, tar); err != nil {
-		return err // Already wrapped.
+	fw := dockerutil.NewFileWriter(r.log, r.client, r.testName)
+	if err := fw.WriteFile(ctx, r.volumeName, chainConfigFile, configContent); err != nil {
+		return fmt.Errorf("failed to rly config: %w", err)
 	}
 
 	cmd := r.c.AddChainConfiguration(chainConfigContainerFilePath, r.HomeDir())
@@ -155,42 +190,8 @@ func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.Relay
 	return res.Err
 }
 
-// generateConfigTar returns an io.Reader containing the content of a tar archive
-// which contains only the initial relayer config content.
-func (r *DockerRelayer) generateConfigTar(relativeConfigPath string, content []byte) (io.Reader, error) {
-	var buf bytes.Buffer
-
-	// Although the docker module offers a "pkg/archive" package,
-	// there is no simple support for setting users and permissions.
-	// That package also brings in a surprising number of dependencies.
-	//
-	// Instead, just use a plain tar instance from the standard library.
-	tw := tar.NewWriter(&buf)
-	if err := tw.WriteHeader(&tar.Header{
-		Name: relativeConfigPath,
-
-		Size:  int64(len(content)),
-		Mode:  0600,
-		Uname: r.c.DockerUser(),
-
-		ModTime: time.Now(),
-
-		Format: tar.FormatPAX,
-	}); err != nil {
-		return nil, fmt.Errorf("writing config file to tar: %w", err)
-	}
-	if _, err := tw.Write(content); err != nil {
-		return nil, fmt.Errorf("writing config content to tar: %w", err)
-	}
-	if err := tw.Close(); err != nil {
-		return nil, fmt.Errorf("closing tar writer: %w", err)
-	}
-
-	return &buf, nil
-}
-
-func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName string) (ibc.Wallet, error) {
-	cmd := r.c.AddKey(chainID, keyName, r.HomeDir())
+func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType string) (ibc.Wallet, error) {
+	cmd := r.c.AddKey(chainID, keyName, coinType, r.HomeDir())
 
 	// Adding a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -199,12 +200,12 @@ func (r *DockerRelayer) AddKey(ctx context.Context, rep ibc.RelayerExecReporter,
 
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
-		return ibc.Wallet{}, res.Err
+		return nil, res.Err
 	}
 
 	wallet, err := r.c.ParseAddKeyOutput(string(res.Stdout), string(res.Stderr))
 	if err != nil {
-		return ibc.Wallet{}, err
+		return nil, err
 	}
 	r.wallets[chainID] = wallet
 	return wallet, nil
@@ -233,14 +234,8 @@ func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerEx
 	return res.Err
 }
 
-func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.HomeDir())
-	res := r.Exec(ctx, rep, cmd, nil)
-	return res.Err
-}
-
-func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushPackets(pathName, channelID, r.HomeDir())
+func (r *DockerRelayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.Flush(pathName, channelID, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -282,6 +277,16 @@ func (r *DockerRelayer) GetConnections(ctx context.Context, rep ibc.RelayerExecR
 	return r.c.ParseGetConnectionsOutput(string(res.Stdout), string(res.Stderr))
 }
 
+func (r *DockerRelayer) GetClients(ctx context.Context, rep ibc.RelayerExecReporter, chainID string) (ibc.ClientOutputs, error) {
+	cmd := r.c.GetClients(chainID, r.HomeDir())
+	res := r.Exec(ctx, rep, cmd, nil)
+	if res.Err != nil {
+		return nil, res.Err
+	}
+
+	return r.c.ParseGetClientsOutput(string(res.Stdout), string(res.Stderr))
+}
+
 func (r *DockerRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	cmd := r.c.LinkPath(pathName, r.HomeDir(), channelOpts, clientOpts)
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -317,8 +322,10 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, mnemonic string) error {
-	cmd := r.c.RestoreKey(chainID, keyName, mnemonic, r.HomeDir())
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+	chainID := cfg.ChainID
+	coinType := cfg.CoinType
+	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.
@@ -329,11 +336,10 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	if res.Err != nil {
 		return res.Err
 	}
+	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
-	r.wallets[chainID] = ibc.Wallet{
-		Mnemonic: mnemonic,
-		Address:  r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr)),
-	}
+	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
+
 	return nil
 }
 
@@ -344,17 +350,40 @@ func (r *DockerRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecRe
 }
 
 func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathNames ...string) error {
-	return r.createNodeContainer(ctx, pathNames...)
+	if r.containerLifecycle != nil {
+		return fmt.Errorf("tried to start relayer again without stopping first")
+	}
+
+	containerImage := r.containerImage()
+	joinedPaths := strings.Join(pathNames, ".")
+	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+
+	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
+
+	r.containerLifecycle = dockerutil.NewContainerLifecycle(r.log, r.client, containerName)
+
+	if err := r.containerLifecycle.CreateContainer(
+		ctx, r.testName, r.networkID, containerImage, nil,
+		r.Bind(), r.HostName(joinedPaths), cmd,
+	); err != nil {
+		return err
+	}
+
+	return r.containerLifecycle.StartContainer(ctx)
 }
 
 func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecReporter) error {
-	if err := r.stopContainer(ctx); err != nil {
+	if r.containerLifecycle == nil {
+		return nil
+	}
+	if err := r.containerLifecycle.StopContainer(ctx); err != nil {
 		return err
 	}
 
 	stdoutBuf := new(bytes.Buffer)
 	stderrBuf := new(bytes.Buffer)
-	rc, err := r.client.ContainerLogs(ctx, r.containerID, types.ContainerLogsOptions{
+	containerID := r.containerLifecycle.ContainerID()
+	rc, err := r.client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       "50",
@@ -374,7 +403,7 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	stdout := stdoutBuf.String()
 	stderr := stderrBuf.String()
 
-	c, err := r.client.ContainerInspect(ctx, r.containerID)
+	c, err := r.client.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return fmt.Errorf("StopRelayer: inspecting container: %w", err)
 	}
@@ -403,14 +432,17 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 
 	r.log.Debug(
 		fmt.Sprintf("Stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout, stderr),
-		zap.String("container_id", r.containerID),
+		zap.String("container_id", containerID),
 		zap.String("container", c.Name),
 	)
 
-	return r.client.ContainerRemove(ctx, r.containerID, types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		// TODO: should this set Force=true?
-	})
+	if err := r.containerLifecycle.RemoveContainer(ctx); err != nil {
+		return err
+	}
+
+	r.containerLifecycle = nil
+
+	return nil
 }
 
 func (r *DockerRelayer) containerImage() ibc.DockerImage {
@@ -439,54 +471,6 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 	return nil
 }
 
-func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...string) error {
-	containerImage := r.containerImage()
-	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
-	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
-	r.log.Info(
-		"Running command",
-		zap.String("command", strings.Join(cmd, " ")),
-		zap.String("container", containerName),
-	)
-	cc, err := r.client.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: containerImage.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: r.HostName(joinedPaths),
-			User:     r.c.DockerUser(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
-		},
-		&container.HostConfig{
-			Binds:      r.Bind(),
-			AutoRemove: false,
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				r.networkID: {},
-			},
-		},
-		nil,
-		containerName,
-	)
-	if err != nil {
-		return err
-	}
-
-	r.containerID = cc.ID
-	return dockerutil.StartContainer(ctx, r.client, r.containerID)
-}
-
-func (r *DockerRelayer) stopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return r.client.ContainerStop(ctx, r.containerID, &timeout)
-}
-
 func (r *DockerRelayer) Name() string {
 	return r.c.Name() + "-" + dockerutil.SanitizeContainerName(r.testName)
 }
@@ -498,9 +482,7 @@ func (r *DockerRelayer) Bind() []string {
 
 // HomeDir returns the home directory of the relayer on the underlying Docker container's filesystem.
 func (r *DockerRelayer) HomeDir() string {
-	// Relayer writes to these files, so /var seems like a reasonable root.
-	// https://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/var.html
-	return "/var/relayer-" + r.c.Name()
+	return r.homeDir
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
@@ -511,101 +493,8 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
-// untarIntoNodeHome untars the given io.Reader into r's NodeHome() directory.
-func (r *DockerRelayer) untarIntoNodeHome(ctx context.Context, tar io.Reader) error {
-	return r.runOneOff(ctx, oneOffOptions{
-		ContainerNameDetail: "untar-chown",
-		Entrypoint:          []string{},
-		Cmd:                 []string{"chown", "-R", r.c.DockerUser(), r.HomeDir()},
-		User:                dockerutil.GetRootUserString(),
-		TarContent:          tar,
-	})
-}
-
-// oneOffOptions indicate how to configure the container for a one-off job.
-type oneOffOptions struct {
-	// Very short description of this container's purpose.
-	ContainerNameDetail string
-
-	// The entrypoint and command to use on the container.
-	Entrypoint, Cmd []string
-
-	// User for when the container runs.
-	User string
-
-	// If set, will be copied into the docker container into the NodeHome directory.
-	TarContent io.Reader
-}
-
-func (r *DockerRelayer) runOneOff(ctx context.Context, opts oneOffOptions) error {
-	containerName := r.Name() + "-" + opts.ContainerNameDetail + "-" + dockerutil.RandLowerCaseLetterString(5)
-	cc, err := r.client.ContainerCreate(
-		ctx,
-		&container.Config{
-			// Always use the main container image,
-			// because oftentimes this depends on the presence of the relayer user.
-			Image: r.containerImage().Ref(),
-
-			Entrypoint: opts.Entrypoint,
-			Cmd:        opts.Cmd,
-
-			Hostname: r.HostName(containerName),
-			User:     opts.User,
-
-			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
-		},
-		&container.HostConfig{
-			Binds:      r.Bind(),
-			AutoRemove: false,
-		},
-		nil, // No network config in the one-off jobs for now. Could move to an option if we need it.
-		nil,
-		containerName,
-	)
-	if err != nil {
-		return fmt.Errorf("creating container for %s: %w", opts.ContainerNameDetail, err)
-	}
-	defer func() {
-		if err := r.client.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{Force: true}); err != nil {
-			r.log.Info(
-				"Failed to remove one-off container",
-				zap.String("container_name_detail", opts.ContainerNameDetail),
-				zap.String("container_id", cc.ID),
-				zap.Error(err),
-			)
-		}
-	}()
-
-	if opts.TarContent != nil {
-		// It is safe to copy into the container before starting it.
-		if err := r.client.CopyToContainer(
-			ctx,
-			cc.ID,
-			r.HomeDir(),
-			opts.TarContent,
-			types.CopyToContainerOptions{},
-		); err != nil {
-			return fmt.Errorf("copying tar to one-off %s container: %w", opts.ContainerNameDetail, err)
-		}
-	}
-
-	if err := r.client.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
-		return fmt.Errorf("starting one-off %s container: %w", opts.ContainerNameDetail, err)
-	}
-
-	waitCh, errCh := r.client.ContainerWait(ctx, cc.ID, container.WaitConditionNotRunning)
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errCh:
-		return err
-	case res := <-waitCh:
-		if res.Error != nil {
-			return fmt.Errorf("waiting for one-off %s container: %s", opts.ContainerNameDetail, res.Error.Message)
-		}
-	}
-
-	return nil
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+	panic("[rly/SetClientContractHash] Implement me")
 }
 
 type RelayerCommander interface {
@@ -616,7 +505,7 @@ type RelayerCommander interface {
 	DefaultContainerVersion() string
 
 	// The Docker user to use in created container.
-	// For ibctest, must be of the format: uid:gid.
+	// For interchaintest, must be of the format: uid:gid.
 	DockerUser() string
 
 	// ConfigContent generates the content of the config file that will be passed to AddChainConfiguration.
@@ -637,6 +526,10 @@ type RelayerCommander interface {
 	// to produce the connection output values.
 	ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error)
 
+	// ParseGetClientsOutput processes the output of GetClients
+	// to produce the client output values.
+	ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error)
+
 	// Init is the command to run on the first call to AddChainConfiguration.
 	// If the returned command is nil or empty, nothing will be executed.
 	Init(homeDir string) []string
@@ -644,18 +537,19 @@ type RelayerCommander interface {
 	// The remaining methods produce the command to run inside the container.
 
 	AddChainConfiguration(containerFilePath, homeDir string) []string
-	AddKey(chainID, keyName, homeDir string) []string
+	AddKey(chainID, keyName, coinType, homeDir string) []string
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
-	FlushAcknowledgements(pathName, channelID, homeDir string) []string
-	FlushPackets(pathName, channelID, homeDir string) []string
+	Flush(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string
 	GetConnections(chainID, homeDir string) []string
+	GetClients(chainID, homeDir string) []string
 	LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string
-	RestoreKey(chainID, keyName, mnemonic, homeDir string) []string
+	RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string
 	StartRelayer(homeDir string, pathNames ...string) []string
 	UpdateClients(pathName, homeDir string) []string
+	CreateWallet(keyName, address, mnemonic string) ibc.Wallet
 }
