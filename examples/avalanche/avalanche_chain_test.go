@@ -24,11 +24,17 @@ func TestAvalancheChainStart(t *testing.T) {
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name: "avalanche",
-			// ToDo: ask to question: how to use it?
-			Version: "045-metis,v0.34.23",
-			// ToDo: ask to question: how to use it?
-			ChainConfig:   ibc.ChainConfig{},
+			Name:    "avalanche",
+			Version: "v1.9.16",
+			ChainConfig: ibc.ChainConfig{
+				ChainID: "network-123",
+				Images: []ibc.DockerImage{
+					{
+						Repository: "avalanche",
+						Version:    "v1.9.16",
+					},
+				},
+			},
 			NumFullNodes:  &nf,
 			NumValidators: &nv,
 		},

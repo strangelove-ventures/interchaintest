@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -47,4 +48,21 @@ func NewCertAndKeyBytes() ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("couldn't write private key: %w", err)
 	}
 	return certBuff.Bytes(), keyBuff.Bytes(), nil
+}
+
+func NewTLSCert() (*tls.Certificate, error) {
+	certBytes, keyBytes, err := NewCertAndKeyBytes()
+	if err != nil {
+		return nil, err
+	}
+	return NewTLSCertFromBytes(certBytes, keyBytes)
+}
+
+func NewTLSCertFromBytes(certBytes, keyBytes []byte) (*tls.Certificate, error) {
+	cert, err := tls.X509KeyPair(certBytes, keyBytes)
+	if err != nil {
+		return nil, err
+	}
+	cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+	return &cert, err
 }

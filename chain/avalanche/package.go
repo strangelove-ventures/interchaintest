@@ -8,11 +8,15 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils/crypto/secp256k1"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils/ids"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
-var _ ibc.Chain = AvalancheChain{}
+//var _ ibc.Chain = AvalancheChain{}
 
 type (
 	AvalancheChain struct {
@@ -51,11 +55,8 @@ func (c AvalancheChain) Config() ibc.ChainConfig {
 }
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain
-func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
-	count := c.numFullNodes + c.numValidators
-	c.nodes = make([]AvalancheNode, count)
-	chainCfg := c.Config()
-	for _, image := range chainCfg.Images {
+func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	for _, image := range c.Config().Images {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
@@ -72,6 +73,20 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			_ = rc.Close()
 		}
 	}
+
+	rawChainID := c.Config().ChainID
+	if rawChainID == "" {
+		rawChainID = "localnet-123456"
+	}
+	chainId, err := utils.ParseChainID(rawChainID)
+	if err != nil {
+		c.log.Error("Failed to pull image",
+			zap.Error(err),
+			zap.String("networkID", networkID),
+		)
+		return err
+	}
+
 	var subnetOpts []AvalancheNodeSubnetOpts = nil
 	if len(c.cfg.AvalancheSubnets) > 0 {
 		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
@@ -91,10 +106,57 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 			}
 		}
 	}
-	for i := 0; i < count*2; i += 2 {
+
+	numNodes := c.numValidators + c.numFullNodes
+	credentials := make([]AvalancheNodeCredentials, numNodes)
+	keyFactory := secp256k1.Factory{}
+	for i := 0; i < numNodes; i++ {
+		key, err := keyFactory.NewPrivateKey()
+		if err != nil {
+			return err
+		}
+
+		rawTlsCert, rawTlsKey, err := utils.NewCertAndKeyBytes()
+		if err != nil {
+			return err
+		}
+
+		cert, err := utils.NewTLSCertFromBytes(rawTlsCert, rawTlsKey)
+		if err != nil {
+			return err
+		}
+
+		credentials[i].PK = key
+		credentials[i].ID = ids.NodeIDFromCert(cert.Leaf)
+		credentials[i].TLSCert = rawTlsCert
+		credentials[i].TLSKey = rawTlsKey
+	}
+
+	allocations := make([]GenesisAllocation, 0, c.numValidators)
+	stakedFunds := make([]string, 0, c.numValidators)
+	stakes := make([]GenesisStaker, 0, c.numValidators)
+	for i := 0; i < c.numValidators; i++ {
+		allocations = append(allocations, GenesisAllocation{
+			ETHAddr:       "0x" + credentials[i].PK.PublicKey().Address().Hex(),
+			AVAXAddr:      credentials[i].PK.PublicKey().Address().PrefixedString("X-" + chainId.Name),
+			InitialAmount: 300000000000000000,
+		})
+		stakes = append(stakes, GenesisStaker{
+			NodeID:        credentials[i].ID.String(),
+			RewardAddress: credentials[i].PK.PublicKey().Address().PrefixedString("X-" + chainId.Name),
+			DelegationFee: 1000000,
+		})
+	}
+	stakedFunds = append(stakedFunds, credentials[0].PK.PublicKey().Address().PrefixedString(fmt.Sprintf("X-%s", chainId.Name)))
+	genesis := NewGenesis(chainId.Number, allocations, stakedFunds, stakes)
+
+	nodes := make([]AvalancheNode, 0, numNodes)
+	for i := 0; i < numNodes*2; i += 2 {
+		idx := i / 2
+
 		var bootstrapOpt []AvalancheNodeBootstrapOpts = nil
-		if i > 0 {
-			n := c.nodes[len(c.nodes)-1]
+		if idx > 0 {
+			n := nodes[idx-1]
 			bootstrapOpt = []AvalancheNodeBootstrapOpts{
 				{
 					ID:   n.NodeId(),
@@ -102,24 +164,34 @@ func (c AvalancheChain) Initialize(ctx context.Context, testName string, cli *cl
 				},
 			}
 		}
-		n, err := NewAvalancheNode(ctx, testName, cli, chainCfg.Images[0], i/2, &AvalancheNodeOpts{
-			NetworkID:   networkID,
+		n, err := NewAvalancheNode(ctx, networkID, testName, cli, c.Config().Images[0], idx, c.log, &AvalancheNodeOpts{
 			HttpPort:    fmt.Sprintf("%d", 9650+i),
 			StakingPort: fmt.Sprintf("%d", 9650+i+1),
 			Bootstrap:   bootstrapOpt,
 			Subnets:     subnetOpts,
+			Credentials: credentials[idx],
+			Genesis:     genesis,
+			ChainID:     *chainId,
 		})
 		if err != nil {
 			return err
 		}
-		c.nodes[i] = *n
+		nodes = append(nodes, *n)
 	}
+	c.nodes = nodes
 	return nil
 }
 
 // Start sets up everything needed (validators, gentx, fullnodes, peering, additional accounts) for chain to start from genesis.
 func (c AvalancheChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	panic("ToDo: implement me")
+	eg, egCtx := errgroup.WithContext(ctx)
+	for i := range c.nodes {
+		node := c.nodes[i]
+		eg.Go(func() error {
+			return node.StartContainer(egCtx)
+		})
+	}
+	return eg.Wait()
 }
 
 // Exec runs an arbitrary command using Chain's docker environment.

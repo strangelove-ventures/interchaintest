@@ -1,22 +1,20 @@
 package avalanche
 
-import "github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils/ids"
-
 type (
 	GenesisLockedAmount struct {
 		Amount   uint64 `json:"amount"`
 		Locktime uint64 `json:"locktime"`
 	}
 	GenesisAllocation struct {
-		ETHAddr        ids.ShortID           `json:"ethAddr"`
-		AVAXAddr       ids.ShortID           `json:"avaxAddr"`
+		ETHAddr        string                `json:"ethAddr"`
+		AVAXAddr       string                `json:"avaxAddr"`
 		InitialAmount  uint64                `json:"initialAmount"`
 		UnlockSchedule []GenesisLockedAmount `json:"unlockSchedule"`
 	}
 	GenesisStaker struct {
-		NodeID        ids.NodeID  `json:"nodeID"`
-		RewardAddress ids.ShortID `json:"rewardAddress"`
-		DelegationFee uint32      `json:"delegationFee"`
+		NodeID        string `json:"nodeID"`
+		RewardAddress string `json:"rewardAddress"`
+		DelegationFee uint32 `json:"delegationFee"`
 	}
 	Genesis struct {
 		NetworkID uint32 `json:"networkID"`
