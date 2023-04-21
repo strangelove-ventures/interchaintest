@@ -124,28 +124,27 @@ func NewAvalancheNode(
 		options:            *options,
 	}
 
-	if err := node.WriteFile(ctx, rawGenesis, fmt.Sprintf("%s/genesis.json", node.HomeDir())); err != nil {
+	if err := node.WriteFile(ctx, rawGenesis, "genesis.json"); err != nil {
 		return nil, err
 	}
 
-	if err := node.WriteFile(ctx, options.Credentials.TLSCert, fmt.Sprintf("%s/tls.cert", node.HomeDir())); err != nil {
+	if err := node.WriteFile(ctx, options.Credentials.TLSCert, "tls.cert"); err != nil {
 		return nil, err
 	}
 
-	if err := node.WriteFile(ctx, options.Credentials.TLSKey, fmt.Sprintf("%s/tls.key", node.HomeDir())); err != nil {
+	if err := node.WriteFile(ctx, options.Credentials.TLSKey, "tls.key"); err != nil {
 		return nil, err
 	}
 
-	ports := nat.PortSet{nat.Port(options.StakingPort): {}}
+	ports := nat.PortSet{nat.Port(fmt.Sprintf("%s/tcp", options.StakingPort)): {}}
 	cmd := []string{
 		"/bin/avalanchego",
-		"--db-dir", fmt.Sprintf("%s/db", node.HomeDir()),
 		"--http-port", options.HttpPort,
 		"--staking-port", options.StakingPort,
 		"--network-id", fmt.Sprintf("%s-%d", options.ChainID.Name, options.ChainID.Number),
-		"--genesis", fmt.Sprintf("%s/genesis.json", node.HomeDir()),
-		"--staking-tls-cert-file", fmt.Sprintf("%s/tls.cert", node.HomeDir()),
-		"--staking-tls-key-file", fmt.Sprintf("%s/tls.key", node.HomeDir()),
+		"--genesis", fmt.Sprintf("%s/config/genesis.json", node.HomeDir()),
+		"--staking-tls-cert-file", fmt.Sprintf("%s/config/tls.cert", node.HomeDir()),
+		"--staking-tls-key-file", fmt.Sprintf("%s/config/tls.key", node.HomeDir()),
 	}
 	if len(options.Bootstrap) > 0 {
 		bootstapIps := make([]string, len(options.Bootstrap))
@@ -173,7 +172,9 @@ func (n *AvalancheNode) HomeDir() string {
 }
 
 func (n *AvalancheNode) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", n.volume.Name, n.HomeDir())}
+	return []string{
+		fmt.Sprintf("%s:%s", n.volume.Name, n.HomeDir()+"/config"),
+	}
 }
 
 func (n *AvalancheNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
