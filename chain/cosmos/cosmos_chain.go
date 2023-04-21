@@ -3,6 +3,8 @@ package cosmos
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -19,17 +21,20 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	chanTypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -353,6 +358,36 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
+// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
+func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
+	tx := TxProposal{}
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return tx, "", err
+	}
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+	content, err = testutil.GzipIt(content)
+	if err != nil {
+		return tx, "", err
+	}
+	message := wasmtypes.MsgStoreCode{
+		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
+		Code:   content,
+	}
+	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
+	if err != nil {
+		return tx, "", err
+	}
+	prop.Messages = append(prop.Messages, msg)
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, "", fmt.Errorf("failed to submit wasm client proposal: %w", err)
+	}
+	tx, err = c.txProposal(txHash)
+	return tx, codeHash, err
+}
+
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
@@ -506,13 +541,15 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
-func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, version string) {
+func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
 	c.cfg.Images[0].Version = version
 	for _, n := range c.Validators {
 		n.Image.Version = version
+		n.Image.Repository = containerRepo
 	}
 	for _, n := range c.FullNodes {
 		n.Image.Version = version
+		n.Image.Repository = containerRepo
 	}
 	c.pullImages(ctx, cli)
 }
@@ -545,20 +582,11 @@ func (c *CosmosChain) NewChainNode(
 	networkID string,
 	image ibc.DockerImage,
 	validator bool,
+	index int,
 ) (*ChainNode, error) {
 	// Construct the ChainNode first so we can access its name.
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
-	tn := &ChainNode{
-		log: c.log,
-
-		Validator: validator,
-
-		Chain:        c,
-		DockerClient: cli,
-		NetworkID:    networkID,
-		TestName:     testName,
-		Image:        image,
-	}
+	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
 		Labels: map[string]string{
@@ -607,11 +635,10 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.Validators); i < c.numValidators; i++ {
 		i := i
 		eg.Go(func() error {
-			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true)
+			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true, i)
 			if err != nil {
 				return err
 			}
-			val.Index = i
 			newVals[i] = val
 			return nil
 		})
@@ -619,11 +646,10 @@ func (c *CosmosChain) initializeChainNodes(
 	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
 		i := i
 		eg.Go(func() error {
-			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false)
+			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false, i)
 			if err != nil {
 				return err
 			}
-			fn.Index = i
 			newFullNodes[i] = fn
 			return nil
 		})
