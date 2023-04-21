@@ -10,7 +10,6 @@ import (
 	"hash/fnv"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -620,58 +619,19 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, amount ibc.WalletAmount, fileName, initMessage string, needsNoAdminFlag bool) (string, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-
-	_, file := filepath.Split(fileName)
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, content); err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	if _, err := tn.ExecTx(ctx, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
-		return "", err
-	}
-
-	err = test.WaitForBlocks(ctx, 5, tn.Chain)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
-	if err != nil {
-		return "", err
-	}
-
-	res := CodeInfosResponse{}
-	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
-		return "", err
-	}
-
-<<<<<<< HEAD
-	codeID := res.CodeInfos[0].CodeID
-	command := []string{"wasm", "instantiate", codeID, initMessage}
-=======
-	return res.CodeInfos[0].CodeID, nil
-}
-
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
 	command = append(command, extraExecTxArgs...)
->>>>>>> 281f131 (Merge PR #496: `InstantiateContract` command should have the ability to intake extra args)
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-	_, err = tn.ExecTx(ctx, keyName, command...)
+	_, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
 	}
 
-	stdout, _, err = tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
 	if err != nil {
 		return "", err
 	}
