@@ -493,10 +493,6 @@ func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
-func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
-	panic("[rly/SetClientContractHash] Implement me")
-}
-
 type RelayerCommander interface {
 	// Name is the name of the relayer, e.g. "rly" or "hermes".
 	Name() string

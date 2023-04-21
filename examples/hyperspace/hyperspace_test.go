@@ -16,6 +16,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
@@ -196,7 +197,7 @@ func TestHyperspace(t *testing.T) {
 	codeHash := pushWasmContractViaGov(t, ctx, cosmosChain)
 
 	// Set client contract hash in cosmos chain config
-	err = r.SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
+	err = r.(*hyperspace.HyperspaceRelayer).SetClientContractHash(ctx, eRep, cosmosChain.Config(), codeHash)
 	require.NoError(t, err)
 
 	// Ensure parachain has started (starts 1 session/epoch after relay chain)
@@ -211,7 +212,11 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create new clients
-	err = r.CreateClients(ctx, eRep, pathName, ibc.DefaultClientOpts())
+	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{
+		TrustingPeriod: "0",
+		SrcChainWasmCodeID: codeHash,
+		DstChainWasmCodeID: "",
+	})
 	require.NoError(t, err)
 	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, polkadotChain) // these 1 block waits seem to be needed to reduce flakiness
 	require.NoError(t, err)

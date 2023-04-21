@@ -66,19 +66,16 @@ func TestTendermintWasm(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		// These two fields are used to pass in a custom Docker image built locally
-		relayer.ImagePull(false),
-		relayer.CustomDockerImage("relayer", "local", "100:1000"),
+		relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "steve-wasm", "100:1000"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
 	const pathName = "simd-gaia"
-	const relayerName = "rly"
 
 	ic := interchaintest.NewInterchain().
 		AddChain(simdChain).
 		AddChain(gaiaChain).
-		AddRelayer(r, relayerName).
+		AddRelayer(r, "rly").
 		AddLink(interchaintest.InterchainLink{
 			Chain1:  simdChain,
 			Chain2:  gaiaChain,
