@@ -56,12 +56,21 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	ctx := context.Background()
 	client, network := ibctest.DockerSetup(t)
 
+<<<<<<< HEAD
 	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
 		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true,
+=======
+	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: true,
+>>>>>>> 281f131 (Merge PR #496: `InstantiateContract` command should have the ability to intake extra args)
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()

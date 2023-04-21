@@ -651,8 +651,18 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, am
 		return "", err
 	}
 
+<<<<<<< HEAD
 	codeID := res.CodeInfos[0].CodeID
 	command := []string{"wasm", "instantiate", codeID, initMessage}
+=======
+	return res.CodeInfos[0].CodeID, nil
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
+	command = append(command, extraExecTxArgs...)
+>>>>>>> 281f131 (Merge PR #496: `InstantiateContract` command should have the ability to intake extra args)
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
