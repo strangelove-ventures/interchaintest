@@ -2,6 +2,7 @@ package label
 
 import (
 	"fmt"
+	"sync"
 )
 
 // Test is a label associated with an individual test.
@@ -73,9 +74,12 @@ var knownChainLabels = map[Chain]struct{}{}
 // RegisterChainLabel is available for external packages that may import interchaintest,
 // to register any external chain implementations they may provide.
 func RegisterChainLabel(l Chain) {
+	var mu sync.Mutex
+
 	if _, exists := knownChainLabels[l]; exists {
 		return
 	}
-
+	mu.Lock()
 	knownChainLabels[l] = struct{}{}
+	mu.Unlock()
 }
