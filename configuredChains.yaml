@@ -677,7 +677,7 @@ sifchain:
 sommelier:
   name: sommelier
   type: cosmos
-  bin: sifnoded
+  bin: sommelier
   bech32-prefix: somm
   denom: usomm
   gas-prices: 0.01usomm
