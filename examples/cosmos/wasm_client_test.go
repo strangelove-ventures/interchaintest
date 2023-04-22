@@ -44,7 +44,7 @@ func TestTendermintWasm(t *testing.T) {
 		{
 			Name: "ibc-go-simd",
 			ChainName: "ibc-go-simd",
-			Version: "feat-wasm-clients",
+			Version: "feat-wasm-clients-main",
 			ChainConfig: ibc.ChainConfig{
 				ModifyGenesis:       modifyGenesisShortProposalsNew(),
 			},
@@ -52,7 +52,7 @@ func TestTendermintWasm(t *testing.T) {
 		{
 			Name: "ibc-go-simd",
 			ChainName: "fake-gaia", // Gaia needs to support ibc-go v7.2 so it can verify membership of counterparty chain's 08-wasm types
-			Version: "feat-wasm-clients",
+			Version: "feat-wasm-clients-main",
 		},
 	})
 
