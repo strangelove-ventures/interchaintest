@@ -12,9 +12,74 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - dependencies
+      - dont_backport
       
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
     open-pull-requests-limit: 10
+    labels:
+      - dont_backport
+
+# maintained branches:
+
+  - package-ecosystem: gomod
+    target-branch: "v3"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - v3
+    commit-message:
+      prefix: "v3"
+
+  - package-ecosystem: gomod
+    target-branch: "v3-ics"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - v3-ics
+    commit-message:
+      prefix: "v3-ics"
+
+  - package-ecosystem: gomod
+    target-branch: "v4"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - v4
+    commit-message:
+      prefix: "v4"
+
+  - package-ecosystem: gomod
+    target-branch: "v5"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - v5
+    commit-message:
+      prefix: "v5"
+
+  - package-ecosystem: gomod
+    target-branch: "v6"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - v6
+    commit-message:
+      prefix: "v6"

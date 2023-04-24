@@ -16,7 +16,7 @@ pull_request_rules:
         labels:
           - automerge
           - backport
-        title: "[BP `{{ destination_branch }}` <- `#{{ number }}`] {{ title }}"
+        title: "`[BP: {{ destination_branch }} <- #{{ number }}]` {{ title }}"
 
   - name: automerge backported PR's for maintained branches
     conditions:
