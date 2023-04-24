@@ -1,3 +1,8 @@
+DOCKER := $(shell which docker)
+protoVer=0.11.2
+protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+
 default: help
 
 .PHONY: help
@@ -24,3 +29,8 @@ docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docke
 .PHONY: gen
 gen: ## Run code generators
 	go generate ./...
+
+.PHONY: proto-gen
+proto-gen: # Generate code from protos
+	@echo "Generating Protobuf files"
+	@$(protoImage) sh ./scripts/protocgen.sh
