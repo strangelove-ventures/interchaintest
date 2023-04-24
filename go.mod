@@ -24,10 +24,6 @@ require (
 	github.com/libp2p/go-libp2p-core v0.15.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
-<<<<<<< HEAD
-=======
-	github.com/spf13/cobra v1.7.0
->>>>>>> 789f78e (Bump github.com/spf13/cobra from 1.6.1 to 1.7.0 (#513))
 	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/tendermint v0.34.26
 	go.uber.org/multierr v1.8.0
@@ -115,7 +111,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hdevalence/ed25519consensus v0.0.0-20220222234857-c00d1f31bab3 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/go-cid v0.0.7 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
@@ -168,7 +164,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
+	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.14.0 // indirect
