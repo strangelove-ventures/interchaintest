@@ -24,6 +24,10 @@ require (
 	github.com/libp2p/go-libp2p-core v0.15.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
+<<<<<<< HEAD
+=======
+	github.com/spf13/cobra v1.7.0
+>>>>>>> 789f78e (Bump github.com/spf13/cobra from 1.6.1 to 1.7.0 (#513))
 	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/tendermint v0.34.26
 	go.uber.org/multierr v1.8.0
