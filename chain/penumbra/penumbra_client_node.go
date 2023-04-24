@@ -10,10 +10,14 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	cryptov1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/core/crypto/v1alpha1"
+	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/custody/v1alpha1"
+	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/view/v1alpha1"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 type PenumbraClientNode struct {
@@ -118,8 +122,69 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
-	// TODO make grpc call to pclientd to send transfer
-	panic("not yet implemented")
+	channel, err := grpc.Dial(fmt.Sprintf(p.HostName()))
+	if err != nil {
+		return err
+	}
+	defer channel.Close()
+
+	// 5.1. Generate a transaction plan sending funds to an address.
+	tpr := &viewv1alpha1.TransactionPlannerRequest{
+		XAccountGroupId: nil,
+		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
+			Value: &cryptov1alpha1.Value{
+				Amount: &cryptov1alpha1.Amount{
+					Lo: uint64(amount.Amount),
+					Hi: uint64(amount.Amount),
+				},
+				AssetId: &cryptov1alpha1.AssetId{Inner: []byte(amount.Denom)},
+			},
+			Address: &cryptov1alpha1.Address{Inner: []byte(amount.Address)},
+		}},
+	}
+
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	resp, err := viewClient.TransactionPlanner(ctx, tpr)
+	if err != nil {
+		return err
+	}
+
+	// 5.2. Get authorization data for the transaction from pclientd (signing).
+	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+
+	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
+		Plan:              resp.Plan,
+		AccountGroupId:    nil,
+		PreAuthorizations: nil,
+	}
+	authData, err := custodyClient.Authorize(ctx, authorizeReq, nil)
+	if err != nil {
+		return err
+	}
+
+	// 5.3. Have pclientd build and sign the planned transaction.
+	wbr := &viewv1alpha1.WitnessAndBuildRequest{
+		TransactionPlan:   resp.Plan,
+		AuthorizationData: authData.Data,
+	}
+
+	tx, err := viewClient.WitnessAndBuild(ctx, wbr, nil)
+	if err != nil {
+		return err
+	}
+
+	// 5.4. Have pclientd broadcast and await confirmation of the built transaction.
+	btr := &viewv1alpha1.BroadcastTransactionRequest{
+		Transaction:    tx.Transaction,
+		AwaitDetection: false,
+	}
+
+	_, err = viewClient.BroadcastTransaction(ctx, btr, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *PenumbraClientNode) SendIBCTransfer(
@@ -133,8 +198,26 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 }
 
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (int64, error) {
-	// TODO make grpc call to pclientd to get balance
-	panic("not yet implemented")
+	//channel, err := grpc.Dial(fmt.Sprintf(p.HostName()))
+	//if err != nil {
+	//	return 0, err
+	//}
+	//defer channel.Close()
+	//
+	//viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	//resp, err := viewClient.BalanceByAddress()
+	//if err != nil {
+	//	return 0, err
+	//}
+	//
+	//bal, err := resp.Recv()
+	//if err != nil {
+	//	return 0, err
+	//}
+	//
+	//return int64(bal.Amount.Hi), nil
+	// TODO implement
+	panic("implement me")
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
