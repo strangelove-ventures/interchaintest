@@ -160,8 +160,7 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 	for i := 0; i < numNodes; i++ {
 		var bootstrapOpt []*AvalancheNode = nil
 		if i > 0 {
-			n := &nodes[i-1]
-			bootstrapOpt = []*AvalancheNode{n}
+			bootstrapOpt = []*AvalancheNode{&nodes[0]}
 		}
 		ip, err := getIP(ctx, cli, networkID, uint8(i+1))
 		if err != nil {
