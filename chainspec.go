@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"go.uber.org/zap"
 )
 
@@ -93,10 +92,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 			sort.Strings(availableChains)
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
-		}
-		chainLabel := label.Chain(s.Name)
-		if !chainLabel.IsKnown() {
-			label.RegisterChainLabel(chainLabel)
 		}
 		cfg = ibc.ChainConfig{}
 	}
