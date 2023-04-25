@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
+	"net"
 	"os"
 
 	"github.com/docker/docker/api/types"
@@ -42,7 +44,7 @@ func NewAvalancheChain(log *zap.Logger, testName string, chainConfig ibc.ChainCo
 	}, nil
 }
 
-func (c *AvalancheChain) node() *AvalancheNode {
+func (c AvalancheChain) node() *AvalancheNode {
 	if len(c.nodes) > c.numValidators {
 		return &c.nodes[c.numValidators]
 	}
@@ -136,40 +138,40 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 	stakedFunds := make([]string, 0, c.numValidators)
 	stakes := make([]GenesisStaker, 0, c.numValidators)
 	for i := 0; i < c.numValidators; i++ {
+		avaxAddr0, _ := utils.Format("X", chainId.Name, credentials[0].PK.PublicKey().Address().Bytes())
+		avaxAddr, _ := utils.Format("X", chainId.Name, credentials[i].PK.PublicKey().Address().Bytes())
 		allocations = append(allocations, GenesisAllocation{
-			ETHAddr:       "0x" + credentials[i].PK.PublicKey().Address().Hex(),
-			AVAXAddr:      credentials[i].PK.PublicKey().Address().PrefixedString("X-" + chainId.Name),
-			InitialAmount: 300000000000000000,
+			ETHAddr:        "0x" + credentials[i].PK.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  math.MaxUint32,
+			UnlockSchedule: []GenesisLockedAmount{{Amount: 1294967295}},
 		})
 		stakes = append(stakes, GenesisStaker{
 			NodeID:        credentials[i].ID.String(),
-			RewardAddress: credentials[i].PK.PublicKey().Address().PrefixedString("X-" + chainId.Name),
-			DelegationFee: 1000000,
+			RewardAddress: avaxAddr0,
+			DelegationFee: 1000,
 		})
 	}
-	stakedFunds = append(stakedFunds, credentials[0].PK.PublicKey().Address().PrefixedString(fmt.Sprintf("X-%s", chainId.Name)))
+	avaxAddr, _ := utils.Format("X", chainId.Name, credentials[0].PK.PublicKey().Address().Bytes())
+	stakedFunds = append(stakedFunds, avaxAddr)
 	genesis := NewGenesis(chainId.Number, allocations, stakedFunds, stakes)
 
 	nodes := make([]AvalancheNode, 0, numNodes)
-	for i := 0; i < numNodes*2; i += 2 {
-		idx := i / 2
-
-		var bootstrapOpt []AvalancheNodeBootstrapOpts = nil
-		if idx > 0 {
-			n := nodes[idx-1]
-			bootstrapOpt = []AvalancheNodeBootstrapOpts{
-				{
-					ID:   n.NodeId(),
-					Addr: fmt.Sprintf("%s:%s", n.HostName(), n.StackingPort()),
-				},
-			}
+	for i := 0; i < numNodes; i++ {
+		var bootstrapOpt []*AvalancheNode = nil
+		if i > 0 {
+			n := &nodes[i-1]
+			bootstrapOpt = []*AvalancheNode{n}
 		}
-		n, err := NewAvalancheNode(ctx, networkID, testName, cli, c.Config().Images[0], idx, c.log, &AvalancheNodeOpts{
-			HttpPort:    fmt.Sprintf("%d", 9650+i),
-			StakingPort: fmt.Sprintf("%d", 9650+i+1),
+		ip, err := getIP(ctx, cli, networkID, uint8(i+1))
+		if err != nil {
+			return err
+		}
+		n, err := NewAvalancheNode(ctx, networkID, testName, cli, c.Config().Images[0], i, c.log, &AvalancheNodeOpts{
+			PublicIP:    ip,
 			Bootstrap:   bootstrapOpt,
 			Subnets:     subnetOpts,
-			Credentials: credentials[idx],
+			Credentials: credentials[i],
 			Genesis:     genesis,
 			ChainID:     *chainId,
 		})
@@ -188,7 +190,7 @@ func (c AvalancheChain) Start(testName string, ctx context.Context, additionalGe
 	for i := range c.nodes {
 		node := c.nodes[i]
 		eg.Go(func() error {
-			return node.StartContainer(egCtx)
+			return node.StartContainer(egCtx, testName, additionalGenesisWallets)
 		})
 	}
 	return eg.Wait()
@@ -315,4 +317,15 @@ func (c AvalancheChain) BuildWallet(ctx context.Context, keyName string, mnemoni
 func (c AvalancheChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	// ToDo: what functionality?
 	panic("ToDo: implement me")
+}
+
+func getIP(ctx context.Context, cli *client.Client, networkID string, idx uint8) (string, error) {
+	network, err := cli.NetworkInspect(ctx, networkID, types.NetworkInspectOptions{})
+	if err != nil {
+		return "", err
+	}
+	ip := net.ParseIP(network.IPAM.Config[0].Gateway)
+	ip = ip.To4()
+	ip[3] += idx
+	return ip.String(), nil
 }

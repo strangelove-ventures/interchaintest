@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,6 +17,10 @@ var (
 	FormatChainID = regexp.MustCompile(`^([a-zA-Z]+)-(\d+)$`)
 	ErrBadChainID = errors.New("networkID has bad format")
 )
+
+func (cid ChainID) String() string {
+	return fmt.Sprintf("%d", cid.Number)
+}
 
 func ParseChainID(str string) (*ChainID, error) {
 	if !FormatChainID.Match([]byte(str)) {

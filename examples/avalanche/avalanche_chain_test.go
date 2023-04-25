@@ -20,14 +20,14 @@ func TestAvalancheChainStart(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	nv := 5
-	nf := 1
+	nf := 0
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "avalanche",
 			Version: "v1.9.16",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "network-123",
+				ChainID: "neto-123123",
 				Images: []ibc.DockerImage{
 					{
 						Repository: "avalanche",
