@@ -15,8 +15,6 @@ import (
 )
 
 func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.ChainFactory, rf interchaintest.RelayerFactory, rep *testreporter.Reporter) {
-	rep.TrackTest(t)
-
 	// FlushPackets will be exercised in a subtest,
 	// but check that capability first in case we can avoid setup.
 	requireCapabilities(t, rep, rf, relayer.Flush)
@@ -83,8 +81,6 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 	req.NoError(tx.Validate())
 
 	t.Run("flush", func(t *testing.T) {
-		rep.TrackTest(t)
-
 		eRep := rep.RelayerExecReporter(t)
 
 		req := require.New(rep.TestifyT(t))

@@ -16,8 +16,6 @@ import (
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
 func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.ChainFactory, rf interchaintest.RelayerFactory, rep *testreporter.Reporter) {
-	rep.TrackTest(t)
-
 	client, network := interchaintest.DockerSetup(t)
 
 	req := require.New(rep.TestifyT(t))
@@ -65,7 +63,6 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 	// to conditionally stop execution before the following subtest.
 
 	t.Run("generate path", func(t *testing.T) {
-		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
 		req.NoError(r.GeneratePath(ctx, rep.RelayerExecReporter(t), c0.Config().ChainID, c1.Config().ChainID, pathName))
@@ -75,7 +72,6 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 	}
 
 	t.Run("create clients", func(t *testing.T) {
-		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
 		req.NoError(r.CreateClients(ctx, rep.RelayerExecReporter(t), pathName, ibc.DefaultClientOpts()))
@@ -88,7 +84,6 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 	req.NoError(testutil.WaitForBlocks(ctx, 2, c0, c1))
 
 	t.Run("create connections", func(t *testing.T) {
-		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
 		eRep := rep.RelayerExecReporter(t)
@@ -124,7 +119,6 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 	}
 
 	t.Run("create channel", func(t *testing.T) {
-		rep.TrackTest(t)
 		req := require.New(rep.TestifyT(t))
 
 		eRep := rep.RelayerExecReporter(t)

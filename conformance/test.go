@@ -41,7 +41,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
@@ -77,9 +76,6 @@ type RelayerTestCaseConfig struct {
 	PreRelayerStart func(context.Context, *testing.T, *RelayerTestCase, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
 	// test after chains and relayers are started
 	Test func(context.Context, *testing.T, *RelayerTestCase, *testreporter.Reporter, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
-
-	// Test-specific labels.
-	TestLabels []label.Test
 }
 
 var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
@@ -92,21 +88,18 @@ var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 		Name:            "no timeout",
 		PreRelayerStart: preRelayerStart_NoTimeout,
 		Test:            testPacketRelaySuccess,
-		TestLabels:      []label.Test{label.Timeout},
 	},
 	{
 		Name:                        "height timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.HeightTimeout},
 		PreRelayerStart:             preRelayerStart_HeightTimeout,
 		Test:                        testPacketRelayFail,
-		TestLabels:                  []label.Test{label.Timeout, label.HeightTimeout},
 	},
 	{
 		Name:                        "timestamp timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.TimestampTimeout},
 		PreRelayerStart:             preRelayerStart_TimestampTimeout,
 		Test:                        testPacketRelayFail,
-		TestLabels:                  []label.Test{label.Timeout, label.TimestampTimeout},
 	},
 }
 
@@ -240,18 +233,15 @@ func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, 
 
 						t.Run(rf.Name(), func(t *testing.T) {
 							// Record the labels for this nested test.
-							rep.TrackParameters(t, rf.Labels(), cf.Labels())
 							rep.TrackParallel(t)
 
 							t.Run("relayer setup", func(t *testing.T) {
-								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
 								TestRelayerSetup(t, ctx, cf, rf, rep)
 							})
 
 							t.Run("conformance", func(t *testing.T) {
-								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
 								chains, err := cf.Chains(t.Name())
@@ -264,7 +254,6 @@ func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, 
 							})
 
 							t.Run("flushing", func(t *testing.T) {
-								rep.TrackTest(t)
 								rep.TrackParallel(t)
 
 								TestRelayerFlushing(t, ctx, cf, rf, rep)
@@ -354,7 +343,6 @@ func TestChainPair(
 		for _, testCase := range testCases {
 			testCase := testCase
 			t.Run(testCase.Config.Name, func(t *testing.T) {
-				rep.TrackTest(t, testCase.Config.TestLabels...)
 				requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
 				rep.TrackParallel(t)
 				testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)

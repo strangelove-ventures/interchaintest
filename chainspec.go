@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"go.uber.org/zap"
 )
 
@@ -80,9 +79,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pre-configured chains: %w", err)
 	}
-
-	// Register chain label as chain name. These labels help filter through the test reporter.
-	label.RegisterChainLabel(label.Chain(s.Name))
 
 	// Get built-in config.
 	// If chain doesn't have built in config, but is fully configured, register chain label.

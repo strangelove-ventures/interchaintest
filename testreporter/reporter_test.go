@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/stretchr/testify/require"
 )
@@ -57,7 +56,6 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	mt := mocktesting.NewT("my_test")
 
 	beforeStartTest := time.Now()
-	r.TrackTest(mt, label.Timeout)
 	afterStartTest := time.Now()
 
 	time.Sleep(10 * time.Millisecond)
@@ -78,7 +76,6 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 
 	beginTestMsg := msgs[1].(testreporter.BeginTestMessage)
 	require.Equal(t, beginTestMsg.Name, "my_test")
-	require.Equal(t, beginTestMsg.Labels, testreporter.LabelSet{Test: []label.Test{label.Timeout}})
 	requireTimeInRange(t, beginTestMsg.StartedAt, beforeStartTest, afterStartTest)
 
 	finishTestMsg := msgs[2].(testreporter.FinishTestMessage)
@@ -103,8 +100,6 @@ func TestReporter_TrackFailingSingleTest(t *testing.T) {
 	var beforeFailure time.Time
 	mt := mocktesting.NewT("my_test")
 	mt.Simulate(func() {
-		r.TrackTest(mt)
-
 		time.Sleep(10 * time.Millisecond)
 
 		beforeFailure = time.Now()
@@ -140,7 +135,6 @@ func TestReporter_TrackParallel(t *testing.T) {
 	parallelDelay := 50 * time.Millisecond
 	mt := mocktesting.NewT("my_test")
 	mt.ParallelDelay = parallelDelay
-	r.TrackTest(mt)
 
 	beforeParallel := time.Now()
 	r.TrackParallel(mt)
@@ -177,8 +171,6 @@ func TestReporter_TrackSkip(t *testing.T) {
 	var beforeSkip time.Time
 	mt := mocktesting.NewT("my_test")
 	mt.Simulate(func() {
-		r.TrackTest(mt)
-
 		beforeSkip = time.Now()
 		time.Sleep(5 * time.Millisecond)
 		r.TrackSkip(mt, "skipping %s", "for reasons")
@@ -211,7 +203,6 @@ func TestReporter_Errorf(t *testing.T) {
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
 	mt := mocktesting.NewT("my_test")
-	r.TrackTest(mt)
 	r.TestifyT(mt).Errorf("failed? %t", true)
 	mt.RunCleanups()
 	require.NoError(t, r.Close())
@@ -226,8 +217,6 @@ func TestReporter_RelayerExec(t *testing.T) {
 	r := testreporter.NewReporter(nopCloser{Writer: buf})
 
 	mt := mocktesting.NewT("my_test")
-
-	r.TrackTest(mt)
 
 	execStartedAt := time.Now()
 	execFinishedAt := execStartedAt.Add(time.Second)
