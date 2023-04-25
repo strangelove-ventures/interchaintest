@@ -168,9 +168,8 @@ func (n *AvalancheNode) PublicStackingAddr(ctx context.Context) (string, error) 
 	}
 
 	return fmt.Sprintf(
-		"%s:%s",
+		"%s:9651",
 		info.NetworkSettings.Networks[netinfo.Name].IPAddress,
-		info.HostConfig.PortBindings[nat.Port(StackingPort)][0].HostPort,
 	), nil
 }
 
@@ -201,20 +200,20 @@ func (n *AvalancheNode) CreateKey(ctx context.Context, keyName string) error {
 	panic("ToDo: implement me")
 }
 
-func (n AvalancheNode) RecoverKey(ctx context.Context, name, mnemonic string) error {
+func (n *AvalancheNode) RecoverKey(ctx context.Context, name, mnemonic string) error {
 	// ToDo: recover key from mnemonic
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/multisig-utxos-with-avalanchejs.md#setup-keychains-with-private-keys
 	panic("ToDo: implement me")
 }
 
-func (n AvalancheNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+func (n *AvalancheNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	// ToDo: get address for keyname
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
 	panic("ToDo: implement me")
 }
 
-func (n AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+func (n *AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	// ToDo: send some amount to keyName from rootAddress
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/cross-chain-transfers.md
@@ -224,15 +223,15 @@ func (n AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc
 	panic("ToDo: implement me")
 }
 
-func (n AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
+func (n *AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
 	return ibc.Tx{}, errors.New("not yet implemented")
 }
 
-func (n AvalancheNode) Height(ctx context.Context) (uint64, error) {
+func (n *AvalancheNode) Height(ctx context.Context) (uint64, error) {
 	panic("ToDo: implement me")
 }
 
-func (n AvalancheNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (n *AvalancheNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	if strings.HasPrefix(address, "X-") {
 		// ToDo: call /ext/bc/X (method avm.getBalance)
 		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-x-chain-balance
@@ -250,7 +249,7 @@ func (n AvalancheNode) GetBalance(ctx context.Context, address string, denom str
 	return 0, fmt.Errorf("address should be have prefix X, P, 0x. current address: %s", address)
 }
 
-func (n AvalancheNode) IP() string {
+func (n *AvalancheNode) IP() string {
 	return n.options.PublicIP
 }
 
