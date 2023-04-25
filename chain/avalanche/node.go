@@ -288,7 +288,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 						echo '%s' > /home/heighliner/genesis.json;
 						echo '%s' > /home/heighliner/tls.cert;
 						echo '%s' > /home/heighliner/tls.key;
-						/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="0.0.0.0" --network-id="%s"\
+						/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="%s" --network-id="%s"\
 							--genesis="/home/heighliner/genesis.json"\
 							--staking-tls-cert-file="/home/heighliner/tls.cert"\
 							--staking-tls-key-file="/home/heighliner/tls.key"
@@ -296,6 +296,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 			genesis,
 			n.options.Credentials.TLSCert,
 			n.options.Credentials.TLSKey,
+			n.options.PublicIP,
 			n.options.ChainID,
 		))
 	} else {
@@ -304,7 +305,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 				echo '%s' > /home/heighliner/genesis.json;
 				echo '%s' > /home/heighliner/tls.cert;
 				echo '%s' > /home/heighliner/tls.key;
-				/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="0.0.0.0" --network-id="%s"\
+				/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="%s" --network-id="%s"\
 					--genesis=/home/heighliner/genesis.json\
 					--staking-tls-cert-file="/home/heighliner/tls.cert"\
 					--staking-tls-key-file="/home/heighliner/tls.key"\
@@ -314,6 +315,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 			genesis,
 			n.options.Credentials.TLSCert,
 			n.options.Credentials.TLSKey,
+			n.options.PublicIP,
 			n.options.ChainID,
 			bootstrapIps,
 			bootstrapIds,
