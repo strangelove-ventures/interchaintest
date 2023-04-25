@@ -27,7 +27,7 @@ require (
 	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230413215336-5bd2aea337ae
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pelletier/go-toml v1.9.5
-	github.com/pelletier/go-toml/v2 v2.0.6
+	github.com/pelletier/go-toml/v2 v2.0.7
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
