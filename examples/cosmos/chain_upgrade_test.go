@@ -57,11 +57,11 @@ func CosmosChainUpgradeTest(t *testing.T, chainName, initialVersion, upgradeVers
 	client, network := ibctest.DockerSetup(t)
 
 	require.NoError(t, ic.Build(ctx, nil, ibctest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  true,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: true,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()
