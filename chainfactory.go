@@ -7,11 +7,18 @@ import (
 	"strings"
 	"sync"
 
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
 	"github.com/strangelove-ventures/interchaintest/v4/label"
+=======
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+>>>>>>> 81ed325 (Remove `label` Package (#528))
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -31,11 +38,6 @@ type ChainFactory interface {
 	// Depending on how the factory was configured,
 	// this may report more than two chains.
 	Name() string
-
-	// Labels are reported to allow simple filtering of tests depending on these Chains.
-	// While the Name should be fully descriptive,
-	// the Labels are intended to be short and fixed.
-	Labels() []label.Chain
 }
 
 // BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
@@ -174,18 +176,4 @@ func (f *BuiltinChainFactory) Name() string {
 		parts[i] = cfg.Name + "@" + v
 	}
 	return strings.Join(parts, "+")
-}
-
-func (f *BuiltinChainFactory) Labels() []label.Chain {
-	labels := make([]label.Chain, len(f.specs))
-	for i, s := range f.specs {
-		label := label.Chain(s.Name)
-		if !label.IsKnown() {
-			// The label must be known (i.e. registered),
-			// otherwise filtering from the command line will be broken.
-			panic(fmt.Errorf("chain name %s is not a known label", s.Name))
-		}
-		labels[i] = label
-	}
-	return labels
 }
