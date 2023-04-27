@@ -75,7 +75,8 @@ func (r *Reporter) TrackTest(t T) {
 	name := t.Name()
 	r.in <- BeginTestMessage{
 		Name:      name,
-		StartedAt: time.Now()}
+		StartedAt: time.Now(),
+	}
 	t.Cleanup(func() {
 		r.in <- FinishTestMessage{
 			Name:       name,
