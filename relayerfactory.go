@@ -5,10 +5,18 @@ import (
 	"testing"
 
 	"github.com/docker/docker/client"
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/ibctest/v5/ibc"
 	"github.com/strangelove-ventures/ibctest/v5/label"
 	"github.com/strangelove-ventures/ibctest/v5/relayer"
 	"github.com/strangelove-ventures/ibctest/v5/relayer/rly"
+=======
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
+>>>>>>> 81ed325 (Remove `label` Package (#528))
 	"go.uber.org/zap"
 )
 
@@ -24,14 +32,6 @@ type RelayerFactory interface {
 	// Name returns a descriptive name of the factory,
 	// indicating details of the Relayer that will be built.
 	Name() string
-
-	// Labels are reported to allow simple filtering of tests depending on this Relayer.
-	// While the Name should be fully descriptive,
-	// the Labels are intended to be short and fixed.
-	//
-	// Most relayers will probably only have one label indicative of its name,
-	// but we allow multiple labels for future compatibility.
-	Labels() []label.Relayer
 
 	// Capabilities is an indication of the features this relayer supports.
 	// Tests for any unsupported features will be skipped rather than failed.
@@ -88,6 +88,7 @@ func (f builtinRelayerFactory) Name() string {
 	}
 }
 
+<<<<<<< HEAD
 func (f builtinRelayerFactory) Labels() []label.Relayer {
 	switch f.impl {
 	case ibc.CosmosRly:
@@ -97,6 +98,8 @@ func (f builtinRelayerFactory) Labels() []label.Relayer {
 	}
 }
 
+=======
+>>>>>>> 81ed325 (Remove `label` Package (#528))
 // Capabilities returns the set of capabilities for the
 // relayer implementation backing this factory.
 func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
