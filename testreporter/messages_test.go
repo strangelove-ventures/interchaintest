@@ -6,8 +6,12 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v6/label"
 	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+=======
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+>>>>>>> 81ed325 (Remove `label` Package (#528))
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,11 +25,6 @@ func TestWrappedMessage_RoundTrip(t *testing.T) {
 			Message: testreporter.BeginTestMessage{
 				Name:      "foo",
 				StartedAt: time.Now(),
-				Labels: testreporter.LabelSet{
-					Relayer: []label.Relayer{label.Rly},
-					Chain:   []label.Chain{label.Gaia},
-					Test:    []label.Test{label.Timeout},
-				},
 			},
 		},
 		{Message: testreporter.PauseTestMessage{Name: "foo", When: time.Now()}},
