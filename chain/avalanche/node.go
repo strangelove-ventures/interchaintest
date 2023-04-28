@@ -2,11 +2,12 @@ package avalanche
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
-	"github.com/cometbft/cometbft/libs/json"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
@@ -21,31 +22,13 @@ import (
 )
 
 var (
-	RPCPort      = "9650/tcp"
-	StackingPort = "9651/tcp"
+	RPCPort     = "9650/tcp"
+	StakingPort = "9651/tcp"
 )
 
 type (
-	AvalancheNodeCredentials struct {
-		PK      *secp256k1.PrivateKey
-		ID      ids.NodeID
-		TLSCert []byte
-		TLSKey  []byte
-	}
-	AvalancheNodeSubnetOpts struct {
-		Name string
-		VM   []byte
-	}
-	AvalancheNodeOpts struct {
-		PublicIP    string
-		Subnets     []AvalancheNodeSubnetOpts
-		Bootstrap   []*AvalancheNode
-		Credentials AvalancheNodeCredentials
-		Genesis     Genesis
-		ChainID     utils.ChainID
-	}
 	AvalancheNode struct {
-		name string
+		chain *AvalancheChain
 
 		logger             *zap.Logger
 		containerLifecycle *dockerutil.ContainerLifecycle
@@ -55,21 +38,55 @@ type (
 
 		networkID string
 		testName  string
+		index     int
 		options   AvalancheNodeOpts
 	}
-	AvalancheNodes []AvalancheNode
+
+	AvalancheNodes []*AvalancheNode
+
+	AvalancheNodeCredentials struct {
+		PK      *secp256k1.PrivateKey
+		ID      ids.NodeID
+		TLSCert []byte
+		TLSKey  []byte
+	}
+
+	AvalancheNodeSubnetOpts struct {
+		Name string
+		VM   []byte
+	}
+
+	AvalancheNodeOpts struct {
+		PublicIP    string
+		Subnets     []AvalancheNodeSubnetOpts
+		Bootstrap   []*AvalancheNode
+		Credentials AvalancheNodeCredentials
+		ChainID     utils.ChainID
+	}
 )
 
 func NewAvalancheNode(
 	ctx context.Context,
+	chain *AvalancheChain,
 	networkID string,
 	testName string,
 	dockerClient *dockerclient.Client,
 	image ibc.DockerImage,
 	containerIdx int,
 	log *zap.Logger,
+	genesis Genesis,
 	options *AvalancheNodeOpts,
 ) (*AvalancheNode, error) {
+	node := &AvalancheNode{
+		chain:        chain,
+		index:        containerIdx,
+		logger:       log,
+		dockerClient: dockerClient,
+		image:        image,
+		networkID:    networkID,
+		testName:     testName,
+		options:      *options,
+	}
 
 	// avalanchego
 	//   --plugin-dir=<Sets the directory for VM plugins. The default value is $HOME/.avalanchego/plugins>
@@ -90,11 +107,7 @@ func NewAvalancheNode(
 	//
 	// Vm ID can be generated as zero-extended in a 32 byte array and encoded in CB58([32]byte(subnet.Name))
 
-	name := fmt.Sprintf(
-		"av-%s-%d",
-		testName,
-		containerIdx,
-	)
+	name := node.Name()
 
 	volume, err := dockerClient.VolumeCreate(ctx, volume.VolumeCreateBody{
 		Name: name,
@@ -106,30 +119,39 @@ func NewAvalancheNode(
 	if err != nil {
 		return nil, err
 	}
+	node.volume = volume
 
-	containerLifecycle := dockerutil.NewContainerLifecycle(log, dockerClient, name)
+	fmt.Printf("creating container lifecycle, name: %s\n", name)
 
-	node := AvalancheNode{
-		name:               name,
-		logger:             log,
-		containerLifecycle: containerLifecycle,
-		dockerClient:       dockerClient,
-		image:              image,
-		volume:             volume,
-		networkID:          networkID,
-		testName:           testName,
-		options:            *options,
+	node.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, name)
+
+	genesisBz, err := json.MarshalIndent(genesis, "", "  ")
+	if err != nil {
+		return nil, err
 	}
-	return &node, node.CreateContainer(ctx)
+
+	if err := node.WriteFile(ctx, genesisBz, "genesis.json"); err != nil {
+		return nil, fmt.Errorf("failed to write genesis file: %w", err)
+	}
+
+	if err := node.WriteFile(ctx, options.Credentials.TLSCert, "tls.cert"); err != nil {
+		return nil, fmt.Errorf("failed to write TLS certificate: %w", err)
+	}
+
+	if err := node.WriteFile(ctx, options.Credentials.TLSKey, "tls.key"); err != nil {
+		return nil, fmt.Errorf("failed to write TLS key: %w", err)
+	}
+
+	return node, node.CreateContainer(ctx)
 }
 
 func (n *AvalancheNode) HomeDir() string {
-	return "/home/heighliner"
+	return "/home/heighliner/ava"
 }
 
 func (n *AvalancheNode) Bind() []string {
 	return []string{
-		fmt.Sprintf("%s:%s", n.volume.Name, n.HomeDir()+"/config"),
+		fmt.Sprintf("%s:%s", n.volume.Name, n.HomeDir()),
 	}
 }
 
@@ -153,11 +175,19 @@ func (n *AvalancheNode) NodeId() string {
 	return n.options.Credentials.ID.String()
 }
 
-func (n *AvalancheNode) HostName() string {
-	return n.name
+func (n *AvalancheNode) Name() string {
+	return fmt.Sprintf(
+		"av-%s-%d",
+		dockerutil.SanitizeContainerName(n.testName),
+		n.index,
+	)
 }
 
-func (n *AvalancheNode) PublicStackingAddr(ctx context.Context) (string, error) {
+func (n *AvalancheNode) HostName() string {
+	return dockerutil.CondenseHostName(n.Name())
+}
+
+func (n *AvalancheNode) PublicStakingAddr(ctx context.Context) (string, error) {
 	netinfo, err := n.dockerClient.NetworkInspect(ctx, n.networkID, types.NetworkInspectOptions{})
 	if err != nil {
 		return "", err
@@ -173,12 +203,12 @@ func (n *AvalancheNode) PublicStackingAddr(ctx context.Context) (string, error) 
 	), nil
 }
 
-func (n *AvalancheNode) StackingPort() string {
+func (n *AvalancheNode) StakingPort() string {
 	info, err := n.dockerClient.ContainerInspect(context.Background(), n.containerLifecycle.ContainerID())
 	if err != nil {
 		panic(err)
 	}
-	return info.HostConfig.PortBindings[nat.Port(StackingPort)][0].HostPort
+	return info.HostConfig.PortBindings[nat.Port(StakingPort)][0].HostPort
 }
 
 func (n *AvalancheNode) RPCPort() string {
@@ -256,70 +286,41 @@ func (n *AvalancheNode) IP() string {
 func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 	netinfo, err := n.dockerClient.NetworkInspect(ctx, n.networkID, types.NetworkInspectOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to inspect network: %w", err)
 	}
 
-	genesis, err := json.MarshalIndent(n.options.Genesis, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	bootstrapIps := ""
-	bootstrapIds := ""
+	bootstrapIps, bootstrapIds := "", ""
 	if len(n.options.Bootstrap) > 0 {
 		for i := range n.options.Bootstrap {
 			sep := ""
 			if i > 0 {
 				sep = ","
 			}
-			stackingAddr, err := n.options.Bootstrap[i].PublicStackingAddr(ctx)
+			stakingAddr, err := n.options.Bootstrap[i].PublicStakingAddr(ctx)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get public staking address for index %d: %w", i, err)
 			}
-			bootstrapIps += sep + stackingAddr
+			bootstrapIps += sep + stakingAddr
 			bootstrapIds += sep + n.options.Bootstrap[i].NodeId()
 		}
 	}
 
-	cmd := []string{"/bin/sh", "-c"}
-	if bootstrapIps == "" || bootstrapIds == "" {
-		cmd = append(cmd, fmt.Sprintf(
-			`
-						echo '%s' > /home/heighliner/genesis.json;
-						echo '%s' > /home/heighliner/tls.cert;
-						echo '%s' > /home/heighliner/tls.key;
-						/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="%s" --network-id="%s"\
-							--genesis="/home/heighliner/genesis.json"\
-							--staking-tls-cert-file="/home/heighliner/tls.cert"\
-							--staking-tls-key-file="/home/heighliner/tls.key"
-					`,
-			genesis,
-			n.options.Credentials.TLSCert,
-			n.options.Credentials.TLSKey,
-			n.options.PublicIP,
-			n.options.ChainID,
-		))
-	} else {
-		cmd = append(cmd, fmt.Sprintf(
-			`
-				echo '%s' > /home/heighliner/genesis.json;
-				echo '%s' > /home/heighliner/tls.cert;
-				echo '%s' > /home/heighliner/tls.key;
-				/bin/avalanchego --http-host="0.0.0.0" --data-dir="/home/heighliner/ava" --public-ip="%s" --network-id="%s"\
-					--genesis=/home/heighliner/genesis.json\
-					--staking-tls-cert-file="/home/heighliner/tls.cert"\
-					--staking-tls-key-file="/home/heighliner/tls.key"\
-					--bootstrap-ips="%s"\
-					--bootstrap-ids="%s"
-			`,
-			genesis,
-			n.options.Credentials.TLSCert,
-			n.options.Credentials.TLSKey,
-			n.options.PublicIP,
-			n.options.ChainID,
-			bootstrapIps,
-			bootstrapIds,
-		))
+	cmd := []string{
+		n.chain.cfg.Bin,
+		"--http-host", "0.0.0.0",
+		"--data-dir", n.HomeDir(),
+		"--public-ip", n.options.PublicIP,
+		"--network-id", n.options.ChainID.String(),
+		"--genesis", filepath.Join(n.HomeDir(), "genesis.json"),
+		"--staking-tls-cert-file", filepath.Join(n.HomeDir(), "tls.cert"),
+		"--staking-tls-key-file", filepath.Join(n.HomeDir(), "tls.key"),
+	}
+	if bootstrapIps != "" && bootstrapIds != "" {
+		cmd = append(
+			cmd,
+			"--bootstrap-ips", bootstrapIps,
+			"--bootstrap-ids", bootstrapIds,
+		)
 	}
 	port1, _ := nat.NewPort("tcp", "9650")
 	port2, _ := nat.NewPort("tcp", "9651")
