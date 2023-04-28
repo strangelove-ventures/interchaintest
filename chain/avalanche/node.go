@@ -119,6 +119,18 @@ func NewAvalancheNode(
 	if err != nil {
 		return nil, err
 	}
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log:        log,
+		Client:     dockerClient,
+		VolumeName: name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set volume owner: %w", err)
+	}
+
 	node.volume = volume
 
 	fmt.Printf("creating container lifecycle, name: %s\n", name)
