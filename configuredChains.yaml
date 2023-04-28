@@ -119,7 +119,7 @@ penumbra:
 avalanche:
   name: avalanche
   type: avalanche
-  bin: avalanche
+  bin: avalanchego
   bech32-prefix: ""
   denom: avax
   gas-prices: 

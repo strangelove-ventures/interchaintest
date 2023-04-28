@@ -75,14 +75,17 @@ const (
 	Agoric  Chain = "agoric"
 
 	Penumbra Chain = "penumbra"
+
+	Avalanche Chain = "avalanche"
 )
 
 var knownChainLabels = map[Chain]struct{}{
-	Gaia:     {},
-	Osmosis:  {},
-	Juno:     {},
-	Agoric:   {},
-	Penumbra: {},
+	Gaia:      {},
+	Osmosis:   {},
+	Juno:      {},
+	Agoric:    {},
+	Penumbra:  {},
+	Avalanche: {},
 }
 
 // RegisterChainLabel is available for external packages that may import interchaintest,

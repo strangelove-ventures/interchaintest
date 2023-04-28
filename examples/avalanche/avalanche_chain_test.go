@@ -28,12 +28,6 @@ func TestAvalancheChainStart(t *testing.T) {
 			Version: "v1.9.16",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "neto-123123",
-				Images: []ibc.DockerImage{
-					{
-						Repository: "avalanche",
-						Version:    "v1.9.16",
-					},
-				},
 			},
 			NumFullNodes:  &nf,
 			NumValidators: &nv,
