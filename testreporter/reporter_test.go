@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/strangelove-ventures/interchaintest/v4/internal/mocktesting"
-	"github.com/strangelove-ventures/interchaintest/v4/label"
 	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
 	"github.com/stretchr/testify/require"
 )
@@ -57,7 +56,7 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	mt := mocktesting.NewT("my_test")
 
 	beforeStartTest := time.Now()
-	r.TrackTest(mt, label.Timeout)
+	r.TrackTest(mt)
 	afterStartTest := time.Now()
 
 	time.Sleep(10 * time.Millisecond)
@@ -78,7 +77,6 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 
 	beginTestMsg := msgs[1].(testreporter.BeginTestMessage)
 	require.Equal(t, beginTestMsg.Name, "my_test")
-	require.Equal(t, beginTestMsg.Labels, testreporter.LabelSet{Test: []label.Test{label.Timeout}})
 	requireTimeInRange(t, beginTestMsg.StartedAt, beforeStartTest, afterStartTest)
 
 	finishTestMsg := msgs[2].(testreporter.FinishTestMessage)
