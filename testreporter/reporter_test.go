@@ -8,14 +8,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/internal/mocktesting"
-	"github.com/strangelove-ventures/interchaintest/v4/label"
 	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
-=======
-	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
->>>>>>> 81ed325 (Remove `label` Package (#528))
 	"github.com/stretchr/testify/require"
 )
 

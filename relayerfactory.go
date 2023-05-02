@@ -5,18 +5,9 @@ import (
 	"testing"
 
 	"github.com/docker/docker/client"
-<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
-	"github.com/strangelove-ventures/interchaintest/v4/label"
 	"github.com/strangelove-ventures/interchaintest/v4/relayer"
 	"github.com/strangelove-ventures/interchaintest/v4/relayer/rly"
-=======
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
->>>>>>> 81ed325 (Remove `label` Package (#528))
 	"go.uber.org/zap"
 )
 
@@ -88,18 +79,6 @@ func (f builtinRelayerFactory) Name() string {
 	}
 }
 
-<<<<<<< HEAD
-func (f builtinRelayerFactory) Labels() []label.Relayer {
-	switch f.impl {
-	case ibc.CosmosRly:
-		return []label.Relayer{label.Rly}
-	default:
-		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
-	}
-}
-
-=======
->>>>>>> 81ed325 (Remove `label` Package (#528))
 // Capabilities returns the set of capabilities for the
 // relayer implementation backing this factory.
 func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {

@@ -8,12 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
-	"github.com/strangelove-ventures/interchaintest/v4/label"
-=======
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
->>>>>>> 81ed325 (Remove `label` Package (#528))
 	"go.uber.org/zap"
 )
 

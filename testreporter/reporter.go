@@ -5,11 +5,6 @@ import (
 	"fmt"
 	"io"
 	"time"
-<<<<<<< HEAD
-
-	"github.com/strangelove-ventures/interchaintest/v4/label"
-=======
->>>>>>> 81ed325 (Remove `label` Package (#528))
 )
 
 // T is a subset of testing.TB,

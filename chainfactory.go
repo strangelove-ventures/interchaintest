@@ -7,18 +7,10 @@ import (
 	"strings"
 	"sync"
 
-<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
-	"github.com/strangelove-ventures/interchaintest/v4/label"
-=======
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
->>>>>>> 81ed325 (Remove `label` Package (#528))
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )

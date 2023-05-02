@@ -4,11 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-<<<<<<< HEAD
-
-	"github.com/strangelove-ventures/interchaintest/v4/label"
-=======
->>>>>>> 81ed325 (Remove `label` Package (#528))
 )
 
 // Message is the sentinel interface to all testreporter messages.
