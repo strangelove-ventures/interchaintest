@@ -4,13 +4,18 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
 
 type AvalancheSubnetConfig struct {
-	Name   string
-	VMFile string
+	Name    string
+	VMFile  string
+	Genesis []byte
+
+	subnet ids.ID
+	chain  ids.ID
 }
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.

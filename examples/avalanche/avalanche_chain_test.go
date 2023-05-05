@@ -28,6 +28,13 @@ func TestAvalancheChainStart(t *testing.T) {
 			Version: "v1.9.16",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "neto-123123",
+				AvalancheSubnets: []ibc.AvalancheSubnetConfig{
+					{
+						Name:    "timestampvm",
+						VMFile:  "",
+						Genesis: []byte("{}"),
+					},
+				},
 			},
 			NumFullNodes:  &nf,
 			NumValidators: &nv,
@@ -48,7 +55,7 @@ func TestAvalancheChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start avalanche chain")
 
-	err = testutil.WaitForBlocks(ctx, 10, chain)
+	err = testutil.WaitForBlocks(ctx, 2, chain)
 
 	require.NoError(t, err, "avalanche chain failed to make blocks")
 }

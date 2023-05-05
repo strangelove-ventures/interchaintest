@@ -4,21 +4,26 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"os"
+	"time"
 
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/staking"
+	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
+	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils/crypto/secp256k1"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/utils/ids"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/lib"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
-var _ ibc.Chain = &AvalancheChain{}
+var (
+	_                    ibc.Chain = &AvalancheChain{}
+	ChainBootsrapTimeout           = 5 * time.Minute
+)
 
 type AvalancheChain struct {
 	log           *zap.Logger
@@ -78,7 +83,7 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 	if rawChainID == "" {
 		rawChainID = "localnet-123456"
 	}
-	chainId, err := utils.ParseChainID(rawChainID)
+	chainId, err := lib.ParseChainID(rawChainID)
 	if err != nil {
 		c.log.Error("Failed to pull image",
 			zap.Error(err),
@@ -92,6 +97,14 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
 		for i := range c.cfg.AvalancheSubnets {
 			subnetOpts[i].Name = c.cfg.AvalancheSubnets[i].Name
+			subnetOpts[i].Genesis = c.cfg.AvalancheSubnets[i].Genesis
+			vmName := make([]byte, 32)
+			copy(vmName[:], []byte(c.cfg.AvalancheSubnets[i].Name))
+			subnetOpts[i].VmID, err = ids.ToID(vmName)
+			if err != nil {
+				return err
+			}
+
 			if len(c.cfg.AvalancheSubnets[i].VMFile) > 0 {
 				file, err := os.Open(c.cfg.AvalancheSubnets[i].VMFile)
 				if err != nil {
@@ -107,21 +120,21 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		}
 	}
 
+	keyFactory := secp256k1.Factory{}
+	key, err := keyFactory.NewPrivateKey()
+	if err != nil {
+		return err
+	}
+
 	numNodes := c.numValidators + c.numFullNodes
 	credentials := make([]AvalancheNodeCredentials, numNodes)
-	keyFactory := secp256k1.Factory{}
 	for i := 0; i < numNodes; i++ {
-		key, err := keyFactory.NewPrivateKey()
+		rawTlsCert, rawTlsKey, err := staking.NewCertAndKeyBytes()
 		if err != nil {
 			return err
 		}
 
-		rawTlsCert, rawTlsKey, err := utils.NewCertAndKeyBytes()
-		if err != nil {
-			return err
-		}
-
-		cert, err := utils.NewTLSCertFromBytes(rawTlsCert, rawTlsKey)
+		cert, err := staking.LoadTLSCertFromBytes(rawTlsKey, rawTlsCert)
 		if err != nil {
 			return err
 		}
@@ -132,28 +145,56 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		credentials[i].TLSKey = rawTlsKey
 	}
 
-	allocations := make([]GenesisAllocation, 0, c.numValidators)
+	avaxAddr, _ := address.Format("X", chainId.Name, key.Address().Bytes())
+	allocations := []GenesisAllocation{
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{{Amount: 2000000000}, {Amount: 1000000000}},
+		},
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{{Amount: 2000000000}, {Amount: 1000000000}},
+		},
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{},
+		},
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{},
+		},
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{{Amount: 4000000000, Locktime: uint32(time.Second)}},
+		},
+		{
+			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			AVAXAddr:       avaxAddr,
+			InitialAmount:  4000000000,
+			UnlockSchedule: []GenesisLockedAmount{{Amount: 4000000000, Locktime: uint32(time.Second)}},
+		},
+	}
 	stakedFunds := make([]string, 0, c.numValidators)
 	stakes := make([]GenesisStaker, 0, c.numValidators)
 	for i := 0; i < c.numValidators; i++ {
-		avaxAddr0, _ := utils.Format("X", chainId.Name, credentials[0].PK.PublicKey().Address().Bytes())
-		avaxAddr, _ := utils.Format("X", chainId.Name, credentials[i].PK.PublicKey().Address().Bytes())
-		allocations = append(allocations, GenesisAllocation{
-			ETHAddr:        "0x" + credentials[i].PK.PublicKey().Address().Hex(),
-			AVAXAddr:       avaxAddr,
-			InitialAmount:  math.MaxUint32,
-			UnlockSchedule: []GenesisLockedAmount{{Amount: 1294967295}},
-		})
 		stakes = append(stakes, GenesisStaker{
 			NodeID:        credentials[i].ID.String(),
-			RewardAddress: avaxAddr0,
-			DelegationFee: 1000,
+			RewardAddress: avaxAddr,
+			DelegationFee: 100000000,
 		})
 	}
-	avaxAddr, _ := utils.Format("X", chainId.Name, credentials[0].PK.PublicKey().Address().Bytes())
 	stakedFunds = append(stakedFunds, avaxAddr)
 	genesis := NewGenesis(chainId.Number, allocations, stakedFunds, stakes)
-
 	nodes := make(AvalancheNodes, 0, numNodes)
 	for i := 0; i < numNodes; i++ {
 		var bootstrapOpt []*AvalancheNode = nil
@@ -186,10 +227,17 @@ func (c *AvalancheChain) Start(testName string, ctx context.Context, additionalG
 	for _, node := range c.nodes {
 		node := node
 		eg.Go(func() error {
-			return node.StartContainer(egCtx, testName, additionalGenesisWallets)
+			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootsrapTimeout)
+			defer tCtxCancel()
+
+			return node.Start(tCtx, testName, additionalGenesisWallets)
 		})
 	}
-	return eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	return c.node().StartSubnets(ctx)
 }
 
 // Exec runs an arbitrary command using Chain's docker environment.

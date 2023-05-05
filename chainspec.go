@@ -143,6 +143,10 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	}
 	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
 
+	if s.AvalancheSubnets != nil {
+		cfg.AvalancheSubnets = s.AvalancheSubnets
+	}
+
 	// Set the version depending on the chain type.
 	switch cfg.Type {
 	case "cosmos", "avalanche":
