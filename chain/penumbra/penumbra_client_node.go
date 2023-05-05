@@ -122,7 +122,7 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
-	channel, err := grpc.Dial(fmt.Sprintf(p.HostName()))
+	channel, err := grpc.Dial(fmt.Sprintf("tcp://%s:%s", p.HostName(), strings.Split(grpcPort, "/")))
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	// 5.1. Generate a transaction plan sending funds to an address.
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		XAccountGroupId: nil,
+		//XAccountGroupId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &cryptov1alpha1.Value{
 				Amount: &cryptov1alpha1.Amount{
@@ -153,9 +153,9 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
-		Plan:              resp.Plan,
-		AccountGroupId:    nil,
-		PreAuthorizations: nil,
+		Plan: resp.Plan,
+		//AccountGroupId:    nil,
+		//PreAuthorizations: nil,
 	}
 	authData, err := custodyClient.Authorize(ctx, authorizeReq, nil)
 	if err != nil {
@@ -176,7 +176,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	// 5.4. Have pclientd broadcast and await confirmation of the built transaction.
 	btr := &viewv1alpha1.BroadcastTransactionRequest{
 		Transaction:    tx.Transaction,
-		AwaitDetection: false,
+		AwaitDetection: true,
 	}
 
 	_, err = viewClient.BroadcastTransaction(ctx, btr, nil)
@@ -197,27 +197,59 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	panic("not yet implemented")
 }
 
-func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (int64, error) {
-	//channel, err := grpc.Dial(fmt.Sprintf(p.HostName()))
+func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, error) {
+	addr := p.hostGRPCPort
+	fmt.Printf("SERVER ADDR: %s \n", addr)
+
+	channel, err := grpc.Dial(
+		addr,
+		grpc.WithInsecure(),
+	)
+	if err != nil || channel == nil {
+		return 0, err
+	}
+	defer channel.Close()
+
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+
+	fmt.Println("Before GetAddress")
+
+	addressReq := &viewv1alpha1.AddressByIndexRequest{
+		AddressIndex: &cryptov1alpha1.AddressIndex{
+			Account:    0,
+			Randomizer: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		}}
+
+	out := new(viewv1alpha1.AddressByIndexResponse)
+	err = channel.Invoke(ctx, "/penumbra.view.v1alpha1.ViewProtocolService/AddressByIndex", addressReq, out, nil...)
+	if err != nil {
+		return 0, err
+	}
+
+	fmt.Println("SUCCESS")
+
+	//res, err := viewClient.AddressByIndex(ctx, addressReq, nil)
 	//if err != nil {
 	//	return 0, err
 	//}
-	//defer channel.Close()
-	//
-	//viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
-	//resp, err := viewClient.BalanceByAddress()
-	//if err != nil {
-	//	return 0, err
-	//}
-	//
-	//bal, err := resp.Recv()
-	//if err != nil {
-	//	return 0, err
-	//}
-	//
-	//return int64(bal.Amount.Hi), nil
-	// TODO implement
-	panic("implement me")
+
+	fmt.Println("After GetAddress")
+
+	bar := &viewv1alpha1.BalanceByAddressRequest{
+		Address: &cryptov1alpha1.Address{Inner: out.GetAddress().Inner},
+	}
+
+	resp, err := viewClient.BalanceByAddress(ctx, bar, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	bal, err := resp.Recv()
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(bal.Amount.Hi), nil
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
@@ -254,7 +286,12 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 		"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd)
+	// TODO: we should be able to remove this once a patch release has been tagged for pclientd
+	env := []string{
+		"RUST_LOG=error",
+	}
+
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
 }
 
 func (p *PenumbraClientNode) StopContainer(ctx context.Context) error {

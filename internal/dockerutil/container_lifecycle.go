@@ -42,6 +42,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	volumeBinds []string,
 	hostName string,
 	cmd []string,
+	env []string,
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(
@@ -64,6 +65,7 @@ func (c *ContainerLifecycle) CreateContainer(
 			Image: imageRef,
 
 			Entrypoint: []string{},
+			Env:        env,
 			Cmd:        cmd,
 
 			Hostname: hostName,
@@ -144,4 +146,13 @@ func (c *ContainerLifecycle) GetHostPorts(ctx context.Context, portIDs ...string
 		ports[i] = GetHostPort(cjson, p)
 	}
 	return ports, nil
+}
+
+func (c *ContainerLifecycle) GetIP(ctx context.Context) (string, error) {
+	resp, err := c.client.ContainerInspect(ctx, c.id)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.NetworkSettings.IPAddress, nil
 }

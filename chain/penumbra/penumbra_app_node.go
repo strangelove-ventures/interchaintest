@@ -220,7 +220,8 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "view", "address"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -269,7 +270,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, nil)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {

@@ -31,6 +31,6 @@ gen: ## Run code generators
 	go generate ./...
 
 .PHONY: proto-gen
-proto-gen: # Generate code from protos
+proto-gen: ## Generate code from protos
 	@echo "Generating Protobuf files"
 	@$(protoImage) sh ./scripts/protocgen.sh
