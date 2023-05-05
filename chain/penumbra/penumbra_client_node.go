@@ -18,6 +18,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type PenumbraClientNode struct {
@@ -157,7 +158,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		//AccountGroupId:    nil,
 		//PreAuthorizations: nil,
 	}
-	authData, err := custodyClient.Authorize(ctx, authorizeReq, nil)
+	authData, err := custodyClient.Authorize(ctx, authorizeReq)
 	if err != nil {
 		return err
 	}
@@ -168,7 +169,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		AuthorizationData: authData.Data,
 	}
 
-	tx, err := viewClient.WitnessAndBuild(ctx, wbr, nil)
+	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
 	if err != nil {
 		return err
 	}
@@ -198,14 +199,11 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 }
 
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, error) {
-	addr := p.hostGRPCPort
-	fmt.Printf("SERVER ADDR: %s \n", addr)
-
 	channel, err := grpc.Dial(
-		addr,
-		grpc.WithInsecure(),
+		p.hostGRPCPort,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	if err != nil || channel == nil {
+	if err != nil {
 		return 0, err
 	}
 	defer channel.Close()
@@ -220,35 +218,32 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 			Randomizer: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		}}
 
-	out := new(viewv1alpha1.AddressByIndexResponse)
-	err = channel.Invoke(ctx, "/penumbra.view.v1alpha1.ViewProtocolService/AddressByIndex", addressReq, out, nil...)
+	res, err := viewClient.AddressByIndex(ctx, addressReq)
 	if err != nil {
 		return 0, err
 	}
-
-	fmt.Println("SUCCESS")
-
-	//res, err := viewClient.AddressByIndex(ctx, addressReq, nil)
-	//if err != nil {
-	//	return 0, err
-	//}
 
 	fmt.Println("After GetAddress")
 
 	bar := &viewv1alpha1.BalanceByAddressRequest{
-		Address: &cryptov1alpha1.Address{Inner: out.GetAddress().Inner},
+		Address: res.GetAddress(),
 	}
 
-	resp, err := viewClient.BalanceByAddress(ctx, bar, nil)
+	resp, err := viewClient.BalanceByAddress(ctx, bar)
 	if err != nil {
 		return 0, err
 	}
+
+	fmt.Println("After GET BAL")
 
 	bal, err := resp.Recv()
 	if err != nil {
 		return 0, err
 	}
 
+	fmt.Println("After RECV")
+
+	fmt.Printf("BAL: %+v \b", bal)
 	return int64(bal.Amount.Hi), nil
 }
 
