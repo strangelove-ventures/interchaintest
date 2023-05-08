@@ -6,7 +6,7 @@ on:
 jobs:
   test-unit:
     name: unit-tests
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       # Install and setup go
       - name: Set up Go 1.19
@@ -17,12 +17,7 @@ jobs:
       - name: checkout interchaintest
         uses: actions/checkout@v3
 
-      # cleanup environment on self-hosted test runner
-      - name: clean
-        run: |-
-          rm -rf ~/.interchaintest
-
       # run tests
       - name: run unit tests
         # -short flag purposefully omitted because there are some longer unit tests
-        run: go test -race -timeout 10m -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+        run: go test -race -timeout 10m -failfast -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
