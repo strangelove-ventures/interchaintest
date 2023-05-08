@@ -220,6 +220,7 @@ func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 		},
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
+		retry.Attempts(3),
 	)
 
 	if err != nil {
