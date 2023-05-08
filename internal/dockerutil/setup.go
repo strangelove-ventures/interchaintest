@@ -220,12 +220,11 @@ func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 		},
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
-		retry.Attempts(3),
+		retry.Attempts(5),
 	)
 
 	if err != nil {
 		t.Logf("Failed to prune networks during docker cleanup: %v", err)
-		return
 	}
 
 	if len(deleted) > 0 {
