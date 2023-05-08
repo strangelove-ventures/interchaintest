@@ -10,9 +10,151 @@ agoric:
   denom: urun
   gas-prices: 0.01urun
   gas-adjustment: 1.3
+  coin-type: 564
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/agoric
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+akash:
+  name: akash
+  type: cosmos
+  bin: akash
+  bech32-prefix: akash
+  denom: uakt
+  gas-prices: 0.01uakt
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/akash
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+axelar:
+  name: axelar
+  type: cosmos
+  bin: axelard
+  bech32-prefix: axelar
+  denom: uaxl
+  gas-prices: 0.01uaxl
+  gas-adjustment: 1.3
+  trusting-period: 168h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/axelar
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bitcanna:
+  name: bitcanna
+  type: cosmos
+  bin: bcnad
+  bech32-prefix: bcna
+  denom: ubcna
+  gas-prices: 0.01ubcna
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bitcanna
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bitsong:
+  name: bitsong
+  type: cosmos
+  bin: bitsongd
+  bech32-prefix: bitsong
+  denom: ubtsg
+  gas-prices: 0.01ubtsg
+  gas-adjustment: 1.3
+  coin-type: 639
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bitsong
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+bostrom:
+  name: bostrom
+  type: cosmos
+  bin: cyber
+  bech32-prefix: bostrom
+  denom: boot
+  gas-prices: 0.01boot
+  gas-adjustment: 1.3
+  trusting-period: 192h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/bostrom
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+carbon:
+  name: carbon
+  type: cosmos
+  bin: carbond
+  bech32-prefix: swth
+  denom: swth
+  gas-prices: 0.01swth
+  gas-adjustment: 1.3
+  trusting-period: 720h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/carbon
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+cerberus:
+  name: cerberus
+  type: cosmos
+  bin: cerberusd
+  bech32-prefix: cerberus
+  denom: ucrbrus
+  gas-prices: 0.01ucrbrus
+  gas-adjustment: 1.3
+  trusting-period: 336.667h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/cerberus
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+cheqd:
+  name: cheqd
+  type: cosmos
+  bin: cheqd-noded
+  bech32-prefix: cheqd
+  denom: ncheq
+  gas-prices: 0.01ncheq
+  gas-adjustment: 1.3
+  trusting-period: 336.111h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/cheqd
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+chihuahua:
+  name: chihuahua
+  type: cosmos
+  bin: chihuahuad
+  bech32-prefix: chihuahua
+  denom: uhuahua
+  gas-prices: 0.01uhuahua
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/chihuahua
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+comdex:
+  name: comdex
+  type: cosmos
+  bin: chihuahuad
+  bech32-prefix: comdex
+  denom: ucmdx
+  gas-prices: 0.01ucmdx
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/comdex
       uid-gid: 1025:1025
   no-host-mount: true
 
@@ -31,6 +173,151 @@ composable:
     - repository: ghcr.io/strangelove-ventures/heighliner/composable
       uid-gid: 1025:1025
 
+crescent:
+  name: crescent
+  type: cosmos
+  bin: crescentd
+  bech32-prefix: cre
+  denom: ucre
+  gas-prices: 0.01ucre
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/crescent
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+cronos:
+  name: cronos
+  type: cosmos
+  bin: cronosd
+  bech32-prefix: crc
+  denom: stake
+  gas-prices: 0.01stake
+  gas-adjustment: 1.3
+  coin-type: 60
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/cronos
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+cryptoorgchain:
+  name: cryptoorgchain
+  type: cosmos
+  bin: chain-maind
+  bech32-prefix: cro
+  denom: basecro
+  gas-prices: 0.01basecro
+  gas-adjustment: 1.3
+  coin-type: 394
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/cryptoorgchain
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+decentr:
+  name: decentr
+  type: cosmos
+  bin: decentrd
+  bech32-prefix: decentr
+  denom: udec
+  gas-prices: 0.01udec
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/decentr
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+desmos:
+  name: desmos
+  type: cosmos
+  bin: desmos
+  bech32-prefix: desmos
+  denom: udsm
+  gas-prices: 0.01udsm
+  gas-adjustment: 1.3
+  coin-type: 852
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/desmos
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+dig:
+  name: dig
+  type: cosmos
+  bin: digg
+  bech32-prefix: dig
+  denom: udig
+  gas-prices: 0.01udig
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/dig
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+emoney:
+  name: emoney
+  type: cosmos
+  bin: emoney
+  bech32-prefix: emoney
+  denom: ungm
+  gas-prices: 0.01ungm
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/emoney
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+evmos:
+  name: evmos
+  type: cosmos
+  bin: evmosd
+  bech32-prefix: evmos
+  denom: aevmos
+  gas-prices: 0.01aevmos
+  gas-adjustment: 1.3
+  coin-type: 60
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/evmos
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+fetchhub:
+  name: fetchhub
+  type: cosmos
+  bin: fetchd
+  bech32-prefix: fetch
+  denom: afet
+  gas-prices: 0.01afet
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/fetchhub
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+firmachain:
+  name: firmachain
+  type: cosmos
+  bin: firmachaind
+  bech32-prefix: firma
+  denom: ufct
+  gas-prices: 0.01ufct
+  gas-adjustment: 1.3
+  coin-type: 7777777
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/firmachain
+      uid-gid: 1025:1025
+  no-host-mount: true
+
 gaia:
   name: gaia
   type: cosmos
@@ -42,6 +329,34 @@ gaia:
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/gaia
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+gravitybridge:
+  name: gravitybridge
+  type: cosmos
+  bin: gravity
+  bech32-prefix: gravity
+  denom: ugraviton
+  gas-prices: 0.01ugraviton
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/gravitybridge
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+ibc-go-simd:
+  name: ibc-go-simd
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: photon
+  gas-prices: 0.0photon
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/ibc-go-simd
       uid-gid: 1025:1025
   no-host-mount: false
 
@@ -59,19 +374,48 @@ icad:
       uid-gid: 1025:1025
   no-host-mount: false
 
-ibc-go-simd:
-  name: ibc-go-simd
+impacthub:
+  name: impacthub
   type: cosmos
-  bin: simd
-  bech32-prefix: cosmos
-  denom: photon
-  gas-prices: 0.0photon
-  gas-adjustment: 1.2
+  bin: ixod
+  bech32-prefix: ixo
+  denom: uixo
+  gas-prices: 0.01uixo
+  gas-adjustment: 1.3
   trusting-period: 504h
   images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/ibc-go-simd
+    - repository: ghcr.io/strangelove-ventures/heighliner/impacthub
       uid-gid: 1025:1025
-  no-host-mount: false
+  no-host-mount: true
+
+injective:
+  name: injective
+  type: cosmos
+  bin: injectived
+  bech32-prefix: inj
+  denom: inj
+  gas-prices: 0.01inj
+  gas-adjustment: 1.3
+  coin-type: 60
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/injective
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+irisnet:
+  name: irisnet
+  type: cosmos
+  bin: iris
+  bech32-prefix: iaa
+  denom: uiris
+  gas-prices: 0.01uiris
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/irisnet
+      uid-gid: 1025:1025
+  no-host-mount: true
 
 juno:
   name: juno
@@ -84,6 +428,90 @@ juno:
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/juno
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+kichain:
+  name: kichain
+  type: cosmos
+  bin: kid
+  bech32-prefix: ki
+  denom: uxki
+  gas-prices: 0.01uxki
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/kichain
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+konstellation:
+  name: konstellation
+  type: cosmos
+  bin: knstld
+  bech32-prefix: darc
+  denom: udarc
+  gas-prices: 0.01udarc
+  gas-adjustment: 1.3
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/konstellation
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+kujira:
+  name: kujira
+  type: cosmos
+  bin: kujirad
+  bech32-prefix: kujira
+  denom: ukuji
+  gas-prices: 0.01ukuji
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/kujira
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+likecoin:
+  name: likecoin
+  type: cosmos
+  bin: liked
+  bech32-prefix: like
+  denom: nanolike
+  gas-prices: 0.01nanolike
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/likecoin
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+lumnetwork:
+  name: lumnetwork
+  type: cosmos
+  bin: lumd
+  bech32-prefix: lum
+  denom: ulum
+  gas-prices: 0.01ulum
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/lum
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+omniflixhub:
+  name: omniflixhub
+  type: cosmos
+  bin: omniflixhubd
+  bech32-prefix: omniflix
+  denom: uflix
+  gas-prices: 0.01uflix
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/omniflix
       uid-gid: 1025:1025
   no-host-mount: false
 
@@ -101,6 +529,21 @@ osmosis:
       uid-gid: 1025:1025
   no-host-mount: false
 
+panacea:
+  name: panacea
+  type: cosmos
+  bin: panacead
+  bech32-prefix: panacea
+  denom: umed
+  gas-prices: 0.01umed
+  gas-adjustment: 1.3
+  coin-type: 371
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/panacea
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 penumbra:
   name: penumbra
   type: penumbra
@@ -115,3 +558,219 @@ penumbra:
       uid-gid: 1025:1025
     - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
       uid-gid: 1025:1025
+
+persistence:
+  name: persistence
+  type: cosmos
+  bin: persistenceCore
+  bech32-prefix: persistence
+  denom: uxprt
+  gas-prices: 0.01uxprt
+  gas-adjustment: 1.3
+  coin-type: 750
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/persistence
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+provenance:
+  name: provenance
+  type: cosmos
+  bin: provenanced
+  bech32-prefix: pb
+  denom: nhash
+  gas-prices: 0.01nhash
+  gas-adjustment: 1.3
+  coin-type: 505
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/provenance
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+regen:
+  name: regen
+  type: cosmos
+  bin: regen
+  bech32-prefix: regen
+  denom: uregen
+  gas-prices: 0.01uregen
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/regen
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+rizon:
+  name: rizon
+  type: cosmos
+  bin: rizond
+  bech32-prefix: rizon
+  denom: uatolo
+  gas-prices: 0.01uatolo
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/rizon
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+secretnetwork:
+  name: secretnetwork
+  type: cosmos
+  bin: secret-network-node
+  bech32-prefix: secret
+  denom: uscrt
+  gas-prices: 0.01uscrt
+  gas-adjustment: 1.3
+  coin-type: 529
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/secretnetwork
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+sentinel:
+  name: sentinel
+  type: cosmos
+  bin: sentinelhub
+  bech32-prefix: sent
+  denom: udvpn
+  gas-prices: 0.01udvpn
+  gas-adjustment: 1.3
+  trusting-period: "672h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/sentinel
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+shentu:
+  name: shentu
+  type: cosmos
+  bin: certik
+  bech32-prefix: certik
+  denom: uctk
+  gas-prices: 0.01uctk
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/shentu
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+sifchain:
+  name: sifchain
+  type: cosmos
+  bin: sifnoded
+  bech32-prefix: sif
+  denom: rowan
+  gas-prices: 0.01rowan
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/sifchain
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+sommelier:
+  name: sommelier
+  type: cosmos
+  bin: sommelier
+  bech32-prefix: somm
+  denom: usomm
+  gas-prices: 0.01usomm
+  gas-adjustment: 1.3
+  trusting-period: "672h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/sommelier
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+stargaze:
+  name: stargaze
+  type: cosmos
+  bin: starsd
+  bech32-prefix: stars
+  denom: ustars
+  gas-prices: 0.01ustars
+  gas-adjustment: 1.3
+  trusting-period: "336h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/stargaze
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+starname:
+  name: starname
+  type: cosmos
+  bin: starnamed
+  bech32-prefix: star
+  denom: uiov
+  gas-prices: 0.01uiov
+  gas-adjustment: 1.3
+  coin-type: 234
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/starname
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+stride:
+  name: stride
+  type: cosmos
+  bin: strided
+  bech32-prefix: stride
+  denom: ustrd
+  gas-prices: 0.01ustrd
+  gas-adjustment: 1.3
+  trusting-period: "336h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/stride
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+terra:
+  name: terra
+  type: cosmos
+  bin: terrad
+  bech32-prefix: terra
+  denom: uluna
+  gas-prices: 0.01uluna
+  gas-adjustment: 1.3
+  coin-type: 330
+  trusting-period: "336h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/terra
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+umee:
+  name: umee
+  type: cosmos
+  bin: umeed
+  bech32-prefix: umee
+  denom: uumee
+  gas-prices: 0.01uumee
+  gas-adjustment: 1.3
+  trusting-period: "336h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/umee
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+vidulum:
+  name: vidulum
+  type: cosmos
+  bin: vidulumd
+  bech32-prefix: vdl
+  denom: uvdl
+  gas-prices: 0.01uvdl
+  gas-adjustment: 1.3
+  coin-type: 370
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/vidulum
+      uid-gid: 1025:1025
+  no-host-mount: false
