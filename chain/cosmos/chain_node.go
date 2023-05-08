@@ -150,7 +150,7 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
@@ -159,7 +159,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	err := tn.WriteFile(ctx, content, "config/genesis.json")
 	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
@@ -1110,7 +1110,7 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		gen, err := n.genesisFileContent(ctx)
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
