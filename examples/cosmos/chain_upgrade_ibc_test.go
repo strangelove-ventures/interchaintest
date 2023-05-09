@@ -16,6 +16,13 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+const (
+	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
+	blocksAfterUpgrade = uint64(10)
+	votingPeriod       = "10s"
+	maxDepositPeriod   = "10s"
+)
+
 func TestJunoUpgradeIBC(t *testing.T) {
 	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "v8.0.0", "multiverse")
 }
@@ -33,7 +40,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+				ModifyGenesis: cosmos.ModifyGenesisProposalTime(votingPeriod, maxDepositPeriod),
 			},
 		},
 		{
