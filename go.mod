@@ -1,6 +1,6 @@
 module github.com/strangelove-ventures/interchaintest/v6
 
-go 1.18
+go 1.20
 
 require (
 	github.com/99designs/keyring v1.2.1
