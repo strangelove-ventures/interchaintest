@@ -576,7 +576,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 
 		time.Sleep(4 * time.Second)
 
-		startTime := time.Now().Add(time.Minute)
+		startTime := time.Now().Add(20 * time.Second)
 		duration := 2 * 7 * 24 * time.Hour // 2 weeks
 		weight := units.Schmeckle
 		addValidatorStartTime := time.Now()
@@ -627,7 +627,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 		n.options.Subnets[i].subnet = createSubnetTxID
 		n.options.Subnets[i].chain = createChainTxID
 
-		time.Sleep(100 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 
 	n.logger.Info("stopping container")

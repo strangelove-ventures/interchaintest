@@ -3,6 +3,7 @@ package avalanche
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
@@ -64,23 +65,23 @@ func (c *AvalancheChain) Config() ibc.ChainConfig {
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain
 func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
-	//for _, image := range c.Config().Images {
-	//	rc, err := cli.ImagePull(
-	//		ctx,
-	//		image.Repository+":"+image.Version,
-	//		types.ImagePullOptions{},
-	//	)
-	//	if err != nil {
-	//		c.log.Error("Failed to pull image",
-	//			zap.Error(err),
-	//			zap.String("repository", image.Repository),
-	//			zap.String("tag", image.Version),
-	//		)
-	//	} else {
-	//		_, _ = io.Copy(io.Discard, rc)
-	//		_ = rc.Close()
-	//	}
-	//}
+	for _, image := range c.Config().Images {
+		rc, err := cli.ImagePull(
+			ctx,
+			image.Repository+":"+image.Version,
+			types.ImagePullOptions{},
+		)
+		if err != nil {
+			c.log.Error("Failed to pull image",
+				zap.Error(err),
+				zap.String("repository", image.Repository),
+				zap.String("tag", image.Version),
+			)
+		} else {
+			_, _ = io.Copy(io.Discard, rc)
+			_ = rc.Close()
+		}
+	}
 
 	rawChainID := c.Config().ChainID
 	if rawChainID == "" {

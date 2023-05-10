@@ -68,13 +68,21 @@ func TestAvalancheChainStart(t *testing.T) {
 
 	eg := new(errgroup.Group)
 	eg.Go(func() error {
-		return chain.SendFunds(subnetCtx, "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027", ibc.WalletAmount{
+		err := chain.SendFunds(subnetCtx, "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027", ibc.WalletAmount{
 			Address: "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC",
 			Amount:  1000000,
 		})
+		if err != nil {
+			return err
+		}
+		return chain.SendFunds(subnetCtx, "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027", ibc.WalletAmount{
+			Address: "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FD",
+			Amount:  2000000,
+		})
+
 	})
 	eg.Go(func() error {
-		return testutil.WaitForBlocks(subnetCtx, 2, chain)
+		return testutil.WaitForBlocks(subnetCtx, 1, chain)
 	})
 
 	require.NoError(t, eg.Wait(), "avalanche chain failed to make blocks")
