@@ -447,7 +447,7 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
