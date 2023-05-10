@@ -3,9 +3,7 @@ package avalanche
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
-	"os"
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
@@ -14,15 +12,16 @@ import (
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/lib"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/lib"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 var (
-	_                    ibc.Chain = &AvalancheChain{}
-	ChainBootsrapTimeout           = 5 * time.Minute
+	_                     ibc.Chain = &AvalancheChain{}
+	ChainBootstrapTimeout           = 6 * time.Minute
 )
 
 type AvalancheChain struct {
@@ -51,6 +50,10 @@ func (c *AvalancheChain) node() *AvalancheNode {
 	if len(c.nodes) > c.numValidators {
 		return c.nodes[c.numValidators]
 	}
+
+	if len(c.nodes) > 1 {
+		return c.nodes[1]
+	}
 	return c.nodes[0]
 }
 
@@ -61,23 +64,23 @@ func (c *AvalancheChain) Config() ibc.ChainConfig {
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain
 func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
-	for _, image := range c.Config().Images {
-		rc, err := cli.ImagePull(
-			ctx,
-			image.Repository+":"+image.Version,
-			types.ImagePullOptions{},
-		)
-		if err != nil {
-			c.log.Error("Failed to pull image",
-				zap.Error(err),
-				zap.String("repository", image.Repository),
-				zap.String("tag", image.Version),
-			)
-		} else {
-			_, _ = io.Copy(io.Discard, rc)
-			_ = rc.Close()
-		}
-	}
+	//for _, image := range c.Config().Images {
+	//	rc, err := cli.ImagePull(
+	//		ctx,
+	//		image.Repository+":"+image.Version,
+	//		types.ImagePullOptions{},
+	//	)
+	//	if err != nil {
+	//		c.log.Error("Failed to pull image",
+	//			zap.Error(err),
+	//			zap.String("repository", image.Repository),
+	//			zap.String("tag", image.Version),
+	//		)
+	//	} else {
+	//		_, _ = io.Copy(io.Discard, rc)
+	//		_ = rc.Close()
+	//	}
+	//}
 
 	rawChainID := c.Config().ChainID
 	if rawChainID == "" {
@@ -97,25 +100,13 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
 		for i := range c.cfg.AvalancheSubnets {
 			subnetOpts[i].Name = c.cfg.AvalancheSubnets[i].Name
+			subnetOpts[i].VM = c.cfg.AvalancheSubnets[i].VM
 			subnetOpts[i].Genesis = c.cfg.AvalancheSubnets[i].Genesis
 			vmName := make([]byte, 32)
 			copy(vmName[:], []byte(c.cfg.AvalancheSubnets[i].Name))
 			subnetOpts[i].VmID, err = ids.ToID(vmName)
 			if err != nil {
 				return err
-			}
-
-			if len(c.cfg.AvalancheSubnets[i].VMFile) > 0 {
-				file, err := os.Open(c.cfg.AvalancheSubnets[i].VMFile)
-				if err != nil {
-					return err
-				}
-				file.Close()
-				vmFileContent, err := io.ReadAll(file)
-				if err != nil {
-					return err
-				}
-				subnetOpts[i].VM = vmFileContent
 			}
 		}
 	}
@@ -227,7 +218,7 @@ func (c *AvalancheChain) Start(testName string, ctx context.Context, additionalG
 	for _, node := range c.nodes {
 		node := node
 		eg.Go(func() error {
-			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootsrapTimeout)
+			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootstrapTimeout)
 			defer tCtxCancel()
 
 			return node.Start(tCtx, testName, additionalGenesisWallets)
@@ -267,7 +258,7 @@ func (c *AvalancheChain) GetGRPCAddress() string {
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 func (c *AvalancheChain) GetHostRPCAddress() string {
-	panic("ToDo: implement me")
+	return fmt.Sprintf("http://127.0.0.1:%s", c.node().RPCPort())
 }
 
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.

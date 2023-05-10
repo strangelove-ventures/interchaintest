@@ -9,9 +9,9 @@ require (
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/ava-labs/avalanchego v1.10.1
-	github.com/avast/retry-go/v4 v4.3.4
-	github.com/cometbft/cometbft v0.37.1
-	github.com/cosmos/cosmos-sdk v0.47.2
+	github.com/avast/retry-go/v4 v4.3.3
+	github.com/cometbft/cometbft v0.37.0
+	github.com/cosmos/cosmos-sdk v0.47.1
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.8
 	github.com/cosmos/ibc-go/v7 v7.0.0
@@ -19,6 +19,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/docker/docker v20.10.19+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/ethereum/go-ethereum v1.10.26
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -41,7 +42,7 @@ require (
 	golang.org/x/tools v0.8.0
 	google.golang.org/grpc v1.54.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.22.1
+	modernc.org/sqlite v1.22.0
 )
 
 require (
@@ -101,7 +102,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
-	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
@@ -135,7 +135,7 @@ require (
 	github.com/gtank/merlin v0.1.1 // indirect
 	github.com/gtank/ristretto255 v0.1.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-getter v1.7.1 // indirect
+	github.com/hashicorp/go-getter v1.7.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
@@ -190,6 +190,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.40.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rakyll/statik v0.1.7 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
@@ -250,7 +251,7 @@ require (
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.40.0 // indirect
 	modernc.org/ccgo/v3 v3.16.13 // indirect
-	modernc.org/libc v1.22.5 // indirect
+	modernc.org/libc v1.22.4 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect
 	modernc.org/opt v0.1.3 // indirect
