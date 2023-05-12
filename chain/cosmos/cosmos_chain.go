@@ -408,12 +408,13 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 	return c.txProposal(txHash)
 }
 
-func (c *CosmosChain) BuildProposal(chain ibc.Chain, messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+// Build a gov v1 proposal type.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
 	var propType TxProposalv1
 	rawMsgs := make([]json.RawMessage, len(messages))
 
 	for i, msg := range messages {
-		msg, err := chain.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
+		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
 		if err != nil {
 			return propType, err
 		}
