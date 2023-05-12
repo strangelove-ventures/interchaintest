@@ -397,6 +397,15 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 	return c.txProposal(txHash)
 }
 
+// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
 // TextProposal submits a text governance proposal to the chain.
 func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop TextProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().TextProposal(ctx, keyName, prop)
