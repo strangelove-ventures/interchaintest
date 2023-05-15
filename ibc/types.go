@@ -176,6 +176,7 @@ type WalletAmount struct {
 type IBCTimeout struct {
 	NanoSeconds uint64
 	Height      uint64
+	Absolute    bool
 }
 
 type ChannelCounterparty struct {

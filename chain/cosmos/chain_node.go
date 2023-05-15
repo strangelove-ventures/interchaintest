@@ -663,6 +663,10 @@ func (tn *ChainNode) SendIBCTransfer(
 		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
 	}
 	if options.Timeout != nil {
+		if options.Timeout.Absolute {
+			command = append(command, "--absolute-timeouts")
+		}
+
 		if options.Timeout.NanoSeconds > 0 {
 			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
 		} else if options.Timeout.Height > 0 {
