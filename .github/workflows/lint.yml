@@ -1,11 +1,7 @@
 name: golangci-lint
 on:
-  push:
-    tags:
-      - v*
-    branches:
-      - main
   pull_request:
+  
 jobs:
   golangci:
     name: lint
@@ -17,4 +13,4 @@ jobs:
         with:
           version: latest
           only-new-issues: true
-          args: --timeout=3m
+          args: --timeout=5m

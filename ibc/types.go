@@ -228,6 +228,7 @@ type RelayerImplementation int64
 const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
+	Hyperspace
 )
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain

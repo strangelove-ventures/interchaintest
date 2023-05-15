@@ -48,13 +48,13 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 			State:    r.ChannelEnd.State,
 			Ordering: r.ChannelEnd.Ordering,
 			Counterparty: ibc.ChannelCounterparty{
-				PortID:    r.CounterPartyChannelEnd.Remote.PortID,
-				ChannelID: r.CounterPartyChannelEnd.Remote.ChannelID,
+				PortID:    r.ChannelEnd.Remote.PortID,
+				ChannelID: r.ChannelEnd.Remote.ChannelID,
 			},
 			ConnectionHops: r.ChannelEnd.ConnectionHops,
 			Version:        r.ChannelEnd.Version,
-			PortID:         r.ChannelEnd.Remote.PortID,
-			ChannelID:      r.ChannelEnd.Remote.ChannelID,
+			PortID:         r.CounterPartyChannelEnd.Remote.PortID,
+			ChannelID:      r.CounterPartyChannelEnd.Remote.ChannelID,
 		})
 	}
 
