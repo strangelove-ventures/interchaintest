@@ -24,8 +24,13 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/tendermint v0.34.27
 	go.uber.org/multierr v1.8.0
+<<<<<<< HEAD
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.5.0
+=======
+	go.uber.org/zap v1.24.0
+	golang.org/x/crypto v0.9.0
+>>>>>>> 4c903c4 (Bump golang.org/x/crypto from 0.8.0 to 0.9.0 (#568))
 	golang.org/x/sync v0.1.0
 	golang.org/x/tools v0.7.0
 	google.golang.org/grpc v1.54.0
@@ -182,6 +187,7 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
+<<<<<<< HEAD
 	go.uber.org/goleak v1.1.12 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/mod v0.9.0 // indirect
@@ -190,6 +196,15 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
+=======
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
+	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/oauth2 v0.5.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
+>>>>>>> 4c903c4 (Bump golang.org/x/crypto from 0.8.0 to 0.9.0 (#568))
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.103.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
