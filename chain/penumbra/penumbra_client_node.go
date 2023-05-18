@@ -283,7 +283,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 
 	// TODO: we should be able to remove this once a patch release has been tagged for pclientd
 	env := []string{
-		"RUST_LOG=error",
+		"RUST_LOG=debug",
 	}
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)

@@ -27,7 +27,7 @@ func TestPenumbraChainStart(t *testing.T) {
 		{
 			Name: "penumbra",
 			// Version: "040-themisto.1,v0.34.23",
-			Version: "v0.51.2,v0.34.24",
+			Version: "v0.52.2,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
@@ -48,7 +48,7 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start penumbra chain")
 
-	err = testutil.WaitForBlocks(ctx, 10, chain)
+	err = testutil.WaitForBlocks(ctx, 30, chain)
 
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 
