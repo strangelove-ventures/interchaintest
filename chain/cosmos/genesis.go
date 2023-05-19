@@ -23,18 +23,18 @@ func ModifyGenesis(genesisKV []GenesisKV) func(ibc.ChainConfig, []byte) ([]byte,
 		}
 
 		for idx, values := range genesisKV {
-			path := strings.Split(values.Key, ".")
+			splitPath := strings.Split(values.Key, ".")
 
-			result := make([]interface{}, len(path))
-			for i, component := range path {
+			path := make([]interface{}, len(splitPath))
+			for i, component := range splitPath {
 				if v, err := strconv.Atoi(component); err == nil {
-					result[i] = v
+					path[i] = v
 				} else {
-					result[i] = component
+					path[i] = component
 				}
 			}
 
-			if err := dyno.Set(g, values.Value, result...); err != nil {
+			if err := dyno.Set(g, values.Value, path...); err != nil {
 				return nil, fmt.Errorf("failed to set value (index:%d) in genesis json: %w", idx, err)
 			}
 		}
