@@ -106,9 +106,12 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 		}
 
 		for _, c := range cs {
-			stopTimeout := 10 * time.Second
-			deadline := time.Now().Add(stopTimeout)
-			if err := cli.ContainerStop(ctx, c.ID, &stopTimeout); isLoggableStopError(err) {
+			var stopTimeout container.StopOptions
+			timeout := 10
+			timeoutDur := time.Duration(timeout * int(time.Second))
+			deadline := time.Now().Add(timeoutDur)
+			stopTimeout.Timeout = &timeout
+			if err := cli.ContainerStop(ctx, c.ID, stopTimeout); isLoggableStopError(err) {
 				t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
 			}
 
