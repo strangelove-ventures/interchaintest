@@ -94,6 +94,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
 		ctx := context.TODO()
+		cli.NegotiateAPIVersion(ctx)
 		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
 			All: true,
 			Filters: filters.NewArgs(
