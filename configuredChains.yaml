@@ -45,6 +45,51 @@ gaia:
       uid-gid: 1025:1025
   no-host-mount: false
 
+<<<<<<< HEAD
+=======
+gravitybridge:
+  name: gravitybridge
+  type: cosmos
+  bin: gravity
+  bech32-prefix: gravity
+  denom: ugraviton
+  gas-prices: 0.01ugraviton
+  gas-adjustment: 1.3
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/gravitybridge
+      uid-gid: 1025:1025
+  no-host-mount: true
+
+hyperlane-simd:
+  name: hyperlane-simd
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: stake
+  gas-prices: 0.0stake
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/hyperlane-simd
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+ibc-go-simd:
+  name: ibc-go-simd
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: photon
+  gas-prices: 0.0photon
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/ibc-go-simd
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+>>>>>>> a51c38c (Add hyperlane-simd to chain config (#586))
 icad:
   name: icad
   type: cosmos
