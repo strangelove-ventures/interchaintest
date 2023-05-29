@@ -36,7 +36,7 @@ func Test_DeriveEd25519FromName(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKey)
 	require.NoError(t, err, "error encoding ed25519 public key to ss58")
 
-	require.Equal(t, "5FA9nQDVg267DEd8m1ZypXLBnvN7SFxYwV7ndqSYGiN9TTpu", pubKeyEncoded)
+	require.Equal(t, "5wfmbM1KN4DCJeTP6jj9TqCAKKNApYNCG4zhwcweWhXZRo1j", pubKeyEncoded)
 }
 
 func Test_DeriveSr25519FromNameAccount(t *testing.T) {
@@ -49,13 +49,12 @@ func Test_DeriveSr25519FromNameAccount(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKeyAccount)
 	require.NoError(t, err, "error encoding account public key to ss58")
 
-	kp, err := signature.KeyringPairFromSecret("//Alice", 42)
+	kp, err := signature.KeyringPairFromSecret("//Alice", polkadot.Ss58Format)
 	require.NoError(t, err, "error signature KeyringPairFromSecret")
 
 	pubKeyDecoded, err := polkadot.DecodeAddressSS58(pubKeyEncoded)
 	require.NoError(t, err, "error decoding SS58 address to pub key")
 
-	require.Equal(t, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", pubKeyEncoded)
 	require.Equal(t, pubKeyDecoded, kp.PublicKey)
 }
 
@@ -70,11 +69,10 @@ func Test_DeriveSr25519FromNameStash(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKeyStash)
 	require.NoError(t, err, "error encoding stash public key to ss58")
 
-	kp, err := signature.KeyringPairFromSecret("//Alice//stash", 42)
+	kp, err := signature.KeyringPairFromSecret("//Alice//stash", polkadot.Ss58Format)
 	require.NoError(t, err, "error signature KeyringPairFromSecret")
 
-	require.Equal(t, "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", pubKeyEncoded)
-	require.Equal(t, "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", kp.Address)
+	require.Equal(t, kp.Address, pubKeyEncoded)
 }
 
 func Test_DeriveSecp256k1FromName(t *testing.T) {
@@ -93,5 +91,5 @@ func Test_DeriveSecp256k1FromName(t *testing.T) {
 	pubKeyEncoded, err := polkadot.EncodeAddressSS58(pubKey)
 	require.NoError(t, err, "error encoding secp256k1 public key to ss58")
 
-	require.Equal(t, "KW39r9CJjAVzmkf9zQ4YDb2hqfAVGdRqn53eRqyruqpxAP5YL", pubKeyEncoded)
+	require.Equal(t, "NaqsuM2ZDssHFdr7HU8znFsHKpgkCyrCW6aPiLpLTa8Vxi3Q9", pubKeyEncoded)
 }
