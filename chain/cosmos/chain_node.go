@@ -1070,6 +1070,7 @@ func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (s
 	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
+		"--log_level", "error",
 	}
 
 	if bech != "" {
