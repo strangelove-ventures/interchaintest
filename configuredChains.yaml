@@ -31,6 +31,19 @@ akash:
       uid-gid: 1025:1025
   no-host-mount: true
 
+avalanche:
+  name: avalanche
+  type: avalanche
+  bin: avalanchego
+  bech32-prefix: ""
+  denom: avax
+  gas-prices:
+  gas-adjustment: 0.0
+  trusting-period: ""
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/avalanche
+      uid-gid: 1025:1025
+
 axelar:
   name: axelar
   type: cosmos

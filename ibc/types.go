@@ -4,9 +4,19 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
+
+type AvalancheSubnetConfig struct {
+	Name    string
+	VM      []byte
+	Genesis []byte
+
+	subnet ids.ID
+	chain  ids.ID
+}
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
@@ -42,6 +52,8 @@ type ChainConfig struct {
 	EncodingConfig *testutil.TestEncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
+	//
+	AvalancheSubnets []AvalancheSubnetConfig `yaml:"avalanche-subnet"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
