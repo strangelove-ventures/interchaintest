@@ -51,7 +51,7 @@ func TestDockerSetup_KeepVolumes(t *testing.T) {
 			mt.Simulate(func() {
 				cli, _ := dockerutil.DockerSetup(mt)
 
-				v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+				v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 					Labels: map[string]string{dockerutil.CleanupLabel: mt.Name()},
 				})
 				require.NoError(t, err)
