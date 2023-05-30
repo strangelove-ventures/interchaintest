@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -115,8 +114,11 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return c.client.ContainerStop(ctx, c.id, &timeout)
+	var timeout container.StopOptions
+	timeoutSec := 30
+	timeout.Timeout = &timeoutSec
+
+	return c.client.ContainerStop(ctx, c.id, timeout)
 }
 
 func (c *ContainerLifecycle) RemoveContainer(ctx context.Context) error {
