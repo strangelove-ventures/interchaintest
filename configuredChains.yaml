@@ -346,6 +346,20 @@ gravitybridge:
       uid-gid: 1025:1025
   no-host-mount: true
 
+hyperlane-simd:
+  name: hyperlane-simd
+  type: cosmos
+  bin: simd
+  bech32-prefix: cosmos
+  denom: stake
+  gas-prices: 0.0stake
+  gas-adjustment: 1.2
+  trusting-period: 504h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/hyperlane-simd
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 ibc-go-simd:
   name: ibc-go-simd
   type: cosmos
