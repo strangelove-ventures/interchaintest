@@ -593,7 +593,7 @@ func (c *CosmosChain) NewChainNode(
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
