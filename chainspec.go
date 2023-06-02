@@ -133,8 +133,14 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	if s.NoHostMount != nil {
 		cfg.NoHostMount = *s.NoHostMount
 	}
+	if s.SkipGenTx {
+		cfg.SkipGenTx = true
+	}
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
+	}
+	if s.PreGenesis != nil {
+		cfg.PreGenesis = s.PreGenesis
 	}
 	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
 
