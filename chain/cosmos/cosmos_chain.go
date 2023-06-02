@@ -728,7 +728,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					return err
 				}
 			}
-			return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			if !c.cfg.SkipGenTx {
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			}
+			return nil
 		})
 	}
 
@@ -766,6 +769,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	// for the validators we need to collect the gentxs and the accounts
 	// to the first node's genesis file
 	validator0 := c.Validators[0]
@@ -781,8 +791,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validatorN.copyGentx(ctx, validator0); err != nil {
-			return err
+		if !c.cfg.SkipGenTx {
+			if err := validatorN.copyGentx(ctx, validator0); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -792,8 +804,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if err := validator0.CollectGentxs(ctx); err != nil {
-		return err
+	if !c.cfg.SkipGenTx {
+		if err := validator0.CollectGentxs(ctx); err != nil {
+			return err
+		}
 	}
 
 	genbz, err := validator0.GenesisFileContent(ctx)
