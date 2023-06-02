@@ -17,8 +17,8 @@ import (
 
 const (
 	hermes                  = "hermes"
-	defaultContainerImage   = "docker.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.2.0"
+	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
+	DefaultContainerVersion = "1.4.0"
 
 	hermesDefaultUidGid = "1000:1000"
 	hermesHome          = "/home/hermes"
@@ -62,6 +62,12 @@ type pathChainConfig struct {
 // NewHermesRelayer returns a new hermes relayer.
 func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *Relayer {
 	c := commander{log: log}
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case relayer.RelayerOptionExtraStartFlags:
+			c.extraStartFlags = o.Flags
+		}
+	}
 	options = append(options, relayer.HomeDir(hermesHome))
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
