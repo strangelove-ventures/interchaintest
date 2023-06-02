@@ -3,7 +3,12 @@ module github.com/strangelove-ventures/interchaintest/v4
 go 1.20
 
 require (
+<<<<<<< HEAD
 	github.com/BurntSushi/toml v1.2.1
+=======
+	github.com/99designs/keyring v1.2.2
+	github.com/BurntSushi/toml v1.3.0
+>>>>>>> 089c9f6 (Bump golang.org/x/tools from 0.9.1 to 0.9.3 (#613))
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
 	github.com/CosmWasm/wasmd v0.31.0
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
@@ -27,11 +32,19 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/tendermint/tendermint v0.34.26
 	go.uber.org/multierr v1.8.0
+<<<<<<< HEAD
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.5.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/tools v0.6.0
 	google.golang.org/grpc v1.53.0
+=======
+	go.uber.org/zap v1.24.0
+	golang.org/x/crypto v0.9.0
+	golang.org/x/sync v0.2.0
+	golang.org/x/tools v0.9.3
+	google.golang.org/grpc v1.55.0
+>>>>>>> 089c9f6 (Bump golang.org/x/tools from 0.9.1 to 0.9.3 (#613))
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.17.3
 )
