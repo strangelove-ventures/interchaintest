@@ -356,7 +356,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	containerImage := r.containerImage()
 	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+	containerName := fmt.Sprintf("%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
 
 	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 
