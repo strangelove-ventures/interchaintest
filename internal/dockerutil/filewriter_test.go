@@ -21,7 +21,7 @@ func TestFileWriter(t *testing.T) {
 	cli, network := interchaintest.DockerSetup(t)
 
 	ctx := context.Background()
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{dockerutil.CleanupLabel: t.Name()},
 	})
 	require.NoError(t, err)

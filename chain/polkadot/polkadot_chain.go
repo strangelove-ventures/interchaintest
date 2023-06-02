@@ -155,7 +155,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -210,7 +210,7 @@ func (c *PolkadotChain) NewParachainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
