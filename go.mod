@@ -41,7 +41,7 @@ require (
 	golang.org/x/tools v0.9.3
 	google.golang.org/grpc v1.55.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.22.1
+	modernc.org/sqlite v1.23.0
 )
 
 require (
