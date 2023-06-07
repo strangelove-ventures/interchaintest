@@ -416,6 +416,11 @@ func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName string, p
 	return c.txProposal(txHash)
 }
 
+// QueryParam returns the param state of a given key.
+func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	return c.getFullNode().QueryParam(ctx, subspace, key)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
