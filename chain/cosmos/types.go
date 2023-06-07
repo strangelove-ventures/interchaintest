@@ -93,6 +93,12 @@ type ProposalDeposit struct {
 	Amount string `json:"amount"`
 }
 
+type ParamChange struct {
+	Subspace string `json:"subspace"`
+	Key      string `json:"key"`
+	Value    any    `json:"value"`
+}
+
 type DumpContractStateResponse struct {
 	Models []ContractStateModels `json:"models"`
 }

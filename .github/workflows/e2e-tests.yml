@@ -1,4 +1,4 @@
-name: Run Go Tests
+name: Run End-To-End Tests
 
 on:
   pull_request:
@@ -9,28 +9,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-unit:
-    name: unit-tests
-    runs-on: [self-hosted, linux]
-    steps:
-      # Install and setup go
-      - name: Set up Go 1.19
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.19
-
-      - name: checkout interchaintest
-        uses: actions/checkout@v3
-
-      # cleanup environment on self-hosted test runner
-      - name: clean
-        run: |-
-          rm -rf ~/.interchaintest
-
-      # run tests
-      - name: run unit tests
-        # -short flag purposefully omitted because there are some longer unit tests
-        run: go test -race -timeout 10m -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
   test-conformance:
     name: test-conformance
     runs-on: [self-hosted, linux]
@@ -51,7 +29,7 @@ jobs:
 
       # run tests
       - name: run conformance tests
-        run: (go test -race -timeout 30m -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
+        run: (go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
   test-ibc-examples:
     name: test-ibc-examples
     runs-on: [self-hosted, linux]
@@ -72,7 +50,7 @@ jobs:
 
       # run tests
       - name: run example ibc tests
-        run: go test -race -timeout 30m -v -p 2 ./examples/ibc
+        run: go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
   test-cosmos-examples:
     name: test-cosmos-examples
     runs-on: [self-hosted, linux]
@@ -93,4 +71,4 @@ jobs:
 
       # run tests
       - name: run example cosmos tests
-        run: go test -race -timeout 30m -v -p 2 ./examples/cosmos
+        run: go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
