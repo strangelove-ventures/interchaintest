@@ -39,6 +39,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.19
+          cache: false
 
       - name: checkout interchaintest
         uses: actions/checkout@v3
@@ -60,6 +61,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.19
+          cache: false
 
       - name: checkout interchaintest
         uses: actions/checkout@v3
