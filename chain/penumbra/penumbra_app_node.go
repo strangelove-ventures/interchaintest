@@ -240,6 +240,26 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 	return []byte{}, errors.New("address not found")
 }
 
+func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "view", "balance"}
+	stdout, _, err := p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("STDOUT BAL: %s \n", string(stdout))
+
+	keyPath = filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd = []string{"pcli", "-d", keyPath, "view", "address"}
+	stdout, _, err = p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("STDOUT ADDR: %s \n", string(stdout))
+
+	return 0, errors.New("address not found")
+}
+
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
 	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)

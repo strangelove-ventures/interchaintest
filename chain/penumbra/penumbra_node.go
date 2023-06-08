@@ -16,9 +16,11 @@ type PenumbraNode struct {
 	PenumbraAppNode     *PenumbraAppNode
 	PenumbraClientNodes map[string]*PenumbraClientNode
 	clientsMu           sync.Locker
+	address             []byte
+	addrString          string
 }
 
-type PenumbraNodes []PenumbraNode
+type PenumbraNodes []*PenumbraNode
 
 // NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
 // with docker volumes created.
@@ -73,6 +75,8 @@ func (p *PenumbraNode) CreateClientNode(
 		image,
 		dockerClient,
 		networkID,
+		p.address,
+		p.addrString,
 	)
 	if err != nil {
 		p.clientsMu.Unlock()

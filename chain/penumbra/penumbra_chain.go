@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/pactus-project/pactus/util/bech32m"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
@@ -106,7 +107,7 @@ func (c *PenumbraChain) Exec(ctx context.Context, cmd []string, env []string) (s
 	return c.getFullNode().PenumbraAppNode.Exec(ctx, cmd, env)
 }
 
-func (c *PenumbraChain) getFullNode() PenumbraNode {
+func (c *PenumbraChain) getFullNode() *PenumbraNode {
 	if len(c.PenumbraNodes) > c.numValidators {
 		// use first full node
 		return c.PenumbraNodes[c.numValidators]
@@ -244,6 +245,7 @@ func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom st
 	if len(fn.PenumbraClientNodes) == 0 {
 		return 0, fmt.Errorf("no pclientd nodes on the fullnode for balance check")
 	}
+	fn.PenumbraAppNode.GetBalance(ctx, keyName)
 	return fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
 }
 
@@ -261,7 +263,7 @@ func (c *PenumbraChain) initializeChainNodes(
 	cli *client.Client,
 	networkID string,
 ) error {
-	var penumbraNodes []PenumbraNode
+	var penumbraNodes []*PenumbraNode
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
@@ -286,7 +288,7 @@ func (c *PenumbraChain) initializeChainNodes(
 		if err != nil {
 			return err
 		}
-		penumbraNodes = append(penumbraNodes, pn)
+		penumbraNodes = append(penumbraNodes, &pn)
 	}
 	c.PenumbraNodes = penumbraNodes
 
@@ -366,6 +368,20 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 			fundingStream := validatorTemplateDefinition.FundingStreams[0]
 			validatorTemplateDefinition.FundingStreams = []PenumbraValidatorFundingStream{fundingStream}
+
+			fmt.Printf("Funding Stream Addr: %s \n", fundingStream.Recipient)
+			_, bz, err := bech32m.DecodeNoLimit(fundingStream.Recipient)
+			if err != nil {
+				fmt.Println(fundingStream.Recipient)
+				fmt.Println(len(fundingStream.Recipient))
+				return err
+			}
+			fmt.Printf("DECODED BZ: %v \n", bz)
+
+			v.address = bz
+			v.addrString = fundingStream.Recipient
+
+			fmt.Printf("V ADDR BZ: %v \n", v.address)
 
 			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
 			validatorDefinitions[i] = validatorTemplateDefinition
