@@ -923,6 +923,20 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
+// QueryParam returns the state and details of a subspace param.
+func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "params", "subspace", subspace, key)
+	if err != nil {
+		return nil, err
+	}
+	var param ParamChange
+	err = json.Unmarshal(stdout, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &param, nil
+}
+
 // DumpContractState dumps the state of a contract at a block height.
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
