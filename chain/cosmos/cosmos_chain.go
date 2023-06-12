@@ -426,6 +426,11 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop *
 	return c.txProposal(txHash)
 }
 
+// QueryParam returns the param state of a given key.
+func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	return c.getFullNode().QueryParam(ctx, subspace, key)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
@@ -457,7 +462,7 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
@@ -598,7 +603,7 @@ func (c *CosmosChain) NewChainNode(
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -738,7 +743,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					return err
 				}
 			}
-			return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			if !c.cfg.SkipGenTx {
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			}
+			return nil
 		})
 	}
 
@@ -776,6 +784,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	// for the validators we need to collect the gentxs and the accounts
 	// to the first node's genesis file
 	validator0 := c.Validators[0]
@@ -791,8 +806,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validatorN.copyGentx(ctx, validator0); err != nil {
-			return err
+		if !c.cfg.SkipGenTx {
+			if err := validatorN.copyGentx(ctx, validator0); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -802,8 +819,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
-	if err := validator0.CollectGentxs(ctx); err != nil {
-		return err
+	if !c.cfg.SkipGenTx {
+		if err := validator0.CollectGentxs(ctx); err != nil {
+			return err
+		}
 	}
 
 	genbz, err := validator0.GenesisFileContent(ctx)
