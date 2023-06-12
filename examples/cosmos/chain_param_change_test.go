@@ -86,7 +86,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 		Deposit: "10000000ujuno",
 	}
 
-	paramTx, err := chain.ParamChangeProposal(ctx, chainUser.KeyName(), &param_change)
+	paramTx, err := chain.LegacyParamChangeProposal(ctx, chainUser.KeyName(), &param_change)
 	require.NoError(t, err, "error submitting param change proposal tx")
 
 	err = chain.VoteOnProposalAllValidators(ctx, paramTx.ProposalID, cosmos.ProposalVoteYes)
