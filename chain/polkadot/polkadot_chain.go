@@ -28,8 +28,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Increase polkadot scaled wallet amounts relative to cosmos
-const polkadotScaling = int64(1_000_000)
+// Increase polkadot wallet amount due to their additional precision
+const polkadotScaling = int64(1_000)
 
 // PolkadotChain implements the ibc.Chain interface for substrate chains.
 type PolkadotChain struct {
@@ -155,7 +155,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -210,7 +210,7 @@ func (c *PolkadotChain) NewParachainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 

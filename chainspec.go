@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
 	"go.uber.org/zap"
 )
 
@@ -94,10 +93,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
 		}
-		chainLabel := label.Chain(s.Name)
-		if !chainLabel.IsKnown() {
-			label.RegisterChainLabel(chainLabel)
-		}
 		cfg = ibc.ChainConfig{}
 	}
 
@@ -138,8 +133,14 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	if s.NoHostMount != nil {
 		cfg.NoHostMount = *s.NoHostMount
 	}
+	if s.SkipGenTx {
+		cfg.SkipGenTx = true
+	}
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
+	}
+	if s.PreGenesis != nil {
+		cfg.PreGenesis = s.PreGenesis
 	}
 	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
 

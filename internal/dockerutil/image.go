@@ -345,7 +345,10 @@ func (c *Container) Stop(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*2)
 	defer cancel()
 
-	err := c.image.client.ContainerStop(ctx, c.containerID, &timeout)
+	var stopOptions container.StopOptions
+	timeoutRound := int(timeout.Round(time.Second))
+	stopOptions.Timeout = &timeoutRound
+	err := c.image.client.ContainerStop(ctx, c.containerID, stopOptions)
 	if err != nil {
 		// Only return the error if it didn't match an already stopped, or a missing container.
 		if !(errdefs.IsNotModified(err) || errdefs.IsNotFound(err)) {
