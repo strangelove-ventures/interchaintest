@@ -17,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/pactus-project/pactus/util/bech32m"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
@@ -370,18 +369,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorTemplateDefinition.FundingStreams = []PenumbraValidatorFundingStream{fundingStream}
 
 			fmt.Printf("Funding Stream Addr: %s \n", fundingStream.Recipient)
-			_, bz, err := bech32m.DecodeNoLimit(fundingStream.Recipient)
-			if err != nil {
-				fmt.Println(fundingStream.Recipient)
-				fmt.Println(len(fundingStream.Recipient))
-				return err
-			}
-			fmt.Printf("DECODED BZ: %v \n", bz)
-
-			v.address = bz
 			v.addrString = fundingStream.Recipient
-
-			fmt.Printf("V ADDR BZ: %v \n", v.address)
 
 			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
 			validatorDefinitions[i] = validatorTemplateDefinition

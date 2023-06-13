@@ -105,7 +105,7 @@ penumbra:
   name: penumbra
   type: penumbra
   bin: tendermint
-  bech32-prefix: penumbra
+  bech32-prefix: penumbrav2t
   denom: upenumbra
   gas-prices: 0.0upenumbra
   gas-adjustment: 1.3

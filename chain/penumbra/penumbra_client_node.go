@@ -10,7 +10,6 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/pactus-project/pactus/util/bech32m"
 	cryptov1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/core/crypto/v1alpha1"
 	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/custody/v1alpha1"
 	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/view/v1alpha1"
@@ -207,8 +206,12 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 }
 
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, error) {
+	fmt.Println("Entering GetBalance function from client perspective...")
+	pclientd_addr := p.hostGRPCPort
+	// pclientd_addr = fmt.Sprintf("localhost:8081")
+	fmt.Printf("Dialing pclientd(?) grpc address at %v\n", pclientd_addr)
 	channel, err := grpc.Dial(
-		p.hostGRPCPort,
+		pclientd_addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -217,73 +220,38 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	defer channel.Close()
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
-
-	fmt.Println("Before GetAddress")
-
 	addressReq := &viewv1alpha1.AddressByIndexRequest{
 		AddressIndex: &cryptov1alpha1.AddressIndex{
 			Account:    0,
 			Randomizer: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		}}
 
+	fmt.Println("In GetBalance, requesting address...")
 	res, err := viewClient.AddressByIndex(ctx, addressReq)
 	if err != nil {
 		return 0, err
 	}
+	fmt.Println("Received address bytes:", res.Address.Inner)
 
-	fmt.Println("After GetAddress")
+	fmt.Println("In GetBalance, building BalanceByAddressRequest...")
+	balanceRequest := &viewv1alpha1.BalanceByAddressRequest{
+		Address: res.Address,
+	}
 
-	address := res.GetAddress()
-
-	bzSliced := address.Inner[12:]
-
-	_, bz, err := bech32m.DecodeNoLimit(p.addrString)
+	fmt.Println("In GetBalance, submitting BalanceByAddressRequest...")
+	resp, err := viewClient.BalanceByAddress(ctx, balanceRequest)
 	if err != nil {
 		return 0, err
 	}
 
-	equals := bytes.Compare(bz, bzSliced)
-	if equals != 0 {
-		fmt.Printf("address bytes are not equal, expected(%v) got(%v)", bz, bzSliced)
-	}
-
-	/*
-		address bytes are not equal,
-		expected([27 2 12 27 15 29 16 29 0 14 13 19 22 13 13 13 13 9 20 0 4 23 16 17 18 3 0 17 29 8 31 8 5 10 26 28 21 4 22 28 18 23 11 30 24 19 29 9 3 19 27 24 4 14 20 2 30 14 18 11 25 21 3 13 16 3 30 14 24 1 1 16 4 21 28 21 11 11 20 17 26 14 6 17 18 22 29 1 31 22 23 21 27 0 13 30 18 31 24 6 16 25 15 11 17 2 14 14 30 24 28 22 22 16 30 5 7 30 5 9 6 24 13 27 11 1 28 22])
-		got([2 94 17 144 193 30 163 232 42 181 202 146 220 149 215 236 79 169 28 247 130 58 130 243 164 188 212 109 128 252 236 4 48 37 121 85 174 145 211 141 25 91 161 253 175 93 129 190 151 240 104 101 235 136 156 239 99 150 180 60 83 248 169 54 27 181 135 150])failed to encode address bz, err: invalid data byte: 94
-
-	*/
-
-	encodedAddr, err := bech32m.Encode("penumbrav2t", bzSliced)
-	if err != nil {
-		fmt.Printf("failed to encode address bz, err: %v \n", err)
-	}
-
-	fmt.Printf("Encoded addr: %s \n", encodedAddr)
-
-	penAddress := &cryptov1alpha1.Address{
-		Inner: p.address,
-	}
-
-	bar := &viewv1alpha1.BalanceByAddressRequest{
-		Address: penAddress,
-	}
-
-	resp, err := viewClient.BalanceByAddress(ctx, bar)
-	if err != nil {
-		return 0, err
-	}
-
-	fmt.Println("After GET BAL")
-
+	fmt.Println("In GetBalance, unwrapping BalanceByAddressResponse...")
 	bal, err := resp.Recv()
 	if err != nil {
+		fmt.Printf("Failed to unwrap balance response: %v\nbal: %v\n", err, bal)
 		return 0, err
 	}
 
-	fmt.Println("After RECV")
-
-	fmt.Printf("BAL: %+v \b", bal)
+	fmt.Printf("Balance appears to be: %+v \b", bal)
 	return int64(bal.Amount.Hi), nil
 }
 
@@ -323,7 +291,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 
 	// TODO: we should be able to remove this once a patch release has been tagged for pclientd
 	env := []string{
-		"RUST_LOG=debug",
+		"RUST_LOG=info",
 	}
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
