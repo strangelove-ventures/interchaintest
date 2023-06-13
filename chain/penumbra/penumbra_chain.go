@@ -10,19 +10,16 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -73,10 +70,7 @@ type PenumbraGenesisAppStateAllocation struct {
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
-	registry := codectypes.NewInterfaceRegistry()
-	cryptocodec.RegisterInterfaces(registry)
-	cdc := codec.NewProtoCodec(registry)
-	kr := keyring.NewInMemory(cdc)
+	kr := keyring.NewInMemory()
 
 	return &PenumbraChain{
 		log:           log,
@@ -202,10 +196,7 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	addrBytes, err := info.GetAddress()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
-	}
+	addrBytes := info.GetAddress()
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }

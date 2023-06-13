@@ -9,9 +9,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
 )
@@ -55,9 +52,5 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 		}
 	}
 
-	registry := codectypes.NewInterfaceRegistry()
-	cryptocodec.RegisterInterfaces(registry)
-	cdc := codec.NewProtoCodec(registry)
-
-	return keyring.New("", keyring.BackendTest, localDirectory, os.Stdin, cdc)
+	return keyring.New("", keyring.BackendTest, localDirectory, os.Stdin)
 }

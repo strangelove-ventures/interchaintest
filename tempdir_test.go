@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v3"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 

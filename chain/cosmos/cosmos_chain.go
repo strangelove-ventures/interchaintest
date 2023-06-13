@@ -3,8 +3,6 @@ package cosmos
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -12,26 +10,22 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v3/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v3/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v3/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -88,8 +82,8 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
-	cdc := codec.NewProtoCodec(registry)
-	kr := keyring.NewInMemory(cdc)
+	// cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory()
 
 	return &CosmosChain{
 		testName:      testName,
@@ -278,10 +272,11 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	addrBytes, err := info.GetAddress()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
-	}
+	// addrBytes, err := info.GetAddress()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to get address: %w", err)
+	// }
+	addrBytes := info.GetAddress()
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
@@ -353,36 +348,6 @@ func (c *CosmosChain) SendIBCTransfer(
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
-}
-
-// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
-func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
-	tx := TxProposal{}
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return tx, "", err
-	}
-	codeHashByte32 := sha256.Sum256(content)
-	codeHash := hex.EncodeToString(codeHashByte32[:])
-	content, err = testutil.GzipIt(content)
-	if err != nil {
-		return tx, "", err
-	}
-	message := wasmtypes.MsgStoreCode{
-		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
-		Code:   content,
-	}
-	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
-	if err != nil {
-		return tx, "", err
-	}
-	prop.Messages = append(prop.Messages, msg)
-	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
-	if err != nil {
-		return tx, "", fmt.Errorf("failed to submit wasm client proposal: %w", err)
-	}
-	tx, err = c.txProposal(txHash)
-	return tx, codeHash, err
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.

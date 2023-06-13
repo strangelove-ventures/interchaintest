@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -43,7 +43,7 @@ type ChainConfig struct {
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
-	EncodingConfig *testutil.TestEncodingConfig
+	EncodingConfig *simappparams.EncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 }
@@ -240,7 +240,6 @@ type RelayerImplementation int64
 const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
-	Hyperspace
 )
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
