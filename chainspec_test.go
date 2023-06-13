@@ -145,6 +145,18 @@ func TestChainSpec_Config(t *testing.T) {
 
 			require.True(t, cfg.UsingNewGenesisCommand)
 		})
+
+		t.Run("UsingGovModv1beta1", func(t *testing.T) {
+			require.False(t, baseCfg.UsingGovModv1beta1)
+
+			s := baseSpec
+			s.UsingGovModv1beta1 = true
+
+			cfg, err := s.Config(zaptest.NewLogger(t))
+			require.NoError(t, err)
+
+			require.True(t, cfg.UsingGovModv1beta1)
+		})
 	})
 
 	t.Run("error cases", func(t *testing.T) {

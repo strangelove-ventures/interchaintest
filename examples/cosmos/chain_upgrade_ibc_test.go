@@ -40,7 +40,8 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: cosmos.ModifyGenesisProposalTime(votingPeriod, maxDepositPeriod),
+				ModifyGenesis:      cosmos.ModifyGenesisProposalTime(votingPeriod, maxDepositPeriod),
+				UsingGovModv1beta1: true,
 			},
 		},
 		{

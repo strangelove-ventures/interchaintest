@@ -871,10 +871,16 @@ func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop Tx
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-// UpgradeProposal submits a software-upgrade governance proposal to the chain.
+// LegacyUpgradeProposal submits a software-upgrade governance proposal to the chain.
+// If running a chain < sdk v0.46, ensure to set UsingGovModv1beta1 to true in the chain config
 func (tn *ChainNode) LegacyUpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
+	c := "submit-legacy-proposal"
+	if tn.Chain.Config().UsingGovModv1beta1 {
+		c = "submit-proposal"
+	}
+
 	command := []string{
-		"gov", "submit-legacy-proposal",
+		"gov", c,
 		"software-upgrade", prop.Name,
 		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
 		"--title", prop.Title,
@@ -889,10 +895,16 @@ func (tn *ChainNode) LegacyUpgradeProposal(ctx context.Context, keyName string, 
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-// TextProposal submits a text governance proposal to the chain.
+// LegacyTextProposal submits a text governance proposal to the chain.
+// If running a chain < sdk v0.46, ensure to set UsingGovModv1beta1 to true in the chain config
 func (tn *ChainNode) LegacyTextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
+	c := "submit-legacy-proposal"
+	if tn.Chain.Config().UsingGovModv1beta1 {
+		c = "submit-proposal"
+	}
+
 	command := []string{
-		"gov", "submit-legacy-proposal",
+		"gov", c,
 		"--type", "text",
 		"--title", prop.Title,
 		"--description", prop.Description,
@@ -904,7 +916,8 @@ func (tn *ChainNode) LegacyTextProposal(ctx context.Context, keyName string, pro
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+// LegacyParamChangeProposal submits a param change proposal to the chain, signed by keyName.
+// If running a chain < sdk v0.46, ensure to set UsingGovModv1beta1 to true in the chain config
 func (tn *ChainNode) LegacyParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
 	content, err := json.Marshal(prop)
 	if err != nil {
@@ -920,8 +933,13 @@ func (tn *ChainNode) LegacyParamChangeProposal(ctx context.Context, keyName stri
 
 	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
 
+	c := "submit-legacy-proposal"
+	if tn.Chain.Config().UsingGovModv1beta1 {
+		c = "submit-proposal"
+	}
+
 	command := []string{
-		"gov", "submit-legacy-proposal",
+		"gov", c,
 		"param-change",
 		proposalPath,
 	}

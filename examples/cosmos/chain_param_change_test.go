@@ -33,8 +33,9 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 			ChainName: name,
 			Version:   version,
 			ChainConfig: ibc.ChainConfig{
-				Denom:         "ujuno",
-				ModifyGenesis: cosmos.ModifyGenesisProposalTime(votingPeriod, maxDepositPeriod),
+				Denom:              "ujuno",
+				ModifyGenesis:      cosmos.ModifyGenesisProposalTime(votingPeriod, maxDepositPeriod),
+				UsingGovModv1beta1: true,
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,

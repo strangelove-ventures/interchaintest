@@ -46,6 +46,9 @@ type ChainConfig struct {
 	EncodingConfig *testutil.TestEncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
+	// Required when chains are using Gov Module v1beta1 as opposed to v1
+	// Usually requried for chains running an SDK older than v0.46 (https://github.com/cosmos/cosmos-sdk/blob/v0.47.3/tools/cosmovisor/README.md#update-app)
+	UsingGovModv1beta1 bool `yaml:"using-gov-mod-v1beta1"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
