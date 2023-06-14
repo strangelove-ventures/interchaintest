@@ -522,6 +522,25 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	return err
 }
 
+// WriteFile accepts file contents in a byte slice and writes the contents to
+// the docker filesystem. relPath describes the location of the file in the
+// docker volume relative to the home directory
+func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	return fw.WriteFile(ctx, tn.VolumeName, relPath, content)
+}
+
+// CopyFile adds a file from the host filesystem to the docker filesystem
+// relPath describes the location of the file in the docker volume relative to
+// the home directory
+func (tn *ChainNode) CopyFile(ctx context.Context, srcPath, dstPath string) error {
+	content, err := os.ReadFile(srcPath)
+	if err != nil {
+		return err
+	}
+	return tn.WriteFile(ctx, content, dstPath)
+}
+
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
