@@ -746,7 +746,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 // ExecuteContract executes a contract transaction with a message using it's address.
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
 	return tn.ExecTx(ctx, keyName,
-		"wasm", "execute", contractAddress, message,
+		"wasm", "execute", contractAddress, message, "--gas", "auto",
 	)
 }
 
