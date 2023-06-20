@@ -408,13 +408,13 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 		return fmt.Errorf("StopRelayer: inspecting container: %w", err)
 	}
 
-	startedAt, err := time.Parse(c.State.StartedAt, time.RFC3339Nano)
+	startedAt, err := time.Parse(time.RFC3339Nano, c.State.StartedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container StartedAt", zap.Error(err))
 		startedAt = time.Unix(0, 0)
 	}
 
-	finishedAt, err := time.Parse(c.State.FinishedAt, time.RFC3339Nano)
+	finishedAt, err := time.Parse(time.RFC3339Nano, c.State.FinishedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container FinishedAt", zap.Error(err))
 		finishedAt = time.Now().UTC()
