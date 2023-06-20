@@ -2,7 +2,7 @@ package cosmos
 
 import (
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v3/ibc"
+	"github.com/strangelove-ventures/interchaintest/v4/ibc"
 )
 
 var _ ibc.Wallet = &CosmosWallet{}
