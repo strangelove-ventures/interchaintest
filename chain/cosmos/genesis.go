@@ -12,7 +12,7 @@ import (
 
 type GenesisKV struct {
 	Key   string      `json:"key"`
-	Value interface{} `json:"val"`
+	Value interface{} `json:"value"`
 }
 
 func ModifyGenesis(genesisKV []GenesisKV) func(ibc.ChainConfig, []byte) ([]byte, error) {
