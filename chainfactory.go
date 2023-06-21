@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v4/chain/penumbra"
-	"github.com/strangelove-ventures/interchaintest/v4/ibc"
+	"github.com/strangelove-ventures/interchaintest/v5/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v5/chain/penumbra"
+	"github.com/strangelove-ventures/interchaintest/v5/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )

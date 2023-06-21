@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/interchaintest/v4
+module github.com/strangelove-ventures/interchaintest/v5
 
 go 1.19
 

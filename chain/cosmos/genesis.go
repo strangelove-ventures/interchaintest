@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/interchaintest/v4/ibc"
+	"github.com/strangelove-ventures/interchaintest/v5/ibc"
 )
 
 func ModifyGenesisProposalTime(votingPeriod string, maxDepositPeriod string) func(ibc.ChainConfig, []byte) ([]byte, error) {

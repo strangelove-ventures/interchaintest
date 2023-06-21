@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v4/ibc"
-	"github.com/strangelove-ventures/interchaintest/v4/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v4/internal/version"
-	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v5/ibc"
+	"github.com/strangelove-ventures/interchaintest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v5/internal/version"
+	"github.com/strangelove-ventures/interchaintest/v5/testreporter"
 )
 
 const (
