@@ -407,7 +407,6 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		"--from", keyName,
 		"--gas-prices", tn.Chain.Config().GasPrices,
 		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--gas", "auto",
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
