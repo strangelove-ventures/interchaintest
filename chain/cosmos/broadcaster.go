@@ -138,7 +138,7 @@ func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user User) ([]byte
 // instance of sdk.TxResponse.
 func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
 	resp := sdk.TxResponse{}
-	if err := b.chain.cfg.EncodingConfig.Marshaler.UnmarshalJSON(bytes, &resp); err != nil {
+	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
 	return resp, nil
@@ -159,7 +159,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithAccountRetriever(authtypes.AccountRetriever{}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastSync).
-		WithCodec(b.chain.cfg.EncodingConfig.Marshaler)
+		WithCodec(b.chain.cfg.EncodingConfig.Codec)
 
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
 	// but that field no longer exists and the test against Broadcaster still passes without it.

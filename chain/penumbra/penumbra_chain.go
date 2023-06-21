@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
@@ -70,8 +73,10 @@ type PenumbraGenesisAppStateAllocation struct {
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
-	kr := keyring.NewInMemory()
-
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
 	return &PenumbraChain{
 		log:           log,
 		testName:      testName,
@@ -196,7 +201,10 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	addrBytes := info.GetAddress()
+	addrBytes, err := info.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address: %w", err)
+	}
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }

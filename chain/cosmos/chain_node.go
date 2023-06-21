@@ -724,36 +724,6 @@ type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
 }
 
-// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	_, file := filepath.Split(fileName)
-	err := tn.CopyFile(ctx, fileName, file)
-	if err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
-		return "", err
-	}
-
-	err = testutil.WaitForBlocks(ctx, 5, tn.Chain)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
-	if err != nil {
-		return "", err
-	}
-
-	res := CodeInfosResponse{}
-	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
-		return "", err
-	}
-
-	return res.CodeInfos[0].CodeID, nil
-}
-
 func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
@@ -769,95 +739,6 @@ func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*t
 		retry.LastErrorOnly(true),
 	)
 	return txResp, err
-}
-
-// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
-	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
-	command = append(command, extraExecTxArgs...)
-	if needsNoAdminFlag {
-		command = append(command, "--no-admin")
-	}
-	txHash, err := tn.ExecTx(ctx, keyName, command...)
-	if err != nil {
-		return "", err
-	}
-
-	txResp, err := tn.getTransaction(tn.CliContext(), txHash)
-	if err != nil {
-		return "", fmt.Errorf("failed to get transaction %s: %w", txHash, err)
-	}
-	if txResp.Code != 0 {
-		return "", fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
-	if err != nil {
-		return "", err
-	}
-
-	contactsRes := QueryContractResponse{}
-	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
-		return "", err
-	}
-
-	contractAddress := contactsRes.Contracts[len(contactsRes.Contracts)-1]
-	return contractAddress, nil
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return tn.ExecTx(ctx, keyName,
-		"wasm", "execute", contractAddress, message,
-	)
-}
-
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
-func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
-	query, err := json.Marshal(queryMsg)
-	if err != nil {
-		return err
-	}
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal([]byte(stdout), response)
-	return err
-}
-
-// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-	_, file := filepath.Split(fileName)
-	err = tn.WriteFile(ctx, content, file)
-	if err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	_, err = tn.ExecTx(ctx, keyName, "ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto")
-	if err != nil {
-		return "", err
-	}
-
-	codeHashByte32 := sha256.Sum256(content)
-	codeHash := hex.EncodeToString(codeHashByte32[:])
-
-	//return stdout, nil
-	return codeHash, nil
-}
-
-// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
-func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
-	stdout, _, err := tn.ExecQuery(ctx, "ibc-wasm", "code", codeHash)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal([]byte(stdout), response)
-	return err
 }
 
 // VoteOnProposal submits a vote for the specified proposal.
@@ -974,23 +855,6 @@ func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*Par
 		return nil, err
 	}
 	return &param, nil
-}
-
-// DumpContractState dumps the state of a contract at a block height.
-func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
-	stdout, _, err := tn.ExecQuery(ctx,
-		"wasm", "contract-state", "all", contractAddress,
-		"--height", fmt.Sprint(height),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	res := new(DumpContractStateResponse)
-	if err := json.Unmarshal([]byte(stdout), res); err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
 func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {

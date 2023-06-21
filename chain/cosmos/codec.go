@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibctypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
+	ibctypes "github.com/cosmos/ibc-go/v5/modules/core/types"
 )
 
 func DefaultEncoding() simappparams.EncodingConfig {

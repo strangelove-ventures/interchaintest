@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -17,7 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -82,8 +83,8 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
-	// cdc := codec.NewProtoCodec(registry)
-	kr := keyring.NewInMemory()
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
 
 	return &CosmosChain{
 		testName:      testName,
@@ -272,11 +273,10 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	// addrBytes, err := info.GetAddress()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get address: %w", err)
-	// }
-	addrBytes := info.GetAddress()
+	addrBytes, err := info.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address: %w", err)
+	}
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
@@ -401,41 +401,6 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
 
 	return tx, nil
-}
-
-// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreContract(ctx, keyName, fileName)
-}
-
-// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
-	return c.getFullNode().InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag, extraExecTxArgs...)
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
-}
-
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
-func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
-	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
-}
-
-// DumpContractState dumps the state of a contract at a block height.
-func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
-	return c.getFullNode().DumpContractState(ctx, contractAddress, height)
-}
-
-// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
-}
-
-// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
-func (c *CosmosChain) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
-	return c.getFullNode().QueryClientContractCode(ctx, codeHash, response)
 }
 
 // ExportState exports the chain state at specific height.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v5/modules/apps/transfer/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v5"
 	"github.com/strangelove-ventures/interchaintest/v5/ibc"
 	"github.com/strangelove-ventures/interchaintest/v5/testreporter"
