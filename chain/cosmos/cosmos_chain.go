@@ -439,6 +439,26 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
+// AllBalances fetches an account address's balance for all denoms it holds
+func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
+	params := bankTypes.QueryAllBalancesRequest{Address: address}
+	grpcAddress := c.getFullNode().hostGRPCPort
+	conn, err := grpc.Dial(grpcAddress, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	queryClient := bankTypes.NewQueryClient(conn)
+	res, err := queryClient.AllBalances(ctx, &params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res.GetBalances(), nil
+}
+
 func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
