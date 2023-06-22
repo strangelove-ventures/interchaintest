@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v5"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

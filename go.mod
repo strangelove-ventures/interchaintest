@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/interchaintest/v5
+module github.com/strangelove-ventures/interchaintest/v6
 
 go 1.19
 
@@ -12,7 +12,7 @@ require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.46.13
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/ibc-go/v5 v5.3.1
+	github.com/cosmos/ibc-go/v6 v6.2.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.1+incompatible

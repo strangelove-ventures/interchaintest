@@ -1,6 +1,6 @@
 package hermes
 
-import "github.com/strangelove-ventures/interchaintest/v5/ibc"
+import "github.com/strangelove-ventures/interchaintest/v6/ibc"
 
 var _ ibc.Wallet = &Wallet{}
 

@@ -21,9 +21,9 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/strangelove-ventures/interchaintest/v5/ibc"
-	"github.com/strangelove-ventures/interchaintest/v5/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v5/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )

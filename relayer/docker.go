@@ -13,9 +13,9 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/strangelove-ventures/interchaintest/v5/ibc"
-	"github.com/strangelove-ventures/interchaintest/v5/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v5/testutil"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"go.uber.org/zap"
 )
 

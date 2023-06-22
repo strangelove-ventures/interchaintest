@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	ibcexported "github.com/cosmos/ibc-go/v5/modules/core/03-connection/types"
+	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/strangelove-ventures/interchaintest/v5/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v5/chain/penumbra"
-	"github.com/strangelove-ventures/interchaintest/v5/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v5/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/penumbra"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
