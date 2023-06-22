@@ -423,6 +423,7 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
+		"--chain-id", tn.Chain.Config().ChainID,
 	)...)
 }
 
@@ -458,7 +459,6 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
 	return append(command,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--chain-id", tn.Chain.Config().ChainID,
 	)
 }
 
