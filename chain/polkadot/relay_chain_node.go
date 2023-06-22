@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
@@ -30,7 +30,6 @@ type RelayChainNode struct {
 
 	NetworkID          string
 	containerLifecycle *dockerutil.ContainerLifecycle
-	containerID        string
 	VolumeName         string
 	DockerClient       *client.Client
 	Image              ibc.DockerImage
@@ -97,7 +96,7 @@ func (p *RelayChainNode) PeerID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return peer.Encode(id), nil
+	return id.String(), nil
 }
 
 // GrandpaAddress returns the ss58 encoded grandpa (consensus) address.
@@ -128,7 +127,7 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(rpcPort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
 func (c *RelayChainNode) logger() *zap.Logger {
@@ -216,6 +215,9 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
+		"--enable-offchain-indexing=true",
+		"--rpc-methods=unsafe",
+		"--pruning=archive",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
 		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
@@ -231,19 +233,22 @@ func (p *RelayChainNode) StopContainer(ctx context.Context) error {
 
 // StartContainer starts the container after it is built by CreateNodeContainer.
 func (p *RelayChainNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, wsPort, rpcPort)
 	if err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	p.hostWsPort = dockerutil.GetHostPort(c, wsPort)
-	p.hostRpcPort = dockerutil.GetHostPort(c, rpcPort)
+	p.hostWsPort, p.hostRpcPort = hostPorts[0], hostPorts[1]
 
+	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
+	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
+	p.log.Info(explorerUrl, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -253,6 +258,7 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
+	p.logger().Info("Done", zap.String("container", p.Name()))
 	p.api = api
 
 	return nil
@@ -267,4 +273,27 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 		User:  p.Image.UidGid,
 	}
 	return job.Run(ctx, cmd, opts)
+}
+
+// SendFunds sends funds to a wallet from a user account.
+// Implements Chain interface.
+func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	kp, err := p.Chain.(*PolkadotChain).GetKeyringPair(keyName)
+	if err != nil {
+		return err
+	}
+
+	hash, err := SendFundsTx(p.api, kp, amount)
+	if err != nil {
+		return err
+	}
+
+	p.log.Info("Transfer sent", zap.String("hash", fmt.Sprintf("%#x", hash)), zap.String("container", p.Name()))
+	return nil
+}
+
+// GetBalance fetches the current balance for a specific account address and denom.
+// Implements Chain interface.
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+	return GetBalance(p.api, address)
 }

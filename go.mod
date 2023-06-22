@@ -9,7 +9,6 @@ require (
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.3.4
-	github.com/centrifuge/go-substrate-rpc-client v2.0.0+incompatible
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10
 	github.com/cosmos/cosmos-sdk v0.46.13
 	github.com/cosmos/go-bip39 v1.0.0
@@ -22,7 +21,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-version v1.6.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
-	github.com/libp2p/go-libp2p-core v0.20.1
+	github.com/libp2p/go-libp2p v0.22.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
@@ -125,7 +124,6 @@ require (
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.22.0 // indirect
 	github.com/libp2p/go-openssl v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect

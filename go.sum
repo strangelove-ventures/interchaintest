@@ -109,8 +109,6 @@ github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce h1:YtWJF7RHm2pY
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff/v4 v4.1.3 h1:cFAlzYUlVYDysBEH2T5hyJZMh3+5+WCBvSnK6Q8UtC4=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
-github.com/centrifuge/go-substrate-rpc-client v2.0.0+incompatible h1:FvPewruOgelqA/DVBdX7/Q6znUGGQ+g0ciG5tA2Fk98=
-github.com/centrifuge/go-substrate-rpc-client v2.0.0+incompatible/go.mod h1:GBMLH8MQs5g4FcrytcMm9uRgBnTL1LIkNTue6lUPhZU=
 github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10 h1:HW3XP9G3mXr0gYPfxCAQLD29u+Ys0uIeotv9RWfnhrM=
 github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.10/go.mod h1:5g1oM4Zu3BOaLpsKQ+O8PAv2kNuq+kPcA1VzFbsSqxE=
 github.com/cespare/xxhash v1.1.0 h1:a6HrQnmkObjyL+Gs60czilIUGqrzKutQD6XZog3p+ko=
@@ -433,8 +431,6 @@ github.com/libp2p/go-buffer-pool v0.1.0 h1:oK4mSFcQz7cTQIfqbe4MIj9gLW+mnanjyFtc6
 github.com/libp2p/go-buffer-pool v0.1.0/go.mod h1:N+vh8gMqimBzdKkSMVuydVDq+UV5QTWy5HSiZacSbPg=
 github.com/libp2p/go-libp2p v0.22.0 h1:2Tce0kHOp5zASFKJbNzRElvh0iZwdtG5uZheNW8chIw=
 github.com/libp2p/go-libp2p v0.22.0/go.mod h1:UDolmweypBSjQb2f7xutPnwZ/fxioLbMBxSjRksxxU4=
-github.com/libp2p/go-libp2p-core v0.20.1 h1:fQz4BJyIFmSZAiTbKV8qoYhEH5Dtv/cVhZbG3Ib/+Cw=
-github.com/libp2p/go-libp2p-core v0.20.1/go.mod h1:6zR8H7CvQWgYLsbG4on6oLNSGcyKaYFSEYyDt51+bIY=
 github.com/libp2p/go-openssl v0.1.0 h1:LBkKEcUv6vtZIQLVTegAil8jbNpJErQ9AnT+bWV+Ooo=
 github.com/libp2p/go-openssl v0.1.0/go.mod h1:OiOxwPpL3n4xlenjx2h7AwSGaFSC/KZvf6gNdOBQMtc=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
