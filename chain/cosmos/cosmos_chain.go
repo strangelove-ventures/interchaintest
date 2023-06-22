@@ -3,6 +3,11 @@ package cosmos
 import (
 	"bytes"
 	"context"
+<<<<<<< HEAD
+=======
+	"crypto/sha256"
+	"encoding/hex"
+>>>>>>> 220ce33 (SDK v47 features from Juno (#565))
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+<<<<<<< HEAD
 	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
 	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v4/modules/core/23-commitment/types"
@@ -23,6 +29,12 @@ import (
 	ccvconsumertypes "github.com/cosmos/interchain-security/x/ccv/consumer/types"
 	ccvclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
 	ccvprovidertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
+=======
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+	cosmosproto "github.com/cosmos/gogoproto/proto"
+	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+>>>>>>> 220ce33 (SDK v47 features from Juno (#565))
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -318,6 +330,7 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 	return c.txProposal(txHash)
 }
 
+<<<<<<< HEAD
 // ParamChangeProposal submits a param-change governance proposal to the chain.
 func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName, fileLocation string) (tx TxProposal, _ error) {
 	dat, err := os.ReadFile(fileLocation)
@@ -334,10 +347,44 @@ func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName, fileLoca
 	txHash, err := c.getFullNode().ParamChangeProposal(ctx, keyName, paramChange)
 	if err != nil {
 		return tx, fmt.Errorf("failed to submit param-change proposal: %w", err)
+=======
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
+>>>>>>> 220ce33 (SDK v47 features from Juno (#565))
 	}
 	return c.txProposal(txHash)
 }
 
+<<<<<<< HEAD
+=======
+// Build a gov v1 proposal type.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+	var propType TxProposalv1
+	rawMsgs := make([]json.RawMessage, len(messages))
+
+	for i, msg := range messages {
+		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
+		if err != nil {
+			return propType, err
+		}
+		rawMsgs[i] = msg
+	}
+
+	propType = TxProposalv1{
+		Messages: rawMsgs,
+		Metadata: metadata,
+		Deposit:  depositStr,
+		Title:    title,
+		Summary:  summary,
+	}
+
+	return propType, nil
+}
+
+>>>>>>> 220ce33 (SDK v47 features from Juno (#565))
 // TextProposal submits a text governance proposal to the chain.
 func (c *CosmosChain) TextProposal(ctx context.Context, keyName string, prop TextProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().TextProposal(ctx, keyName, prop)
