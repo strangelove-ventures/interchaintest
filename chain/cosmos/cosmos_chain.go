@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -22,6 +23,7 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -392,6 +394,39 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
 	return c.txProposal(txHash)
+}
+
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
+// Build a gov v1 proposal type.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+	var propType TxProposalv1
+	rawMsgs := make([]json.RawMessage, len(messages))
+
+	for i, msg := range messages {
+		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
+		if err != nil {
+			return propType, err
+		}
+		rawMsgs[i] = msg
+	}
+
+	propType = TxProposalv1{
+		Messages: rawMsgs,
+		Metadata: metadata,
+		Deposit:  depositStr,
+		Title:    title,
+		Summary:  summary,
+	}
+
+	return propType, nil
 }
 
 // TextProposal submits a text governance proposal to the chain.
