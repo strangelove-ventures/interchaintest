@@ -27,13 +27,33 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeV
 
 	t.Parallel()
 
+	// SDK v45 params for Juno genesis
+	shortVoteGenesis := []cosmos.GenesisKV{
+		{
+			Key:   "app_state.gov.voting_params.voting_period",
+			Value: votingPeriod,
+		},
+		{
+			Key:   "app_state.gov.deposit_params.max_deposit_period",
+			Value: maxDepositPeriod,
+		},
+		{
+			Key:   "app_state.gov.deposit_params.min_deposit.0.denom",
+			Value: "ujuno",
+		},
+	}
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      chainName,
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
+<<<<<<< HEAD
 				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+=======
+				ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
+>>>>>>> 220ce33 (SDK v47 features from Juno (#565))
 			},
 		},
 		{
