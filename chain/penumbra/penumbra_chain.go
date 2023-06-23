@@ -375,18 +375,21 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorDefinitions[i] = validatorTemplateDefinition
 
 			// self delegation
-			allocations = append(allocations, PenumbraGenesisAppStateAllocation{
-				Amount:  100_000,
-				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
-				Address: fundingStream.Recipient,
-			})
-
+			allocations = append(allocations,
+				PenumbraGenesisAppStateAllocation{
+					Amount:  100_000_000_000,
+					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
+					Address: fundingStream.Recipient,
+				},
+			)
 			// liquid
-			allocations = append(allocations, PenumbraGenesisAppStateAllocation{
-				Amount:  100_000,
-				Denom:   chainCfg.Denom,
-				Address: fundingStream.Recipient,
-			})
+			allocations = append(allocations,
+				PenumbraGenesisAppStateAllocation{
+					Amount:  1_000_000_000_000,
+					Denom:   chainCfg.Denom,
+					Address: fundingStream.Recipient,
+				},
+			)
 
 			return nil
 		})

@@ -200,9 +200,9 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
-	allocationsCsv := []byte(`"amount","denom","address"\n`)
+	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%d\",\"%s\",\"%s\"\n", allocation.Amount, allocation.Denom, allocation.Address))...)
 	}
 
 	fmt.Println("Allocations CSV")
