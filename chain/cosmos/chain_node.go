@@ -23,6 +23,7 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	ccvclient "github.com/cosmos/interchain-security/v2/x/ccv/provider/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
@@ -185,6 +186,25 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 	err = destVal.WriteFile(ctx, gentx, relPath)
 	if err != nil {
 		return fmt.Errorf("overwriting gentx: %w", err)
+	}
+
+	return nil
+}
+
+func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
+	}
+
+	return gen, nil
+}
+
+func (tn *ChainNode) overwritePrivValFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
+		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 	}
 
 	return nil
@@ -935,6 +955,28 @@ func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop Text
 		command = append(command, "--is-expedited=true")
 	}
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	return tn.ExecTx(ctx, keyName,
+		"gov", "submit-proposal", "consumer-addition", filePath,
+		"-b", "block",
+		"--gas", "auto",
+	)
 }
 
 // ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
