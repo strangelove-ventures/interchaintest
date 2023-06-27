@@ -1,2 +1,2 @@
 test:
-    go test examples/penumbra/penumbra_chain_test.go
+    go test -v examples/penumbra/penumbra_chain_test.go

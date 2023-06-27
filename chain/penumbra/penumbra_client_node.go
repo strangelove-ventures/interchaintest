@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"io"
 
 	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -208,7 +209,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, error) {
 	fmt.Println("Entering GetBalance function from client perspective...")
 	pclientd_addr := p.hostGRPCPort
-	// pclientd_addr = fmt.Sprintf("localhost:8081")
 	fmt.Printf("Dialing pclientd(?) grpc address at %v\n", pclientd_addr)
 	channel, err := grpc.Dial(
 		pclientd_addr,
@@ -223,36 +223,53 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	addressReq := &viewv1alpha1.AddressByIndexRequest{
 		AddressIndex: &cryptov1alpha1.AddressIndex{
 			Account:    0,
-			Randomizer: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		}}
 
 	fmt.Println("In GetBalance, requesting address...")
-	res, err := viewClient.AddressByIndex(ctx, addressReq)
+	addressResponse, err := viewClient.AddressByIndex(ctx, addressReq)
 	if err != nil {
 		return 0, err
 	}
-	fmt.Println("Received address bytes:", res.Address.Inner)
+	fmt.Println("Received address bytes:", addressResponse.Address.Inner)
 
 	fmt.Println("In GetBalance, building BalanceByAddressRequest...")
 	balanceRequest := &viewv1alpha1.BalanceByAddressRequest{
-		Address: res.Address,
+		Address: addressResponse.Address,
 	}
-
 	fmt.Println("In GetBalance, submitting BalanceByAddressRequest...")
-	resp, err := viewClient.BalanceByAddress(ctx, balanceRequest)
+	// The BalanceByAddress method returns a stream response, containing
+	// zero-or-more balances, including denom and amount info per balance.
+	balanceStream, err := viewClient.BalanceByAddress(ctx, balanceRequest)
 	if err != nil {
 		return 0, err
 	}
-
-	fmt.Println("In GetBalance, unwrapping BalanceByAddressResponse...")
-	bal, err := resp.Recv()
-	if err != nil {
-		fmt.Printf("Failed to unwrap balance response: %v\nbal: %v\n", err, bal)
-		return 0, err
+	var balances []viewv1alpha1.BalanceByAddressResponse
+	for {
+		balance, err := balanceStream.Recv()
+		if err != nil {
+			// A gRPC streaming response will return EOF when it's done.
+			if err == io.EOF {
+				break
+			} else {
+				fmt.Println("Failed to get balance:", err)
+				return 0, err
+			}
+		}
+		balances = append(balances, *balance)
 	}
 
-	fmt.Printf("Balance appears to be: %+v \b", bal)
-	return int64(bal.Amount.Hi), nil
+	fmt.Println("In GetBalance, dumping all wallet contents...")
+	for _, b := range balances{
+		// N.B. the `Hi` and `Lo` fields on Amount denote high/low order bytes:
+		// https://github.com/penumbra-zone/penumbra/blob/v0.54.1/crates/core/crypto/src/asset/amount.rs#L220-L240
+		// TODO: Write business logic to translate assets to human-readable names,
+		// and handle the high/low bytes correctly.
+		fmt.Printf("%v '%v'\n", b.Asset, b.Amount.Lo)
+
+	}
+	// TODO Update function sig to filter by denom; for now we'll just return whatever
+	// the first asset was.
+	return int64(balances[0].Amount.Lo), nil
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to

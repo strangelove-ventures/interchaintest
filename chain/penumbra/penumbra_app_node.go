@@ -258,8 +258,10 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
 	fmt.Println("Entering GetBalance function from app perspective...")
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%v", p.hostGRPCPort)
-	// pdUrl := fmt.Sprintf("http://localhost:8080")
+	// TODO Figure out the container's address, so we can use pcli to look up balance
+	// as a sanity check. "localhost" is not the right network context.
+	// pdUrl := fmt.Sprintf("http://%v", p.hostGRPCPort)
+	pdUrl := fmt.Sprintf("http://localhost:8080")
 	cmd := []string{"pcli", "-d", keyPath, "-n", pdUrl, "view", "balance"}
 	fmt.Printf("Running bal command: %v\n", cmd)
 
