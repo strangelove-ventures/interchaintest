@@ -321,7 +321,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	chainCfg := c.Config()
 
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
-	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
+	var allocations []PenumbraGenesisAppStateAllocation
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
@@ -375,17 +375,18 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorDefinitions[i] = validatorTemplateDefinition
 
 			// self delegation
-			allocations[2*i] = PenumbraGenesisAppStateAllocation{
-				Amount:  100_000_000_000,
+			allocations = append(allocations, PenumbraGenesisAppStateAllocation{
+				Amount:  100_000,
 				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 				Address: fundingStream.Recipient,
-			}
+			})
+
 			// liquid
-			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
-				Amount:  1_000_000_000_000,
+			allocations = append(allocations, PenumbraGenesisAppStateAllocation{
+				Amount:  100_000,
 				Denom:   chainCfg.Denom,
 				Address: fundingStream.Recipient,
-			}
+			})
 
 			return nil
 		})
@@ -406,6 +407,15 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("waiting to init full nodes' files: %w", err)
+	}
+
+	for i := 0; i < len(allocations)-1; i++ {
+		if i%2 == 0 {
+			fmt.Printf("Allocation \n")
+			fmt.Printf("%v \n", allocations[i])
+			fmt.Printf("%v \n", allocations[i+1])
+			fmt.Println("---------------")
+		}
 	}
 
 	firstVal := c.PenumbraNodes[0]
