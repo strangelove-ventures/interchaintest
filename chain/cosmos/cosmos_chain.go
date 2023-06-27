@@ -862,11 +862,27 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 }
 
 // Bootstraps the provider chain and starts it from genesis
+// It also alters genesis file: voting_params, deposit_params, and min_deposit in the gov module
 func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	existingFunc := c.cfg.ModifyGenesis
 	c.cfg.ModifyGenesis = func(cc ibc.ChainConfig, b []byte) ([]byte, error) {
+
+		shortVote := []GenesisKV{
+			{
+				Key:   "app_state.gov.voting_params.voting_period",
+				Value: "10s",
+			},
+			{
+				Key:   "app_state.gov.deposit_params.max_deposit_period",
+				Value: "10s",
+			},
+			{
+				Key:   "app_state.gov.deposit_params.min_deposit.0.denom",
+				Value: cc.Denom,
+			},
+		}
 		var err error
-		b, err = ModifyGenesisProposalTime("10s", "10s")(cc, b)
+		b, err = ModifyGenesis(shortVote)(cc, b)
 		if err != nil {
 			return nil, err
 		}
