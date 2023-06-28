@@ -1,13 +1,13 @@
 pull_request_rules:
   - name: backport to maintained branches
     conditions:
-      - base=main
-      - label!=dont_backport
+      - base~=^(main|v4|v4-ics|v5|v6)$
+      - label=BACKPORT
     actions:
       backport:
         branches:
-          - v3
-          - v3-ics
+          - main
+          - v4-ics
           - v4
           - v5
           - v6
@@ -21,7 +21,7 @@ pull_request_rules:
   - name: automerge backported PR's for maintained branches
     conditions:
       - label=automerge
-      - base~=^(v3|v3-ics|v4|v5|v6)$
+      - base~=^(v4|v4-ics|v5|v6)$
     actions:
       merge:
         method: squash
