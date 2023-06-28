@@ -215,7 +215,7 @@ func (c *CosmosChain) GetHostRPCAddress() string {
 // GetHostAPIAddress returns the address of the REST API server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostAPIAddress() string {
-	return "http://" + c.getFullNode().hostRPCPort
+	return "http://" + c.getFullNode().hostAPIPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
