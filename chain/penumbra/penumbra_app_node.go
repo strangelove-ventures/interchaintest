@@ -256,31 +256,18 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 }
 
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
-	fmt.Println("Entering GetBalance function from app perspective...")
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	// TODO Figure out the container's address, so we can use pcli to look up balance
-	// as a sanity check. "localhost" is not the right network context.
-	// pdUrl := fmt.Sprintf("http://%v", p.hostGRPCPort)
-	pdUrl := fmt.Sprintf("http://localhost:8080")
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 	cmd := []string{"pcli", "-d", keyPath, "-n", pdUrl, "view", "balance"}
-	fmt.Printf("Running bal command: %v\n", cmd)
 
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
-		fmt.Printf("pcli command failed, err was: %v\nstdout was:%v\n", err, stdout)
 		return 0, err
 	}
+
+	// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
 	fmt.Printf("STDOUT BAL: '%s'\n", string(stdout))
-
-	keyPath = filepath.Join(p.HomeDir(), "keys", keyName)
-	cmd = []string{"pcli", "-d", keyPath, "view", "address"}
-	stdout, _, err = p.Exec(ctx, cmd, nil)
-	if err != nil {
-		return 0, err
-	}
-	fmt.Printf("STDOUT ADDR: %s \n", string(stdout))
-
-	return 0, errors.New("address not found")
+	return 0, nil
 }
 
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
