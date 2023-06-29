@@ -244,7 +244,13 @@ func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom st
 	if len(fn.PenumbraClientNodes) == 0 {
 		return 0, fmt.Errorf("no pclientd nodes on the fullnode for balance check")
 	}
-	fn.PenumbraAppNode.GetBalance(ctx, keyName)
+
+	// TODO remove this after debugging
+	_, err := fn.PenumbraAppNode.GetBalance(ctx, keyName)
+	if err != nil {
+		fmt.Printf("Error when checking balances via pcli, err: %s \n", err)
+	}
+
 	return fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
 }
 
@@ -368,7 +374,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			fundingStream := validatorTemplateDefinition.FundingStreams[0]
 			validatorTemplateDefinition.FundingStreams = []PenumbraValidatorFundingStream{fundingStream}
 
-			fmt.Printf("Funding Stream Addr: %s \n", fundingStream.Recipient)
 			v.addrString = fundingStream.Recipient
 
 			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
@@ -410,15 +415,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("waiting to init full nodes' files: %w", err)
-	}
-
-	for i := 0; i < len(allocations)-1; i++ {
-		if i%2 == 0 {
-			fmt.Printf("Allocation \n")
-			fmt.Printf("%v \n", allocations[i])
-			fmt.Printf("%v \n", allocations[i+1])
-			fmt.Println("---------------")
-		}
 	}
 
 	firstVal := c.PenumbraNodes[0]

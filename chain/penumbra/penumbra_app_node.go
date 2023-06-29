@@ -196,20 +196,21 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
+
 	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
 	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
+
 	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
 	for _, allocation := range allocations {
 		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%d\",\"%s\",\"%s\"\n", allocation.Amount, allocation.Denom, allocation.Address))...)
 	}
 
-	fmt.Println("Allocations CSV")
-	fmt.Printf("%s \n", string(allocationsCsv))
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
 	}
+
 	cmd := []string{
 		"pd",
 		"testnet",
@@ -222,14 +223,6 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("failed to exec testnet generate: %w", err)
 	}
-
-	bz, err := p.genesisFileContent(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read genesis file contents: %w", err)
-	}
-
-	fmt.Println("Genesis file contents after pd testnet generate")
-	fmt.Println(string(bz))
 
 	return err
 }
