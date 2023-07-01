@@ -745,9 +745,17 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 
 // ExecuteContract executes a contract transaction with a message using it's address.
 func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return tn.ExecTx(ctx, keyName,
-		"wasm", "execute", contractAddress, message, "--gas", "auto",
-	)
+	command := []string{"wasm", "execute", contractAddress, message, "--gas", "auto"}
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// ExecuteContract executes a contract transaction with a message using it's address.
+func (tn *ChainNode) ExecuteContractWithAmount(ctx context.Context, keyName string, contractAddress string, message string, amount types.Coins) (txHash string, err error) {
+	command := []string{"wasm", "execute", contractAddress, message, "--gas", "auto"}
+	if amount != nil {
+		command = append(command, "--amount", amount.String())
+	}
+	return tn.ExecTx(ctx, keyName, command...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
