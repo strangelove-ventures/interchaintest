@@ -169,10 +169,6 @@ func (ic *Interchain) AddLink(link InterchainLink) *Interchain {
 		panic(fmt.Errorf("relayer %v was never added to Interchain", link.Relayer))
 	}
 
-	if link.Chain1 == link.Chain2 {
-		panic(fmt.Errorf("chains must be different (both were %v)", link.Chain1))
-	}
-
 	key := relayerPath{
 		Relayer: link.Relayer,
 		Path:    link.Path,
