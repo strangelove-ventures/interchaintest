@@ -176,6 +176,13 @@ func (commander) Flush(pathName, channelID, homeDir string) []string {
 	return cmd
 }
 
+func (commander) ImportPath(srcChainID, dstChainID, pathName, pathFile, homeDir string) []string {
+	return append([]string{
+		"rly", "paths", "add", srcChainID, dstChainID, pathName,
+		"-f", pathFile, "--home", homeDir,
+	})
+}
+
 func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string, hopChainID ...string) []string {
 	return append([]string{
 		"rly", "paths", "new", srcChainID, dstChainID, pathName,

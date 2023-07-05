@@ -35,6 +35,9 @@ type Relayer interface {
 	// add relayer configuration for a chain
 	AddChainConfiguration(ctx context.Context, rep RelayerExecReporter, chainConfig ChainConfig, keyName, rpcAddr, grpcAddr string) error
 
+	// import a path from a config file
+	ImportPath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName, pathFile string) error
+
 	// generate new path between two chains
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, hopChainID ...string) error
 

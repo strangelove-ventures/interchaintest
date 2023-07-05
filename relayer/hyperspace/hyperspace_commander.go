@@ -139,6 +139,11 @@ func (hyperspaceCommander) FlushPackets(pathName, channelID, homeDir string) []s
 	panic("[FlushPackets] Do not call me")
 }
 
+// ImportPath is not implemented yet
+func (c *hyperspaceCommander) ImportPath(srcChainID, dstChainID, pathName, pathFile, homeDir string) []string {
+	panic("[ImportPath] Do not call me")
+}
+
 // GeneratePath establishes an in memory path representation. The concept does not exist in hyperspace.
 func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string, hopChainID ...string) []string {
 	if c.paths == nil {
