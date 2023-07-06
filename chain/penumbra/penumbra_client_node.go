@@ -12,6 +12,7 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	clientv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/client/v1alpha1"
 	cryptov1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/core/crypto/v1alpha1"
 	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/custody/v1alpha1"
 	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/view/v1alpha1"
@@ -214,7 +215,8 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	panic("not yet implemented")
 }
 
-func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, error) {
+// TODO: We probably need to change all the balance func sigs to return *big.Int
+func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (*big.Int, error) {
 	fmt.Println("Entering GetBalance function from client perspective...")
 	pclientd_addr := p.hostGRPCPort
 	fmt.Printf("Dialing pclientd(?) grpc address at %v\n", pclientd_addr)
@@ -223,7 +225,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer channel.Close()
 
@@ -236,7 +238,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	fmt.Println("In GetBalance, requesting address...")
 	addressResponse, err := viewClient.AddressByIndex(ctx, addressReq)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	fmt.Println("Received address bytes:", addressResponse.Address.Inner)
 
@@ -250,8 +252,9 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	// zero-or-more balances, including denom and amount info per balance.
 	balanceStream, err := viewClient.BalanceByAddress(ctx, balanceRequest)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
+
 	var balances []viewv1alpha1.BalanceByAddressResponse
 	for {
 		balance, err := balanceStream.Recv()
@@ -261,7 +264,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 				break
 			} else {
 				fmt.Println("Failed to get balance:", err)
-				return 0, err
+				return nil, err
 			}
 		}
 		balances = append(balances, *balance)
@@ -269,16 +272,26 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 
 	fmt.Println("In GetBalance, dumping all wallet contents...")
 	for _, b := range balances {
-		// N.B. the `Hi` and `Lo` fields on Amount denote high/low order bytes:
-		// https://github.com/penumbra-zone/penumbra/blob/v0.54.1/crates/core/crypto/src/asset/amount.rs#L220-L240
-		// TODO: Write business logic to translate assets to human-readable names,
-		// and handle the high/low bytes correctly.
-		fmt.Printf("%v '%s'\n", b.Asset, translateHiAndLo(b.Amount.Hi, b.Amount.Lo).String())
+		metadata, err := p.GetDenomMetadata(ctx, b.Asset)
+		if err != nil {
+			p.log.Error(
+				"Failed to retrieve DenomMetadata",
+				zap.String("asset_id", b.Asset.String()),
+				zap.Error(err),
+			)
+
+			continue
+		}
+
+		fmt.Printf("%v '%s'\n", metadata.Display, translateHiAndLo(b.Amount.Hi, b.Amount.Lo).String())
+
+		if metadata.Display == denom {
+			return translateHiAndLo(b.Amount.Hi, b.Amount.Lo), nil
+		}
 	}
 
-	// TODO Update function sig to filter by denom; for now we'll just return whatever
-	// the first asset was.
-	return int64(balances[0].Amount.Lo), nil
+	// we should have found the specified denom balance by this point
+	return nil, fmt.Errorf("balance not found for specified denom %s", denom)
 }
 
 // translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
@@ -293,6 +306,31 @@ func translateHiAndLo(hi, lo uint64) *big.Int {
 
 	// Add the lower order bytes
 	return big.NewInt(0).Add(hiBig, loBig)
+}
+
+// GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
+func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *cryptov1alpha1.AssetId) (*cryptov1alpha1.DenomMetadata, error) {
+	channel, err := grpc.Dial(
+		p.hostGRPCPort,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer channel.Close()
+
+	queryClient := clientv1alpha1.NewSpecificQueryServiceClient(channel)
+	req := &clientv1alpha1.DenomMetadataByIdRequest{
+		ChainId: p.Chain.Config().ChainID,
+		AssetId: assetId,
+	}
+
+	resp, err := queryClient.DenomMetadataById(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.DenomMetadata, nil
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to

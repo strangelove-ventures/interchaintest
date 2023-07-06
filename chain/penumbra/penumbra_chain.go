@@ -251,7 +251,14 @@ func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom st
 		fmt.Printf("Error when checking balances via pcli, err: %s \n", err)
 	}
 
-	return fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
+	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
+	if err != nil {
+		return 0, err
+	}
+
+	// TODO: this is messing up the precision but the ibc.Chain interface specifies the GetBalance return value as int64
+	// we need to figure out what the best solution is here. Possibly switch to big.Int and refactor
+	return bal.Int64(), nil
 }
 
 // Implements Chain interface
