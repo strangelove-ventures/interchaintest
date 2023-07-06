@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"io"
+	"math/big"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -131,7 +132,7 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
-	channel, err := grpc.Dial(fmt.Sprintf("tcp://%s:%s", p.HostName(), strings.Split(grpcPort, "/")))
+	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
@@ -143,9 +144,14 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &cryptov1alpha1.Value{
 				Amount: &cryptov1alpha1.Amount{
+					// TODO: this is incorrect, we need to take a 128-bit int and break it into the hi/lo parts before
+					// building the tx plan
 					Lo: uint64(amount.Amount),
 					Hi: uint64(amount.Amount),
 				},
+				// TODO: this should be the AssetID and not the denom string. One option is to make a mapping
+				// of DenomID->Denom Strings or see if we can get a change server side for this as well like the balance
+				// change we discussed.
 				AssetId: &cryptov1alpha1.AssetId{Inner: []byte(amount.Denom)},
 			},
 			Address: &cryptov1alpha1.Address{Inner: []byte(amount.Address)},
@@ -153,6 +159,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
 		return err
@@ -166,6 +173,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		//AccountGroupId:    nil,
 		//PreAuthorizations: nil,
 	}
+
 	authData, err := custodyClient.Authorize(ctx, authorizeReq)
 	if err != nil {
 		return err
@@ -188,7 +196,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		AwaitDetection: true,
 	}
 
-	_, err = viewClient.BroadcastTransaction(ctx, btr, nil)
+	_, err = viewClient.BroadcastTransaction(ctx, btr)
 	if err != nil {
 		return err
 	}
@@ -222,7 +230,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 	addressReq := &viewv1alpha1.AddressByIndexRequest{
 		AddressIndex: &cryptov1alpha1.AddressIndex{
-			Account:    0,
+			Account: 0,
 		}}
 
 	fmt.Println("In GetBalance, requesting address...")
@@ -233,6 +241,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	fmt.Println("Received address bytes:", addressResponse.Address.Inner)
 
 	fmt.Println("In GetBalance, building BalanceByAddressRequest...")
+
 	balanceRequest := &viewv1alpha1.BalanceByAddressRequest{
 		Address: addressResponse.Address,
 	}
@@ -259,17 +268,31 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, _ string) (int64, e
 	}
 
 	fmt.Println("In GetBalance, dumping all wallet contents...")
-	for _, b := range balances{
+	for _, b := range balances {
 		// N.B. the `Hi` and `Lo` fields on Amount denote high/low order bytes:
 		// https://github.com/penumbra-zone/penumbra/blob/v0.54.1/crates/core/crypto/src/asset/amount.rs#L220-L240
 		// TODO: Write business logic to translate assets to human-readable names,
 		// and handle the high/low bytes correctly.
-		fmt.Printf("%v '%v'\n", b.Asset, b.Amount.Lo)
-
+		fmt.Printf("%v '%s'\n", b.Asset, translateHiAndLo(b.Amount.Hi, b.Amount.Lo).String())
 	}
+
 	// TODO Update function sig to filter by denom; for now we'll just return whatever
 	// the first asset was.
 	return int64(balances[0].Amount.Lo), nil
+}
+
+// translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
+// they represent. Since Go does not support native uint128 we make use of the big.Int type.
+// see: https://github.com/penumbra-zone/penumbra/blob/4d175986f385e00638328c64d729091d45eb042a/crates/core/crypto/src/asset/amount.rs#L220-L240
+func translateHiAndLo(hi, lo uint64) *big.Int {
+	hiBig := big.NewInt(0).SetUint64(hi)
+	loBig := big.NewInt(0).SetUint64(lo)
+
+	// Shift hi 8 bytes to the left
+	hiBig.Lsh(hiBig, 64)
+
+	// Add the lower order bytes
+	return big.NewInt(0).Add(hiBig, loBig)
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
