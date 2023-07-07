@@ -30,6 +30,17 @@ func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) erro
 	return eg.Wait()
 }
 
+func WaitForBlocksUtil(maxBlocks int, fn func(i int) error) error {
+	for i := 0; i < maxBlocks; i++ {
+		if err := fn(i); err == nil {
+			break
+		} else if i == maxBlocks-1 {
+			return err
+		}
+	}
+	return nil
+}
+
 // nodesInSync returns an error if the nodes are not in sync with the chain.
 func nodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter) error {
 	var chainHeight uint64
