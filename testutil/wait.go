@@ -30,6 +30,9 @@ func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) erro
 	return eg.Wait()
 }
 
+// WaitForBlocksUtil iterates from 0 to maxBlocks and calls fn function with the current iteration index as a parameter.
+// If fn returns nil, the loop is terminated and the function returns nil.
+// If fn returns an error and the loop has iterated over all maxBlocks without success, the error is returned.
 func WaitForBlocksUtil(maxBlocks int, fn func(i int) error) error {
 	for i := 0; i < maxBlocks; i++ {
 		if err := fn(i); err == nil {
