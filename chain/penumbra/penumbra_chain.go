@@ -260,7 +260,7 @@ func (c *PenumbraChain) NewChainNode(
 ) (PenumbraNode, error) {
 	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
 
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -289,7 +289,7 @@ func (c *PenumbraChain) NewChainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 

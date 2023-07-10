@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 )
 
@@ -86,7 +87,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		return nil, fmt.Errorf("pulling container image %s: %w", containerImage.Ref(), err)
 	}
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		// Have to leave Driver unspecified for Docker Desktop compatibility.
 
 		Labels: map[string]string{dockerutil.CleanupLabel: testName},
@@ -138,6 +139,22 @@ func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath str
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 	return nil
+}
+
+// ReadFileFromHomeDir reads a file at the relative path specified and returns the contents. The file is
+// relative to the home directory in the relayer container.
+func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(r.log, r.client, r.testName)
+	bytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve %s: %w", relativePath, err)
+	}
+	return bytes, nil
+}
+
+// Modify a toml config file in relayer home directory
+func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
+	return testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)
 }
 
 // AddWallet adds a stores a wallet for the given chain ID.
@@ -305,7 +322,9 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+	chainID := cfg.ChainID
+	coinType := cfg.CoinType
 	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
@@ -317,7 +336,6 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	if res.Err != nil {
 		return res.Err
 	}
-
 	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
 	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
@@ -338,7 +356,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	containerImage := r.containerImage()
 	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+	containerName := fmt.Sprintf("%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
 
 	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 
@@ -390,13 +408,13 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 		return fmt.Errorf("StopRelayer: inspecting container: %w", err)
 	}
 
-	startedAt, err := time.Parse(c.State.StartedAt, time.RFC3339Nano)
+	startedAt, err := time.Parse(time.RFC3339Nano, c.State.StartedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container StartedAt", zap.Error(err))
 		startedAt = time.Unix(0, 0)
 	}
 
-	finishedAt, err := time.Parse(c.State.FinishedAt, time.RFC3339Nano)
+	finishedAt, err := time.Parse(time.RFC3339Nano, c.State.FinishedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container FinishedAt", zap.Error(err))
 		finishedAt = time.Now().UTC()
@@ -473,6 +491,10 @@ func (r *DockerRelayer) HostName(pathName string) string {
 
 func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
+}
+
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+	panic("[rly/SetClientContractHash] Implement me")
 }
 
 type RelayerCommander interface {

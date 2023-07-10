@@ -24,7 +24,7 @@ import (
 // but the report will be missing details.
 type Relayer interface {
 	// restore a mnemonic to be used as a relayer wallet for a chain
-	RestoreKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error
+	RestoreKey(ctx context.Context, rep RelayerExecReporter, cfg ChainConfig, keyName, mnemonic string) error
 
 	// generate a new key
 	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType string) (Wallet, error)
@@ -93,6 +93,10 @@ type Relayer interface {
 	//
 	// "env" are environment variables in the format "MY_ENV_VAR=value"
 	Exec(ctx context.Context, rep RelayerExecReporter, cmd []string, env []string) RelayerExecResult
+
+	// Set the wasm client contract hash in the chain's config if the counterparty chain in a path used 08-wasm
+	// to instantiate the client.
+	SetClientContractHash(ctx context.Context, rep RelayerExecReporter, cfg ChainConfig, hash string) error
 }
 
 // GetTransferChannel will return the transfer channel assuming only one client,

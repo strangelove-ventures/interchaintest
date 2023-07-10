@@ -23,6 +23,18 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 
 <br>
 
+### Maintained Branches
+
+|                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** |    **Maintained**   |
+|:----------------------------------------------------------------------------:|:----------:|:--------------:|:-------------------:|
+|                                     main                                     |     v7     |      v0.47     |         ✅          |
+|     [v6](https://github.com/strangelove-ventures/interchaintest/tree/v6)     |     v6     |      v0.46     |         ✅          |
+|     [v5](https://github.com/strangelove-ventures/interchaintest/tree/v5)     |     v5     |      v0.46     |         ✅          |
+|     [v4](https://github.com/strangelove-ventures/interchaintest/tree/v4)     |     v4     |      v0.45     |         ✅          |
+| [v4-ics](https://github.com/strangelove-ventures/interchaintest/tree/v4-ics) |     v4     |   v0.45.x-ics  |         ✅          |
+|     [v3](https://github.com/strangelove-ventures/interchaintest/tree/v3)     |     v3     |      v0.45     |❌<br>(June 25 2023) |
+| [v3-ics](https://github.com/strangelove-ventures/interchaintest/tree/v3-ics) |     v3     |  v0.45.11-ics  |❌<br>(April 24 2023)|
+
 ## Table Of Contents
 - [Building Binary](#building-binary)
 - **Usage:**

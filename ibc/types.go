@@ -34,6 +34,10 @@ type ChainConfig struct {
 	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
 	NoHostMount bool `yaml:"no-host-mount"`
+	// When true, will skip validator gentx flow
+	SkipGenTx bool
+	// When provided, will run before performing gentx and genesis file creation steps for validators.
+	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Override config parameters for files at filepath.
@@ -126,6 +130,14 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.ModifyGenesis != nil {
 		c.ModifyGenesis = other.ModifyGenesis
+	}
+
+	if other.SkipGenTx {
+		c.SkipGenTx = true
+	}
+
+	if other.PreGenesis != nil {
+		c.PreGenesis = other.PreGenesis
 	}
 
 	if other.ConfigFileOverrides != nil {
@@ -240,6 +252,7 @@ type RelayerImplementation int64
 const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
+	Hyperspace
 )
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
