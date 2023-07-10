@@ -1,14 +1,12 @@
 # Local Interchain
 
-A simple way to config and run IBC local chain testing environments using [Strangelove's InterchainTest](https://github.com/strangelove-ventures/interchaintest)
-
-**This will eventually get phased out and brought into the ICTest repo directly.** Just doing it here for ease of creation & for a future simple public archive.
+A simple way to config and run IBC local chain testing environments with any language of choice for interaction.
 
 ## Installing
 
 **Install on Mac / Linux**
 ```bash
-git clone https://github.com/Reecepbcups/local-interchain.git 
+git clone https://github.com/strangelove-ventures/interchaintest.git 
 
 cd local-interchain
 
