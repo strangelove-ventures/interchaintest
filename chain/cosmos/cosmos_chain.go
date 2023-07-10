@@ -675,7 +675,7 @@ func (c *CosmosChain) NewSidecarProcess(
 	// The SidecarProcess's VolumeName cannot be set until after we create the volume.
 	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, index, ports, startCmd)
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: s.Name(),

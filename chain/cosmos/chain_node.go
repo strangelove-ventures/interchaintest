@@ -137,7 +137,7 @@ func (tn *ChainNode) NewSidecarProcess(
 ) error {
 	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, testName, image, tn.Index, ports, startCmd)
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: s.Name(),
