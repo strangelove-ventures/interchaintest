@@ -52,9 +52,15 @@ type ChainConfig struct {
 
 func (c ChainConfig) Clone() ChainConfig {
 	x := c
+
 	images := make([]DockerImage, len(c.Images))
 	copy(images, c.Images)
 	x.Images = images
+
+	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
+	copy(sidecars, c.SidecarConfigs)
+	x.SidecarConfigs = sidecars
+
 	return x
 }
 
@@ -146,6 +152,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.EncodingConfig != nil {
 		c.EncodingConfig = other.EncodingConfig
+	}
+
+	if len(other.SidecarConfigs) > 0 {
+		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
 	}
 
 	return c
