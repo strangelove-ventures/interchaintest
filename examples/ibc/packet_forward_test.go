@@ -3,6 +3,7 @@ package ibc_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -194,25 +195,49 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err)
 		_, err = testutil.PollForAck(ctx, chainA, chainAHeight, chainAHeight+30, transferTx.Packet)
 		require.NoError(t, err)
-		err = testutil.WaitForBlocks(ctx, 1, chainA)
-		require.NoError(t, err)
+		maxBlocks := 5
+		err = testutil.WaitForBlocksUtil(maxBlocks, func(_ int) error {
+			err = testutil.WaitForBlocks(ctx, 1, chainA)
+			require.NoError(t, err)
 
-		chainABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), chainA.Config().Denom)
-		require.NoError(t, err)
+			chainABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), chainA.Config().Denom)
+			if err != nil {
+				return err
+			}
+			expect := userFunds - transferAmount
+			if expect != chainABalance {
+				return fmt.Errorf("chainA balance mismatch: expect %d, got %d", expect, chainABalance)
+			}
 
-		chainBBalance, err := chainB.GetBalance(ctx, userB.FormattedAddress(), firstHopIBCDenom)
-		require.NoError(t, err)
+			chainBBalance, err := chainB.GetBalance(ctx, userB.FormattedAddress(), firstHopIBCDenom)
+			if err != nil {
+				return err
+			}
+			expect = int64(0)
+			if expect != chainBBalance {
+				return fmt.Errorf("chainB balance mismatch: expect %d, got %d", expect, chainBBalance)
+			}
 
-		chainCBalance, err := chainC.GetBalance(ctx, userC.FormattedAddress(), secondHopIBCDenom)
-		require.NoError(t, err)
+			chainCBalance, err := chainC.GetBalance(ctx, userC.FormattedAddress(), secondHopIBCDenom)
+			if err != nil {
+				return err
+			}
+			expect = int64(0)
+			if expect != chainCBalance {
+				return fmt.Errorf("chainC balance mismatch: expect %d, got %d", expect, chainCBalance)
+			}
 
-		chainDBalance, err := chainD.GetBalance(ctx, userD.FormattedAddress(), thirdHopIBCDenom)
+			chainDBalance, err := chainD.GetBalance(ctx, userD.FormattedAddress(), thirdHopIBCDenom)
+			if err != nil {
+				return err
+			}
+			expect = int64(transferAmount)
+			if expect != chainDBalance {
+				return fmt.Errorf("chainD balance mismatch: expect %d, got %d", expect, chainDBalance)
+			}
+			return nil
+		})
 		require.NoError(t, err)
-
-		require.Equal(t, userFunds-transferAmount, chainABalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
-		require.Equal(t, transferAmount, chainDBalance)
 
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
 		require.NoError(t, err)
