@@ -54,7 +54,7 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	node := chain.(*penumbra.PenumbraChain).PenumbraNodes[0]
 
-	bal, err := chain.GetBalance(ctx, node.PenumbraClientNodes["validator"].KeyName, "")
+	bal, err := chain.GetBalance(ctx, node.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
 	t.Logf("Balance: %d \n", bal)

@@ -216,6 +216,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 		"testnet",
 		"generate",
 		"--chain-id", chainID,
+		"--preserve-chain-id",
 		"--validators-input-file", p.ValidatorsInputFileContainer(),
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
 	}

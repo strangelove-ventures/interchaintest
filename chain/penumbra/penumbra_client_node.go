@@ -283,9 +283,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (*big
 			continue
 		}
 
-		fmt.Printf("%v '%s'\n", metadata.Display, translateHiAndLo(b.Amount.Hi, b.Amount.Lo).String())
-
-		if metadata.Display == denom {
+		if metadata.Base == denom {
 			return translateHiAndLo(b.Amount.Hi, b.Amount.Lo), nil
 		}
 	}
