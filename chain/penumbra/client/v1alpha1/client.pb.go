@@ -12,6 +12,7 @@ import (
 	types1 "github.com/cometbft/cometbft/proto/tendermint/types"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
+	types2 "github.com/cosmos/gogoproto/types"
 	types "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 	v1alpha1 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/core/chain/v1alpha1"
 	v1alpha12 "github.com/strangelove-ventures/interchaintest/v7/chain/penumbra/core/crypto/v1alpha1"
@@ -20,7 +21,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -3628,10 +3628,10 @@ func (m *GetStatusResponse) GetValidatorInfo() *types1.Validator {
 }
 
 type SyncInfo struct {
-	LatestBlockHash   []byte                 `protobuf:"bytes,1,opt,name=latest_block_hash,json=latestBlockHash,proto3" json:"latest_block_hash,omitempty"`
-	LatestAppHash     []byte                 `protobuf:"bytes,2,opt,name=latest_app_hash,json=latestAppHash,proto3" json:"latest_app_hash,omitempty"`
-	LatestBlockHeight uint64                 `protobuf:"varint,3,opt,name=latest_block_height,json=latestBlockHeight,proto3" json:"latest_block_height,omitempty"`
-	LatestBlockTime   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=latest_block_time,json=latestBlockTime,proto3" json:"latest_block_time,omitempty"`
+	LatestBlockHash   []byte            `protobuf:"bytes,1,opt,name=latest_block_hash,json=latestBlockHash,proto3" json:"latest_block_hash,omitempty"`
+	LatestAppHash     []byte            `protobuf:"bytes,2,opt,name=latest_app_hash,json=latestAppHash,proto3" json:"latest_app_hash,omitempty"`
+	LatestBlockHeight uint64            `protobuf:"varint,3,opt,name=latest_block_height,json=latestBlockHeight,proto3" json:"latest_block_height,omitempty"`
+	LatestBlockTime   *types2.Timestamp `protobuf:"bytes,4,opt,name=latest_block_time,json=latestBlockTime,proto3" json:"latest_block_time,omitempty"`
 	// These are implemented in tendermint, but not
 	// in tendermint-rpc.
 	// bytes earliest_block_hash = 5;
@@ -3695,7 +3695,7 @@ func (m *SyncInfo) GetLatestBlockHeight() uint64 {
 	return 0
 }
 
-func (m *SyncInfo) GetLatestBlockTime() *timestamppb.Timestamp {
+func (m *SyncInfo) GetLatestBlockTime() *types2.Timestamp {
 	if m != nil {
 		return m.LatestBlockTime
 	}
@@ -17549,7 +17549,7 @@ func (m *SyncInfo) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.LatestBlockTime == nil {
-				m.LatestBlockTime = &timestamppb.Timestamp{}
+				m.LatestBlockTime = &types2.Timestamp{}
 			}
 			if err := m.LatestBlockTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
