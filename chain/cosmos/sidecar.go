@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -37,6 +36,7 @@ type SidecarProcess struct {
 	Image        ibc.DockerImage
 	ports        nat.PortSet
 	startCmd     []string
+	homeDir      string
 
 	containerLifecycle *dockerutil.ContainerLifecycle
 }
@@ -50,6 +50,7 @@ func NewSidecar(
 	dockerClient *dockerclient.Client,
 	networkID, processName, testName string,
 	image ibc.DockerImage,
+	homeDir string,
 	index int,
 	ports []string,
 	startCmd []string,
@@ -58,6 +59,10 @@ func NewSidecar(
 
 	for _, port := range ports {
 		processPorts[nat.Port(port)] = struct{}{}
+	}
+
+	if homeDir == "" {
+		homeDir = "/home/sidecar"
 	}
 
 	s := &SidecarProcess{
@@ -71,6 +76,7 @@ func NewSidecar(
 		DockerClient:     dockerClient,
 		NetworkID:        networkID,
 		Image:            image,
+		homeDir:          homeDir,
 		ports:            processPorts,
 		startCmd:         startCmd,
 	}
@@ -119,7 +125,7 @@ func (s *SidecarProcess) Bind() []string {
 
 // HomeDir returns the path name where any configuration files will be written to the Docker filesystem.
 func (s *SidecarProcess) HomeDir() string {
-	return path.Join("/var/sidecar-processes", s.ProcessName)
+	return s.homeDir
 }
 
 func (s *SidecarProcess) HostName() string {

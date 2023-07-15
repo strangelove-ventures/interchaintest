@@ -180,6 +180,7 @@ func (c ChainConfig) IsFullyConfigured() bool {
 type SidecarConfig struct {
 	ProcessName      string
 	Image            DockerImage
+	HomeDir          string
 	Ports            []string
 	StartCmd         []string
 	PreStart         bool

@@ -128,18 +128,18 @@ func (tn *ChainNode) NewSidecarProcess(
 	ctx context.Context,
 	preStart bool,
 	processName string,
-	testName string,
 	cli *dockerclient.Client,
 	networkID string,
 	image ibc.DockerImage,
+	homeDir string,
 	ports []string,
 	startCmd []string,
 ) error {
-	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, testName, image, tn.Index, ports, startCmd)
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
-			dockerutil.CleanupLabel:   testName,
+			dockerutil.CleanupLabel:   tn.TestName,
 			dockerutil.NodeOwnerLabel: s.Name(),
 		},
 	})
@@ -155,7 +155,7 @@ func (tn *ChainNode) NewSidecarProcess(
 
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
-		TestName:   testName,
+		TestName:   tn.TestName,
 		UidGid:     image.UidGid,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
