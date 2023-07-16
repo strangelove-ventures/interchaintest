@@ -132,6 +132,10 @@ func (s *SidecarProcess) HostName() string {
 	return dockerutil.CondenseHostName(s.Name())
 }
 
+func (s *SidecarProcess) GetHostPorts(ctx context.Context, portIDs ...string) ([]string, error) {
+	return s.containerLifecycle.GetHostPorts(ctx, portIDs...)
+}
+
 // WriteFile accepts file contents in a byte slice and writes the contents to
 // the docker filesystem. relPath describes the location of the file in the
 // docker volume relative to the home directory
