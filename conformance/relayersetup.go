@@ -101,6 +101,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		req.True(len(conns0) == 1 || len(conns0) == 2)
 		if len(conns0) == 2 {
+			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
 			req.Equal(conns0[1].ID, exported.LocalhostConnectionID)
 		}
 		conn0 := conns0[0]
@@ -113,6 +114,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		req.True(len(conns1) == 1 || len(conns1) == 2)
 		if len(conns1) == 2 {
+			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
 			req.Equal(conns1[1].ID, exported.LocalhostConnectionID)
 		}
 		conn1 := conns1[0]
