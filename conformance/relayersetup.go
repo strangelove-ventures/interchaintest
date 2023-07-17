@@ -101,7 +101,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		req.True(len(conns0) == 1 || len(conns0) == 2)
 		if len(conns0) == 2 {
-			req.Equal(conns0[1].ClientID, exported.LocalhostConnectionID)
+			req.Equal(conns0[1].ID, exported.LocalhostConnectionID)
 		}
 		conn0 := conns0[0]
 		req.NotEmpty(conn0.ID)
@@ -113,7 +113,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 
 		req.True(len(conns1) == 1 || len(conns1) == 2)
 		if len(conns1) == 2 {
-			req.Equal(conns1[1].ClientID, exported.LocalhostConnectionID)
+			req.Equal(conns1[1].ID, exported.LocalhostConnectionID)
 		}
 		conn1 := conns1[0]
 		req.NotEmpty(conn1.ID)
