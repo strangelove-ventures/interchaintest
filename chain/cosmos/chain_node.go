@@ -26,6 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockerclient "github.com/docker/docker/client"
@@ -58,8 +59,6 @@ type ChainNode struct {
 	// Ports set during StartContainer.
 	hostRPCPort  string
 	hostGRPCPort string
-
-	preStartListeners dockerutil.Listeners
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -152,7 +151,7 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
@@ -161,7 +160,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	err := tn.WriteFile(ctx, content, "config/genesis.json")
 	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
@@ -404,13 +403,27 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
+	var gasPriceFound, gasAdjustmentFound = false, false
+	for i := 0; i < len(command); i++ {
+		if command[i] == "--gas-prices" {
+			gasPriceFound = true
+		}
+		if command[i] == "--gas-adjustment" {
+			gasAdjustmentFound = true
+		}
+	}
+	if !gasPriceFound {
+		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
+	}
+	if !gasAdjustmentFound {
+		command = append(command, "--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment))
+	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
+		"--chain-id", tn.Chain.Config().ChainID,
 	)...)
 }
 
@@ -446,7 +459,6 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
 	return append(command,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--chain-id", tn.Chain.Config().ChainID,
 	)
 }
 
@@ -720,7 +732,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
 		return "", err
 	}
 
@@ -742,15 +754,41 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	return res.CodeInfos[0].CodeID, nil
 }
 
+func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
+	// Retry because sometimes the tx is not committed to state yet.
+	var txResp *types.TxResponse
+	err := retry.Do(func() error {
+		var err error
+		txResp, err = authTx.QueryTx(clientCtx, txHash)
+		return err
+	},
+		// retry for total of 3 seconds
+		retry.Attempts(15),
+		retry.Delay(200*time.Millisecond),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	)
+	return txResp, err
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
+func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
+	command = append(command, extraExecTxArgs...)
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-	_, err := tn.ExecTx(ctx, keyName, command...)
+	txHash, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
+	}
+
+	txResp, err := tn.getTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+	if txResp.Code != 0 {
+		return "", fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
 
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
@@ -768,11 +806,10 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	_, err := tn.ExecTx(ctx, keyName,
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
+	return tn.ExecTx(ctx, keyName,
 		"wasm", "execute", contractAddress, message,
 	)
-	return err
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -792,13 +829,16 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
 	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
 	_, file := filepath.Split(fileName)
 	err = tn.WriteFile(ctx, content, file)
 	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	_, err = tn.ExecTx(ctx, keyName, "ibc", "wasm-client", "push-wasm", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	_, err = tn.ExecTx(ctx, keyName, "ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto")
 	if err != nil {
 		return "", err
 	}
@@ -812,7 +852,7 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
 func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
-	stdout, _, err := tn.ExecQuery(ctx, "ibc", "wasm-client", "code", codeHash)
+	stdout, _, err := tn.ExecQuery(ctx, "ibc-wasm", "code", codeHash)
 	if err != nil {
 		return err
 	}
@@ -824,7 +864,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote,
+		proposalID, vote, "--gas", "auto",
 	)
 	return err
 }
@@ -841,6 +881,27 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 		return nil, err
 	}
 	return &proposal, nil
+}
+
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
+	// Write msg to container
+	file := "proposal.json"
+	propJson, err := json.MarshalIndent(prop, "", " ")
+	if err != nil {
+		return "", err
+	}
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	command := []string{
+		"gov", "submit-proposal",
+		path.Join(tn.HomeDir(), file), "--gas", "auto",
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
@@ -899,6 +960,20 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	}
 
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// QueryParam returns the state and details of a subspace param.
+func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "params", "subspace", subspace, key)
+	if err != nil {
+		return nil, err
+	}
+	var param ParamChange
+	err = json.Unmarshal(stdout, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &param, nil
 }
 
 // DumpContractState dumps the state of a contract at a block height.
@@ -1087,7 +1162,7 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		gen, err := n.genesisFileContent(ctx)
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}

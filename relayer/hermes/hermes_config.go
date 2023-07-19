@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-
 // NewConfig returns a hermes Config with an entry for each of the provided ChainConfigs.
 // The defaults were adapted from the sample config file found here: https://github.com/informalsystems/hermes/blob/master/config.toml
 func NewConfig(chainConfigs ...ChainConfig) Config {
