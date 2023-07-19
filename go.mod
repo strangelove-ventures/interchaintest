@@ -38,7 +38,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.11.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/tools v0.10.0
+	golang.org/x/tools v0.11.0
 	google.golang.org/grpc v1.56.2
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.24.0
@@ -206,7 +206,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
-	golang.org/x/mod v0.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
