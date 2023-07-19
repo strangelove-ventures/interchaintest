@@ -649,7 +649,7 @@ func (c *CosmosChain) NewChainNode(
 			continue
 		}
 
-		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.Ports, cfg.StartCmd)
+		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd)
 		if err != nil {
 			return nil, err
 		}
@@ -667,13 +667,14 @@ func (c *CosmosChain) NewSidecarProcess(
 	cli *client.Client,
 	networkID string,
 	image ibc.DockerImage,
+	homeDir string,
 	index int,
 	ports []string,
 	startCmd []string,
 ) error {
 	// Construct the SidecarProcess first so we can access its name.
 	// The SidecarProcess's VolumeName cannot be set until after we create the volume.
-	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, index, ports, startCmd)
+	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, homeDir, index, ports, startCmd)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
@@ -770,7 +771,7 @@ func (c *CosmosChain) initializeSidecars(
 		}
 
 		eg.Go(func() error {
-			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, i, cfg.Ports, cfg.StartCmd)
+			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.HomeDir, i, cfg.Ports, cfg.StartCmd)
 			if err != nil {
 				return err
 			}
