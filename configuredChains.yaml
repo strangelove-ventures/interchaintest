@@ -549,7 +549,7 @@ osmosis:
   bin: osmosisd
   bech32-prefix: osmo
   denom: uosmo
-  gas-prices: 0.0uosmo
+  gas-prices: 0.0025uosmo
   gas-adjustment: 1.3
   trusting-period: 336h
   images:
