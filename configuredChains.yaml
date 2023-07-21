@@ -771,7 +771,7 @@ terpnetwork:
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/terpnetwork
       uid-gid: 1025:1025
-no-host-mount: false
+  no-host-mount: false
 
 terra:
   name: terra
