@@ -5,10 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/decred/dcrd/dcrec/secp256k1/v2"
-
 	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	"github.com/StirlingMarketingGroup/go-namecase"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"golang.org/x/crypto/blake2b"
 )
@@ -24,7 +23,7 @@ func DeriveEd25519FromName(name string) (*p2pCrypto.Ed25519PrivateKey, error) {
 	chainCode := make([]byte, 32)
 	derivePath := []byte{byte(len(name) << 2)}
 	derivePath = append(derivePath, []byte(namecase.New().NameCase(name))...)
-	_ = copy(chainCode, []byte(derivePath))
+	_ = copy(chainCode, derivePath)
 
 	hasher, err := blake2b.New256(nil)
 	if err != nil {
@@ -69,7 +68,7 @@ func DeriveSr25519FromName(path []string) (*schnorrkel.MiniSecretKey, error) {
 		var chainCode [32]byte
 		derivePath := []byte{byte(len(pathItem) << 2)}
 		derivePath = append(derivePath, []byte(pathItem)...)
-		_ = copy(chainCode[:], []byte(derivePath))
+		_ = copy(chainCode[:], derivePath)
 		miniSecret, _, err = miniSecret.HardDeriveMiniSecretKey([]byte{}, chainCode)
 		if err != nil {
 			return nil, fmt.Errorf("error hard deriving mini secret key")
@@ -83,7 +82,7 @@ func DeriveSecp256k1FromName(name string) (*secp256k1.PrivateKey, error) {
 	chainCode := make([]byte, 32)
 	derivePath := []byte{byte(len(name) << 2)}
 	derivePath = append(derivePath, []byte(namecase.New().NameCase(name))...)
-	_ = copy(chainCode, []byte(derivePath))
+	_ = copy(chainCode, derivePath)
 
 	hasher, err := blake2b.New256(nil)
 	if err != nil {

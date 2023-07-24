@@ -4,9 +4,7 @@ import (
 	exported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 )
 
-var (
-	_ exported.ClientMessage = &Misbehaviour{}
-)
+var _ exported.ClientMessage = &Misbehaviour{}
 
 func (m Misbehaviour) ClientType() string {
 	return ""

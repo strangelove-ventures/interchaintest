@@ -460,7 +460,7 @@ func testPacketRelaySuccess(
 		req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
 		req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
 	}
-	//[END] assert on destination to source transfer
+	// [END] assert on destination to source transfer
 }
 
 // Ensure that a queued packet that should not be relayed is not relayed.

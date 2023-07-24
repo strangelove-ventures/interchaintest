@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/avast/retry-go/v4"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -19,6 +18,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
+
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Increase parachain wallet amount due to their additional precision
@@ -178,7 +179,7 @@ func (pn *ParachainNode) ParachainID(ctx context.Context) (int, error) {
 		return -1, res.Err
 	}
 	out := GetParachainIDResponse{}
-	if err := json.Unmarshal([]byte(res.Stdout), &out); err != nil {
+	if err := json.Unmarshal(res.Stdout, &out); err != nil {
 		return -1, err
 	}
 	return out.ParachainID, nil

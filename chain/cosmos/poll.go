@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.

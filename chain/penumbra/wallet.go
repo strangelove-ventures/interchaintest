@@ -1,8 +1,9 @@
 package penumbra
 
 import (
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 var _ ibc.Wallet = &PenumbraWallet{}

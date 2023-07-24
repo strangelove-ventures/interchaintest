@@ -17,7 +17,7 @@ import (
 // Pass :memory: as databasePath for in-memory database.
 func ConnectDB(ctx context.Context, databasePath string) (*sql.DB, error) {
 	if databasePath != ":memory:" {
-		if err := os.MkdirAll(filepath.Dir(databasePath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(databasePath), 0o755); err != nil {
 			return nil, err
 		}
 	}

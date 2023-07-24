@@ -4,9 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-var (
-	_ sdk.Msg = &MsgStoreCode{}
-)
+var _ sdk.Msg = &MsgStoreCode{}
 
 func (m MsgStoreCode) ValidateBasic() error {
 	return nil

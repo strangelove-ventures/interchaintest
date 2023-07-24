@@ -13,16 +13,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
@@ -38,6 +28,17 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -62,7 +63,8 @@ func NewCosmosHeighlinerChainConfig(name string,
 	gasPrices string,
 	gasAdjustment float64,
 	trustingPeriod string,
-	noHostMount bool) ibc.ChainConfig {
+	noHostMount bool,
+) ibc.ChainConfig {
 	return ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           name,
@@ -527,7 +529,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.Balance(ctx, params)
-
 	if err != nil {
 		return 0, err
 	}
@@ -547,7 +548,6 @@ func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Co
 
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.AllBalances(ctx, &params)
-
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +857,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
+		_ = os.WriteFile(exportGenesis, genbz, 0o600)
 	}
 
 	chainNodes := c.Nodes()

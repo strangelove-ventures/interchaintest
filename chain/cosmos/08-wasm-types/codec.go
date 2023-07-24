@@ -1,9 +1,10 @@
 package types
 
 import (
+	"github.com/cosmos/ibc-go/v7/modules/core/exported"
+
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/ibc-go/v7/modules/core/exported"
 )
 
 // RegisterInterfaces registers the tendermint concrete client-related
