@@ -42,16 +42,15 @@ func DockerSetup(t *testing.T) (*client.Client, string) {
 // creates wallets in the relayer for src and dst chain
 // funds relayer src and dst wallets on respective chain in genesis
 // creates a faucet account on the both chains (separate fullnode)
-// funds faucet accounts in genesis
+// funds faucet accounts in genesis.
 func StartChainPair(
-	t *testing.T,
 	ctx context.Context,
+	t *testing.T,
 	rep *testreporter.Reporter,
 	cli *client.Client,
 	networkID string,
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
-	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, error) {
 	relayerImpl := f.Build(t, cli, networkID)
 
@@ -90,8 +89,8 @@ func StartChainPair(
 // then execute the preRelayerStartFuncs and wait for all to complete before starting
 // the relayer.
 func StopStartRelayerWithPreStartFuncs(
-	t *testing.T,
 	ctx context.Context,
+	t *testing.T,
 	srcChainID string,
 	relayerImpl ibc.Relayer,
 	eRep *testreporter.RelayerExecReporter,

@@ -1,9 +1,8 @@
 package penumbra
 
 import (
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 var _ ibc.Wallet = &PenumbraWallet{}
@@ -28,17 +27,17 @@ func (w *PenumbraWallet) KeyName() string {
 	return w.keyName
 }
 
-// Get Address formatted with chain's prefix
+// Get Address formatted with chain's prefix.
 func (w *PenumbraWallet) FormattedAddress() string {
 	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
 }
 
-// Get mnemonic, only used for relayer wallets
+// Get mnemonic, only used for relayer wallets.
 func (w *PenumbraWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address
+// Get Address.
 func (w *PenumbraWallet) Address() []byte {
 	return w.address
 }

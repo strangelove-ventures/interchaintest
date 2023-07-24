@@ -70,7 +70,6 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 
 	var outputs ibc.ConnectionOutputs
 	for _, r := range queryResult.Result {
-
 		var versions []*ibcexported.Version
 		for _, v := range r.ConnectionEnd.Versions {
 			versions = append(versions, &ibcexported.Version{

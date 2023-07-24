@@ -44,17 +44,17 @@ var exposedPorts = nat.PortSet{
 	nat.Port(tendermintPort): {},
 }
 
-// Name of the test node container
+// Name of the test node container.
 func (p *PenumbraAppNode) Name() string {
 	return fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
 }
 
-// the hostname of the test node container
+// the hostname of the test node container.
 func (p *PenumbraAppNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (p *PenumbraAppNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.HomeDir())}
 }
@@ -87,7 +87,7 @@ func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic stri
 }
 
 // initializes validator definition template file
-// wallet must be generated first
+// wallet must be generated first.
 func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", valKeyName)
 	cmd := []string{
@@ -233,7 +233,7 @@ func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// Exec run a container for a specific job and block until the container exits
+// Exec run a container for a specific job and block until the container exits.
 func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.ContainerOptions{

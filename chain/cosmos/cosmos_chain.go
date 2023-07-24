@@ -13,6 +13,16 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
@@ -28,17 +38,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -167,12 +166,12 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 	return eg.Wait()
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
@@ -193,12 +192,12 @@ func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (std
 	return c.getFullNode().Exec(ctx, cmd, env)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().HostName())
 }
@@ -220,17 +219,17 @@ func (c *CosmosChain) HomeDir() string {
 	return c.getFullNode().HomeDir()
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getFullNode().CreateKey(ctx, keyName)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	return c.getFullNode().RecoverKey(ctx, keyName, mnemonic)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	b32Addr, err := c.getFullNode().AccountKeyBech32(ctx, keyName)
 	if err != nil {
@@ -242,7 +241,7 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 
 // BuildWallet will return a Cosmos wallet
 // If mnemonic != "", it will restore using that mnemonic
-// If mnemonic == "", it will create a new key
+// If mnemonic == "", it will create a new key.
 func (c *CosmosChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -290,12 +289,12 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.getFullNode().SendFunds(ctx, keyName, amount)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -359,7 +358,7 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
-// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
+// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain.
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
 	content, err := os.ReadFile(fileName)
@@ -505,19 +504,19 @@ func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, f
 	return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
 }
 
-// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
+// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output.
 func (c *CosmosChain) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
 	return c.getFullNode().QueryClientContractCode(ctx, codeHash, response)
 }
 
 // ExportState exports the chain state at specific height.
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, error) {
 	return c.getFullNode().ExportState(ctx, height)
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
-// Implements Chain interface
+// Implements Chain interface.
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
@@ -536,7 +535,7 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	return res.Balance.Amount.Int64(), nil
 }
 
-// AllBalances fetches an account address's balance for all denoms it holds
+// AllBalances fetches an account address's balance for all denoms it holds.
 func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
 	params := bankTypes.QueryAllBalancesRequest{Address: address}
 	grpcAddress := c.getFullNode().hostGRPCPort
@@ -640,7 +639,7 @@ func (c *CosmosChain) NewChainNode(
 	return tn, nil
 }
 
-// creates the test node objects required for bootstrapping tests
+// creates the test node objects required for bootstrapping tests.
 func (c *CosmosChain) initializeChainNodes(
 	ctx context.Context,
 	testName string,
@@ -709,7 +708,7 @@ type ValidatorWithIntPower struct {
 	PubKeyBase64 string
 }
 
-// Bootstraps the chain and starts it from genesis
+// Bootstraps the chain and starts it from genesis.
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
@@ -904,12 +903,12 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
-// Height implements ibc.Chain
+// Height implements ibc.Chain.
 func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
-// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
+// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height.
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
 	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
@@ -942,7 +941,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 	return ibcAcks, nil
 }
 
-// Timeouts implements ibc.Chain, returning all timeouts in block at height
+// Timeouts implements ibc.Chain, returning all timeouts in block at height.
 func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
 	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
@@ -982,7 +981,7 @@ func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx,
 	return fn.FindTxs(ctx, height)
 }
 
-// StopAllNodes stops and removes all long running containers (validators and full nodes)
+// StopAllNodes stops and removes all long running containers (validators and full nodes).
 func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {

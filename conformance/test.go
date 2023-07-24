@@ -327,14 +327,14 @@ func TestChainPair(
 		// funds relayer src and dst wallets on respective chain in genesis.
 		// creates a faucet account on the both chains (separate fullnode).
 		// funds faucet accounts in genesis.
-		relayerImpl, err = interchaintest.StartChainPair(t, ctx, rep, client, network, srcChain, dstChain, rf, preRelayerStartFuncs)
+		relayerImpl, err = interchaintest.StartChainPair(ctx, t, rep, client, network, srcChain, dstChain, rf)
 		req.NoError(err, "failed to StartChainPair")
 	}
 
 	// execute the pre relayer start functions, then start the relayer.
 	channels, err := interchaintest.StopStartRelayerWithPreStartFuncs(
-		t,
 		ctx,
+		t,
 		srcChain.Config().ChainID,
 		relayerImpl,
 		rep.RelayerExecReporter(t),

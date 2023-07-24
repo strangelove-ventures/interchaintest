@@ -10,7 +10,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 )
 
-// OsmosisPoolParams defines parameters for creating an osmosis gamm liquidity pool
+// OsmosisPoolParams defines parameters for creating an osmosis gamm liquidity pool.
 type OsmosisPoolParams struct {
 	Weights        string `json:"weights"`
 	InitialDeposit string `json:"initial-deposit"`

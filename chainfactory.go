@@ -1,6 +1,7 @@
 package interchaintest
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"strings"
@@ -12,8 +13,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
-
-	_ "embed"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -46,7 +45,7 @@ var embeddedConfiguredChains []byte
 
 var logConfiguredChainsSourceOnce sync.Once
 
-// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
+// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains.
 func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
 	var dat []byte
 	var err error

@@ -50,7 +50,7 @@ func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir s
 	}
 }
 
-// Hyperspace doesn't not have this functionality
+// Hyperspace doesn't not have this functionality.
 func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	panic("[AddKey] Do not call me")
 }
@@ -129,12 +129,12 @@ func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []stri
 	}
 }
 
-// Hyperspace doesn't not have this functionality
+// Hyperspace doesn't not have this functionality.
 func (hyperspaceCommander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
 	panic("[FlushAcknowledgements] Do not call me")
 }
 
-// Hyperspace doesn't not have this functionality
+// Hyperspace doesn't not have this functionality.
 func (hyperspaceCommander) FlushPackets(pathName, channelID, homeDir string) []string {
 	panic("[FlushPackets] Do not call me")
 }
@@ -155,13 +155,13 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 	return []string{"true"}
 }
 
-// Hyperspace does not have paths, just two configs
+// Hyperspace does not have paths, just two configs.
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
 	panic("[UpdatePath] Do not call me")
 }
 
 // Prints chain config which is populated by hyperspace
-// Ideally, there should be a command from hyperspace to get this output
+// Ideally, there should be a command from hyperspace to get this output.
 func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Channels")
 	configFilePath := path.Join(homeDir, chainID+".config")
@@ -172,7 +172,7 @@ func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
 }
 
 // Prints chain config which is populated by hyperspace
-// Ideally, there should be a command from hyperspace to get this output
+// Ideally, there should be a command from hyperspace to get this output.
 func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Connections")
 	configFilePath := path.Join(homeDir, chainID+".config")
@@ -183,7 +183,7 @@ func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 }
 
 // Prints chain config which is populated by hyperspace
-// Ideally, there should be a command from hyperspace to get this output
+// Ideally, there should be a command from hyperspace to get this output.
 func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
 	fmt.Println("[hyperspace] Get Clients")
 	configFilePath := path.Join(homeDir, chainID+".config")
@@ -193,18 +193,18 @@ func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
 	}
 }
 
-// Hyperspace does not have link cmd, call create clients, create connection, and create channel
+// Hyperspace does not have link cmd, call create clients, create connection, and create channel.
 func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
 	panic("[LinkPath] Do not use me")
 }
 
 // There is no hyperspace call to restore the key, so this can't return an executable.
-// HyperspaceRelayer's RestoreKey will restore the key in the chain's config file
+// HyperspaceRelayer's RestoreKey will restore the key in the chain's config file.
 func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic, homeDir string) []string {
 	panic("[RestoreKey] Do not use me")
 }
 
-// hyperspace can only start 1 path
+// hyperspace can only start 1 path.
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
 	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
 	if len(pathNames) != 1 {
@@ -235,7 +235,7 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 	}
 }
 
-// Hyperspace doesn't not have this functionality
+// Hyperspace doesn't not have this functionality.
 func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
 	panic("[UpdateClients] Do not use me")
 }
@@ -259,13 +259,13 @@ func (hyperspaceCommander) DefaultContainerVersion() string {
 }
 
 // There is no hyperspace call to add key, so there is no stdout to parse.
-// DockerRelayer's RestoreKey will restore the key in the chain's config file
+// DockerRelayer's RestoreKey will restore the key in the chain's config file.
 func (hyperspaceCommander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
 	panic("[ParseAddKeyOutput] Do not call me")
 }
 
 // There is no hyperspace call to restore the key, so there is no stdout to parse.
-// DockerRelayer's RestoreKey will restore the key in the chain's config file
+// DockerRelayer's RestoreKey will restore the key in the chain's config file.
 func (hyperspaceCommander) ParseRestoreKeyOutput(stdout, stderr string) string {
 	panic("[ParseRestoreKeyOutput] Do not call me")
 }
@@ -275,7 +275,7 @@ type ChannelsOutput struct {
 }
 
 // Parses output of chain config which is populated by hyperspace
-// Ideally, there should be a command from hyperspace to get this output
+// Ideally, there should be a command from hyperspace to get this output.
 func (hyperspaceCommander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
 	var cfg ChannelsOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)
@@ -308,7 +308,7 @@ type ConnectionsOutput struct {
 
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
-// Only supports 1 connection and limited info
+// Only supports 1 connection and limited info.
 func (hyperspaceCommander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
 	var cfg ConnectionsOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)
@@ -346,7 +346,7 @@ type ClientOutput struct {
 
 // Parses output of chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output
-// Only supports 1 client
+// Only supports 1 client.
 func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
 	var cfg ClientOutput
 	err := toml.Unmarshal([]byte(stdout), &cfg)

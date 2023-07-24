@@ -10,6 +10,11 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -20,12 +25,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
 type PenumbraNode struct {
@@ -47,23 +46,23 @@ type PenumbraChain struct {
 
 type PenumbraValidatorDefinition struct {
 	SequenceNumber int                              `json:"sequence_number" toml:"sequence_number"`
-	Enabled        bool                             `json:"enabled" toml:"enabled"`
-	Name           string                           `json:"name" toml:"name"`
-	Website        string                           `json:"website" toml:"website"`
-	Description    string                           `json:"description" toml:"description"`
-	IdentityKey    string                           `json:"identity_key" toml:"identity_key"`
-	GovernanceKey  string                           `json:"governance_key" toml:"governance_key"`
-	ConsensusKey   PenumbraConsensusKey             `json:"consensus_key" toml:"consensus_key"`
+	Enabled        bool                             `json:"enabled"         toml:"enabled"`
+	Name           string                           `json:"name"            toml:"name"`
+	Website        string                           `json:"website"         toml:"website"`
+	Description    string                           `json:"description"     toml:"description"`
+	IdentityKey    string                           `json:"identity_key"    toml:"identity_key"`
+	GovernanceKey  string                           `json:"governance_key"  toml:"governance_key"`
+	ConsensusKey   PenumbraConsensusKey             `json:"consensus_key"   toml:"consensus_key"`
 	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams" toml:"funding_stream"`
 }
 
 type PenumbraConsensusKey struct {
-	Type  string `json:"type" toml:"type"`
+	Type  string `json:"type"  toml:"type"`
 	Value string `json:"value" toml:"value"`
 }
 
 type PenumbraValidatorFundingStream struct {
-	Address string `json:"address" toml:"address"`
+	Address string `json:"address"  toml:"address"`
 	RateBPS int64  `json:"rate_bps" toml:"rate_bps"`
 }
 
@@ -97,12 +96,12 @@ func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Pack
 	panic("implement me")
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
@@ -121,12 +120,12 @@ func (c *PenumbraChain) getRelayerNode() PenumbraNode {
 	return c.PenumbraNodes[0]
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().TendermintNode.HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getRelayerNode().TendermintNode.HostName())
 }
@@ -147,7 +146,7 @@ func (c *PenumbraChain) HomeDir() string {
 	panic(errors.New("HomeDir not implemented yet"))
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
 }
@@ -156,14 +155,14 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 	return c.getRelayerNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
 // BuildWallet will return a Penumbra wallet
 // If mnemonic != "", it will restore using that mnemonic
-// If mnemonic == "", it will create a new key
+// If mnemonic == "", it will create a new key.
 func (c *PenumbraChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -211,12 +210,12 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, amount)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -227,7 +226,7 @@ func (c *PenumbraChain) SendIBCTransfer(
 	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
@@ -236,12 +235,12 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 	return c.getRelayerNode().TendermintNode.Height(ctx)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	panic("implement me")
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
@@ -322,7 +321,7 @@ func (c *PenumbraChain) NewChainNode(
 	}, nil
 }
 
-// creates the test node objects required for bootstrapping tests
+// creates the test node objects required for bootstrapping tests.
 func (c *PenumbraChain) initializeChainNodes(
 	ctx context.Context,
 	testName string,
@@ -505,7 +504,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	return c.start(ctx)
 }
 
-// Bootstraps the chain and starts it from genesis
+// Bootstraps the chain and starts it from genesis.
 func (c *PenumbraChain) start(ctx context.Context) error {
 	// Copy the penumbra genesis to all tendermint nodes.
 	genesisContent, err := c.PenumbraNodes[0].PenumbraAppNode.genesisFileContent(ctx)

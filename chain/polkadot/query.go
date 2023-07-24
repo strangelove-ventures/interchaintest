@@ -5,7 +5,7 @@ import (
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 )
 
-// GetBalance fetches the current balance for a specific account address using the SubstrateAPI
+// GetBalance fetches the current balance for a specific account address using the SubstrateAPI.
 func GetBalance(api *gsrpc.SubstrateAPI, address string) (int64, error) {
 	meta, err := api.RPC.State.GetMetadataLatest()
 	if err != nil {

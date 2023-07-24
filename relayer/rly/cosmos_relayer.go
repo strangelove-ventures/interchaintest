@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"go.uber.org/zap"
-
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
 const (
@@ -150,7 +149,7 @@ func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, ho
 	}
 }
 
-// passing a value of 0 for customeClientTrustingPeriod will use default
+// passing a value of 0 for customeClientTrustingPeriod will use default.
 func (commander) CreateClient(pathName, homeDir, customeClientTrustingPeriod string) []string {
 	return []string{
 		"rly", "tx", "client", pathName, "--client-tp", customeClientTrustingPeriod,

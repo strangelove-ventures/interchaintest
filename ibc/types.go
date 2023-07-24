@@ -4,9 +4,8 @@ import (
 	"reflect"
 	"strconv"
 
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -208,11 +207,11 @@ type ChannelOutput struct {
 
 // ConnectionOutput represents the IBC connection information queried from a chain's state for a particular connection.
 type ConnectionOutput struct {
-	ID           string                    `json:"id,omitempty" yaml:"id"`
-	ClientID     string                    `json:"client_id,omitempty" yaml:"client_id"`
-	Versions     []*ibcexported.Version    `json:"versions,omitempty" yaml:"versions"`
-	State        string                    `json:"state,omitempty" yaml:"state"`
-	Counterparty *ibcexported.Counterparty `json:"counterparty" yaml:"counterparty"`
+	ID           string                    `json:"id,omitempty"           yaml:"id"`
+	ClientID     string                    `json:"client_id,omitempty"    yaml:"client_id"`
+	Versions     []*ibcexported.Version    `json:"versions,omitempty"     yaml:"versions"`
+	State        string                    `json:"state,omitempty"        yaml:"state"`
+	Counterparty *ibcexported.Counterparty `json:"counterparty"           yaml:"counterparty"`
 	DelayPeriod  string                    `json:"delay_period,omitempty" yaml:"delay_period"`
 }
 

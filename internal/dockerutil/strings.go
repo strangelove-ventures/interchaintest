@@ -44,7 +44,7 @@ func init() {
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")
 
-// RandLowerCaseLetterString returns a lowercase letter string of given length
+// RandLowerCaseLetterString returns a lowercase letter string of given length.
 func RandLowerCaseLetterString(length int) string {
 	b := make([]byte, length)
 	for i := range b {

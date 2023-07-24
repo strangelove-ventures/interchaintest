@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/avast/retry-go/v4"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -18,11 +19,9 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
-
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
-// Increase parachain wallet amount due to their additional precision
+// Increase parachain wallet amount due to their additional precision.
 const parachainScaling = int64(1_000)
 
 // ParachainNode defines the properties required for running a polkadot parachain node.
@@ -79,7 +78,7 @@ func (pn *ParachainNode) ParachainChainSpecFileName() string {
 }
 
 // ParachainChainSpecFilePathFull returns the full path to the chain spec file
-// within the parachain container
+// within the parachain container.
 func (pn *ParachainNode) ParachainChainSpecFilePathFull() string {
 	return filepath.Join(pn.NodeHome(), pn.ParachainChainSpecFileName())
 }
@@ -118,7 +117,7 @@ type GetParachainIDResponse struct {
 	ParachainID int `json:"para_id"`
 }
 
-// GenerateDefaultChainSpec runs build-spec to get the default chain spec into something malleable
+// GenerateDefaultChainSpec runs build-spec to get the default chain spec into something malleable.
 func (pn *ParachainNode) GenerateDefaultChainSpec(ctx context.Context) ([]byte, error) {
 	cmd := []string{
 		pn.Bin,
@@ -133,7 +132,7 @@ func (pn *ParachainNode) GenerateDefaultChainSpec(ctx context.Context) ([]byte, 
 }
 
 // GenerateParachainGenesisFile creates the default chain spec, modifies it and returns it.
-// The modified chain spec is then written to each Parachain node
+// The modified chain spec is then written to each Parachain node.
 func (pn *ParachainNode) GenerateParachainGenesisFile(ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) ([]byte, error) {
 	defaultChainSpec, err := pn.GenerateDefaultChainSpec(ctx)
 	if err != nil {
@@ -310,7 +309,7 @@ func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom s
 	return GetBalance(pn.api, address)
 }
 
-// GetIbcBalance returns the Coins type of ibc coins in account
+// GetIbcBalance returns the Coins type of ibc coins in account.
 func (pn *ParachainNode) GetIbcBalance(ctx context.Context, address string, denom uint64) (sdktypes.Coin, error) {
 	res, err := pn.api.RPC.IBC.QueryBalanceWithAddress(ctx, address, denom)
 	if err != nil {
@@ -370,7 +369,7 @@ func (pn *ParachainNode) SendIbcFunds(
 	return nil
 }
 
-// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset.
 func (pn *ParachainNode) MintFunds(
 	keyName string,
 	amount ibc.WalletAmount,
