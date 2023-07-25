@@ -922,6 +922,24 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
+func (tn *ChainNode) LegacyUpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
+	command := []string{
+		"gov", "submit-legacy-proposal",
+		"software-upgrade", prop.Name,
+		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--title", prop.Title,
+		"--description", prop.Description,
+		"--deposit", prop.Deposit,
+		"--no-validate",
+	}
+
+	if prop.Info != "" {
+		command = append(command, "--upgrade-info", prop.Info)
+	}
+
+	return tn.ExecTx(ctx, keyName, command...)
+}
+
 // TextProposal submits a text governance proposal to the chain.
 func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
 	command := []string{

@@ -54,12 +54,12 @@ type TextProposal struct {
 
 // SoftwareUpgradeProposal defines the required and optional parameters for submitting a software-upgrade proposal.
 type SoftwareUpgradeProposal struct {
-	Deposit     string
-	Title       string
-	Name        string
-	Description string
-	Height      uint64
-	Info        string // optional
+	Deposit     string `json:"deposit"`
+	Title       string `json:"title"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Height      uint64 `json:"height"`
+	Info        string `json:"info,omitempty"`
 }
 
 // ProposalResponse is the proposal query response.
