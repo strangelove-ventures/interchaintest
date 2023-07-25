@@ -3,6 +3,8 @@ module github.com/strangelove-ventures/interchaintest/v7
 go 1.20
 
 require (
+	cosmossdk.io/math v1.0.1
+	cosmossdk.io/store v1.0.0-alpha.1
 	cosmossdk.io/x/upgrade v0.0.0-20230724130706-5442197d6bcd
 	github.com/99designs/keyring v1.2.2
 	github.com/BurntSushi/toml v1.3.2
@@ -12,7 +14,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.3.4
 	github.com/cometbft/cometbft v0.38.0-rc3
-	github.com/cosmos/cosmos-sdk v0.50.0-beta.0.0.20230723220119-d68a1231a44b
+	github.com/cosmos/cosmos-sdk v0.50.0-beta.0.0.20230725121928-d234c6aea2e1
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc3
@@ -58,8 +60,6 @@ require (
 	cosmossdk.io/depinject v1.0.0-alpha.3 // indirect
 	cosmossdk.io/errors v1.0.0 // indirect
 	cosmossdk.io/log v1.1.1-0.20230704160919-88f2c830b0ca // indirect
-	cosmossdk.io/math v1.0.1 // indirect
-	cosmossdk.io/store v1.0.0-alpha.1 // indirect
 	cosmossdk.io/x/tx v0.9.1 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -264,6 +264,6 @@ replace (
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
 
-replace github.com/cosmos/ibc-go/v7 => github.com/notional-labs/ibc-go/v7 v7.0.0-20230724113134-e8c560b25881
+replace github.com/cosmos/ibc-go/v7 => github.com/notional-labs/ibc-go/v7 v7.0.0-20230725115016-ed60bbb0ec6f
 
-replace github.com/CosmWasm/wasmd => github.com/notional-labs/wasmd v0.40.1-0.20230724133754-0a95e36cabc3
+replace github.com/CosmWasm/wasmd => github.com/notional-labs/wasmd v0.40.1-0.20230725154726-6f2a6f0a0bb3
