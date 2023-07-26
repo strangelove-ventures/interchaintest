@@ -6,10 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
@@ -45,10 +48,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	chainID_A, chainID_B, chainID_C, chainID_D := "chain-a", "chain-b", "chain-c", "chain-d"
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v9.0.1", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "v9.0.1", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "v9.0.1", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0uatom"}},
-		{Name: "gaia", Version: "v9.0.1", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0uatom"}},
+		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
+		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
+		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
+		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -59,6 +62,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
+		relayer.CustomDockerImage(rly.DefaultContainerImage, "main", rly.RlyDefaultUidGid),
 	).Build(t, client, network)
 
 	const pathAB = "ab"
@@ -151,9 +155,17 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopIBCDenom := secondHopDenomTrace.IBCDenom()
 	thirdHopIBCDenom := thirdHopDenomTrace.IBCDenom()
 
-	firstHopEscrowAccount := transfertypes.GetEscrowAddress(abChan.PortID, abChan.ChannelID).String()
-	secondHopEscrowAccount := transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID).String()
-	thirdHopEscrowAccount := transfertypes.GetEscrowAddress(cdChan.PortID, abChan.ChannelID).String()
+	firstHopEscrow := transfertypes.GetEscrowAddress(abChan.PortID, abChan.ChannelID)
+	firstHopEscrowAccount, err := bech32.ConvertAndEncode(chainA.Config().Bech32Prefix, firstHopEscrow.Bytes())
+	require.NoError(t, err)
+
+	secondHopEscrow := transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID)
+	secondHopEscrowAccount, err := bech32.ConvertAndEncode(chainB.Config().Bech32Prefix, secondHopEscrow.Bytes())
+	require.NoError(t, err)
+
+	thirdHopEscrow := transfertypes.GetEscrowAddress(cdChan.PortID, cdChan.ChannelID)
+	thirdHopEscrowAccount, err := bech32.ConvertAndEncode(chainC.Config().Bech32Prefix, thirdHopEscrow.Bytes())
+	require.NoError(t, err)
 
 	t.Run("multi-hop a->b->c->d", func(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain C->Chain D
@@ -530,7 +542,11 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), baIBCDenom)
 		require.NoError(t, err)
 
-		baEscrowBalance, err := chainB.GetBalance(ctx, transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID).String(), chainB.Config().Denom)
+		baEscrow := transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID)
+		baEscrowAccount, err := bech32.ConvertAndEncode(chainB.Config().Bech32Prefix, baEscrow.Bytes())
+		require.NoError(t, err)
+
+		baEscrowBalance, err := chainB.GetBalance(ctx, baEscrowAccount, chainB.Config().Denom)
 		require.NoError(t, err)
 
 		require.Equal(t, transferAmount, chainABalance)
@@ -598,14 +614,26 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.Equal(t, int64(0), chainCBalance)
 		require.Equal(t, int64(0), chainDBalance)
 
+		cdEscrow := transfertypes.GetEscrowAddress(cdChan.PortID, cdChan.ChannelID)
+		cdEscrowAccount, err := bech32.ConvertAndEncode(chainC.Config().Bech32Prefix, cdEscrow.Bytes())
+		require.NoError(t, err)
+
 		// assert balances for IBC escrow accounts
-		cdEscrowBalance, err := chainC.GetBalance(ctx, transfertypes.GetEscrowAddress(cdChan.PortID, cdChan.ChannelID).String(), bcIBCDenom)
+		cdEscrowBalance, err := chainC.GetBalance(ctx, cdEscrowAccount, bcIBCDenom)
 		require.NoError(t, err)
 
-		bcEscrowBalance, err := chainB.GetBalance(ctx, transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID).String(), chainB.Config().Denom)
+		bcEscrow := transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID)
+		bcEscrowAccount, err := bech32.ConvertAndEncode(chainB.Config().Bech32Prefix, bcEscrow.Bytes())
 		require.NoError(t, err)
 
-		baEscrowBalance, err = chainB.GetBalance(ctx, transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID).String(), chainB.Config().Denom)
+		bcEscrowBalance, err := chainB.GetBalance(ctx, bcEscrowAccount, chainB.Config().Denom)
+		require.NoError(t, err)
+
+		baEscrow = transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID)
+		baEscrowAccount, err = bech32.ConvertAndEncode(chainB.Config().Bech32Prefix, baEscrow.Bytes())
+		require.NoError(t, err)
+
+		baEscrowBalance, err = chainB.GetBalance(ctx, baEscrowAccount, chainB.Config().Denom)
 		require.NoError(t, err)
 
 		require.Equal(t, transferAmount, baEscrowBalance)
