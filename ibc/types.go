@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 )
@@ -205,7 +206,7 @@ func (i DockerImage) Ref() string {
 type WalletAmount struct {
 	Address string
 	Denom   string
-	Amount  int64
+	Amount  math.Int
 }
 
 type IBCTimeout struct {

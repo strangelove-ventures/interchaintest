@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/docker/docker/client"
@@ -152,7 +152,7 @@ func (pn *ParachainNode) GenerateParachainGenesisFile(ctx context.Context, addit
 
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount * parachainScaling},
+			[]interface{}{wallet.Address, wallet.Amount.MulRaw(parachainScaling)},
 		)
 	}
 	if err := dyno.Set(chainSpec, balances, "genesis", "runtime", "balances", "balances"); err != nil {
@@ -305,7 +305,7 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	return job.Run(ctx, cmd, opts)
 }
 
-func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (pn *ParachainNode) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	return GetBalance(pn.api, address)
 }
 
@@ -329,7 +329,7 @@ func (pn *ParachainNode) SendFunds(ctx context.Context, keyName string, amount i
 		"ParachainNode SendFunds",
 		zap.String("From", kp.Address),
 		zap.String("To", amount.Address),
-		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+		zap.String("Amount", amount.Amount.String()),
 	)
 	hash, err := SendFundsTx(pn.api, kp, amount)
 	if err != nil {
@@ -357,7 +357,7 @@ func (pn *ParachainNode) SendIbcFunds(
 		"ParachainNode SendIbcFunds",
 		zap.String("From", kp.Address),
 		zap.String("To", amount.Address),
-		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+		zap.String("Amount", amount.Amount.String()),
 	)
 	hash, err := SendIbcFundsTx(pn.api, kp, channelID, amount, options)
 	if err != nil {
@@ -383,7 +383,7 @@ func (pn *ParachainNode) MintFunds(
 		"ParachainNode MintFunds",
 		zap.String("From", kp.Address),
 		zap.String("To", amount.Address),
-		zap.String("Amount", strconv.FormatInt(amount.Amount, 10)),
+		zap.String("Amount", amount.Amount.String()),
 	)
 	hash, err := MintFundsTx(pn.api, kp, amount)
 	if err != nil {

@@ -29,7 +29,7 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 		return hash, err
 	}
 
-	call, err := gstypes.NewCall(meta, "Balances.transfer", receiver, gstypes.NewUCompactFromUInt(uint64(amount.Amount)))
+	call, err := gstypes.NewCall(meta, "Balances.transfer", receiver, gstypes.NewUCompact(amount.Amount.BigInt()))
 	if err != nil {
 		return hash, err
 	}
@@ -85,7 +85,7 @@ func SendIbcFundsTx(
 	timestamp := gstypes.NewOptionU64(gstypes.NewU64(0))
 	height := gstypes.NewOptionU64(gstypes.NewU64(3000)) // Must set timestamp or height
 	assetId := gstypes.NewU128(*big.NewInt(assetNum))
-	amount2 := gstypes.NewU128(*big.NewInt(amount.Amount))
+	amount2 := gstypes.NewU128(*amount.Amount.BigInt())
 	memo := gstypes.NewU8(0)
 
 	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetId, amount2, memo)
@@ -124,7 +124,7 @@ func MintFundsTx(
 	}
 
 	assetId := gstypes.NewU128(*big.NewInt(assetNum))
-	amount2 := gstypes.NewUCompactFromUInt(uint64(amount.Amount))
+	amount2 := gstypes.NewUCompact(amount.Amount.BigInt())
 
 	call, err := gstypes.NewCall(meta, "Assets.mint", assetId, receiver, amount2)
 	if err != nil {
