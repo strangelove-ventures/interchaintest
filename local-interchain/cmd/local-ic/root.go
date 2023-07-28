@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -38,7 +37,6 @@ func GetDirectory() string {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(dirname)
 
 		MakeFileInstallDirectory = path.Join(dirname, "local-interchain")
 	}
