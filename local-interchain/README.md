@@ -72,7 +72,7 @@ Read more about the API [here](./docs/REST_API.md)
         "version": "v14.1.0"
     },    
     "gas_prices": "0%DENOM%",
-    "gas_adjustment": 2.0,           
+    "gas_adjustment": 2.0
 }
 ```
 
