@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v7"
@@ -20,6 +22,24 @@ import (
 func StartChain(installDir, chainCfgFile string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	vals := make(map[string]*cosmos.ChainNode)
+	ic := interchaintest.NewInterchain()
+	defer ic.Close()
+
+	// cleanup on ctrl + c
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			log.Printf("Closing from signal: %s\n", sig)
+			for _, v := range vals {
+				v.StopContainer(ctx)
+			}
+			ic.Close()
+			cancel()
+		}
+	}()
 
 	// Logger for ICTest functions only.
 	logger, err := InitLogger()
@@ -66,10 +86,6 @@ func StartChain(installDir, chainCfgFile string) {
 	if err != nil {
 		log.Fatal("cf.Chains", err)
 	}
-
-	// Create a new Interchain object which describes the chains, relayers, and IBC connections we want to use
-	ic := interchaintest.NewInterchain()
-	defer ic.Close()
 
 	for _, chain := range chains {
 		ic = ic.AddChain(chain)
@@ -135,8 +151,6 @@ func StartChain(installDir, chainCfgFile string) {
 		}()
 	}
 
-	// keys as well?
-	vals := make(map[string]*cosmos.ChainNode)
 	for _, chain := range chains {
 		if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
 			chainID := cosmosChain.Config().ChainID
@@ -145,9 +159,8 @@ func StartChain(installDir, chainCfgFile string) {
 	}
 
 	// Starts a non blocking REST server to take action on the chain.
-	// TODO: kill this later & cleanup all docker containers. (maybe add a /kill-switch endpoint?)
 	go func() {
-		r := router.NewRouter(ctx, config, vals, &relayer, eRep, installDir)
+		r := router.NewRouter(ctx, ic, config, vals, &relayer, eRep, installDir)
 
 		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
 		if err := http.ListenAndServe(server, r); err != nil {
@@ -172,6 +185,6 @@ func StartChain(installDir, chainCfgFile string) {
 	log.Println("\n", "Local-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, ttlWait, longestTTLChain); err != nil {
-		log.Fatal("testutil.WaitForBlocks", err)
+		log.Fatal("WaitForBlocks StartChain: ", err)
 	}
 }

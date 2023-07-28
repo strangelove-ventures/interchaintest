@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
@@ -19,13 +20,13 @@ type Route struct {
 	Methods []string `json:"methods"`
 }
 
-func NewRouter(ctx context.Context, config *ictypes.Config, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter, installDir string) *mux.Router {
+func NewRouter(ctx context.Context, ic *interchaintest.Interchain, config *ictypes.Config, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter, installDir string) *mux.Router {
 	r := mux.NewRouter()
 
 	infoH := handlers.NewInfo(config, installDir)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
 
-	actionsH := handlers.NewActions(ctx, vals, relayer, eRep)
+	actionsH := handlers.NewActions(ctx, ic, vals, relayer, eRep)
 	r.HandleFunc("/", actionsH.PostActions).Methods(http.MethodPost)
 
 	uploaderH := handlers.NewUploader(ctx, vals)

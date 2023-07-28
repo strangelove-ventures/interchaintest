@@ -9,12 +9,14 @@ import (
 
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
 
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 type actions struct {
 	ctx  context.Context
+	ic   *interchaintest.Interchain
 	vals map[string]*cosmos.ChainNode
 
 	relayer *ibc.Relayer
@@ -27,9 +29,10 @@ type ActionHandler struct {
 	Cmd     string `json:"cmd"`
 }
 
-func NewActions(ctx context.Context, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
+func NewActions(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
 	return &actions{
 		ctx:     ctx,
+		ic:      ic,
 		vals:    vals,
 		relayer: relayer,
 		eRep:    eRep,
@@ -44,8 +47,13 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chainId := ah.ChainId
 	action := ah.Action
+	if action == "kill-all" {
+		a.killAll()
+		return
+	}
+
+	chainId := ah.ChainId
 	if _, ok := a.vals[chainId]; !ok {
 		util.Write(w, []byte(fmt.Sprintf(`{"error":"chain_id '%s' not found. Chains %v"}`, chainId, a.vals[chainId])))
 		return
@@ -138,4 +146,12 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return err
+}
+
+func (a *actions) killAll() {
+	for _, v := range a.vals {
+		v.StopContainer(a.ctx)
+	}
+	a.ic.Close()
+	a.ctx.Done()
 }
