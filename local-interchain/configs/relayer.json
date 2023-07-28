@@ -4,6 +4,6 @@
             "repository": "ghcr.io/cosmos/relayer",
             "version": "latest"
         },
-        "startup_flags": ["--processor", "events", "--block-history", "100"]
+        "startup_flags": ["--block-history", "100"]
     }
 }
