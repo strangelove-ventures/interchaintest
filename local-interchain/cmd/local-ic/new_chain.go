@@ -161,6 +161,8 @@ func getOrDefault[T any](output string, defaultVal T) T {
 		defaultOutput = any(defaultVal).(string)
 	case reflect.Int:
 		defaultOutput = strconv.Itoa(any(defaultVal).(int))
+	case reflect.Float32, reflect.Float64:
+		defaultOutput = fmt.Sprintf("%f", any(defaultVal).(float64))
 	case reflect.Slice:
 		if reflect.TypeOf(defaultVal).Elem().Kind() == reflect.String {
 			defaultOutput = "[]"
