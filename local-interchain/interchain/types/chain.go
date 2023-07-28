@@ -14,10 +14,10 @@ type Chain struct {
 	Binary               string `json:"binary" validate:"min=1"`
 	Bech32Prefix         string `json:"bech32_prefix" validate:"min=1"`
 	Denom                string `json:"denom" validate:"min=1"`
-	TrustingPeriod       string `json:"trusting_period" validate:"time.Duration"`
+	TrustingPeriod       string `json:"trusting_period"`
 	Debugging            bool   `json:"debugging"`
 	UseNewGenesisCommand bool   `json:"use_new_genesis_command"`
-	BlockTime            string `json:"block_time" validate:"time.Duration"`
+	BlockTime            string `json:"block_time"`
 
 	// Required
 	Name    string `json:"name" validate:"min=1"`
