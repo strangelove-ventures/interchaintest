@@ -6,8 +6,6 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v7"
@@ -16,7 +14,6 @@ import (
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"github.com/strangelove-ventures/localinterchain/interchain/handlers"
 	"github.com/strangelove-ventures/localinterchain/interchain/router"
 	"go.uber.org/zap"
 )
@@ -32,15 +29,18 @@ func StartChain(installDir, chainCfgFile string) {
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
-	// cleanup on ctrl + c
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for sig := range c {
-			log.Printf("Closing from signal: %s\n", sig)
-			handlers.KillAll(ctx, ic, vals, relayer, eRep)
-		}
-	}()
+	// TODO: cleanup on ctrl + c
+	// Properly cleanup at the start, during build, and after the REST API is created
+	// The following only works at the start and after the REST API is created.
+	//
+	// c := make(chan os.Signal, 1)
+	// signal.Notify(c, os.Interrupt)
+	// go func() {
+	// 	for sig := range c {
+	// 		log.Printf("Closing from signal: %s\n", sig)
+	// 		handlers.KillAll(ctx, ic, vals, relayer, eRep)
+	// 	}
+	// }()
 
 	// Logger for ICTest functions only.
 	logger, err := InitLogger()
