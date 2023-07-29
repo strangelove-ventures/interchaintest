@@ -23,7 +23,9 @@ Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for i
 - *(optional)* Edit `./configs/relayer.json`
 - Copy: `cp ./configs/base_ibc.json ./configs/mytest1_ignored.json`
 - Run: `local-ic start mytest1_ignored.json`
-- Change directory `ICTEST_HOME=/root/example/local-interchain local-ic start myother_ignored.json`
+- Run in different directory: `ICTEST_HOME=/root/local-interchain local-ic start myother_ignored.json`
+
+**NOTE** The ICTEST_HOME path must contain the directories `chains` and `configs` to be valid.
 
 *(Default: `make install` links to the cloned directory. `go install .` will use your home directory /local-interchain)*
 

@@ -17,9 +17,6 @@ var startCmd = &cobra.Command{
 		configPath := args[0]
 		parentDir := GetDirectory()
 
-		// base.json
-		// /abs/path/here/base.json
-
 		if path.IsAbs(configPath) {
 			dir, err := filepath.Abs(configPath)
 			if err != nil {

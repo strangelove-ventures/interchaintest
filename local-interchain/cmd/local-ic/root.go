@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -29,7 +30,6 @@ func GetDirectory() string {
 	// Config variable override for the ICTEST_HOME
 	if res := os.Getenv("ICTEST_HOME"); res != "" {
 		MakeFileInstallDirectory = res
-		return res
 	}
 
 	if MakeFileInstallDirectory == "" {
@@ -41,5 +41,19 @@ func GetDirectory() string {
 		MakeFileInstallDirectory = path.Join(dirname, "local-interchain")
 	}
 
+	if err := directoryRequirementChecks(MakeFileInstallDirectory, "configs", "chains"); err != nil {
+		log.Fatal(err)
+	}
+
 	return MakeFileInstallDirectory
+}
+
+func directoryRequirementChecks(parent string, subDirectories ...string) error {
+	for _, subDirectory := range subDirectories {
+		if _, err := os.Stat(path.Join(parent, subDirectory)); os.IsNotExist(err) {
+			return fmt.Errorf("%s/ folder not found in %s", subDirectory, parent)
+		}
+	}
+
+	return nil
 }
