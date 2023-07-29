@@ -19,7 +19,7 @@ type actions struct {
 	ic   *interchaintest.Interchain
 	vals map[string]*cosmos.ChainNode
 
-	relayer *ibc.Relayer
+	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
 }
 
@@ -29,7 +29,7 @@ type ActionHandler struct {
 	Cmd     string `json:"cmd"`
 }
 
-func NewActions(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
+func NewActions(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
 	return &actions{
 		ctx:     ctx,
 		ic:      ic,
@@ -49,7 +49,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	action := ah.Action
 	if action == "kill-all" {
-		a.killAll()
+		KillAll(a.ctx, a.ic, a.vals, a.relayer, a.eRep)
 		return
 	}
 
@@ -88,13 +88,13 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 		switch action {
 		case "stop-relayer", "stop_relayer", "stopRelayer":
-			err = (*a.relayer).StopRelayer(a.ctx, a.eRep)
+			err = a.relayer.StopRelayer(a.ctx, a.eRep)
 
 		case "start-relayer", "start_relayer", "startRelayer":
 			paths := strings.FieldsFunc(ah.Cmd, func(c rune) bool {
 				return c == ',' || c == ' '
 			})
-			err = (*a.relayer).StartRelayer(a.ctx, a.eRep, paths...)
+			err = a.relayer.StartRelayer(a.ctx, a.eRep, paths...)
 
 		case "relayer", "relayer-exec", "relayer_exec", "relayerExec":
 			if !strings.Contains(ah.Cmd, "--home") {
@@ -102,13 +102,13 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 				cmd = append(cmd, "--home", "/home/relayer")
 			}
 
-			res := (*a.relayer).Exec(a.ctx, a.eRep, cmd, []string{})
+			res := a.relayer.Exec(a.ctx, a.eRep, cmd, []string{})
 			stdout = []byte(res.Stdout)
 			stderr = []byte(res.Stderr)
 			err = res.Err
 
 		case "get_channels", "get-channels", "getChannels":
-			res, err := (*a.relayer).GetChannels(a.ctx, a.eRep, chainId)
+			res, err := a.relayer.GetChannels(a.ctx, a.eRep, chainId)
 			if err != nil {
 				util.WriteError(w, err)
 				return
@@ -148,10 +148,15 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	return err
 }
 
-func (a *actions) killAll() {
-	for _, v := range a.vals {
-		v.StopContainer(a.ctx)
+func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
+	if relayer != nil {
+		relayer.StopRelayer(ctx, eRep)
 	}
-	a.ic.Close()
-	a.ctx.Done()
+
+	for _, v := range vals {
+		go v.StopContainer(ctx)
+	}
+
+	ic.Close()
+	<-ctx.Done()
 }

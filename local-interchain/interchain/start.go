@@ -16,6 +16,7 @@ import (
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/localinterchain/interchain/handlers"
 	"github.com/strangelove-ventures/localinterchain/interchain/router"
 	"go.uber.org/zap"
 )
@@ -23,6 +24,9 @@ import (
 func StartChain(installDir, chainCfgFile string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	var relayer ibc.Relayer
+	var eRep *testreporter.RelayerExecReporter
 
 	vals := make(map[string]*cosmos.ChainNode)
 	ic := interchaintest.NewInterchain()
@@ -34,11 +38,7 @@ func StartChain(installDir, chainCfgFile string) {
 	go func() {
 		for sig := range c {
 			log.Printf("Closing from signal: %s\n", sig)
-			for _, v := range vals {
-				v.StopContainer(ctx)
-			}
-			ic.Close()
-			cancel()
+			handlers.KillAll(ctx, ic, vals, relayer, eRep)
 		}
 	}()
 
@@ -99,12 +99,11 @@ func StartChain(installDir, chainCfgFile string) {
 
 	// Base setup
 	rep := testreporter.NewNopReporter()
-	eRep := rep.RelayerExecReporter(&fakeT)
+	eRep = rep.RelayerExecReporter(&fakeT)
 
 	client, network := interchaintest.DockerSetup(fakeT)
 
 	// setup a relayer if we have IBC paths to use.
-	var relayer ibc.Relayer
 	if len(ibcpaths) > 0 {
 		rlyCfg := config.Relayer
 
@@ -161,7 +160,7 @@ func StartChain(installDir, chainCfgFile string) {
 
 	// Starts a non blocking REST server to take action on the chain.
 	go func() {
-		r := router.NewRouter(ctx, ic, config, vals, &relayer, eRep, installDir)
+		r := router.NewRouter(ctx, ic, config, vals, relayer, eRep, installDir)
 
 		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
 		if err := http.ListenAndServe(server, r); err != nil {

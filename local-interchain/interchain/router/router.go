@@ -20,7 +20,7 @@ type Route struct {
 	Methods []string `json:"methods"`
 }
 
-func NewRouter(ctx context.Context, ic *interchaintest.Interchain, config *ictypes.Config, vals map[string]*cosmos.ChainNode, relayer *ibc.Relayer, eRep ibc.RelayerExecReporter, installDir string) *mux.Router {
+func NewRouter(ctx context.Context, ic *interchaintest.Interchain, config *ictypes.Config, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter, installDir string) *mux.Router {
 	r := mux.NewRouter()
 
 	infoH := handlers.NewInfo(config, installDir)
