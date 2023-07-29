@@ -1,8 +1,6 @@
 package types
 
 import (
-	"math"
-
 	"github.com/go-playground/validator"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 )
@@ -29,7 +27,6 @@ type Chain struct {
 	GasAdjustment float64  `json:"gas_adjustment"`
 	NumberVals    int      `json:"number_vals" validate:"gte=1"`
 	NumberNode    int      `json:"number_node"`
-	BlocksTTL     int      `json:"blocks_ttl"`
 	IBCPaths      []string `json:"ibc_paths"`
 	Genesis       Genesis  `json:"genesis"`
 }
@@ -40,10 +37,6 @@ func (chain *Chain) Validate() error {
 }
 
 func (chain *Chain) SetChainDefaults() {
-	if chain.BlocksTTL <= 0 {
-		chain.BlocksTTL = math.MaxInt32
-	}
-
 	if chain.ChainType == "" {
 		chain.ChainType = "cosmos"
 	}

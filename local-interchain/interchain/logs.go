@@ -18,11 +18,7 @@ func WriteRunningChains(configsDir string, bz []byte) {
 	_ = os.WriteFile(filepath, bz, 0644)
 }
 
-func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.Chain, connections []types.IBCChannel) (*cosmos.CosmosChain, int) {
-	// This may be un-needed.
-	var longestTTLChain *cosmos.CosmosChain
-	ttlWait := 0
-
+func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.Chain, connections []types.IBCChannel) {
 	mainLogs := types.MainLogs{
 		StartTime: uint64(time.Now().Unix()),
 		Chains:    []types.LogOutput{},
@@ -47,18 +43,11 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 			IBCPath:     ibcPaths,
 		}
 
-		if chain.BlocksTTL > ttlWait {
-			ttlWait = chain.BlocksTTL
-			longestTTLChain = chainObj
-		}
-
 		mainLogs.Chains = append(mainLogs.Chains, log)
 	}
 
 	bz, _ := json.MarshalIndent(mainLogs, "", "  ")
 	WriteRunningChains(configDir, []byte(bz))
-
-	return longestTTLChain, ttlWait
 }
 
 // == Zap Logger ==

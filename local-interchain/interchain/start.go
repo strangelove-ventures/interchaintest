@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -176,15 +177,11 @@ func StartChain(installDir, chainCfgFile string) {
 	connections := GetChannelConnections(ctx, ibcpaths, chains, ic, relayer, eRep)
 
 	// Save to logs.json file for runtime chain information.
-	longestTTLChain, ttlWait := DumpChainsInfoToLogs(installDir, config, chains, connections)
+	DumpChainsInfoToLogs(installDir, config, chains, connections)
 
-	// TODO: Way for us to wait for blocks & show the tx logs during this time for each block?
-	log.Println("Waiting for blocks", ttlWait, longestTTLChain.Config().ChainID)
+	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
-	// Do with context? https://github.com/cosmos/relayer/blob/main/cmd/start.go#L161
-	log.Println("\n", "Local-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
-
-	if err = testutil.WaitForBlocks(ctx, ttlWait, longestTTLChain); err != nil {
+	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		log.Fatal("WaitForBlocks StartChain: ", err)
 	}
 }

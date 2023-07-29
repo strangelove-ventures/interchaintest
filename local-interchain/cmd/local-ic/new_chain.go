@@ -83,7 +83,6 @@ var newChainCmd = &cobra.Command{
 				Debugging:  false,
 				NumberVals: 1,
 				NumberNode: 0,
-				BlocksTTL:  -1,
 				Genesis: ictypes.Genesis{
 					Accounts:        generateRandomAccounts(),
 					Modify:          []cosmos.GenesisKV{},

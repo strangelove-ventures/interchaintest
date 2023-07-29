@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
+	"path"
+	"path/filepath"
 
-	interchain "github.com/strangelove-ventures/localinterchain/interchain"
+	"github.com/spf13/cobra"
+	"github.com/strangelove-ventures/localinterchain/interchain"
 )
 
 var startCmd = &cobra.Command{
@@ -12,8 +14,23 @@ var startCmd = &cobra.Command{
 	Short:   "Starts up the chain of choice with the config name",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		config := args[0]
-		interchain.StartChain(GetDirectory(), config)
+		configPath := args[0]
+		parentDir := GetDirectory()
+
+		// base.json
+		// /abs/path/here/base.json
+
+		if path.IsAbs(configPath) {
+			dir, err := filepath.Abs(configPath)
+			if err != nil {
+				panic(err)
+			}
+
+			parentDir = dir
+			configPath = filepath.Base(configPath)
+		}
+
+		interchain.StartChain(parentDir, configPath)
 	},
 }
 

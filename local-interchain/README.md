@@ -101,7 +101,6 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "gas_adjustment": 2.0,
     "number_vals": 1,
     "number_node": 0,
-    "blocks_ttl": -1,
     "use_new_genesis_command": false,
     "ibc_paths": ["juno-ibc-1"],
     "debugging": true,
