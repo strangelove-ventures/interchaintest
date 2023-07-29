@@ -8,7 +8,7 @@ A simple way to config and run IBC local chain testing environments with any lan
 ```bash
 git clone https://github.com/strangelove-ventures/interchaintest.git 
 
-cd local-interchain
+cd interchaintest/local-interchain
 
 # NOTE: your binary will link back to this location of where you install.
 # If you rename the folder or move it, you need to `make install` the binary again.

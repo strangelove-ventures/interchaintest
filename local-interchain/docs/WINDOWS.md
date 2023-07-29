@@ -1,12 +1,12 @@
-# Setup Windows Environment to Run [Local Interchain](https://github.com/Reecepbcups/local-interchain)
+# Setup Windows Environment to Run Local Interchain
 
-This is a step-by-step guide to setup a Windows environment and add the missing dependencies to run [Local Interchain](https://github.com/Reecepbcups/local-interchain)
+This is a step-by-step guide to setup a Windows environment and add the missing dependencies to run Local Interchain
 
 **Local Interchain enables developers to :-**
 - Quickly spin up a local testnet for any wasm chain.
 - Test IBC connection compatibility on a high level between multiple local chains.
-- Execute binary commands such as `tx decode` *[see example](https://github.com/Reecepbcups/local-interchain/blob/main/scripts/api_test.py#L29-L33)*.
-- Store and execute wasm smart contracts *[see example](https://github.com/Reecepbcups/local-interchain/blob/main/scripts/daodao.py)*.
+- Execute binary commands such as `tx decode` *[see example](../scripts/api_test.py)*.
+- Store and execute wasm smart contracts *[see example](../scripts/daodao.py)*.
 - Local RPC node + REST API which enables building scripts with any language.
 - Configure chains to be launched within the testing environment, adjusting parameters such as gas options, number of validators, IBC paths, governance parameters, genesis accounts, and much more.
 - Configure IBC relayers.
@@ -100,8 +100,8 @@ After finishing the steps above, open a new cmd or shell, and you will be able t
 1. Start the docker daemon by running **Docker Desktop** on Win 10/11 or using [**Docker Quickstart Terminal**](https://github.com/microsoft/docker/blob/master/docs/installation/windows.md#using-the-docker-quickstart-terminal) if you have installed Docker Toolbox.
 2. Clone the Local Interchain Repo.
 ```bash
-git clone https://github.com/Reecepbcups/local-interchain.git 
-cd local-interchain
+git clone https://github.com/strangelove-ventures/interchaintest.git 
+cd interchaintest/local-interchain
 ```
 3. Run `make install`
 4. Run `local-ic start base.json`
