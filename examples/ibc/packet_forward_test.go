@@ -140,6 +140,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	// Get original account balances
 	userA, userB, userC, userD := users[0], users[1], users[2], users[3]
 
+	const intermediateAddr = "pfm" // can be anything, just needs to be non-empty to pass validation for SendPacket.
 	const transferAmount int64 = 100000
 
 	// Compose the prefixed denoms and ibc denom for asserting balances
@@ -171,7 +172,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain C->Chain D
 
 		transfer := ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, // userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   chainA.Config().Denom,
 			Amount:  transferAmount,
 		}
@@ -189,7 +190,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		firstHopMetadata := &PacketMetadata{
 			Forward: &ForwardMetadata{
-				Receiver: userC.FormattedAddress(),
+				Receiver: intermediateAddr, // userC.FormattedAddress(), // Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 				Channel:  bcChan.ChannelID,
 				Port:     bcChan.PortID,
 				Next:     &next,
@@ -243,7 +244,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	t.Run("multi-hop denom unwind d->c->b->a", func(t *testing.T) {
 		// Send packet back from Chain D->Chain C->Chain B->Chain A
 		transfer := ibc.WalletAmount{
-			Address: userC.FormattedAddress(),
+			Address: intermediateAddr, // userC.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   thirdHopIBCDenom,
 			Amount:  transferAmount,
 		}
@@ -263,7 +264,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		firstHopMetadata := &PacketMetadata{
 			Forward: &ForwardMetadata{
-				Receiver: userB.FormattedAddress(),
+				Receiver: intermediateAddr, // userB.FormattedAddress(), // Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 				Channel:  cbChan.ChannelID,
 				Port:     cbChan.PortID,
 				Next:     &next,
@@ -320,7 +321,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		// Send a malformed packet with invalid receiver address from Chain A->Chain B->Chain C
 		// This should succeed in the first hop and fail to make the second hop; funds should then be refunded to Chain A.
 		transfer := ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, // userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   chainA.Config().Denom,
 			Amount:  transferAmount,
 		}
@@ -374,7 +375,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	t.Run("forward timeout refund", func(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain C with the timeout so low for B->C transfer that it can not make it from B to C, which should result in a refund from B to A after two retries.
 		transfer := ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, // userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   chainA.Config().Denom,
 			Amount:  transferAmount,
 		}
@@ -432,7 +433,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		// This should succeed in the first hop and second hop, then fail to make the third hop.
 		// Funds should be refunded to Chain B and then to Chain A via acknowledgements with errors.
 		transfer := ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, // userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   chainA.Config().Denom,
 			Amount:  transferAmount,
 		}
@@ -452,7 +453,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		firstHopMetadata := &PacketMetadata{
 			Forward: &ForwardMetadata{
-				Receiver: userC.FormattedAddress(),
+				Receiver: intermediateAddr, // userC.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 				Channel:  bcChan.ChannelID,
 				Port:     bcChan.PortID,
 				Next:     &next,
@@ -556,7 +557,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		// This should succeed in the first hop and second hop, then fail to make the third hop.
 		// Funds should be refunded to Chain B and then to Chain A via acknowledgements with errors.
 		transfer = ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, //userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   baIBCDenom,
 			Amount:  transferAmount,
 		}
@@ -576,7 +577,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 
 		firstHopMetadata := &PacketMetadata{
 			Forward: &ForwardMetadata{
-				Receiver: userC.FormattedAddress(),
+				Receiver: intermediateAddr, // userC.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 				Channel:  bcChan.ChannelID,
 				Port:     bcChan.PortID,
 				Next:     &next,
@@ -651,7 +652,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		require.NoError(t, err, "failed to get user a balance")
 
 		transfer := ibc.WalletAmount{
-			Address: userB.FormattedAddress(),
+			Address: intermediateAddr, // userB.FormattedAddress(), Receiver doesnt need to be valid, just non-empty, for intermediate chains as long as PFM exists.
 			Denom:   chainA.Config().Denom,
 			Amount:  transferAmount,
 		}
