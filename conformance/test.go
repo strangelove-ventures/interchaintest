@@ -407,7 +407,7 @@ func testPacketRelaySuccess(
 		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := math.NewInt(userFaucetFund)
-		dstInitialBalance := math.NewInt(0)
+		dstInitialBalance := math.ZeroInt()
 
 		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
@@ -438,7 +438,7 @@ func testPacketRelaySuccess(
 		dstUser := testCase.Users[1]
 		dstDenom := dstChainCfg.Denom
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := math.NewInt(0)
+		srcInitialBalance := math.ZeroInt()
 		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
@@ -488,7 +488,7 @@ func testPacketRelayFail(
 	for i, srcTx := range testCase.TxCache.Src {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := math.NewInt(userFaucetFund)
-		dstInitialBalance := math.NewInt(0)
+		dstInitialBalance := math.ZeroInt()
 
 		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
@@ -518,7 +518,7 @@ func testPacketRelayFail(
 	// [BEGIN] assert on destination to source transfer
 	for i, dstTx := range testCase.TxCache.Dst {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := math.NewInt(0)
+		srcInitialBalance := math.ZeroInt()
 		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)

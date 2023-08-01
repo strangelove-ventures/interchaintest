@@ -154,7 +154,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopEscrowAccount := transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID).String()
 	thirdHopEscrowAccount := transfertypes.GetEscrowAddress(cdChan.PortID, abChan.ChannelID).String()
 
-	zeroBal := math.NewInt(0)
+	zeroBal := math.ZeroInt()
 	transferAmount := math.NewInt(100_000)
 
 	t.Run("multi-hop a->b->c->d", func(t *testing.T) {
