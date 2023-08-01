@@ -17,7 +17,7 @@ require (
 	github.com/cosmos/ibc-go/v7 v7.2.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
-	github.com/docker/docker v24.0.4+incompatible
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.5.9
@@ -39,7 +39,7 @@ require (
 	golang.org/x/crypto v0.11.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.11.0
-	google.golang.org/grpc v1.56.2
+	google.golang.org/grpc v1.57.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.24.0
 )
