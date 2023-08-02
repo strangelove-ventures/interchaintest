@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -73,10 +74,9 @@ func NewClientNode(
 
 	p.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, p.Name())
 
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
+			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: p.Name(),
 		},
 	})
@@ -147,8 +147,8 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 				Amount: &cryptov1alpha1.Amount{
 					// TODO: this is incorrect, we need to take a 128-bit int and break it into the hi/lo parts before
 					// building the tx plan
-					Lo: uint64(amount.Amount),
-					Hi: uint64(amount.Amount),
+					Lo: amount.Amount.Uint64(),
+					Hi: amount.Amount.Uint64(),
 				},
 				// TODO: this should be the AssetID and not the denom string. One option is to make a mapping
 				// of DenomID->Denom Strings or see if we can get a change server side for this as well like the balance
@@ -215,8 +215,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	panic("not yet implemented")
 }
 
-// TODO: We probably need to change all the balance func sigs to return *big.Int
-func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (*big.Int, error) {
+func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
 	fmt.Println("Entering GetBalance function from client perspective...")
 	pclientd_addr := p.hostGRPCPort
 	fmt.Printf("Dialing pclientd(?) grpc address at %v\n", pclientd_addr)
@@ -225,77 +224,75 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (*big
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return nil, err
+		return math.Int{}, err
 	}
 	defer channel.Close()
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
-	addressReq := &viewv1alpha1.AddressByIndexRequest{
-		AddressIndex: &cryptov1alpha1.AddressIndex{
+
+	fmt.Println("In GetBalance, building BalancesRequest...")
+	balanceRequest := &viewv1alpha1.BalancesRequest{
+		AccountFilter: &cryptov1alpha1.AddressIndex{
 			Account: 0,
-		}}
-
-	fmt.Println("In GetBalance, requesting address...")
-	addressResponse, err := viewClient.AddressByIndex(ctx, addressReq)
-	if err != nil {
-		return nil, err
+		},
+		AssetIdFilter: nil,
 	}
-	fmt.Println("Received address bytes:", addressResponse.Address.Inner)
 
-	fmt.Println("In GetBalance, building BalanceByAddressRequest...")
-
-	balanceRequest := &viewv1alpha1.BalanceByAddressRequest{
-		Address: addressResponse.Address,
-	}
-	fmt.Println("In GetBalance, submitting BalanceByAddressRequest...")
 	// The BalanceByAddress method returns a stream response, containing
 	// zero-or-more balances, including denom and amount info per balance.
-	balanceStream, err := viewClient.BalanceByAddress(ctx, balanceRequest)
+	fmt.Println("In GetBalance, submitting BalancesRequest...")
+	balanceStream, err := viewClient.Balances(ctx, balanceRequest)
 	if err != nil {
-		return nil, err
+		return math.Int{}, err
 	}
 
-	var balances []viewv1alpha1.BalanceByAddressResponse
+	var balances []*viewv1alpha1.BalancesResponse
 	for {
 		balance, err := balanceStream.Recv()
 		if err != nil {
 			// A gRPC streaming response will return EOF when it's done.
 			if err == io.EOF {
+				fmt.Println("Found expected EOF error")
 				break
 			} else {
 				fmt.Println("Failed to get balance:", err)
-				return nil, err
+				return math.Int{}, err
 			}
 		}
-		balances = append(balances, *balance)
+		fmt.Printf("Adding %v to balances array \n", balance)
+		balances = append(balances, balance)
 	}
 
-	fmt.Println("In GetBalance, dumping all wallet contents...")
-	for _, b := range balances {
-		metadata, err := p.GetDenomMetadata(ctx, b.Asset)
-		if err != nil {
-			p.log.Error(
-				"Failed to retrieve DenomMetadata",
-				zap.String("asset_id", b.Asset.String()),
-				zap.Error(err),
-			)
+	fmt.Println("HERE DA BALANCES YO")
+	fmt.Printf("%v \n", balances)
+	fmt.Println()
 
-			continue
-		}
-
-		if metadata.Base == denom {
-			return translateHiAndLo(b.Amount.Hi, b.Amount.Lo), nil
-		}
-	}
+	//fmt.Println("In GetBalance, dumping all wallet contents...")
+	//for _, b := range balances {
+	//	metadata, err := p.GetDenomMetadata(ctx, b.Balance.AssetId)
+	//	if err != nil {
+	//		p.log.Error(
+	//			"Failed to retrieve DenomMetadata",
+	//			zap.String("asset_id", b.Balance.String()),
+	//			zap.Error(err),
+	//		)
+	//
+	//		continue
+	//	}
+	//
+	//	if metadata.Base == denom {
+	//		return translateHiAndLo(b.Balance.Amount.Hi, b.Balance.Amount.Lo), nil
+	//	}
+	//}
 
 	// we should have found the specified denom balance by this point
-	return nil, fmt.Errorf("balance not found for specified denom %s", denom)
+	return math.Int{}, fmt.Errorf("balance not found for specified denom %s", denom)
 }
 
 // translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
 // they represent. Since Go does not support native uint128 we make use of the big.Int type.
 // see: https://github.com/penumbra-zone/penumbra/blob/4d175986f385e00638328c64d729091d45eb042a/crates/core/crypto/src/asset/amount.rs#L220-L240
-func translateHiAndLo(hi, lo uint64) *big.Int {
+func translateHiAndLo(hi, lo uint64) math.Int {
 	hiBig := big.NewInt(0).SetUint64(hi)
 	loBig := big.NewInt(0).SetUint64(lo)
 
@@ -303,7 +300,8 @@ func translateHiAndLo(hi, lo uint64) *big.Int {
 	hiBig.Lsh(hiBig, 64)
 
 	// Add the lower order bytes
-	return big.NewInt(0).Add(hiBig, loBig)
+	i := big.NewInt(0).Add(hiBig, loBig)
+	return math.NewIntFromBigInt(i)
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.

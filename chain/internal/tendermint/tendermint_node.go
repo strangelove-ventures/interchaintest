@@ -55,10 +55,9 @@ func NewTendermintNode(
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
 
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
+			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: tn.Name(),
 		},
 	})

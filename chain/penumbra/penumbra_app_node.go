@@ -50,10 +50,9 @@ func NewPenumbraAppNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
 
-	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
+			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: pn.Name(),
 		},
 	})
@@ -202,7 +201,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 
 	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%d\",\"%s\",\"%s\"\n", allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%s\",\"%s\",\"%s\"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
 
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
