@@ -4,8 +4,14 @@ import (
 	"reflect"
 	"strconv"
 
+<<<<<<< HEAD
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+=======
+	"cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -182,7 +188,7 @@ func (i DockerImage) Ref() string {
 type WalletAmount struct {
 	Address string
 	Denom   string
-	Amount  int64
+	Amount  math.Int
 }
 
 type IBCTimeout struct {
