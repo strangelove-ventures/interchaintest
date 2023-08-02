@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v4"
@@ -44,6 +45,18 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v4/relayer"
 	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v4/testutil"
+=======
+	"cosmossdk.io/math"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -145,12 +158,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCoinSrcToDst := ibc.WalletAmount{
 		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
-		Amount:  testCoinAmount,
+		Amount:  math.NewInt(testCoinAmount),
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
 		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
-		Amount:  testCoinAmount,
+		Amount:  math.NewInt(testCoinAmount),
 	}
 
 	var eg errgroup.Group
@@ -405,8 +418,8 @@ func testPacketRelaySuccess(
 	for i, srcTx := range testCase.TxCache.Src {
 		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		srcInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := math.ZeroInt()
 
 		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
@@ -425,8 +438,8 @@ func testPacketRelaySuccess(
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 		expectedDifference := testCoinAmount + totalFees
 
-		req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
-		req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.SubRaw(expectedDifference)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.AddRaw(testCoinAmount)))
 	}
 
 	// [END] assert on source to destination transfer
@@ -437,8 +450,8 @@ func testPacketRelaySuccess(
 		dstUser := testCase.Users[1]
 		dstDenom := dstChainCfg.Denom
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := int64(0)
-		dstInitialBalance := userFaucetFund
+		srcInitialBalance := math.ZeroInt()
+		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on destination chain")
@@ -457,8 +470,8 @@ func testPacketRelaySuccess(
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 		expectedDifference := testCoinAmount + totalFees
 
-		req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
-		req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.AddRaw(testCoinAmount)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.SubRaw(expectedDifference)))
 	}
 	//[END] assert on destination to source transfer
 }
@@ -486,8 +499,8 @@ func testPacketRelayFail(
 	// [BEGIN] assert on source to destination transfer
 	for i, srcTx := range testCase.TxCache.Src {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		srcInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := math.ZeroInt()
 
 		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
@@ -509,16 +522,16 @@ func testPacketRelayFail(
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
-		req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
-		req.Equal(dstInitialBalance, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.SubRaw(totalFees)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance))
 	}
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
 	for i, dstTx := range testCase.TxCache.Dst {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := int64(0)
-		dstInitialBalance := userFaucetFund
+		srcInitialBalance := math.ZeroInt()
+		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")
@@ -536,8 +549,8 @@ func testPacketRelayFail(
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
-		req.Equal(srcInitialBalance, srcFinalBalance)
-		req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.SubRaw(totalFees)))
 	}
 	// [END] assert on destination to source transfer
 }

@@ -6,12 +6,22 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos/wasm"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
 	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v4/testutil"
+=======
+	"cosmossdk.io/math"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -77,8 +87,8 @@ func TestWasmIbc(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(100_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), juno1, juno2)
+	initBal := math.NewInt(100_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal.Int64(), juno1, juno2)
 	juno1User := users[0]
 	juno2User := users[1]
 
@@ -87,11 +97,11 @@ func TestWasmIbc(t *testing.T) {
 
 	juno1UserBalInitial, err := juno1.GetBalance(ctx, juno1User.FormattedAddress(), juno1.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, juno1UserBalInitial)
+	require.True(t, juno1UserBalInitial.Equal(initBal))
 
 	juno2UserBalInitial, err := juno2.GetBalance(ctx, juno2User.FormattedAddress(), juno2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, juno2UserBalInitial)
+	require.True(t, juno2UserBalInitial.Equal(initBal))
 
 	// Start the relayer
 	err = r.StartRelayer(ctx, eRep, ibcPath)

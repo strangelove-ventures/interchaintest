@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4"
 	cosmosChain "github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos/wasm"
@@ -18,6 +19,17 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v4/relayer"
 	"github.com/strangelove-ventures/interchaintest/v4/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v4/testutil"
+=======
+	"cosmossdk.io/math"
+	"github.com/strangelove-ventures/interchaintest/v7"
+	cosmosChain "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -142,10 +154,10 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 
 	// Fund user accounts so we can query balances
-	chain1UserAmt := int64(10_000_000_000)
-	chain2UserAmt := int64(99_999_999_999)
-	chain1User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt, chain1)[0]
-	chain2User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt, chain2)[0]
+	chain1UserAmt := math.NewInt(10_000_000_000)
+	chain2UserAmt := math.NewInt(99_999_999_999)
+	chain1User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt.Int64(), chain1)[0]
+	chain2User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt.Int64(), chain2)[0]
 
 	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
@@ -159,11 +171,11 @@ func TestInterchainQueriesWASM(t *testing.T) {
 
 	chain1UserBalInitial, err := chain1.GetBalance(ctx, chain1UserAddress, chain1.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain1UserAmt, chain1UserBalInitial)
+	require.True(t, chain1UserBalInitial.Equal(chain1UserAmt))
 
 	chain2UserBalInitial, err := chain2.GetBalance(ctx, chain2UserAddress, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2UserAmt, chain2UserBalInitial)
+	require.True(t, chain2UserBalInitial.Equal(chain2UserAmt))
 
 	logger.Info("instantiating contract")
 	initMessage := "{\"default_timeout\": 1000}"

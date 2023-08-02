@@ -138,7 +138,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"\n`, allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)

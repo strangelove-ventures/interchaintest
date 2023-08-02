@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
 	"github.com/strangelove-ventures/interchaintest/v4/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v4/testutil"
+=======
+	"cosmossdk.io/math"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,7 +37,7 @@ func GetAndFundTestUserWithMnemonic(
 
 	err = chain.SendFunds(ctx, FaucetAccountKeyName, ibc.WalletAmount{
 		Address: user.FormattedAddress(),
-		Amount:  amount,
+		Amount:  math.NewInt(amount),
 		Denom:   chainCfg.Denom,
 	})
 	if err != nil {
