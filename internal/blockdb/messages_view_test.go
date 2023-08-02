@@ -9,12 +9,21 @@ import (
 	"path/filepath"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
+<<<<<<< HEAD
 	interchaintest "github.com/strangelove-ventures/interchaintest/v5"
 	"github.com/strangelove-ventures/interchaintest/v5/ibc"
 	"github.com/strangelove-ventures/interchaintest/v5/relayer"
 	"github.com/strangelove-ventures/interchaintest/v5/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v5/testutil"
+=======
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> 8e02aef (refactor: use cosmos sdk Int type for balances/token amounts (#679))
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -258,7 +267,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 		transfer := ibc.WalletAmount{
 			Address: gaia1FaucetAddr,
 			Denom:   gaia0.Config().Denom,
-			Amount:  txAmount,
+			Amount:  math.NewInt(txAmount),
 		}
 		tx, err := gaia0.SendIBCTransfer(ctx, gaia0ChannelID, interchaintest.FaucetAccountKeyName, transfer, ibc.TransferOptions{})
 		require.NoError(t, err)

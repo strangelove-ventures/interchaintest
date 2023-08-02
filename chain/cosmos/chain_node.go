@@ -674,7 +674,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -692,7 +692,7 @@ func (tn *ChainNode) SendIBCTransfer(
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
 }
@@ -1097,7 +1097,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"amount": []map[string]any{
 			{
 				"denom":  amount.Denom,
-				"amount": amount.Amount,
+				"amount": amount.Amount.String(),
 			},
 		},
 	})
