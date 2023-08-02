@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -117,8 +116,11 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return c.client.ContainerStop(ctx, c.id, &timeout)
+	var timeout container.StopOptions
+	timeoutSec := 30
+	timeout.Timeout = &timeoutSec
+
+	return c.client.ContainerStop(ctx, c.id, timeout)
 }
 
 func (c *ContainerLifecycle) RemoveContainer(ctx context.Context) error {
@@ -155,4 +157,17 @@ func (c *ContainerLifecycle) GetIP(ctx context.Context) (string, error) {
 	}
 
 	return resp.NetworkSettings.IPAddress, nil
+}
+
+// Running will inspect the container and check its state to determine if it is currently running.
+// If the container is running nil will be returned, otherwise an error is returned.
+func (c *ContainerLifecycle) Running(ctx context.Context) error {
+	cjson, err := c.client.ContainerInspect(ctx, c.id)
+	if err != nil {
+		return err
+	}
+	if cjson.State.Running {
+		return nil
+	}
+	return fmt.Errorf("container with name %s and id %s is not running", c.containerName, c.id)
 }

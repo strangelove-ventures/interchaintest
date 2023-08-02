@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
@@ -44,8 +45,6 @@ type RelayChainNode struct {
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
 	hostRpcPort string
-
-	preStartListeners dockerutil.Listeners
 }
 
 type RelayChainNodes []*RelayChainNode
@@ -98,7 +97,7 @@ func (p *RelayChainNode) PeerID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return peer.Encode(id), nil
+	return id.String(), nil
 }
 
 // GrandpaAddress returns the ss58 encoded grandpa (consensus) address.
@@ -217,6 +216,9 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		"--unsafe-ws-external",
 		"--unsafe-rpc-external",
 		"--prometheus-external",
+		"--enable-offchain-indexing=true",
+		"--rpc-methods=unsafe",
+		"--pruning=archive",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
 		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
@@ -293,6 +295,6 @@ func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount i
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	return GetBalance(p.api, address)
 }

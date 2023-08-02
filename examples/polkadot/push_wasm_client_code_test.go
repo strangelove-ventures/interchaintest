@@ -4,8 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"testing"
 
+	"cosmossdk.io/math"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -13,17 +17,13 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	//simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 )
 
-// Re-add once feat/wasm-client branch is on ibc-go v6
-/*func WasmClientEncoding() *simappparams.EncodingConfig {
-	cfg := cosmos.DefaultEncoding()
-
-	wasmclient.RegisterInterfaces(cfg.InterfaceRegistry)
-
-	return &cfg
-}*/
+const (
+	heightDelta      = uint64(20)
+	votingPeriod     = "30s"
+	maxDepositPeriod = "10s"
+)
 
 // Spin up a simd chain, push a contract, and get that contract code from chain
 func TestPushWasmClientCode(t *testing.T) {
@@ -47,12 +47,12 @@ func TestPushWasmClientCode(t *testing.T) {
 	configTomlOverrides := make(testutil.Toml)
 
 	apiOverrides := make(testutil.Toml)
-	apiOverrides["rpc-max-body-bytes"] = 1350000
+	apiOverrides["rpc-max-body-bytes"] = 2_000_000
 	appTomlOverrides["api"] = apiOverrides
 
 	rpcOverrides := make(testutil.Toml)
-	rpcOverrides["max_body_bytes"] = 1350000
-	rpcOverrides["max_header_bytes"] = 1400000
+	rpcOverrides["max_body_bytes"] = 2_000_000
+	rpcOverrides["max_header_bytes"] = 2_100_000
 	configTomlOverrides["rpc"] = rpcOverrides
 
 	//mempoolOverrides := make(testutil.Toml)
@@ -63,22 +63,14 @@ func TestPushWasmClientCode(t *testing.T) {
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		/*{
-			Name: "ibc-go-simd",
-			Version: "feat/wasm-client",
-			ChainConfig: ibc.ChainConfig{
-				GasPrices:  "0.00stake",
-				EncodingConfig: WasmClientEncoding(),
-			}
-		},*/
 		{ChainConfig: ibc.ChainConfig{
 			Type:    "cosmos",
 			Name:    "ibc-go-simd",
 			ChainID: "simd",
 			Images: []ibc.DockerImage{
 				{
-					Repository: "ibc-go-simd",
-					Version:    "feat-wasm-client",
+					Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
+					Version:    "feat-wasm-clients",
 					UidGid:     "1025:1025",
 				},
 			},
@@ -91,21 +83,19 @@ func TestPushWasmClientCode(t *testing.T) {
 			//EncodingConfig: WasmClientEncoding(),
 			NoHostMount:         true,
 			ConfigFileOverrides: configFileOverrides,
+			ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 		},
 		},
 	})
 
-	t.Logf("Calling cf.Chains")
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
 	simd := chains[0]
 
-	t.Logf("NewInterchain")
 	ic := interchaintest.NewInterchain().
 		AddChain(simd)
 
-	t.Logf("Interchain build options")
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
@@ -119,27 +109,40 @@ func TestPushWasmClientCode(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(100_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), simd)
+	fundAmount := math.NewInt(10_000_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), simd)
 	simd1User := users[0]
-
-	err = testutil.WaitForBlocks(ctx, 2, simd)
-	require.NoError(t, err)
 
 	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.FormattedAddress(), simd.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, simd1UserBalInitial)
-
-	err = testutil.WaitForBlocks(ctx, 2, simd)
-	require.NoError(t, err)
+	require.True(t, simd1UserBalInitial.Equal(fundAmount))
 
 	simdChain := simd.(*cosmos.CosmosChain)
 
-	codeHash, err := simdChain.StoreClientContract(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm")
-	t.Logf("Contract codeHash: %s", codeHash)
-	require.NoError(t, err)
+	// Verify a normal user cannot push a wasm light client contract
+	_, err = simdChain.StoreClientContract(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm")
+	require.ErrorContains(t, err, "invalid authority")
 
-	err = testutil.WaitForBlocks(ctx, 5, simd)
+	proposal := cosmos.TxProposalv1{
+		Metadata: "none",
+		Deposit:  "500000000" + simdChain.Config().Denom, // greater than min deposit
+		Title:    "Grandpa Contract",
+		Summary:  "new grandpa contract",
+	}
+
+	proposalTx, codeHash, err := simdChain.PushNewWasmClientProposal(ctx, simd1User.KeyName(), "ics10_grandpa_cw.wasm", proposal)
+	require.NoError(t, err, "error submitting new wasm contract proposal tx")
+
+	height, err := simdChain.Height(ctx)
+	require.NoError(t, err, "error fetching height before submit upgrade proposal")
+
+	err = simdChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
+	require.NoError(t, err, "failed to submit votes")
+
+	_, err = cosmos.PollForProposalStatus(ctx, simdChain, height, height+heightDelta, proposalTx.ProposalID, cosmos.ProposalStatusPassed)
+	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
+
+	err = testutil.WaitForBlocks(ctx, 2, simd)
 	require.NoError(t, err)
 
 	var getCodeQueryMsgRsp GetCodeQueryMsgResponse
@@ -154,4 +157,27 @@ func TestPushWasmClientCode(t *testing.T) {
 
 type GetCodeQueryMsgResponse struct {
 	Code []byte `json:"code"`
+}
+
+func modifyGenesisShortProposals(votingPeriod string, maxDepositPeriod string) func(ibc.ChainConfig, []byte) ([]byte, error) {
+	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
+		g := make(map[string]interface{})
+		if err := json.Unmarshal(genbz, &g); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
+		}
+		if err := dyno.Set(g, votingPeriod, "app_state", "gov", "params", "voting_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, maxDepositPeriod, "app_state", "gov", "params", "max_deposit_period"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		if err := dyno.Set(g, chainConfig.Denom, "app_state", "gov", "params", "min_deposit", 0, "denom"); err != nil {
+			return nil, fmt.Errorf("failed to set voting period in genesis json: %w", err)
+		}
+		out, err := json.Marshal(g)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+		}
+		return out, nil
+	}
 }

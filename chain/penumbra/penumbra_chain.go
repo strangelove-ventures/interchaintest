@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -62,9 +63,9 @@ type PenumbraValidatorFundingStream struct {
 }
 
 type PenumbraGenesisAppStateAllocation struct {
-	Amount  int64  `json:"amount"`
-	Denom   string `json:"denom"`
-	Address string `json:"address"`
+	Amount  math.Int `json:"amount"`
+	Denom   string   `json:"denom"`
+	Address string   `json:"address"`
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -239,7 +240,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (int64, error) {
+func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
 	fn := c.getFullNode()
 	if len(fn.PenumbraClientNodes) == 0 {
 		return 0, fmt.Errorf("no pclientd nodes on the fullnode for balance check")
@@ -266,6 +267,78 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
 	return int64(fees)
+}
+
+// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
+// with docker volumes created.
+func (c *PenumbraChain) NewChainNode(
+	ctx context.Context,
+	i int,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	tendermintImage ibc.DockerImage,
+	penumbraImage ibc.DockerImage,
+) (PenumbraNode, error) {
+	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
+
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: tn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating tendermint volume: %w", err)
+	}
+	tn.VolumeName = tv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: tn.VolumeName,
+		ImageRef:   tn.Image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set tendermint volume owner: %w", err)
+	}
+
+	pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: penumbraImage}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
+
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating penumbra volume: %w", err)
+	}
+	pn.VolumeName = pv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: pn.VolumeName,
+		ImageRef:   pn.Image.Ref(),
+		TestName:   pn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set penumbra volume owner: %w", err)
+	}
+
+	return PenumbraNode{
+		TendermintNode:  tn,
+		PenumbraAppNode: pn,
+	}, nil
 }
 
 // creates the test node objects required for bootstrapping tests
@@ -389,7 +462,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			// self delegation
 			allocations = append(allocations,
 				PenumbraGenesisAppStateAllocation{
-					Amount:  100_000_000_000,
+					Amount:  math.NewInt(100_000_000_000),
 					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 					Address: fundingStream.Recipient,
 				},
@@ -397,7 +470,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			// liquid
 			allocations = append(allocations,
 				PenumbraGenesisAppStateAllocation{
-					Amount:  1_000_000_000_000,
+					Amount:  math.NewInt(1_000_000_000_000),
 					Denom:   chainCfg.Denom,
 					Address: fundingStream.Recipient,
 				},

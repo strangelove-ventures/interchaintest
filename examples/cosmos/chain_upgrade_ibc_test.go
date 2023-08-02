@@ -16,6 +16,13 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+const (
+	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
+	blocksAfterUpgrade = uint64(10)
+	votingPeriod       = "10s"
+	maxDepositPeriod   = "10s"
+)
+
 func TestJunoUpgradeIBC(t *testing.T) {
 	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "v8.0.0", "multiverse")
 }
@@ -27,13 +34,29 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 
 	t.Parallel()
 
+	// SDK v45 params for Juno genesis
+	shortVoteGenesis := []cosmos.GenesisKV{
+		{
+			Key:   "app_state.gov.voting_params.voting_period",
+			Value: votingPeriod,
+		},
+		{
+			Key:   "app_state.gov.deposit_params.max_deposit_period",
+			Value: maxDepositPeriod,
+		},
+		{
+			Key:   "app_state.gov.deposit_params.min_deposit.0.denom",
+			Value: "ujuno",
+		},
+	}
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      chainName,
 			ChainName: chainName,
 			Version:   initialVersion,
 			ChainConfig: ibc.ChainConfig{
-				ModifyGenesis: modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+				ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
 			},
 		},
 		{
@@ -80,11 +103,11 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 	rep := testreporter.NewNopReporter()
 
 	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  false,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: false,
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()

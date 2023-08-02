@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"cosmossdk.io/math"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
@@ -83,7 +84,7 @@ func TestUpdateLightClients(t *testing.T) {
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
 		Denom:   gaia.Config().Denom,
-		Amount:  amountToSend,
+		Amount:  math.NewInt(amountToSend),
 	}
 	tx, err := gaia.SendIBCTransfer(ctx, chanID, gaiaUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)

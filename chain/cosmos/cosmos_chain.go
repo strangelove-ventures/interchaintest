@@ -3,28 +3,33 @@ package cosmos
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/avast/retry-go/v4"
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
@@ -45,6 +50,9 @@ type CosmosChain struct {
 	numFullNodes  int
 	Validators    ChainNodes
 	FullNodes     ChainNodes
+
+	// Additional processes that need to be run on a per-chain basis.
+	Sidecars SidecarProcesses
 
 	log      *zap.Logger
 	keyring  keyring.Keyring
@@ -110,7 +118,7 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 	peers := c.Nodes().PeerString(ctx)
 
 	// Get genesis.json
-	genbz, err := c.Validators[0].genesisFileContent(ctx)
+	genbz, err := c.Validators[0].GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
@@ -132,7 +140,7 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 			if err := fn.SetPeers(ctx, peers); err != nil {
 				return err
 			}
-			if err := fn.overwriteGenesisFile(ctx, genbz); err != nil {
+			if err := fn.OverwriteGenesisFile(ctx, genbz); err != nil {
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
@@ -168,6 +176,9 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 
 // Implements Chain interface
 func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	if err := c.initializeSidecars(ctx, testName, cli, networkID); err != nil {
+		return err
+	}
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
@@ -353,6 +364,36 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
+// PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
+func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
+	tx := TxProposal{}
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return tx, "", err
+	}
+	codeHashByte32 := sha256.Sum256(content)
+	codeHash := hex.EncodeToString(codeHashByte32[:])
+	content, err = testutil.GzipIt(content)
+	if err != nil {
+		return tx, "", err
+	}
+	message := wasmtypes.MsgStoreCode{
+		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
+		Code:   content,
+	}
+	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
+	if err != nil {
+		return tx, "", err
+	}
+	prop.Messages = append(prop.Messages, msg)
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, "", fmt.Errorf("failed to submit wasm client proposal: %w", err)
+	}
+	tx, err = c.txProposal(txHash)
+	return tx, codeHash, err
+}
+
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (tx TxProposal, _ error) {
 	txHash, err := c.getFullNode().UpgradeProposal(ctx, keyName, prop)
@@ -360,6 +401,39 @@ func (c *CosmosChain) UpgradeProposal(ctx context.Context, keyName string, prop 
 		return tx, fmt.Errorf("failed to submit upgrade proposal: %w", err)
 	}
 	return c.txProposal(txHash)
+}
+
+// SubmitProposal submits a gov v1 proposal to the chain.
+func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().SubmitProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
+// Build a gov v1 proposal type.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+	var propType TxProposalv1
+	rawMsgs := make([]json.RawMessage, len(messages))
+
+	for i, msg := range messages {
+		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
+		if err != nil {
+			return propType, err
+		}
+		rawMsgs[i] = msg
+	}
+
+	propType = TxProposalv1{
+		Messages: rawMsgs,
+		Metadata: metadata,
+		Deposit:  depositStr,
+		Title:    title,
+		Summary:  summary,
+	}
+
+	return propType, nil
 }
 
 // TextProposal submits a text governance proposal to the chain.
@@ -379,6 +453,11 @@ func (c *CosmosChain) ParamChangeProposal(ctx context.Context, keyName string, p
 	}
 
 	return c.txProposal(txHash)
+}
+
+// QueryParam returns the param state of a given key.
+func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	return c.getFullNode().QueryParam(ctx, subspace, key)
 }
 
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
@@ -407,12 +486,12 @@ func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileNam
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool) (string, error) {
-	return c.getFullNode().InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag)
+func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
+	return c.getFullNode().InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag, extraExecTxArgs...)
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
 }
 
@@ -444,12 +523,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return 0, err
+		return math.Int{}, err
 	}
 	defer conn.Close()
 
@@ -457,10 +536,10 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	res, err := queryClient.Balance(ctx, params)
 
 	if err != nil {
-		return 0, err
+		return math.Int{}, err
 	}
 
-	return res.Balance.Amount.Int64(), nil
+	return res.Balance.Amount, nil
 }
 
 // AllBalances fetches an account address's balance for all denoms it holds
@@ -483,21 +562,9 @@ func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Co
 	return res.GetBalances(), nil
 }
 
-func (c *CosmosChain) getTransaction(txHash string) (*types.TxResponse, error) {
-	// Retry because sometimes the tx is not committed to state yet.
-	var txResp *types.TxResponse
-	err := retry.Do(func() error {
-		var err error
-		txResp, err = authTx.QueryTx(c.getFullNode().CliContext(), txHash)
-		return err
-	},
-		// retry for total of 3 seconds
-		retry.Attempts(15),
-		retry.Delay(200*time.Millisecond),
-		retry.DelayType(retry.FixedDelay),
-		retry.LastErrorOnly(true),
-	)
-	return txResp, err
+func (c *CosmosChain) getTransaction(txhash string) (*types.TxResponse, error) {
+	fn := c.getFullNode()
+	return fn.getTransaction(fn.CliContext(), txhash)
 }
 
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
@@ -553,7 +620,7 @@ func (c *CosmosChain) NewChainNode(
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -577,7 +644,66 @@ func (c *CosmosChain) NewChainNode(
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
+
+	for _, cfg := range c.cfg.SidecarConfigs {
+		if !cfg.ValidatorProcess {
+			continue
+		}
+
+		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return tn, nil
+}
+
+// NewSidecarProcess constructs a new sidecar process with a docker volume.
+func (c *CosmosChain) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	testName string,
+	cli *client.Client,
+	networkID string,
+	image ibc.DockerImage,
+	homeDir string,
+	index int,
+	ports []string,
+	startCmd []string,
+) error {
+	// Construct the SidecarProcess first so we can access its name.
+	// The SidecarProcess's VolumeName cannot be set until after we create the volume.
+	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, homeDir, index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   testName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	c.Sidecars = append(c.Sidecars, s)
+
+	return nil
 }
 
 // creates the test node objects required for bootstrapping tests
@@ -626,6 +752,37 @@ func (c *CosmosChain) initializeChainNodes(
 	defer c.findTxMu.Unlock()
 	c.Validators = newVals
 	c.FullNodes = newFullNodes
+	return nil
+}
+
+// initializeSidecars creates the sidecar processes that exist at the chain level.
+func (c *CosmosChain) initializeSidecars(
+	ctx context.Context,
+	testName string,
+	cli *client.Client,
+	networkID string,
+) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+	for i, cfg := range c.cfg.SidecarConfigs {
+		i := i
+		cfg := cfg
+
+		if cfg.ValidatorProcess {
+			continue
+		}
+
+		eg.Go(func() error {
+			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.HomeDir, i, cfg.Ports, cfg.StartCmd)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -693,7 +850,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					return err
 				}
 			}
-			return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			if !c.cfg.SkipGenTx {
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			}
+			return nil
 		})
 	}
 
@@ -731,6 +891,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	// for the validators we need to collect the gentxs and the accounts
 	// to the first node's genesis file
 	validator0 := c.Validators[0]
@@ -746,22 +913,26 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validatorN.copyGentx(ctx, validator0); err != nil {
-			return err
+		if !c.cfg.SkipGenTx {
+			if err := validatorN.copyGentx(ctx, validator0); err != nil {
+				return err
+			}
 		}
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
 			return err
 		}
 	}
 
-	if err := validator0.CollectGentxs(ctx); err != nil {
-		return err
+	if !c.cfg.SkipGenTx {
+		if err := validator0.CollectGentxs(ctx); err != nil {
+			return err
+		}
 	}
 
-	genbz, err := validator0.genesisFileContent(ctx)
+	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
@@ -789,7 +960,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	chainNodes := c.Nodes()
 
 	for _, cn := range chainNodes {
-		if err := cn.overwriteGenesisFile(ctx, genbz); err != nil {
+		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
 			return err
 		}
 	}
@@ -798,7 +969,31 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	// Start any sidecar processes that should be running before the chain starts
 	eg, egCtx := errgroup.WithContext(ctx)
+	for _, s := range c.Sidecars {
+		s := s
+
+		err = s.containerLifecycle.Running(ctx)
+		if s.preStart && err != nil {
+			eg.Go(func() error {
+				if err := s.CreateContainer(egCtx); err != nil {
+					return err
+				}
+
+				if err := s.StartContainer(egCtx); err != nil {
+					return err
+				}
+
+				return nil
+			})
+		}
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
 		n := n
 		eg.Go(func() error {
@@ -923,6 +1118,21 @@ func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 	return eg.Wait()
 }
 
+// StopAllSidecars stops and removes all long-running containers for sidecar processes.
+func (c *CosmosChain) StopAllSidecars(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, s := range c.Sidecars {
+		s := s
+		eg.Go(func() error {
+			if err := s.StopContainer(ctx); err != nil {
+				return err
+			}
+			return s.RemoveContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
 // StartAllNodes creates and starts new containers for each node.
 // Should only be used if the chain has previously been started with .Start.
 func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
@@ -939,6 +1149,60 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 			return n.StartContainer(ctx)
 		})
 	}
+	return eg.Wait()
+}
+
+// StartAllSidecars creates and starts new containers for each sidecar process.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartAllSidecars(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+	for _, s := range c.Sidecars {
+		s := s
+
+		err := s.containerLifecycle.Running(ctx)
+		if err == nil {
+			continue
+		}
+
+		eg.Go(func() error {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+			return s.StartContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+// StartAllValSidecars creates and starts new containers for each validator sidecar process.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+
+	for _, v := range c.Validators {
+		for _, s := range v.Sidecars {
+			s := s
+
+			err := s.containerLifecycle.Running(ctx)
+			if err == nil {
+				continue
+			}
+
+			eg.Go(func() error {
+				if err := s.CreateContainer(ctx); err != nil {
+					return err
+				}
+				return s.StartContainer(ctx)
+			})
+		}
+	}
+
 	return eg.Wait()
 }
 

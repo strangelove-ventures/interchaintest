@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"cosmossdk.io/math"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
@@ -351,7 +352,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			{
 				Address: faucetAddresses[c],
 				Denom:   c.Config().Denom,
-				Amount:  100_000_000_000_000, // Faucet wallet gets 100T units of denom.
+				Amount:  math.NewInt(100_000_000_000_000), // Faucet wallet gets 100T units of denom.
 			},
 		}
 
@@ -366,7 +367,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
 			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
-			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
+			Amount:  math.NewInt(1_000_000_000_000), // Every wallet gets 1t units of denom.
 		})
 	}
 
@@ -420,8 +421,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 
 			if err := r.RestoreKey(ctx,
 				rep,
-				c.Config().ChainID, chainName,
-				c.Config().CoinType,
+				c.Config(), chainName,
 				ic.relayerWallets[relayerChain{R: r, C: c}].Mnemonic(),
 			); err != nil {
 				return fmt.Errorf("failed to restore key to relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
