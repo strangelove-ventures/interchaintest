@@ -29,6 +29,7 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -50,6 +51,9 @@ type ChainNode struct {
 	Client       rpcclient.Client
 	TestName     string
 	Image        ibc.DockerImage
+
+	// Additional processes that need to be run on a per-validator basis.
+	Sidecars SidecarProcesses
 
 	lock sync.Mutex
 	log  *zap.Logger
@@ -117,6 +121,48 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.Client = rpcClient
+	return nil
+}
+
+func (tn *ChainNode) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	cli *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+	homeDir string,
+	ports []string,
+	startCmd []string,
+) error {
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   tn.TestName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: tn.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	tn.Sidecars = append(tn.Sidecars, s)
+
 	return nil
 }
 
@@ -634,7 +680,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -652,7 +698,7 @@ func (tn *ChainNode) SendIBCTransfer(
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
 }
@@ -987,6 +1033,20 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		err := s.containerLifecycle.Running(ctx)
+
+		if s.preStart && err != nil {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+
+			if err := s.StartContainer(ctx); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
@@ -1019,10 +1079,20 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.StopContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.RemoveContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
@@ -1193,7 +1263,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"amount": []map[string]any{
 			{
 				"denom":  amount.Denom,
-				"amount": amount.Amount,
+				"amount": amount.Amount.String(),
 			},
 		},
 	})

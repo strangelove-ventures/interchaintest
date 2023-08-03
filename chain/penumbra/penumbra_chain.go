@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -67,9 +68,9 @@ type PenumbraValidatorFundingStream struct {
 }
 
 type PenumbraGenesisAppStateAllocation struct {
-	Amount  int64  `json:"amount"`
-	Denom   string `json:"denom"`
-	Address string `json:"address"`
+	Amount  math.Int `json:"amount"`
+	Denom   string   `json:"denom"`
+	Address string   `json:"address"`
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -236,7 +237,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	panic("implement me")
 }
 
@@ -434,13 +435,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 			// self delegation
 			allocations[2*i] = PenumbraGenesisAppStateAllocation{
-				Amount:  100_000_000_000,
+				Amount:  math.NewInt(100_000_000_000),
 				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}
 			// liquid
 			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
-				Amount:  1_000_000_000_000,
+				Amount:  math.NewInt(1_000_000_000_000),
 				Denom:   chainCfg.Denom,
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}

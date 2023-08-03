@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
@@ -102,8 +103,8 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	const userFunds = int64(10_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chainA, chainB, chainC, chainD)
+	initBal := math.NewInt(10_000_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), initBal.Int64(), chainA, chainB, chainC, chainD)
 
 	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainID_A, chainID_B)
 	require.NoError(t, err)
@@ -136,8 +137,6 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	// Get original account balances
 	userA, userB, userC, userD := users[0], users[1], users[2], users[3]
 
-	const transferAmount int64 = 100000
-
 	// Compose the prefixed denoms and ibc denom for asserting balances
 	firstHopDenom := transfertypes.GetPrefixedDenom(baChan.PortID, baChan.ChannelID, chainA.Config().Denom)
 	secondHopDenom := transfertypes.GetPrefixedDenom(cbChan.PortID, cbChan.ChannelID, firstHopDenom)
@@ -155,9 +154,11 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	secondHopEscrowAccount := transfertypes.GetEscrowAddress(bcChan.PortID, bcChan.ChannelID).String()
 	thirdHopEscrowAccount := transfertypes.GetEscrowAddress(cdChan.PortID, abChan.ChannelID).String()
 
+	zeroBal := math.ZeroInt()
+	transferAmount := math.NewInt(100_000)
+
 	t.Run("multi-hop a->b->c->d", func(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain C->Chain D
-
 		transfer := ibc.WalletAmount{
 			Address: userB.FormattedAddress(),
 			Denom:   chainA.Config().Denom,
@@ -209,10 +210,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainDBalance, err := chainD.GetBalance(ctx, userD.FormattedAddress(), thirdHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, userFunds-transferAmount, chainABalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
-		require.Equal(t, transferAmount, chainDBalance)
+		require.True(t, chainABalance.Equal(initBal.Sub(transferAmount)))
+		require.True(t, chainBBalance.Equal(zeroBal))
+		require.True(t, chainCBalance.Equal(zeroBal))
+		require.True(t, chainDBalance.Equal(transferAmount))
 
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
 		require.NoError(t, err)
@@ -223,9 +224,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		thirdHopEscrowBalance, err := chainC.GetBalance(ctx, thirdHopEscrowAccount, secondHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, transferAmount, firstHopEscrowBalance)
-		require.Equal(t, transferAmount, secondHopEscrowBalance)
-		require.Equal(t, transferAmount, thirdHopEscrowBalance)
+		require.True(t, firstHopEscrowBalance.Equal(transferAmount))
+		require.True(t, secondHopEscrowBalance.Equal(transferAmount))
+		require.True(t, thirdHopEscrowBalance.Equal(transferAmount))
 	})
 
 	t.Run("multi-hop denom unwind d->c->b->a", func(t *testing.T) {
@@ -284,10 +285,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), chainA.Config().Denom)
 		require.NoError(t, err)
 
-		require.Equal(t, int64(0), chainDBalance)
-		require.Equal(t, int64(0), chainCBalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, userFunds, chainABalance)
+		require.True(t, chainDBalance.Equal(zeroBal))
+		require.True(t, chainCBalance.Equal(zeroBal))
+		require.True(t, chainBBalance.Equal(zeroBal))
+		require.True(t, chainABalance.Equal(initBal))
 
 		// assert balances for IBC escrow accounts
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
@@ -299,9 +300,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		thirdHopEscrowBalance, err := chainC.GetBalance(ctx, thirdHopEscrowAccount, secondHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, int64(0), firstHopEscrowBalance)
-		require.Equal(t, int64(0), secondHopEscrowBalance)
-		require.Equal(t, int64(0), thirdHopEscrowBalance)
+		require.True(t, firstHopEscrowBalance.Equal(zeroBal))
+		require.True(t, secondHopEscrowBalance.Equal(zeroBal))
+		require.True(t, thirdHopEscrowBalance.Equal(zeroBal))
 	})
 
 	t.Run("forward ack error refund", func(t *testing.T) {
@@ -344,9 +345,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainCBalance, err := chainC.GetBalance(ctx, userC.FormattedAddress(), secondHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, userFunds, chainABalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
+		require.True(t, chainABalance.Equal(initBal))
+		require.True(t, chainBBalance.Equal(zeroBal))
+		require.True(t, chainCBalance.Equal(zeroBal))
 
 		// assert balances for IBC escrow accounts
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
@@ -355,8 +356,8 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		secondHopEscrowBalance, err := chainB.GetBalance(ctx, secondHopEscrowAccount, firstHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, int64(0), firstHopEscrowBalance)
-		require.Equal(t, int64(0), secondHopEscrowBalance)
+		require.True(t, firstHopEscrowBalance.Equal(zeroBal))
+		require.True(t, secondHopEscrowBalance.Equal(zeroBal))
 	})
 
 	t.Run("forward timeout refund", func(t *testing.T) {
@@ -401,9 +402,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainCBalance, err := chainC.GetBalance(ctx, userC.FormattedAddress(), secondHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, userFunds, chainABalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
+		require.True(t, chainABalance.Equal(initBal))
+		require.True(t, chainBBalance.Equal(zeroBal))
+		require.True(t, chainCBalance.Equal(zeroBal))
 
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
 		require.NoError(t, err)
@@ -411,8 +412,8 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		secondHopEscrowBalance, err := chainB.GetBalance(ctx, secondHopEscrowAccount, firstHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, int64(0), firstHopEscrowBalance)
-		require.Equal(t, int64(0), secondHopEscrowBalance)
+		require.True(t, firstHopEscrowBalance.Equal(zeroBal))
+		require.True(t, secondHopEscrowBalance.Equal(zeroBal))
 	})
 
 	t.Run("multi-hop ack error refund", func(t *testing.T) {
@@ -473,10 +474,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), chainA.Config().Denom)
 		require.NoError(t, err)
 
-		require.Equal(t, userFunds, chainABalance)
-		require.Equal(t, int64(0), chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
-		require.Equal(t, int64(0), chainDBalance)
+		require.True(t, chainABalance.Equal(initBal))
+		require.True(t, chainBBalance.Equal(zeroBal))
+		require.True(t, chainCBalance.Equal(zeroBal))
+		require.True(t, chainDBalance.Equal(zeroBal))
 
 		// assert balances for IBC escrow accounts
 		firstHopEscrowBalance, err := chainA.GetBalance(ctx, firstHopEscrowAccount, chainA.Config().Denom)
@@ -488,9 +489,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		thirdHopEscrowBalance, err := chainC.GetBalance(ctx, thirdHopEscrowAccount, secondHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, int64(0), firstHopEscrowBalance)
-		require.Equal(t, int64(0), secondHopEscrowBalance)
-		require.Equal(t, int64(0), thirdHopEscrowBalance)
+		require.True(t, firstHopEscrowBalance.Equal(zeroBal))
+		require.True(t, secondHopEscrowBalance.Equal(zeroBal))
+		require.True(t, thirdHopEscrowBalance.Equal(zeroBal))
 	})
 
 	t.Run("multi-hop through native chain ack error refund", func(t *testing.T) {
@@ -533,8 +534,8 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		baEscrowBalance, err := chainB.GetBalance(ctx, transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID).String(), chainB.Config().Denom)
 		require.NoError(t, err)
 
-		require.Equal(t, transferAmount, chainABalance)
-		require.Equal(t, transferAmount, baEscrowBalance)
+		require.True(t, chainABalance.Equal(transferAmount))
+		require.True(t, baEscrowBalance.Equal(transferAmount))
 
 		// Send a malformed packet with invalid receiver address from Chain A->Chain B->Chain C->Chain D
 		// This should succeed in the first hop and second hop, then fail to make the third hop.
@@ -593,10 +594,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainABalance, err = chainA.GetBalance(ctx, userA.FormattedAddress(), baIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, transferAmount, chainABalance)
-		require.Equal(t, userFunds-transferAmount, chainBBalance)
-		require.Equal(t, int64(0), chainCBalance)
-		require.Equal(t, int64(0), chainDBalance)
+		require.True(t, chainABalance.Equal(transferAmount))
+		require.True(t, chainBBalance.Equal(initBal.Sub(transferAmount)))
+		require.True(t, chainCBalance.Equal(zeroBal))
+		require.True(t, chainDBalance.Equal(zeroBal))
 
 		// assert balances for IBC escrow accounts
 		cdEscrowBalance, err := chainC.GetBalance(ctx, transfertypes.GetEscrowAddress(cdChan.PortID, cdChan.ChannelID).String(), bcIBCDenom)
@@ -608,14 +609,13 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		baEscrowBalance, err = chainB.GetBalance(ctx, transfertypes.GetEscrowAddress(baChan.PortID, baChan.ChannelID).String(), chainB.Config().Denom)
 		require.NoError(t, err)
 
-		require.Equal(t, transferAmount, baEscrowBalance)
-		require.Equal(t, int64(0), bcEscrowBalance)
-		require.Equal(t, int64(0), cdEscrowBalance)
+		require.True(t, baEscrowBalance.Equal(transferAmount))
+		require.True(t, bcEscrowBalance.Equal(zeroBal))
+		require.True(t, cdEscrowBalance.Equal(zeroBal))
 	})
 
 	t.Run("forward a->b->a", func(t *testing.T) {
 		// Send packet from Chain A->Chain B->Chain A
-
 		userABalance, err := chainA.GetBalance(ctx, userA.FormattedAddress(), chainA.Config().Denom)
 		require.NoError(t, err, "failed to get user a balance")
 
@@ -655,7 +655,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		chainBBalance, err := chainB.GetBalance(ctx, userB.FormattedAddress(), firstHopIBCDenom)
 		require.NoError(t, err)
 
-		require.Equal(t, userABalance, chainABalance)
-		require.Equal(t, userBBalance, chainBBalance)
+		require.True(t, chainABalance.Equal(userABalance))
+		require.True(t, chainBBalance.Equal(userBBalance))
 	})
 }
