@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -52,10 +53,36 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	require.NoError(t, err, "penumbra chain failed to make blocks")
 
-	node := chain.(*penumbra.PenumbraChain).PenumbraNodes[0]
+	alice := chain.(*penumbra.PenumbraChain).PenumbraNodes[0]
+	bob := chain.(*penumbra.PenumbraChain).PenumbraNodes[1]
 
-	bal, err := chain.GetBalance(ctx, node.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	aliceBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	//require.NoError(t, err)
+
+	bobBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	//require.NoError(t, err)
+
+	t.Logf("Alice Balance: %s \n", aliceBal)
+	t.Logf("Bob Balance: %s \n", bobBal)
+
+	//bobAddr, err := bob.PenumbraAppNode.GetAddress(ctx, bob.PenumbraClientNodes["validator"].KeyName)
+	//require.NoError(t, err)
+
+	transfer := ibc.WalletAmount{
+		Address: bob.PenumbraClientNodes["validator"].KeyName,
+		Denom:   chain.Config().Denom,
+		Amount:  math.NewInt(1_000),
+	}
+
+	err = chain.SendFunds(ctx, alice.PenumbraClientNodes["validator"].KeyName, transfer)
 	require.NoError(t, err)
 
-	t.Logf("Balance: %d \n", bal)
+	aliceBal, err = chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	//require.NoError(t, err)
+
+	bobBal, err = chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	//require.NoError(t, err)
+
+	t.Logf("Alice Balance: %s \n", aliceBal)
+	t.Logf("Bob Balance: %s \n", bobBal)
 }

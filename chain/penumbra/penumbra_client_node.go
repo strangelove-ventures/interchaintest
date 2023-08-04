@@ -139,21 +139,18 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 	defer channel.Close()
 
+	hi, lo := translateBigInt(amount.Amount)
+
 	// 5.1. Generate a transaction plan sending funds to an address.
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
 		//XAccountGroupId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &cryptov1alpha1.Value{
 				Amount: &cryptov1alpha1.Amount{
-					// TODO: this is incorrect, we need to take a 128-bit int and break it into the hi/lo parts before
-					// building the tx plan
-					Lo: amount.Amount.Uint64(),
-					Hi: amount.Amount.Uint64(),
+					Lo: lo,
+					Hi: hi,
 				},
-				// TODO: this should be the AssetID and not the denom string. One option is to make a mapping
-				// of DenomID->Denom Strings or see if we can get a change server side for this as well like the balance
-				// change we discussed.
-				AssetId: &cryptov1alpha1.AssetId{Inner: []byte(amount.Denom)},
+				AssetId: &cryptov1alpha1.AssetId{AltBaseDenom: amount.Denom},
 			},
 			Address: &cryptov1alpha1.Address{Inner: []byte(amount.Address)},
 		}},
@@ -302,6 +299,31 @@ func translateHiAndLo(hi, lo uint64) math.Int {
 	// Add the lower order bytes
 	i := big.NewInt(0).Add(hiBig, loBig)
 	return math.NewIntFromBigInt(i)
+}
+
+// translateBigInt converts a Cosmos SDK Int, which is a wrapper around Go's big.Int, into two uint64 values
+func translateBigInt(i math.Int) (uint64, uint64) {
+	bz := i.BigInt().Bytes()
+
+	// Pad the byte slice with leading zeros to ensure it's 16 bytes long
+	paddedBytes := make([]byte, 16)
+	copy(paddedBytes[16-len(bz):], bz)
+
+	// Extract the high and low parts from the padded byte slice
+	var hi uint64
+	var lo uint64
+
+	for j := 0; j < 8; j++ {
+		hi <<= 8
+		hi |= uint64(paddedBytes[j])
+	}
+
+	for j := 8; j < 16; j++ {
+		lo <<= 8
+		lo |= uint64(paddedBytes[j])
+	}
+
+	return hi, lo
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.

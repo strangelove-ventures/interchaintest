@@ -227,11 +227,14 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	cmd := []string{"pcli", "-d", keyPath, "view", "address"}
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "-d", keyPath, "-n", pdUrl, "view", "address"}
+
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	addresses := strings.Split(string(stdout), "\n")
 	for _, address := range addresses {
 		fields := strings.Fields(address)
@@ -243,6 +246,7 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 			return []byte(fields[2]), nil
 		}
 	}
+
 	return []byte{}, errors.New("address not found")
 }
 
