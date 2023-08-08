@@ -152,7 +152,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 				},
 				AssetId: &cryptov1alpha1.AssetId{AltBaseDenom: amount.Denom},
 			},
-			Address: &cryptov1alpha1.Address{Inner: []byte(amount.Address)},
+			Address: &cryptov1alpha1.Address{AltBech32M: amount.Address},
 		}},
 	}
 

@@ -235,19 +235,25 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 		return nil, err
 	}
 
-	addresses := strings.Split(string(stdout), "\n")
-	for _, address := range addresses {
-		fields := strings.Fields(address)
-		if len(fields) < 3 {
-			continue
-		}
-		if fields[1] == keyName {
-			// TODO penumbra address is bech32m. need to decode to bytes here
-			return []byte(fields[2]), nil
-		}
+	if len(stdout) == 0 {
+		return []byte{}, errors.New("address not found")
 	}
 
-	return []byte{}, errors.New("address not found")
+	return stdout, nil
+
+	//addresses := strings.Split(string(stdout), "\n")
+	//for _, address := range addresses {
+	//	fields := strings.Fields(address)
+	//	if len(fields) < 3 {
+	//		continue
+	//	}
+	//	if fields[1] == keyName {
+	//		// TODO penumbra address is bech32m. need to decode to bytes here
+	//		return []byte(fields[2]), nil
+	//	}
+	//}
+	//
+	//return []byte{}, errors.New("address not found")
 }
 
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {

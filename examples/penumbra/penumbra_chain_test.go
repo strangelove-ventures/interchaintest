@@ -70,8 +70,13 @@ func TestPenumbraChainStart(t *testing.T) {
 	require.True(t, aliceBal.Equal(expectedBal))
 	require.True(t, bobBal.Equal(expectedBal))
 
+	bobAddr, err := chain.GetAddress(ctx, bob.PenumbraClientNodes["validator"].KeyName)
+	require.NoError(t, err)
+
+	t.Logf("ADDR: %s \n", bobAddr)
+
 	transfer := ibc.WalletAmount{
-		Address: bob.PenumbraClientNodes["validator"].KeyName,
+		Address: string(bobAddr), //bob.PenumbraClientNodes["validator"].KeyName,
 		Denom:   chain.Config().Denom,
 		Amount:  math.NewInt(1_000),
 	}
