@@ -26,9 +26,8 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name: "penumbra",
-			// Version: "040-themisto.1,v0.34.23",
-			Version: "v0.57.0,v0.34.24",
+			Name:    "penumbra",
+			Version: "v0.58.0,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
@@ -57,16 +56,19 @@ func TestPenumbraChainStart(t *testing.T) {
 	bob := chain.(*penumbra.PenumbraChain).PenumbraNodes[1]
 
 	aliceBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
-	//require.NoError(t, err)
+	require.NoError(t, err)
 
 	bobBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
-	//require.NoError(t, err)
+	require.NoError(t, err)
+
+	// TODO: genesis allocations should be configurable, right now we are using a hardcoded value in PenumbraChain.Start
+	expectedBal := math.NewInt(1_000_000_000_000)
 
 	t.Logf("Alice Balance: %s \n", aliceBal)
 	t.Logf("Bob Balance: %s \n", bobBal)
 
-	//bobAddr, err := bob.PenumbraAppNode.GetAddress(ctx, bob.PenumbraClientNodes["validator"].KeyName)
-	//require.NoError(t, err)
+	require.True(t, aliceBal.Equal(expectedBal))
+	require.True(t, bobBal.Equal(expectedBal))
 
 	transfer := ibc.WalletAmount{
 		Address: bob.PenumbraClientNodes["validator"].KeyName,
@@ -77,12 +79,15 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.SendFunds(ctx, alice.PenumbraClientNodes["validator"].KeyName, transfer)
 	require.NoError(t, err)
 
-	aliceBal, err = chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
-	//require.NoError(t, err)
+	aliceNewBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	require.NoError(t, err)
 
-	bobBal, err = chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
-	//require.NoError(t, err)
+	bobNewBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	require.NoError(t, err)
 
-	t.Logf("Alice Balance: %s \n", aliceBal)
-	t.Logf("Bob Balance: %s \n", bobBal)
+	t.Logf("Alice Balance: %s \n", aliceNewBal)
+	t.Logf("Bob Balance: %s \n", bobNewBal)
+
+	require.True(t, aliceNewBal.Equal(aliceBal.Sub(transfer.Amount)))
+	require.True(t, bobNewBal.Equal(bobBal.Add(transfer.Amount)))
 }

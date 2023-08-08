@@ -232,7 +232,9 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 		AccountFilter: &cryptov1alpha1.AddressIndex{
 			Account: 0,
 		},
-		AssetIdFilter: nil,
+		AssetIdFilter: &cryptov1alpha1.AssetId{
+			AltBaseDenom: denom,
+		},
 	}
 
 	// The BalanceByAddress method returns a stream response, containing
@@ -249,20 +251,13 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 		if err != nil {
 			// A gRPC streaming response will return EOF when it's done.
 			if err == io.EOF {
-				fmt.Println("Found expected EOF error")
 				break
 			} else {
-				fmt.Println("Failed to get balance:", err)
 				return math.Int{}, err
 			}
 		}
-		fmt.Printf("Adding %v to balances array \n", balance)
 		balances = append(balances, balance)
 	}
-
-	fmt.Println("HERE DA BALANCES YO")
-	fmt.Printf("%v \n", balances)
-	fmt.Println()
 
 	//fmt.Println("In GetBalance, dumping all wallet contents...")
 	//for _, b := range balances {
@@ -282,8 +277,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 	//	}
 	//}
 
-	// we should have found the specified denom balance by this point
-	return math.Int{}, fmt.Errorf("balance not found for specified denom %s", denom)
+	return translateHiAndLo(balances[0].Balance.Amount.Hi, balances[0].Balance.Amount.Lo), nil
 }
 
 // translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
