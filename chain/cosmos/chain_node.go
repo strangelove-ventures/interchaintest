@@ -146,6 +146,10 @@ func (tn *ChainNode) Name() string {
 	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
+func (tn *ChainNode) ContainerID() string {
+	return tn.containerLifecycle.ContainerID()
+}
+
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
@@ -619,7 +623,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		command = append(command, "genesis")
 	}
 
-	command = append(command, "add-genesis-account", address, amount)
+	command = append(command, "add-genesis-account", address, amount, "--chain-id", tn.Chain.Config().ChainID)
 	_, _, err := tn.ExecBin(ctx, command...)
 
 	return err
