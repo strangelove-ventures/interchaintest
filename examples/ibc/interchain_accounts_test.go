@@ -3,14 +3,14 @@ package ibc
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
@@ -183,7 +183,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Send funds to ICA from user account on chain2
-	const transferAmount = 10000
+	transferAmount := math.NewInt(1000)
 	transfer := ibc.WalletAmount{
 		Address: icaAddr,
 		Denom:   chain2.Config().Denom,
@@ -194,11 +194,11 @@ func TestInterchainAccounts(t *testing.T) {
 
 	chain2Bal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal-transferAmount, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal.Sub(transferAmount)))
 
 	icaBal, err := chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal+transferAmount, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal.Add(transferAmount)))
 
 	// Build bank transfer msg
 	rawMsg, err := json.Marshal(map[string]any{
@@ -208,7 +208,7 @@ func TestInterchainAccounts(t *testing.T) {
 		"amount": []map[string]any{
 			{
 				"denom":  chain2.Config().Denom,
-				"amount": strconv.Itoa(transferAmount),
+				"amount": transferAmount.String(),
 			},
 		},
 	})
@@ -245,12 +245,12 @@ func TestInterchainAccounts(t *testing.T) {
 	// Assert that the funds have been received by the user account on chain2
 	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal))
 
 	// Assert that the funds have been removed from the ICA on chain2
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal))
 
 	// Stop the relayer and wait for the process to terminate
 	err = r.StopRelayer(ctx, eRep)
@@ -282,11 +282,11 @@ func TestInterchainAccounts(t *testing.T) {
 	// Assert that the packet timed out and that the acc balances are correct
 	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal))
 
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal))
 
 	// Assert that the channel ends are both closed
 	chain1Chans, err := r.GetChannels(ctx, eRep, chain1.Config().ChainID)
