@@ -48,10 +48,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	chainID_A, chainID_B, chainID_C, chainID_D := "chain-a", "chain-b", "chain-c", "chain-d"
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
-		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
-		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
-		{Name: "juno", Version: "andrew-pfm_arbitrary_passthrough", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0ujuno", UsingNewGenesisCommand: true}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0uosmo"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -380,6 +380,9 @@ func TestPacketForwardMiddleware(t *testing.T) {
 		}
 
 		retries := uint8(2)
+
+		next := `{"wasm":{"contract":"neutron1mrm80xxdv8yhrt6gqvx2n638vjh23j023xj5yufha9y02gvskmaq6prr8z","msg":{"swap_and_action":{"user_swap":{"swap_venue_name":"neutron-astroport","operations":[{"pool":"neutron1u4v7xcvkhz8sxs3u9mjhprwc8vwc2p08x0tje4ugtrrkjhkagdysztt5dq","denom_in":"ibc/376222D6D9DAE23092E29740E56B758580935A6D77C24C2ABD57A6A78A1F3955","denom_out":"untrn"},{"pool":"neutron1e22zh5p8meddxjclevuhjmfj69jxfsa8uu3jvht72rv9d8lkhves6t8veq","denom_in":"untrn","denom_out":"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"}]},"min_coin":{"denom":"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9","amount":"590"},"timeout_timestamp":1690567147930478000,"post_swap_action":{"bank_send":{"to_address":"neutron19vf5mfr40awvkefw69nl6p3mmlsnacmmwc0x6s"}},"affiliates":[]}}}}`
+
 		metadata := &PacketMetadata{
 			Forward: &ForwardMetadata{
 				Receiver: userC.FormattedAddress(),
@@ -387,6 +390,7 @@ func TestPacketForwardMiddleware(t *testing.T) {
 				Port:     bcChan.PortID,
 				Retries:  &retries,
 				Timeout:  1 * time.Second,
+				Next:     &next,
 			},
 		}
 
