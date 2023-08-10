@@ -669,7 +669,12 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		command = append(command, "genesis")
 	}
 
-	command = append(command, "add-genesis-account", address, amount, "--chain-id", tn.Chain.Config().ChainID)
+	command = append(command, "add-genesis-account", address, amount)
+
+	if tn.Chain.Config().UsingChainIDFlagCLI {
+		command = append(command, "--chain-id", tn.Chain.Config().ChainID)
+	}
+
 	_, _, err := tn.ExecBin(ctx, command...)
 
 	return err

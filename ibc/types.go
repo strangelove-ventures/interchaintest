@@ -50,6 +50,8 @@ type ChainConfig struct {
 	EncodingConfig *testutil.TestEncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
+	// Required when the chain requires the chain-id field to be populated for certain commands
+	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
 }
