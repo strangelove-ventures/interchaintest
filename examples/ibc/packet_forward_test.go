@@ -48,10 +48,10 @@ func TestPacketForwardMiddleware(t *testing.T) {
 	chainID_A, chainID_B, chainID_C, chainID_D := "chain-a", "chain-b", "chain-c", "chain-d"
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.0uosmo"}},
-		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.0uosmo"}},
-		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.0uosmo"}},
-		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.0uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_A, GasPrices: "0.01uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_B, GasPrices: "0.01uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_C, GasPrices: "0.01uosmo"}},
+		{Name: "osmosis", Version: "nicolas-v16-pfm-experiment", ChainConfig: ibc.ChainConfig{ChainID: chainID_D, GasPrices: "0.01uosmo"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
