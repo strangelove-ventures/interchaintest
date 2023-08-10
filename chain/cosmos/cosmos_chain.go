@@ -653,6 +653,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		Denom:  chainCfg.Denom,
 	}
 
+	if chainCfg.ModifyGenesisAmounts != nil {
+		genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
+	}
+
 	genesisAmounts := []types.Coin{genesisAmount}
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
