@@ -4,15 +4,9 @@ import (
 	"reflect"
 	"strconv"
 
-<<<<<<< HEAD
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
-=======
-	"cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
->>>>>>> 5fdb1e8 (feat(cosmos): Additional Helpers (#687))
+	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -55,13 +49,8 @@ type ChainConfig struct {
 	EncodingConfig *simappparams.EncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
-<<<<<<< HEAD
-=======
 	// Required when the chain requires the chain-id field to be populated for certain commands
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
-	// Configuration describing additional sidecar processes.
-	SidecarConfigs []SidecarConfig
->>>>>>> 5fdb1e8 (feat(cosmos): Additional Helpers (#687))
 }
 
 func (c ChainConfig) Clone() ChainConfig {
