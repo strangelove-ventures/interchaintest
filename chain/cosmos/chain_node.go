@@ -32,12 +32,13 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -1125,6 +1126,24 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+}
+
+func (tn *ChainNode) PauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.PauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.PauseContainer(ctx)
+}
+
+func (tn *ChainNode) UnpauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.UnpauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.UnpauseContainer(ctx)
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
