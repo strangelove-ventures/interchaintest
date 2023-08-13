@@ -119,7 +119,7 @@ func (c *ContainerLifecycle) PauseContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) UnpauseContainer(ctx context.Context) error {
-	return c.client.ContainerPause(ctx, c.id)
+	return c.client.ContainerUnpause(ctx, c.id)
 }
 
 func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
