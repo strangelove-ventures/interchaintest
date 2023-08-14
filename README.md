@@ -25,13 +25,22 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 
 ### Maintained Branches
 
+#### Backport Policy:
+Strangelove maintains `n` and `n - 1` branches of interchaintest, `n` being current `main`.
+
+We strive to keep interchaintest inline with the latest from the ibc-go and cosmos sdk teams. Once an alpha versions of the next major ibc-go version is released, we will discontinue `n - 1` and branch off a new `n`.
+
+**Recommendation:** Even if your chain uses an older version of ibc-go, try importing from `main`. This should work unless you are decoding transactions that require a specific ibc-go version.
+
+If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you. 
+
 |                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** |    **Maintained**   |
 |:----------------------------------------------------------------------------:|:----------:|:--------------:|:-------------------:|
-|                                     main                                     |     v7     |      v0.47     |         ✅          |
+|     [main](https://github.com/strangelove-ventures/interchaintest)           |     v7     |      v0.47     |         ✅          |
 |     [v6](https://github.com/strangelove-ventures/interchaintest/tree/v6)     |     v6     |      v0.46     |         ✅          |
-|     [v5](https://github.com/strangelove-ventures/interchaintest/tree/v5)     |     v5     |      v0.46     |         ✅          |
-|     [v4](https://github.com/strangelove-ventures/interchaintest/tree/v4)     |     v4     |      v0.45     |         ✅          |
-| [v4-ics](https://github.com/strangelove-ventures/interchaintest/tree/v4-ics) |     v4     |   v0.45.x-ics  |         ✅          |
+|     [v5](https://github.com/strangelove-ventures/interchaintest/tree/v5)     |     v5     |      v0.46     |❌<br>(Aug 11 2023)  |
+|     [v4](https://github.com/strangelove-ventures/interchaintest/tree/v4)     |     v4     |      v0.45     |❌<br>(Aug 11 2023)  |
+| [v4-ics](https://github.com/strangelove-ventures/interchaintest/tree/v4-ics) |     v4     |   v0.45.x-ics  |❌<br>(Aug 11 2023)  |
 |     [v3](https://github.com/strangelove-ventures/interchaintest/tree/v3)     |     v3     |      v0.45     |❌<br>(June 25 2023) |
 | [v3-ics](https://github.com/strangelove-ventures/interchaintest/tree/v3-ics) |     v3     |  v0.45.11-ics  |❌<br>(April 24 2023)|
 
