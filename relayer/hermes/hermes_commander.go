@@ -145,7 +145,7 @@ func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
 }
 
-func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+func (c commander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
 	// TODO: figure out how to implement this.
 	panic("implement me")
 }
@@ -183,6 +183,10 @@ func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions,
 
 func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	panic("create clients implemented in hermes relayer not the commander")
+}
+
+func (c commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	panic("create client implemented in hermes relayer not the commander")
 }
 
 func (c commander) CreateConnections(pathName string, homeDir string) []string {

@@ -6,7 +6,7 @@ import (
 
 	"cosmossdk.io/math"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	"github.com/strangelove-ventures/interchaintest/v7"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"

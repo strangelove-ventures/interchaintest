@@ -16,6 +16,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/cosmos/ibc-go/v7 v7.2.0
+	github.com/cosmos/interchain-security/v3 v3.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.5+incompatible
@@ -33,6 +34,7 @@ require (
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
+	github.com/tendermint/tendermint v0.37.0-rc2
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/multierr v1.11.0
@@ -43,6 +45,7 @@ require (
 	google.golang.org/grpc v1.57.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.24.0
+
 )
 
 require (
@@ -84,7 +87,7 @@ require (
 	github.com/cosmos/gogogateway v1.2.0 // indirect
 	github.com/cosmos/iavl v0.20.0 // indirect
 	github.com/cosmos/ics23/go v0.10.0 // indirect
-	github.com/cosmos/ledger-cosmos-go v0.12.1 // indirect
+	github.com/cosmos/ledger-cosmos-go v0.12.2 // indirect
 	github.com/cosmos/rosetta-sdk-go v0.10.0 // indirect
 	github.com/creachadair/taskgroup v0.4.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
@@ -240,6 +243,7 @@ require (
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
+	//github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.45.15-ics
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )

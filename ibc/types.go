@@ -278,3 +278,13 @@ type ChannelFilter struct {
 	Rule        string
 	ChannelList []string
 }
+
+type PathUpdateOptions struct {
+	ChannelFilter *ChannelFilter
+	SrcClientID   *string
+	SrcConnID     *string
+	SrcChainID    *string
+	DstClientID   *string
+	DstConnID     *string
+	DstChainID    *string
+}

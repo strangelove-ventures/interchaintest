@@ -30,7 +30,7 @@ type pathConfiguration struct {
 
 // pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
-	chainID      string
+	chainID string
 }
 
 func (hyperspaceCommander) Name() string {
@@ -156,7 +156,7 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 }
 
 // Hyperspace does not have paths, just two configs
-func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.PathUpdateOptions) []string {
 	panic("[UpdatePath] Do not call me")
 
 }
@@ -389,4 +389,9 @@ func (hyperspaceCommander) Flush(pathName, channelID, homeDir string) []string {
 func configPath(homeDir, chainID string) string {
 	chainConfigFile := chainID + ".config"
 	return path.Join(homeDir, chainConfigFile)
+}
+
+func (h *hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	// TODO: Add actual implementation here
+	return []string{""}
 }
