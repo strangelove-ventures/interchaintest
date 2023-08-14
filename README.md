@@ -26,7 +26,7 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 ### Maintained Branches
 
 #### Backport Policy:
-Strangelove maintains `n - 1` branches of interchaintest, `n` being current `main`.
+Strangelove maintains `n` and `n - 1` branches of interchaintest, `n` being current `main`.
 
 We strive to keep interchaintest inline with the latest from the ibc-go and cosmos sdk teams. Once an alpha versions of the next major ibc-go version is released, we will discontinue `n - 1` and branch off a new `n`.
 
