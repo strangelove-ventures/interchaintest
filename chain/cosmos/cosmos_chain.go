@@ -1218,6 +1218,9 @@ func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx,
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)
 func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		n := n
@@ -1226,6 +1229,29 @@ func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 				return err
 			}
 			return n.RemoveContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+// StopANode stops and removes one long running containers (validators/full nodes)
+func (c *CosmosChain) StopANode(ctx context.Context, num int) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+	for i, n := range c.Nodes() {
+		n := n
+		i := i
+		eg.Go(func() error {
+			if i == num {
+				if err := n.StopContainer(ctx); err != nil {
+					return err
+				}
+				return n.RemoveContainer(ctx)
+			} else {
+				return nil
+			}
 		})
 	}
 	return eg.Wait()
@@ -1245,6 +1271,30 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 				return err
 			}
 			return n.StartContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+// StartANode creates and starts new containers for one node.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartANode(ctx context.Context, num int) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+	for i, n := range c.Nodes() {
+		n := n
+		i := i
+		eg.Go(func() error {
+			if i == num {
+				if err := n.CreateNodeContainer(ctx); err != nil {
+					return err
+				}
+				return n.StartContainer(ctx)
+			} else {
+				return nil
+			}
 		})
 	}
 	return eg.Wait()
