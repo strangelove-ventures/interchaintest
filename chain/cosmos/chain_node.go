@@ -29,6 +29,7 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -51,6 +52,9 @@ type ChainNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 
+	// Additional processes that need to be run on a per-validator basis.
+	Sidecars SidecarProcesses
+
 	lock sync.Mutex
 	log  *zap.Logger
 
@@ -58,6 +62,7 @@ type ChainNode struct {
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
+	hostAPIPort  string
 	hostGRPCPort string
 }
 
@@ -120,6 +125,48 @@ func (tn *ChainNode) NewClient(addr string) error {
 	return nil
 }
 
+func (tn *ChainNode) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	cli *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+	homeDir string,
+	ports []string,
+	startCmd []string,
+) error {
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   tn.TestName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: tn.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	tn.Sidecars = append(tn.Sidecars, s)
+
+	return nil
+}
+
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
@@ -144,6 +191,10 @@ func (tn *ChainNode) Name() string {
 		nodeType = "fn"
 	}
 	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+}
+
+func (tn *ChainNode) ContainerID() string {
+	return tn.containerLifecycle.ContainerID()
 }
 
 // hostname of the test node container
@@ -237,6 +288,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
 
@@ -261,6 +313,15 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	grpc["address"] = "0.0.0.0:9090"
 
 	a["grpc"] = grpc
+
+	api := make(testutil.Toml)
+
+	// Enable public REST API
+	api["enable"] = true
+	api["swagger"] = true
+	api["address"] = "tcp://0.0.0.0:1317"
+
+	a["api"] = api
 
 	return testutil.ModifyTomlConfigFile(
 		ctx,
@@ -620,6 +681,11 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	}
 
 	command = append(command, "add-genesis-account", address, amount)
+
+	if tn.Chain.Config().UsingChainIDFlagCLI {
+		command = append(command, "--chain-id", tn.Chain.Config().ChainID)
+	}
+
 	_, _, err := tn.ExecBin(ctx, command...)
 
 	return err
@@ -674,7 +740,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -692,7 +758,7 @@ func (tn *ChainNode) SendIBCTransfer(
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
 }
@@ -1027,16 +1093,30 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		err := s.containerLifecycle.Running(ctx)
+
+		if s.preStart && err != nil {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+
+			if err := s.StartContainer(ctx); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort)
 	if err != nil {
 		return err
 	}
-	tn.hostRPCPort, tn.hostGRPCPort = hostPorts[0], hostPorts[1]
+	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort = hostPorts[0], hostPorts[1], hostPorts[2]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
@@ -1059,10 +1139,20 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.StopContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.RemoveContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
@@ -1233,7 +1323,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"amount": []map[string]any{
 			{
 				"denom":  amount.Denom,
-				"amount": amount.Amount,
+				"amount": amount.Amount.String(),
 			},
 		},
 	})

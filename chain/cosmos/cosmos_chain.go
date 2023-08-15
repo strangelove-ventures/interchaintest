@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -49,6 +50,9 @@ type CosmosChain struct {
 	numFullNodes  int
 	Validators    ChainNodes
 	FullNodes     ChainNodes
+
+	// Additional processes that need to be run on a per-chain basis.
+	Sidecars SidecarProcesses
 
 	log      *zap.Logger
 	keyring  keyring.Keyring
@@ -172,6 +176,9 @@ func (c *CosmosChain) Config() ibc.ChainConfig {
 
 // Implements Chain interface
 func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+	if err := c.initializeSidecars(ctx, testName, cli, networkID); err != nil {
+		return err
+	}
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
@@ -197,6 +204,11 @@ func (c *CosmosChain) GetRPCAddress() string {
 }
 
 // Implements Chain interface
+func (c *CosmosChain) GetAPIAddress() string {
+	return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
+}
+
+// Implements Chain interface
 func (c *CosmosChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().HostName())
 }
@@ -205,6 +217,12 @@ func (c *CosmosChain) GetGRPCAddress() string {
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostRPCAddress() string {
 	return "http://" + c.getFullNode().hostRPCPort
+}
+
+// GetHostAPIAddress returns the address of the REST API server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostAPIAddress() string {
+	return "http://" + c.getFullNode().hostAPIPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
@@ -516,12 +534,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return 0, err
+		return math.Int{}, err
 	}
 	defer conn.Close()
 
@@ -529,10 +547,10 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	res, err := queryClient.Balance(ctx, params)
 
 	if err != nil {
-		return 0, err
+		return math.Int{}, err
 	}
 
-	return res.Balance.Amount.Int64(), nil
+	return res.Balance.Amount, nil
 }
 
 // AllBalances fetches an account address's balance for all denoms it holds
@@ -637,7 +655,66 @@ func (c *CosmosChain) NewChainNode(
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
+
+	for _, cfg := range c.cfg.SidecarConfigs {
+		if !cfg.ValidatorProcess {
+			continue
+		}
+
+		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return tn, nil
+}
+
+// NewSidecarProcess constructs a new sidecar process with a docker volume.
+func (c *CosmosChain) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	testName string,
+	cli *client.Client,
+	networkID string,
+	image ibc.DockerImage,
+	homeDir string,
+	index int,
+	ports []string,
+	startCmd []string,
+) error {
+	// Construct the SidecarProcess first so we can access its name.
+	// The SidecarProcess's VolumeName cannot be set until after we create the volume.
+	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, homeDir, index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   testName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	c.Sidecars = append(c.Sidecars, s)
+
+	return nil
 }
 
 // creates the test node objects required for bootstrapping tests
@@ -689,6 +766,37 @@ func (c *CosmosChain) initializeChainNodes(
 	return nil
 }
 
+// initializeSidecars creates the sidecar processes that exist at the chain level.
+func (c *CosmosChain) initializeSidecars(
+	ctx context.Context,
+	testName string,
+	cli *client.Client,
+	networkID string,
+) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+	for i, cfg := range c.cfg.SidecarConfigs {
+		i := i
+		cfg := cfg
+
+		if cfg.ValidatorProcess {
+			continue
+		}
+
+		eg.Go(func() error {
+			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.HomeDir, i, cfg.Ports, cfg.StartCmd)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
 type GenesisValidatorPubKey struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -721,6 +829,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	genesisSelfDelegation := types.Coin{
 		Amount: types.NewInt(5_000_000_000_000),
 		Denom:  chainCfg.Denom,
+	}
+
+	if chainCfg.ModifyGenesisAmounts != nil {
+		genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
 	}
 
 	genesisAmounts := []types.Coin{genesisAmount}
@@ -824,7 +936,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
 			return err
 		}
 	}
@@ -872,7 +984,31 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
+	// Start any sidecar processes that should be running before the chain starts
 	eg, egCtx := errgroup.WithContext(ctx)
+	for _, s := range c.Sidecars {
+		s := s
+
+		err = s.containerLifecycle.Running(ctx)
+		if s.preStart && err != nil {
+			eg.Go(func() error {
+				if err := s.CreateContainer(egCtx); err != nil {
+					return err
+				}
+
+				if err := s.StartContainer(egCtx); err != nil {
+					return err
+				}
+
+				return nil
+			})
+		}
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
 		n := n
 		eg.Go(func() error {
@@ -997,6 +1133,21 @@ func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 	return eg.Wait()
 }
 
+// StopAllSidecars stops and removes all long-running containers for sidecar processes.
+func (c *CosmosChain) StopAllSidecars(ctx context.Context) error {
+	var eg errgroup.Group
+	for _, s := range c.Sidecars {
+		s := s
+		eg.Go(func() error {
+			if err := s.StopContainer(ctx); err != nil {
+				return err
+			}
+			return s.RemoveContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
 // StartAllNodes creates and starts new containers for each node.
 // Should only be used if the chain has previously been started with .Start.
 func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
@@ -1013,6 +1164,60 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 			return n.StartContainer(ctx)
 		})
 	}
+	return eg.Wait()
+}
+
+// StartAllSidecars creates and starts new containers for each sidecar process.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartAllSidecars(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+	for _, s := range c.Sidecars {
+		s := s
+
+		err := s.containerLifecycle.Running(ctx)
+		if err == nil {
+			continue
+		}
+
+		eg.Go(func() error {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+			return s.StartContainer(ctx)
+		})
+	}
+	return eg.Wait()
+}
+
+// StartAllValSidecars creates and starts new containers for each validator sidecar process.
+// Should only be used if the chain has previously been started with .Start.
+func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
+	// prevent client calls during this time
+	c.findTxMu.Lock()
+	defer c.findTxMu.Unlock()
+	var eg errgroup.Group
+
+	for _, v := range c.Validators {
+		for _, s := range v.Sidecars {
+			s := s
+
+			err := s.containerLifecycle.Running(ctx)
+			if err == nil {
+				continue
+			}
+
+			eg.Go(func() error {
+				if err := s.CreateContainer(ctx); err != nil {
+					return err
+				}
+				return s.StartContainer(ctx)
+			})
+		}
+	}
+
 	return eg.Wait()
 }
 

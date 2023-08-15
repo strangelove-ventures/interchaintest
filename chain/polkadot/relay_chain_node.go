@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -294,6 +295,6 @@ func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount i
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	return GetBalance(p.api, address)
 }
