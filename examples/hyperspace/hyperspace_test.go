@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
@@ -243,7 +244,7 @@ func TestHyperspace(t *testing.T) {
 	transfer := ibc.WalletAmount{
 		Address: polkadotUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
-		Amount:  amountToSend,
+		Amount:  math.NewInt(amountToSend),
 	}
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
@@ -261,13 +262,13 @@ func TestHyperspace(t *testing.T) {
 	reflectTransfer := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   "2", // stake
-		Amount:  amountToReflect,
+		Amount:  math.NewInt(amountToReflect),
 	}
 	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), reflectTransfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 
 	// Send 1.88 "UNIT" from Alice to cosmosUser
-	amountUnits := int64(1_880_000_000_000)
+	amountUnits := math.NewInt(1_880_000_000_000)
 	unitTransfer := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   "1", // UNIT
@@ -277,7 +278,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for MsgRecvPacket on cosmos chain
-	finalStakeBal := fundAmount - amountToSend + amountToReflect
+	finalStakeBal := math.NewInt(fundAmount - amountToSend + amountToReflect)
 	err = cosmos.PollForBalance(ctx, cosmosChain, 20, ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
@@ -288,23 +289,23 @@ func TestHyperspace(t *testing.T) {
 	// Verify cosmos user's final "stake" balance
 	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, finalStakeBal, cosmosUserStakeBal)
+	require.True(t, cosmosUserStakeBal.Equal(finalStakeBal))
 
 	// Verify cosmos user's final "unit" balance
 	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
 	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
 	require.NoError(t, err)
-	require.Equal(t, amountUnits, cosmosUserUnitBal)
+	require.True(t, cosmosUserUnitBal.Equal(amountUnits))
 
 	// Verify parachain user's final "unit" balance (will be less than expected due gas costs for stake tx)
 	parachainUserUnits, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 1)
 	require.NoError(t, err)
-	require.LessOrEqual(t, parachainUserUnits.Amount.Int64(), fundAmount, "parachain user's final unit amount not expected")
+	require.True(t, parachainUserUnits.Amount.LTE(math.NewInt(fundAmount)), "parachain user's final unit amount not expected")
 
 	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-	require.Equal(t, amountToSend-amountToReflect, parachainUserStake.Amount.Int64(), "parachain user's final stake amount not expected")
+	require.True(t, parachainUserStake.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
 }
 
 type GetCodeQueryMsgResponse struct {
@@ -319,7 +320,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	contractUserBalInitial, err := cosmosChain.GetBalance(ctx, contractUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmountForGov, contractUserBalInitial)
+	require.True(t, contractUserBalInitial.Equal(math.NewInt(fundAmountForGov)))
 
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
@@ -361,15 +362,18 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")
 
 	// Check balances are correct
+	amount := math.NewInt(fundAmount)
 	polkadotUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, polkadotUserAmount, "Initial polkadot user amount not expected")
+	require.True(t, polkadotUserAmount.Equal(amount), "Initial polkadot user amount not expected")
+
 	parachainUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), "")
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, parachainUserAmount, "Initial parachain user amount not expected")
+	require.True(t, parachainUserAmount.Equal(amount), "Initial parachain user amount not expected")
+
 	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
+	require.True(t, cosmosUserAmount.Equal(amount), "Initial cosmos user amount not expected")
 
 	return polkadotUser, cosmosUser
 }
