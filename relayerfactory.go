@@ -2,7 +2,6 @@ package interchaintest
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
@@ -12,11 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type TestName interface {
+	Name() string
+}
+
 // RelayerFactory describes how to start a Relayer.
 type RelayerFactory interface {
 	// Build returns a Relayer associated with the given arguments.
 	Build(
-		t *testing.T,
+		t TestName,
 		cli *client.Client,
 		networkID string,
 	) ibc.Relayer
@@ -44,7 +47,7 @@ func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger
 
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
-	t *testing.T,
+	t TestName,
 	cli *client.Client,
 	networkID string,
 ) ibc.Relayer {
