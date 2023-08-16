@@ -5,10 +5,11 @@ import (
 	"log"
 	"strings"
 
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	types "github.com/strangelove-ventures/localinterchain/interchain/types"
+	"github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 
 func AddGenesisKeysToKeyring(ctx context.Context, config *types.Config, chains []ibc.Chain) {
@@ -62,7 +63,7 @@ func SetupGenesisWallets(config *types.Config, chains []ibc.Chain) map[ibc.Chain
 			for _, coin := range amount {
 				additionalWallets[chainObj] = append(additionalWallets[chainObj], ibc.WalletAmount{
 					Address: acc.Address,
-					Amount:  coin.Amount.Int64(),
+					Amount:  math.NewInt(coin.Amount.Int64()),
 					Denom:   coin.Denom,
 				})
 			}
