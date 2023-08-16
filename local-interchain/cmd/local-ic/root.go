@@ -24,25 +24,25 @@ var rootCmd = &cobra.Command{
 
 func GetDirectory() string {
 	// Config variable override for the ICTEST_HOME
-	var makeInstalDir string
+	var makeFileInstallDir string
 	if res := os.Getenv("ICTEST_HOME"); res != "" {
-		makeInstalDir = res
+		makeFileInstallDir = res
 	}
 
-	if makeInstalDir == "" {
+	if makeFileInstallDir == "" {
 		dirname, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		makeInstalDir = path.Join(dirname, "local-interchain")
+		makeFileInstallDir = path.Join(dirname, "local-interchain")
 	}
 
-	if err := directoryRequirementChecks(makeInstalDir, "configs", "chains"); err != nil {
+	if err := directoryRequirementChecks(makeFileInstallDir, "configs", "chains"); err != nil {
 		log.Fatal(err)
 	}
 
-	return makeInstalDir
+	return makeFileInstallDir
 }
 
 func directoryRequirementChecks(parent string, subDirectories ...string) error {
