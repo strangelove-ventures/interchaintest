@@ -185,7 +185,3 @@ func getOrDefault[T any](output string, defaultVal T) T {
 
 	return any(text).(T)
 }
-
-func init() {
-	rootCmd.AddCommand(newChainCmd)
-}
