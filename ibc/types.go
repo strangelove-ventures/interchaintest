@@ -49,13 +49,10 @@ type ChainConfig struct {
 	EncodingConfig *simappparams.EncodingConfig
 	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
-<<<<<<< HEAD
 	// Required when the chain requires the chain-id field to be populated for certain commands
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
-=======
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
->>>>>>> 2d8518c (feat: add the ability to manage sidecar processes (#465))
 }
 
 func (c ChainConfig) Clone() ChainConfig {
