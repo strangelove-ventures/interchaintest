@@ -51,13 +51,21 @@ type ChainConfig struct {
 	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 	// Required when the chain requires the chain-id field to be populated for certain commands
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
+	// Configuration describing additional sidecar processes.
+	SidecarConfigs []SidecarConfig
 }
 
 func (c ChainConfig) Clone() ChainConfig {
 	x := c
+
 	images := make([]DockerImage, len(c.Images))
 	copy(images, c.Images)
 	x.Images = images
+
+	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
+	copy(sidecars, c.SidecarConfigs)
+	x.SidecarConfigs = sidecars
+
 	return x
 }
 
@@ -151,6 +159,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.EncodingConfig = other.EncodingConfig
 	}
 
+	if len(other.SidecarConfigs) > 0 {
+		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
+	}
+
 	return c
 }
 
@@ -167,6 +179,17 @@ func (c ChainConfig) IsFullyConfigured() bool {
 		c.Denom != "" &&
 		c.GasPrices != "" &&
 		c.TrustingPeriod != ""
+}
+
+// SidecarConfig describes the configuration options for instantiating a new sidecar process.
+type SidecarConfig struct {
+	ProcessName      string
+	Image            DockerImage
+	HomeDir          string
+	Ports            []string
+	StartCmd         []string
+	PreStart         bool
+	ValidatorProcess bool
 }
 
 type DockerImage struct {
