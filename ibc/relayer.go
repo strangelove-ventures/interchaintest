@@ -64,6 +64,12 @@ type Relayer interface {
 	// StopRelayer stops a relayer that started work through StartRelayer.
 	StopRelayer(ctx context.Context, rep RelayerExecReporter) error
 
+	// PauseRelayer halts a relayer that started work through StartRelayer.
+	PauseRelayer(ctx context.Context) error
+
+	// ResumeRelayer resumes a relayer that was paused through PauseRelayer.
+	ResumeRelayer(ctx context.Context) error
+
 	// Flush flushes any outstanding packets and then returns.
 	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 

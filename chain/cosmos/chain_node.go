@@ -25,6 +25,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
@@ -37,6 +38,15 @@ import (
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+=======
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+>>>>>>> cc35cd3 (feat: ability to pause and resume containers (#692))
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -940,6 +950,24 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+}
+
+func (tn *ChainNode) PauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.PauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.PauseContainer(ctx)
+}
+
+func (tn *ChainNode) UnpauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.UnpauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.UnpauseContainer(ctx)
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
