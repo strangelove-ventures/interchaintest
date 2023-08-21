@@ -68,6 +68,8 @@ linters-settings:
         disabled: true
       - name: if-return
         disabled: true
+      - name: context-as-argument
+        disabled: true
       - name: max-public-structs
         disabled: true
       # it may make sense to enable exported later, like in ibc version 8

@@ -218,13 +218,13 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	// Set Log Level to info
 	c["log_level"] = "info"
 
-	p2p := make(testutil.Toml)
+	peerToPeer := make(testutil.Toml)
 
 	// Allow p2p strangeness
-	p2p["allow_duplicate_ip"] = true
-	p2p["addr_book_strict"] = false
+	peerToPeer["allow_duplicate_ip"] = true
+	peerToPeer["addr_book_strict"] = false
 
-	c["p2p"] = p2p
+	c["p2p"] = peerToPeer
 
 	consensus := make(testutil.Toml)
 
