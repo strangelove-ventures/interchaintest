@@ -10,7 +10,7 @@ import (
 
 var _ exported.ClientState = (*ClientState)(nil)
 
-func (c ClientState) ClientType() string {
+func (ClientState) ClientType() string {
 	return ""
 }
 
@@ -18,15 +18,15 @@ func (c ClientState) GetLatestHeight() exported.Height {
 	return c.LatestHeight
 }
 
-func (c ClientState) Validate() error {
+func (ClientState) Validate() error {
 	return nil
 }
 
-func (c ClientState) Status(ctx sdk.Context, store sdk.KVStore, cdc codec.BinaryCodec) exported.Status {
+func (ClientState) Status(ctx sdk.Context, store sdk.KVStore, cdc codec.BinaryCodec) exported.Status {
 	return exported.Active
 }
 
-func (c ClientState) ExportMetadata(store sdk.KVStore) []exported.GenesisMetadata {
+func (ClientState) ExportMetadata(store sdk.KVStore) []exported.GenesisMetadata {
 	return []exported.GenesisMetadata{}
 }
 
@@ -34,7 +34,7 @@ func (c ClientState) ZeroCustomFields() exported.ClientState {
 	return &c
 }
 
-func (c ClientState) GetTimestampAtHeight(
+func (ClientState) GetTimestampAtHeight(
 	ctx sdk.Context,
 	clientStore sdk.KVStore,
 	cdc codec.BinaryCodec,
@@ -43,11 +43,11 @@ func (c ClientState) GetTimestampAtHeight(
 	return 0, nil
 }
 
-func (c ClientState) Initialize(context sdk.Context, marshaler codec.BinaryCodec, store sdk.KVStore, state exported.ConsensusState) error {
+func (ClientState) Initialize(context sdk.Context, marshaler codec.BinaryCodec, store sdk.KVStore, state exported.ConsensusState) error {
 	return nil
 }
 
-func (c ClientState) VerifyMembership(
+func (ClientState) VerifyMembership(
 	ctx sdk.Context,
 	clientStore sdk.KVStore,
 	cdc codec.BinaryCodec,
@@ -61,7 +61,7 @@ func (c ClientState) VerifyMembership(
 	return nil
 }
 
-func (c ClientState) VerifyNonMembership(
+func (ClientState) VerifyNonMembership(
 	ctx sdk.Context,
 	clientStore sdk.KVStore,
 	cdc codec.BinaryCodec,
@@ -78,30 +78,30 @@ func (c ClientState) VerifyNonMembership(
 // It must handle each type of ClientMessage appropriately. Calls to CheckForMisbehaviour, UpdateState, and UpdateStateOnMisbehaviour
 // will assume that the content of the ClientMessage has been verified and can be trusted. An error should be returned
 // if the ClientMessage fails to verify.
-func (c ClientState) VerifyClientMessage(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, clientMsg exported.ClientMessage) error {
+func (ClientState) VerifyClientMessage(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, clientMsg exported.ClientMessage) error {
 	return nil
 }
 
-func (c ClientState) CheckForMisbehaviour(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, msg exported.ClientMessage) bool {
+func (ClientState) CheckForMisbehaviour(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, msg exported.ClientMessage) bool {
 	return true
 }
 
 // UpdateStateOnMisbehaviour should perform appropriate state changes on a client state given that misbehaviour has been detected and verified.
-func (c ClientState) UpdateStateOnMisbehaviour(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, clientMsg exported.ClientMessage) {
+func (ClientState) UpdateStateOnMisbehaviour(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, clientMsg exported.ClientMessage) {
 }
 
 func (c ClientState) UpdateState(ctx sdk.Context, cdc codec.BinaryCodec, clientStore sdk.KVStore, clientMsg exported.ClientMessage) []exported.Height {
 	return []exported.Height{c.LatestHeight}
 }
 
-func (c ClientState) CheckSubstituteAndUpdateState(
+func (ClientState) CheckSubstituteAndUpdateState(
 	ctx sdk.Context, cdc codec.BinaryCodec, subjectClientStore,
 	substituteClientStore sdk.KVStore, substituteClient exported.ClientState,
 ) error {
 	return nil
 }
 
-func (c ClientState) VerifyUpgradeAndUpdateState(
+func (ClientState) VerifyUpgradeAndUpdateState(
 	ctx sdk.Context,
 	cdc codec.BinaryCodec,
 	store sdk.KVStore,

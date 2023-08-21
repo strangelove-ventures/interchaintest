@@ -19,7 +19,7 @@ type nopCloser struct {
 	io.Writer
 }
 
-func (n nopCloser) Close() error {
+func (nopCloser) Close() error {
 	return nil
 }
 

@@ -22,7 +22,7 @@ type BeginSuiteMessage struct {
 	// we'll have to fall back to ldflags to embed it.
 }
 
-func (m BeginSuiteMessage) typ() string {
+func (BeginSuiteMessage) typ() string {
 	return "BeginSuite"
 }
 
@@ -31,7 +31,7 @@ type FinishSuiteMessage struct {
 	FinishedAt time.Time
 }
 
-func (m FinishSuiteMessage) typ() string {
+func (FinishSuiteMessage) typ() string {
 	return "FinishSuite"
 }
 
@@ -43,7 +43,7 @@ type BeginTestMessage struct {
 	StartedAt time.Time
 }
 
-func (m BeginTestMessage) typ() string {
+func (BeginTestMessage) typ() string {
 	return "BeginTest"
 }
 
@@ -55,7 +55,7 @@ type FinishTestMessage struct {
 	Failed, Skipped bool
 }
 
-func (m FinishTestMessage) typ() string {
+func (FinishTestMessage) typ() string {
 	return "FinishTest"
 }
 
@@ -66,7 +66,7 @@ type PauseTestMessage struct {
 	When time.Time
 }
 
-func (m PauseTestMessage) typ() string {
+func (PauseTestMessage) typ() string {
 	return "PauseTest"
 }
 
@@ -77,7 +77,7 @@ type ContinueTestMessage struct {
 	When time.Time
 }
 
-func (m ContinueTestMessage) typ() string {
+func (ContinueTestMessage) typ() string {
 	return "ContinueTest"
 }
 
@@ -94,7 +94,7 @@ type TestErrorMessage struct {
 	Message string
 }
 
-func (m TestErrorMessage) typ() string {
+func (TestErrorMessage) typ() string {
 	return "TestError"
 }
 
@@ -106,7 +106,7 @@ type TestSkipMessage struct {
 	Message string
 }
 
-func (m TestSkipMessage) typ() string {
+func (TestSkipMessage) typ() string {
 	return "TestSkip"
 }
 
@@ -129,7 +129,7 @@ type RelayerExecMessage struct {
 	Error string `json:",omitempty"`
 }
 
-func (m RelayerExecMessage) typ() string {
+func (RelayerExecMessage) typ() string {
 	return "RelayerExec"
 }
 

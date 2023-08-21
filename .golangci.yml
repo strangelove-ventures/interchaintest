@@ -107,4 +107,5 @@ linters-settings:
           - 'fmt.Printf'
           - 'fmt.Print'
           - 'fmt.Println'
+          - 'fmt.Fprint'
           - 'myFunction'

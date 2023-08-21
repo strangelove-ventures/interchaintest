@@ -6,10 +6,10 @@ import (
 
 var _ exported.ClientMessage = &Misbehaviour{}
 
-func (m Misbehaviour) ClientType() string {
+func (Misbehaviour) ClientType() string {
 	return ""
 }
 
-func (m Misbehaviour) ValidateBasic() error {
+func (Misbehaviour) ValidateBasic() error {
 	return nil
 }

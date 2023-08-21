@@ -6,7 +6,7 @@ import (
 
 var _ exported.ConsensusState = (*ConsensusState)(nil)
 
-func (m ConsensusState) ClientType() string {
+func (ConsensusState) ClientType() string {
 	return ""
 }
 
@@ -14,6 +14,6 @@ func (m ConsensusState) GetTimestamp() uint64 {
 	return m.Timestamp
 }
 
-func (m ConsensusState) ValidateBasic() error {
+func (ConsensusState) ValidateBasic() error {
 	return nil
 }

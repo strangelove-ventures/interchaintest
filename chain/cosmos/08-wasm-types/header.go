@@ -6,10 +6,10 @@ import (
 
 var _ exported.ClientMessage = &Header{}
 
-func (m Header) ClientType() string {
+func (Header) ClientType() string {
 	return ""
 }
 
-func (m Header) ValidateBasic() error {
+func (Header) ValidateBasic() error {
 	return nil
 }

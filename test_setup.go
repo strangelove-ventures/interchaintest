@@ -53,6 +53,7 @@ func StartChainPair(
 	srcChain, dstChain ibc.Chain,
 	f RelayerFactory,
 ) (ibc.Relayer, error) {
+	t.Helper()
 	relayerImpl := f.Build(t, cli, networkID)
 
 	ic := NewInterchain().
@@ -98,6 +99,7 @@ func StopStartRelayerWithPreStartFuncs(
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 	pathNames ...string,
 ) ([]ibc.ChannelOutput, error) {
+	t.Helper()
 	if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
 		t.Logf("error stopping relayer: %v", err)
 	}
