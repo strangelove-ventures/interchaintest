@@ -65,6 +65,7 @@ const (
 	HyperspaceDefaultContainerVersion = "local"
 	Polkadot                          = "polkadot"
 	Parachain                         = "parachain"
+	Cosmos                            = "cosmos"
 )
 
 func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
@@ -127,7 +128,7 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			KeyType:          "sr25519",
 			FinalityProtocol: "Grandpa",
 		}
-	} else if chainType == "cosmos" {
+	} else if chainType == Cosmos {
 		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
 		return HyperspaceRelayerCosmosChainConfig{
 			Type:          chainType,

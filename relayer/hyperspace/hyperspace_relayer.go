@@ -102,7 +102,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 		return err
 	}
 	switch chainType {
-	case "cosmos":
+	case Cosmos:
 		bech32Prefix := cfg.Bech32Prefix
 		config.(*HyperspaceRelayerCosmosChainConfig).Keybase = GenKeyEntry(bech32Prefix, coinType, mnemonic)
 	case "polkadot":

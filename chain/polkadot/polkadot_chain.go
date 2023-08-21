@@ -631,7 +631,7 @@ func NewMnemonic() (string, error) {
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	mnemonic, err := NewMnemonic()
@@ -661,7 +661,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)

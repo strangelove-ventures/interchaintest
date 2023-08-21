@@ -277,11 +277,11 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 // SetPeers modifies the config persistent_peers for a node.
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 	c := make(testutil.Toml)
-	p2p := make(testutil.Toml)
+	peerToPeer := make(testutil.Toml)
 
 	// Set peers
-	p2p["persistent_peers"] = peers
-	c["p2p"] = p2p
+	peerToPeer["persistent_peers"] = peers
+	c["p2p"] = peerToPeer
 
 	return testutil.ModifyTomlConfigFile(
 		ctx,

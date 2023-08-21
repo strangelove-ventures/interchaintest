@@ -12,7 +12,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -104,7 +103,7 @@ func (c *PenumbraChain) Config() ibc.ChainConfig {
 }
 
 // Implements Chain interface.
-func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *dockerclient.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
@@ -327,7 +326,7 @@ func (c *PenumbraChain) NewChainNode(
 func (c *PenumbraChain) initializeChainNodes(
 	ctx context.Context,
 	testName string,
-	cli *client.Client,
+	cli *dockerclient.Client,
 	networkID string,
 ) error {
 	penumbraNodes := []PenumbraNode{}

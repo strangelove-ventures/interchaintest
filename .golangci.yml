@@ -10,7 +10,7 @@ linters:
     - errcheck
     - gci
     - goconst
-    - gocritic
+    #    - gocritic <- suggest eabling later.
     - gofumpt
     - gosec
     - gosimple
@@ -38,6 +38,9 @@ issues:
     - text: 'Use of weak random number generator'
       linters:
         - gosec
+    - text: 'ST1003'
+      linters:
+        - stylecheck
 
   max-issues-per-linter: 10000
   max-same-issues: 10000
@@ -59,11 +62,16 @@ linters-settings:
     # Do NOT whine about the following, full explanation found in:
     # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#description-of-available-rules
     rules:
+      - name: unnecessary-stmt
+        disabled: true
       - name: use-any
         disabled: true
       - name: if-return
         disabled: true
       - name: max-public-structs
+        disabled: true
+      # it may make sense to enable exported later, like in ibc version 8
+      - name: exported
         disabled: true
       - name: var-naming
         disabled: true
@@ -103,14 +111,16 @@ linters-settings:
         disabled: true
       - name: confusing-naming
         disabled: true
+      - name: get-return
+        disabled: true
       - name: defer
         disabled: true
       - name: unhandled-error
         disabled: false
         arguments:
+          - 'h.Write'
           - 'fmt.Printf'
           - 'fmt.Print'
           - 'fmt.Println'
           - 'fmt.Fprint'
           - 'fmt.Fprintf'
-          - 'myFunction'

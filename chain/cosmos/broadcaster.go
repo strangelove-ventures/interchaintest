@@ -138,9 +138,9 @@ func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user User) ([]byte
 
 // UnmarshalTxResponseBytes accepts the sdk.TxResponse bytes and unmarshalls them into an
 // instance of sdk.TxResponse.
-func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
+func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, txResponseBytes []byte) (sdk.TxResponse, error) {
 	resp := sdk.TxResponse{}
-	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
+	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(txResponseBytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
 	return resp, nil
