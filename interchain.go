@@ -8,6 +8,8 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"cosmossdk.io/math"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 )
@@ -352,7 +354,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 			{
 				Address: faucetAddresses[c],
 				Denom:   c.Config().Denom,
-				Amount:  100_000_000_000_000, // Faucet wallet gets 100T units of denom.
+				Amount:  math.NewInt(100_000_000_000_000), // Faucet wallet gets 100T units of denom.
 			},
 		}
 
@@ -367,7 +369,7 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
 			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
-			Amount:  1_000_000_000_000, // Every wallet gets 1t units of denom.
+			Amount:  math.NewInt(1_000_000_000_000), // Every wallet gets 1t units of denom.
 		})
 	}
 

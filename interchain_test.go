@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
+	"cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -18,7 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
@@ -202,6 +204,8 @@ func TestInterchain_CreateUser(t *testing.T) {
 		NetworkID: network,
 	}))
 
+	initBal := math.NewInt(10_000)
+
 	t.Run("with mnemonic", func(t *testing.T) {
 		keyName := "mnemonic-user-name"
 
@@ -221,7 +225,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, mnemonic)
 
-		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, 10000, gaia0)
+		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, initBal.Int64(), gaia0)
 		require.NoError(t, err)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address())
@@ -229,12 +233,12 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, int64(10000), actualBalance)
+		require.True(t, actualBalance.Equal(initBal))
 	})
 
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
-		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, 10000, gaia0)
+		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, initBal.Int64(), gaia0)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address())
@@ -242,7 +246,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, int64(10000), actualBalance)
+		require.True(t, actualBalance.Equal(initBal))
 	})
 }
 
@@ -303,7 +307,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
 
-	sendAmount := int64(10000)
+	sendAmount := math.NewInt(10_000)
 
 	t.Run("relayer starts", func(t *testing.T) {
 		require.NoError(t, r.StartRelayer(ctx, eRep, pathName))
@@ -311,7 +315,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	t.Run("broadcast success", func(t *testing.T) {
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
-		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sdk.NewInt(sendAmount)}
+		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sendAmount}
 		memo := ""
 
 		msg := transfertypes.NewMsgTransfer(
@@ -337,7 +341,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
-		require.Equal(t, sendAmount, dstFinalBalance)
+		require.True(t, dstFinalBalance.Equal(sendAmount))
 	})
 }
 

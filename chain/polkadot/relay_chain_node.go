@@ -17,6 +17,8 @@ import (
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"go.uber.org/zap"
 
+	"cosmossdk.io/math"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 )
@@ -293,6 +295,6 @@ func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount i
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	return GetBalance(p.api, address)
 }

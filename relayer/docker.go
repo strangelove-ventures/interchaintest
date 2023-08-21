@@ -446,6 +446,20 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	return nil
 }
 
+func (r *DockerRelayer) PauseRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerPause(ctx, r.containerLifecycle.ContainerID())
+}
+
+func (r *DockerRelayer) ResumeRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerUnpause(ctx, r.containerLifecycle.ContainerID())
+}
+
 func (r *DockerRelayer) containerImage() ibc.DockerImage {
 	if r.customImage != nil {
 		return *r.customImage

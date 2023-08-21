@@ -243,8 +243,8 @@ func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
 
 func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
 	fmt.Println("[hyperspace] ConfigContent", cfg, keyName, rpcAddr, grpcAddr)
-	HyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
-	bytes, err := toml.Marshal(HyperspaceRelayerChainConfig)
+	hyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+	bytes, err := toml.Marshal(hyperspaceRelayerChainConfig)
 	if err != nil {
 		return nil, err
 	}

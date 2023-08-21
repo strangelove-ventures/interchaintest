@@ -7,9 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/types"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
@@ -79,7 +81,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 	tx, err := c0.SendIBCTransfer(ctx, c0ChannelID, interchaintest.FaucetAccountKeyName, ibc.WalletAmount{
 		Address: c1FaucetAddr,
 		Denom:   c0.Config().Denom,
-		Amount:  txAmount,
+		Amount:  math.NewInt(txAmount),
 	}, ibc.TransferOptions{})
 	req.NoError(err)
 	req.NoError(tx.Validate())

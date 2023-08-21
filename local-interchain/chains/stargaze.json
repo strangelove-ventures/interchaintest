@@ -1,0 +1,49 @@
+{    
+    "chains": [
+        {
+            "name": "stargaze",            
+            "chain_id": "localstars-1",
+            "denom": "ustars",
+            "binary": "starsd",
+            "bech32_prefix": "stars",
+            "docker_image": {                
+                "version": "v10.0.1"
+            },
+            "use_new_genesis_command": false,
+            "gas_prices": "0%DENOM%",
+            "chain_type": "cosmos",
+            "coin_type": 118,
+            "trusting_period": "112h",
+            "gas_adjustment": 2.0,
+            "number_vals": 1,
+            "number_node": 0,          
+            "debugging": true,
+            "block_time": "500ms",
+            "encoding-options": ["wasm"],
+            "genesis": {
+                "modify": [
+                    {
+                        "key": "app_state.gov.voting_params.voting_period",
+                        "value": "15s"
+                    },
+                    {
+                        "key": "app_state.gov.deposit_params.max_deposit_period",
+                        "value": "15s"
+                    },
+                    {
+                        "key": "app_state.gov.deposit_params.min_deposit.0.denom",
+                        "value": "ustars"
+                    }
+                ],     
+                "accounts": [
+                    {
+                        "name": "acc0",
+                        "address": "stars1hj5fveer5cjtn4wd6wstzugjfdxzl0xpjs908j", 
+                        "amount": "10000000000%DENOM%",
+                        "mnemonic": "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+                    }
+                ]               
+            }
+        }
+    ]
+}
