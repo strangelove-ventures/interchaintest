@@ -4,8 +4,3 @@ interchaintest.test
 .idea
 /bin
 vendor
-.DS_Store
-chain/.DS_Store
-examples/.DS_Store
-internal/.DS_Store
-relayer/.DS_Store
