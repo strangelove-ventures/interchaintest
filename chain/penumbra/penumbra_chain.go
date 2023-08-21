@@ -239,7 +239,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
+func (*PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	panic("implement me")
 }
 

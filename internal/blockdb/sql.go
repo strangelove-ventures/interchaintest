@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" //nolint:revive // sqlite driver
 )
 
 // ConnectDB connects to the sqlite database at databasePath.

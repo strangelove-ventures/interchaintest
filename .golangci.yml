@@ -72,8 +72,7 @@ linters-settings:
         disabled: true
       - name: max-public-structs
         disabled: true
-      # it may make sense to enable exported later, like in ibc version 8
-      - name: exported
+      - name: exported # it may make sense to enable exported later, like in ibc version 8
         disabled: true
       - name: var-naming
         disabled: true
@@ -126,5 +125,6 @@ linters-settings:
           - 'fmt.Println'
           - 'fmt.Fprint'
           - 'fmt.Fprintf'
+          - 'fmt.Fprintln'
           - 'listener.Close'
           - 'l.Close'

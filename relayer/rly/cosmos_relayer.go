@@ -324,13 +324,13 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 
 func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
 	var clients ibc.ClientOutputs
-	for _, client := range strings.Split(stdout, "\n") {
-		if strings.TrimSpace(client) == "" {
+	for _, ibcClient := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(ibcClient) == "" {
 			continue
 		}
 
 		var clientOutput ibc.ClientOutput
-		if err := json.Unmarshal([]byte(client), &clientOutput); err != nil {
+		if err := json.Unmarshal([]byte(ibcClient), &clientOutput); err != nil {
 			c.log.Error(
 				"Error parsing client json",
 				zap.Error(err),

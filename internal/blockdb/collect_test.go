@@ -74,7 +74,7 @@ func TestCollector_Collect(t *testing.T) {
 			return nil
 		})
 		eg.Go(func() error {
-			for atomic.LoadInt64(&currentHeight) <= 3 {
+			for atomic.LoadInt64(&currentHeight) <= 3 { //nolint:revive // concerned this empty block does something
 			}
 			cancel()
 			return nil

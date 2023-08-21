@@ -118,6 +118,7 @@ func (f *BuiltinChainFactory) Chains(testName string) ([]ibc.Chain, error) {
 const (
 	defaultNumValidators = 2
 	defaultNumFullNodes  = 1
+	Polkadot             = "polkadot"
 )
 
 func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValidators, numFullNodes *int) (ibc.Chain, error) {
@@ -135,7 +136,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
-	case "polkadot":
+	case Polkadot:
 		// TODO Clean this up. RelayChain config should only reference cfg.Images[0] and parachains should iterate through the remaining
 		// Maybe just pass everything in like NewCosmosChain and NewPenumbraChain, let NewPolkadotChain figure it out
 		// Or parachains and ICS consumer chains maybe should be their own chain

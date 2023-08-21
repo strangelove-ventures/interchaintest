@@ -151,14 +151,14 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 	// Set Log Level to info
 	c[fmt.Sprintf("log%slevel", sep)] = "info"
 
-	p2p := make(testutil.Toml)
+	peerToPeer := make(testutil.Toml)
 
 	// Allow p2p strangeness
-	p2p[fmt.Sprintf("allow%sduplicate%sip", sep, sep)] = true
-	p2p[fmt.Sprintf("addr%sbook%sstrict", sep, sep)] = false
-	p2p[fmt.Sprintf("persistent%speers", sep)] = peers
+	peerToPeer[fmt.Sprintf("allow%sduplicate%sip", sep, sep)] = true
+	peerToPeer[fmt.Sprintf("addr%sbook%sstrict", sep, sep)] = false
+	peerToPeer[fmt.Sprintf("persistent%speers", sep)] = peers
 
-	c["p2p"] = p2p
+	c["p2p"] = peerToPeer
 
 	consensus := make(testutil.Toml)
 

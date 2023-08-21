@@ -577,7 +577,7 @@ func CondenseMoniker(m string) string {
 	// less of the middle will be truncated to fit in the character limit.
 	// It's also non-cryptographic, not that this function will ever be a bottleneck in tests.
 	h := fnv.New32()
-	h.Write([]byte(m))
+	h.Write([]byte(m)) //nolint:revive // no need to handle this error
 	suffix := "-" + strconv.FormatUint(uint64(h.Sum32()), 36)
 
 	wantLen := stakingtypes.MaxMonikerLength - len(suffix)

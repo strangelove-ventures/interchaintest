@@ -39,7 +39,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 		}
 
 		var fileBuff bytes.Buffer
-		if _, err := io.Copy(&fileBuff, tr); err != nil {
+		if _, err := io.Copy(&fileBuff, tr); err != nil { //nolint:gosec // "potential DoS via decompression bomb (does not seem relevant in this context)"
 			return nil, err
 		}
 

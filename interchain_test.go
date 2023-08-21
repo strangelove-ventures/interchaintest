@@ -86,14 +86,15 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 }
 
 func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) {
-	getRelayerWalletsTest(t, ibc.CosmosRly)
+	relayerWalletsTest(t, ibc.CosmosRly)
 }
 
 func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) {
-	getRelayerWalletsTest(t, ibc.Hermes)
+	relayerWalletsTest(t, ibc.Hermes)
 }
 
-func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+func relayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}

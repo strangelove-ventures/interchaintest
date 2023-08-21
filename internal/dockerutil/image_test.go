@@ -52,8 +52,8 @@ func TestImage_Run(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	client, networkID := DockerSetup(t)
-	image := NewImage(zap.NewNop(), client, networkID, t.Name(), testDockerImage, testDockerTag)
+	dockerclient, networkID := DockerSetup(t)
+	image := NewImage(zap.NewNop(), dockerclient, networkID, t.Name(), testDockerImage, testDockerTag)
 
 	t.Run("happy path", func(t *testing.T) {
 		res := image.Run(ctx, []string{"echo", "-n", "hello"}, ContainerOptions{})
@@ -69,7 +69,7 @@ func TestImage_Run(t *testing.T) {
 echo -n hi from stderr >> /dev/stderr
 `
 		tmpDir := t.TempDir()
-		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0o777)
+		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0o777) //nolint:gosec // things break if we reduce permissions here
 		require.NoError(t, err)
 
 		opts := ContainerOptions{

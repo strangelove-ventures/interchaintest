@@ -21,7 +21,7 @@ type transactions []Tx
 func (txs transactions) Hash() []byte {
 	h := fnv.New32()
 	for _, tx := range txs {
-		h.Write(tx.Data)
+		h.Write(tx.Data) //nolint:revive // don't handle this error
 	}
 	return h.Sum(nil)
 }
