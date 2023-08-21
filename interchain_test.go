@@ -35,6 +35,7 @@ func TestInterchain_DuplicateChain_HermesRelayer(t *testing.T) {
 }
 
 func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -254,6 +255,7 @@ func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) {
 }
 
 func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -451,6 +453,7 @@ func TestInterchain_AddNil(t *testing.T) {
 }
 
 func assertTransactionIsValid(t *testing.T, resp sdk.TxResponse) {
+	t.Helper()
 	require.NotNil(t, resp)
 	require.NotEqual(t, 0, resp.GasUsed)
 	require.NotEqual(t, 0, resp.GasWanted)

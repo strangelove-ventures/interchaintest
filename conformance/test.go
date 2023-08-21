@@ -135,6 +135,7 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	channels []ibc.ChannelOutput,
 	timeout *ibc.IBCTimeout,
 ) {
+	t.Helper()
 	srcChainCfg := srcChain.Config()
 	srcUser := testCase.Users[0]
 
@@ -394,6 +395,7 @@ func testPacketRelaySuccess(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	t.Helper()
 	req := require.New(rep.TestifyT(t))
 
 	srcChainCfg := srcChain.Config()
@@ -474,6 +476,7 @@ func testPacketRelayFail(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	t.Helper()
 	req := require.New(rep.TestifyT(t))
 
 	srcChainCfg := srcChain.Config()

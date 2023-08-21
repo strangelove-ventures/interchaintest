@@ -49,6 +49,7 @@ func GetAndFundTestUsers(
 	amount int64,
 	chains ...ibc.Chain,
 ) []ibc.Wallet {
+	t.Helper()
 	users := make([]ibc.Wallet, len(chains))
 	var eg errgroup.Group
 	for i, chain := range chains {

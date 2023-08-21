@@ -129,10 +129,10 @@ func (p *RelayChainNode) MultiAddress() (string, error) {
 	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
 }
 
-func (c *RelayChainNode) logger() *zap.Logger {
-	return c.log.With(
-		zap.String("chain_id", c.Chain.Config().ChainID),
-		zap.String("test", c.TestName),
+func (p *RelayChainNode) logger() *zap.Logger {
+	return p.log.With(
+		zap.String("chain_id", p.Chain.Config().ChainID),
+		zap.String("test", p.TestName),
 	)
 }
 

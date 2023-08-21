@@ -189,11 +189,10 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			default:
 				return nil, fmt.Errorf("unexpected parachain: %s", s.Name)
 			}
-		} else {
+
 			// Ensure there are at least two images and check the 2nd version is populated
-			if len(s.ChainConfig.Images) < 2 || s.ChainConfig.Images[1].Version == "" {
-				return nil, fmt.Errorf("ChainCongfig.Images must be >1 and ChainConfig.Images[1].Version must not be empty")
-			}
+		} else if len(s.ChainConfig.Images) < 2 || s.ChainConfig.Images[1].Version == "" {
+			return nil, fmt.Errorf("ChainCongfig.Images must be >1 and ChainConfig.Images[1].Version must not be empty")
 		}
 	}
 
