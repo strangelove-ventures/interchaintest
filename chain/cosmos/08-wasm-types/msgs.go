@@ -6,7 +6,7 @@ import (
 
 var _ sdk.Msg = &MsgStoreCode{}
 
-func (m MsgStoreCode) ValidateBasic() error {
+func (MsgStoreCode) ValidateBasic() error {
 	return nil
 }
 

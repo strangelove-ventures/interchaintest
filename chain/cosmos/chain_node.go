@@ -755,7 +755,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	return res.CodeInfos[0].CodeID, nil
 }
 
-func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
+func (*ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
 	err := retry.Do(func() error {
@@ -887,12 +887,12 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
 	// Write msg to container
 	file := "proposal.json"
-	propJson, err := json.MarshalIndent(prop, "", " ")
+	propJSON, err := json.MarshalIndent(prop, "", " ")
 	if err != nil {
 		return "", err
 	}
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJSON); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 

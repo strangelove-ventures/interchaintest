@@ -14,7 +14,6 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -242,7 +241,7 @@ func (c *PolkadotChain) NewParachainNode(
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
 // Implements Chain interface.
-func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *dockerclient.Client, networkID string) error {
 	relayChainNodes := []*RelayChainNode{}
 	chainCfg := c.Config()
 	images := []ibc.DockerImage{}

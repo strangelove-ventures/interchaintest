@@ -21,7 +21,7 @@ type RelayerOptionHomeDir struct {
 	HomeDir string
 }
 
-func (r RelayerOptionHomeDir) relayerOption() {}
+func (RelayerOptionHomeDir) relayerOption() {}
 
 // CustomDockerImage overrides the default relayer docker image.
 // uidGid is the uid:gid format owner that should be used within the container.
@@ -52,7 +52,7 @@ func ImagePull(pull bool) RelayerOption {
 	}
 }
 
-func (opt RelayerOptionImagePull) relayerOption() {}
+func (RelayerOptionImagePull) relayerOption() {}
 
 type RelayerOptionExtraStartFlags struct {
 	Flags []string
