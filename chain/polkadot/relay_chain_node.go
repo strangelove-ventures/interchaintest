@@ -245,9 +245,9 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	p.hostWsPort, p.hostRpcPort = hostPorts[0], hostPorts[1]
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
-	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+	explorerURL := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
-	p.log.Info(explorerUrl, zap.String("container", p.Name()))
+	p.log.Info(explorerURL, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error

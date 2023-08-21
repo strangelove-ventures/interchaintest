@@ -140,11 +140,11 @@ func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
 	return cmd
 }
 
-func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+func (commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
 }
 
-func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+func (commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
 	// TODO: figure out how to implement this.
 	panic("implement me")
 }
@@ -152,55 +152,55 @@ func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter
 // the following methods do not have a single command that cleanly maps to a single hermes command without
 // additional logic wrapping them. They have been implemented one layer up in the hermes relayer.
 
-func (c commander) UpdateClients(pathName, homeDir string) []string {
+func (commander) UpdateClients(pathName, homeDir string) []string {
 	panic("update clients implemented in hermes relayer not the commander")
 }
 
-func (c commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+func (commander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
 	panic("generate path implemented in hermes relayer not the commander")
 }
 
-func (c commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string {
+func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) []string {
 	panic("link path implemented in hermes relayer not the commander")
 }
 
-func (c commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
+func (commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
 	panic("restore key implemented in hermes relayer not the commander")
 }
 
-func (c commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
+func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	panic("add chain configuration implemented in hermes relayer not the commander")
 }
 
-func (c commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
+func (commander) AddKey(chainID, keyName, coinType, homeDir string) []string {
 	panic("add key implemented in hermes relayer not the commander")
 }
 
-func (c commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
+func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
 	panic("create channel implemented in hermes relayer not the commander")
 }
 
-func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	panic("create clients implemented in hermes relayer not the commander")
 }
 
-func (c commander) CreateConnections(pathName string, homeDir string) []string {
+func (commander) CreateConnections(pathName string, homeDir string) []string {
 	panic("create connections implemented in hermes relayer not the commander")
 }
 
-func (c commander) Flush(pathName, channelID, homeDir string) []string {
+func (commander) Flush(pathName, channelID, homeDir string) []string {
 	panic("flush implemented in hermes relayer not the commander")
 }
 
-func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
 	panic("config content implemented in hermes relayer not the commander")
 }
 
-func (c commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
+func (commander) ParseAddKeyOutput(stdout, stderr string) (ibc.Wallet, error) {
 	panic("add key implemented in Hermes Relayer")
 }
 
 // ParseRestoreKeyOutput extracts the address from the hermes output.
-func (c commander) ParseRestoreKeyOutput(stdout, stderr string) string {
+func (commander) ParseRestoreKeyOutput(stdout, stderr string) string {
 	panic("implemented in Hermes Relayer")
 }

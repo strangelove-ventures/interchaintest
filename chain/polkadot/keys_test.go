@@ -23,8 +23,8 @@ func TestNodeKeyPeerID(t *testing.T) {
 
 	id, err := peer.IDFromPrivateKey(privKey)
 	require.NoError(t, err, "error getting peer id from private key")
-	peerId := id.String()
-	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerId)
+	peerID := id.String()
+	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerID)
 }
 
 func Test_DeriveEd25519FromName(t *testing.T) {
