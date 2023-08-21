@@ -3,7 +3,7 @@ module github.com/strangelove-ventures/interchaintest/v7
 go 1.19
 
 require (
-	cosmossdk.io/math v1.0.1
+	cosmossdk.io/math v1.1.1
 	github.com/99designs/keyring v1.2.2
 	github.com/BurntSushi/toml v1.3.2
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
