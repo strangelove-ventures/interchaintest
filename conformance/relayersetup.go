@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	conntypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/cosmos/ibc-go/v7/modules/core/exported"
+	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
@@ -98,7 +99,11 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		conns0, err := r.GetConnections(ctx, eRep, c0.Config().ChainID)
 		req.NoError(err)
 
-		req.Len(conns0, 1)
+		req.True(len(conns0) == 1 || len(conns0) == 2)
+		if len(conns0) == 2 {
+			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
+			req.Equal(conns0[1].ID, exported.LocalhostConnectionID)
+		}
 		conn0 := conns0[0]
 		req.NotEmpty(conn0.ID)
 		req.NotEmpty(conn0.ClientID)
@@ -107,7 +112,11 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		conns1, err := r.GetConnections(ctx, eRep, c1.Config().ChainID)
 		req.NoError(err)
 
-		req.Len(conns1, 1)
+		req.True(len(conns1) == 1 || len(conns1) == 2)
+		if len(conns1) == 2 {
+			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
+			req.Equal(conns1[1].ID, exported.LocalhostConnectionID)
+		}
 		conn1 := conns1[0]
 		req.NotEmpty(conn1.ID)
 		req.NotEmpty(conn1.ClientID)
