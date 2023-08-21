@@ -69,7 +69,7 @@ func (pn *ParachainNode) Bind() []string {
 
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
-func (pn *ParachainNode) NodeHome() string {
+func (*ParachainNode) NodeHome() string {
 	return "/home/heighliner"
 }
 

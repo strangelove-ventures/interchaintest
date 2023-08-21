@@ -43,7 +43,7 @@ func (msg CosmosMessage) Channels() string {
 	)
 }
 
-func (msg CosmosMessage) srcCounterpartyPair(source, counterparty string) string {
+func (CosmosMessage) srcCounterpartyPair(source, counterparty string) string {
 	if source != "" {
 		source += " (source)"
 	}

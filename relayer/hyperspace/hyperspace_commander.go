@@ -42,7 +42,7 @@ func (hyperspaceCommander) DockerUser() string {
 	return "1000:1000" // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
-func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
+func (*hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
 
 	return []string{

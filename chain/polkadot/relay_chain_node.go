@@ -85,7 +85,7 @@ func (p *RelayChainNode) Bind() []string {
 
 // NodeHome returns the working directory within the docker image,
 // the path where the docker volume is mounted.
-func (p *RelayChainNode) NodeHome() string {
+func (*RelayChainNode) NodeHome() string {
 	return "/home/heighliner"
 }
 

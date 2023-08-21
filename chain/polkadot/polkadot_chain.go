@@ -548,9 +548,9 @@ func (c *PolkadotChain) GetRPCAddress() string {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
 	relaychainHostName := c.RelayChainNodes[0].HostName()
-	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
-	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
-	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
+	parachainURL := fmt.Sprintf("http://%s:%s", parachainHostName, port)
+	relaychainURL := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
+	return fmt.Sprintf("%s,%s", parachainURL, relaychainURL)
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
@@ -601,14 +601,14 @@ func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
 
 // ExportState exports the chain state at specific height.
 // Implements Chain interface.
-func (c *PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
+func (*PolkadotChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("[ExportState] not implemented yet")
 }
 
 // HomeDir is the home directory of a node running in a docker container. Therefore, this maps to
 // the container's filesystem (not the host).
 // Implements Chain interface.
-func (c *PolkadotChain) HomeDir() string {
+func (*PolkadotChain) HomeDir() string {
 	panic("[HomeDir] not implemented yet")
 }
 
@@ -804,19 +804,19 @@ type AccountInfo struct {
 
 // GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
 // Implements Chain interface.
-func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
+func (*PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	panic("[GetGasFeesInNativeDenom] not implemented yet")
 }
 
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (*PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	panic("[Acknowledgements] not implemented yet")
 }
 
 // Timeouts returns all timeouts in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (*PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("[Timeouts] not implemented yet")
 }
 
@@ -837,7 +837,7 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 }
 
 // FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit).
-func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (*PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
 	return []blockdb.Tx{}, nil
 }
 

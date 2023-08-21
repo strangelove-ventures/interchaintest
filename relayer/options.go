@@ -40,7 +40,7 @@ func HomeDir(homeDir string) RelayerOption {
 	return RelayerOptionHomeDir{HomeDir: homeDir}
 }
 
-func (opt RelayerOptionDockerImage) relayerOption() {}
+func (RelayerOptionDockerImage) relayerOption() {}
 
 type RelayerOptionImagePull struct {
 	Pull bool
@@ -65,4 +65,4 @@ func StartupFlags(flags ...string) RelayerOption {
 	}
 }
 
-func (opt RelayerOptionExtraStartFlags) relayerOption() {}
+func (RelayerOptionExtraStartFlags) relayerOption() {}

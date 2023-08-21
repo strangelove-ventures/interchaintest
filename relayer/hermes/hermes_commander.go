@@ -20,23 +20,23 @@ type commander struct {
 	extraStartFlags []string
 }
 
-func (c commander) Name() string {
+func (commander) Name() string {
 	return hermes
 }
 
-func (c commander) DefaultContainerImage() string {
+func (commander) DefaultContainerImage() string {
 	return defaultContainerImage
 }
 
-func (c commander) DefaultContainerVersion() string {
+func (commander) DefaultContainerVersion() string {
 	return DefaultContainerVersion
 }
 
-func (c commander) DockerUser() string {
+func (commander) DockerUser() string {
 	return hermesDefaultUidGid
 }
 
-func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
+func (commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
 	jsonBz := extractJsonResult([]byte(stdout))
 	var result ChannelOutputResult
 	if err := json.Unmarshal(jsonBz, &result); err != nil {
@@ -62,7 +62,7 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 	return ibcChannelOutput, nil
 }
 
-func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
+func (commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
 	jsonBz := extractJsonResult([]byte(stdout))
 	var queryResult ConnectionQueryResult
 	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
@@ -96,7 +96,7 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 	return outputs, nil
 }
 
-func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
+func (commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
 	jsonBz := extractJsonResult([]byte(stdout))
 	var queryResult ClientQueryResult
 	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
@@ -116,21 +116,21 @@ func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutpu
 	return clientOutputs, nil
 }
 
-func (c commander) Init(homeDir string) []string {
+func (commander) Init(homeDir string) []string {
 	return nil
 }
 
-func (c commander) GetChannels(chainID, homeDir string) []string {
+func (commander) GetChannels(chainID, homeDir string) []string {
 	// the --verbose and --show-counterparty options are required to get enough information to correctly populate
 	// the path.
 	return []string{hermes, "--json", "query", "channels", "--chain", chainID, "--show-counterparty", "--verbose"}
 }
 
-func (c commander) GetConnections(chainID, homeDir string) []string {
+func (commander) GetConnections(chainID, homeDir string) []string {
 	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "--json", "query", "connections", "--chain", chainID, "--verbose"}
 }
 
-func (c commander) GetClients(chainID, homeDir string) []string {
+func (commander) GetClients(chainID, homeDir string) []string {
 	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "--json", "query", "clients", "--host-chain", chainID}
 }
 

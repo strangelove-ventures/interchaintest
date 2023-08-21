@@ -60,7 +60,7 @@ func (p *PenumbraAppNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.HomeDir())}
 }
 
-func (p *PenumbraAppNode) HomeDir() string {
+func (*PenumbraAppNode) HomeDir() string {
 	return "/home/heighliner"
 }
 
@@ -195,11 +195,11 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 	return "", errors.New("address not found")
 }
 
-func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+func (*PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return errors.New("not yet implemented")
 }
 
-func (p *PenumbraAppNode) SendIBCTransfer(
+func (*PenumbraAppNode) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
 	keyName string,

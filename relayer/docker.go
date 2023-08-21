@@ -490,11 +490,11 @@ func (r *DockerRelayer) HostName(pathName string) string {
 	return dockerutil.CondenseHostName(fmt.Sprintf("%s-%s", r.c.Name(), pathName))
 }
 
-func (r *DockerRelayer) UseDockerNetwork() bool {
+func (*DockerRelayer) UseDockerNetwork() bool {
 	return true
 }
 
-func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+func (*DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
 	panic("[rly/SetClientContractHash] Implement me")
 }
 

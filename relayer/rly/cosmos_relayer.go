@@ -351,6 +351,6 @@ func (commander) Init(homeDir string) []string {
 	}
 }
 
-func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
+func (commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
 }

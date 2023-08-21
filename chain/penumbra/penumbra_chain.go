@@ -90,11 +90,11 @@ func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 	}
 }
 
-func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (*PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
-func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (*PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
@@ -144,7 +144,7 @@ func (c *PenumbraChain) GetHostGRPCAddress() string {
 	return c.getRelayerNode().PenumbraAppNode.hostGRPCPort
 }
 
-func (c *PenumbraChain) HomeDir() string {
+func (*PenumbraChain) HomeDir() string {
 	panic(errors.New("HomeDir not implemented yet"))
 }
 
@@ -229,7 +229,7 @@ func (c *PenumbraChain) SendIBCTransfer(
 }
 
 // Implements Chain interface.
-func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
+func (*PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
 
@@ -238,7 +238,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface.
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (*PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
 	panic("implement me")
 }
 
