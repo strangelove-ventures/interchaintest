@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
+	"go.uber.org/zap"
+
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/conformance"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -21,7 +23,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/internal/version"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"go.uber.org/zap"
 )
 
 func init() {

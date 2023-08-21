@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
 )
 
 func TestT_Name(t *testing.T) {

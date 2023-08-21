@@ -9,18 +9,20 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
+	"github.com/hashicorp/go-version"
+	"go.uber.org/zap"
+
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/p2p"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
-	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
-	"github.com/hashicorp/go-version"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"go.uber.org/zap"
 )
 
 // TendermintNode represents a node in the test network that is being created.

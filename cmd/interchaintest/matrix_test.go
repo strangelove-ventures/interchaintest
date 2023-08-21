@@ -1,13 +1,15 @@
 package interchaintest_test
 
 import (
-	_ "embed"
 	"encoding/json"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	_ "embed"
+
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 )
 
 // Embed the matrix files as strings since they aren't intended to be changed.

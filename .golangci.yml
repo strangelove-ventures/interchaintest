@@ -1,110 +1,110 @@
-# Options for analysis running.
 run:
-  # The default concurrency value is the number of available CPU.
-  concurrency: 4
-  # Timeout for analysis, e.g. 30s, 5m.
-  # Default: 1m
-  timeout: 10m
-  # Exit code when at least one issue was found.
-  # Default: 1
   tests: true
-  # List of build tags, all linters use it.
-  # Default: [].
-  allow-parallel-runners: true
-
-# output configuration options
-output:
-  # Format: colored-line-number|line-number|json|colored-tab|tab|checkstyle|code-climate|junit-xml|github-actions|teamcity
-  #
-  # Multiple can be specified by separating them by comma, output can be provided
-  # for each of them by separating format name and path by colon symbol.
-  # Output path can be either `stdout`, `stderr` or path to the file to write to.
-  # Example: "checkstyle:report.xml,json:stdout,colored-line-number"
-  #
-  # Default: colored-line-number
-  format: colored-line-number
-  # Print lines of code with issue.
-  # Default: true
-  print-issued-lines: true
-  # Print linter name in the end of issue text.
-  # Default: true
-  print-linter-name: true
-  # Make issues output unique by line.
-  # Default: true
-  uniq-by-line: true
-  # Sort results by: filepath, line and column.
-  sort-results: true
+  #   # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
 
 linters:
-  # Disable all linters.
-  # Default: false
   disable-all: true
-  # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - containedctx
-    - contextcheck
-    - decorder
-    - depguard
-    - dogsled
-    - dupl
-    - dupword
-    - durationcheck
+    - exportloopref
     - errcheck
-    - errchkjson
-    - errname
-    - errorlint
-    - forcetypeassert
-    - funlen
     - gci
-    - ginkgolinter
-    - gocognit
     - goconst
     - gocritic
-    - godot
-    - godox
     - gofumpt
-    - goprintffuncname
     - gosec
     - gosimple
     - govet
-    - importas
     - ineffassign
-    - interfacebloat
-    - loggercheck
-    - maintidx
-    - makezero
-    - mirror
     - misspell
-    - musttag
     - nakedret
-    - nestif
-    - nilerr
-    - nilnil
-    - nolintlint
-    - nosprintfhostport
-    - paralleltest
-    - promlinter
-    - reassign
-    - revive
-    - rowserrcheck
-    - sqlclosecheck
     - staticcheck
-    - stylecheck
-    - tagalign
-    - tenv
     - thelper
     - typecheck
+    - stylecheck
+    - revive
+    - typecheck
+    - tenv
     - unconvert
-    - unparam
     - unused
-    - usestdlibvars
-    - varnamelen
-    - wastedassign
-    - whitespace
-    - wrapcheck
-    - zerologlint
+    - unparam
+    - misspell
+
+issues:
+  exclude-rules:
+    - text: 'differs only by capitalization to method'
+      linters:
+        - revive
+    - text: 'Use of weak random number generator'
+      linters:
+        - gosec
+
+  max-issues-per-linter: 10000
+  max-same-issues: 10000
+
+linters-settings:
+  gci:
+    sections:
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+      - blank # blank imports
+      - dot # dot imports
+      - prefix(cosmossdk.io)
+      - prefix(github.com/cosmos/cosmos-sdk)
+      - prefix(github.com/cometbft/cometbft)
+      - prefix(github.com/strangelove-ventures/interchaintest)
+    custom-order: true
+  revive:
+    enable-all-rules: true
+    # Do NOT whine about the following, full explanation found in:
+    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#description-of-available-rules
+    rules:
+      - name: use-any
+        disabled: true
+      - name: if-return
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+      - name: argument-limit
+        disabled: true
+      - name: cyclomatic
+        disabled: true
+      - name: file-header
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: function-result-limit
+        disabled: true
+      - name: line-length-limit
+        disabled: true
+      - name: flag-parameter
+        disabled: true
+      - name: add-constant
+        disabled: true
+      - name: empty-lines
+        disabled: true
+      - name: banned-characters
+        disabled: true
+      - name: deep-exit
+        disabled: true
+      - name: confusing-results
+        disabled: true
+      - name: unused-parameter
+        disabled: true
+      - name: modifies-value-receiver
+        disabled: true
+      - name: early-return
+        disabled: true
+      - name: confusing-naming
+        disabled: true
+      - name: defer
+        disabled: true
+      - name: unhandled-error
+        disabled: false
+        arguments:
+          - 'fmt.Printf'
+          - 'fmt.Print'
+          - 'fmt.Println'
+          - 'myFunction'

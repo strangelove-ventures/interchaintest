@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 )
 
 func TestTx(t *testing.T) {

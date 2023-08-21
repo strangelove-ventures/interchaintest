@@ -10,9 +10,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"go.uber.org/zap"
 )
 
 const (

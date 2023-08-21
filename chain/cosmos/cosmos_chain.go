@@ -13,6 +13,16 @@ import (
 	"strings"
 	"sync"
 
+	cosmosproto "github.com/cosmos/gogoproto/proto"
+	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	dockertypes "github.com/docker/docker/api/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
+	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -23,21 +33,13 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	cosmosproto "github.com/cosmos/gogoproto/proto"
-	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	dockertypes "github.com/docker/docker/api/types"
-	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
+
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.

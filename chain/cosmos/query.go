@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	tmtypes "github.com/cometbft/cometbft/rpc/core/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	tmtypes "github.com/cometbft/cometbft/rpc/core/types"
 )
 
 type blockClient interface {

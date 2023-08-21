@@ -2,13 +2,14 @@ package blockdb
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	_ "embed"
 )
 
 //go:embed testdata/sample_txs.json

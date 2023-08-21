@@ -12,8 +12,9 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
 type ContainerLifecycle struct {

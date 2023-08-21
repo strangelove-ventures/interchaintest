@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"go.uber.org/zap"
 )
 
 const (

@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 )
 
 func TestTestCase(t *testing.T) {

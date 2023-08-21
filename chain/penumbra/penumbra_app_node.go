@@ -10,9 +10,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"go.uber.org/zap"
 )
 
 type PenumbraAppNode struct {

@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTempDir_Cleanup(t *testing.T) {

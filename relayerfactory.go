@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer/rly"
-	"go.uber.org/zap"
 )
 
 // RelayerFactory describes how to start a Relayer.

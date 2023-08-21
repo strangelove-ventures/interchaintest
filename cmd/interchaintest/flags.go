@@ -6,9 +6,10 @@ import (
 	"os"
 	"time"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 )
 
 // The value of the extra flags this test supports.

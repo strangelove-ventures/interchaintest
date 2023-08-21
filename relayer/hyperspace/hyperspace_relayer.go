@@ -9,9 +9,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"go.uber.org/zap"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}

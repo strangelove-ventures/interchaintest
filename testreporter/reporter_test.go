@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"github.com/stretchr/testify/require"
 )
 
 // nopCloser wraps an io.Writer to provide a Close method that always returns nil.

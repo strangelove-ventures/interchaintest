@@ -11,7 +11,6 @@ import (
 
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -21,11 +20,14 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 // Increase polkadot wallet amount due to their additional precision.

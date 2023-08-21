@@ -1,18 +1,20 @@
 package interchaintest
 
 import (
-	_ "embed"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+
+	_ "embed"
+
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
 
 // ChainFactory describes how to get chains for tests.

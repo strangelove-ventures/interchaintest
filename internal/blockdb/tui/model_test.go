@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 )
 
 func TestModel_RootView(t *testing.T) {
