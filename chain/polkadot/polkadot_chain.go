@@ -3,7 +3,6 @@ package polkadot
 import (
 	"context"
 	"crypto/rand"
-	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -111,7 +110,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 		return nil, err
 	}
 
-	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("error generating node key: %w", err)
 	}
@@ -192,7 +191,7 @@ func (c *PolkadotChain) NewParachainNode(
 	testName string,
 	parachainConfig ParachainConfig,
 ) (*ParachainNode, error) {
-	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("error generating node key: %w", err)
 	}
@@ -359,7 +358,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("sudo", "key")...); err != nil {
 		return fmt.Errorf("error setting sudo key: %w", err)
 	}
-	/*if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoGrandpa", "owner")...); err != nil {
+	/* if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeRococoGrandpa", "owner")...); err != nil {
 		return fmt.Errorf("error setting bridgeRococoGrandpa owner: %w", err)
 	}
 	if err := dyno.Set(chainSpec, sudoAddress, runtimeGenesisPath("bridgeWococoGrandpa", "owner")...); err != nil {

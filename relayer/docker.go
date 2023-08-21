@@ -146,11 +146,11 @@ func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath str
 // relative to the home directory in the relayer container.
 func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath string) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(r.log, r.client, r.testName)
-	bytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
+	fileBytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve %s: %w", relativePath, err)
 	}
-	return bytes, nil
+	return fileBytes, nil
 }
 
 // Modify a toml config file in relayer home directory.

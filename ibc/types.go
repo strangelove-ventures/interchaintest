@@ -75,7 +75,6 @@ func (c ChainConfig) VerifyCoinType() (string, error) {
 		return "", err
 	}
 	return c.CoinType, nil
-
 }
 
 func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
