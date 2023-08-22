@@ -239,7 +239,8 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 		return []byte{}, errors.New("address not found")
 	}
 
-	return stdout, nil
+	addr := strings.TrimSpace(string(stdout))
+	return []byte(addr), nil
 
 	//addresses := strings.Split(string(stdout), "\n")
 	//for _, address := range addresses {

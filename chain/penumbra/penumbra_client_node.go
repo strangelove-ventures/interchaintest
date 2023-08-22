@@ -133,6 +133,7 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
+	fmt.Println("In client.SendFunds call")
 	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -142,8 +143,9 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	hi, lo := translateBigInt(amount.Amount)
 
 	// 5.1. Generate a transaction plan sending funds to an address.
+	fmt.Println("Building TransactionPlannerRequest")
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		//XAccountGroupId: nil,
+		AccountGroupId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &cryptov1alpha1.Value{
 				Amount: &cryptov1alpha1.Amount{
@@ -158,46 +160,57 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 
+	fmt.Println("Submitting TransactionPlannerRequest")
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Received response from TransactionPlanner call")
 
 	// 5.2. Get authorization data for the transaction from pclientd (signing).
-	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 
+	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+	fmt.Println("Building AuthorizeRequest")
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
-		Plan: resp.Plan,
-		//AccountGroupId:    nil,
-		//PreAuthorizations: nil,
+		Plan:              resp.Plan,
+		AccountGroupId:    nil,
+		PreAuthorizations: nil,
 	}
 
+	fmt.Println("Submitting AuthorizeRequest")
 	authData, err := custodyClient.Authorize(ctx, authorizeReq)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Received response from AuthorizeRequest call")
 
 	// 5.3. Have pclientd build and sign the planned transaction.
+	fmt.Println("Building WitnessAndBuildRequest")
 	wbr := &viewv1alpha1.WitnessAndBuildRequest{
 		TransactionPlan:   resp.Plan,
 		AuthorizationData: authData.Data,
 	}
 
+	fmt.Println("Submitting WitnessAndBuildRequest")
 	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Received response from WitnessAndBuild call")
 
 	// 5.4. Have pclientd broadcast and await confirmation of the built transaction.
+	fmt.Println("Building BroadcastTxRequest")
 	btr := &viewv1alpha1.BroadcastTransactionRequest{
 		Transaction:    tx.Transaction,
 		AwaitDetection: true,
 	}
 
+	fmt.Println("Submitting BroadcastTxRequest")
 	_, err = viewClient.BroadcastTransaction(ctx, btr)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Received response from BroadcastTx call")
 
 	return nil
 }

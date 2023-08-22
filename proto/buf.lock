@@ -9,8 +9,8 @@ deps:
   - remote: buf.build
     owner: cosmos
     repository: cosmos-sdk
-    commit: 2bbc9f7c8a454d5d8e8614964b0bbbbb
-    digest: shake256:5b6705f306ea63e36dc5fdfea32b6507c025e4fafaeb884ec643ecee19ebf16be3aedecd45f61c9b48c3cd47fd99027bde2d98ee250d289a2b627aa12bf154ac
+    commit: e7a85cef453e4b999ad9aff8714ae05f
+    digest: shake256:bc5f340b60991981d8aabefcc9c706780e25fa0d3ab7e1d9a3e75559f45c80038a913d05aa51928ad8dfebeee75feea1dc6e0e7a6311302e60c42fb3596ee262
   - remote: buf.build
     owner: cosmos
     repository: gogo-proto
@@ -19,8 +19,8 @@ deps:
   - remote: buf.build
     owner: cosmos
     repository: ibc
-    commit: fbb44f5ad3194450af479a615fa715d9
-    digest: shake256:3fbf41c96089017ebf3b5143f78de0d531f604cb11da1bc98b2104eb6dd295b8a49f5f35c60b8389ba50bfa08959da905109324099e75ece9afd8e4087b14019
+    commit: f559baa46fdb47b3b9fb206dec05da1d
+    digest: shake256:712055a221430dd12ce858885c592b57e0e301dc1ed9c7d35e5e0fff8fef74499116dc2ba5f71ca6896576763c5f970bc3e970b025c7d17067d8d6a3f3b821b5
   - remote: buf.build
     owner: cosmos
     repository: ics23
@@ -34,5 +34,5 @@ deps:
   - remote: buf.build
     owner: penumbra-zone
     repository: penumbra
-    commit: d95955c6a19a4aa7914f7819e56a1150
-    digest: shake256:dfd6d6626aefc960c1dfd836cf6f33e61b160751761653ecdc76d65895e38a7c5643ab4e595ec8a8efce79c450e964530dfed433a8e9d4f85ea1d93ff65730c9
+    commit: 31b3d5da27fa45959254eb4af1ca6697
+    digest: shake256:966a0745338232905405b8b572ae5655d97d79e69b30350d7caf2e044ba6f7c4a1f5e9a5fa5bbe4305ce1e66d74647f42400c4b6d92fa57afff691e9b52c6f8a
