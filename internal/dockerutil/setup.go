@@ -92,6 +92,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
+		showFailedLogging := os.Getenv("SHOW_FAILED_LOGGING") != ""
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
 		ctx := context.TODO()
 		cli.NegotiateAPIVersion(ctx)
@@ -131,7 +132,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			}
 			cancel()
 
-			if t.Failed() || showContainerLogs {
+			if (showFailedLogging && t.Failed()) || showContainerLogs {
 				logTail := "50"
 				if containerLogTail != "" {
 					logTail = containerLogTail
