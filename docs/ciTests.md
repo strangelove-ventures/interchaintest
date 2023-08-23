@@ -1,11 +1,16 @@
-# Integrate E2E Tests Locally and in GitHub Action
+# Integrate E2E Tests Locally + in GitHub Actions
+
+**TOC:**
+[Build Locally](#building-locally)
+[Setup GitHub Action](#github-e2e-workflow-for-prs)
+[Integrate into Tests](#integrate-docker-name-and-tag-into-tests)
+
 
 ### Goal:
 
 Seamlessly build and test current iterations of your chain both locally and within GitHubs continuous integration (CI) pipeline.
 
-Example workflow accomplished from this guide:
-
+### Example workflow accomplished from this guide:
 
 1. Chain code altered
 2. Dev runs `make local-image` -> builds current iteration of chain inside docker image
@@ -17,7 +22,7 @@ Example workflow accomplished from this guide:
 
 ### Setup
 
-We recommend creating a separate directory in your chain's repo and importing `interchaintest` as its own module. This will allow you to keep the extra imports needed for `interchaintest` separate from your chain.
+We recommend creating a separate directory in your chain's repo and importing interchaintest as its own module. This will allow you to keep the extra imports needed for `interchaintest` separate from your chain.
 
 See [`noble`](https://github.com/strangelove-ventures/noble) chains `interchaintest` [folder](https://github.com/strangelove-ventures/noble/tree/main/interchaintest) as an example.
 
@@ -32,7 +37,7 @@ The noble chains CI workflow is a great example to follow along with throughout 
 
 `interchaintest` relies on docker images containing your chains binary. 
 
-We recommend leveraging [`heighliner`](https://github.com/strangelove-ventures/heighliner) to build the docker image. Ideally you won't even need a local Dockerfile in your repo as Heighliner covers this.
+We recommend leveraging [`heighliner`](https://github.com/strangelove-ventures/heighliner) to build the docker image for your chain. Ideally you won't even need a local Dockerfile in your repo as Heighliner covers this.
 
 
 Add this to  your Makerfile:
@@ -49,20 +54,23 @@ else
 	heighliner build -c noble --local --dockerfile cosmos --build-target "make install" --binaries "/go/bin/nobled"
 endif
 ```
-`make local-image` will build image: `noble:local`.
+In the example above, `make local-image` will build image: `noble:local`.
 
 You'll need to change `-c` arg to your chain name, and the `--binaries` arg to your binary's install location.
 
-It's important to realize the image will be named using the arg from the `-c` flag. The `--local` flag builds from your local repository (as opposed to the remote git repository) and tags the docker image as `local`. The image name and tag will be integrated into your tests [in the step below]()
+It's important to realize the image will be named using the arg from the `-c` flag. The `--local` flag builds from your local repository (as opposed to the remote git repository) and tags the docker image as `local`. The image name and tag will be integrated into your tests [in the step below](#integrate-docker-name-and-tag-into-tests)
 
 
-Heighliner works out of the box with most Cosmos based chains. Other chains or non standard Cosmos chains may require extra args. See the Heighliner repo for more info.
+Heighliner works out of the box with most Cosmos based chains. Other chains or non-standard Cosmos chains may require extra args. See the [Heighliner](https://github.com/strangelove-ventures/heighliner) repo for more info.
 
 
 
 ## GitHub E2E Workflow for PR's
 
-There are two jobs in this workflow. We recommend having this workflow run only on PR's.
+We recommend having this workflow run only on PR's.
+
+
+There are two jobs in this workflow. 
 1. Build Image based off pushed code and upload image as a GitHub Artifact 
 2. Download artifact to runners and run tests
 
@@ -179,12 +187,12 @@ jobs:
             - /go/bin/nobled
 ```
 
-As noted in the previous step, unless you are working with a non Cosmos chain or a non standard Cosmos chain, the only args you'll likely need to alter are the `chain` and `binaries` arguments.
+As noted in the previous step, unless you are working with a non-Cosmos chain or a non-standard Cosmos chain, the only args you'll likely need to alter are the `chain` and `binaries` arguments.
 
 
 ### Upload Docker Image Tarball as GitHub artifact
 
-This is the next step in the `build-docker` image job:
+This is the next step in the `build-docker` job:
 
 ```yaml
 ...
@@ -195,7 +203,7 @@ env:
 jobs:
   build-docker:
 ...
-
+...
       - name: Publish Tarball as Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -208,7 +216,7 @@ You shouldn't need to change anything in this step.
 
 ### Run E2E Tests
 
-The next job synchronously spins up a runner for each test. It then downloads the tarball docker image, loads the image into docker and runs all the specified tests.
+The next job synchronously spins up a runner for each test. It then downloads the tarball Docker image, loads the image into Docker and runs all the specified tests.
 
 The example below will spin up 9 runners.
 
@@ -258,13 +266,15 @@ For example in the Makefile:
 
 ```makefile
 ictest-tkn-factory:
-	cd interchaintest && go test -race -v -run ^TestNobleChain$$ .
+	cd interchaintest && go test -race -v -run ^TestTokenFactory$$ .
 ```
 
 ## Integrate Docker Name and Tag into Tests
 
-The part that ties this all together is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`
+The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`
 
+`Repository` = chain name or (same as the `-c` arg in the heighliner command)
+`Version` = "local"
 
 ```go
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -286,10 +296,9 @@ The part that ties this all together is to specify the proper Docker `Repository
 
 ```
 
+
 > [!NOTE]
-> You may see a `ERROR	Failed to pull image` when first starting your test. This is expected when running local images.
-
-
+> When running tests, you may see a `ERROR	Failed to pull image` at the start of the test. This is expected when running local images.
 
 
 ### Example implementations:
