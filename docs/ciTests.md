@@ -274,6 +274,7 @@ ictest-tkn-factory:
 The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`
 
 `Repository` = chain name or (same as the `-c` arg in the heighliner command)
+
 `Version` = "local"
 
 ```go
