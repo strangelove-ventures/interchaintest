@@ -50,7 +50,7 @@ If there is a feature you would like backported to an older branch, make an issu
     - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
     - [Write Custom Tests](./docs/writeCustomTests.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
-- [Integrate E2E Tests into CI Tests](./docs/ciTests.md)
+- [Integrate E2E with GitHub Workflow](./docs/ciTests.md)
 
 
 <br>
