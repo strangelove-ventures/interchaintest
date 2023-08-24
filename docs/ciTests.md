@@ -1,8 +1,11 @@
 # Integrate E2E Tests Locally + in GitHub Actions
 
 **TOC:**
+
 [Build Locally](#building-locally)
+
 [Setup GitHub Action](#github-e2e-workflow-for-prs)
+
 [Integrate into Tests](#integrate-docker-name-and-tag-into-tests)
 
 
@@ -56,13 +59,11 @@ endif
 ```
 In the example above, `make local-image` will build image: `noble:local`.
 
-You'll need to change `-c` arg to your chain name, and the `--binaries` arg to your binary's install location.
+You'll need to change `-c` arg to your chain name, and the `--binaries` arg to your binary's install location. 
+
+While Heighliner works out of the box with most Cosmos based chains. Other chains or non-standard Cosmos chains may require extra args. See the [Heighliner](https://github.com/strangelove-ventures/heighliner) repo for more info.
 
 It's important to realize the image will be named using the arg from the `-c` flag. The `--local` flag builds from your local repository (as opposed to the remote git repository) and tags the docker image as `local`. The image name and tag will be integrated into your tests [in the step below](#integrate-docker-name-and-tag-into-tests)
-
-
-Heighliner works out of the box with most Cosmos based chains. Other chains or non-standard Cosmos chains may require extra args. See the [Heighliner](https://github.com/strangelove-ventures/heighliner) repo for more info.
-
 
 
 ## GitHub E2E Workflow for PR's
@@ -72,7 +73,7 @@ We recommend having this workflow run only on PR's.
 
 There are two jobs in this workflow. 
 1. Build Image based off pushed code and upload image as a GitHub Artifact 
-2. Download artifact to runners and run tests
+2. Download artifact (docker image) to runners and use this image to run tests
 
 <details>
 <summary>Full workflow file example</summary>
@@ -156,9 +157,11 @@ jobs:
 ```
 </details>
 
+This example is broken down in the steps below.
+
 ### Build Image
 
-We recommend to use the [Heighliner Action](https://github.com/strangelove-ventures/heighliner-build-action) (strangelove-ventures/heighliner-build-action@v0.0.3). This action streamlines setting up Go, checking out the repo, and building the image with the proper tags.
+We recommend to use the [Heighliner Action](https://github.com/strangelove-ventures/heighliner-build-action) (strangelove-ventures/heighliner-build-action@vx.x.x). This action streamlines setting up Go, checking out the repo, and building the image with the proper tags. Like the local build step above, this removes the need for a local Dockerfile.
 
 Note the `tar-export-path`. This tarball archive of the docker image will be used by other GitHub runners.
 
@@ -218,7 +221,7 @@ You shouldn't need to change anything in this step.
 
 The next job synchronously spins up a runner for each test. It then downloads the tarball Docker image, loads the image into Docker and runs all the specified tests.
 
-The example below will spin up 9 runners.
+The example below will spin up 9 runners, one for each test.
 
 ```yaml
   e2e-tests:
@@ -273,7 +276,7 @@ ictest-tkn-factory:
 
 The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`
 
-`Repository` = chain name or (same as the `-c` arg in the heighliner command)
+`Repository` = chain name (same as the `-c` arg in the heighliner command)
 
 `Version` = "local"
 
@@ -300,6 +303,9 @@ The final part is to specify the proper Docker `Repository` (image name) and `Ve
 
 > [!NOTE]
 > When running tests, you may see a `ERROR	Failed to pull image` at the start of the test. This is expected when running local images.
+
+
+With that, you should be set up for streamlined E2E testing!
 
 
 ### Example implementations:
