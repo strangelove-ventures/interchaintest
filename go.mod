@@ -7,7 +7,7 @@ toolchain go1.21.0
 require (
 	cosmossdk.io/math v1.0.1
 	cosmossdk.io/store v1.0.0-alpha.1.0.20230728080422-54ed7dab3982
-	cosmossdk.io/x/upgrade v0.0.0-20230724130706-5442197d6bcd
+	cosmossdk.io/x/upgrade v0.0.0-20230818115413-c402c51a1508
 	github.com/99designs/keyring v1.2.2
 	github.com/BurntSushi/toml v1.3.2
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
@@ -16,7 +16,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/cometbft/cometbft v0.38.0-rc3
-	github.com/cosmos/cosmos-sdk v0.50.0-rc.0
+	github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230819070346-e8164be94954
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.11
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc3
@@ -263,6 +263,6 @@ replace (
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
 
-replace github.com/cosmos/ibc-go/v7 => github.com/notional-labs/ibc-go/v7 v7.0.0-20230725115016-ed60bbb0ec6f
+replace github.com/cosmos/ibc-go/v7 => github.com/cosmos/ibc-go/v7 v7.0.0-20230824130558-7de47052f528
 
 replace github.com/CosmWasm/wasmd => github.com/notional-labs/wasmd v0.40.1-0.20230725154726-6f2a6f0a0bb3
