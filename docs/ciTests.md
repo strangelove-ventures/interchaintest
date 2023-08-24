@@ -1,14 +1,5 @@
 # Integrate E2E Tests Locally + in GitHub Actions
 
-**TOC:**
-
-[Build Locally](#building-locally)
-
-[Setup GitHub Action](#github-e2e-workflow-for-prs)
-
-[Integrate into Tests](#integrate-docker-name-and-tag-into-tests)
-
-
 ### Goal:
 
 Seamlessly build and test current iterations of your chain both locally and within GitHubs continuous integration (CI) pipeline.
