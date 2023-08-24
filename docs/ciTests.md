@@ -12,6 +12,7 @@ Seamlessly build and test current iterations of your chain both locally and with
 4. -- Development done, code pushed, PR created -- 
 5. GitHub Action Builds Docker image (on PR)
 6. GitHub Action runs tests as part of CI (on PR)
+7. Team can ensure all tests pass before merging
 
 
 ### Setup
