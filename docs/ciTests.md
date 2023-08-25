@@ -60,12 +60,15 @@ It's important to realize the image will be named using the arg from the `-c` fl
 
 ## GitHub E2E Workflow for PR's
 
+**Goal:** When a PR is created, have a GitHub workflow that:
+1. Builds a Docker image with the latest code changes to the binary.
+2. Synchronously spin up runners (one for each test), load Docker image, and run tests. 
+
 We recommend having this workflow run only on PR's.
 
-
 There are two jobs in this workflow. 
-1. Build Image based off pushed code and upload image as a GitHub Artifact 
-2. Download artifact (docker image) to runners and use this image to run tests
+1. `build-docker` 
+2. `e2e-tests`
 
 <details>
 <summary>Full workflow file example</summary>
@@ -151,11 +154,15 @@ jobs:
 
 This example is broken down in the steps below.
 
-### Build Image
+### Job 1: `build-docker`
+
+**Goal:**  Builds Docker image based off pushed chain code. Then uploads image as a GitHub artifact. 
+
+Artifacts allow you to share data between jobs in a workflow. You can read more about them [here](https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts)
 
 We recommend to use the [Heighliner Action](https://github.com/strangelove-ventures/heighliner-build-action) (strangelove-ventures/heighliner-build-action@vx.x.x). This action streamlines setting up Go, checking out the repo, and building the image with the proper tags. Like the local build step above, this removes the need for a local Dockerfile.
 
-Note the `tar-export-path`. This tarball archive of the docker image will be used by other GitHub runners.
+Note the `tar-export-path`. This is the artifact that will be uploaded and used by the other GitHub runners.
 
 ```yaml
 env:
@@ -185,9 +192,7 @@ jobs:
 As noted in the previous step, unless you are working with a non-Cosmos chain or a non-standard Cosmos chain, the only args you'll likely need to alter are the `chain` and `binaries` arguments.
 
 
-### Upload Docker Image Tarball as GitHub artifact
-
-This is the next step in the `build-docker` job:
+This step uploads the artifact:
 
 ```yaml
 ...
@@ -209,9 +214,9 @@ jobs:
 
 You shouldn't need to change anything in this step.
 
-### Run E2E Tests
+### Job 2: `e2e-tests`
 
-The next job synchronously spins up a runner for each test. It then downloads the tarball Docker image, loads the image into Docker and runs all the specified tests.
+**Goal:** Synchronously spin up a runner for each test, download the artifact (Docker image) to each runner, load image into Docker, and runs test.
 
 The example below will spin up 9 runners, one for each test.
 
@@ -266,7 +271,7 @@ ictest-tkn-factory:
 
 ## Integrate Docker Name and Tag into Tests
 
-The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`
+The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`.
 
 `Repository` = chain name (same as the `-c` arg in the heighliner command)
 
