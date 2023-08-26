@@ -417,7 +417,26 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 		}
 		txs = append(txs, newTx)
 	}
-
+	if len(blockRes.FinalizeBlockEvents) > 0 {
+		finalizeBlockTx := blockdb.Tx{
+			Data: []byte(`{"data":"finalize_block","note":"this is a transaction artificially created for debugging purposes"}`),
+		}
+		finalizeBlockTx.Events = make([]blockdb.Event, len(blockRes.FinalizeBlockEvents))
+		for i, e := range blockRes.FinalizeBlockEvents {
+			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
+			for j, attr := range e.Attributes {
+				attrs[j] = blockdb.EventAttribute{
+					Key:   string(attr.Key),
+					Value: string(attr.Value),
+				}
+			}
+			finalizeBlockTx.Events[i] = blockdb.Event{
+				Type:       e.Type,
+				Attributes: attrs,
+			}
+		}
+		txs = append(txs, finalizeBlockTx)
+	}
 	return txs, nil
 }
 
