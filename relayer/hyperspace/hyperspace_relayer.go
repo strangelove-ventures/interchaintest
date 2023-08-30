@@ -92,7 +92,6 @@ func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecRep
 func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
 	addrBytes := ""
 	chainID := cfg.ChainID
-	coinType := cfg.CoinType
 	chainType := cfg.Type
 
 	chainConfigFile := chainID + ".config"
@@ -102,8 +101,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 	}
 	switch chainType {
 	case "cosmos":
-		bech32Prefix := cfg.Bech32Prefix
-		config.(*HyperspaceRelayerCosmosChainConfig).Keybase = GenKeyEntry(bech32Prefix, coinType, mnemonic)
+		config.(*HyperspaceRelayerCosmosChainConfig).Mnemonic = mnemonic
 	case "polkadot":
 		config.(*HyperspaceRelayerSubstrateChainConfig).PrivateKey = mnemonic
 	}

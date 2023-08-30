@@ -71,7 +71,12 @@ func TestHyperspace(t *testing.T) {
 
 	client, network := interchaintest.DockerSetup(t)
 
-	rep := testreporter.NewNopReporter()
+	// Log location
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+	require.NoError(t, err)
+	// Reporter/logs
+	rep := testreporter.NewReporter(f)
+	//rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
@@ -102,12 +107,12 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "polkadot-node",
-						Version:    "local",
+						Version:    "local-v0.9.39",
 						UidGid:     "1000:1000",
 					},
 					{
 						Repository: "parachain-node",
-						Version:    "latest",
+						Version:    "localv39",
 						//UidGid: "1025:1025",
 					},
 				},
@@ -130,8 +135,8 @@ func TestHyperspace(t *testing.T) {
 				ChainID: "simd",
 				Images: []ibc.DockerImage{
 					{
-						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-						Version:    "feat-wasm-clients",
+						Repository: "ibc-go-simd",
+						Version:    "local",
 						UidGid:     "1025:1025",
 					},
 				},
@@ -146,6 +151,7 @@ func TestHyperspace(t *testing.T) {
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
 				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
+				UsingNewGenesisCommand: true,
 			},
 		},
 	})
@@ -162,7 +168,7 @@ func TestHyperspace(t *testing.T) {
 		zaptest.NewLogger(t),
 		// These two fields are used to pass in a custom Docker image built locally
 		relayer.ImagePull(false),
-		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"),
+		relayer.CustomDockerImage("hyperspace", "localv39debug", "1000:1000"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -249,7 +255,7 @@ func TestHyperspace(t *testing.T) {
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 15, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	// Verify tokens arrived on parachain user
@@ -286,6 +292,13 @@ func TestHyperspace(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	exportStateHeight, err := cosmosChain.Height(ctx)
+	require.NoError(t, err)
+
+	// Wait for a new update state
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
 	// Verify cosmos user's final "stake" balance
 	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
@@ -305,11 +318,19 @@ func TestHyperspace(t *testing.T) {
 	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-	require.True(t, parachainUserStake.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
+	require.True(t, parachainUserStake.Amount.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
+
+	r.StopRelayer(ctx, eRep) //  Stop relayer to export data
+	err = cosmosChain.StopAllNodes(ctx)
+	require.NoError(t, err)
+	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
+	require.NoError(t, err)
+	fmt.Println("Exported State at height: ", exportStateHeight)
+	fmt.Println(exportedState)
 }
 
 type GetCodeQueryMsgResponse struct {
-	Code []byte `json:"code"`
+	Data []byte `json:"data"`
 }
 
 func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
@@ -346,10 +367,10 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	var getCodeQueryMsgRsp GetCodeQueryMsgResponse
 	err = cosmosChain.QueryClientContractCode(ctx, codeHash, &getCodeQueryMsgRsp)
-	codeHashByte32 := sha256.Sum256(getCodeQueryMsgRsp.Code)
+	codeHashByte32 := sha256.Sum256(getCodeQueryMsgRsp.Data)
 	codeHash2 := hex.EncodeToString(codeHashByte32[:])
 	require.NoError(t, err)
-	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
+	require.NotEmpty(t, getCodeQueryMsgRsp.Data)
 	require.Equal(t, codeHash, codeHash2)
 
 	return codeHash

@@ -53,8 +53,8 @@ type HyperspaceRelayerCosmosChainConfig struct {
 	GasLimit         uint64   `toml:"gas_limit"`
 	StorePrefix      string   `toml:"store_prefix"`
 	MaxTxSize        uint64   `toml:"max_tx_size"`
-	WasmCodeId       string   `toml:"wasm_code_id"`
-	Keybase          KeyEntry `toml:"keybase"`
+	WasmCodeId       string   `toml:"wasm_code_hash"`
+	Mnemonic         string   `toml:"mnemonic"`
 	ChannelWhitelist []string `toml:"channel_whitelist"`
 }
 
