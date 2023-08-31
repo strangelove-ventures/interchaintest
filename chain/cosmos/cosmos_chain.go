@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -66,7 +67,8 @@ func NewCosmosHeighlinerChainConfig(name string,
 	gasPrices string,
 	gasAdjustment float64,
 	trustingPeriod string,
-	noHostMount bool) ibc.ChainConfig {
+	noHostMount bool,
+) ibc.ChainConfig {
 	return ibc.ChainConfig{
 		Type:           "cosmos",
 		Name:           name,
@@ -545,7 +547,6 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.Balance(ctx, params)
-
 	if err != nil {
 		return math.Int{}, err
 	}
@@ -565,7 +566,6 @@ func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Co
 
 	queryClient := bankTypes.NewQueryClient(conn)
 	res, err := queryClient.AllBalances(ctx, &params)
-
 	if err != nil {
 		return nil, err
 	}
@@ -598,11 +598,23 @@ func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, co
 }
 
 func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
+	user := os.Getenv("DOCKER_REGISTRY_USER")
+	pass := os.Getenv("DOCKER_REGISTRY_PASS")
+	var registryAuth string
+	if user != "" && pass != "" {
+		jsonBytes, _ := json.Marshal(map[string]string{
+			"username": user,
+			"password": pass,
+		})
+		registryAuth = base64.StdEncoding.EncodeToString(jsonBytes)
+	}
 	for _, image := range c.Config().Images {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockertypes.ImagePullOptions{
+				RegistryAuth: registryAuth,
+			},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",
@@ -969,7 +981,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
+		_ = os.WriteFile(exportGenesis, genbz, 0o600)
 	}
 
 	chainNodes := c.Nodes()

@@ -9,7 +9,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	types23 "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
-	"github.com/pelletier/go-toml/v2"
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"go.uber.org/zap"
@@ -30,7 +30,7 @@ type pathConfiguration struct {
 
 // pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
-	chainID      string
+	chainID string
 }
 
 func (hyperspaceCommander) Name() string {
@@ -43,7 +43,7 @@ func (hyperspaceCommander) DockerUser() string {
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
-	//c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
+	// c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
 	return []string{
 		"hyperspace",
 		"-h",
@@ -139,8 +139,13 @@ func (hyperspaceCommander) FlushPackets(pathName, channelID, homeDir string) []s
 	panic("[FlushPackets] Do not call me")
 }
 
+// ImportPath is not implemented yet
+func (c *hyperspaceCommander) ImportPath(srcChainID, dstChainID, pathName, pathFile, homeDir string) []string {
+	panic("[ImportPath] Do not call me")
+}
+
 // GeneratePath establishes an in memory path representation. The concept does not exist in hyperspace.
-func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string {
+func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, homeDir string, hopChainID ...string) []string {
 	if c.paths == nil {
 		c.paths = map[string]*pathConfiguration{}
 	}
@@ -158,7 +163,6 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 // Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
 	panic("[UpdatePath] Do not call me")
-
 }
 
 // Prints chain config which is populated by hyperspace
