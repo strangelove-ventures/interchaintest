@@ -22,7 +22,6 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 			ID:       chainCfg.ChainID,
 			RPCAddr:  hermesCfg.rpcAddr,
 			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
-			// WebsocketAddr: strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
 			EventSource: EventSource{
 				Mode:       "push",
 				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
