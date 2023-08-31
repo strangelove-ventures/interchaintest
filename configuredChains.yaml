@@ -402,7 +402,7 @@ icad:
       uid-gid: 1025:1025
   no-host-mount: false
 
-  ics-provider:
+ics-provider:
   name: ics-provider
   type: cosmos
   bin: interchain-security-pd
