@@ -42,7 +42,7 @@ func TestSDKBoundaries(t *testing.T) {
 					},
 				},
 			},
-			relayerVersion: "v2.4.1",
+			relayerVersion: "colin-event-fix",
 		},
 		{
 			name: "sdk 47 - 50",
@@ -57,7 +57,7 @@ func TestSDKBoundaries(t *testing.T) {
 					},
 				},
 			},
-			relayerVersion: "v2.4.1",
+			relayerVersion: "colin-event-fix",
 		},
 	}
 
