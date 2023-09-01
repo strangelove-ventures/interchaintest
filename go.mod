@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/interchaintest/v7
+module github.com/strangelove-ventures/interchaintest/v8
 
 go 1.21
 

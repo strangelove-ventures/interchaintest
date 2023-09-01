@@ -27,6 +27,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
 				BatchDelay: "500ms"},
 			RPCTimeout:    "10s",
+			TrustedNode:   true,
 			AccountPrefix: chainCfg.Bech32Prefix,
 			KeyName:       hermesCfg.keyName,
 			AddressType: AddressType{
@@ -165,6 +166,7 @@ type Chain struct {
 	GrpcAddr       string         `toml:"grpc_addr"`
 	EventSource    EventSource    `toml:"event_source"`
 	RPCTimeout     string         `toml:"rpc_timeout"`
+	TrustedNode    bool           `toml:"trusted_node"`
 	AccountPrefix  string         `toml:"account_prefix"`
 	KeyName        string         `toml:"key_name"`
 	AddressType    AddressType    `toml:"address_type"`
