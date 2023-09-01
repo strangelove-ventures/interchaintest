@@ -24,3 +24,8 @@ docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docke
 .PHONY: gen
 gen: ## Run code generators
 	go generate ./...
+
+.PHONY: lint
+lint: ## Run linters
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	golangci-lint run ./... --fix
