@@ -30,7 +30,7 @@ func TestSDKBoundaries(t *testing.T) {
 
 	var tests = []boundarySpecs{
 		{
-			name: "sdk 45 - 50",
+			name: "sdk 45 <-> 50",
 			chainSpecs: []*interchaintest.ChainSpec{
 				{
 					Name: "gaia", ChainName: "gaia", Version: "v7.0.3", //sdk 0.45.6
@@ -62,8 +62,10 @@ func TestSDKBoundaries(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		testname := tt.name
 		t.Run(testname, func(t *testing.T) {
+			t.Parallel()
 
 			cf := interchaintest.NewBuiltinChainFactory(
 				zaptest.NewLogger(t),
