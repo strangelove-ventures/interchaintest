@@ -21,7 +21,7 @@ It allows users to quickly spin up custom testnets and dev environments to test 
     - **Importing as a Module**
         - [Chain Integration and GitHub CI](./docs/ciTests.md)
     -  **Running as a Binary**
-        - [Building Binary](#building-binary)
+        - [Building Binary](./docs/buildBinary.md)
         - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
 - [Write Custom Tests](./docs/writeCustomTests.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
