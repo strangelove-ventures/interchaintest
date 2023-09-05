@@ -25,6 +25,26 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 
 ### Maintained Branches
 
+|                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** |
+|:----------------------------------------------------------------------------:|:----------:|:--------------:|
+|     [main](https://github.com/strangelove-ventures/interchaintest)           |     v8     |      v0.50     |
+|     [v7](https://github.com/strangelove-ventures/interchaintest/tree/v7)     |     v7     |      v0.47     |
+
+### Depreciated Branches
+
+These are branches that we no longer actively update or maintain. But may be of use if a chain is running older versions of the `Cosmos SDK ` or `IBC Go`. Please see the [Backport Policy](#backport-policy) below.
+
+
+|                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** | **Depreciated Date** |
+|:----------------------------------------------------------------------------:|:----------:|:--------------:|:--------------------:|
+|     [v6](https://github.com/strangelove-ventures/interchaintest/tree/v6)     |     v6     |      v0.46     |       Sept 5 2023    |
+|     [v5](https://github.com/strangelove-ventures/interchaintest/tree/v5)     |     v5     |      v0.46     |       Aug 11 2023    |
+|     [v4](https://github.com/strangelove-ventures/interchaintest/tree/v4)     |     v4     |      v0.45     |       Aug 11 2023    |
+| [v4-ics](https://github.com/strangelove-ventures/interchaintest/tree/v4-ics) |     v4     |   v0.45.x-ics  |       Aug 11 2023    |
+|     [v3](https://github.com/strangelove-ventures/interchaintest/tree/v3)     |     v3     |      v0.45     |      June 25 2023    |
+| [v3-ics](https://github.com/strangelove-ventures/interchaintest/tree/v3-ics) |     v3     |  v0.45.11-ics  |      April 24 2023   |
+
+
 #### Backport Policy:
 Strangelove maintains `n` and `n - 1` branches of interchaintest, `n` being current `main`.
 
@@ -34,15 +54,6 @@ We strive to keep interchaintest inline with the latest from the ibc-go and cosm
 
 If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you. 
 
-|                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** |    **Maintained**   |
-|:----------------------------------------------------------------------------:|:----------:|:--------------:|:-------------------:|
-|     [main](https://github.com/strangelove-ventures/interchaintest)           |     v7     |      v0.47     |         ✅          |
-|     [v6](https://github.com/strangelove-ventures/interchaintest/tree/v6)     |     v6     |      v0.46     |         ✅          |
-|     [v5](https://github.com/strangelove-ventures/interchaintest/tree/v5)     |     v5     |      v0.46     |❌<br>(Aug 11 2023)  |
-|     [v4](https://github.com/strangelove-ventures/interchaintest/tree/v4)     |     v4     |      v0.45     |❌<br>(Aug 11 2023)  |
-| [v4-ics](https://github.com/strangelove-ventures/interchaintest/tree/v4-ics) |     v4     |   v0.45.x-ics  |❌<br>(Aug 11 2023)  |
-|     [v3](https://github.com/strangelove-ventures/interchaintest/tree/v3)     |     v3     |      v0.45     |❌<br>(June 25 2023) |
-| [v3-ics](https://github.com/strangelove-ventures/interchaintest/tree/v3-ics) |     v3     |  v0.45.11-ics  |❌<br>(April 24 2023)|
 
 ## Table Of Contents
 - [Building Binary](#building-binary)
