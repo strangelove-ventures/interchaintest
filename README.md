@@ -17,12 +17,15 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 
 ## Table Of Contents
 - [Branch Versioning](#maintained-branches)
-- [Building Binary](#building-binary)
-- **Usage:**
-    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
-    - [Write Custom Tests](./docs/writeCustomTests.md)
+- **Use Cases:**
+    - **Importing as a Module**
+        - [Chain Integration and GitHub CI](./docs/ciTests.md)
+    -  **Running as a Binary**
+        - [Building Binary](#building-binary)
+        - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
+- [Write Custom Tests](./docs/writeCustomTests.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
-- [Deploy as GitHub CI Tests](./docs/ciTests.md)
+
 
 ### Maintained Branches
 
@@ -54,22 +57,6 @@ We strive to keep interchaintest inline with the latest from the ibc-go and cosm
 **Recommendation:** Even if your chain uses an older version of ibc-go, try importing from `main`. This should work unless you are decoding transactions that require a specific ibc-go version.
 
 If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you. 
-
-
-## Building Binary
-
-While it is not necessary to build the binary, sometimes it can be more convenient, *specifically* when running conformance test with custom chain sets.
-
-Building binary:
-```shell
-git clone https://github.com/strangelove-ventures/interchaintest.git
-cd interchaintest
-make interchaintest
-```
-
-This places the binary in `interchaintest/bin/interchaintest`
-
-Note that this is not in your Go path.
 
 
 ## Contributing
