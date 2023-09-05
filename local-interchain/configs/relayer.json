@@ -1,0 +1,9 @@
+{
+    "relayer": {
+        "docker_image": {
+            "repository": "ghcr.io/cosmos/relayer",
+            "version": "latest"
+        },
+        "startup_flags": ["--block-history", "100"]
+    }
+}

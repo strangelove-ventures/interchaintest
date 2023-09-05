@@ -221,6 +221,11 @@ func (c *CosmosChain) GetRPCAddress() string {
 }
 
 // Implements Chain interface
+func (c *CosmosChain) GetAPIAddress() string {
+	return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
+}
+
+// Implements Chain interface
 func (c *CosmosChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().HostName())
 }
@@ -229,6 +234,12 @@ func (c *CosmosChain) GetGRPCAddress() string {
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostRPCAddress() string {
 	return "http://" + c.getFullNode().hostRPCPort
+}
+
+// GetHostAPIAddress returns the address of the REST API server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostAPIAddress() string {
+	return "http://" + c.getFullNode().hostAPIPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.

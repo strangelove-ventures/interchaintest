@@ -33,7 +33,7 @@ func KeepDockerVolumesOnFailure(b bool) {
 // DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
 //
 // If any part of the setup fails, t.Fatal is called.
-func DockerSetup(t *testing.T) (*client.Client, string) {
+func DockerSetup(t dockerutil.DockerSetupTestingT) (*client.Client, string) {
 	t.Helper()
 	return dockerutil.DockerSetup(t)
 }

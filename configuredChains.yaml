@@ -416,6 +416,20 @@ ics-consumer:
       uid-gid: 1025:1025
   no-host-mount: false
 
+ics-provider:
+  name: ics-provider
+  type: cosmos
+  bin: interchain-security-pd
+  bech32-prefix: cosmos
+  denom: stake
+  gas-prices: 0.0stake
+  gas-adjustment: 1.1
+  trusting-period: 96h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/ics
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 impacthub:
   name: impacthub
   type: cosmos

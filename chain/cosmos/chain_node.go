@@ -33,12 +33,13 @@ import (
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -63,6 +64,7 @@ type ChainNode struct {
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
+	hostAPIPort  string
 	hostGRPCPort string
 }
 
@@ -307,6 +309,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
 
@@ -331,6 +334,15 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	grpc["address"] = "0.0.0.0:9090"
 
 	a["grpc"] = grpc
+
+	api := make(testutil.Toml)
+
+	// Enable public REST API
+	api["enable"] = true
+	api["swagger"] = true
+	api["address"] = "tcp://0.0.0.0:1317"
+
+	a["api"] = api
 
 	return testutil.ModifyTomlConfigFile(
 		ctx,
@@ -1143,11 +1155,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort)
 	if err != nil {
 		return err
 	}
-	tn.hostRPCPort, tn.hostGRPCPort = hostPorts[0], hostPorts[1]
+	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort = hostPorts[0], hostPorts[1], hostPorts[2]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
@@ -1167,6 +1179,24 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+}
+
+func (tn *ChainNode) PauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.PauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.PauseContainer(ctx)
+}
+
+func (tn *ChainNode) UnpauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.UnpauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.UnpauseContainer(ctx)
 }
 
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
