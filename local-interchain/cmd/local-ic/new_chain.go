@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
 
 	"github.com/tyler-smith/go-bip39"
