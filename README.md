@@ -15,13 +15,14 @@ Formerly known as `ibctest`.
 It allows users to quickly spin up custom testnets and dev environments to test IBC, chain infrastructures, smart contracts, etc.
 </div>
 
-### -- Features --
-
-- Built-in suite of conformance tests to test high-level IBC compatibility between chain sets
-- Easily construct customized tests in highly configurable environments
-- Deployable as CI tests in production workflows
-
-<br>
+## Table Of Contents
+- [Branch Versioning](#maintained-branches)
+- [Building Binary](#building-binary)
+- **Usage:**
+    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
+    - [Write Custom Tests](./docs/writeCustomTests.md)
+- [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
+- [Deploy as GitHub CI Tests](./docs/ciTests.md)
 
 ### Maintained Branches
 
@@ -32,7 +33,7 @@ It allows users to quickly spin up custom testnets and dev environments to test 
 
 ### Depreciated Branches
 
-These are branches that we no longer actively update or maintain. But may be of use if a chain is running older versions of the `Cosmos SDK ` or `IBC Go`. Please see the [Backport Policy](#backport-policy) below.
+These are branches that we no longer actively update or maintain but may be of use if a chain is running older versions of the `Cosmos SDK ` or `IBC Go`. Please see the [Backport Policy](#backport-policy) below.
 
 
 |                                **Branch Name**                               | **IBC-Go** | **Cosmos-sdk** | **Depreciated Date** |
@@ -53,18 +54,6 @@ We strive to keep interchaintest inline with the latest from the ibc-go and cosm
 **Recommendation:** Even if your chain uses an older version of ibc-go, try importing from `main`. This should work unless you are decoding transactions that require a specific ibc-go version.
 
 If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you. 
-
-
-## Table Of Contents
-- [Building Binary](#building-binary)
-- **Usage:**
-    - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
-    - [Write Custom Tests](./docs/writeCustomTests.md)
-- [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
-- [Deploy as GitHub CI Tests](./docs/ciTests.md)
-
-
-<br>
 
 
 ## Building Binary
