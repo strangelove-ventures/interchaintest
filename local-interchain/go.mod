@@ -13,7 +13,7 @@ replace (
 
 require (
 	github.com/cosmos/cosmos-sdk v0.47.4
-	github.com/cosmos/ibc-go/v7 v7.2.0 // indirect
+	github.com/cosmos/ibc-go/v8 v7.2.0 // indirect
 	github.com/strangelove-ventures/interchaintest/v8 v7.0.0-20230508154211-ebc1cbd6d88e
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/zap v1.24.0

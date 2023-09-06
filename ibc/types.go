@@ -6,7 +6,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
