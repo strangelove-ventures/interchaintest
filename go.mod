@@ -17,7 +17,7 @@ require (
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc3
 	github.com/cosmos/ibc-go/v7 v7.0.0-20230824131743-d0ab8285e9f0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/docker/docker v24.0.4+incompatible
+	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.5.9
