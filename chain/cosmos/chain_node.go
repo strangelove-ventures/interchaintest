@@ -1043,10 +1043,10 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	isNewChain := tn.Chain.Config().UsingNewGenesisCommand
+	isNewGenesis := tn.Chain.Config().UsingNewGenesisCommand
 
 	command := []string{"export", "--height", fmt.Sprint(height)}
-	if isNewChain {
+	if isNewGenesis {
 		command = append(command, "--output-document", "state_export.json")
 	}
 
@@ -1055,7 +1055,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		return "", err
 	}
 
-	if isNewChain {
+	if isNewGenesis {
 		content, err := tn.ReadFile(ctx, "state_export.json")
 		if err != nil {
 			return "", err
