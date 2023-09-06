@@ -1,6 +1,6 @@
 package types
 
-import "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+import "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 
 type GenesisAccount struct {
 	Name     string `json:"name"`

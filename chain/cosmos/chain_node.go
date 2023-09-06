@@ -35,10 +35,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -417,12 +417,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 		}
 		txs = append(txs, newTx)
 	}
-	if len(blockRes.BeginBlockEvents) > 0 {
-		beginBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"begin_block","note":"this is a transaction artificially created for debugging purposes"}`),
+	if len(blockRes.FinalizeBlockEvents) > 0 {
+		finalizeBlockTx := blockdb.Tx{
+			Data: []byte(`{"data":"finalize_block","note":"this is a transaction artificially created for debugging purposes"}`),
 		}
-		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
-		for i, e := range blockRes.BeginBlockEvents {
+		finalizeBlockTx.Events = make([]blockdb.Event, len(blockRes.FinalizeBlockEvents))
+		for i, e := range blockRes.FinalizeBlockEvents {
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for j, attr := range e.Attributes {
 				attrs[j] = blockdb.EventAttribute{
@@ -430,34 +430,13 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 					Value: string(attr.Value),
 				}
 			}
-			beginBlockTx.Events[i] = blockdb.Event{
+			finalizeBlockTx.Events[i] = blockdb.Event{
 				Type:       e.Type,
 				Attributes: attrs,
 			}
 		}
-		txs = append(txs, beginBlockTx)
+		txs = append(txs, finalizeBlockTx)
 	}
-	if len(blockRes.EndBlockEvents) > 0 {
-		endBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"end_block","note":"this is a transaction artificially created for debugging purposes"}`),
-		}
-		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
-		for i, e := range blockRes.EndBlockEvents {
-			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
-			for j, attr := range e.Attributes {
-				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
-				}
-			}
-			endBlockTx.Events[i] = blockdb.Event{
-				Type:       e.Type,
-				Attributes: attrs,
-			}
-		}
-		txs = append(txs, endBlockTx)
-	}
-
 	return txs, nil
 }
 
