@@ -80,9 +80,7 @@ func HaltChainAndExportGenesis(ctx context.Context, t *testing.T, chain *cosmos.
 	state, err := chain.ExportState(ctx, int64(haltHeight))
 	require.NoError(t, err, "error exporting state")
 
-	appTomlOverrides := make(testutil.Toml)
-
-	appTomlOverrides["halt-height"] = 0
+	appToml := make(testutil.Toml)
 
 	for _, node := range chain.Nodes() {
 		err := node.OverwriteGenesisFile(ctx, []byte(state))
@@ -97,7 +95,7 @@ func HaltChainAndExportGenesis(ctx context.Context, t *testing.T, chain *cosmos.
 			node.TestName,
 			node.VolumeName,
 			"config/app.toml",
-			appTomlOverrides,
+			appToml,
 		)
 		require.NoError(t, err)
 	}
