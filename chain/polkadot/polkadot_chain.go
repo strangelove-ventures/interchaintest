@@ -341,7 +341,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	}
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount.MulRaw(polkadotScaling)},
+			[]interface{}{wallet.Address, wallet.Amount.MulRaw(polkadotScaling).Uint64()},
 		)
 	}
 

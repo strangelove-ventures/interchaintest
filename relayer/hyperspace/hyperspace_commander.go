@@ -70,8 +70,6 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
-		"--delay-period",
-		"0",
 		"--port-id",
 		opts.SourcePortName,
 		"--order",
@@ -96,8 +94,6 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
-		"--delay-period",
-		"0",
 		"--port-id",
 		"transfer",
 		"--order",
@@ -121,11 +117,7 @@ func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []stri
 		"--config-core",
 		path.Join(homeDir, "core.config"),
 		"--delay-period",
-		"0",
-		"--port-id",
-		"transfer",
-		"--order",
-		"unordered",
+		"1",
 	}
 }
 
@@ -225,14 +217,6 @@ func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) 
 		configPath(homeDir, c.paths[pathName].chainB.chainID),
 		"--config-core",
 		path.Join(homeDir, "core.config"),
-		"--delay-period",
-		"0",
-		"--port-id",
-		"transfer",
-		"--order",
-		"unordered",
-		"--version",
-		"ics20-1",
 	}
 }
 

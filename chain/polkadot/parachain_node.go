@@ -152,7 +152,7 @@ func (pn *ParachainNode) GenerateParachainGenesisFile(ctx context.Context, addit
 
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount.MulRaw(parachainScaling)},
+			[]interface{}{wallet.Address, wallet.Amount.MulRaw(parachainScaling).Uint64()},
 		)
 	}
 	if err := dyno.Set(chainSpec, balances, "genesis", "runtime", "balances", "balances"); err != nil {
