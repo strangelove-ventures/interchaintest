@@ -93,7 +93,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
-		_, keepContainers := os.LookupEnv("KEEP_CONTAINTERS")
+		keepContainers := os.Getenv("KEEP_CONTAINTERS") != ""
 
 		ctx := context.TODO()
 		cli.NegotiateAPIVersion(ctx)
@@ -127,7 +127,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 					}
 				}
 			}
-			if !keepContainers {
+			if keepContainers {
 				var stopTimeout container.StopOptions
 				timeout := 10
 				timeoutDur := time.Duration(timeout * int(time.Second))
@@ -161,7 +161,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			}
 		}
 
-		if !keepContainers {
+		if keepContainers {
 			pruneVolumesWithRetry(ctx, t, cli)
 			pruneNetworksWithRetry(ctx, t, cli)
 		} else {
