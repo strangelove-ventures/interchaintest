@@ -62,7 +62,7 @@ func SetupGenesisWallets(config *types.Config, chains []ibc.Chain) map[ibc.Chain
 			for _, coin := range amount {
 				additionalWallets[chainObj] = append(additionalWallets[chainObj], ibc.WalletAmount{
 					Address: acc.Address,
-					Amount:  coin.Amount.Int64(),
+					Amount:  coin.Amount,
 					Denom:   coin.Denom,
 				})
 			}

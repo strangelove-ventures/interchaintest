@@ -9,12 +9,13 @@ replace (
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.2 //indirect
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/strangelove-ventures/interchaintest/v8 => ../
+	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000 => ../
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
 
 require (
 	github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230905141004-6a9777fff287
+	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/zap v1.25.0
 
@@ -198,8 +199,6 @@ require (
 	pgregory.net/rapid v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-require github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000
 
 require (
 	cosmossdk.io/collections v0.4.0 // indirect
