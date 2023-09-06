@@ -1055,7 +1055,14 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx, "unsafe-reset-all")
+	command := []string{tn.Chain.Config().Bin}
+	if tn.Chain.Config().UsingNewGenesisCommand {
+		command = append(command, "comet")
+	}
+
+	command = append(command, "unsafe-reset-all", "--home", tn.HomeDir())
+
+	_, _, err := tn.Exec(ctx, command, nil)
 	return err
 }
 
