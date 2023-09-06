@@ -19,11 +19,15 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		}
 
 		chains = append(chains, Chain{
-			ID:            chainCfg.ChainID,
-			RPCAddr:       hermesCfg.rpcAddr,
-			GrpcAddr:      fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
-			WebsocketAddr: strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+			ID:       chainCfg.ChainID,
+			RPCAddr:  hermesCfg.rpcAddr,
+			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
+			EventSource: EventSource{
+				Mode:       "push",
+				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+				BatchDelay: "500ms"},
 			RPCTimeout:    "10s",
+			TrustedNode:   true,
 			AccountPrefix: chainCfg.Bech32Prefix,
 			KeyName:       hermesCfg.keyName,
 			AddressType: AddressType{
@@ -145,6 +149,12 @@ type GasPrice struct {
 	Denom string  `toml:"denom"`
 }
 
+type EventSource struct {
+	Mode       string `toml:"mode"`
+	Url        string `toml:"url"`
+	BatchDelay string `toml:"batch_delay"`
+}
+
 type TrustThreshold struct {
 	Numerator   string `toml:"numerator"`
 	Denominator string `toml:"denominator"`
@@ -154,8 +164,9 @@ type Chain struct {
 	ID             string         `toml:"id"`
 	RPCAddr        string         `toml:"rpc_addr"`
 	GrpcAddr       string         `toml:"grpc_addr"`
-	WebsocketAddr  string         `toml:"websocket_addr"`
+	EventSource    EventSource    `toml:"event_source"`
 	RPCTimeout     string         `toml:"rpc_timeout"`
+	TrustedNode    bool           `toml:"trusted_node"`
 	AccountPrefix  string         `toml:"account_prefix"`
 	KeyName        string         `toml:"key_name"`
 	AddressType    AddressType    `toml:"address_type"`

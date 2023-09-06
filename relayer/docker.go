@@ -13,10 +13,11 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 const (
@@ -87,7 +88,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		return nil, fmt.Errorf("pulling container image %s: %w", containerImage.Ref(), err)
 	}
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		// Have to leave Driver unspecified for Docker Desktop compatibility.
 
 		Labels: map[string]string{dockerutil.CleanupLabel: testName},
@@ -356,7 +357,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	containerImage := r.containerImage()
 	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
+	containerName := fmt.Sprintf("%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
 
 	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 
@@ -408,13 +409,13 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 		return fmt.Errorf("StopRelayer: inspecting container: %w", err)
 	}
 
-	startedAt, err := time.Parse(c.State.StartedAt, time.RFC3339Nano)
+	startedAt, err := time.Parse(time.RFC3339Nano, c.State.StartedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container StartedAt", zap.Error(err))
 		startedAt = time.Unix(0, 0)
 	}
 
-	finishedAt, err := time.Parse(c.State.FinishedAt, time.RFC3339Nano)
+	finishedAt, err := time.Parse(time.RFC3339Nano, c.State.FinishedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container FinishedAt", zap.Error(err))
 		finishedAt = time.Now().UTC()
@@ -443,6 +444,20 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	r.containerLifecycle = nil
 
 	return nil
+}
+
+func (r *DockerRelayer) PauseRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerPause(ctx, r.containerLifecycle.ContainerID())
+}
+
+func (r *DockerRelayer) ResumeRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerUnpause(ctx, r.containerLifecycle.ContainerID())
 }
 
 func (r *DockerRelayer) containerImage() ibc.DockerImage {

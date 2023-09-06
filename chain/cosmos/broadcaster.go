@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -84,12 +84,12 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	accNumber, err := clientContext.AccountRetriever.GetAccount(clientContext, sdkAdd)
+	account, err := clientContext.AccountRetriever.GetAccount(clientContext, sdkAdd)
 	if err != nil {
 		return tx.Factory{}, err
 	}
 
-	f := b.defaultTxFactory(clientContext, accNumber.GetAccountNumber())
+	f := b.defaultTxFactory(clientContext, account)
 	for _, opt := range b.factoryOptions {
 		f = opt(f)
 	}
@@ -166,10 +166,11 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 }
 
 // defaultTxFactory creates a new Factory with default configuration.
-func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber uint64) tx.Factory {
+func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, account client.Account) tx.Factory {
 	chainConfig := b.chain.Config()
 	return tx.Factory{}.
-		WithAccountNumber(accountNumber).
+		WithAccountNumber(account.GetAccountNumber()).
+		WithSequence(account.GetSequence()).
 		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
 		WithGasAdjustment(chainConfig.GasAdjustment).
 		WithGas(flags.DefaultGasLimit).

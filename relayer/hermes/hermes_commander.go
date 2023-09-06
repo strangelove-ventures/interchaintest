@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
@@ -16,7 +16,8 @@ import (
 var _ relayer.RelayerCommander = &commander{}
 
 type commander struct {
-	log *zap.Logger
+	log             *zap.Logger
+	extraStartFlags []string
 }
 
 func (c commander) Name() string {
@@ -135,7 +136,9 @@ func (c commander) GetClients(chainID, homeDir string) []string {
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "start", "--full-scan"}
+	cmd := []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "start"}
+	cmd = append(cmd, c.extraStartFlags...)
+	return cmd
 }
 
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {

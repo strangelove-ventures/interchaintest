@@ -7,8 +7,8 @@ import (
 
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/errdefs"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,7 +51,7 @@ func TestDockerSetup_KeepVolumes(t *testing.T) {
 			mt.Simulate(func() {
 				cli, _ := dockerutil.DockerSetup(mt)
 
-				v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+				v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 					Labels: map[string]string{dockerutil.CleanupLabel: mt.Name()},
 				})
 				require.NoError(t, err)

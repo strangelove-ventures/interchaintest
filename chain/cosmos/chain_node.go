@@ -26,16 +26,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -50,6 +53,9 @@ type ChainNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 
+	// Additional processes that need to be run on a per-validator basis.
+	Sidecars SidecarProcesses
+
 	lock sync.Mutex
 	log  *zap.Logger
 
@@ -57,6 +63,7 @@ type ChainNode struct {
 
 	// Ports set during StartContainer.
 	hostRPCPort  string
+	hostAPIPort  string
 	hostGRPCPort string
 }
 
@@ -119,6 +126,48 @@ func (tn *ChainNode) NewClient(addr string) error {
 	return nil
 }
 
+func (tn *ChainNode) NewSidecarProcess(
+	ctx context.Context,
+	preStart bool,
+	processName string,
+	cli *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+	homeDir string,
+	ports []string,
+	startCmd []string,
+) error {
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
+
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   tn.TestName,
+			dockerutil.NodeOwnerLabel: s.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for sidecar process: %w", err)
+	}
+	s.VolumeName = v.Name
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: tn.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	tn.Sidecars = append(tn.Sidecars, s)
+
+	return nil
+}
+
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
@@ -145,12 +194,16 @@ func (tn *ChainNode) Name() string {
 	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
+func (tn *ChainNode) ContainerID() string {
+	return tn.containerLifecycle.ContainerID()
+}
+
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
@@ -159,7 +212,7 @@ func (tn *ChainNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwriteGenesisFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) error {
 	err := tn.WriteFile(ctx, content, "config/genesis.json")
 	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
@@ -236,6 +289,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
 
@@ -260,6 +314,15 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	grpc["address"] = "0.0.0.0:9090"
 
 	a["grpc"] = grpc
+
+	api := make(testutil.Toml)
+
+	// Enable public REST API
+	api["enable"] = true
+	api["swagger"] = true
+	api["address"] = "tcp://0.0.0.0:1317"
+
+	a["api"] = api
 
 	return testutil.ModifyTomlConfigFile(
 		ctx,
@@ -354,12 +417,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 		}
 		txs = append(txs, newTx)
 	}
-	if len(blockRes.BeginBlockEvents) > 0 {
-		beginBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"begin_block","note":"this is a transaction artificially created for debugging purposes"}`),
+	if len(blockRes.FinalizeBlockEvents) > 0 {
+		finalizeBlockTx := blockdb.Tx{
+			Data: []byte(`{"data":"finalize_block","note":"this is a transaction artificially created for debugging purposes"}`),
 		}
-		beginBlockTx.Events = make([]blockdb.Event, len(blockRes.BeginBlockEvents))
-		for i, e := range blockRes.BeginBlockEvents {
+		finalizeBlockTx.Events = make([]blockdb.Event, len(blockRes.FinalizeBlockEvents))
+		for i, e := range blockRes.FinalizeBlockEvents {
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for j, attr := range e.Attributes {
 				attrs[j] = blockdb.EventAttribute{
@@ -367,34 +430,13 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 					Value: string(attr.Value),
 				}
 			}
-			beginBlockTx.Events[i] = blockdb.Event{
+			finalizeBlockTx.Events[i] = blockdb.Event{
 				Type:       e.Type,
 				Attributes: attrs,
 			}
 		}
-		txs = append(txs, beginBlockTx)
+		txs = append(txs, finalizeBlockTx)
 	}
-	if len(blockRes.EndBlockEvents) > 0 {
-		endBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"end_block","note":"this is a transaction artificially created for debugging purposes"}`),
-		}
-		endBlockTx.Events = make([]blockdb.Event, len(blockRes.EndBlockEvents))
-		for i, e := range blockRes.EndBlockEvents {
-			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
-			for j, attr := range e.Attributes {
-				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
-				}
-			}
-			endBlockTx.Events[i] = blockdb.Event{
-				Type:       e.Type,
-				Attributes: attrs,
-			}
-		}
-		txs = append(txs, endBlockTx)
-	}
-
 	return txs, nil
 }
 
@@ -402,13 +444,27 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
+	var gasPriceFound, gasAdjustmentFound = false, false
+	for i := 0; i < len(command); i++ {
+		if command[i] == "--gas-prices" {
+			gasPriceFound = true
+		}
+		if command[i] == "--gas-adjustment" {
+			gasAdjustmentFound = true
+		}
+	}
+	if !gasPriceFound {
+		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
+	}
+	if !gasAdjustmentFound {
+		command = append(command, "--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment))
+	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
+		"--chain-id", tn.Chain.Config().ChainID,
 	)...)
 }
 
@@ -444,7 +500,6 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
 	return append(command,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
-		"--chain-id", tn.Chain.Config().ChainID,
 	)
 }
 
@@ -606,6 +661,11 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	}
 
 	command = append(command, "add-genesis-account", address, amount)
+
+	if tn.Chain.Config().UsingChainIDFlagCLI {
+		command = append(command, "--chain-id", tn.Chain.Config().ChainID)
+	}
+
 	_, _, err := tn.ExecBin(ctx, command...)
 
 	return err
@@ -660,7 +720,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -678,7 +738,7 @@ func (tn *ChainNode) SendIBCTransfer(
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
 }
@@ -718,7 +778,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file)); err != nil {
+	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
 		return "", err
 	}
 
@@ -740,6 +800,23 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	return res.CodeInfos[0].CodeID, nil
 }
 
+func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
+	// Retry because sometimes the tx is not committed to state yet.
+	var txResp *types.TxResponse
+	err := retry.Do(func() error {
+		var err error
+		txResp, err = authTx.QueryTx(clientCtx, txHash)
+		return err
+	},
+		// retry for total of 3 seconds
+		retry.Attempts(15),
+		retry.Delay(200*time.Millisecond),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	)
+	return txResp, err
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
@@ -747,9 +824,17 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
 	}
-	_, err := tn.ExecTx(ctx, keyName, command...)
+	txHash, err := tn.ExecTx(ctx, keyName, command...)
 	if err != nil {
 		return "", err
+	}
+
+	txResp, err := tn.getTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+	if txResp.Code != 0 {
+		return "", fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
 
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
@@ -767,11 +852,10 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) error {
-	_, err := tn.ExecTx(ctx, keyName,
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
+	return tn.ExecTx(ctx, keyName,
 		"wasm", "execute", contractAddress, message,
 	)
-	return err
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -926,6 +1010,20 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
+// QueryParam returns the state and details of a subspace param.
+func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*ParamChange, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "params", "subspace", subspace, key)
+	if err != nil {
+		return nil, err
+	}
+	var param ParamChange
+	err = json.Unmarshal(stdout, &param)
+	if err != nil {
+		return nil, err
+	}
+	return &param, nil
+}
+
 // DumpContractState dumps the state of a contract at a block height.
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
@@ -977,16 +1075,30 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		err := s.containerLifecycle.Running(ctx)
+
+		if s.preStart && err != nil {
+			if err := s.CreateContainer(ctx); err != nil {
+				return err
+			}
+
+			if err := s.StartContainer(ctx); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort)
 	if err != nil {
 		return err
 	}
-	tn.hostRPCPort, tn.hostGRPCPort = hostPorts[0], hostPorts[1]
+	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort = hostPorts[0], hostPorts[1], hostPorts[2]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
@@ -1008,11 +1120,39 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
+func (tn *ChainNode) PauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.PauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.PauseContainer(ctx)
+}
+
+func (tn *ChainNode) UnpauseContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.UnpauseContainer(ctx); err != nil {
+			return err
+		}
+	}
+	return tn.containerLifecycle.UnpauseContainer(ctx)
+}
+
 func (tn *ChainNode) StopContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.StopContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.StopContainer(ctx)
 }
 
 func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
+	for _, s := range tn.Sidecars {
+		if err := s.RemoveContainer(ctx); err != nil {
+			return err
+		}
+	}
 	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
@@ -1112,7 +1252,7 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 // LogGenesisHashes logs the genesis hashes for the various nodes
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
-		gen, err := n.genesisFileContent(ctx)
+		gen, err := n.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
@@ -1183,7 +1323,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"amount": []map[string]any{
 			{
 				"denom":  amount.Denom,
-				"amount": amount.Amount,
+				"amount": amount.Amount.String(),
 			},
 		},
 	})

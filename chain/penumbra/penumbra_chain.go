@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -19,10 +20,10 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -67,9 +68,9 @@ type PenumbraValidatorFundingStream struct {
 }
 
 type PenumbraGenesisAppStateAllocation struct {
-	Amount  int64  `json:"amount"`
-	Denom   string `json:"denom"`
-	Address string `json:"address"`
+	Amount  math.Int `json:"amount"`
+	Denom   string   `json:"denom"`
+	Address string   `json:"address"`
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -236,7 +237,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	panic("implement me")
 }
 
@@ -260,7 +261,7 @@ func (c *PenumbraChain) NewChainNode(
 ) (PenumbraNode, error) {
 	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
 
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -289,7 +290,7 @@ func (c *PenumbraChain) NewChainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -434,13 +435,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 			// self delegation
 			allocations[2*i] = PenumbraGenesisAppStateAllocation{
-				Amount:  100_000_000_000,
+				Amount:  math.NewInt(100_000_000_000),
 				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}
 			// liquid
 			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
-				Amount:  1_000_000_000_000,
+				Amount:  math.NewInt(1_000_000_000_000),
 				Denom:   chainCfg.Denom,
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}
