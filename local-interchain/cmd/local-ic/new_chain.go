@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
 
 	"github.com/tyler-smith/go-bip39"
@@ -30,7 +30,7 @@ var newChainCmd = &cobra.Command{
 	Short:   "Create a new chain config",
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		name, _ := strings.CutSuffix(args[0], ".json")
+		name := strings.TrimSuffix(args[0], ".json")
 		filePath := path.Join(GetDirectory(), "chains", fmt.Sprintf("%s.json", name))
 
 		// while loop to allow for IBC conncetions to work as expected. Else set IBC as []string{}
