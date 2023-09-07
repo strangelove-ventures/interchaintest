@@ -817,6 +817,26 @@ func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*t
 	return txResp, err
 }
 
+// HasCommand checks if a command in the chain binary is available.
+func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
+	_, _, err := tn.ExecBin(ctx, command...)
+
+	if strings.Contains(string(err.Error()), "Error: unknown command") {
+		return false
+	}
+
+	// cmd just needed more arguments, but it is a valid command (ex: appd tx bank send)
+	if strings.Contains(string(err.Error()), "Error: accepts") {
+		return true
+	}
+
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
