@@ -1,0 +1,27 @@
+name: Local Interchain
+
+on:
+  pull_request:
+
+# Ensures that only a single workflow per PR will run at a time. Cancels in-progress jobs if new commit is pushed.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+env:
+    GO_VERSION: 1.19
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: build
+    steps:
+      - name: Checkout interchaintest
+        uses: actions/checkout@v3
+
+      - name: Setup go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+            go-version: ${{ env.GO_VERSION }}
+
+      - run: cd local-interchain && go mod tidy && make install
