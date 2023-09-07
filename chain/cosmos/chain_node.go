@@ -817,6 +817,26 @@ func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*t
 	return txResp, err
 }
 
+// HasCommand checks if a command in the chain binary is available.
+func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
+	_, _, err := tn.ExecBin(ctx, command...)
+
+	if strings.Contains(string(err.Error()), "Error: unknown command") {
+		return false
+	}
+
+	// cmd just needed more arguments, but it is a valid command (ex: appd tx bank send)
+	if strings.Contains(string(err.Error()), "Error: accepts") {
+		return true
+	}
+
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
@@ -1043,10 +1063,32 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, stderr, err := tn.ExecBin(ctx, "export", "--height", fmt.Sprint(height))
+	var (
+		doc     = "state_export.json"
+		docPath = path.Join(tn.HomeDir(), doc)
+
+		isNewGenesis = tn.Chain.Config().UsingNewGenesisCommand
+
+		command = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
+	)
+
+	if isNewGenesis {
+		command = append(command, "--output-document", docPath)
+	}
+
+	stdout, stderr, err := tn.ExecBin(ctx, command...)
 	if err != nil {
 		return "", err
 	}
+
+	if isNewGenesis {
+		content, err := tn.ReadFile(ctx, doc)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
+	}
+
 	// output comes to stderr on older versions
 	return string(stdout) + string(stderr), nil
 }
