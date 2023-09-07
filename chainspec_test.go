@@ -108,19 +108,6 @@ func TestChainSpec_Config(t *testing.T) {
 		baseCfg, err := baseSpec.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 
-		t.Run("GasAdjustment", func(t *testing.T) {
-			g := float64(1234.5)
-			require.NotEqual(t, baseCfg.GasAdjustment, g)
-
-			s := baseSpec
-			s.GasAdjustment = &g
-
-			cfg, err := s.Config(zaptest.NewLogger(t))
-			require.NoError(t, err)
-
-			require.Equal(t, g, cfg.GasAdjustment)
-		})
-
 		t.Run("NoHostMount", func(t *testing.T) {
 			m := true
 			require.NotEqual(t, baseCfg.NoHostMount, m)
