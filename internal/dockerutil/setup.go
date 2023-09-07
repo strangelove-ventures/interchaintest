@@ -127,7 +127,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 					}
 				}
 			}
-			if keepContainers {
+			if !keepContainers {
 				var stopTimeout container.StopOptions
 				timeout := 10
 				timeoutDur := time.Duration(timeout * int(time.Second))
@@ -161,7 +161,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			}
 		}
 
-		if keepContainers {
+		if !keepContainers {
 			pruneVolumesWithRetry(ctx, t, cli)
 			pruneNetworksWithRetry(ctx, t, cli)
 		} else {
