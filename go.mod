@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	cosmossdk.io/math v1.0.1
+	cosmossdk.io/math v1.1.2
 	cosmossdk.io/store v1.0.0-alpha.1.0.20230728080422-54ed7dab3982
 	cosmossdk.io/x/upgrade v0.0.0-20230818115413-c402c51a1508
 	github.com/BurntSushi/toml v1.3.2
@@ -14,7 +14,7 @@ require (
 	github.com/cometbft/cometbft v0.38.0-rc3
 	github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230819070346-e8164be94954
 	github.com/cosmos/gogoproto v1.4.11
-	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc3
+	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc5
 	github.com/cosmos/ibc-go/v7 v7.0.0-20230824131743-d0ab8285e9f0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v24.0.6+incompatible
