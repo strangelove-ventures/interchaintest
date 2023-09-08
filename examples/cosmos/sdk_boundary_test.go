@@ -37,7 +37,6 @@ func TestSDKBoundaries(t *testing.T) {
 				},
 				{
 					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", //sdk 0.50 alpha
-					ChainConfig: ibc.ChainConfig{},
 				},
 			},
 			relayerVersion: "colin-event-fix",
@@ -50,7 +49,6 @@ func TestSDKBoundaries(t *testing.T) {
 				},
 				{
 					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", //sdk 0.50 alpha
-					ChainConfig: ibc.ChainConfig{},
 				},
 			},
 			relayerVersion: "colin-event-fix",
