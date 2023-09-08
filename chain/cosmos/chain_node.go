@@ -840,7 +840,7 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 		return true
 	}
 
-	return true
+	return false
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
