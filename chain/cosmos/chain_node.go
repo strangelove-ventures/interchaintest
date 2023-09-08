@@ -865,9 +865,9 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 		return split[0], split[1]
 	}
 
-	var buildDeps []Dependency
+	var buildDeps []BuildDependency
 	for _, dep := range deps.BuildDeps {
-		var bd Dependency
+		var bd BuildDependency
 
 		if strings.Contains(dep, "=>") {
 			// Ex: "github.com/aaa/bbb@v1.2.1 => github.com/ccc/bbb@v1.2.0"
@@ -877,7 +877,7 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 			parent, parentVersion := getRepoAndVersion(main)
 			r, rV := getRepoAndVersion(replacement)
 
-			bd = Dependency{
+			bd = BuildDependency{
 				Parent:             parent,
 				Version:            parentVersion,
 				IsReplacement:      true,
@@ -890,7 +890,7 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 			split := strings.Split(dep, "@")
 			parent, version := split[0], split[1]
 
-			bd = Dependency{
+			bd = BuildDependency{
 				Parent:        parent,
 				Version:       version,
 				IsReplacement: false,
