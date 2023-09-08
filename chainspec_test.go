@@ -120,18 +120,6 @@ func TestChainSpec_Config(t *testing.T) {
 
 			require.Equal(t, m, cfg.NoHostMount)
 		})
-
-		t.Run("UsingNewGenesisCommand", func(t *testing.T) {
-			require.False(t, baseCfg.UsingNewGenesisCommand)
-
-			s := baseSpec
-			s.UsingNewGenesisCommand = true
-
-			cfg, err := s.Config(zaptest.NewLogger(t))
-			require.NoError(t, err)
-
-			require.True(t, cfg.UsingNewGenesisCommand)
-		})
 	})
 
 	t.Run("error cases", func(t *testing.T) {

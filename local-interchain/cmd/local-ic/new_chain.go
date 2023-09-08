@@ -66,11 +66,6 @@ var newChainCmd = &cobra.Command{
 					UidGid:     "1000:1000",
 				},
 
-				// maybe if genesis fails, we just recomend to toggle this?
-				// SDK v47+ only
-				// UseNewGenesisCommand: getOrDefault("Use new genesis command?", false).(bool),
-				UseNewGenesisCommand: true,
-
 				// genesis accounts (juno1...:100ujuno,10uatom;)
 
 				// Spam through enter typically

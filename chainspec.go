@@ -142,7 +142,6 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.ModifyGenesisAmounts = s.ModifyGenesisAmounts
 	}
 
-	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
 	// Set the version depending on the chain type.

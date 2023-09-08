@@ -7,15 +7,14 @@ import (
 
 type Chain struct {
 	// ibc chain config (optional)
-	ChainType            string `json:"chain_type" validate:"min=1"`
-	CoinType             int    `json:"coin_type" validate:"gt=0"`
-	Binary               string `json:"binary" validate:"min=1"`
-	Bech32Prefix         string `json:"bech32_prefix" validate:"min=1"`
-	Denom                string `json:"denom" validate:"min=1"`
-	TrustingPeriod       string `json:"trusting_period"`
-	Debugging            bool   `json:"debugging"`
-	UseNewGenesisCommand bool   `json:"use_new_genesis_command"`
-	BlockTime            string `json:"block_time"`
+	ChainType      string `json:"chain_type" validate:"min=1"`
+	CoinType       int    `json:"coin_type" validate:"gt=0"`
+	Binary         string `json:"binary" validate:"min=1"`
+	Bech32Prefix   string `json:"bech32_prefix" validate:"min=1"`
+	Denom          string `json:"denom" validate:"min=1"`
+	TrustingPeriod string `json:"trusting_period"`
+	Debugging      bool   `json:"debugging"`
+	BlockTime      string `json:"block_time"`
 
 	// Required
 	Name    string `json:"name" validate:"min=1"`
