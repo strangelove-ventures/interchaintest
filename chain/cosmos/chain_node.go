@@ -887,13 +887,14 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 
 		} else {
 			// Ex: "github.com/aaa/bbb@v0.0.0-20191008050251-8e49817e8af4"
-			split := strings.Split(dep, "@")
-			parent, version := split[0], split[1]
+			parent, version := getRepoAndVersion(dep)
 
 			bd = BuildDependency{
-				Parent:        parent,
-				Version:       version,
-				IsReplacement: false,
+				Parent:             parent,
+				Version:            version,
+				IsReplacement:      false,
+				Replacement:        "",
+				ReplacementVersion: "",
 			}
 		}
 
