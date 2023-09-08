@@ -837,6 +837,81 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 	return true
 }
 
+// GetBuildInformation returns the build information and dependencies for the chain binary.
+func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInformation {
+	stdout, _, err := tn.ExecBin(ctx, "version", "--long", "--output", "json")
+	if err != nil {
+		return nil
+	}
+
+	type tempBuildDeps struct {
+		Name             string   `json:"name"`
+		ServerName       string   `json:"server_name"`
+		Version          string   `json:"version"`
+		Commit           string   `json:"commit"`
+		BuildTags        string   `json:"build_tags"`
+		Go               string   `json:"go"`
+		BuildDeps        []string `json:"build_deps"`
+		CosmosSdkVersion string   `json:"cosmos_sdk_version"`
+	}
+
+	var deps tempBuildDeps
+	if err := json.Unmarshal([]byte(stdout), &deps); err != nil {
+		return nil
+	}
+
+	getRepoAndVersion := func(dep string) (string, string) {
+		split := strings.Split(dep, "@")
+		return split[0], split[1]
+	}
+
+	var buildDeps []Dependency
+	for _, dep := range deps.BuildDeps {
+		var bd Dependency
+
+		if strings.Contains(dep, "=>") {
+			// Ex: "github.com/aaa/bbb@v1.2.1 => github.com/ccc/bbb@v1.2.0"
+			split := strings.Split(dep, " => ")
+			main, replacement := split[0], split[1]
+
+			parent, parentVersion := getRepoAndVersion(main)
+			r, rV := getRepoAndVersion(replacement)
+
+			bd = Dependency{
+				Parent:             parent,
+				Version:            parentVersion,
+				IsReplacement:      true,
+				Replacement:        r,
+				ReplacementVersion: rV,
+			}
+
+		} else {
+			// Ex: "github.com/aaa/bbb@v0.0.0-20191008050251-8e49817e8af4"
+			split := strings.Split(dep, "@")
+			parent, version := split[0], split[1]
+
+			bd = Dependency{
+				Parent:        parent,
+				Version:       version,
+				IsReplacement: false,
+			}
+		}
+
+		buildDeps = append(buildDeps, bd)
+	}
+
+	return &BinaryBuildInformation{
+		BuildDeps:        buildDeps,
+		Name:             deps.Name,
+		ServerName:       deps.ServerName,
+		Version:          deps.Version,
+		Commit:           deps.Commit,
+		BuildTags:        deps.BuildTags,
+		Go:               deps.Go,
+		CosmosSdkVersion: deps.CosmosSdkVersion,
+	}
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
