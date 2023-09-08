@@ -637,6 +637,13 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	return err
 }
 
+func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
+	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
+	// so we use this to switch between new and legacy SDK logic.
+	// https://github.com/cosmos/cosmos-sdk/pull/14149
+	return tn.HasCommand(ctx, "genesis")
+}
+
 // AddGenesisAccount adds a genesis account for each key
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []types.Coin) error {
 	amount := ""
@@ -656,7 +663,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	defer cancel()
 
 	var command []string
-	if tn.Chain.Config().UsingNewGenesisCommand {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -677,7 +684,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	defer tn.lock.Unlock()
 
 	var command []string
-	if tn.Chain.Config().UsingNewGenesisCommand {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -692,7 +699,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin}
-	if tn.Chain.Config().UsingNewGenesisCommand {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -820,6 +827,9 @@ func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*t
 // HasCommand checks if a command in the chain binary is available.
 func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 	_, _, err := tn.ExecBin(ctx, command...)
+	if err == nil {
+		return true
+	}
 
 	if strings.Contains(string(err.Error()), "Error: unknown command") {
 		return false
@@ -830,11 +840,7 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 		return true
 	}
 
-	if err != nil {
-		return false
-	}
-
-	return true
+	return false
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
@@ -1064,15 +1070,13 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	defer tn.lock.Unlock()
 
 	var (
-		doc     = "state_export.json"
-		docPath = path.Join(tn.HomeDir(), doc)
-
-		isNewGenesis = tn.Chain.Config().UsingNewGenesisCommand
-
-		command = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
+		doc              = "state_export.json"
+		docPath          = path.Join(tn.HomeDir(), doc)
+		isNewerThanSdk47 = tn.IsAboveSDK47(ctx)
+		command          = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
 	)
 
-	if isNewGenesis {
+	if isNewerThanSdk47 {
 		command = append(command, "--output-document", docPath)
 	}
 
@@ -1081,7 +1085,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		return "", err
 	}
 
-	if isNewGenesis {
+	if isNewerThanSdk47 {
 		content, err := tn.ReadFile(ctx, doc)
 		if err != nil {
 			return "", err
@@ -1098,7 +1102,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	defer tn.lock.Unlock()
 
 	command := []string{tn.Chain.Config().Bin}
-	if tn.Chain.Config().UsingNewGenesisCommand {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "comet")
 	}
 
