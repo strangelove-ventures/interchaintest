@@ -637,7 +637,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	return err
 }
 
-func (tn *ChainNode) isAboveSDK47(ctx context.Context) bool {
+func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
@@ -663,7 +663,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	defer cancel()
 
 	var command []string
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -684,7 +684,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	defer tn.lock.Unlock()
 
 	var command []string
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -699,7 +699,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 // CollectGentxs runs collect gentxs on the node's home folders
 func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin}
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
 	}
 
@@ -1075,7 +1075,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		command = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
 	)
 
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "--output-document", docPath)
 	}
 
@@ -1084,7 +1084,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		return "", err
 	}
 
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		content, err := tn.ReadFile(ctx, doc)
 		if err != nil {
 			return "", err
@@ -1101,7 +1101,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 	defer tn.lock.Unlock()
 
 	command := []string{tn.Chain.Config().Bin}
-	if tn.isAboveSDK47(ctx) {
+	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "comet")
 	}
 
