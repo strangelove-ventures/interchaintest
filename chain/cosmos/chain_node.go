@@ -1070,12 +1070,13 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 	defer tn.lock.Unlock()
 
 	var (
-		doc     = "state_export.json"
-		docPath = path.Join(tn.HomeDir(), doc)
-		command = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
+		doc              = "state_export.json"
+		docPath          = path.Join(tn.HomeDir(), doc)
+		isNewerThanSdk47 = tn.IsAboveSDK47(ctx)
+		command          = []string{"export", "--height", fmt.Sprint(height), "--home", tn.HomeDir()}
 	)
 
-	if tn.IsAboveSDK47(ctx) {
+	if isNewerThanSdk47 {
 		command = append(command, "--output-document", docPath)
 	}
 
@@ -1084,7 +1085,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		return "", err
 	}
 
-	if tn.IsAboveSDK47(ctx) {
+	if isNewerThanSdk47 {
 		content, err := tn.ReadFile(ctx, doc)
 		if err != nil {
 			return "", err
