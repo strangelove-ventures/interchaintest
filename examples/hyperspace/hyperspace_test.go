@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -115,7 +116,7 @@ func TestHyperspace(t *testing.T) {
 					},
 					{
 						Repository: "parachain-node",
-						Version:    "local", // Set your locally built version, i.e. localv39
+						Version:    "localv39", // Set your locally built version, i.e. localv39/latest
 					},
 				},
 				Bin:            "polkadot",
@@ -152,7 +153,6 @@ func TestHyperspace(t *testing.T) {
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
 				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
-				UsingNewGenesisCommand: true,
 			},
 		},
 	})
@@ -326,8 +326,8 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
 	require.NoError(t, err)
-	fmt.Println("Exported State at height: ", exportStateHeight)
-	fmt.Println(exportedState)
+	err = os.WriteFile("exported_state.json", []byte(exportedState), 0644)
+	require.NoError(t, err)
 }
 
 type GetCodeQueryMsgResponse struct {
