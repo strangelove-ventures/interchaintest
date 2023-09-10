@@ -61,7 +61,7 @@ func TestInterchainAccounts(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
+		relayer.StartupFlags("-p", "events", "-b", "100"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
