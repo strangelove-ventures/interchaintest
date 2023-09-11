@@ -29,6 +29,8 @@ func CosmosChainStateExportTest(t *testing.T, name, version string, useNewGenesi
 	numVals := 1
 	numFullNodes := 0
 
+	// TODO: Verify ModifyGenesis works for both chains, and that the export values line up here.
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      name,
