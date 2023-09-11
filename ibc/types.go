@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -48,8 +48,6 @@ type ChainConfig struct {
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
 	EncodingConfig *testutil.TestEncodingConfig
-	// Required when the chain uses the new sub commands for genesis (https://github.com/cosmos/cosmos-sdk/pull/14149)
-	UsingNewGenesisCommand bool `yaml:"using-new-genesis-command"`
 	// Required when the chain requires the chain-id field to be populated for certain commands
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.

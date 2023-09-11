@@ -35,8 +35,7 @@ func CosmosChainStateExportTest(t *testing.T, name, version string, useNewGenesi
 			ChainName: name,
 			Version:   version,
 			ChainConfig: ibc.ChainConfig{
-				Denom:                  "ujuno",
-				UsingNewGenesisCommand: useNewGenesisCmd,
+				Denom: "ujuno",
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
