@@ -5,7 +5,9 @@ This test the rest server to ensures it functions properly.
 local-ic start base
 """
 
+import time
 
+import httpx
 from helpers.transactions import RequestBuilder
 from util_base import API_URL
 
@@ -16,8 +18,23 @@ rb = RequestBuilder(API_URL, chain_id, log_output=True)
 
 
 def main():
+    poll_for_start()
+
     bin_test()
     tx_test()
+
+
+# TODO: move this into the main scripts package as static. Useful
+def poll_for_start(waitSeconds=60):
+    for i in range(waitSeconds + 1):
+        try:
+            httpx.get(API_URL)
+            return
+        except:
+            print(f"waiting for server to start (iter:{i}) ({API_URL})")
+            time.sleep(1)
+
+    raise Exception("Local-IC REST Server did not start")
 
 
 # Test to ensure the base layer works and returns data properly
