@@ -118,6 +118,7 @@ func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	require.NoError(t, err)
 
 	// recover a key
+	// juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl
 	keyName := "key-abc"
 	testMnemonic := "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
 	wallet, err := chain.BuildWallet(ctx, keyName, testMnemonic)
@@ -127,6 +128,18 @@ func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	addr, err := chain.GetAddress(ctx, keyName)
 	require.NoError(t, err)
 	require.Equal(t, wallet.Address(), addr)
+	tn := chain.Validators[0]
+	a, err := tn.KeyBech32(ctx, "key-abc", "val")
+	require.NoError(t, err)
+	require.Equal(t, a, "junovaloper1hj5fveer5cjtn4wd6wstzugjfdxzl0xp0r8xsx")
+
+	a, err = tn.KeyBech32(ctx, "key-abc", "acc")
+	require.NoError(t, err)
+	require.Equal(t, a, wallet.FormattedAddress())
+
+	a, err = tn.AccountKeyBech32(ctx, "key-abc")
+	require.NoError(t, err)
+	require.Equal(t, a, wallet.FormattedAddress())
 }
 
 func testSendingTokens(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
