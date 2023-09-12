@@ -2,7 +2,9 @@ package penumbra_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v7"
@@ -13,7 +15,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestPenumbraChainStart(t *testing.T) {
+func TestPenumbraNetworkIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -21,13 +23,13 @@ func TestPenumbraChainStart(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 4
+	nv := 2
 	fn := 0
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.59.0,v0.34.24",
+			Version: "v0.60.0,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},
@@ -55,44 +57,48 @@ func TestPenumbraChainStart(t *testing.T) {
 	alice := chain.(*penumbra.PenumbraChain).PenumbraNodes[0]
 	bob := chain.(*penumbra.PenumbraChain).PenumbraNodes[1]
 
-	aliceBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	const aliceKeyName = "validator-0"
+	const bobKeyName = "validator-1"
+
+	aliceBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
-	bobBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	bobBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
 	// TODO: genesis allocations should be configurable, right now we are using a hardcoded value in PenumbraChain.Start
 	expectedBal := math.NewInt(1_000_000_000_000)
 
-	t.Logf("Alice Balance: %s \n", aliceBal)
-	t.Logf("Bob Balance: %s \n", bobBal)
-
 	require.True(t, aliceBal.Equal(expectedBal))
 	require.True(t, bobBal.Equal(expectedBal))
 
-	bobAddr, err := chain.GetAddress(ctx, bob.PenumbraClientNodes["validator"].KeyName)
+	bobAddr, err := chain.GetAddress(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName)
 	require.NoError(t, err)
 
-	t.Logf("ADDR: %s \n", bobAddr)
-
 	transfer := ibc.WalletAmount{
-		Address: string(bobAddr), //bob.PenumbraClientNodes["validator"].KeyName,
+		Address: string(bobAddr),
 		Denom:   chain.Config().Denom,
 		Amount:  math.NewInt(1_000),
 	}
 
-	err = chain.SendFunds(ctx, alice.PenumbraClientNodes["validator"].KeyName, transfer)
+	err = chain.SendFunds(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, transfer)
 	require.NoError(t, err)
 
-	aliceNewBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	/*
+		TODO:
+		without this sleep statement we see intermittent failures where we will observe the tokens taken from alice's balance
+		but not added to bob's balance. after debugging it seems like this is because alice's client is in sync but bob's is not.
+		we may need a way to check if each client is in sync before making any assertions about chain state after some state transition.
+		alternatively, we may wrap penumbra related queries in a retry.
+	*/
+	time.Sleep(1 * time.Second)
+
+	aliceNewBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
-	bobNewBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes["validator"].KeyName, chain.Config().Denom)
+	bobNewBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
-	t.Logf("Alice Balance: %s \n", aliceNewBal)
-	t.Logf("Bob Balance: %s \n", bobNewBal)
-
-	require.True(t, aliceNewBal.Equal(aliceBal.Sub(transfer.Amount)))
-	require.True(t, bobNewBal.Equal(bobBal.Add(transfer.Amount)))
+	require.True(t, aliceNewBal.Equal(aliceBal.Sub(transfer.Amount)), fmt.Sprintf("incorrect balances, got (%s) expected (%s)", aliceNewBal, aliceBal.Sub(transfer.Amount)))
+	require.True(t, bobNewBal.Equal(bobBal.Add(transfer.Amount)), fmt.Sprintf("incorrect balances, got (%s) expected (%s)", bobNewBal, bobBal.Add(transfer.Amount)))
 }

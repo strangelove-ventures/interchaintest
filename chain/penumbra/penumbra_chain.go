@@ -116,6 +116,18 @@ func (c *PenumbraChain) getFullNode() *PenumbraNode {
 	return c.PenumbraNodes[0]
 }
 
+// TODO: we need to refactor to use the sidecar processs feat and in the process kill this.
+func (c *PenumbraChain) getPenumbraNode(keyName string) (*PenumbraNode, error) {
+	parts := strings.Split(keyName, "-")
+	index := parts[1]
+	indexInt, err := strconv.Atoi(index)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.PenumbraNodes[indexInt], nil
+}
+
 // Implements Chain interface
 func (c *PenumbraChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().TendermintNode.HostName())
@@ -144,16 +156,28 @@ func (c *PenumbraChain) HomeDir() string {
 
 // Implements Chain interface
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
-	return c.getFullNode().PenumbraAppNode.CreateKey(ctx, keyName)
+	node, err := c.getPenumbraNode(keyName)
+	if err != nil {
+		return err
+	}
+	return node.PenumbraAppNode.CreateKey(ctx, keyName)
 }
 
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return c.getFullNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
+	node, err := c.getPenumbraNode(name)
+	if err != nil {
+		return err
+	}
+	return node.PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return c.getFullNode().PenumbraAppNode.GetAddress(ctx, keyName)
+	node, err := c.getPenumbraNode(keyName)
+	if err != nil {
+		return nil, err
+	}
+	return node.PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
 // BuildWallet will return a Penumbra wallet
@@ -208,11 +232,11 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 
 // Implements Chain interface
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	fn := c.getFullNode()
-	if len(fn.PenumbraClientNodes) == 0 {
-		return fmt.Errorf("no pclientd nodes on the fullnode for funds transfer")
+	node, err := c.getPenumbraNode(keyName)
+	if err != nil {
+		return err
 	}
-	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
+	return node.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
 }
 
 // Implements Chain interface
@@ -241,18 +265,12 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
-	fn := c.getFullNode()
-	if len(fn.PenumbraClientNodes) == 0 {
-		return math.Int{}, fmt.Errorf("no pclientd nodes on the fullnode for balance check")
-	}
-
-	// TODO remove this after debugging
-	_, err := fn.PenumbraAppNode.GetBalance(ctx, keyName)
+	node, err := c.getPenumbraNode(keyName)
 	if err != nil {
-		fmt.Printf("Error when checking balances via pcli, err: %s \n", err)
+		return math.Int{}, err
 	}
 
-	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
+	bal, err := node.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
 	if err != nil {
 		return math.Int{}, err
 	}
@@ -341,6 +359,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	for i, v := range validators {
 		v := v
 		i := i
+		keyName := fmt.Sprintf("%s-%d", valKey, i)
 		eg.Go(func() error {
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
@@ -354,10 +373,10 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
-			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
+			if err := v.PenumbraAppNode.CreateKey(egCtx, keyName); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, valKey); err != nil {
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, keyName); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
 
@@ -534,9 +553,12 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
 		val := val
 		i := i
+
+		keyName := fmt.Sprintf("%s-%d", valKey, i)
+
 		eg.Go(func() error {
 			fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
-			ckbz, err := fr.SingleFileContent(egCtx, val.PenumbraAppNode.VolumeName, "keys/validator/custody.json")
+			ckbz, err := fr.SingleFileContent(egCtx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
 			if err != nil {
 				return fmt.Errorf("error getting validator custody key content: %w", err)
 			}
@@ -545,7 +567,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 				return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
 			}
 
-			fvk, err := val.PenumbraAppNode.FullViewingKey(egCtx, valKey)
+			fvk, err := val.PenumbraAppNode.FullViewingKey(egCtx, keyName)
 			if err != nil {
 				return fmt.Errorf("error getting validator full viewing key: %w", err)
 			}
@@ -558,7 +580,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 				val.PenumbraAppNode.Image,
 				c.testName,
 				i,
-				valKey,
+				keyName,
 				ck.SpendKey,
 				fvk,
 			); err != nil {

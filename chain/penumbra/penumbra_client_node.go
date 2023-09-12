@@ -173,8 +173,8 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	fmt.Println("Building AuthorizeRequest")
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
-		AccountGroupId:    nil,
-		PreAuthorizations: nil,
+		AccountGroupId:    &cryptov1alpha1.AccountGroupId{Inner: make([]byte, 32)},
+		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
 	fmt.Println("Submitting AuthorizeRequest")
@@ -206,11 +206,14 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 
 	fmt.Println("Submitting BroadcastTxRequest")
-	_, err = viewClient.BroadcastTransaction(ctx, btr)
+	txResp, err := viewClient.BroadcastTransaction(ctx, btr)
 	if err != nil {
 		return err
 	}
 	fmt.Println("Received response from BroadcastTx call")
+
+	fmt.Println("broadcast tx response")
+	fmt.Printf("%+v \n", txResp)
 
 	return nil
 }
