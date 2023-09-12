@@ -33,22 +33,10 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 	cosmos.SetSDKConfig("juno")
 
 	sdk47Genesis := []cosmos.GenesisKV{
-		{
-			Key:   "app_state.gov.params.voting_period",
-			Value: "15s",
-		},
-		{
-			Key:   "app_state.gov.params.max_deposit_period",
-			Value: "10s",
-		},
-		{
-			Key:   "app_state.gov.params.min_deposit.0.denom",
-			Value: "ujuno",
-		},
-		{
-			Key:   "app_state.gov.params.min_deposit.0.amount",
-			Value: "1",
-		},
+		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
+		cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "10s"),
+		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "ujuno"),
+		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -100,11 +88,14 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
 	testBroadcaster(ctx, t, chain, users)
-	testAddingNode(ctx, t, chain)
+
+	testQueryCmd(ctx, t, chain)
+	testHasCommand(ctx, t, chain)
 
 	// testProposal(ctx, t, chain, user) // broken param unmarshaling, requires v50 sim.
 	// testCosmWasm(ctx, t, chain, user.KeyName(), "contracts/cw_template.wasm", `{"count":0}`) // requires wasmd v50
 
+	testAddingNode(ctx, t, chain)
 }
 
 func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -128,6 +119,7 @@ func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	addr, err := chain.GetAddress(ctx, keyName)
 	require.NoError(t, err)
 	require.Equal(t, wallet.Address(), addr)
+
 	tn := chain.Validators[0]
 	a, err := tn.KeyBech32(ctx, "key-abc", "val")
 	require.NoError(t, err)
@@ -218,6 +210,50 @@ func testAddingNode(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	require.Equal(t, nodesAmt+1, len(chain.Nodes()))
 }
 
+func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	from := users[0].FormattedAddress()
+	addr1 := "juno190g5j8aszqhvtg7cprmev8xcxs6csra7xnk3n3"
+	addr2 := "juno1a53udazy8ayufvy0s434pfwjcedzqv34q7p7vj"
+
+	c1 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(1)))
+	c2 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(2)))
+
+	b := cosmos.NewBroadcaster(t, chain)
+
+	in := banktypes.Input{
+		Address: from,
+		Coins:   c1.Add(c2[0]),
+	}
+	out := []banktypes.Output{
+		{
+			Address: addr1,
+			Coins:   c1,
+		},
+		{
+			Address: addr2,
+			Coins:   c2,
+		},
+	}
+
+	txResp, err := cosmos.BroadcastTx(
+		ctx,
+		b,
+		users[0],
+		banktypes.NewMsgMultiSend(in, out),
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, txResp.TxHash)
+	fmt.Printf("txResp: %+v\n", txResp)
+
+	updatedBal1, err := chain.GetBalance(ctx, addr1, chain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, math.NewInt(1), updatedBal1)
+
+	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, math.NewInt(2), updatedBal2)
+}
+
 /*
 func testProposal(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user ibc.Wallet) {
 	govAcc := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
@@ -299,68 +335,35 @@ func testSidecar(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	// and everythign in sidecar.go
 }
 
-func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-	from := users[0].FormattedAddress()
-	addr1 := "juno190g5j8aszqhvtg7cprmev8xcxs6csra7xnk3n3"
-	addr2 := "juno1a53udazy8ayufvy0s434pfwjcedzqv34q7p7vj"
-
-	c1 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(1)))
-	c2 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(2)))
-
-	b := cosmos.NewBroadcaster(t, chain)
-
-	in := banktypes.Input{
-		Address: from,
-		Coins:   c1.Add(c2[0]),
-	}
-	out := []banktypes.Output{
-		{
-			Address: addr1,
-			Coins:   c1,
-		},
-		{
-			Address: addr2,
-			Coins:   c2,
-		},
-	}
-
-	txResp, err := cosmos.BroadcastTx(
-		ctx,
-		b,
-		users[0],
-		banktypes.NewMsgMultiSend(in, out),
-	)
+func testQueryCmd(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	tn := chain.Validators[0]
+	stdout, stderr, err := tn.ExecQuery(ctx, "slashing", "params")
 	require.NoError(t, err)
-	require.NotEmpty(t, txResp.TxHash)
-	fmt.Printf("txResp: %+v\n", txResp)
-
-	updatedBal1, err := chain.GetBalance(ctx, addr1, chain.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, math.NewInt(1), updatedBal1)
-
-	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, math.NewInt(2), updatedBal2)
+	require.NotEmpty(t, stdout)
+	require.Empty(t, stderr)
 }
 
-// chain-node
-// GenesisFileContent
-// TxCommand
-// ExecTx
-// NodeCommand
-// BinCommand
-// ExecBin
-// QueryCommand
-// ExecQuery
-// WriteFile
-// ReadFile
-// IsAboveSDK47
-// HasCommand
-// UnsafeResetAll (45 and 47)
-// NodeID
-// KeyBech32
-// AccountKeyBech32
-// Exec
+func testHasCommand(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	tn := chain.Validators[0]
+	res := tn.HasCommand(ctx, "query")
+	require.True(t, res)
+
+	if tn.IsAboveSDK47(ctx) {
+		require.True(t, tn.HasCommand(ctx, "genesis"))
+	} else {
+		// 45 does not have this
+		require.False(t, tn.HasCommand(ctx, "genesis"))
+	}
+
+	require.True(t, tn.HasCommand(ctx, "tx", "ibc"))
+	require.True(t, tn.HasCommand(ctx, "q", "ibc"))
+	require.True(t, tn.HasCommand(ctx, "keys"))
+	require.True(t, tn.HasCommand(ctx, "help"))
+	require.True(t, tn.HasCommand(ctx, "tx", "bank", "send"))
+
+	require.False(t, tn.HasCommand(ctx, "tx", "bank", "send2notrealcmd"))
+	require.False(t, tn.HasCommand(ctx, "incorrectcmd"))
+}
 
 // helpers
 func sendTokens(ctx context.Context, chain *cosmos.CosmosChain, from, to ibc.Wallet, token string, amount int64) (ibc.WalletAmount, error) {
