@@ -2,13 +2,14 @@ package cosmos_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"cosmossdk.io/math"
 
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -28,6 +29,8 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 
 	numVals := 1
 	numFullNodes := 0
+
+	cosmos.SetSDKConfig("juno")
 
 	sdk47Genesis := []cosmos.GenesisKV{
 		{
@@ -55,6 +58,8 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 			Version:   version,
 			ChainConfig: ibc.ChainConfig{
 				Denom:         "ujuno",
+				Bech32Prefix:  "juno",
+				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 			},
 			NumValidators: &numVals,
@@ -94,6 +99,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 	testFindTxs(ctx, t, chain, users)
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
+	testBroadcaster(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
 
 	// testProposal(ctx, t, chain, user) // broken param unmarshaling, requires v50 sim.
@@ -182,7 +188,7 @@ func testRangeBlockMessages(ctx context.Context, t *testing.T, chain *cosmos.Cos
 	require.NoError(t, err)
 
 	var bankMsgs []*banktypes.MsgSend
-	err = cosmos.RangeBlockMessages(ctx, chain.Config().EncodingConfig.InterfaceRegistry, chain.Validators[0].Client, height+1, func(msg types.Msg) bool {
+	err = cosmos.RangeBlockMessages(ctx, chain.Config().EncodingConfig.InterfaceRegistry, chain.Validators[0].Client, height+1, func(msg sdk.Msg) bool {
 		found, ok := msg.(*banktypes.MsgSend)
 		if ok {
 			bankMsgs = append(bankMsgs, found)
@@ -280,6 +286,50 @@ func testSidecar(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	// and everythign in sidecar.go
 }
 
+func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	from := users[0].FormattedAddress()
+	addr1 := "juno190g5j8aszqhvtg7cprmev8xcxs6csra7xnk3n3"
+	addr2 := "juno1a53udazy8ayufvy0s434pfwjcedzqv34q7p7vj"
+
+	c1 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(1)))
+	c2 := sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, math.NewInt(2)))
+
+	b := cosmos.NewBroadcaster(t, chain)
+
+	in := banktypes.Input{
+		Address: from,
+		Coins:   c1.Add(c2[0]),
+	}
+	out := []banktypes.Output{
+		{
+			Address: addr1,
+			Coins:   c1,
+		},
+		{
+			Address: addr2,
+			Coins:   c2,
+		},
+	}
+
+	txResp, err := cosmos.BroadcastTx(
+		ctx,
+		b,
+		users[0],
+		banktypes.NewMsgMultiSend(in, out),
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, txResp.TxHash)
+	fmt.Printf("txResp: %+v\n", txResp)
+
+	updatedBal1, err := chain.GetBalance(ctx, addr1, chain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, math.NewInt(1), updatedBal1)
+
+	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, math.NewInt(2), updatedBal2)
+}
+
 // chain-node
 // GenesisFileContent
 // TxCommand
@@ -298,8 +348,6 @@ func testSidecar(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 // KeyBech32
 // AccountKeyBech32
 // Exec
-
-// broadcaster.go (reference PersistanceOne)
 
 // helpers
 func sendTokens(ctx context.Context, chain *cosmos.CosmosChain, from, to ibc.Wallet, token string, amount int64) (ibc.WalletAmount, error) {
