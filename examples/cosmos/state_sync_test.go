@@ -12,7 +12,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
 
 func TestCosmosHubStateSync(t *testing.T) {
@@ -46,39 +45,16 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			Name:      chainName,
-			ChainName: chainName,
-			Version:   version,
-			ChainConfig: ibc.ChainConfig{
-				ConfigFileOverrides: configFileOverrides,
-			},
-			NumFullNodes: &nf,
-		},
-	})
+	cfg := ibc.ChainConfig{
+		ConfigFileOverrides: configFileOverrides,
+	}
 
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
+	chains := interchaintest.CreateChainWithConfig(t, 1, nf, chainName, version, cfg)
 
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := interchaintest.NewInterchain().
-		AddChain(chain)
-
-	ctx := context.Background()
-	client, network := interchaintest.DockerSetup(t)
-
-	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
-		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation: true,
-	}))
-	t.Cleanup(func() {
-		_ = ic.Close()
-	})
+	enableBlockDB := false
+	_, ctx, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
 	// Wait for blocks so that nodes have a few state sync snapshot available
 	require.NoError(t, testutil.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))

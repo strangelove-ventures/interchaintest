@@ -24,13 +24,11 @@ func TestUpdateLightClients(t *testing.T) {
 	ctx := context.Background()
 
 	// Chains
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
+	chains := interchaintest.CreateChainsWithChainSpecs(t, []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: gaiaVersion},
 		{Name: "osmosis", Version: osmosisVersion},
 	})
 
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
 	gaia, osmosis := chains[0], chains[1]
 
 	// Relayer
