@@ -65,6 +65,9 @@ jobs:
         with:
           name: local-ic
           path: /tmp
+      
+      - name: Make local-ic executable
+        run: chmod +x /tmp/local-ic
 
       - name: Start background ibc local-interchain        
         run: /tmp/local-ic start juno_ibc &
