@@ -6,9 +6,8 @@ local-ic start base
 """
 
 import sys
-import time
 
-import httpx
+from helpers.testing import poll_for_start
 from helpers.transactions import RequestBuilder
 from util_base import API_URL
 
@@ -19,47 +18,34 @@ rb = RequestBuilder(API_URL, chain_id, log_output=True)
 
 
 def main():
-    seconds = 120
-    if len(sys.argv) > 1:
-        if sys.argv[1].isdigit():
-            seconds = int(sys.argv[1])
-
-    poll_for_start(waitSeconds=seconds)
+    poll_for_start(waitSeconds=120)
 
     bin_test()
     tx_test()
 
-    # fail on purpose with a non 0 error code
-    exit(1)
-
-
-# TODO: move this into the main scripts package as static. Useful
-def poll_for_start(waitSeconds=60):
-    for i in range(waitSeconds + 1):
-        try:
-            httpx.get(API_URL)
-            return
-        except:
-            print(f"waiting for server to start (iter:{i}) ({API_URL})")
-            time.sleep(1)
-
-    raise Exception("Local-IC REST Server did not start")
-
 
 # Test to ensure the base layer works and returns data properly
 def bin_test():
-    rb.binary("keys list --keyring-backend=test --output=json")
+    res = rb.binary("keys list --keyring-backend=test --output=json")
+    assert len(res) > 0
 
-    rb.binary(
+    res = rb.binary(
         "tx decode ClMKUQobL2Nvc21vcy5nb3YudjFiZXRhMS5Nc2dWb3RlEjIIpwISK2p1bm8xZGM3a2MyZzVrZ2wycmdmZHllZGZ6MDl1YTlwZWo1eDNsODc3ZzcYARJmClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECxjGMmYp4MlxxfFWi9x4u+jOleJVde3Cru+HnxAVUJmgSBAoCCH8YNBISCgwKBXVqdW5vEgMyMDQQofwEGkDPE4dCQ4zUh6LIB9wqNXDBx+nMKtg0tEGiIYEH8xlw4H8dDQQStgAe6xFO7I/oYVSWwa2d9qUjs9qyB8r+V0Gy"
+    )
+    assert res is not None
+    assert res == dict(
+        """{"body":{"messages":[{"@type":"/cosmos.gov.v1beta1.MsgVote","proposal_id":"295","voter":"juno1dc7kc2g5kgl2rgfdyedfz09ua9pej5x3l877g7","option":"VOTE_OPTION_YES"}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[{"public_key":{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AsYxjJmKeDJccXxVovceLvozpXiVXXtwq7vh58QFVCZo"},"mode_info":{"single":{"mode":"SIGN_MODE_LEGACY_AMINO_JSON"}},"sequence":"52"}],"fee":{"amount":[{"denom":"ujuno","amount":"204"}],"gas_limit":"81441","payer":"","granter":""}},"signatures":["zxOHQkOM1IeiyAfcKjVwwcfpzCrYNLRBoiGBB/MZcOB/HQ0EErYAHusRTuyP6GFUlsGtnfalI7PasgfK/ldBsg=="]}"""
     )
 
     rb.binary("config keyring-backend test")
-    rb.binary("config")
+    assert rb.binary("config") == dict(
+        """{"chain-id": "","keyring-backend": "test","output": "text","node": "tcp://localhost:26657","broadcast-mode": "sync","gas": "","gas-prices": "","gas-adjustment": "","fees": "","fee-account": "","note": ""}"""
+    )
 
-    rb.binary("keys list --output=json")
+    assert len(rb.binary("keys list --output=json")) > 0
 
-    rb.query("bank total")
+    # this query returns a dict with suply as the key, validate it is there
+    assert "supply" in rb.query("bank total")
 
     rb.query("bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 --output=json")
 
@@ -71,12 +57,13 @@ def tx_test():
     )
     tx_data = rb.query_tx(res)
     print(tx_data)
+    assert tx_data["code"] == 0
 
-    print(
-        rb.query(
-            "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 --output=json"
-        )
+    bal = rb.query(
+        "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 --output=json"
     )
+    print(bal)
+    assert len(bal["balances"]) > 0
 
 
 if __name__ == "__main__":
