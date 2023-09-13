@@ -29,6 +29,9 @@ def main():
     bin_test()
     tx_test()
 
+    # fail on purpose with a non 0 error code
+    exit(1)
+
 
 # TODO: move this into the main scripts package as static. Useful
 def poll_for_start(waitSeconds=60):
