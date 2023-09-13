@@ -77,9 +77,7 @@ class CosmWasm:
         if "error" in res:
             raise Exception(res["error"])
 
-        # self.code_id = int(res["code_id"])
         self.code_id = Cache.update_cache(contracts, res["code_id"], sha1)
-        print(Cache.get_cache_or_default({}, ictest_chain_start))
         return self
 
     def instantiate_contract(

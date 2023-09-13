@@ -163,6 +163,16 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 		}
 	}
 
+	AddGenesisKeysToKeyring(ctx, config, chains)
+
+	// run commands for each server after startup. Iterate chain configs
+	PostStartupCommands(ctx, config, chains)
+
+	connections := GetChannelConnections(ctx, ibcpaths, chains, ic, relayer, eRep)
+
+	// Save to logs.json file for runtime chain information.
+	DumpChainsInfoToLogs(installDir, config, chains, connections)
+
 	// Starts a non blocking REST server to take action on the chain.
 	go func() {
 		r := router.NewRouter(ctx, ic, config, vals, relayer, eRep, installDir)
@@ -178,19 +188,9 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 		if err := http.ListenAndServe(server, r); err != nil {
 			log.Default().Println(err)
 		}
+
+		log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 	}()
-
-	AddGenesisKeysToKeyring(ctx, config, chains)
-
-	// run commands for each server after startup. Iterate chain configs
-	PostStartupCommands(ctx, config, chains)
-
-	connections := GetChannelConnections(ctx, ibcpaths, chains, ic, relayer, eRep)
-
-	// Save to logs.json file for runtime chain information.
-	DumpChainsInfoToLogs(installDir, config, chains, connections)
-
-	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		log.Fatal("WaitForBlocks StartChain: ", err)
