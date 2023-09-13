@@ -2,7 +2,7 @@ version: v1
 managed:
   enabled: true
   go_package_prefix:
-    default: github.com/strangelove-ventures/interchaintest/v7/chain
+    default: github.com/strangelove-ventures/interchaintest/v8/chain
     except:
       - buf.build/cosmos/ibc
       - github.com/cometbft/cometbft
