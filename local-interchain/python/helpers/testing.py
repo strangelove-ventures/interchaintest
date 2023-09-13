@@ -9,7 +9,9 @@ def poll_for_start(API_URL: str, waitSeconds=120):
             httpx.get(API_URL)
             return
         except Exception:
-            print(f"waiting for server to start (iter:{i}) ({API_URL})")
+            if i % 5 == 0:
+                print(f"waiting for server to start (iter:{i}) ({API_URL})")
+
             time.sleep(1)
 
     raise Exception("Local-IC REST API Server did not start")

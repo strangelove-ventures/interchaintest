@@ -127,6 +127,7 @@ def main():
             {"get_count": {"channel": "channel-1"}}
         )
         print(f"{contract1_res=}")
+        assert contract1_res["data"]["count"] == 1
 
 
 if __name__ == "__main__":
