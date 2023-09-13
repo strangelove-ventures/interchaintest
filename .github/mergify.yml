@@ -7,7 +7,7 @@ pull_request_rules:
       backport:
         branches:
           - main
-          - v6
+          - v7
         assignees: 
             - "{{ author }}"
         labels:
