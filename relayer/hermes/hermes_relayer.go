@@ -10,17 +10,17 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 )
 
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.4.0"
+	DefaultContainerVersion = "1.6.0"
 
-	hermesDefaultUidGid = "1000:1000"
+	hermesDefaultUidGid = "1001:1001"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )

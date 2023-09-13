@@ -11,10 +11,10 @@ import (
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
 
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 func loadConfig(config *types.Config, filepath string) (*types.Config, error) {
@@ -97,21 +97,20 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
 	chainCfg := ibc.ChainConfig{
-		Type:                   cfg.ChainType,
-		Name:                   cfg.Name,
-		ChainID:                cfg.ChainID,
-		Bin:                    cfg.Binary,
-		Bech32Prefix:           cfg.Bech32Prefix,
-		Denom:                  cfg.Denom,
-		CoinType:               fmt.Sprintf("%d", cfg.CoinType),
-		GasPrices:              cfg.GasPrices,
-		GasAdjustment:          cfg.GasAdjustment,
-		TrustingPeriod:         cfg.TrustingPeriod,
-		NoHostMount:            false,
-		ModifyGenesis:          cosmos.ModifyGenesis(cfg.Genesis.Modify),
-		ConfigFileOverrides:    FasterBlockTimesBuilder(cfg.BlockTime),
-		EncodingConfig:         nil,
-		UsingNewGenesisCommand: cfg.UseNewGenesisCommand,
+		Type:                cfg.ChainType,
+		Name:                cfg.Name,
+		ChainID:             cfg.ChainID,
+		Bin:                 cfg.Binary,
+		Bech32Prefix:        cfg.Bech32Prefix,
+		Denom:               cfg.Denom,
+		CoinType:            fmt.Sprintf("%d", cfg.CoinType),
+		GasPrices:           cfg.GasPrices,
+		GasAdjustment:       cfg.GasAdjustment,
+		TrustingPeriod:      cfg.TrustingPeriod,
+		NoHostMount:         false,
+		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
+		ConfigFileOverrides: FasterBlockTimesBuilder(cfg.BlockTime),
+		EncodingConfig:      nil,
 	}
 
 	if cfg.DockerImage.Version == "" {

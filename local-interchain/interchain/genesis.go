@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 
@@ -62,7 +62,7 @@ func SetupGenesisWallets(config *types.Config, chains []ibc.Chain) map[ibc.Chain
 			for _, coin := range amount {
 				additionalWallets[chainObj] = append(additionalWallets[chainObj], ibc.WalletAmount{
 					Address: acc.Address,
-					Amount:  coin.Amount.Int64(),
+					Amount:  coin.Amount,
 					Denom:   coin.Denom,
 				})
 			}

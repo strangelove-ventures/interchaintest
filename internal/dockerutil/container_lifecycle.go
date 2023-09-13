@@ -14,7 +14,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 type ContainerLifecycle struct {
