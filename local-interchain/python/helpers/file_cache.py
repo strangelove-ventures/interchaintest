@@ -19,13 +19,14 @@ class Cache:
 
     @staticmethod
     def get_chain_start_time_from_logs() -> int:
-        if not os.path.exists(logs_path):
-            return 0
-
         with open(logs_path, "r") as f:
             logs = dict(json.load(f))
 
-        return int(logs.get("start_time", 0))
+        res = logs.get("start_time", -1)
+        if isinstance(res, str):
+            res = res.replace("\n", "")
+
+        return int(res)
 
     @staticmethod
     def get_cache_or_default(contracts: dict, ictest_chain_start: int) -> dict:
