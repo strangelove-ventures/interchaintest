@@ -5,6 +5,7 @@ This test the rest server to ensures it functions properly.
 local-ic start base
 """
 
+import sys
 import time
 
 import httpx
@@ -18,7 +19,12 @@ rb = RequestBuilder(API_URL, chain_id, log_output=True)
 
 
 def main():
-    poll_for_start()
+    seconds = 120
+    if len(sys.argv) > 1:
+        if sys.argv[1].isdigit():
+            seconds = int(sys.argv[1])
+
+    poll_for_start(waitSeconds=seconds)
 
     bin_test()
     tx_test()
