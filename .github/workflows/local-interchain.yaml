@@ -46,8 +46,8 @@ jobs:
     strategy:
       matrix:        
         test:
-          - "./scripts/api_test.py"
-          - "./scripts/ibc_contract.py"
+          - [8081, "./scripts/api_test.py"]
+          - [8082, "./scripts/ibc_contract.py"]
       fail-fast: false
       
     steps:
@@ -71,10 +71,10 @@ jobs:
         run: chmod +x /tmp/local-ic
 
       - name: Start background ibc local-interchain        
-        run: /tmp/local-ic start juno_ibc &
+        run: /tmp/local-ic start juno_ibc --api-port ${{ matrix.test[0] }} &
       
       - name: Run Python Script        
-        run: python3 ${{ matrix.test }}
+        run: python3 ${{ matrix.test[1] }} --api-port ${{ matrix.test[0] }}
 
       - name: Cleanup        
         run: killall local-ic && exit 0
