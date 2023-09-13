@@ -67,6 +67,7 @@ class CosmWasm:
         Cache.default_contracts_json()
 
         contracts = Cache.get_cache_or_default({}, ictest_chain_start)
+        print(contracts)
 
         sha1 = Cache.get_file_hash(abs_path, self.chain_id)
         if sha1 in contracts["file_cache"]:
