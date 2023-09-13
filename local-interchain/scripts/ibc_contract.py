@@ -1,5 +1,6 @@
+# flake8: noqa
 #
-# SHows how to relay between contracts
+# Shows how to relay between contracts
 
 """.
 
@@ -23,6 +24,7 @@ from typing import Collection
 
 from helpers.cosmwasm import CosmWasm
 from helpers.relayer import Relayer
+from helpers.testing import poll_for_start
 from helpers.transactions import RequestBuilder
 from util_base import API_URL
 
@@ -47,6 +49,8 @@ def main():
     contracts_dir = os.path.join(parent_dir, "contracts")
 
     relayer = Relayer(API_URL, chain_id)
+
+    poll_for_start(API_URL, waitSeconds=120)
 
     if True:
         print("⚙️ Setting env configuration")
