@@ -45,9 +45,9 @@ jobs:
         working-directory: ./local-interchain
     strategy:
       matrix:        
-        test:
-          - [8081, "./scripts/api_test.py"]
-          - [8082, "./scripts/ibc_contract.py"]
+        test:          
+          - ["api_test", 8081]
+          - ["ibc_contract", 8082]
       fail-fast: false
       
     steps:
@@ -59,7 +59,7 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
-      - run: pip install -r scripts/requirements.txt --break-system-packages  
+      - run: pip install -r python/requirements.txt --break-system-packages  
 
       - name: Download Tarball Artifact
         uses: actions/download-artifact@v3
@@ -71,10 +71,10 @@ jobs:
         run: chmod +x /tmp/local-ic
 
       - name: Start background ibc local-interchain        
-        run: /tmp/local-ic start juno_ibc --api-port ${{ matrix.test[0] }} &
+        run: /tmp/local-ic start juno_ibc --api-port ${{ matrix.test[1] }} &
       
       - name: Run Python Script        
-        run: python3 ${{ matrix.test[1] }} --api-port ${{ matrix.test[0] }}
+        run: python3 ./python/${{ matrix.test[0] }}.py --api-port ${{ matrix.test[1] }}
 
       - name: Cleanup        
         run: killall local-ic && exit 0
