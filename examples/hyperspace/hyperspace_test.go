@@ -28,13 +28,13 @@ import (
 // Must build local docker images of hyperspace, parachain, polkadot, ibc-go-simd
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Commit: fce2d6303cc111c8b5f2aa47b2fba3dc61a79bf2
+// * Pull PR: gh pr checkout 388
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
 //    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:local --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Commit: fce2d6303cc111c8b5f2aa47b2fba3dc61a79bf2
+// * Pull PR: gh pr checkout 388
 // * Build local parachain docker from centauri repo:
 //     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed / or change the tag/version name)
 // ###### polkadot ######
@@ -47,7 +47,7 @@ import (
 // ##### ibc-go-simd #####
 // * Repo: cosmos/ibc-go
 // * Branch: feat/wasm-clients
-// * Commit: 01757b953dcb5de43c523bae3edf592284533ac3
+// * Use this PR if it hasn't been merged: gh pr checkout 4306
 // * Build using heighliner:
 //     heighliner build -c ibc-go-simd -g local --local
 
@@ -111,12 +111,12 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "polkadot-node",
-						Version:    "local", // Set your locally built version: i.e local-v0.9.39
+						Version:    "local", // Set your locally built version
 						UidGid:     "1000:1000",
 					},
 					{
 						Repository: "parachain-node",
-						Version:    "localv39", // Set your locally built version, i.e. localv39/latest
+						Version:    "latest", // Set your locally built version
 					},
 				},
 				Bin:            "polkadot",
@@ -169,7 +169,7 @@ func TestHyperspace(t *testing.T) {
 		zaptest.NewLogger(t),
 		// These two fields are used to pass in a custom Docker image built locally
 		relayer.ImagePull(false),
-		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"), // Set your locally built version, i.e. localv39debug
+		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"), // Set your locally built version
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
