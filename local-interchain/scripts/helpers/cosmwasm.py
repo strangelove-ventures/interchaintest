@@ -1,3 +1,5 @@
+# flake8: noqa
+
 import json
 import os
 from base64 import b64decode, b64encode

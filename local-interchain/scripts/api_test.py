@@ -5,8 +5,6 @@ This test the rest server to ensures it functions properly.
 local-ic start base
 """
 
-import sys
-
 from helpers.testing import poll_for_start
 from helpers.transactions import RequestBuilder
 from util_base import API_URL
