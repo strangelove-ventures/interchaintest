@@ -40,6 +40,9 @@ jobs:
     name: e2e tests
     needs: build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./local-interchain
     strategy:
       matrix:        
         test:
