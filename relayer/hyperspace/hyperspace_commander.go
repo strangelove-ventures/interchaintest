@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"path"
 
-	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
-	types23 "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	types23 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"

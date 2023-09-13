@@ -26,7 +26,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
-	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
