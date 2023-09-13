@@ -8,6 +8,11 @@ import (
 	"github.com/strangelove-ventures/localinterchain/interchain"
 )
 
+const (
+	FlagAPIAddressOverride = "api-address"
+	FlagAPIPortOverride    = "api-port"
+)
+
 var startCmd = &cobra.Command{
 	Use:     "start <config.json>",
 	Aliases: []string{"s", "run"},
@@ -27,10 +32,19 @@ var startCmd = &cobra.Command{
 			configPath = filepath.Base(configPath)
 		}
 
-		interchain.StartChain(parentDir, configPath)
+		apiAddrOverride, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
+		apiPortOverride, _ := cmd.Flags().GetUint16(FlagAPIPortOverride)
+
+		interchain.StartChain(parentDir, configPath, &interchain.AppOverrides{
+			AddressOverride: apiAddrOverride,
+			PortOverride:    apiPortOverride,
+		})
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+
+	startCmd.Flags().String(FlagAPIAddressOverride, "", "Override the default API host address")
+	startCmd.Flags().Uint16(FlagAPIPortOverride, 0, "Override the default API port")
 }
