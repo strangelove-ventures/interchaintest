@@ -15,6 +15,11 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// TestPenumbraNetworkIntegration exercises various facilities of pclientd and is used as a basic integration test
+// to assert that interacting with a local Penumbra testnet via pclientd works as intended.
+//
+// This test case is ported from a Rust integration test found in the Penumbra repo at the link below:
+// https://github.com/penumbra-zone/penumbra/blob/45bdbbeefc2f0d3ebf09e2f37d0545d8b1e094d8/crates/bin/pclientd/tests/network_integration.rs
 func TestPenumbraNetworkIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -99,6 +104,9 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 	bobNewBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName, chain.Config().Denom)
 	require.NoError(t, err)
 
-	require.True(t, aliceNewBal.Equal(aliceBal.Sub(transfer.Amount)), fmt.Sprintf("incorrect balances, got (%s) expected (%s)", aliceNewBal, aliceBal.Sub(transfer.Amount)))
-	require.True(t, bobNewBal.Equal(bobBal.Add(transfer.Amount)), fmt.Sprintf("incorrect balances, got (%s) expected (%s)", bobNewBal, bobBal.Add(transfer.Amount)))
+	aliceExpected := aliceBal.Sub(transfer.Amount)
+	bobExpected := bobBal.Add(transfer.Amount)
+
+	require.True(t, aliceNewBal.Equal(aliceExpected), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceNewBal, aliceExpected))
+	require.True(t, bobNewBal.Equal(bobExpected), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobNewBal, bobExpected))
 }

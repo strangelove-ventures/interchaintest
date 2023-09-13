@@ -133,7 +133,6 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
-	fmt.Println("In client.SendFunds call")
 	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -142,8 +141,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	hi, lo := translateBigInt(amount.Amount)
 
-	// 5.1. Generate a transaction plan sending funds to an address.
-	fmt.Println("Building TransactionPlannerRequest")
+	// Generate a transaction plan sending funds to an address.
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
 		AccountGroupId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
@@ -160,60 +158,45 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 
-	fmt.Println("Submitting TransactionPlannerRequest")
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Received response from TransactionPlanner call")
 
-	// 5.2. Get authorization data for the transaction from pclientd (signing).
-
+	// Get authorization data for the transaction from pclientd (signing).
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
-	fmt.Println("Building AuthorizeRequest")
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
 		AccountGroupId:    &cryptov1alpha1.AccountGroupId{Inner: make([]byte, 32)},
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
-	fmt.Println("Submitting AuthorizeRequest")
 	authData, err := custodyClient.Authorize(ctx, authorizeReq)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Received response from AuthorizeRequest call")
 
-	// 5.3. Have pclientd build and sign the planned transaction.
-	fmt.Println("Building WitnessAndBuildRequest")
+	// Have pclientd build and sign the planned transaction.
 	wbr := &viewv1alpha1.WitnessAndBuildRequest{
 		TransactionPlan:   resp.Plan,
 		AuthorizationData: authData.Data,
 	}
 
-	fmt.Println("Submitting WitnessAndBuildRequest")
 	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Received response from WitnessAndBuild call")
 
-	// 5.4. Have pclientd broadcast and await confirmation of the built transaction.
-	fmt.Println("Building BroadcastTxRequest")
+	// Have pclientd broadcast and await confirmation of the built transaction.
 	btr := &viewv1alpha1.BroadcastTransactionRequest{
 		Transaction:    tx.Transaction,
 		AwaitDetection: true,
 	}
 
-	fmt.Println("Submitting BroadcastTxRequest")
-	txResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	_, err = viewClient.BroadcastTransaction(ctx, btr)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Received response from BroadcastTx call")
-
-	fmt.Println("broadcast tx response")
-	fmt.Printf("%+v \n", txResp)
 
 	return nil
 }
@@ -229,11 +212,8 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 }
 
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
-	fmt.Println("Entering GetBalance function from client perspective...")
-	pclientd_addr := p.hostGRPCPort
-	fmt.Printf("Dialing pclientd(?) grpc address at %v\n", pclientd_addr)
 	channel, err := grpc.Dial(
-		pclientd_addr,
+		p.hostGRPCPort,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -243,7 +223,6 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 
-	fmt.Println("In GetBalance, building BalancesRequest...")
 	balanceRequest := &viewv1alpha1.BalancesRequest{
 		AccountFilter: &cryptov1alpha1.AddressIndex{
 			Account: 0,
@@ -255,7 +234,6 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 
 	// The BalanceByAddress method returns a stream response, containing
 	// zero-or-more balances, including denom and amount info per balance.
-	fmt.Println("In GetBalance, submitting BalancesRequest...")
 	balanceStream, err := viewClient.Balances(ctx, balanceRequest)
 	if err != nil {
 		return math.Int{}, err
@@ -275,23 +253,9 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 		balances = append(balances, balance)
 	}
 
-	//fmt.Println("In GetBalance, dumping all wallet contents...")
-	//for _, b := range balances {
-	//	metadata, err := p.GetDenomMetadata(ctx, b.Balance.AssetId)
-	//	if err != nil {
-	//		p.log.Error(
-	//			"Failed to retrieve DenomMetadata",
-	//			zap.String("asset_id", b.Balance.String()),
-	//			zap.Error(err),
-	//		)
-	//
-	//		continue
-	//	}
-	//
-	//	if metadata.Base == denom {
-	//		return translateHiAndLo(b.Balance.Amount.Hi, b.Balance.Amount.Lo), nil
-	//	}
-	//}
+	if len(balances) <= 0 {
+		return math.Int{}, fmt.Errorf("no balance was found for the denom %s", denom)
+	}
 
 	return translateHiAndLo(balances[0].Balance.Amount.Hi, balances[0].Balance.Amount.Lo), nil
 }
@@ -395,10 +359,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 		"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
 	}
 
-	// TODO: we should be able to remove this once a patch release has been tagged for pclientd
-	env := []string{
-		"RUST_LOG=info",
-	}
+	var env []string
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
 }

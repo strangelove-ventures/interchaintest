@@ -241,22 +241,9 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 
 	addr := strings.TrimSpace(string(stdout))
 	return []byte(addr), nil
-
-	//addresses := strings.Split(string(stdout), "\n")
-	//for _, address := range addresses {
-	//	fields := strings.Fields(address)
-	//	if len(fields) < 3 {
-	//		continue
-	//	}
-	//	if fields[1] == keyName {
-	//		// TODO penumbra address is bech32m. need to decode to bytes here
-	//		return []byte(fields[2]), nil
-	//	}
-	//}
-	//
-	//return []byte{}, errors.New("address not found")
 }
 
+// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
@@ -267,7 +254,6 @@ func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64
 		return 0, err
 	}
 
-	// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
 	fmt.Printf("STDOUT BAL: '%s'\n", string(stdout))
 	return 0, nil
 }

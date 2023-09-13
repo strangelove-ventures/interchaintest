@@ -364,18 +364,22 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
 			}
+
 			fr := dockerutil.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
 			privValKeyBytes, err := fr.SingleFileContent(egCtx, v.TendermintNode.VolumeName, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
 			}
+
 			privValKey := tendermint.PrivValidatorKeyFile{}
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
+
 			if err := v.PenumbraAppNode.CreateKey(egCtx, keyName); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
+
 			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, keyName); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
@@ -387,10 +391,12 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
+
 			validatorTemplateDefinition := PenumbraValidatorDefinition{}
 			if err := toml.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
 				return fmt.Errorf("error unmarshaling validator definition template key: %v", err)
 			}
+
 			validatorTemplateDefinition.SequenceNumber = i
 			validatorTemplateDefinition.Enabled = true
 			validatorTemplateDefinition.ConsensusKey.Value = privValKey.PubKey.Value
@@ -414,6 +420,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 					Address: fundingStream.Recipient,
 				},
 			)
+
 			// liquid
 			allocations = append(allocations,
 				PenumbraGenesisAppStateAllocation{
@@ -505,10 +512,12 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+
 		sep, err := n.TendermintNode.GetConfigSeparator()
 		if err != nil {
 			return err
 		}
+
 		tmPort := strings.Split(rpcPort, "/")[0]
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
@@ -517,6 +526,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 				"--rpc.laddr=tcp://0.0.0.0:"+tmPort,
 			)
 		})
+
 		eg.Go(func() error {
 			return n.PenumbraAppNode.CreateNodeContainer(egCtx, n.TendermintNode.HostName()+":"+tmPort)
 		})
@@ -528,6 +538,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+
 		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(egCtx, n.TendermintNode)
@@ -536,6 +547,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 			}
 			return n.TendermintNode.StartContainer(egCtx)
 		})
+
 		c.log.Info("Starting penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
 		eg.Go(func() error {
 			return n.PenumbraAppNode.StartContainer(egCtx)
@@ -562,6 +574,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("error getting validator custody key content: %w", err)
 			}
+
 			var ck PenumbraCustodyKey
 			if err := json.Unmarshal(ckbz, &ck); err != nil {
 				return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
