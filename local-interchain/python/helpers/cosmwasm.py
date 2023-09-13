@@ -60,27 +60,26 @@ class CosmWasm:
         return self.tx_hash
 
     def store_contract(self, key_name: str, abs_path: str) -> "CosmWasm":
-        ictest_chain_start = Cache.get_chain_start_time_from_logs()
-        if ictest_chain_start == -1:
-            return self
-
-        Cache.default_contracts_json()
-
-        contracts = Cache.get_cache_or_default({}, ictest_chain_start)
-
-        sha1 = Cache.get_file_hash(abs_path, self.chain_id)
-        if sha1 in contracts["file_cache"]:
-            self.code_id = contracts["file_cache"][sha1]
-
-            sub_file_path = abs_path.split("/")[-1]
-            print(f"[Cache] CodeID={self.code_id} for {sub_file_path}")
-            return self
+        # TODO: Re-add the cache
+        # (if filehash is the same & the chain time is the same, use teh same code_id)
+        # ictest_chain_start = Cache.get_chain_start_time_from_logs()
+        # if ictest_chain_start == -1:
+        #     return self
+        # Cache.default_contracts_json()
+        # contracts = Cache.get_cache_or_default({}, ictest_chain_start)
+        # sha1 = Cache.get_file_hash(abs_path, self.chain_id)
+        # if sha1 in contracts["file_cache"]:
+        #     self.code_id = contracts["file_cache"][sha1]
+        #     sub_file_path = abs_path.split("/")[-1]
+        #     print(f"[Cache] CodeID={self.code_id} for {sub_file_path}")
+        #     return self
 
         res = upload_file(self.rb, key_name, abs_path)
         if "error" in res:
             raise Exception(res["error"])
 
-        self.code_id = Cache.update_cache(contracts, res["code_id"], sha1)
+        self.code_id = int(res["code_id"])
+        # self.code_id = Cache.update_cache(contracts, res["code_id"], sha1)
         return self
 
     def instantiate_contract(
@@ -103,6 +102,7 @@ class CosmWasm:
             msg = json.dumps(msg, separators=(",", ":"))
 
         cmd = f"""tx wasm instantiate {code_id} {msg} --label={label} --from={account_key} {self.default_flag_set} {flags}"""
+        print(cmd)
         res = self.rb.binary(cmd)
 
         tx_res = get_transaction_response(res)
@@ -168,7 +168,12 @@ class CosmWasm:
     def get_contract_address(rb: RequestBuilder, tx_hash: str) -> str:
         res_json = rb.query(f"tx {tx_hash} --output=json")
 
-        code = int(res_json["code"])
+        code = -1
+        try:
+            code = int(res_json["code"])
+        except:
+            raise Exception("Failed to get contract address", res_json)
+
         if code != 0:
             raw = res_json["raw_log"]
             return raw
