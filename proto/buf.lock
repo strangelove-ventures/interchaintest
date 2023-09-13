@@ -19,8 +19,8 @@ deps:
   - remote: buf.build
     owner: cosmos
     repository: ibc
-    commit: f559baa46fdb47b3b9fb206dec05da1d
-    digest: shake256:712055a221430dd12ce858885c592b57e0e301dc1ed9c7d35e5e0fff8fef74499116dc2ba5f71ca6896576763c5f970bc3e970b025c7d17067d8d6a3f3b821b5
+    commit: 7ab44ae956a0488ea04e04511efa5f70
+    digest: shake256:95cc5472ddf692d23654b7e5adfd79149469dcc90657f9a1f80ee3fea8af639cff59cd849efca0567d270118eea7c7ff2f7e60c562545bace410b8eece27577e
   - remote: buf.build
     owner: cosmos
     repository: ics23
@@ -34,5 +34,5 @@ deps:
   - remote: buf.build
     owner: penumbra-zone
     repository: penumbra
-    commit: 31b3d5da27fa45959254eb4af1ca6697
-    digest: shake256:966a0745338232905405b8b572ae5655d97d79e69b30350d7caf2e044ba6f7c4a1f5e9a5fa5bbe4305ce1e66d74647f42400c4b6d92fa57afff691e9b52c6f8a
+    commit: 60489c71c3b64f179b2537b24a587abe
+    digest: shake256:296efd5bb8051beace006b4a2920e79b43d2fe033554c88504e10f813c87d777a712309cd3bbba366703d76aa3c5f93f1af10a2083e76b923ee54ae251f1fc8d

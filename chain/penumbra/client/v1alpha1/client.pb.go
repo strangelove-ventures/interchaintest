@@ -13,7 +13,7 @@ import (
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
 	types2 "github.com/cosmos/gogoproto/types"
-	types "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
+	types "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/chain/v1alpha1"
 	v1alpha12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/crypto/v1alpha1"
 	v1alpha13 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/dex/v1alpha1"
