@@ -62,10 +62,8 @@ class CosmWasm:
     def store_contract(self, key_name: str, abs_path: str) -> "CosmWasm":
         ictest_chain_start = Cache.get_chain_start_time_from_logs()
         if ictest_chain_start == -1:
+            ictest_chain_start = 0
             Cache.reset_contracts_cache_json()
-            raise Exception(
-                "Failed to get chain start time from logs (chain is offline)."
-            )
 
         contracts = Cache.get_cache_or_default({}, ictest_chain_start)
         sha1 = Cache.get_file_hash(abs_path, self.chain_id)

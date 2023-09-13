@@ -31,11 +31,13 @@ class Cache:
 
     @staticmethod
     def get_cache_or_default(contracts: dict, ictest_chain_start: int) -> dict:
-        with open(contracts_json_path, "r") as f:
-            c = dict(json.load(f))
-            cache_time = c.get("start_time", 0)
-            if isinstance(cache_time, str):
-                cache_time = cache_time.replace("\n", "")
+        cache_time: str | int = 0
+        if os.path.exists(contracts_json_path):
+            with open(contracts_json_path, "r") as f:
+                c = dict(json.load(f))
+                cache_time = c.get("start_time", 0)
+                if isinstance(cache_time, str):
+                    cache_time = cache_time.replace("\n", "")
 
         if cache_time == 0 or cache_time != ictest_chain_start:
             # reset cache, and set cache time to current interchain_test time
