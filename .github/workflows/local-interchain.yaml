@@ -64,10 +64,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: local-ic
-          path: ~/go/bin/
+          path: /tmp
 
       - name: Start background ibc local-interchain        
-        run: local-ic start juno_ibc &
+        run: /tmp/local-ic start juno_ibc &
       
       - name: Run Python Script        
         run: python3 ${{ matrix.test }}
