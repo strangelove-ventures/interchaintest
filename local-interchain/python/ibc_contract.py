@@ -64,8 +64,6 @@ def main():
         print("\n📝 Storing Contracts")
         contract_1 = CosmWasm(API_URL, chain_id)
         contract_2 = CosmWasm(API_URL, chain_id2)
-        print(f"{contract_1=}")
-        print(f"{contract_2=}")
 
         contract_1.store_contract(KEY_NAME, os.path.join(contracts_dir, WASM_FILE_NAME))
         contract_2.store_contract(
