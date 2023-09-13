@@ -165,7 +165,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 			pruneVolumesWithRetry(ctx, t, cli)
 			pruneNetworksWithRetry(ctx, t, cli)
 		} else {
-			t.Logf("KEEPING CONTAINERS - DOCKER CLEANUP SKIPPED")
+			t.Logf("Keeping containers - Docker cleanup skipped")
 		}
 	}
 }
