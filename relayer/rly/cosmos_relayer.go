@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 )
 
@@ -66,7 +66,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.3.1"
+	DefaultContainerVersion = "v2.4.1"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -80,9 +80,6 @@ func Capabilities() map[relayer.Capability]bool {
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	chainType := chainConfig.Type
-	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
-		chainType = "substrate"
-	}
 	return CosmosRelayerChainConfig{
 		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{

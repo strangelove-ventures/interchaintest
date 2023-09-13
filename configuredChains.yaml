@@ -402,6 +402,20 @@ icad:
       uid-gid: 1025:1025
   no-host-mount: false
 
+ics-provider:
+  name: ics-provider
+  type: cosmos
+  bin: interchain-security-pd
+  bech32-prefix: cosmos
+  denom: stake
+  gas-prices: 0.0stake
+  gas-adjustment: 1.1
+  trusting-period: 96h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/ics
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 impacthub:
   name: impacthub
   type: cosmos
@@ -549,7 +563,7 @@ osmosis:
   bin: osmosisd
   bech32-prefix: osmo
   denom: uosmo
-  gas-prices: 0.0uosmo
+  gas-prices: 0.0025uosmo
   gas-adjustment: 1.3
   trusting-period: 336h
   images:
@@ -756,6 +770,20 @@ stride:
   trusting-period: "336h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/stride
+      uid-gid: 1025:1025
+  no-host-mount: false
+
+terpnetwork:
+  name: terpnetwork
+  type: cosmos
+  bin: terpd
+  bech32-prefix: terp
+  denom: uterp
+  gas-prices: 0.01uterp
+  gas-adjustment: 1.3
+  trusting-period: "504h"
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/terpnetwork
       uid-gid: 1025:1025
   no-host-mount: false
 
