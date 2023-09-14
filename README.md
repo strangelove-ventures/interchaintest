@@ -24,6 +24,7 @@ It allows users to quickly spin up custom testnets and dev environments to test 
         - [Building Binary](./docs/buildBinary.md)
         - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
 - [Write Custom Tests](./docs/writeCustomTests.md)
+- [Environment Variable Options](./docs/envOptions.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
 
 
