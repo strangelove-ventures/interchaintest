@@ -114,6 +114,10 @@ func BuildInitialChainWithRelayer(
 
 	t.Cleanup(func() {
 		_ = ic.Close()
+
+		if err := r.StopRelayer(ctx, eRep); err != nil {
+			t.Logf("an error occurred while stopping the relayer: %s", err)
+		}
 	})
 
 	return ctx, ic, r, rep, eRep, client, network
