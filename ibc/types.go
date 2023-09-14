@@ -164,6 +164,14 @@ type DockerImage struct {
 	UidGid     string `yaml:"uid-gid"`
 }
 
+func NewDockerImage(repository, version, uidGid string) DockerImage {
+	return DockerImage{
+		Repository: repository,
+		Version:    version,
+		UidGid:     uidGid,
+	}
+}
+
 // IsFullyConfigured reports whether all of i's required fields are present.
 // Version is not required, as it can be superseded by a ChainSpec version.
 func (i DockerImage) IsFullyConfigured() bool {
