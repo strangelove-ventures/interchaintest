@@ -54,7 +54,7 @@ func CosmosChainStateSyncTest(t *testing.T, chainName, version string) {
 	chain := chains[0].(*cosmos.CosmosChain)
 
 	enableBlockDB := false
-	_, ctx, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
+	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
 	// Wait for blocks so that nodes have a few state sync snapshot available
 	require.NoError(t, testutil.WaitForBlocks(ctx, stateSyncSnapshotInterval*2, chain))

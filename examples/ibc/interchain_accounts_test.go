@@ -1,7 +1,6 @@
 package ibc
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -13,11 +12,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
 
 // TestInterchainAccounts is a test case that performs simulations and assertions around some basic
@@ -29,62 +25,40 @@ func TestInterchainAccounts(t *testing.T) {
 
 	t.Parallel()
 
-	client, network := interchaintest.DockerSetup(t)
-
-	rep := testreporter.NewNopReporter()
-	eRep := rep.RelayerExecReporter(t)
-
-	ctx := context.Background()
-
-	// Get both chains
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			Name: "icad",
-			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
-			},
+	chainSpec := &interchaintest.ChainSpec{
+		Name: "icad",
+		ChainConfig: ibc.ChainConfig{
+			Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
 		},
-		{
-			Name: "icad",
-			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
-			},
-		},
+	}
+
+	// Create 2 chains from the same chain spec
+	chains := interchaintest.CreateChainsWithChainSpecs(t, []*interchaintest.ChainSpec{
+		chainSpec,
+		chainSpec,
 	})
-
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
 
 	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
-	// Get a relayer instance
-	r := interchaintest.NewBuiltinRelayerFactory(
-		ibc.CosmosRly,
-		zaptest.NewLogger(t),
-		relayer.RelayerOptionExtraStartFlags{Flags: []string{"-p", "events", "-b", "100"}},
-	).Build(t, client, network)
-
-	// Build the network; spin up the chains and configure the relayer
+	// Build chains with a relayer
 	const pathName = "test-path"
-	const relayerName = "relayer"
+	relayerFlags := []string{"-p", "events", "-b", "100"}
+	enableBlockDB := false
 
-	ic := interchaintest.NewInterchain().
-		AddChain(chain1).
-		AddChain(chain2).
-		AddRelayer(r, relayerName).
-		AddLink(interchaintest.InterchainLink{
-			Chain1:  chain1,
-			Chain2:  chain2,
-			Relayer: r,
-			Path:    pathName,
-		})
-
-	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
-		SkipPathCreation: true,
-	}))
+	ctx, _, r, _, eRep, _, _ := interchaintest.BuildInitialChainWithRelayer(
+		t,
+		chains,
+		enableBlockDB,
+		ibc.CosmosRly,
+		relayerFlags,
+		[]interchaintest.InterchainLink{
+			{
+				Chain1: chain1,
+				Chain2: chain2,
+				Path:   pathName,
+			},
+		},
+	)
 
 	// Fund a user account on chain1 and chain2
 	const userFunds = int64(10_000_000_000)
@@ -93,7 +67,7 @@ func TestInterchainAccounts(t *testing.T) {
 	chain2User := users[1]
 
 	// Generate a new IBC path
-	err = r.GeneratePath(ctx, eRep, chain1.Config().ChainID, chain2.Config().ChainID, pathName)
+	err := r.GeneratePath(ctx, eRep, chain1.Config().ChainID, chain2.Config().ChainID, pathName)
 	require.NoError(t, err)
 
 	// Create new clients

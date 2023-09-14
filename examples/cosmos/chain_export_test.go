@@ -36,7 +36,7 @@ func CosmosChainStateExportTest(t *testing.T, name, version string, useNewGenesi
 	chain := chains[0].(*cosmos.CosmosChain)
 
 	enableBlockDB := false
-	_, ctx, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
+	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
 	HaltChainAndExportGenesis(ctx, t, chain, nil, 3)
 }
