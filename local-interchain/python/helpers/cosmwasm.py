@@ -165,11 +165,10 @@ class CosmWasm:
     def get_contract_address(rb: RequestBuilder, tx_hash: str) -> str:
         res_json = rb.query(f"tx {tx_hash} --output=json")
 
-        code = -1
         try:
             code = int(res_json["code"])
         except:
-            raise Exception("Failed to get contract address", res_json)
+            code = -1
 
         if code != 0:
             raw = res_json["raw_log"]
