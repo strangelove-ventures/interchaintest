@@ -1,6 +1,13 @@
 # Environment Variable Options
 
-- `KEEP_CONTAINTERS` - Setting this value to anything besides "", will keep the testnet alive and skip the docker cleanup phase at test completion.
+- `SHOW_CONTAINER_LOGS`: Controls whether container logs are displayed.
 
+    - Set to `"always"` to show logs for both pass and fail.
+    - Set to `"never"` to never show any logs.
+    - Leave unset to show logs only for failed tests.
 
-<!-- TODO: Add other env options -->
+- `KEEP_CONTAINERS`: Prevents testnet cleanup after completion.
+
+    - Set to any non-empty value to keep testnet containers alive.
+
+- `CONTAINER_LOG_TAIL`: Specifies the number of lines to display from container logs. Defaults to 50 lines.
