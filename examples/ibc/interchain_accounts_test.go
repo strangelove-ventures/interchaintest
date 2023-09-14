@@ -25,17 +25,20 @@ func TestInterchainAccounts(t *testing.T) {
 
 	t.Parallel()
 
-	chainSpec := &interchaintest.ChainSpec{
-		Name: "icad",
-		ChainConfig: ibc.ChainConfig{
-			Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
-		},
-	}
-
 	// Create 2 chains from the same chain spec
 	chains := interchaintest.CreateChainsWithChainSpecs(t, []*interchaintest.ChainSpec{
-		chainSpec,
-		chainSpec,
+		{
+			Name: "icad",
+			ChainConfig: ibc.ChainConfig{
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
+			},
+		},
+		{
+			Name: "icad",
+			ChainConfig: ibc.ChainConfig{
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
+			},
+		},
 	})
 
 	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
