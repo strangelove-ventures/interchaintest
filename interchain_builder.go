@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -63,20 +64,39 @@ func CreateChainsWithChainSpecs(t *testing.T, chainSpecs []*ChainSpec) []ibc.Cha
 	return chains
 }
 
-// TODO: Add simple relayer support.
-func BuildInitialChain(t *testing.T, chains []ibc.Chain, enableBlockDB bool) (*Interchain, context.Context, *client.Client, string) {
-	// Create a new Interchain object which describes the chains, relayers, and IBC connections we want to use
-	ic := NewInterchain()
+func BuildInitialChainWithRelayer(
+	t *testing.T,
+	chains []ibc.Chain,
+	enableBlockDB bool,
+	rly ibc.RelayerImplementation,
+	relayerFlags []string,
+	links []InterchainLink,
+) (context.Context, *Interchain, ibc.Relayer, *testreporter.Reporter, *testreporter.RelayerExecReporter, *client.Client, string) {
+	ctx := context.Background()
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+	client, network := DockerSetup(t)
 
+	ic := NewInterchain()
 	for _, chain := range chains {
 		ic = ic.AddChain(chain)
 	}
 
-	rep := testreporter.NewNopReporter()
-	eRep := rep.RelayerExecReporter(t)
+	var r ibc.Relayer
+	if links == nil {
+		r = NewBuiltinRelayerFactory(
+			rly,
+			zaptest.NewLogger(t),
+			relayer.RelayerOptionExtraStartFlags{Flags: relayerFlags},
+		).Build(t, client, network)
 
-	ctx := context.Background()
-	client, network := DockerSetup(t)
+		ic.AddRelayer(r, "relayer")
+
+		for _, link := range links {
+			link.Relayer = r
+			ic = ic.AddLink(link)
+		}
+	}
 
 	opt := InterchainBuildOptions{
 		TestName:         t.Name(),
@@ -96,5 +116,10 @@ func BuildInitialChain(t *testing.T, chains []ibc.Chain, enableBlockDB bool) (*I
 		_ = ic.Close()
 	})
 
-	return ic, ctx, client, network
+	return ctx, ic, r, rep, eRep, client, network
+}
+
+func BuildInitialChain(t *testing.T, chains []ibc.Chain, enableBlockDB bool) (context.Context, *Interchain, *client.Client, string) {
+	ctx, ic, _, _, _, client, network := BuildInitialChainWithRelayer(t, chains, enableBlockDB, 0, nil, nil)
+	return ctx, ic, client, network
 }
