@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	MakeFileInstallDirectory string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "local-ic",
 	Short: "Your local IBC interchain of nodes program",
@@ -24,25 +28,24 @@ var rootCmd = &cobra.Command{
 
 func GetDirectory() string {
 	// Config variable override for the ICTEST_HOME
-	var makeFileInstallDir string
 	if res := os.Getenv("ICTEST_HOME"); res != "" {
-		makeFileInstallDir = res
+		MakeFileInstallDirectory = res
 	}
 
-	if makeFileInstallDir == "" {
+	if MakeFileInstallDirectory == "" {
 		dirname, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		makeFileInstallDir = path.Join(dirname, "local-interchain")
+		MakeFileInstallDirectory = path.Join(dirname, "local-interchain")
 	}
 
-	if err := directoryRequirementChecks(makeFileInstallDir, "configs", "chains"); err != nil {
+	if err := directoryRequirementChecks(MakeFileInstallDirectory, "configs", "chains"); err != nil {
 		log.Fatal(err)
 	}
 
-	return makeFileInstallDir
+	return MakeFileInstallDirectory
 }
 
 func directoryRequirementChecks(parent string, subDirectories ...string) error {
