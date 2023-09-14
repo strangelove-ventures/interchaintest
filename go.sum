@@ -228,6 +228,10 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
+github.com/CosmWasm/wasmd v0.42.0-rc.0.0.20230911075353-5fa4442ed723 h1:nCeclub4svxsDyWTDG3dl/W0BfgXyzEOfxHEq5ejPuU=
+github.com/CosmWasm/wasmd v0.42.0-rc.0.0.20230911075353-5fa4442ed723/go.mod h1:yvXbeci41T0JywkwBWbmSEwJ7Nd3pR7ve7mYxL7ohl0=
+github.com/CosmWasm/wasmvm v1.4.0 h1:84I3MlvvzcOo2z+ed0ztPi7eeDNk6/sYuK76uyXP1nI=
+github.com/CosmWasm/wasmvm v1.4.0/go.mod h1:vW/E3h8j9xBQs9bCoijDuawKo9kCtxOaS8N8J7KFtkc=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=
 github.com/DataDog/zstd v1.5.5/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
@@ -359,8 +363,8 @@ github.com/cosmos/cosmos-db v1.0.0 h1:EVcQZ+qYag7W6uorBKFPvX6gRjw6Uq2hIh4hCWjuQ0
 github.com/cosmos/cosmos-db v1.0.0/go.mod h1:iBvi1TtqaedwLdcrZVYRSSCb6eSy61NLj4UNmdIgs0U=
 github.com/cosmos/cosmos-proto v1.0.0-beta.3 h1:VitvZ1lPORTVxkmF2fAp3IiA61xVwArQYKXTdEcpW6o=
 github.com/cosmos/cosmos-proto v1.0.0-beta.3/go.mod h1:t8IASdLaAq+bbHbjq4p960BvcTqtwuAxid3b/2rOD6I=
-github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230905141004-6a9777fff287 h1:8KqZgZEGzPjqAL66YDOzAVFiDrLQA4Sr8RsoesV3Ymk=
-github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230905141004-6a9777fff287/go.mod h1:olbHxcVB4zWwnF+oNPbKIoEIO5HgHndzKUqdpuu4s34=
+github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230908143326-ccd7288ef3b1 h1:oXu4UwvrVUGSMnJWaa4C+tdPJHDtfmSNORZe8jRYfVo=
+github.com/cosmos/cosmos-sdk v0.50.0-rc.0.0.20230908143326-ccd7288ef3b1/go.mod h1:olbHxcVB4zWwnF+oNPbKIoEIO5HgHndzKUqdpuu4s34=
 github.com/cosmos/go-bip39 v1.0.0 h1:pcomnQdrdH22njcAatO0yWojsUnCO3y2tNoV1cb6hHY=
 github.com/cosmos/go-bip39 v1.0.0/go.mod h1:RNJv0H/pOIVgxw6KS7QeX2a0Uo0aKUlfhZ4xuwvCdJw=
 github.com/cosmos/gogogateway v1.2.0 h1:Ae/OivNhp8DqBi/sh2A8a1D0y638GpL3tkmLQAiKxTE=
@@ -372,8 +376,8 @@ github.com/cosmos/iavl v1.0.0-rc.1 h1:5+73BEWW1gZOIUJKlk/1fpD4lOqqeFBA8KuV+NpkCp
 github.com/cosmos/iavl v1.0.0-rc.1/go.mod h1:CmTGqMnRnucjxbjduneZXT+0vPgNElYvdefjX2q9tYc=
 github.com/cosmos/ibc-go/modules/capability v1.0.0-rc5 h1:OwYsRIM2gwe3ifuvi2sriEvDBd3t43vTF2GEi1SOchM=
 github.com/cosmos/ibc-go/modules/capability v1.0.0-rc5/go.mod h1:YriReKrNl7ZKBW6FSmgV7v4BhrN84tm672YjU0Y2C2I=
-github.com/cosmos/ibc-go/v8 v8.0.0-20230906115913-46ee5f92e1af h1:+aeQn6IdMlq8Mpj58fqBpoF7pZwaICcA2fVWA+Q1pRk=
-github.com/cosmos/ibc-go/v8 v8.0.0-20230906115913-46ee5f92e1af/go.mod h1:BWqKQL2n7CAeOpHrVTSLKDxrYs/es/CbdCgvVOVSgfg=
+github.com/cosmos/ibc-go/v8 v8.0.0-alpha.1.0.20230910030911-23eabb55bf29 h1:RhPbhPM4/kmRFpERucwmD4CDorv5pVM1pBt6E/xU5XQ=
+github.com/cosmos/ibc-go/v8 v8.0.0-alpha.1.0.20230910030911-23eabb55bf29/go.mod h1:BWqKQL2n7CAeOpHrVTSLKDxrYs/es/CbdCgvVOVSgfg=
 github.com/cosmos/ics23/go v0.10.0 h1:iXqLLgp2Lp+EdpIuwXTYIQU+AiHj9mOC2X9ab++bZDM=
 github.com/cosmos/ics23/go v0.10.0/go.mod h1:ZfJSmng/TBNTBkFemHHHj5YY7VAU/MBU980F4VU1NG0=
 github.com/cosmos/ledger-cosmos-go v0.13.0 h1:ex0CvCxToSR7j5WjrghPu2Bu9sSXKikjnVvUryNnx4s=
@@ -496,10 +500,12 @@ github.com/go-playground/validator/v10 v10.11.1/go.mod h1:i+3WkQ1FvaUjjxh1kSvIA4
 github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
-github.com/gobwas/httphead v0.0.0-20180130184737-2c6c146eadee h1:s+21KNqlpePfkah2I+gwHF8xmJWRjooY+5248k6m4A0=
 github.com/gobwas/httphead v0.0.0-20180130184737-2c6c146eadee/go.mod h1:L0fX3K22YWvt/FAX9NnzrNzcI4wNYi9Yku4O0LKYflo=
-github.com/gobwas/pool v0.2.0 h1:QEmUOlnSjWtnpRGHF3SauEiOsy82Cup83Vf2LcMlnc8=
+github.com/gobwas/httphead v0.1.0 h1:exrUm0f4YX0L7EBwZHuCF4GDp8aJfVeBrlLQrs6NqWU=
+github.com/gobwas/httphead v0.1.0/go.mod h1:O/RXo79gxV8G+RqlR/otEwx4Q36zl9rqC5u12GKvMCM=
 github.com/gobwas/pool v0.2.0/go.mod h1:q8bcK0KcYlCgd9e7WYLm9LpyS+YeLd8JVDW6WezmKEw=
+github.com/gobwas/pool v0.2.1 h1:xfeeEhW7pwmX8nuLVlqbzVc7udMDrwetjEv+TZIz1og=
+github.com/gobwas/pool v0.2.1/go.mod h1:q8bcK0KcYlCgd9e7WYLm9LpyS+YeLd8JVDW6WezmKEw=
 github.com/gobwas/ws v1.0.2/go.mod h1:szmBTxLgaFppYjEmNtny/v3w89xOydFnnZMcgRRu/EM=
 github.com/gobwas/ws v1.1.0 h1:7RFti/xnNkMJnrK7D1yQ/iCIB5OrrY/54/H930kIbHA=
 github.com/gobwas/ws v1.1.0/go.mod h1:nzvNcVha5eUziGrbxFCo6qFIojQHjJV5cLYIbezhfL0=

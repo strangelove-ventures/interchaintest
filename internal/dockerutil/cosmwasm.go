@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/api/types"
@@ -32,6 +33,7 @@ type (
 )
 
 // CompileCwContract takes a relative path input for the contract to compile
+// CosmWasm's rust-optimizer is used for compilation
 // Successful compilation will return the absolute path of the new binary
 // - contractPath is the relative path of the contract project on local machine
 func CompileCwContract(contractRelativePath string) (string, error) {
@@ -68,7 +70,6 @@ func CompileCwContract(contractRelativePath string) (string, error) {
 	}
 	defer cli.Close()
 
-	// TODO pull arm version as needed
 	reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 	if err != nil {
 		return "", fmt.Errorf("pull image %s: %w", image, err)
@@ -139,6 +140,21 @@ func CompileCwContract(contractRelativePath string) (string, error) {
 		return "", fmt.Errorf("remove container %s: %w", image, err)
 	}
 
-	wasmBin := filepath.Join(contractPath, "artifacts", contractPackageName + ".wasm")
-	return wasmBin, nil
+	// Form the path to the artifacts directory, used for checksum.txt and package.wasm
+	artifactsPath := filepath.Join(contractPath, "artifacts")
+
+	// Parse the checksums.txt for the wasm binary name
+	checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
+	checksumsBz, err := os.ReadFile(checksumsPath)
+	if err != nil {
+		return "", fmt.Errorf("checksums read: %w", err)
+	}
+	_, wasmBin, found := strings.Cut(string(checksumsBz), "  ")
+	if !found {
+		return "", fmt.Errorf("wasm binary name not found")
+	}
+
+	// Form the path to the wasm binary
+	wasmBinPath := filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
+	return wasmBinPath, nil
   }
