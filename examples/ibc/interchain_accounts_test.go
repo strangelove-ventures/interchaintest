@@ -9,7 +9,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -41,15 +41,13 @@ func TestInterchainAccounts(t *testing.T) {
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images:                 []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
-				UsingNewGenesisCommand: true,
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
 			},
 		},
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images:                 []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
-				UsingNewGenesisCommand: true,
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
 			},
 		},
 	})
