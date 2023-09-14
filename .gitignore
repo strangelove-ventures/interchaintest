@@ -4,3 +4,4 @@ interchaintest.test
 .idea
 /bin
 vendor
+examples/hyperspace/exported_state.json

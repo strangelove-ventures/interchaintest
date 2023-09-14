@@ -11,7 +11,7 @@ func (m ConsensusState) ClientType() string {
 }
 
 func (m ConsensusState) GetTimestamp() uint64 {
-	return m.Timestamp
+	return 0
 }
 
 func (m ConsensusState) ValidateBasic() error {

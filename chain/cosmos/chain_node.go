@@ -728,6 +728,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+		"--gas", "auto",
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
