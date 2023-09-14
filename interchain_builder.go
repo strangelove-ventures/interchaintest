@@ -83,7 +83,7 @@ func BuildInitialChainWithRelayer(
 	}
 
 	var r ibc.Relayer
-	if links == nil {
+	if links != nil {
 		r = NewBuiltinRelayerFactory(
 			rly,
 			zaptest.NewLogger(t),
