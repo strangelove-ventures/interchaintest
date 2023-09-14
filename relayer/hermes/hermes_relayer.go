@@ -68,10 +68,6 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 	if err != nil {
 		panic(err)
 	}
-
-	for _, opt := range options {
-		opt(dr)
-	}
 	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	return &Relayer{
