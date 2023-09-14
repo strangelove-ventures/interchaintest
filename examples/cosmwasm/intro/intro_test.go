@@ -26,6 +26,7 @@ func TestIntroContract(t *testing.T) {
 
 	t.Parallel()
 
+	// Compile the contract, input is the relative path to the project
 	contractBinary, err := dockerutil.CompileCwContract("contract")
 	require.NoError(t, err)
 
