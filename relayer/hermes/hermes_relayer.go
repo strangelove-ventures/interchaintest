@@ -10,17 +10,17 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 )
 
 const (
 	hermes                  = "hermes"
-	defaultContainerImage   = "docker.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.2.0"
+	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
+	DefaultContainerVersion = "1.6.0"
 
-	hermesDefaultUidGid = "1000:1000"
+	hermesDefaultUidGid = "1001:1001"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )
@@ -62,6 +62,12 @@ type pathChainConfig struct {
 // NewHermesRelayer returns a new hermes relayer.
 func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *Relayer {
 	c := commander{log: log}
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case relayer.RelayerOptionExtraStartFlags:
+			c.extraStartFlags = o.Flags
+		}
+	}
 	options = append(options, relayer.HomeDir(hermesHome))
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
@@ -113,7 +119,10 @@ func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pat
 
 func (r *Relayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
 	pathConfig := r.paths[pathName]
-	cmd := []string{hermes, "--json", "create", "channel", "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--a-connection", pathConfig.chainA.connectionID}
+	cmd := []string{hermes, "--json", "create", "channel", "--order", opts.Order.String(), "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--a-connection", pathConfig.chainA.connectionID}
+	if opts.Version != "" {
+		cmd = append(cmd, "--channel-version", opts.Version)
+	}
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
@@ -161,6 +170,9 @@ func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter
 func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	pathConfig := r.paths[pathName]
 	chainACreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainA.chainID, "--reference-chain", pathConfig.chainB.chainID}
+	if opts.TrustingPeriod != "0" {
+		chainACreateClientCmd = append(chainACreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
 	res := r.Exec(ctx, rep, chainACreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
@@ -173,6 +185,9 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	pathConfig.chainA.clientID = chainAClientId
 
 	chainBCreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainB.chainID, "--reference-chain", pathConfig.chainA.chainID}
+	if opts.TrustingPeriod != "0" {
+		chainBCreateClientCmd = append(chainBCreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
 	res = r.Exec(ctx, rep, chainBCreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
@@ -189,8 +204,8 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 
 // RestoreKey restores a key from a mnemonic. In hermes, you must provide a file containing the mnemonic. We need
 // to copy the contents of the mnemonic into a file on disk and then reference the newly created file.
-func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
-
+func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+	chainID := cfg.ChainID
 	relativeMnemonicFilePath := fmt.Sprintf("%s/mnemonic.txt", chainID)
 	if err := r.WriteFileToHomeDir(ctx, relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
 		return fmt.Errorf("failed to write mnemonic file: %w", err)
@@ -213,11 +228,7 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 	return nil
 }
 
-func (r *Relayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	return r.FlushPackets(ctx, rep, pathName, channelID)
-}
-
-func (r *Relayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelID string) error {
 	path := r.paths[pathName]
 	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", path.chainA.portID}
 	res := r.Exec(ctx, rep, cmd, nil)

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"time"
-
-	"github.com/strangelove-ventures/interchaintest/v6/label"
 )
 
 // T is a subset of testing.TB,
@@ -71,43 +69,13 @@ func (r *Reporter) Close() error {
 	return <-r.writerDone
 }
 
-// TrackParameters is intended to be called from the outermost layer of tests.
-// It tracks the test run including labels indicative of what relayers and chains are used.
-func (r *Reporter) TrackParameters(t T, relayerLabels []label.Relayer, chainLabels []label.Chain) {
-	for _, l := range relayerLabels {
-		if !l.IsKnown() {
-			panic(fmt.Errorf("illegal use of unknown relayer label %q", l))
-		}
-	}
-	// Allowing unknown chain labels, for now.
-
-	r.trackTest(t, LabelSet{
-		Relayer: relayerLabels,
-		Chain:   chainLabels,
-	})
-}
-
-// TrackTest tracks execution of a subtest using the supplied labels.
-func (r *Reporter) TrackTest(t T, labels ...label.Test) {
-	for _, l := range labels {
-		if !l.IsKnown() {
-			panic(fmt.Errorf("illegal use of unknown test label %q", l))
-		}
-	}
-
-	r.trackTest(t, LabelSet{
-		Test: labels,
-	})
-}
-
 // trackTest tracks the test start and finish time.
 // It also records which labels are present on the test.
-func (r *Reporter) trackTest(t T, labels LabelSet) {
+func (r *Reporter) TrackTest(t T) {
 	name := t.Name()
 	r.in <- BeginTestMessage{
 		Name:      name,
 		StartedAt: time.Now(),
-		Labels:    labels,
 	}
 	t.Cleanup(func() {
 		r.in <- FinishTestMessage{

@@ -14,8 +14,8 @@
 //	import (
 //	  "testing"
 //
-//	  "github.com/strangelove-ventures/interchaintest/v6/conformance"
-//	  "github.com/strangelove-ventures/interchaintest/v6/ibc"
+//	  "github.com/strangelove-ventures/interchaintest/v8/conformance"
+//	  "github.com/strangelove-ventures/interchaintest/v8/ibc"
 //	)
 //
 //	func TestMyRelayer(t *testing.T) {
@@ -35,19 +35,18 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/label"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
-
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 )
 
 const (
@@ -78,9 +77,6 @@ type RelayerTestCaseConfig struct {
 	PreRelayerStart func(context.Context, *testing.T, *RelayerTestCase, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
 	// test after chains and relayers are started
 	Test func(context.Context, *testing.T, *RelayerTestCase, *testreporter.Reporter, ibc.Chain, ibc.Chain, []ibc.ChannelOutput)
-
-	// Test-specific labels.
-	TestLabels []label.Test
 }
 
 var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
@@ -93,21 +89,18 @@ var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 		Name:            "no timeout",
 		PreRelayerStart: preRelayerStart_NoTimeout,
 		Test:            testPacketRelaySuccess,
-		TestLabels:      []label.Test{label.Timeout},
 	},
 	{
 		Name:                        "height timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.HeightTimeout},
 		PreRelayerStart:             preRelayerStart_HeightTimeout,
 		Test:                        testPacketRelayFail,
-		TestLabels:                  []label.Test{label.Timeout, label.HeightTimeout},
 	},
 	{
 		Name:                        "timestamp timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.TimestampTimeout},
 		PreRelayerStart:             preRelayerStart_TimestampTimeout,
 		Test:                        testPacketRelayFail,
-		TestLabels:                  []label.Test{label.Timeout, label.TimestampTimeout},
 	},
 }
 
@@ -153,12 +146,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCoinSrcToDst := ibc.WalletAmount{
 		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
-		Amount:  testCoinAmount,
+		Amount:  math.NewInt(testCoinAmount),
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
 		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
-		Amount:  testCoinAmount,
+		Amount:  math.NewInt(testCoinAmount),
 	}
 
 	var eg errgroup.Group
@@ -241,7 +234,7 @@ func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, 
 
 						t.Run(rf.Name(), func(t *testing.T) {
 							// Record the labels for this nested test.
-							rep.TrackParameters(t, rf.Labels(), cf.Labels())
+							rep.TrackTest(t)
 							rep.TrackParallel(t)
 
 							t.Run("relayer setup", func(t *testing.T) {
@@ -355,7 +348,7 @@ func TestChainPair(
 		for _, testCase := range testCases {
 			testCase := testCase
 			t.Run(testCase.Config.Name, func(t *testing.T) {
-				rep.TrackTest(t, testCase.Config.TestLabels...)
+				rep.TrackTest(t)
 				requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
 				rep.TrackParallel(t)
 				testCase.Config.Test(ctx, t, testCase, rep, srcChain, dstChain, channels)
@@ -413,8 +406,8 @@ func testPacketRelaySuccess(
 	for i, srcTx := range testCase.TxCache.Src {
 		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		srcInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := math.ZeroInt()
 
 		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
@@ -433,8 +426,8 @@ func testPacketRelaySuccess(
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 		expectedDifference := testCoinAmount + totalFees
 
-		req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
-		req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.SubRaw(expectedDifference)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.AddRaw(testCoinAmount)))
 	}
 
 	// [END] assert on source to destination transfer
@@ -445,8 +438,8 @@ func testPacketRelaySuccess(
 		dstUser := testCase.Users[1]
 		dstDenom := dstChainCfg.Denom
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := int64(0)
-		dstInitialBalance := userFaucetFund
+		srcInitialBalance := math.ZeroInt()
+		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on destination chain")
@@ -465,8 +458,8 @@ func testPacketRelaySuccess(
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 		expectedDifference := testCoinAmount + totalFees
 
-		req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
-		req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.AddRaw(testCoinAmount)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.SubRaw(expectedDifference)))
 	}
 	//[END] assert on destination to source transfer
 }
@@ -494,8 +487,8 @@ func testPacketRelayFail(
 	// [BEGIN] assert on source to destination transfer
 	for i, srcTx := range testCase.TxCache.Src {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		srcInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := math.ZeroInt()
 
 		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
@@ -517,16 +510,16 @@ func testPacketRelayFail(
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
-		req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
-		req.Equal(dstInitialBalance, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance.SubRaw(totalFees)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance))
 	}
 	// [END] assert on source to destination transfer
 
 	// [BEGIN] assert on destination to source transfer
 	for i, dstTx := range testCase.TxCache.Dst {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := int64(0)
-		dstInitialBalance := userFaucetFund
+		srcInitialBalance := math.ZeroInt()
+		dstInitialBalance := math.NewInt(userFaucetFund)
 
 		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")
@@ -544,8 +537,8 @@ func testPacketRelayFail(
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
-		req.Equal(srcInitialBalance, srcFinalBalance)
-		req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
+		req.True(srcFinalBalance.Equal(srcInitialBalance))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.SubRaw(totalFees)))
 	}
 	// [END] assert on destination to source transfer
 }

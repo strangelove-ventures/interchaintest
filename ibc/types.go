@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
+	"cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -36,19 +38,35 @@ type ChainConfig struct {
 	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
 	NoHostMount bool `yaml:"no-host-mount"`
+	// When true, will skip validator gentx flow
+	SkipGenTx bool
+	// When provided, will run before performing gentx and genesis file creation steps for validators.
+	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
+	// Modify genesis-amounts
+	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
-	EncodingConfig *simappparams.EncodingConfig
+	EncodingConfig *testutil.TestEncodingConfig
+	// Required when the chain requires the chain-id field to be populated for certain commands
+	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
+	// Configuration describing additional sidecar processes.
+	SidecarConfigs []SidecarConfig
 }
 
 func (c ChainConfig) Clone() ChainConfig {
 	x := c
+
 	images := make([]DockerImage, len(c.Images))
 	copy(images, c.Images)
 	x.Images = images
+
+	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
+	copy(sidecars, c.SidecarConfigs)
+	x.SidecarConfigs = sidecars
+
 	return x
 }
 
@@ -126,12 +144,24 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.ModifyGenesis = other.ModifyGenesis
 	}
 
+	if other.SkipGenTx {
+		c.SkipGenTx = true
+	}
+
+	if other.PreGenesis != nil {
+		c.PreGenesis = other.PreGenesis
+	}
+
 	if other.ConfigFileOverrides != nil {
 		c.ConfigFileOverrides = other.ConfigFileOverrides
 	}
 
 	if other.EncodingConfig != nil {
 		c.EncodingConfig = other.EncodingConfig
+	}
+
+	if len(other.SidecarConfigs) > 0 {
+		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
 	}
 
 	return c
@@ -156,6 +186,17 @@ func (c ChainConfig) IsFullyConfigured() bool {
 		c.Denom != "" &&
 		c.GasPrices != "" &&
 		c.TrustingPeriod != ""
+}
+
+// SidecarConfig describes the configuration options for instantiating a new sidecar process.
+type SidecarConfig struct {
+	ProcessName      string
+	Image            DockerImage
+	HomeDir          string
+	Ports            []string
+	StartCmd         []string
+	PreStart         bool
+	ValidatorProcess bool
 }
 
 type DockerImage struct {
@@ -211,7 +252,7 @@ func (i DockerImage) Ref() string {
 type WalletAmount struct {
 	Address string
 	Denom   string
-	Amount  int64
+	Amount  math.Int
 }
 
 type IBCTimeout struct {
@@ -269,6 +310,7 @@ type RelayerImplementation int64
 const (
 	CosmosRly RelayerImplementation = iota
 	Hermes
+	Hyperspace
 )
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain

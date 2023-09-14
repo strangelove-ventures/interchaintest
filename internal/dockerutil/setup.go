@@ -93,7 +93,10 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
+		keepContainers := os.Getenv("KEEP_CONTAINTERS") != ""
+
 		ctx := context.TODO()
+		cli.NegotiateAPIVersion(ctx)
 		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
 			All: true,
 			Filters: filters.NewArgs(
@@ -106,27 +109,6 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 		}
 
 		for _, c := range cs {
-			stopTimeout := 10 * time.Second
-			deadline := time.Now().Add(stopTimeout)
-			if err := cli.ContainerStop(ctx, c.ID, &stopTimeout); isLoggableStopError(err) {
-				t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
-			}
-
-			waitCtx, cancel := context.WithDeadline(ctx, deadline.Add(500*time.Millisecond))
-			waitCh, errCh := cli.ContainerWait(waitCtx, c.ID, container.WaitConditionNotRunning)
-			select {
-			case <-waitCtx.Done():
-				t.Logf("Timed out waiting for container %s", c.ID)
-			case err := <-errCh:
-				t.Logf("Failed to wait for container %s during docker cleanup: %v", c.ID, err)
-			case res := <-waitCh:
-				if res.Error != nil {
-					t.Logf("Error while waiting for container %s during docker cleanup: %s", c.ID, res.Error.Message)
-				}
-				// Ignoring statuscode for now.
-			}
-			cancel()
-
 			if t.Failed() || showContainerLogs {
 				logTail := "50"
 				if containerLogTail != "" {
@@ -141,21 +123,50 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 					b := new(bytes.Buffer)
 					_, err := b.ReadFrom(rc)
 					if err == nil {
-						t.Logf("Container logs - {%s}\n%s", strings.Join(c.Names, " "), b.String())
+						t.Logf("\n\nContainer logs - {%s}\n%s", strings.Join(c.Names, " "), b.String())
 					}
 				}
 			}
+			if !keepContainers {
+				var stopTimeout container.StopOptions
+				timeout := 10
+				timeoutDur := time.Duration(timeout * int(time.Second))
+				deadline := time.Now().Add(timeoutDur)
+				stopTimeout.Timeout = &timeout
+				if err := cli.ContainerStop(ctx, c.ID, stopTimeout); isLoggableStopError(err) {
+					t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
+				}
 
-			if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
-				// Not removing volumes with the container, because we separately handle them conditionally.
-				Force: true,
-			}); err != nil {
-				t.Logf("Failed to remove container %s during docker cleanup: %v", c.ID, err)
+				waitCtx, cancel := context.WithDeadline(ctx, deadline.Add(500*time.Millisecond))
+				waitCh, errCh := cli.ContainerWait(waitCtx, c.ID, container.WaitConditionNotRunning)
+				select {
+				case <-waitCtx.Done():
+					t.Logf("Timed out waiting for container %s", c.ID)
+				case err := <-errCh:
+					t.Logf("Failed to wait for container %s during docker cleanup: %v", c.ID, err)
+				case res := <-waitCh:
+					if res.Error != nil {
+						t.Logf("Error while waiting for container %s during docker cleanup: %s", c.ID, res.Error.Message)
+					}
+					// Ignoring statuscode for now.
+				}
+				cancel()
+
+				if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+					// Not removing volumes with the container, because we separately handle them conditionally.
+					Force: true,
+				}); err != nil {
+					t.Logf("Failed to remove container %s during docker cleanup: %v", c.ID, err)
+				}
 			}
 		}
 
-		pruneVolumesWithRetry(ctx, t, cli)
-		pruneNetworksWithRetry(ctx, t, cli)
+		if !keepContainers {
+			pruneVolumesWithRetry(ctx, t, cli)
+			pruneNetworksWithRetry(ctx, t, cli)
+		} else {
+			t.Logf("Keeping containers - Docker cleanup skipped")
+		}
 	}
 }
 

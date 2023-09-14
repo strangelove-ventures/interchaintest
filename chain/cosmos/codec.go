@@ -1,32 +1,56 @@
 package cosmos
 
 import (
+	"cosmossdk.io/x/upgrade"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	ibctypes "github.com/cosmos/ibc-go/v6/modules/core/types"
+	"github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/x/consensus"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	"github.com/cosmos/cosmos-sdk/x/gov"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
+	"github.com/cosmos/cosmos-sdk/x/mint"
+	"github.com/cosmos/cosmos-sdk/x/params"
+	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/ibc-go/modules/capability"
+
+	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
+	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	ibcwasm "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 )
 
-func DefaultEncoding() simappparams.EncodingConfig {
-	// core modules
-	cfg := simappparams.MakeTestEncodingConfig()
-	std.RegisterLegacyAminoCodec(cfg.Amino)
-	std.RegisterInterfaces(cfg.InterfaceRegistry)
-	simapp.ModuleBasics.RegisterLegacyAminoCodec(cfg.Amino)
-	simapp.ModuleBasics.RegisterInterfaces(cfg.InterfaceRegistry)
-
-	// external modules
-	banktypes.RegisterInterfaces(cfg.InterfaceRegistry)
-	ibctypes.RegisterInterfaces(cfg.InterfaceRegistry)
-	transfertypes.RegisterInterfaces(cfg.InterfaceRegistry)
-
-	return cfg
+func DefaultEncoding() testutil.TestEncodingConfig {
+	return testutil.MakeTestEncodingConfig(
+		auth.AppModuleBasic{},
+		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
+		bank.AppModuleBasic{},
+		capability.AppModuleBasic{},
+		staking.AppModuleBasic{},
+		mint.AppModuleBasic{},
+		distr.AppModuleBasic{},
+		gov.NewAppModuleBasic(
+			[]govclient.ProposalHandler{
+				paramsclient.ProposalHandler,
+			},
+		),
+		params.AppModuleBasic{},
+		slashing.AppModuleBasic{},
+		upgrade.AppModuleBasic{},
+		consensus.AppModuleBasic{},
+		transfer.AppModuleBasic{},
+		ibccore.AppModuleBasic{},
+		ibctm.AppModuleBasic{},
+		ibcwasm.AppModuleBasic{},
+	)
 }
 
 func decodeTX(interfaceRegistry codectypes.InterfaceRegistry, txbz []byte) (sdk.Tx, error) {

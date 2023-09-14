@@ -2,22 +2,24 @@ package interchaintest
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/label"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
 	"go.uber.org/zap"
 )
+
+type TestName interface {
+	Name() string
+}
 
 // RelayerFactory describes how to start a Relayer.
 type RelayerFactory interface {
 	// Build returns a Relayer associated with the given arguments.
 	Build(
-		t *testing.T,
+		t TestName,
 		cli *client.Client,
 		networkID string,
 	) ibc.Relayer
@@ -25,14 +27,6 @@ type RelayerFactory interface {
 	// Name returns a descriptive name of the factory,
 	// indicating details of the Relayer that will be built.
 	Name() string
-
-	// Labels are reported to allow simple filtering of tests depending on this Relayer.
-	// While the Name should be fully descriptive,
-	// the Labels are intended to be short and fixed.
-	//
-	// Most relayers will probably only have one label indicative of its name,
-	// but we allow multiple labels for future compatibility.
-	Labels() []label.Relayer
 
 	// Capabilities is an indication of the features this relayer supports.
 	// Tests for any unsupported features will be skipped rather than failed.
@@ -53,7 +47,7 @@ func NewBuiltinRelayerFactory(impl ibc.RelayerImplementation, logger *zap.Logger
 
 // Build returns a relayer chosen depending on f.impl.
 func (f builtinRelayerFactory) Build(
-	t *testing.T,
+	t TestName,
 	cli *client.Client,
 	networkID string,
 ) ibc.Relayer {
@@ -94,17 +88,6 @@ func (f builtinRelayerFactory) Name() string {
 			}
 		}
 		return "hermes@" + hermes.DefaultContainerVersion
-	default:
-		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
-	}
-}
-
-func (f builtinRelayerFactory) Labels() []label.Relayer {
-	switch f.impl {
-	case ibc.CosmosRly:
-		return []label.Relayer{label.Rly}
-	case ibc.Hermes:
-		return []label.Relayer{label.Hermes}
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

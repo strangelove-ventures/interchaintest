@@ -5,18 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 
-	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
-	"github.com/cosmos/ibc-go/v6/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	"github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 )
 
 var _ relayer.RelayerCommander = &commander{}
 
 type commander struct {
-	log *zap.Logger
+	log             *zap.Logger
+	extraStartFlags []string
 }
 
 func (c commander) Name() string {
@@ -48,13 +49,13 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 			State:    r.ChannelEnd.State,
 			Ordering: r.ChannelEnd.Ordering,
 			Counterparty: ibc.ChannelCounterparty{
-				PortID:    r.CounterPartyChannelEnd.Remote.PortID,
-				ChannelID: r.CounterPartyChannelEnd.Remote.ChannelID,
+				PortID:    r.ChannelEnd.Remote.PortID,
+				ChannelID: r.ChannelEnd.Remote.ChannelID,
 			},
 			ConnectionHops: r.ChannelEnd.ConnectionHops,
 			Version:        r.ChannelEnd.Version,
-			PortID:         r.ChannelEnd.Remote.PortID,
-			ChannelID:      r.ChannelEnd.Remote.ChannelID,
+			PortID:         r.CounterPartyChannelEnd.Remote.PortID,
+			ChannelID:      r.CounterPartyChannelEnd.Remote.ChannelID,
 		})
 	}
 
@@ -135,7 +136,9 @@ func (c commander) GetClients(chainID, homeDir string) []string {
 }
 
 func (c commander) StartRelayer(homeDir string, pathNames ...string) []string {
-	return []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "start", "--full-scan"}
+	cmd := []string{hermes, "--config", fmt.Sprintf("%s/%s", homeDir, hermesConfigPath), "start"}
+	cmd = append(cmd, c.extraStartFlags...)
+	return cmd
 }
 
 func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
@@ -186,12 +189,8 @@ func (c commander) CreateConnections(pathName string, homeDir string) []string {
 	panic("create connections implemented in hermes relayer not the commander")
 }
 
-func (c commander) FlushAcknowledgements(pathName, channelID, homeDir string) []string {
-	panic("flush acks implemented in hermes relayer not the commander")
-}
-
-func (c commander) FlushPackets(pathName, channelID, homeDir string) []string {
-	panic("flush packets implemented in hermes relayer not the commander")
+func (c commander) Flush(pathName, channelID, homeDir string) []string {
+	panic("flush implemented in hermes relayer not the commander")
 }
 
 func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {

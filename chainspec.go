@@ -8,8 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/label"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 )
 
@@ -28,10 +27,9 @@ type ChainSpec struct {
 	// Must be set.
 	Version string
 
-	// GasAdjustment and NoHostMount are pointers in ChainSpec
+	// NoHostMount is a pointers in ChainSpec
 	// so zero-overrides can be detected from omitted overrides.
-	GasAdjustment *float64
-	NoHostMount   *bool
+	NoHostMount *bool
 
 	// Embedded ChainConfig to allow for simple JSON definition of a ChainSpec.
 	ibc.ChainConfig
@@ -102,10 +100,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
 		}
-		chainLabel := label.Chain(s.Name)
-		if !chainLabel.IsKnown() {
-			label.RegisterChainLabel(chainLabel)
-		}
 		cfg = ibc.ChainConfig{}
 	}
 
@@ -140,15 +134,23 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.ChainID = prefix + s.suffix()
 	}
 
-	if s.GasAdjustment != nil {
-		cfg.GasAdjustment = *s.GasAdjustment
-	}
 	if s.NoHostMount != nil {
 		cfg.NoHostMount = *s.NoHostMount
+	}
+	if s.SkipGenTx {
+		cfg.SkipGenTx = true
 	}
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
 	}
+	if s.PreGenesis != nil {
+		cfg.PreGenesis = s.PreGenesis
+	}
+	if s.ModifyGenesisAmounts != nil {
+		cfg.ModifyGenesisAmounts = s.ModifyGenesisAmounts
+	}
+
+	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
 	// Set the version depending on the chain type.
 	switch cfg.Type {
@@ -163,44 +165,6 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		}
 		cfg.Images[0].Version = versionSplit[1]
 		cfg.Images[1].Version = versionSplit[0]
-	case "polkadot":
-		// Only set if ChainSpec's Version is set, if not, Version from Images must be set.
-		if s.Version != "" {
-			versionSplit := strings.Split(s.Version, ",")
-			relayChainImageSplit := strings.Split(versionSplit[0], ":")
-			var relayChainVersion string
-			if len(relayChainImageSplit) > 1 {
-				if relayChainImageSplit[0] != "seunlanlege/centauri-polkadot" &&
-					relayChainImageSplit[0] != "polkadot" {
-					return nil, fmt.Errorf("only polkadot is supported as the relay chain node. got: %s", relayChainImageSplit[0])
-				}
-				relayChainVersion = relayChainImageSplit[1]
-			} else {
-				relayChainVersion = relayChainImageSplit[0]
-			}
-			cfg.Images[0].Version = relayChainVersion
-			switch {
-			case strings.Contains(s.Name, "composable"):
-				if len(versionSplit) != 2 {
-					return nil, fmt.Errorf("unexpected composable version: %s. should be comma separated polkadot:version,composable:version", s.Version)
-				}
-				imageSplit := strings.Split(versionSplit[1], ":")
-				if len(imageSplit) != 2 {
-					return nil, fmt.Errorf("parachain versions should be in the format parachain_name:parachain_version, got: %s", versionSplit[1])
-				}
-				if !strings.Contains(cfg.Images[1].Repository, imageSplit[0]) {
-					return nil, fmt.Errorf("unexpected parachain: %s", imageSplit[0])
-				}
-				cfg.Images[1].Version = imageSplit[1]
-			default:
-				return nil, fmt.Errorf("unexpected parachain: %s", s.Name)
-			}
-		} else {
-			// Ensure there are at least two images and check the 2nd version is populated
-			if len(s.ChainConfig.Images) < 2 || s.ChainConfig.Images[1].Version == "" {
-				return nil, fmt.Errorf("ChainCongfig.Images must be >1 and ChainConfig.Images[1].Version must not be empty")
-			}
-		}
 	}
 
 	return &cfg, nil

@@ -3,18 +3,19 @@ package ibc
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -40,13 +41,13 @@ func TestInterchainAccounts(t *testing.T) {
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.3.5", UidGid: "1025:1025"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0", UidGid: "1025:1025"}},
 			},
 		},
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.3.5", UidGid: "1025:1025"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0", UidGid: "1025:1025"}},
 			},
 		},
 	})
@@ -54,7 +55,7 @@ func TestInterchainAccounts(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	chain1, chain2 := chains[0], chains[1]
+	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
 	// Get a relayer instance
 	r := interchaintest.NewBuiltinRelayerFactory(
@@ -99,20 +100,33 @@ func TestInterchainAccounts(t *testing.T) {
 	err = r.CreateClients(ctx, eRep, pathName, ibc.CreateClientOptions{TrustingPeriod: "330h"})
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 2, chain1, chain2)
 	require.NoError(t, err)
 
 	// Create a new connection
 	err = r.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
+	err = testutil.WaitForBlocks(ctx, 2, chain1, chain2)
 	require.NoError(t, err)
 
 	// Query for the newly created connection
 	connections, err := r.GetConnections(ctx, eRep, chain1.Config().ChainID)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(connections))
+
+	// Start the relayer and set the cleanup function.
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	t.Cleanup(
+		func() {
+			err := r.StopRelayer(ctx, eRep)
+			if err != nil {
+				t.Logf("an error occurred while stopping the relayer: %s", err)
+			}
+		},
+	)
 
 	// Register a new interchain account on chain2, on behalf of the user acc on chain1
 	chain1Addr := chain1User.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix)
@@ -130,21 +144,18 @@ func TestInterchainAccounts(t *testing.T) {
 	_, _, err = chain1.Exec(ctx, registerICA, nil)
 	require.NoError(t, err)
 
-	// Start the relayer and set the cleanup function.
-	err = r.StartRelayer(ctx, eRep, pathName)
+	ir := cosmos.DefaultEncoding().InterfaceRegistry
+
+	c2h, err := chain2.Height(ctx)
 	require.NoError(t, err)
 
-	t.Cleanup(
-		func() {
-			err := r.StopRelayer(ctx, eRep)
-			if err != nil {
-				t.Logf("an error occured while stopping the relayer: %s", err)
-			}
-		},
-	)
+	channelFound := func(found *chantypes.MsgChannelOpenConfirm) bool {
+		return found.PortId == "icahost"
+	}
 
-	// Wait for relayer to start up and finish channel handshake
-	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
+	// Wait for channel open confirm
+	_, err = cosmos.PollForMessage(ctx, chain2, ir,
+		c2h, c2h+30, channelFound)
 	require.NoError(t, err)
 
 	// Query for the newly registered interchain account
@@ -170,7 +181,7 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Send funds to ICA from user account on chain2
-	const transferAmount = 10000
+	transferAmount := math.NewInt(1000)
 	transfer := ibc.WalletAmount{
 		Address: icaAddr,
 		Denom:   chain2.Config().Denom,
@@ -179,17 +190,13 @@ func TestInterchainAccounts(t *testing.T) {
 	err = chain2.SendFunds(ctx, chain2User.KeyName(), transfer)
 	require.NoError(t, err)
 
-	// Wait for transfer to be complete and assert balances
-	err = testutil.WaitForBlocks(ctx, 5, chain2)
-	require.NoError(t, err)
-
 	chain2Bal, err := chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal-transferAmount, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal.Sub(transferAmount)))
 
 	icaBal, err := chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal+transferAmount, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal.Add(transferAmount)))
 
 	// Build bank transfer msg
 	rawMsg, err := json.Marshal(map[string]any{
@@ -199,7 +206,7 @@ func TestInterchainAccounts(t *testing.T) {
 		"amount": []map[string]any{
 			{
 				"denom":  chain2.Config().Denom,
-				"amount": strconv.Itoa(transferAmount),
+				"amount": transferAmount.String(),
 			},
 		},
 	})
@@ -220,24 +227,31 @@ func TestInterchainAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tx to be relayed
-	err = testutil.WaitForBlocks(ctx, 10, chain2)
+	c1h, err := chain1.Height(ctx)
+	require.NoError(t, err)
+
+	ackFound := func(found *chantypes.MsgAcknowledgement) bool {
+		return found.Packet.Sequence == 1 &&
+			found.Packet.SourcePort == "icacontroller-"+chain1Addr &&
+			found.Packet.DestinationPort == "icahost"
+	}
+
+	// Wait for ack
+	_, err = cosmos.PollForMessage(ctx, chain1, ir, c1h, c1h+10, ackFound)
 	require.NoError(t, err)
 
 	// Assert that the funds have been received by the user account on chain2
 	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal))
 
 	// Assert that the funds have been removed from the ICA on chain2
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal))
 
 	// Stop the relayer and wait for the process to terminate
 	err = r.StopRelayer(ctx, eRep)
-	require.NoError(t, err)
-
-	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
 	// Send another bank transfer msg to ICA on chain2 from the user account on chain1.
@@ -252,17 +266,25 @@ func TestInterchainAccounts(t *testing.T) {
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
+	c2h, err = chain2.Height(ctx)
+	require.NoError(t, err)
+
+	chanCloseFound := func(found *chantypes.MsgChannelCloseConfirm) bool {
+		return found.PortId == "icahost"
+	}
+
+	// Wait for channel close confirm
+	_, err = cosmos.PollForMessage(ctx, chain2, ir, c2h, c2h+30, chanCloseFound)
 	require.NoError(t, err)
 
 	// Assert that the packet timed out and that the acc balances are correct
 	chain2Bal, err = chain2.GetBalance(ctx, chain2Addr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, chain2OrigBal, chain2Bal)
+	require.True(t, chain2Bal.Equal(chain2OrigBal))
 
 	icaBal, err = chain2.GetBalance(ctx, icaAddr, chain2.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, icaOrigBal, icaBal)
+	require.True(t, icaBal.Equal(icaOrigBal))
 
 	// Assert that the channel ends are both closed
 	chain1Chans, err := r.GetChannels(ctx, eRep, chain1.Config().ChainID)
@@ -279,8 +301,12 @@ func TestInterchainAccounts(t *testing.T) {
 	_, _, err = chain1.Exec(ctx, registerICA, nil)
 	require.NoError(t, err)
 
-	// Wait for channel handshake to finish
-	err = testutil.WaitForBlocks(ctx, 15, chain1, chain2)
+	c2h, err = chain2.Height(ctx)
+	require.NoError(t, err)
+
+	// Wait for channel open confirm
+	_, err = cosmos.PollForMessage(ctx, chain2, ir,
+		c2h, c2h+30, channelFound)
 	require.NoError(t, err)
 
 	// Assert that a new channel has been opened and the same ICA is in use

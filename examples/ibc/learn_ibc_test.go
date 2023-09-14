@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"cosmossdk.io/math"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -64,24 +65,24 @@ func TestLearn(t *testing.T) {
 
 	// Build interchain
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),
 	)
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
+	fundAmount := math.NewInt(10_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 
 	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, gaiaUserBalInitial)
+	require.True(t, gaiaUserBalInitial.Equal(fundAmount))
 
 	// Get Channel ID
 	gaiaChannelInfo, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
@@ -93,7 +94,7 @@ func TestLearn(t *testing.T) {
 	osmoChannelID := osmoChannelInfo[0].ChannelID
 
 	// Send Transaction
-	amountToSend := int64(1_000_000)
+	amountToSend := math.NewInt(1_000_000)
 	dstAddress := osmosisUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
@@ -104,22 +105,21 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 
-	// relay packets and acknoledgments
-	require.NoError(t, r.FlushPackets(ctx, eRep, ibcPath, osmoChannelID))
-	require.NoError(t, r.FlushAcknowledgements(ctx, eRep, ibcPath, gaiaChannelID))
+	// relay MsgRecvPacket to osmosis, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
 
 	// test source wallet has decreased funds
-	expectedBal := gaiaUserBalInitial - amountToSend
+	expectedBal := gaiaUserBalInitial.Sub(amountToSend)
 	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, expectedBal, gaiaUserBalNew)
+	require.True(t, gaiaUserBalNew.Equal(expectedBal))
 
 	// Trace IBC Denom
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, gaia.Config().Denom))
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, gaia.Config().Denom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	// Test destination wallet has increased funds
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
-	require.Equal(t, amountToSend, osmosUserBalNew)
+	require.True(t, osmosUserBalNew.Equal(amountToSend))
 }

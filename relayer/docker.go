@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 const (
@@ -42,7 +42,7 @@ type DockerRelayer struct {
 	pullImage   bool
 
 	// The ID of the container created by StartRelayer.
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// wallets contains a mapping of chainID to relayer wallet
 	wallets map[string]ibc.Wallet
@@ -88,7 +88,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		return nil, fmt.Errorf("pulling container image %s: %w", containerImage.Ref(), err)
 	}
 
-	v, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		// Have to leave Driver unspecified for Docker Desktop compatibility.
 
 		Labels: map[string]string{dockerutil.CleanupLabel: testName},
@@ -140,6 +140,22 @@ func (r *DockerRelayer) WriteFileToHomeDir(ctx context.Context, relativePath str
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 	return nil
+}
+
+// ReadFileFromHomeDir reads a file at the relative path specified and returns the contents. The file is
+// relative to the home directory in the relayer container.
+func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(r.log, r.client, r.testName)
+	bytes, err := fr.SingleFileContent(ctx, r.volumeName, relativePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve %s: %w", relativePath, err)
+	}
+	return bytes, nil
+}
+
+// Modify a toml config file in relayer home directory
+func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
+	return testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)
 }
 
 // AddWallet adds a stores a wallet for the given chain ID.
@@ -219,14 +235,8 @@ func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerEx
 	return res.Err
 }
 
-func (r *DockerRelayer) FlushAcknowledgements(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushAcknowledgements(pathName, channelID, r.HomeDir())
-	res := r.Exec(ctx, rep, cmd, nil)
-	return res.Err
-}
-
-func (r *DockerRelayer) FlushPackets(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
-	cmd := r.c.FlushPackets(pathName, channelID, r.HomeDir())
+func (r *DockerRelayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName, channelID string) error {
+	cmd := r.c.Flush(pathName, channelID, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -313,7 +323,9 @@ func (r *DockerRelayer) Exec(ctx context.Context, rep ibc.RelayerExecReporter, c
 	}
 }
 
-func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, chainID, keyName, coinType, mnemonic string) error {
+func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
+	chainID := cfg.ChainID
+	coinType := cfg.CoinType
 	cmd := r.c.RestoreKey(chainID, keyName, coinType, mnemonic, r.HomeDir())
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
@@ -325,7 +337,6 @@ func (r *DockerRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecRepor
 	if res.Err != nil {
 		return res.Err
 	}
-
 	addrBytes := r.c.ParseRestoreKeyOutput(string(res.Stdout), string(res.Stderr))
 
 	r.wallets[chainID] = r.c.CreateWallet("", addrBytes, mnemonic)
@@ -340,17 +351,40 @@ func (r *DockerRelayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecRe
 }
 
 func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecReporter, pathNames ...string) error {
-	return r.createNodeContainer(ctx, pathNames...)
+	if r.containerLifecycle != nil {
+		return fmt.Errorf("tried to start relayer again without stopping first")
+	}
+
+	containerImage := r.containerImage()
+	joinedPaths := strings.Join(pathNames, ".")
+	containerName := fmt.Sprintf("%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
+
+	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
+
+	r.containerLifecycle = dockerutil.NewContainerLifecycle(r.log, r.client, containerName)
+
+	if err := r.containerLifecycle.CreateContainer(
+		ctx, r.testName, r.networkID, containerImage, nil,
+		r.Bind(), r.HostName(joinedPaths), cmd,
+	); err != nil {
+		return err
+	}
+
+	return r.containerLifecycle.StartContainer(ctx)
 }
 
 func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecReporter) error {
-	if err := r.stopContainer(ctx); err != nil {
+	if r.containerLifecycle == nil {
+		return nil
+	}
+	if err := r.containerLifecycle.StopContainer(ctx); err != nil {
 		return err
 	}
 
 	stdoutBuf := new(bytes.Buffer)
 	stderrBuf := new(bytes.Buffer)
-	rc, err := r.client.ContainerLogs(ctx, r.containerID, types.ContainerLogsOptions{
+	containerID := r.containerLifecycle.ContainerID()
+	rc, err := r.client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       "50",
@@ -370,18 +404,18 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	stdout := stdoutBuf.String()
 	stderr := stderrBuf.String()
 
-	c, err := r.client.ContainerInspect(ctx, r.containerID)
+	c, err := r.client.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return fmt.Errorf("StopRelayer: inspecting container: %w", err)
 	}
 
-	startedAt, err := time.Parse(c.State.StartedAt, time.RFC3339Nano)
+	startedAt, err := time.Parse(time.RFC3339Nano, c.State.StartedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container StartedAt", zap.Error(err))
 		startedAt = time.Unix(0, 0)
 	}
 
-	finishedAt, err := time.Parse(c.State.FinishedAt, time.RFC3339Nano)
+	finishedAt, err := time.Parse(time.RFC3339Nano, c.State.FinishedAt)
 	if err != nil {
 		r.log.Info("Failed to parse container FinishedAt", zap.Error(err))
 		finishedAt = time.Now().UTC()
@@ -399,14 +433,31 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 
 	r.log.Debug(
 		fmt.Sprintf("Stopped docker container\nstdout:\n%s\nstderr:\n%s", stdout, stderr),
-		zap.String("container_id", r.containerID),
+		zap.String("container_id", containerID),
 		zap.String("container", c.Name),
 	)
 
-	return r.client.ContainerRemove(ctx, r.containerID, types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		// TODO: should this set Force=true?
-	})
+	if err := r.containerLifecycle.RemoveContainer(ctx); err != nil {
+		return err
+	}
+
+	r.containerLifecycle = nil
+
+	return nil
+}
+
+func (r *DockerRelayer) PauseRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerPause(ctx, r.containerLifecycle.ContainerID())
+}
+
+func (r *DockerRelayer) ResumeRelayer(ctx context.Context) error {
+	if r.containerLifecycle == nil {
+		return fmt.Errorf("container not running")
+	}
+	return r.client.ContainerUnpause(ctx, r.containerLifecycle.ContainerID())
 }
 
 func (r *DockerRelayer) containerImage() ibc.DockerImage {
@@ -435,54 +486,6 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 	return nil
 }
 
-func (r *DockerRelayer) createNodeContainer(ctx context.Context, pathNames ...string) error {
-	containerImage := r.containerImage()
-	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("%s-%s", r.c.Name(), joinedPaths)
-	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
-	r.log.Info(
-		"Running command",
-		zap.String("command", strings.Join(cmd, " ")),
-		zap.String("container", containerName),
-	)
-	cc, err := r.client.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: containerImage.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: r.HostName(joinedPaths),
-			User:     r.c.DockerUser(),
-
-			Labels: map[string]string{dockerutil.CleanupLabel: r.testName},
-		},
-		&container.HostConfig{
-			Binds:      r.Bind(),
-			AutoRemove: false,
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				r.networkID: {},
-			},
-		},
-		nil,
-		containerName,
-	)
-	if err != nil {
-		return err
-	}
-
-	r.containerID = cc.ID
-	return dockerutil.StartContainer(ctx, r.client, r.containerID)
-}
-
-func (r *DockerRelayer) stopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return r.client.ContainerStop(ctx, r.containerID, &timeout)
-}
-
 func (r *DockerRelayer) Name() string {
 	return r.c.Name() + "-" + dockerutil.SanitizeContainerName(r.testName)
 }
@@ -503,6 +506,10 @@ func (r *DockerRelayer) HostName(pathName string) string {
 
 func (r *DockerRelayer) UseDockerNetwork() bool {
 	return true
+}
+
+func (r *DockerRelayer) SetClientContractHash(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, hash string) error {
+	panic("[rly/SetClientContractHash] Implement me")
 }
 
 type RelayerCommander interface {
@@ -549,8 +556,7 @@ type RelayerCommander interface {
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
-	FlushAcknowledgements(pathName, channelID, homeDir string) []string
-	FlushPackets(pathName, channelID, homeDir string) []string
+	Flush(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
 	UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string
 	GetChannels(chainID, homeDir string) []string

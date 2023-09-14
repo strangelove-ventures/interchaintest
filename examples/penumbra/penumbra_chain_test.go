@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -23,8 +23,9 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name:    "penumbra",
-			Version: "040-themisto.1,v0.34.21",
+			Name: "penumbra",
+			// Version: "040-themisto.1,v0.34.23",
+			Version: "045-metis,v0.34.23",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},

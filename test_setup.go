@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/version"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/version"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
 const (
@@ -33,7 +33,7 @@ func KeepDockerVolumesOnFailure(b bool) {
 // DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
 //
 // If any part of the setup fails, t.Fatal is called.
-func DockerSetup(t *testing.T) (*client.Client, string) {
+func DockerSetup(t dockerutil.DockerSetupTestingT) (*client.Client, string) {
 	t.Helper()
 	return dockerutil.DockerSetup(t)
 }

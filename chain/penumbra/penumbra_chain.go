@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
+	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -17,10 +19,11 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v6/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	dockerclient "github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -43,24 +46,31 @@ type PenumbraChain struct {
 }
 
 type PenumbraValidatorDefinition struct {
-	IdentityKey    string                           `json:"identity_key"`
-	ConsensusKey   string                           `json:"consensus_key"`
-	Name           string                           `json:"name"`
-	Website        string                           `json:"website"`
-	Description    string                           `json:"description"`
-	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams"`
-	SequenceNumber int64                            `json:"sequence_number"`
+	SequenceNumber int                              `json:"sequence_number" toml:"sequence_number"`
+	Enabled        bool                             `json:"enabled" toml:"enabled"`
+	Name           string                           `json:"name" toml:"name"`
+	Website        string                           `json:"website" toml:"website"`
+	Description    string                           `json:"description" toml:"description"`
+	IdentityKey    string                           `json:"identity_key" toml:"identity_key"`
+	GovernanceKey  string                           `json:"governance_key" toml:"governance_key"`
+	ConsensusKey   PenumbraConsensusKey             `json:"consensus_key" toml:"consensus_key"`
+	FundingStreams []PenumbraValidatorFundingStream `json:"funding_streams" toml:"funding_stream"`
+}
+
+type PenumbraConsensusKey struct {
+	Type  string `json:"type" toml:"type"`
+	Value string `json:"value" toml:"value"`
 }
 
 type PenumbraValidatorFundingStream struct {
-	Address string `json:"address"`
-	RateBPS int64  `json:"rate_bps"`
+	Address string `json:"address" toml:"address"`
+	RateBPS int64  `json:"rate_bps" toml:"rate_bps"`
 }
 
 type PenumbraGenesisAppStateAllocation struct {
-	Amount  int64  `json:"amount"`
-	Denom   string `json:"denom"`
-	Address string `json:"address"`
+	Amount  math.Int `json:"amount"`
+	Denom   string   `json:"denom"`
+	Address string   `json:"address"`
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -227,7 +237,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 }
 
 // Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	panic("implement me")
 }
 
@@ -236,6 +246,78 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
 	return int64(fees)
+}
+
+// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
+// with docker volumes created.
+func (c *PenumbraChain) NewChainNode(
+	ctx context.Context,
+	i int,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	testName string,
+	tendermintImage ibc.DockerImage,
+	penumbraImage ibc.DockerImage,
+) (PenumbraNode, error) {
+	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
+
+	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: tn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating tendermint volume: %w", err)
+	}
+	tn.VolumeName = tv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: tn.VolumeName,
+		ImageRef:   tn.Image.Ref(),
+		TestName:   tn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set tendermint volume owner: %w", err)
+	}
+
+	pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: penumbraImage}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
+
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return PenumbraNode{}, fmt.Errorf("creating penumbra volume: %w", err)
+	}
+	pn.VolumeName = pv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: dockerClient,
+
+		VolumeName: pn.VolumeName,
+		ImageRef:   pn.Image.Ref(),
+		TestName:   pn.TestName,
+		UidGid:     tn.Image.UidGid,
+	}); err != nil {
+		return PenumbraNode{}, fmt.Errorf("set penumbra volume owner: %w", err)
+	}
+
+	return PenumbraNode{
+		TendermintNode:  tn,
+		PenumbraAppNode: pn,
+	}, nil
 }
 
 // creates the test node objects required for bootstrapping tests
@@ -266,60 +348,11 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 	}
 	for i := 0; i < count; i++ {
-		tn := &tendermint.TendermintNode{Log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[0]}
-
-		tv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
-
-				dockerutil.NodeOwnerLabel: tn.Name(),
-			},
-		})
+		pn, err := c.NewChainNode(ctx, i, cli, networkID, testName, chainCfg.Images[0], chainCfg.Images[1])
 		if err != nil {
-			return fmt.Errorf("creating tendermint volume: %w", err)
+			return err
 		}
-		tn.VolumeName = tv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-			Log: c.log,
-
-			Client: cli,
-
-			VolumeName: tn.VolumeName,
-			ImageRef:   tn.Image.Ref(),
-			TestName:   tn.TestName,
-			UidGid:     tn.Image.UidGid,
-		}); err != nil {
-			return fmt.Errorf("set tendermint volume owner: %w", err)
-		}
-
-		pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
-			DockerClient: cli, NetworkID: networkID, TestName: testName, Image: chainCfg.Images[1]}
-		pv, err := cli.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-			Labels: map[string]string{
-				dockerutil.CleanupLabel: testName,
-
-				dockerutil.NodeOwnerLabel: pn.Name(),
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("creating penumbra volume: %w", err)
-		}
-		pn.VolumeName = pv.Name
-		if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-			Log: c.log,
-
-			Client: cli,
-
-			VolumeName: pn.VolumeName,
-			ImageRef:   pn.Image.Ref(),
-			TestName:   pn.TestName,
-			UidGid:     tn.Image.UidGid,
-		}); err != nil {
-			return fmt.Errorf("set penumbra volume owner: %w", err)
-		}
-
-		penumbraNodes = append(penumbraNodes, PenumbraNode{TendermintNode: tn, PenumbraAppNode: pn})
+		penumbraNodes = append(penumbraNodes, pn)
 	}
 	c.PenumbraNodes = penumbraNodes
 
@@ -382,15 +415,17 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			// In all likelihood, the PenumbraAppNode and TendermintNode have the same DockerClient and TestName,
 			// but instantiate a new FileRetriever to be defensive.
 			fr = dockerutil.NewFileRetriever(c.log, v.PenumbraAppNode.DockerClient, v.PenumbraAppNode.TestName)
-			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.json")
+			validatorTemplateDefinitionFileBytes, err := fr.SingleFileContent(egCtx, v.PenumbraAppNode.VolumeName, "validator.toml")
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
 			validatorTemplateDefinition := PenumbraValidatorDefinition{}
-			if err := json.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
+			if err := toml.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
 				return fmt.Errorf("error unmarshaling validator definition template key: %v", err)
 			}
-			validatorTemplateDefinition.ConsensusKey = privValKey.PubKey.Value
+			validatorTemplateDefinition.SequenceNumber = i
+			validatorTemplateDefinition.Enabled = true
+			validatorTemplateDefinition.ConsensusKey.Value = privValKey.PubKey.Value
 			validatorTemplateDefinition.Name = fmt.Sprintf("validator-%d", i)
 			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
 			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)
@@ -400,13 +435,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 
 			// self delegation
 			allocations[2*i] = PenumbraGenesisAppStateAllocation{
-				Amount:  100_000_000_000,
+				Amount:  math.NewInt(100_000_000_000),
 				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}
 			// liquid
 			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
-				Amount:  1_000_000_000_000,
+				Amount:  math.NewInt(1_000_000_000_000),
 				Denom:   chainCfg.Denom,
 				Address: validatorTemplateDefinition.FundingStreams[0].Address,
 			}

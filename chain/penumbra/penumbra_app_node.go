@@ -7,14 +7,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +26,7 @@ type PenumbraAppNode struct {
 	DockerClient *client.Client
 	Image        ibc.DockerImage
 
-	containerID string
+	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Set during StartContainer.
 	hostRPCPort  string
@@ -104,7 +101,7 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName stri
 }
 
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
-	return filepath.Join(p.HomeDir(), "validator.json")
+	return filepath.Join(p.HomeDir(), "validator.toml")
 }
 
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
@@ -141,7 +138,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"\n`, allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
@@ -214,61 +211,25 @@ func (p *PenumbraAppNode) SendIBCTransfer(
 
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
-	fmt.Printf("{%s} -> '%s'\n", p.Name(), strings.Join(cmd, " "))
 
-	cc, err := p.DockerClient.ContainerCreate(
-		ctx,
-		&container.Config{
-			Image: p.Image.Ref(),
-
-			Entrypoint: []string{},
-			Cmd:        cmd,
-
-			Hostname: p.HostName(),
-			User:     p.Image.UidGid,
-
-			Labels: map[string]string{dockerutil.CleanupLabel: p.TestName},
-
-			ExposedPorts: exposedPorts,
-		},
-		&container.HostConfig{
-			Binds:           p.Bind(),
-			PublishAllPorts: true,
-			AutoRemove:      false,
-			DNS:             []string{},
-		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				p.NetworkID: {},
-			},
-		},
-		nil,
-		p.Name(),
-	)
-	if err != nil {
-		return err
-	}
-	p.containerID = cc.ID
-	return nil
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
-	timeout := 30 * time.Second
-	return p.DockerClient.ContainerStop(ctx, p.containerID, &timeout)
+	return p.containerLifecycle.StopContainer(ctx)
 }
 
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
-	if err := dockerutil.StartContainer(ctx, p.DockerClient, p.containerID); err != nil {
+	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
 	}
 
-	c, err := p.DockerClient.ContainerInspect(ctx, p.containerID)
+	hostPorts, err := p.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort)
 	if err != nil {
 		return err
 	}
 
-	p.hostRPCPort = dockerutil.GetHostPort(c, rpcPort)
-	p.hostGRPCPort = dockerutil.GetHostPort(c, grpcPort)
+	p.hostRPCPort, p.hostGRPCPort = hostPorts[0], hostPorts[1]
 
 	return nil
 }

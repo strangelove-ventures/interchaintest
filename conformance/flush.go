@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
-	"github.com/strangelove-ventures/interchaintest/v6/ibc"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer"
-	"github.com/strangelove-ventures/interchaintest/v6/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v6/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +20,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 
 	// FlushPackets will be exercised in a subtest,
 	// but check that capability first in case we can avoid setup.
-	requireCapabilities(t, rep, rf, relayer.FlushPackets)
+	requireCapabilities(t, rep, rf, relayer.Flush)
 
 	client, network := interchaintest.DockerSetup(t)
 
@@ -70,7 +70,6 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 	req.Len(channels, 1)
 
 	c0ChannelID := channels[0].ChannelID
-	c1ChannelID := channels[0].Counterparty.ChannelID
 
 	beforeTransferHeight, err := c0.Height(ctx)
 	req.NoError(err)
@@ -79,12 +78,12 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 	tx, err := c0.SendIBCTransfer(ctx, c0ChannelID, interchaintest.FaucetAccountKeyName, ibc.WalletAmount{
 		Address: c1FaucetAddr,
 		Denom:   c0.Config().Denom,
-		Amount:  txAmount,
+		Amount:  math.NewInt(txAmount),
 	}, ibc.TransferOptions{})
 	req.NoError(err)
 	req.NoError(tx.Validate())
 
-	t.Run("flush packets", func(t *testing.T) {
+	t.Run("flush", func(t *testing.T) {
 		rep.TrackTest(t)
 
 		eRep := rep.RelayerExecReporter(t)
@@ -92,39 +91,12 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 		req := require.New(rep.TestifyT(t))
 
 		// Should trigger MsgRecvPacket.
-		req.NoError(r.FlushPackets(ctx, eRep, pathName, c0ChannelID))
-
-		req.NoError(testutil.WaitForBlocks(ctx, 3, c0, c1))
-
-		req.NoError(r.FlushPackets(ctx, eRep, pathName, c1ChannelID))
+		req.NoError(r.Flush(ctx, eRep, pathName, c0ChannelID))
 
 		afterFlushHeight, err := c0.Height(ctx)
 		req.NoError(err)
 
-		//flush packets and flush acks are the same command in hermes and are not separated as in the go relayer
-		// Ack shouldn't happen yet.
-		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
-		if _, isHermes := r.(*hermes.Relayer); isHermes {
-			req.NoError(err)
-		} else {
-			req.ErrorIs(err, testutil.ErrNotFound)
-		}
-	})
-
-	t.Run("flush acks", func(t *testing.T) {
-		rep.TrackTest(t)
-		requireCapabilities(t, rep, rf, relayer.FlushAcknowledgements)
-
-		eRep := rep.RelayerExecReporter(t)
-
-		req := require.New(rep.TestifyT(t))
-		req.NoError(r.FlushAcknowledgements(ctx, eRep, pathName, c0ChannelID))
-
-		afterFlushHeight, err := c0.Height(ctx)
-		req.NoError(err)
-
-		// Now the ack must be present.
-		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+2, tx.Packet)
+		_, err = testutil.PollForAck(ctx, c0, beforeTransferHeight, afterFlushHeight+5, tx.Packet)
 		req.NoError(err)
 	})
 }
