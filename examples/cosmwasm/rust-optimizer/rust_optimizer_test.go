@@ -1,4 +1,4 @@
-package intro
+package rust_optimizer
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 // TestIntroContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
 // It then spins up a juno chain and executes tests
-func TestIntroContract(t *testing.T) {		
+func TestRustOptimizerContract(t *testing.T) {		
 	if testing.Short() {		
 		t.Skip("skipping in short mode")		
 	}

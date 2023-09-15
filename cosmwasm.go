@@ -37,7 +37,6 @@ type (
 // Successful compilation will return the absolute path of the new binary
 // - contractPath is the relative path of the contract project on local machine
 func CompileCwContract(contractRelativePath string) (string, error) {
-	fmt.Println("Arch: ", runtime.GOARCH)
 	// Set the image to pull/use
 	arch := ""
 	if runtime.GOARCH == "arm64" {
