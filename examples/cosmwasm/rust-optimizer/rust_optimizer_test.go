@@ -28,10 +28,9 @@ func TestRustOptimizerContract(t *testing.T) {
 
 	// Compile the contract, input is the relative path to the project
 	// Using cosmwasm/rust-optimizer v0.13.0 instead of the default v0.14.0
-	// Output is the location of the contract
-	contractBinary, err := cosmwasm.NewContract("contract").WithVersion("0.13.0").Compile()
-
-	require.NoError(t, err)
+	// Output is the location of the contract in a channel
+	// Compilation runs in parallel with chain setup, waiting if necessary before StoreContract
+	contractBinaryChan, errChan := cosmwasm.NewContract("contract").WithVersion("0.13.0").Compile()
 
 	ctx := context.Background()		
 
@@ -84,6 +83,14 @@ func TestRustOptimizerContract(t *testing.T) {
 	require.NoError(t, err)		
 	require.True(t, junoUserBalInitial.Equal(initBal))		
 
+	// Wait for contract to finish compiling
+	contractBinary := ""
+	select {
+	case err := <-errChan:
+		require.NoError(t, err)
+	case contractBinary = <-contractBinaryChan:
+	}
+	
 	// Store contract
 	contractCodeId, err := juno.StoreContract(ctx, junoUser.KeyName(), contractBinary)
 	require.NoError(t, err)

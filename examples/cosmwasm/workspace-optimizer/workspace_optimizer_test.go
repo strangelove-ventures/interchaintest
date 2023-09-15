@@ -27,9 +27,10 @@ func TestWorkspaceOptimizerContracts(t *testing.T) {
 	t.Parallel()
 
 	// Compile the workspace contracts, input is the relative path to the project
+	// Using cosmwasm/workspace-optimizer v0.14.0 (default)
 	// Output is a map of the crate names to their location
-	contractBinaries, err := cosmwasm.NewWorkspace("workspace").Compile()
-	require.NoError(t, err)
+	// Compilation runs in parallel with the chain setup, waiting if necessary before StoreContract
+	contractBinariesChan, errChan := cosmwasm.NewWorkspace("workspace").Compile()
 
 	ctx := context.Background()		
 
@@ -81,6 +82,14 @@ func TestWorkspaceOptimizerContracts(t *testing.T) {
 	junoUserBalInitial, err := juno.GetBalance(ctx, junoUser.FormattedAddress(), juno.Config().Denom)		
 	require.NoError(t, err)		
 	require.True(t, junoUserBalInitial.Equal(initBal))		
+
+	// Wait for contracts to finish compiling
+	contractBinaries := make(map[string]string)
+	select {
+	case err := <-errChan:
+		require.NoError(t, err)
+	case contractBinaries = <-contractBinariesChan:
+	}
 
 	// Store contract
 	contractCodeId, err := juno.StoreContract(ctx, junoUser.KeyName(), contractBinaries["contract1"])

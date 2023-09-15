@@ -37,29 +37,38 @@ func (c *Contract) WithVersion(version string) *Contract {
 
 // Compile will compile the contract
 //   cosmwasm/rust-optimizer is the expected docker image
-// Successful compilation will return the binary location
-func (c *Contract) Compile() (string, error) {
-	repoPathFull, err := compile(c.DockerImage, c.Version, c.RelativePath)
-	if err != nil {
-		return "", err
-	}
+// Successful compilation will return the binary location in a channel
+func (c *Contract) Compile() (<-chan string, <-chan error) {
+	wasmBinPathChan := make(chan string)
+	errChan := make(chan error, 1)
 
-	// Form the path to the artifacts directory, used for checksum.txt and package.wasm
-	artifactsPath := filepath.Join(repoPathFull, "artifacts")
+	go func() {
+		repoPathFull, err := compile(c.DockerImage, c.Version, c.RelativePath)
+		if err != nil {
+			errChan <- err
+			return
+		}
 
-	// Parse the checksums.txt for the crate/wasm binary name
-	checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
-	checksumsBz, err := os.ReadFile(checksumsPath)
-	if err != nil {
-		return "", fmt.Errorf("checksums read: %w", err)
-	}
-	_, wasmBin, found := strings.Cut(string(checksumsBz), "  ")
-	if !found {
-		return "", fmt.Errorf("wasm binary name not found")
-	}
+		// Form the path to the artifacts directory, used for checksum.txt and package.wasm
+		artifactsPath := filepath.Join(repoPathFull, "artifacts")
 
-	// Form the path to the wasm binary
-	wasmBinPath := filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
-	return wasmBinPath, nil
+		// Parse the checksums.txt for the crate/wasm binary name
+		checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
+		checksumsBz, err := os.ReadFile(checksumsPath)
+		if err != nil {
+			errChan <- fmt.Errorf("checksums read: %w", err)
+			return
+		}
+		_, wasmBin, found := strings.Cut(string(checksumsBz), "  ")
+		if !found {
+			errChan <- fmt.Errorf("wasm binary name not found")
+			return
+		}
+
+		// Form the path to the wasm binary
+		wasmBinPathChan <- filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
+	}()
+
+	return wasmBinPathChan, errChan
 }
 
