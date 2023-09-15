@@ -1,4 +1,4 @@
-package dockerutil
+package interchaintest
 
 import (
 	"context"

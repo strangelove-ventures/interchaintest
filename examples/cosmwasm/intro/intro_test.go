@@ -10,7 +10,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/wasm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,7 @@ func TestIntroContract(t *testing.T) {
 	t.Parallel()
 
 	// Compile the contract, input is the relative path to the project
-	contractBinary, err := dockerutil.CompileCwContract("contract")
+	contractBinary, err := interchaintest.CompileCwContract("contract")
 	require.NoError(t, err)
 
 	ctx := context.Background()		
