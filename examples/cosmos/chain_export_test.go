@@ -15,12 +15,12 @@ import (
 
 func TestJunoStateExport(t *testing.T) {
 	// SDK v45
-	CosmosChainStateExportTest(t, "juno", "v15.0.0", false)
+	CosmosChainStateExportTest(t, "juno", "v15.0.0")
 	// SDK v47
-	CosmosChainStateExportTest(t, "juno", "v16.0.0", true)
+	CosmosChainStateExportTest(t, "juno", "v16.0.0")
 }
 
-func CosmosChainStateExportTest(t *testing.T, name, version string, useNewGenesisCmd bool) {
+func CosmosChainStateExportTest(t *testing.T, name, version string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
