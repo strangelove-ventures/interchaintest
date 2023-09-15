@@ -3,6 +3,8 @@ package types
 import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/msgservice"
+
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 )
 
@@ -18,15 +20,13 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 		&ConsensusState{},
 	)
 	registry.RegisterImplementations(
+		(*exported.ClientMessage)(nil),
+		&ClientMessage{},
+	)
+	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
 		&MsgStoreCode{},
 	)
-	registry.RegisterImplementations(
-		(*exported.ClientMessage)(nil),
-		&Misbehaviour{},
-	)
-	registry.RegisterImplementations(
-		(*exported.ClientMessage)(nil),
-		&Header{},
-	)
+
+	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
 }
