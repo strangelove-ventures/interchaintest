@@ -12,10 +12,10 @@ import (
 )
 
 func TestICTestMiscellaneous(t *testing.T) {
-	CosmosChainTestMiscellaneous(t, "juno", "v16.0.0", true)
+	CosmosChainTestMiscellaneous(t, "juno", "v16.0.0")
 }
 
-func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGenesisCmd bool) {
+func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -29,8 +29,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 			ChainName: name,
 			Version:   version,
 			ChainConfig: ibc.ChainConfig{
-				Denom:                  "ujuno",
-				UsingNewGenesisCommand: useNewGenesisCmd,
+				Denom: "ujuno",
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
