@@ -18,13 +18,13 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
-const (
-	rustOptimizer = "cosmwasm/rust-optimizer"
-	rustOptimizerVersion = ":0.14.0"
-)
-
 type (
-	CargoToml struct {
+	Contract struct {
+		DockerImage string
+		Version string
+		RelativePath string
+	}
+	cargoToml struct {
 		Package packageBlock `toml:"package"`
 	}
 	packageBlock struct {
@@ -32,24 +32,42 @@ type (
 	}
 )
 
+func NewContract(relativePath string) *Contract {
+	return &Contract{
+		DockerImage: "cosmwasm/rust-optimizer",
+		Version: "0.14.0",
+		RelativePath: relativePath,
+	}
+}
+
+func (c *Contract) WithDockerImage(image string) *Contract {
+	c.DockerImage = image
+	return c
+}
+
+func (c *Contract) WithVersion(version string) *Contract {
+	c.Version = version
+	return c
+}
+
 // CompileCwContract takes a relative path input for the contract to compile
 // CosmWasm's rust-optimizer is used for compilation
 // Successful compilation will return the absolute path of the new binary
 // - contractPath is the relative path of the contract project on local machine
-func CompileCwContract(contractRelativePath string) (string, error) {
+func (c *Contract) Compile() (string, error) {
 	// Set the image to pull/use
 	arch := ""
 	if runtime.GOARCH == "arm64" {
 		arch = "-arm64"
 	}
-	image := rustOptimizer + arch + rustOptimizerVersion
+	image := c.DockerImage + arch + ":" + c.Version
 
 	// Get absolute path of contract project
 	pwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getwd: %w", err)
 	}
-	contractPath := filepath.Join(pwd, contractRelativePath)
+	contractPath := filepath.Join(pwd, c.RelativePath)
 
 	// Check that Cargo.toml is found
 	cargoTomlPath := filepath.Join(contractPath, "Cargo.toml")
@@ -58,7 +76,7 @@ func CompileCwContract(contractRelativePath string) (string, error) {
 	}
 
 	// Get the contract package name
-	var cargoToml CargoToml
+	var cargoToml cargoToml
 	_, err = toml.DecodeFile(cargoTomlPath, &cargoToml)
 	contractPackageName := cargoToml.Package.Name
 

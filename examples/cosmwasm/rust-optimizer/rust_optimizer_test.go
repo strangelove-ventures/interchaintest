@@ -26,7 +26,8 @@ func TestRustOptimizerContract(t *testing.T) {
 	t.Parallel()
 
 	// Compile the contract, input is the relative path to the project
-	contractBinary, err := interchaintest.CompileCwContract("contract")
+	contractBinary, err := interchaintest.NewContract("contract").Compile()
+
 	require.NoError(t, err)
 
 	ctx := context.Background()		
