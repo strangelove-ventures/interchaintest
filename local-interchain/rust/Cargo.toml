@@ -1,0 +1,12 @@
+[package]
+name = "local-interchain"
+version = "0.0.1"
+edition = "2021"
+authors = ["Strangelove Developers"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.11.20", features = ["blocking", "json"]}
+tokio = { version = "1.32.0", features = ["full"] }
+serde_json = {version = "1.0.107"}
