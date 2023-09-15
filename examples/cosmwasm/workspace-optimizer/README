@@ -1,0 +1,3 @@
+The rust-optimizer example contains a simple contract that performs minimal functionality.
+The single contract uses cosmwasm/rust-optimizer to compile during test execution.
+The test case shows how the contract source can integrate with interchaintest: building the contract, spinning up a chain, storing it on-chain, and instantiating/querying/executing against it.

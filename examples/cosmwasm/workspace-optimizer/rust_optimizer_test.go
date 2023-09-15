@@ -1,4 +1,4 @@
-package rust_optimizer
+package workspace_optimizer
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 
 // TestIntroContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
 // It then spins up a juno chain and executes tests
-func TestRustOptimizerContract(t *testing.T) {		
+func TestWorkspaceOptimizerContracts(t *testing.T) {		
 	if testing.Short() {		
 		t.Skip("skipping in short mode")		
 	}
@@ -27,7 +27,7 @@ func TestRustOptimizerContract(t *testing.T) {
 	t.Parallel()
 
 	// Compile the contract, input is the relative path to the project
-	contractBinary, err := cosmwasm.NewContract("contract").Compile()
+	contractBinary, err := cosmwasm.NewWorkspace("workspace").Compile()
 
 	require.NoError(t, err)
 
