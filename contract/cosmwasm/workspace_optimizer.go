@@ -1,6 +1,7 @@
 package cosmwasm
 
 import (
+	"bufio"
 	"path/filepath"
 	"fmt"
 	"os"
@@ -13,6 +14,8 @@ type Workspace struct {
 	RelativePath string
 }
 
+// NewWorkspace returns a workspace struct, populated with defaults and its relative path
+// relativePath is the relative path to the workspace on local machine
 func NewWorkspace(relativePath string) *Workspace {
 	return &Workspace{
 		DockerImage: "cosmwasm/workspace-optimizer",
@@ -21,38 +24,51 @@ func NewWorkspace(relativePath string) *Workspace {
 	}
 }
 
+// WithDockerImage sets a custom docker image to use
 func (w *Workspace) WithDockerImage(image string) *Workspace {
 	w.DockerImage = image
 	return w
 }
 
+// WithVersion sets a custom version to use
 func (w *Workspace) WithVersion(version string) *Workspace {
 	w.Version = version
 	return w
 }
 
-// CompileCwContract takes a relative path input for the contract to compile
-// CosmWasm's rust-optimizer is used for compilation
-// Successful compilation will return the absolute path of the new binary
-// - contractPath is the relative path of the contract project on local machine
-func (w *Workspace) Compile() (string, error) {
+// Compile will compile the workspace's contracts
+//   cosmwasm/workspace-optimizer is the expected docker image
+// Successful compilation will return a map of crate names to binary locations
+func (w *Workspace) Compile() (map[string]string, error) {
 	repoPathFull, err := compile(w.DockerImage, w.Version, w.RelativePath)
+	if err != nil {
+		return nil, err
+	}
 
 	// Form the path to the artifacts directory, used for checksum.txt and package.wasm
 	artifactsPath := filepath.Join(repoPathFull, "artifacts")
 
-	// Parse the checksums.txt for the wasm binary name
+	// Parse the checksums.txt for the crate/wasm binary names
+	wasmBinaries := make(map[string]string)
 	checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
-	checksumsBz, err := os.ReadFile(checksumsPath)
+	file, err := os.Open(checksumsPath)
 	if err != nil {
-		return "", fmt.Errorf("checksums read: %w", err)
+		return nil, fmt.Errorf("checksums open: %w", err)
 	}
-	_, wasmBin, found := strings.Cut(string(checksumsBz), "  ")
-	if !found {
-		return "", fmt.Errorf("wasm binary name not found")
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		_, wasmBin, found := strings.Cut(line, "  ")
+		if !found {
+			return nil, fmt.Errorf("wasm binary name not found")
+		}
+		wasmBin = strings.TrimSpace(wasmBin)
+		crateName, _, found := strings.Cut(wasmBin, ".")
+		if !found {
+			return nil, fmt.Errorf("wasm binary name invalid")
+		}
+		wasmBinaries[crateName] = filepath.Join(artifactsPath, wasmBin)
 	}
 
-	// Form the path to the wasm binary
-	wasmBinPath := filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
-	return wasmBinPath, nil
+	return wasmBinaries, nil
   }

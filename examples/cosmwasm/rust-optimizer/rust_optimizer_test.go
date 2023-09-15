@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// TestIntroContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
+// TestRustOptimizerContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
 // It then spins up a juno chain and executes tests
 func TestRustOptimizerContract(t *testing.T) {		
 	if testing.Short() {		
@@ -27,7 +27,9 @@ func TestRustOptimizerContract(t *testing.T) {
 	t.Parallel()
 
 	// Compile the contract, input is the relative path to the project
-	contractBinary, err := cosmwasm.NewContract("contract").Compile()
+	// Using cosmwasm/rust-optimizer v0.13.0 instead of the default v0.14.0
+	// Output is the location of the contract
+	contractBinary, err := cosmwasm.NewContract("contract").WithVersion("0.13.0").Compile()
 
 	require.NoError(t, err)
 

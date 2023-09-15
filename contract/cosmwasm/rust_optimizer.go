@@ -13,6 +13,8 @@ type Contract struct {
 	RelativePath string
 }
 
+// NewContract return a contract struct, populated with defaults and its relative path
+// relativePath is the relative path to the contract on local machine
 func NewContract(relativePath string) *Contract {
 	return &Contract{
 		DockerImage: "cosmwasm/rust-optimizer",
@@ -21,27 +23,31 @@ func NewContract(relativePath string) *Contract {
 	}
 }
 
+// WithDockerImage sets a custom docker image to use
 func (c *Contract) WithDockerImage(image string) *Contract {
 	c.DockerImage = image
 	return c
 }
 
+// WithVersion sets a custom version to use
 func (c *Contract) WithVersion(version string) *Contract {
 	c.Version = version
 	return c
 }
 
-// CompileCwContract takes a relative path input for the contract to compile
-// CosmWasm's rust-optimizer is used for compilation
-// Successful compilation will return the absolute path of the new binary
-// - contractPath is the relative path of the contract project on local machine
+// Compile will compile the contract
+//   cosmwasm/rust-optimizer is the expected docker image
+// Successful compilation will return the binary location
 func (c *Contract) Compile() (string, error) {
 	repoPathFull, err := compile(c.DockerImage, c.Version, c.RelativePath)
+	if err != nil {
+		return "", err
+	}
 
 	// Form the path to the artifacts directory, used for checksum.txt and package.wasm
 	artifactsPath := filepath.Join(repoPathFull, "artifacts")
 
-	// Parse the checksums.txt for the wasm binary name
+	// Parse the checksums.txt for the crate/wasm binary name
 	checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
 	checksumsBz, err := os.ReadFile(checksumsPath)
 	if err != nil {

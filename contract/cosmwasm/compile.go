@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
+// compile will compile the specified repo using the specified docker image and version
 func compile(image string, version string, repoPath string) (string, error) {
 	// Set the image to pull/use
 	arch := ""

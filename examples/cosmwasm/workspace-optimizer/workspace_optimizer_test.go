@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// TestIntroContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
+// TestWorkspaceOptimizerContracts compiles a workspace's contracts using cosmwasm/workspace-optimizer
 // It then spins up a juno chain and executes tests
 func TestWorkspaceOptimizerContracts(t *testing.T) {		
 	if testing.Short() {		
@@ -26,9 +26,9 @@ func TestWorkspaceOptimizerContracts(t *testing.T) {
 
 	t.Parallel()
 
-	// Compile the contract, input is the relative path to the project
-	contractBinary, err := cosmwasm.NewWorkspace("workspace").Compile()
-
+	// Compile the workspace contracts, input is the relative path to the project
+	// Output is a map of the crate names to their location
+	contractBinaries, err := cosmwasm.NewWorkspace("workspace").Compile()
 	require.NoError(t, err)
 
 	ctx := context.Background()		
@@ -83,7 +83,7 @@ func TestWorkspaceOptimizerContracts(t *testing.T) {
 	require.True(t, junoUserBalInitial.Equal(initBal))		
 
 	// Store contract
-	contractCodeId, err := juno.StoreContract(ctx, junoUser.KeyName(), contractBinary)
+	contractCodeId, err := juno.StoreContract(ctx, junoUser.KeyName(), contractBinaries["contract1"])
 	require.NoError(t, err)
 
 	// Instantiate contract
