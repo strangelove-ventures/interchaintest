@@ -1,5 +1,5 @@
 use serde_json::{Result, Value};
-
+use reqwest::blocking::Client;
 
 // create a RequestType enum
 
@@ -20,13 +20,15 @@ impl RequestType {
 }
 
 pub struct RequestBase {
+    pub client: Client,
     pub url: String,
     pub chain_id: String,
     pub request_type: RequestType,
 }
 impl RequestBase {
-    pub fn new(url: String, chain_id: String, request_type: RequestType) -> RequestBase {
+    pub fn new(client: Client, url: String, chain_id: String, request_type: RequestType) -> RequestBase {
         RequestBase {
+            client,
             url,
             chain_id,
             request_type,
@@ -104,7 +106,7 @@ impl RequestBuilder {
 
 // create a send_request function which takes in a RequestBase, cmd (Optional string), return_text optional booll, and log_output optional bool
 // return json
-pub fn send_request(request_base: RequestBase, cmd: String, return_text: Option<bool>, log_output: Option<bool>) -> String {    
+pub fn send_request(request_base: RequestBase, cmd: String, return_text: bool, log_output: bool) -> serde_json::Value {    
     if cmd.is_empty() {
         panic!("cmd cannot be empty");
     }
@@ -119,15 +121,12 @@ pub fn send_request(request_base: RequestBase, cmd: String, return_text: Option<
 
     let payload = ActionHandler::new(request_base.chain_id, request_base.request_type.as_str().to_string(), cmd).to_json();    
 
-    match log_output {
-        Some(true) => {
-            println!("[send_request payload]: {}", payload);            
-            println!("[send_request url]: {}", request_base.url);
-        },
-        _ => (),
+    if log_output {
+        println!("[send_request payload]: {}", payload); 
+        println!("[send_request url]: {}", request_base.url);
     }
     
-    let res = reqwest::blocking::Client::new()
+    let res = request_base.client
         .post(request_base.url)
         .json(&payload)     
         .header("Content-Type", "application/json")
@@ -135,19 +134,35 @@ pub fn send_request(request_base: RequestBase, cmd: String, return_text: Option<
         .send()
         .unwrap();
 
-    match log_output {
-        Some(true) => println!("[send_request resp]: {:?}", &res),
-        _ => (),
-    }
+    if log_output {
+        println!("[send_request resp]: {:?}", &res)        
+    }    
 
-    // TODO: Fix below to not panic, and return in serde_json::Value.
-    // Or return in a struct of type Text and JSON depending
-    if return_text.is_some() {
-        let s = r#"{ "text": "%s" }"#.replace("%s", &res.text().unwrap());
-        return s;
+    if return_text {        
+        return return_text_json(res.text().unwrap(), None);
+    }    
+    
+    match res.text() {
+        Ok(text) => {
+            match serde_json::from_str::<Value>(&text) {
+                Ok(json) => {
+                    json
+                },
+                Err(err) => {
+                    return return_text_json(text, Some(err.to_string()));
+                },
+            }
+        },
+        Err(err) => {
+            return return_text_json("".to_string(), Some(err.to_string()));
+        },
     }
-        
-    let json: serde_json::Value = serde_json::from_str(&res.text().unwrap_or_default()).unwrap_or_default();
-    let json = json.to_string();
-    json
+    
+}
+
+fn return_text_json(text: String, err: Option<String>) -> serde_json::Value {    
+    serde_json::json!({
+        "text": &text,
+        "error": err,
+    })
 }

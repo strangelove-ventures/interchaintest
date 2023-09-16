@@ -2,7 +2,7 @@
 
 use std::path;
 
-// TODO: add an arg parser
+// Use clap to parse args in the future
 pub const API_URL: &str = "http://localhost:8080";
 
 pub fn get_current_dir() -> path::PathBuf {
