@@ -266,6 +266,8 @@ ictest-tkn-factory:
   cd interchaintest && go test -race -v -run ^TestTokenFactory$$ .
 ```
 
+There are also environment variables you can set to alter logging settings. See all options [here](./envOptions.md)
+
 ## Integrate Docker Name and Tag into Tests
 
 The final part is to specify the proper Docker `Repository` (image name) and `Version` (image tag) in your `ibc.ChainConfig`.
