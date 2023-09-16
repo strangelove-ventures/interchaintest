@@ -29,18 +29,15 @@ type HyperspaceRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *HyperspaceRelayer {
+func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *HyperspaceRelayer {
 	c := hyperspaceCommander{log: log}
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = o.Flags
-		}
-	}
+
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, &c, options...)
 	if err != nil {
 		panic(err) // TODO: return
 	}
+
+	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	coreConfig := HyperspaceRelayerCoreConfig{
 		PrometheusEndpoint: "",
