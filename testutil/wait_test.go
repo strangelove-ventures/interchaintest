@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -80,6 +81,40 @@ func TestWaitForBlocks(t *testing.T) {
 		// Because 0 is always invalid height, we do not start testing for the delta until height > 0.
 		require.EqualValues(t, 2, chain.CurHeight)
 	})
+}
+
+func TestWaitForBlocksUtil(t *testing.T) {
+	testCases := []struct {
+		maxBlocks int
+		fn        func(i int) error
+		expected  error
+	}{
+		{
+			maxBlocks: 3,
+			fn: func(i int) error {
+				if i == 2 {
+					return nil
+				}
+				return fmt.Errorf("block %d not found", i)
+			},
+			expected: nil,
+		},
+		{
+			maxBlocks: 5,
+			fn: func(i int) error {
+				return fmt.Errorf("block %d not found", i)
+			},
+			expected: errors.New("block 4 not found"),
+		},
+	}
+	for _, tc := range testCases {
+		actual := WaitForBlocksUtil(tc.maxBlocks, tc.fn)
+		if tc.expected == nil {
+			require.NoError(t, actual)
+		} else {
+			require.EqualError(t, actual, tc.expected.Error(), "WaitForBlocksUtil(%d, fn) = %v, want %v", tc.maxBlocks, actual, tc.expected)
+		}
+	}
 }
 
 func TestWaitForInSync(t *testing.T) {
