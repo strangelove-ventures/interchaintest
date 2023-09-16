@@ -1,5 +1,3 @@
-// base are the initial setup features we will use through the program
-
 use std::path;
 
 // Use clap to parse args in the future
@@ -28,7 +26,8 @@ pub fn create_contract_path() {
 }
 
 pub fn get_contract_json_path() -> path::PathBuf {
-    let contract_json_path = get_local_interchain_dir().join("configs").join("contract.json");
+    let contract_json_path = get_local_interchain_dir()
+        .join("configs")
+        .join("contract.json");
     contract_json_path
 }
-
