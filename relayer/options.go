@@ -4,65 +4,44 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 )
 
-// RelayerOption is used to customize the relayer configuration, whether constructed with the
-// RelayerFactory or with the more specific NewDockerRelayer or NewCosmosRelayer methods.
-type RelayerOption interface {
-	// relayerOption is a no-op to be more restrictive on what types can be used as RelayerOptions
-	relayerOption()
-}
-type RelayerOptions []RelayerOption
+// RelayerOpt is a functional option for configuring a relayer.
+type RelayerOpt func(relayer *DockerRelayer)
 
-type RelayerOptionDockerImage struct {
-	DockerImage ibc.DockerImage
+// DockerImage overrides the default relayer docker image.
+func DockerImage(image *ibc.DockerImage) RelayerOpt {
+	return func(r *DockerRelayer) {
+		r.customImage = image
+	}
 }
-
-// RelayerOptionHomeDir allows the configuration of the relayer home directory.
-type RelayerOptionHomeDir struct {
-	HomeDir string
-}
-
-func (r RelayerOptionHomeDir) relayerOption() {}
 
 // CustomDockerImage overrides the default relayer docker image.
 // uidGid is the uid:gid format owner that should be used within the container.
 // If uidGid is empty, root user will be assumed.
-func CustomDockerImage(repository string, version string, uidGid string) RelayerOption {
-	return RelayerOptionDockerImage{
-		DockerImage: ibc.DockerImage{
-			Repository: repository,
-			Version:    version,
-			UidGid:     uidGid,
-		},
+func CustomDockerImage(repository string, version string, uidGid string) RelayerOpt {
+	return DockerImage(&ibc.DockerImage{
+		Repository: repository,
+		Version:    version,
+		UidGid:     uidGid,
+	})
+}
+
+// HomeDir overrides the default relayer home directory.
+func HomeDir(homeDir string) RelayerOpt {
+	return func(r *DockerRelayer) {
+		r.homeDir = homeDir
 	}
 }
 
-func HomeDir(homeDir string) RelayerOption {
-	return RelayerOptionHomeDir{HomeDir: homeDir}
-}
-
-func (opt RelayerOptionDockerImage) relayerOption() {}
-
-type RelayerOptionImagePull struct {
-	Pull bool
-}
-
-func ImagePull(pull bool) RelayerOption {
-	return RelayerOptionImagePull{
-		Pull: pull,
+// ImagePull overrides whether the relayer image should be pulled on startup.
+func ImagePull(pull bool) RelayerOpt {
+	return func(r *DockerRelayer) {
+		r.pullImage = pull
 	}
 }
 
-func (opt RelayerOptionImagePull) relayerOption() {}
-
-type RelayerOptionExtraStartFlags struct {
-	Flags []string
-}
-
-// StartupFlags appends additional flags when starting the relayer.
-func StartupFlags(flags ...string) RelayerOption {
-	return RelayerOptionExtraStartFlags{
-		Flags: flags,
+// StartupFlags overrides the default relayer startup flags.
+func StartupFlags(flags ...string) RelayerOpt {
+	return func(r *DockerRelayer) {
+		r.extraStartupFlags = flags
 	}
 }
-
-func (opt RelayerOptionExtraStartFlags) relayerOption() {}
