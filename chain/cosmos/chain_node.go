@@ -728,6 +728,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+		"--gas", "auto",
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -841,6 +842,82 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 	}
 
 	return false
+}
+
+// GetBuildInformation returns the build information and dependencies for the chain binary.
+func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInformation {
+	stdout, _, err := tn.ExecBin(ctx, "version", "--long", "--output", "json")
+	if err != nil {
+		return nil
+	}
+
+	type tempBuildDeps struct {
+		Name             string   `json:"name"`
+		ServerName       string   `json:"server_name"`
+		Version          string   `json:"version"`
+		Commit           string   `json:"commit"`
+		BuildTags        string   `json:"build_tags"`
+		Go               string   `json:"go"`
+		BuildDeps        []string `json:"build_deps"`
+		CosmosSdkVersion string   `json:"cosmos_sdk_version"`
+	}
+
+	var deps tempBuildDeps
+	if err := json.Unmarshal([]byte(stdout), &deps); err != nil {
+		return nil
+	}
+
+	getRepoAndVersion := func(dep string) (string, string) {
+		split := strings.Split(dep, "@")
+		return split[0], split[1]
+	}
+
+	var buildDeps []BuildDependency
+	for _, dep := range deps.BuildDeps {
+		var bd BuildDependency
+
+		if strings.Contains(dep, "=>") {
+			// Ex: "github.com/aaa/bbb@v1.2.1 => github.com/ccc/bbb@v1.2.0"
+			split := strings.Split(dep, " => ")
+			main, replacement := split[0], split[1]
+
+			parent, parentVersion := getRepoAndVersion(main)
+			r, rV := getRepoAndVersion(replacement)
+
+			bd = BuildDependency{
+				Parent:             parent,
+				Version:            parentVersion,
+				IsReplacement:      true,
+				Replacement:        r,
+				ReplacementVersion: rV,
+			}
+
+		} else {
+			// Ex: "github.com/aaa/bbb@v0.0.0-20191008050251-8e49817e8af4"
+			parent, version := getRepoAndVersion(dep)
+
+			bd = BuildDependency{
+				Parent:             parent,
+				Version:            version,
+				IsReplacement:      false,
+				Replacement:        "",
+				ReplacementVersion: "",
+			}
+		}
+
+		buildDeps = append(buildDeps, bd)
+	}
+
+	return &BinaryBuildInformation{
+		BuildDeps:        buildDeps,
+		Name:             deps.Name,
+		ServerName:       deps.ServerName,
+		Version:          deps.Version,
+		Commit:           deps.Commit,
+		BuildTags:        deps.BuildTags,
+		Go:               deps.Go,
+		CosmosSdkVersion: deps.CosmosSdkVersion,
+	}
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.

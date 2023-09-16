@@ -91,7 +91,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 // dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
 func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
-		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS") != ""
+		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
 		keepContainers := os.Getenv("KEEP_CONTAINTERS") != ""
 
@@ -109,7 +109,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 		}
 
 		for _, c := range cs {
-			if t.Failed() || showContainerLogs {
+			if (t.Failed() && showContainerLogs == "") || showContainerLogs == "always" {
 				logTail := "50"
 				if containerLogTail != "" {
 					logTail = containerLogTail
