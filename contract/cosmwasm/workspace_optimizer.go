@@ -12,6 +12,8 @@ type Workspace struct {
 	DockerImage string
 	Version string
 	RelativePath string
+	wasmBinariesChan chan map[string]string
+	errChan chan error
 }
 
 // NewWorkspace returns a workspace struct, populated with defaults and its relative path
@@ -38,15 +40,15 @@ func (w *Workspace) WithVersion(version string) *Workspace {
 
 // Compile will compile the workspace's contracts
 //   cosmwasm/workspace-optimizer is the expected docker image
-// Successful compilation will return a map of crate names to binary locations in a channel
-func (w *Workspace) Compile() (<-chan map[string]string, <-chan error) {
-	wasmBinariesChan := make(chan map[string]string)
-	errChan := make(chan error, 1)
+// The workspace object is returned, call WaitForCompile() to get results
+func (w *Workspace) Compile() *Workspace {
+	w.wasmBinariesChan = make(chan map[string]string)
+	w.errChan = make(chan error, 1)
 
 	go func() {
 		repoPathFull, err := compile(w.DockerImage, w.Version, w.RelativePath)
 		if err != nil {
-			errChan <- err
+			w.errChan <- err
 			return
 		}
 
@@ -58,7 +60,7 @@ func (w *Workspace) Compile() (<-chan map[string]string, <-chan error) {
 		checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
 		file, err := os.Open(checksumsPath)
 		if err != nil {
-			errChan <- fmt.Errorf("checksums open: %w", err)
+			w.errChan <- fmt.Errorf("checksums open: %w", err)
 			return
 		}
 		scanner := bufio.NewScanner(file)
@@ -66,19 +68,31 @@ func (w *Workspace) Compile() (<-chan map[string]string, <-chan error) {
 			line := scanner.Text()
 			_, wasmBin, found := strings.Cut(line, "  ")
 			if !found {
-				errChan <- fmt.Errorf("wasm binary name not found")
+				w.errChan <- fmt.Errorf("wasm binary name not found")
 				return
 			}
 			wasmBin = strings.TrimSpace(wasmBin)
 			crateName, _, found := strings.Cut(wasmBin, ".")
 			if !found {
-				errChan <- fmt.Errorf("wasm binary name invalid")
+				w.errChan <- fmt.Errorf("wasm binary name invalid")
 				return
 			}
 			wasmBinaries[crateName] = filepath.Join(artifactsPath, wasmBin)
 		}
-		wasmBinariesChan <- wasmBinaries
+		w.wasmBinariesChan <- wasmBinaries
 	}()
 
-	return wasmBinariesChan, errChan
-  }
+	return w
+}
+
+// WaitForCompile will wait until coyympilation is complete, this can be called after chain setup
+// Successful compilation will return a map of crate names to binary locations in a channel
+func (w *Workspace) WaitForCompile() (map[string]string, error) {
+	contractBinaries := make(map[string]string)
+	select {
+	case err := <-w.errChan:
+		return nil, err
+	case contractBinaries = <-w.wasmBinariesChan:
+	}
+	return contractBinaries, nil
+}

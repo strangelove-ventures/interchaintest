@@ -11,6 +11,8 @@ type Contract struct {
 	DockerImage string
 	Version string
 	RelativePath string
+	wasmBinPathChan chan string
+	errChan chan error
 }
 
 // NewContract return a contract struct, populated with defaults and its relative path
@@ -37,15 +39,14 @@ func (c *Contract) WithVersion(version string) *Contract {
 
 // Compile will compile the contract
 //   cosmwasm/rust-optimizer is the expected docker image
-// Successful compilation will return the binary location in a channel
-func (c *Contract) Compile() (<-chan string, <-chan error) {
-	wasmBinPathChan := make(chan string)
-	errChan := make(chan error, 1)
+func (c *Contract) Compile() *Contract {
+	c.wasmBinPathChan = make(chan string)
+	c.errChan = make(chan error, 1)
 
 	go func() {
 		repoPathFull, err := compile(c.DockerImage, c.Version, c.RelativePath)
 		if err != nil {
-			errChan <- err
+			c.errChan <- err
 			return
 		}
 
@@ -56,19 +57,30 @@ func (c *Contract) Compile() (<-chan string, <-chan error) {
 		checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
 		checksumsBz, err := os.ReadFile(checksumsPath)
 		if err != nil {
-			errChan <- fmt.Errorf("checksums read: %w", err)
+			c.errChan <- fmt.Errorf("checksums read: %w", err)
 			return
 		}
 		_, wasmBin, found := strings.Cut(string(checksumsBz), "  ")
 		if !found {
-			errChan <- fmt.Errorf("wasm binary name not found")
+			c.errChan <- fmt.Errorf("wasm binary name not found")
 			return
 		}
 
 		// Form the path to the wasm binary
-		wasmBinPathChan <- filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
+		c.wasmBinPathChan <- filepath.Join(artifactsPath, strings.TrimSpace(wasmBin))
 	}()
 
-	return wasmBinPathChan, errChan
+	return c
 }
 
+// WaitForCompile will wait until coyympilation is complete, this can be called after chain setup
+// Successful compilation will return the binary location in a channel
+func (c *Contract) WaitForCompile() (string, error) {
+	contractBinary := ""
+	select {
+	case err := <-c.errChan:
+		return "", err
+	case contractBinary = <-c.wasmBinPathChan:
+	}
+	return contractBinary, nil
+}
