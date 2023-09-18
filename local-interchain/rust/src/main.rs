@@ -1,42 +1,57 @@
-use reqwest::blocking::Client;
+#![allow(dead_code)]
 
-pub mod polling;
-use polling::poll_for_start;
+use cosmwasm_std::Uint128;
+use reqwest::blocking::Client;
 
 pub mod base;
 use base::API_URL;
 
-pub mod transactions;
-use transactions::RequestBuilder;
-
-use cosmwasm_std::{Coin, Uint128};
+// TODO: Temp wildcards
+use localic_std::balances::*;
+use localic_std::polling::*;
+use localic_std::transactions::*;
 
 fn main() {
     let client = Client::new();
     poll_for_start(client.clone(), &API_URL, 150);
 
-    let req_builder = RequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
+    let req_builder =
+        RequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true, false);
 
-    // == queries ==
-    get_all_accounts(&req_builder);
-    get_bank_total_supply(&req_builder);
+    test_queries(&req_builder);
+    test_binary(&req_builder);
 
-    // == binary ==
-    req_builder.binary("config");
-    get_keyring_accounts(&req_builder);
-    transaction_decode(&req_builder);
-
-    // transactions
-    let cmd = "tx bank send acc0 juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 5ujuno --fees 5000ujuno --node %RPC% --chain-id=%CHAIN_ID% --yes --output json --keyring-backend=test";
-    let tx_data = req_builder.transaction(&cmd);
-    println!("tx_data: {}", tx_data);
-
-    let bal = get_balance(&req_builder, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
-    println!("bal: {}", bal[0]);
+    test_bank_send(&req_builder);
 }
 
-// TODO: put these into its own module helpers. (ensure to return the proper data.)
-fn get_all_accounts(req_builder: &RequestBuilder) {
+// == test functions ==
+fn test_bank_send(req_builder: &RequestBuilder) {
+    // TODO: Have a transaction builder for common Txs (like CosmWasm type.)
+    let before_bal =
+        get_balance(&req_builder, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0")[0].amount;
+
+    let cmd = "tx bank send acc0 juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 5ujuno --fees 5000ujuno --node %RPC% --chain-id=%CHAIN_ID% --yes --output json --keyring-backend=test";
+    let tx_data = req_builder.tx(&cmd, true);
+    println!("tx_data: {}", tx_data.unwrap_or_default());
+
+    let after_amount =
+        get_balance(&req_builder, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0")[0].amount;
+    assert_eq!(before_bal + Uint128::new(5), after_amount);
+}
+
+fn test_queries(req_builder: &RequestBuilder) {
+    test_all_accounts(&req_builder);
+    get_bank_total_supply(&req_builder);
+}
+fn test_binary(req_builder: &RequestBuilder) {
+    req_builder.binary("config");
+    get_keyring_accounts(&req_builder);
+
+    let decoded = req_builder.decode_transaction("ClMKUQobL2Nvc21vcy5nb3YudjFiZXRhMS5Nc2dWb3RlEjIIpwISK2p1bm8xZGM3a2MyZzVrZ2wycmdmZHllZGZ6MDl1YTlwZWo1eDNsODc3ZzcYARJmClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECxjGMmYp4MlxxfFWi9x4u+jOleJVde3Cru+HnxAVUJmgSBAoCCH8YNBISCgwKBXVqdW5vEgMyMDQQofwEGkDPE4dCQ4zUh6LIB9wqNXDBx+nMKtg0tEGiIYEH8xlw4H8dDQQStgAe6xFO7I/oYVSWwa2d9qUjs9qyB8r+V0Gy", false);
+    println!("decoded: {}", decoded);
+}
+
+fn test_all_accounts(req_builder: &RequestBuilder) {
     let res = req_builder.query("q auth accounts --output=json");
     let accounts = res["accounts"].as_array().unwrap();
 
@@ -52,45 +67,6 @@ fn get_all_accounts(req_builder: &RequestBuilder) {
 
         println!("{}: {}", acc_type, addr);
     });
-}
-
-fn get_bank_total_supply(req_builder: &RequestBuilder) {
-    // Total supply: {"pagination":{"next_key":null,"total":"0"},"supply":[{"amount":"110048643629768","denom":"ujuno"}]}
-    let res = req_builder.query("q bank total");
-
-    let supplies = res["supply"].as_array().unwrap();
-    supplies.iter().for_each(|supply| {
-        let amount = supply["amount"].as_str().unwrap_or_default();
-        let denom = supply["denom"].as_str().unwrap_or_default();
-        let amount = amount.parse::<u128>().unwrap_or_default();
-
-        let human_denom = denom[1..].to_string().to_uppercase();
-        let human_amount = amount / 1000000;
-        println!(
-            "{}: {} = ({}: {})",
-            denom, amount, human_denom, human_amount
-        );
-    });
-}
-
-fn get_balance(req_builder: &RequestBuilder, address: &str) -> Vec<Coin> {
-    let res = req_builder.query(&format!("q bank balances {}", address));
-    let balances = res["balances"].as_array().unwrap();
-
-    let mut coins: Vec<Coin> = Vec::new();
-    balances.iter().for_each(|balance| {
-        let amount = balance["amount"].as_str().unwrap_or_default();
-        let denom = balance["denom"].as_str().unwrap_or_default();
-        let amount = amount.parse::<Uint128>().unwrap_or_default();
-
-        let coin = Coin {
-            denom: denom.to_string(),
-            amount: amount,
-        };
-        coins.push(coin);
-    });
-
-    coins
 }
 
 fn get_keyring_accounts(req_builder: &RequestBuilder) {
@@ -109,10 +85,4 @@ fn get_keyring_accounts(req_builder: &RequestBuilder) {
             println!("No accounts found.");
         }
     }
-}
-
-fn transaction_decode(req_builder: &RequestBuilder) {
-    let cmd = "tx decode ClMKUQobL2Nvc21vcy5nb3YudjFiZXRhMS5Nc2dWb3RlEjIIpwISK2p1bm8xZGM3a2MyZzVrZ2wycmdmZHllZGZ6MDl1YTlwZWo1eDNsODc3ZzcYARJmClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECxjGMmYp4MlxxfFWi9x4u+jOleJVde3Cru+HnxAVUJmgSBAoCCH8YNBISCgwKBXVqdW5vEgMyMDQQofwEGkDPE4dCQ4zUh6LIB9wqNXDBx+nMKtg0tEGiIYEH8xlw4H8dDQQStgAe6xFO7I/oYVSWwa2d9qUjs9qyB8r+V0Gy";
-    let res = req_builder.binary(cmd);
-    println!("{}", res);
 }
