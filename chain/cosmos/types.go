@@ -107,3 +107,23 @@ type ContractStateModels struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
+
+type BuildDependency struct {
+	Parent  string `json:"parent"`
+	Version string `json:"version"`
+
+	IsReplacement      bool   `json:"is_replacement"`
+	Replacement        string `json:"replacement"`
+	ReplacementVersion string `json:"replacement_version"`
+}
+
+type BinaryBuildInformation struct {
+	Name             string            `json:"name"`
+	ServerName       string            `json:"server_name"`
+	Version          string            `json:"version"`
+	Commit           string            `json:"commit"`
+	BuildTags        string            `json:"build_tags"`
+	Go               string            `json:"go"`
+	BuildDeps        []BuildDependency `json:"build_deps"`
+	CosmosSdkVersion string            `json:"cosmos_sdk_version"`
+}
