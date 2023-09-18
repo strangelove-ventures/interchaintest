@@ -18,11 +18,10 @@ import (
 )
 
 func TestICTestMiscellaneous(t *testing.T) {
-	// TODO: Convert to sim v0.50 RC 0
-	CosmosChainTestMiscellaneous(t, "juno", "v16.0.0", true)
+	CosmosChainTestMiscellaneous(t, "juno", "v16.0.0")
 }
 
-func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGenesisCmd bool) {
+func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -78,24 +77,55 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string, useNewGene
 
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(10_000_000_000), chain, chain)
 
-	// TODO: Get this from PR 760
-	// BuildDependencies(ctx, t, chain)
-
-	// TODO: Move ExportState here? (we need to run both for SDK 45 and 47+
+	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)
 	testSendingTokens(ctx, t, chain, users)
 	testFindTxs(ctx, t, chain, users)
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
 	testBroadcaster(ctx, t, chain, users)
-
 	testQueryCmd(ctx, t, chain)
 	testHasCommand(ctx, t, chain)
 
-	// testProposal(ctx, t, chain, user) // broken param unmarshaling, requires v50 sim.
-	// testCosmWasm(ctx, t, chain, user.KeyName(), "contracts/cw_template.wasm", `{"count":0}`) // requires wasmd v50
-
 	testAddingNode(ctx, t, chain)
+}
+
+func testBuildDependencies(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	deps := chain.Validators[0].GetBuildInformation(ctx)
+
+	sdkVer := "v0.47.3"
+
+	require.Equal(t, deps.Name, "juno")
+	require.Equal(t, deps.ServerName, "junod")
+	require.Equal(t, deps.Version, "v16.0.0")
+	require.Equal(t, deps.CosmosSdkVersion, sdkVer)
+	require.Equal(t, deps.Commit, "054796f6173a9f15d012b656e255f94a4ec1d2cd")
+	require.Equal(t, deps.BuildTags, "netgo muslc,")
+
+	for _, dep := range deps.BuildDeps {
+		dep := dep
+
+		// Verify specific examples
+		if dep.Parent == "github.com/cosmos/cosmos-sdk" {
+			require.Equal(t, dep.Version, sdkVer)
+			require.Equal(t, dep.IsReplacement, false)
+		} else if dep.Parent == "github.com/99designs/keyring" {
+			require.Equal(t, dep.Version, "v1.2.2")
+			require.Equal(t, dep.IsReplacement, true)
+			require.Equal(t, dep.Replacement, "github.com/cosmos/keyring")
+			require.Equal(t, dep.ReplacementVersion, "v1.2.0")
+
+		}
+
+		// Verify all replacement logic
+		if dep.IsReplacement {
+			require.GreaterOrEqual(t, len(dep.ReplacementVersion), 6, "ReplacementVersion: %s must be >=6 length (ex: vA.B.C)", dep.ReplacementVersion)
+			require.Greater(t, len(dep.Replacement), 0, "Replacement: %s must be >0 length.", dep.Replacement)
+		} else {
+			require.Equal(t, len(dep.Replacement), 0, "Replacement: %s is not 0.", dep.Replacement)
+			require.Equal(t, len(dep.ReplacementVersion), 0, "ReplacementVersion: %s is not 0.", dep.ReplacementVersion)
+		}
+	}
 }
 
 func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -252,87 +282,6 @@ func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChai
 	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, math.NewInt(2), updatedBal2)
-}
-
-/*
-func testProposal(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user ibc.Wallet) {
-	govAcc := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
-
-	dp := govtypes.DefaultParams()
-	dp.MinDeposit = sdk.NewCoins(sdk.NewCoin(chain.Config().Denom, sdkmath.NewInt(7)))
-
-	// make sure to register the interface for this module's types.
-	updateParams := []cosmosproto.Message{
-		&govtypes.MsgUpdateParams{
-			Authority: govAcc,
-			Params:    dp,
-		},
-	}
-
-	proposal, err := chain.BuildProposal(updateParams, "title", "summary", "ipfs://CID", fmt.Sprintf(`500000000%s`, chain.Config().Denom))
-	require.NoError(t, err, "error building proposal")
-
-	txProp, err := chain.SubmitProposal(ctx, user.KeyName(), proposal)
-	require.NoError(t, err, "error submitting proposal")
-
-	height, err := chain.Height(ctx)
-	require.NoError(t, err, "error getting height")
-
-	require.Equal(t, height, txProp.Height)
-	require.Equal(t, "1", txProp.ProposalID)
-
-	err = chain.VoteOnProposalAllValidators(ctx, txProp.ProposalID, cosmos.ProposalVoteYes)
-	require.NoError(t, err, "failed to submit votes")
-
-	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+haltHeightDelta, txProp.ProposalID, cosmos.ProposalStatusPassed)
-	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
-
-	// verify the params updated
-}
-
-func testCosmWasm(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, keyname string, fileLoc string, message string) {
-	codeId, err := chain.StoreContract(ctx, keyname, fileLoc)
-	require.NoError(t, err)
-
-	contractAddr, err := chain.InstantiateContract(ctx, keyname, codeId, message, true)
-	require.NoError(t, err)
-	require.NotEmpty(t, contractAddr)
-
-	// helpers.ExecuteMsgWithFee(t, ctx, juno, user, contractAddr, "", "10000"+nativeDenom, `{"increment":{}}`)
-	txHash, err := chain.ExecuteContract(ctx, keyname, contractAddr, `{"increment":{}}`)
-	require.NoError(t, err)
-	require.NotEmpty(t, txHash)
-
-	// QueryContract
-	type QueryMsg struct {
-		GetConfig *struct{} `json:"get_config,omitempty"`
-	}
-
-	type IncrementResponse struct {
-		Val uint32 `json:"val"`
-	}
-
-	var res IncrementResponse
-	err = chain.QueryContract(ctx, contractAddr, QueryMsg{GetConfig: &struct{}{}}, &res)
-	require.NoError(t, err)
-	require.Equal(t, uint32(1), res.Val)
-
-	// DumpContractState
-	height, _ := chain.Height(ctx)
-	resp, err := chain.DumpContractState(ctx, contractAddr, int64(height))
-	require.NoError(t, err)
-	require.NotEmpty(t, resp)
-
-	fmt.Printf("resp.Modules: %+v\n", resp.Models)
-}
-*/
-
-func testSidecar(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
-	// NewSidecarProcess
-	// StopAllSidecars
-	// StartAllSidecars
-	// StartAllValSidecars
-	// and everythign in sidecar.go
 }
 
 func testQueryCmd(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
