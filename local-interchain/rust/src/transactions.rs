@@ -1,7 +1,7 @@
 use reqwest::blocking::Client;
-use serde_json::{Result, Value};
+use serde_json::{Value};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestType {
     Bin,
     Query,
@@ -17,12 +17,14 @@ impl RequestType {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RequestBase {
     pub client: Client,
     pub url: String,
     pub chain_id: String,
     pub request_type: RequestType,
 }
+
 impl RequestBase {
     pub fn new(
         client: Client,
@@ -39,16 +41,17 @@ impl RequestBase {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct TransactionResponse {
     pub tx_hash: Option<String>,
     pub rawlog: Option<String>,
 }
+
 pub struct ActionHandler {
     pub chain_id: String,
     pub action: String,
     pub cmd: String,
 }
-
 impl ActionHandler {
     pub fn new(chain_id: String, action: String, cmd: String) -> ActionHandler {
         ActionHandler {
@@ -74,13 +77,16 @@ impl ActionHandler {
 }
 
 pub struct RequestBuilder {
+    client: Client,
+
     api: String,
-    chain_id: String,
-    log_output: Option<bool>, // false by default
+    chain_id: String,    
+    log_output: bool,
+
 }
 
 impl RequestBuilder {
-    pub fn new(&self, api: String, chain_id: String, log_output: Option<bool>) -> RequestBuilder {
+    pub fn new(api: String, chain_id: String, log_output: bool) -> RequestBuilder {
         if api.is_empty() {
             panic!("api cannot be empty");
         }
@@ -89,21 +95,43 @@ impl RequestBuilder {
         }
 
         RequestBuilder {
+            client: Client::new(),
             api,
             chain_id,
             log_output,
         }
     }
 
-    // add a binary function which takes in a cmd, log_output Optional<bool>. It will use the request base and call it with RequestType.Bin
-    // pub fn binary(&self, cmd: String, log_output: Option<bool>) -> RequestBase {
-    //     let request_base = RequestBase::new(self.api.clone(), self.chain_id.clone(), RequestType::Bin);
-    //     request_base
-    //     // TODO:
-    //     // return send_request(
-    //     //     rb, cmd, log_output=(log_output if log_output else self.log)
-    //     // )
-    // }
+    pub fn binary(&self, cmd: &str) -> serde_json::Value {
+        let request_base = RequestBase::new(
+            self.client.clone(),
+            self.api.clone(),
+            self.chain_id.clone(),
+            RequestType::Bin,
+        );
+        send_request(request_base, cmd.to_string(), false, self.log_output)
+    }
+
+    pub fn query(&self, cmd: &str) -> serde_json::Value {
+        let request_base = RequestBase::new(
+            self.client.clone(),
+            self.api.clone(),
+            self.chain_id.clone(),
+            RequestType::Query,
+        );
+        send_request(request_base, cmd.to_string(), false, self.log_output)
+    }
+    
+    pub fn query_tx(&self, tx_hash: String) -> Value {        
+        if tx_hash.is_empty() {
+            panic!("tx_hash cannot be empty");
+        }
+
+        let cmd = format!("tx {} --output=json", tx_hash);        
+        let res = self.query(&cmd);
+        // TODO: the python api returns it as {"tx": res} I am not sure why
+        res
+    }
 }
 
 pub fn send_request(
@@ -123,6 +151,12 @@ pub fn send_request(
             cmd = cmd[2..].to_string();
         }
     }
+    
+    if !return_text {
+        if !cmd.contains("--output=json") && !cmd.contains("--output json") {
+            cmd = format!("{} --output=json", cmd);
+        }
+    }
 
     let payload = ActionHandler::new(
         request_base.chain_id,
@@ -136,14 +170,19 @@ pub fn send_request(
         println!("[send_request url]: {}", request_base.url);
     }
 
-    let res = request_base
+    let req_base = request_base
         .client
         .post(request_base.url)
-        .json(&payload)
-        .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
-        .send()
-        .unwrap();
+        .json(&payload);
+        
+    let req: reqwest::blocking::RequestBuilder;
+    if return_text {
+        req = req_base.header("Content-Type", "text/plain").header("Accept", "text/plain");
+    } else {
+        req= req_base.header("Content-Type", "application/json").header("Accept", "application/json");        
+    }
+
+    let res = req.send().unwrap();
 
     if log_output {
         println!("[send_request resp]: {:?}", &res)
@@ -166,9 +205,31 @@ pub fn send_request(
     }
 }
 
+pub fn get_transaction_response(send_req_res: Value) -> TransactionResponse {
+    let tx_hash = send_req_res["txhash"].as_str();
+    let raw_log = send_req_res["raw_log"].as_str();    
+
+    let txr = TransactionResponse {
+        tx_hash: tx_hash.map(|s| s.to_string()),
+        rawlog: raw_log.map(|s| s.to_string()),
+    };
+
+    println!("txr: {:?}", txr);
+    txr
+}
+
+pub fn get_tx_hash(res: Value) -> Option<String> {
+    let tx_hash = res["txhash"].as_str();
+    match tx_hash {
+        Some(tx_hash) => Some(tx_hash.to_string()),
+        None => None,
+    }
+}
+
 fn return_text_json(text: String, err: Option<String>) -> serde_json::Value {
     serde_json::json!({
         "text": &text,
         "error": err,
     })
 }
+
