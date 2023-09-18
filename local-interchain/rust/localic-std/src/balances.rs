@@ -1,10 +1,13 @@
 use cosmwasm_std::{Coin, Uint128};
 
-use crate::transactions::RequestBuilder;
+use crate::transactions::ChainRequestBuilder;
 
-pub fn get_balance(req_builder: &RequestBuilder, address: &str) -> Vec<Coin> {
+pub fn get_balance(req_builder: &ChainRequestBuilder, address: &str) -> Vec<Coin> {
     let res = req_builder.query(&format!("q bank balances {}", address));
-    let balances = res["balances"].as_array().unwrap();
+    let balances = match res["balances"].as_array() {
+        Some(s) => s,
+        None => return vec![],
+    };
 
     let coins: Vec<Coin> = balances
         .iter()
@@ -16,9 +19,12 @@ pub fn get_balance(req_builder: &RequestBuilder, address: &str) -> Vec<Coin> {
 
 }
 
-pub fn get_bank_total_supply(req_builder: &RequestBuilder) -> Vec<Coin> {    
+pub fn get_bank_total_supply(req_builder: &ChainRequestBuilder) -> Vec<Coin> {    
     let res = req_builder.query("q bank total");
-    let supplies = res["supply"].as_array().unwrap();
+    let supplies = match res["supply"].as_array() {
+        Some(s) => s,
+        None => return vec![],
+    };
 
     let coins: Vec<Coin> = supplies
         .iter()
