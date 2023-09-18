@@ -17,7 +17,7 @@ def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
     payload = {
         "chain_id": rb.chain_id,
         "key_name": key_name,
-        "file_name": abs_path,
+        "file_path": abs_path,
     }
 
     url = rb.api
