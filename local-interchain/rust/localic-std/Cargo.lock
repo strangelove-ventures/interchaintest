@@ -703,24 +703,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a9bad9f94746442c783ca431b22403b519cd7fbeed0533fdd6328b2f2212128"
 
 [[package]]
-name = "localic-bin"
-version = "0.0.1"
-dependencies = [
- "cosmwasm-std",
- "localic-std",
- "reqwest",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "localic-std"
+name = "local-ic"
 version = "0.0.1"
 dependencies = [
  "cosmwasm-std",
  "reqwest",
  "serde_json",
- "thiserror",
  "tokio",
 ]
 
