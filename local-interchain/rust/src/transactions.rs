@@ -1,5 +1,5 @@
 use reqwest::blocking::Client;
-use serde_json::{Value};
+use serde_json::Value;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestType {
@@ -80,9 +80,8 @@ pub struct RequestBuilder {
     client: Client,
 
     api: String,
-    chain_id: String,    
+    chain_id: String,
     log_output: bool,
-
 }
 
 impl RequestBuilder {
@@ -121,13 +120,29 @@ impl RequestBuilder {
         );
         send_request(request_base, cmd.to_string(), false, self.log_output)
     }
-    
-    pub fn query_tx(&self, tx_hash: String) -> Value {        
+
+    pub fn transaction(&self, cmd: &str) -> serde_json::Value {
+        let res = self.binary(&cmd);
+
+        let tx_hash = self.get_tx_hash(&res);
+        let data = self.query_tx_hash(tx_hash);
+        data
+    }
+
+    pub fn get_tx_hash(&self, tx_res: &Value) -> String {
+        let tx_hash = get_tx_hash(tx_res);
+        match tx_hash {
+            Some(tx_hash) => tx_hash,
+            None => panic!("tx_hash not found"),
+        }
+    }
+
+    pub fn query_tx_hash(&self, tx_hash: String) -> Value {
         if tx_hash.is_empty() {
             panic!("tx_hash cannot be empty");
         }
 
-        let cmd = format!("tx {} --output=json", tx_hash);        
+        let cmd = format!("tx {} --output=json", tx_hash);
         let res = self.query(&cmd);
         // TODO: the python api returns it as {"tx": res} I am not sure why
         res
@@ -143,15 +158,24 @@ pub fn send_request(
     if cmd.is_empty() {
         panic!("cmd cannot be empty");
     }
+
     let mut cmd = cmd;
-    if request_base.request_type == RequestType::Query {
-        if cmd.to_lowercase().starts_with("query ") {
-            cmd = cmd[6..].to_string();
-        } else if cmd.to_lowercase().starts_with("q ") {
-            cmd = cmd[2..].to_string();
+    match request_base.request_type {
+        RequestType::Bin => {
+            if !cmd.to_lowercase().starts_with("tx ") {
+                cmd = format!("tx {}", cmd);
+            }
         }
+        RequestType::Query => {
+            if cmd.to_lowercase().starts_with("query ") {
+                cmd = cmd[6..].to_string();
+            } else if cmd.to_lowercase().starts_with("q ") {
+                cmd = cmd[2..].to_string();
+            }
+        }
+        _ => {}
     }
-    
+
     if !return_text {
         if !cmd.contains("--output=json") && !cmd.contains("--output json") {
             cmd = format!("{} --output=json", cmd);
@@ -170,16 +194,17 @@ pub fn send_request(
         println!("[send_request url]: {}", request_base.url);
     }
 
-    let req_base = request_base
-        .client
-        .post(request_base.url)
-        .json(&payload);
-        
+    let req_base = request_base.client.post(request_base.url).json(&payload);
+
     let req: reqwest::blocking::RequestBuilder;
     if return_text {
-        req = req_base.header("Content-Type", "text/plain").header("Accept", "text/plain");
+        req = req_base
+            .header("Content-Type", "text/plain")
+            .header("Accept", "text/plain");
     } else {
-        req= req_base.header("Content-Type", "application/json").header("Accept", "application/json");        
+        req = req_base
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json");
     }
 
     let res = req.send().unwrap();
@@ -207,7 +232,7 @@ pub fn send_request(
 
 pub fn get_transaction_response(send_req_res: Value) -> TransactionResponse {
     let tx_hash = send_req_res["txhash"].as_str();
-    let raw_log = send_req_res["raw_log"].as_str();    
+    let raw_log = send_req_res["raw_log"].as_str();
 
     let txr = TransactionResponse {
         tx_hash: tx_hash.map(|s| s.to_string()),
@@ -218,7 +243,7 @@ pub fn get_transaction_response(send_req_res: Value) -> TransactionResponse {
     txr
 }
 
-pub fn get_tx_hash(res: Value) -> Option<String> {
+pub fn get_tx_hash(res: &Value) -> Option<String> {
     let tx_hash = res["txhash"].as_str();
     match tx_hash {
         Some(tx_hash) => Some(tx_hash.to_string()),
@@ -232,4 +257,3 @@ fn return_text_json(text: String, err: Option<String>) -> serde_json::Value {
         "error": err,
     })
 }
-
