@@ -106,7 +106,7 @@ cd interchaintest/local-interchain
 3. Run `make install`
 4. Run `local-ic start base.json`
 
-Wait for it to set up and go to *https://localhost:8080/info*, you should see each local chain running in its own docker container `docker ps`
+Wait for it to set up and go to *https://127.0.0.1:8080/info*, you should see each local chain running in its own docker container `docker ps`
 
 Now you are running a complete local wasm IBC-connected environment on a Windows operating system.
 
