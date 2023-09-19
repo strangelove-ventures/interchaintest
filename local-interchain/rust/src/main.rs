@@ -1,19 +1,20 @@
 #![allow(dead_code)]
 
-use base::get_contract_path;
 use cosmwasm_std::Coin;
 use cosmwasm_std::Uint128;
 use localic_std::cosmwasm::CosmWasm;
 use reqwest::blocking::Client;
-
-pub mod base;
-use base::API_URL;
 
 // TODO: Temp wildcards
 use localic_std::balances::*;
 use localic_std::bank::*;
 use localic_std::polling::*;
 use localic_std::transactions::*;
+
+pub mod base;
+use base::{
+    get_contract_cache_path, get_contract_path, get_current_dir, get_local_interchain_dir, API_URL,
+};
 
 fn main() {
     let client = Client::new();
@@ -22,6 +23,7 @@ fn main() {
     let rb: ChainRequestBuilder =
         ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true, false);
 
+    test_paths();
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
@@ -29,6 +31,13 @@ fn main() {
 }
 
 // == test functions ==
+fn test_paths() {
+    println!("current_dir: {:?}", get_current_dir());
+    println!("local_interchain_dir: {:?}", get_local_interchain_dir());
+    println!("contract_path: {:?}", get_contract_path());
+    println!("contract_json_path: {:?}", get_contract_cache_path());
+}
+
 fn test_cosmwasm(rb: &ChainRequestBuilder) {
     let cw = CosmWasm::new(&rb);
 
