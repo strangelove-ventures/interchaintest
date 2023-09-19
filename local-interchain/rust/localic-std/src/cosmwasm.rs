@@ -2,7 +2,11 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::{errors::LocalError, transactions::ChainRequestBuilder, types::Contract};
+use crate::{
+    errors::LocalError,
+    transactions::ChainRequestBuilder,
+    types::{Contract, TransactionResponse},
+};
 
 #[derive(Clone)]
 pub struct CosmWasm<'a> {
@@ -75,8 +79,43 @@ impl CosmWasm<'_> {
         }
     }
 
-    // account_key, msg, flags(?)
-    pub fn execute_contract(&self) {}
+    pub fn execute_contract(
+        &self,
+        contract_addr: &str,
+        account_key: &str,
+        msg: &str,
+        flags: &str,
+    ) -> Result<TransactionResponse, LocalError> {
+        let mut cmd = format!(
+            "tx wasm execute {contract_addr} {msg} --from={account_key} --keyring-backend=test --home=%HOME% --node=%RPC% --chain-id=%CHAIN_ID% --yes {flags}",
+            contract_addr = contract_addr,
+            msg = msg,
+            account_key = account_key,
+            flags = flags
+        );
+
+        let updated_flags = flags.to_string();
+        if !updated_flags.is_empty() {
+            cmd = format!("{} {}", cmd, updated_flags);
+        }
+
+        let res = self.rb.binary(cmd.as_str());
+        println!("execute_contract res: {}", &res);
+
+        let tx_hash = self.rb.get_tx_hash(&res);
+        let tx_raw_log = self.rb.get_raw_log(&res);
+
+        if let Some(raw_log) = &tx_raw_log {
+            if raw_log != "[]" {
+                println!("execute_contract raw_log: {}", raw_log);
+            }
+        }
+
+        Ok(TransactionResponse {
+            tx_hash,
+            rawlog: tx_raw_log,
+        })
+    }
 
     pub fn query_contract(&self, contract_addr: &str, msg: &str) -> Value {
         // TODO: &str or serde_value?

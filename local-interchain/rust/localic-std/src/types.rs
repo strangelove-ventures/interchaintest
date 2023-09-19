@@ -1,4 +1,7 @@
+use std::fmt;
+
 use reqwest::blocking::Client;
+use serde_json::Value;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestType {
@@ -76,6 +79,12 @@ impl ActionHandler {
 pub struct TransactionResponse {
     pub tx_hash: Option<String>,
     pub rawlog: Option<String>,
+}
+
+impl fmt::Display for TransactionResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "tx_hash: {:?}, rawlog: {:?}", self.tx_hash, self.rawlog)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
