@@ -59,14 +59,20 @@ impl CosmWasm<'_> {
             println!("raw_log: {}", raw_log.clone().unwrap());
         }
 
-        let contract_addr = get_contract_address(&self.rb, tx_hash.clone().unwrap().as_str());
-        println!("contract_addr: {}", contract_addr);
-
-        Ok(Contract {
-            address: contract_addr,
-            tx_hash: tx_hash.unwrap_or_default(),
-            admin: admin.map(|s| s.to_string()),
-        })
+        let contract_addr =
+            get_contract_address(&self.rb, tx_hash.clone().unwrap_or_default().as_str());
+        match contract_addr {
+            Ok(contract_addr) => {
+                return Ok(Contract {
+                    address: contract_addr,
+                    tx_hash: tx_hash.unwrap_or_default(),
+                    admin: admin.map(|s| s.to_string()),
+                });
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
     }
 
     // account_key, msg, flags(?)
@@ -84,28 +90,32 @@ impl CosmWasm<'_> {
     }
 }
 
-pub fn get_contract_address(rb: &ChainRequestBuilder, tx_hash: &str) -> String {
+pub fn get_contract_address(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<String, LocalError> {
     let res = rb.query_tx_hash(tx_hash.to_string());
 
     let code = res["code"].as_i64().unwrap_or_default();
     if code != 0 {
         let raw = res["raw_log"].as_str().unwrap_or_default();
-        return serde_json::json!({
-            "error": raw,
-        })
-        .to_string();
+        return Err(LocalError::TxNotSuccessful {
+            code_status: code,
+            raw_log: raw.to_string(),
+        });
     }
 
-    // contract_addr = ""
-    // for event in res_json["logs"][0]["events"]:
-    //     for attr in event["attributes"]:
-    //         if attr["key"] == "_contract_address":
-    //             contract_addr = attr["value"]
-    //             break
+    for event in res["logs"][0]["events"].as_array().iter() {
+        for attr in event.iter() {
+            for attr_values in attr["attributes"].as_array().iter() {
+                for attr in attr_values.iter() {
+                    if let Some(key) = attr["key"].as_str() {
+                        if key.contains("contract_address") {
+                            let contract_address = attr["value"].as_str().unwrap_or_default();
+                            return Ok(contract_address.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    // TODO: idk about this. maybe better to actually iterate recusrively?
-    let contract_address = res["logs"][0]["events"][0]["attributes"][0]["value"]
-        .as_str()
-        .unwrap_or_default();
-    contract_address.to_string()
+    Err(LocalError::ContractAddressNotFound {})
 }
