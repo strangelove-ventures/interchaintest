@@ -157,9 +157,15 @@ impl ChainRequestBuilder {
         }
 
         let resp = req.send().unwrap();
-
         match resp.text() {
             Ok(text) => {
+                if text.contains("error") {
+                    return Err(LocalError::CWUploadFailed {
+                        path: file.to_string(),
+                        reason: text.to_string(),
+                    });
+                }
+
                 // convert text to json
                 let json = match serde_json::from_str::<Value>(&text) {
                     Ok(json) => json,
