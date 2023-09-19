@@ -27,7 +27,7 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 
 	ip := m[0].HostIP
 	if ip == "0.0.0.0" {
-		ip = "localhost"
+		ip = "127.0.0.1"
 	}
 	return net.JoinHostPort(ip, m[0].HostPort)
 }
