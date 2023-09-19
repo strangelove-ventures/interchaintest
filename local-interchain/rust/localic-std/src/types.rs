@@ -56,9 +56,11 @@ impl ActionHandler {
     }
 
     pub fn to_json_str(&self) -> String {
+        let escaped_cmd = self.cmd.replace("\"", "\\\"");
+
         let json = format!(
             r#"{{"chain_id":"{}","action":"{}","cmd":"{}"}}"#,
-            self.chain_id, self.action, self.cmd
+            self.chain_id, self.action, escaped_cmd
         );
         json
     }
@@ -74,4 +76,11 @@ impl ActionHandler {
 pub struct TransactionResponse {
     pub tx_hash: Option<String>,
     pub rawlog: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Contract {
+    pub address: String,
+    pub tx_hash: String,
+    pub admin: Option<String>,
 }
