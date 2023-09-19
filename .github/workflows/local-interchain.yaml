@@ -73,7 +73,7 @@ jobs:
         run: /tmp/local-ic start juno_ibc --api-port 8080 &
       
       - name: Run Rust Script
-        run: cargo run --package localic-bin --bin localic-bin --manifest-path ./rust/Cargo.toml
+        run: cd rust && cargo run --package localic-bin --bin localic-bin
 
       - name: Cleanup        
         run: killall local-ic && exit 0
