@@ -9,9 +9,9 @@ use crate::{
 };
 
 pub struct ChainRequestBuilder {
-    client: Client,
-    api: String,
-    chain_id: String,
+    pub client: Client,
+    pub api: String,
+    pub chain_id: String,
     log_output: bool,
 }
 
@@ -112,7 +112,7 @@ impl ChainRequestBuilder {
         let res = self.query(&cmd, false);
         // TODO: the python api returns it as {"tx": res} I am not sure why
         res
-    }    
+    }
 
     pub fn upload_file(
         &self,
@@ -150,7 +150,7 @@ impl ChainRequestBuilder {
             .client
             .post(&url)
             .json(&payload)
-            .header("Accept", header)            
+            .header("Accept", header)
             .header("Content-Type", header))
     }
 

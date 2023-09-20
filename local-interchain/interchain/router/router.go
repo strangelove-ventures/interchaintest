@@ -23,7 +23,7 @@ type Route struct {
 func NewRouter(ctx context.Context, ic *interchaintest.Interchain, config *ictypes.Config, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter, installDir string) *mux.Router {
 	r := mux.NewRouter()
 
-	infoH := handlers.NewInfo(config, installDir)
+	infoH := handlers.NewInfo(config, installDir, ctx, ic, vals, relayer, eRep)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
 
 	actionsH := handlers.NewActions(ctx, ic, vals, relayer, eRep)

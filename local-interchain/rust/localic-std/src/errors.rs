@@ -11,12 +11,15 @@ pub enum LocalError {
     #[error("the transaction hash was not found.")]
     TxHashNotFound {},
 
-    #[error("File upload failed for path: {path}. Reason: {reason}")]
+    #[error("file upload failed for path: {path}. reason: {reason}")]
     UploadFailed { path: String, reason: String },
 
-    #[error("Transaction was not successful. Status: {code_status}. log: {raw_log}")]
+    #[error("transaction was not successful. status: {code_status}. log: {raw_log}")]
     TxNotSuccessful { code_status: i64, raw_log: String },
 
-    #[error("Contract address not found")]
+    #[error("contract address not found")]
     ContractAddressNotFound {},
+
+    #[error("key_bech32 failed. reason: {reason}")]
+    KeyBech32Failed { reason: String },
 }

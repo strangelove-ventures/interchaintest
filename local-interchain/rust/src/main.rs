@@ -3,12 +3,14 @@
 use cosmwasm_std::Coin;
 use cosmwasm_std::Uint128;
 use localic_std::cosmwasm::CosmWasm;
+use localic_std::errors::LocalError;
 use reqwest::blocking::Client;
 
 // TODO: Temp wildcards
 use localic_std::balances::*;
 use localic_std::bank::*;
 use localic_std::files::*;
+use localic_std::node::*;
 use localic_std::polling::*;
 use localic_std::transactions::*;
 
@@ -18,20 +20,39 @@ use base::{
 };
 
 fn main() {
-    let client = Client::new();
-    poll_for_start(client.clone(), &API_URL, 150);
+    poll_for_start(Client::new(), &API_URL, 150);
 
     let rb: ChainRequestBuilder =
         ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
 
-    test_paths(&rb);
-    test_queries(&rb);
-    test_binary(&rb);
-    test_bank_send(&rb);
-    test_cosmwasm(&rb);
+    let node: ChainNode = ChainNode::new(&rb);
+
+    assert_eq!(node.get_name(), "localjuno-1-val-0-baseic");
+
+    node.get_container_id();
+    node.get_host_name();
+    node.get_genesis_file_content();
+    node.get_home_dir();
+    node.get_height();
+    node.read_file("./config/app.toml");
+
+    // test_addrs(&node);
+
+    // test_paths(&rb);
+    // test_queries(&rb);
+    // test_binary(&rb);
+    // test_bank_send(&rb);
+    // test_cosmwasm(&rb);
 }
 
-// == test functions ==
+fn test_addrs(node: &ChainNode) {
+    let v = node.account_key_bech_32("acc0");
+    assert_eq!(v.unwrap(), "juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl");
+
+    let v = node.account_key_bech_32("fake-key987");
+    assert!(v.is_err());
+}
+
 fn test_paths(rb: &ChainRequestBuilder) {
     println!("current_dir: {:?}", get_current_dir());
     println!("local_interchain_dir: {:?}", get_local_interchain_dir());
@@ -52,7 +73,7 @@ fn test_paths(rb: &ChainRequestBuilder) {
         }
     };
 
-    let files = get_files(rb, "/var/cosmos-chain/localjuno-1");        
+    let files = get_files(rb, "/var/cosmos-chain/localjuno-1");
     assert!(files.contains(&"Makefile".to_string()));
     assert!(files.contains(&"config".to_string()));
     assert!(files.contains(&"data".to_string()));

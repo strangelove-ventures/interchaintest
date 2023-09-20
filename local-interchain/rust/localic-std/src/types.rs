@@ -1,5 +1,6 @@
 use std::fmt;
 
+use cosmwasm_std::{Coin, Uint128};
 use reqwest::blocking::Client;
 use serde_json::Value;
 
@@ -92,4 +93,15 @@ pub struct Contract {
     pub address: String,
     pub tx_hash: String,
     pub admin: Option<String>,
+}
+
+pub fn get_coin_from_json(value: &serde_json::Value) -> Coin {
+    let amount = value["amount"].as_str().unwrap_or_default();
+    let denom = value["denom"].as_str().unwrap_or_default();
+    let amount = amount.parse::<Uint128>().unwrap_or_default();
+
+    Coin {
+        denom: denom.to_string(),
+        amount,
+    }
 }
