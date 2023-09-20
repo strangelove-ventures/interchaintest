@@ -10,6 +10,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -45,39 +46,54 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 	).Chains(t.Name())
 	require.NoError(t, err, "failed to get penumbra chain")
 	require.Len(t, chains, 1)
-	chain := chains[0]
+	chain := chains[0].(*penumbra.PenumbraChain)
+
+	ic := interchaintest.NewInterchain().
+		AddChain(chain)
 
 	ctx := context.Background()
+	rep := testreporter.NewNopReporter()
 
-	err = chain.Initialize(ctx, t.Name(), client, network)
-	require.NoError(t, err, "failed to initialize penumbra chain")
+	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: true,
+	}))
 
-	err = chain.Start(t.Name(), ctx)
-	require.NoError(t, err, "failed to start penumbra chain")
+	t.Cleanup(func() {
+		err := ic.Close()
+		if err != nil {
+			panic(err)
+		}
+	})
 
-	err = testutil.WaitForBlocks(ctx, 30, chain)
+	initBalance := math.NewInt(1_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chain)
+	require.Equal(t, 1, len(users))
 
-	require.NoError(t, err, "penumbra chain failed to make blocks")
+	alice := users[0]
 
-	alice := chain.(*penumbra.PenumbraChain).PenumbraNodes[0]
-	bob := chain.(*penumbra.PenumbraChain).PenumbraNodes[1]
-
-	const aliceKeyName = "validator-0"
-	const bobKeyName = "validator-1"
-
-	aliceBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, chain.Config().Denom)
+	err = testutil.WaitForBlocks(ctx, 5, chain)
 	require.NoError(t, err)
 
-	bobBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName, chain.Config().Denom)
+	aliceBal, err := chain.GetBalance(ctx, alice.KeyName(), chain.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chain)
+	require.Equal(t, 1, len(users))
+
+	bob := users[0]
+
+	err = testutil.WaitForBlocks(ctx, 5, chain)
 	require.NoError(t, err)
 
-	// TODO: genesis allocations should be configurable, right now we are using a hardcoded value in PenumbraChain.Start
-	expectedBal := math.NewInt(1_000_000_000_000)
+	bobBal, err := chain.GetBalance(ctx, bob.KeyName(), chain.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, initBalance))
 
-	require.True(t, aliceBal.Equal(expectedBal))
-	require.True(t, bobBal.Equal(expectedBal))
-
-	bobAddr, err := chain.GetAddress(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName)
+	bobAddr, err := chain.GetAddress(ctx, bob.KeyName())
 	require.NoError(t, err)
 
 	transfer := ibc.WalletAmount{
@@ -86,7 +102,7 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 		Amount:  math.NewInt(1_000),
 	}
 
-	err = chain.SendFunds(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, transfer)
+	err = chain.SendFunds(ctx, alice.KeyName(), transfer)
 	require.NoError(t, err)
 
 	/*
@@ -94,14 +110,14 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 		without this sleep statement we see intermittent failures where we will observe the tokens taken from alice's balance
 		but not added to bob's balance. after debugging it seems like this is because alice's client is in sync but bob's is not.
 		we may need a way to check if each client is in sync before making any assertions about chain state after some state transition.
-		alternatively, we may wrap penumbra related queries in a retry.
+		alternatively, we may want to wrap penumbra related queries in a retry.
 	*/
 	time.Sleep(1 * time.Second)
 
-	aliceNewBal, err := chain.GetBalance(ctx, alice.PenumbraClientNodes[aliceKeyName].KeyName, chain.Config().Denom)
+	aliceNewBal, err := chain.GetBalance(ctx, alice.KeyName(), chain.Config().Denom)
 	require.NoError(t, err)
 
-	bobNewBal, err := chain.GetBalance(ctx, bob.PenumbraClientNodes[bobKeyName].KeyName, chain.Config().Denom)
+	bobNewBal, err := chain.GetBalance(ctx, bob.KeyName(), chain.Config().Denom)
 	require.NoError(t, err)
 
 	aliceExpected := aliceBal.Sub(transfer.Amount)

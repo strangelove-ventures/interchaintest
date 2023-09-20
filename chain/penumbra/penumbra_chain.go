@@ -108,24 +108,8 @@ func (c *PenumbraChain) Exec(ctx context.Context, cmd []string, env []string) (s
 }
 
 func (c *PenumbraChain) getFullNode() *PenumbraNode {
-	if len(c.PenumbraNodes) > c.numValidators {
-		// use first full node
-		return c.PenumbraNodes[c.numValidators]
-	}
 	// use first validator
 	return c.PenumbraNodes[0]
-}
-
-// TODO: we need to refactor to use the sidecar processs feat and in the process kill this.
-func (c *PenumbraChain) getPenumbraNode(keyName string) (*PenumbraNode, error) {
-	parts := strings.Split(keyName, "-")
-	index := parts[1]
-	indexInt, err := strconv.Atoi(index)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.PenumbraNodes[indexInt], nil
 }
 
 // Implements Chain interface
@@ -154,30 +138,31 @@ func (c *PenumbraChain) HomeDir() string {
 	panic(errors.New("HomeDir not implemented yet"))
 }
 
-// Implements Chain interface
+// CreateKey derives a new key with the given keyName.
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
-	node, err := c.getPenumbraNode(keyName)
-	if err != nil {
-		return err
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return fmt.Errorf("no penumbra app nodes on the fullnode for key creation")
 	}
-	return node.PenumbraAppNode.CreateKey(ctx, keyName)
+	return fn.PenumbraAppNode.CreateKey(ctx, keyName)
 }
 
+// RecoverKey restores an existing key with the given mnemonic and associates it with the specified key name in the keyring.
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	node, err := c.getPenumbraNode(name)
-	if err != nil {
-		return err
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return fmt.Errorf("no penumbra app nodes on the fullnode for key recovery")
 	}
-	return node.PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
+	return fn.PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
-// Implements Chain interface
+// GetAddress returns the byte representation of an address for the specified keyName.
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	node, err := c.getPenumbraNode(keyName)
-	if err != nil {
-		return nil, err
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return nil, fmt.Errorf("no penumbra app nodes on the fullnode to retreive address from")
 	}
-	return node.PenumbraAppNode.GetAddress(ctx, keyName)
+	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
 // BuildWallet will return a Penumbra wallet
@@ -230,13 +215,16 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-// Implements Chain interface
+// SendFunds will initiate a local transfer from the account associated with the specified keyName,
+// amount, token denom, and recipient are specified in the amount.
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	node, err := c.getPenumbraNode(keyName)
-	if err != nil {
-		return err
+	fn := c.getFullNode()
+
+	if len(fn.PenumbraClientNodes) == 0 {
+		return fmt.Errorf("no pclientd instances to use when sending funds")
 	}
-	return node.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
+
+	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
 }
 
 // Implements Chain interface
@@ -265,12 +253,12 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 
 // Implements Chain interface
 func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
-	node, err := c.getPenumbraNode(keyName)
-	if err != nil {
-		return math.Int{}, err
+	fn := c.getFullNode()
+	if len(fn.PenumbraClientNodes) == 0 {
+		return math.Int{}, fmt.Errorf("no pclientd instances on the fullnode for balance requests")
 	}
 
-	bal, err := node.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
+	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
 	if err != nil {
 		return math.Int{}, err
 	}
@@ -604,4 +592,47 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		})
 	}
 	return eg.Wait()
+}
+
+func (c PenumbraChain) CreateClientNode(
+	ctx context.Context,
+	keyName string,
+) error {
+	val := c.getFullNode()
+	if val == nil {
+		return fmt.Errorf("there are no penumbra nodes configured to create a client on")
+	}
+
+	fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+	ckbz, err := fr.SingleFileContent(ctx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
+	if err != nil {
+		return fmt.Errorf("error getting validator custody key content: %w", err)
+	}
+
+	var ck PenumbraCustodyKey
+	if err := json.Unmarshal(ckbz, &ck); err != nil {
+		return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
+	}
+
+	fvk, err := val.PenumbraAppNode.FullViewingKey(ctx, keyName)
+	if err != nil {
+		return fmt.Errorf("error getting validator full viewing key: %w", err)
+	}
+
+	// each validator has a pclientd instance so current index should be:
+	// # of validator related pclientd instances + # of user configured pclientd instances - 1
+	index := len(c.PenumbraNodes[:c.numValidators]) + len(c.getFullNode().PenumbraClientNodes) - 1
+
+	return val.CreateClientNode(
+		ctx,
+		c.log,
+		val.PenumbraAppNode.DockerClient,
+		val.PenumbraAppNode.NetworkID,
+		val.PenumbraAppNode.Image,
+		c.testName,
+		index,
+		keyName,
+		ck.SpendKey,
+		fvk,
+	)
 }
