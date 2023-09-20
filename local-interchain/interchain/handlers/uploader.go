@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
@@ -39,7 +40,11 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Uploader: %+v", u)
+	srcPath := upload.FilePath
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		util.WriteError(w, fmt.Errorf("file %s does not exist on the source machine", srcPath))
+		return
+	}
 
 	chainId := upload.ChainId
 	if _, ok := u.vals[chainId]; !ok {
@@ -47,14 +52,10 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uploadType := r.Header.Get("Upload-Type")
-	if uploadType == "" {
-		util.Write(w, []byte(fmt.Sprintf(`{"success":"file uploaded to %s"}`, chainId)))
-		return
-	}
-
-	if uploadType == "cosmwasm" {
-		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, upload.FilePath)
+	switch r.Header.Get("Upload-Type") {
+	case "cosmwasm":
+		// Upload & Store the contract tot he chain.
+		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, srcPath)
 		if err != nil {
 			util.WriteError(w, err)
 			return
@@ -62,6 +63,16 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 
 		util.Write(w, []byte(fmt.Sprintf(`{"code_id":%s}`, codeId)))
 		return
-	}
+	default:
+		// Upload the file to the chain's docker volume.
+		_, file := filepath.Split(srcPath)
+		if err := u.vals[chainId].CopyFile(u.ctx, srcPath, file); err != nil {
+			util.WriteError(w, fmt.Errorf(`{"error":"writing contract file to docker volume: %w"}`, err))
+			return
+		}
 
+		home := u.vals[chainId].HomeDir()
+		fileLoc := filepath.Join(home, file)
+		util.Write(w, []byte(fmt.Sprintf(`{"success":"file uploaded to %s","location":"%s"}`, chainId, fileLoc)))
+	}
 }
