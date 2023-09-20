@@ -11,7 +11,7 @@ root_dir = os.path.dirname(os.path.dirname(os.path.dirname(fp)))
 contracts_storage_dir = os.path.join(root_dir, "contracts")
 
 
-def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
+def upload_contract(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
     print(f"[upload_file] ({rb.chain_id}) {abs_path}")
 
     payload = {
@@ -26,10 +26,11 @@ def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
     else:
         url += "/upload"
 
+    # Setting "Upload-Type": "cosmwasm" uploads the file and stores it on the chain.
     res = post(
         url,
         json=payload,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "Upload-Type": "cosmwasm"},
         timeout=120,
     )
 
@@ -74,7 +75,7 @@ class CosmWasm:
             print(f"[Cache] CodeID={self.code_id} for {sub_file_path}")
             return self
 
-        res = upload_file(self.rb, key_name, abs_path)
+        res = upload_contract(self.rb, key_name, abs_path)
         if "error" in res:
             raise Exception(res["error"])
 
