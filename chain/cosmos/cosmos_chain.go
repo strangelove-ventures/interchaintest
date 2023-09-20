@@ -193,6 +193,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 	return c.Validators[0]
 }
 
+func (c *CosmosChain) GetNode() *ChainNode {
+	return c.Validators[0]
+}
+
 // Exec implements ibc.Chain.
 func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.getFullNode().Exec(ctx, cmd, env)
@@ -389,8 +393,13 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 		return tx, "", err
 	}
 	message := wasmtypes.MsgStoreCode{
+<<<<<<< HEAD
 		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
 		Code:   content,
+=======
+		Signer:       types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
+		WasmByteCode: content,
+>>>>>>> 23178ec (feat: Add GetNode() helper (#789))
 	}
 	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
 	if err != nil {
