@@ -118,7 +118,6 @@ impl CosmWasm<'_> {
     }
 
     pub fn query_contract(&self, contract_addr: &str, msg: &str) -> Value {
-        // TODO: &str or serde_value?
         let cmd = format!(
             "query wasm contract-state smart {} {} --output=json --node=%RPC%",
             contract_addr, msg

@@ -2,20 +2,29 @@ use std::fmt;
 
 use cosmwasm_std::{Coin, Uint128};
 use reqwest::blocking::Client;
-use serde_json::Value;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestType {
     Bin,
     Query,
     Exec,
+    // custom
+    RecoverKey,
+    OverwriteGenesisFile,
+    SetNewPeers,
+    AddFullNodes,
 }
 impl RequestType {
     pub fn as_str(&self) -> &'static str {
+        // match handlers/actions.go
         match self {
             RequestType::Bin => "bin",
             RequestType::Query => "query",
             RequestType::Exec => "exec",
+            RequestType::RecoverKey => "recover-key",
+            RequestType::OverwriteGenesisFile => "overwrite-genesis-file",
+            RequestType::SetNewPeers => "set-peers",
+            RequestType::AddFullNodes => "add-full-nodes",
         }
     }
 }
@@ -46,12 +55,12 @@ impl RequestBase {
 
 pub struct ActionHandler {
     pub chain_id: String,
-    pub action: String,
+    pub action: RequestType,
     pub cmd: String,
 }
 
 impl ActionHandler {
-    pub fn new(chain_id: String, action: String, cmd: String) -> ActionHandler {
+    pub fn new(chain_id: String, action: RequestType, cmd: String) -> ActionHandler {
         ActionHandler {
             chain_id,
             action,
@@ -64,7 +73,9 @@ impl ActionHandler {
 
         let json = format!(
             r#"{{"chain_id":"{}","action":"{}","cmd":"{}"}}"#,
-            self.chain_id, self.action, escaped_cmd
+            self.chain_id,
+            self.action.as_str(),
+            escaped_cmd
         );
         json
     }

@@ -24,24 +24,36 @@ fn main() {
     let rb: ChainRequestBuilder =
         ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
 
-    let node: ChainNode = ChainNode::new(&rb);
-
-    test_node_actions(&node);
-
-    test_node_information(&node);
     test_paths(&rb);
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
     test_cosmwasm(&rb);
+
+    let node: ChainNode = ChainNode::new(&rb);
+    test_node_information(&node);
+    test_node_actions(&node);
 }
 
 fn test_node_actions(node: &ChainNode) {
-    // let words = "offer excite scare peanut rally speak suggest unit reflect whale cloth speak joy unusual wink session effort hidden angry envelope click race allow buffalo";
-    // let res = node.recover_key("mykey123", words); // juno12zn247pzr4yyz7tt43lg6wv02vdc79taeflm8h
+    let keyname = "abc";
+    let words = "offer excite scare peanut rally speak suggest unit reflect whale cloth speak joy unusual wink session effort hidden angry envelope click race allow buffalo";
+    let expected_addr = "juno1cp8wps50zemt3x5tn3sgqh3x93rlt8cw6tkgx4";
+
+    let res = node.recover_key(keyname, words);
+    println!("res: {:?}", res);
+
+    let acc = node.account_key_bech_32("abc");
+    println!("acc: {:?}", acc);
+    assert_eq!(acc.unwrap(), expected_addr);
+
+    let res = node.overwrite_genesis_file(r#"{"test":{}}"#);
+    println!("res: {:?}", res);
+    node.get_genesis_file_content(); // verify this is updated
+
+    // TODO: keep this disabled for now. The chain must already have a full node running to not err.
+    // let res = node.add_full_node(1);
     // println!("res: {:?}", res);
-    // let v = node.account_key_bech_32("mykey123");
-    // println!("v: {:?}", v);
 }
 
 fn test_node_information(node: &ChainNode) {
@@ -52,8 +64,8 @@ fn test_node_information(node: &ChainNode) {
     assert!(v.is_err());
 
     node.get_chain_config();
-    
-    assert!(node.get_name().starts_with("localjuno-1-val-0"));    
+
+    assert!(node.get_name().starts_with("localjuno-1-val-0"));
     node.get_container_id();
     node.get_host_name();
     node.get_genesis_file_content();
@@ -182,6 +194,8 @@ fn test_binary(rb: &ChainRequestBuilder) {
 
 fn test_all_accounts(rb: &ChainRequestBuilder) {
     let res = rb.query("q auth accounts --output=json", false);
+    // print res
+    println!("res: {}", res);
     let accounts = res["accounts"].as_array().unwrap();
 
     accounts.iter().for_each(|account| {
