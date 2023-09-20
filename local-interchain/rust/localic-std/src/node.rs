@@ -1,10 +1,21 @@
 // ref: chain_node.go
-
-// make this a self so we do not have to do rb allt he time
-
-use std::path::PathBuf;
-
+use serde_json::{json, Value};
 use crate::{errors::LocalError, transactions::ChainRequestBuilder};
+
+// TODO: This should be a POST action rather than a GET. Make a new function here to do so.
+// pub fn overwite_genesis_file(content: &str)
+// SetPeers
+// pub fn RecoverKey(rb: &ChainRequestBuilder, key_name: String, mnemonic: String) -> String {
+// pub fn VoteOnProposal(rb: &ChainRequestBuilder, proposal_id: String, vote: String) -> String {
+// pub fn SubmitProposal(key_name: String, proposal_json_path: Pathbuf)
+// pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit) // need to write other code for this to work
+// pub fn ExportState(rb: &ChainRequestBuilder, height: u64) -> String {
+// pub fn UnsafeResetAll(rb: &ChainRequestBuilder) -> String {
+// pub fn StartContainer(rb: &ChainRequestBuilder) -> String {
+// pub fn PauseContainer(rb: &ChainRequestBuilder) -> String {
+// pub fn UnpauseContainer(rb: &ChainRequestBuilder) -> String {
+// pub fn StopContainer(rb: &ChainRequestBuilder) -> String {
+// pub fn RemoveContainer(rb: &ChainRequestBuilder) -> String {
 
 #[derive(Clone)]
 pub struct ChainNode<'a> {
@@ -14,6 +25,33 @@ pub struct ChainNode<'a> {
 impl ChainNode<'_> {
     pub fn new(rb: &ChainRequestBuilder) -> ChainNode {
         ChainNode { rb }
+    }
+
+    fn info_builder(&self, request: &str, extra_params: Option<&[(&str, &str)]>) -> String {
+        let query_params: Vec<(&str, &str)> = {
+            let mut params = vec![
+                ("chain_id", self.rb.chain_id.as_str()),
+                ("request", request),
+            ];
+            
+            if let Some(extra_params) = extra_params {
+                params.extend_from_slice(extra_params);
+            }
+            
+            params
+        };        
+        let query_params: &[(&str, &str)] = query_params.as_slice();
+
+        let res = self
+            .rb
+            .client
+            .get(format!("{}/info", self.rb.api).as_str())
+            .query(query_params)
+            .send()
+            .unwrap()
+            .text()
+            .unwrap();
+        res
     }
 
     pub fn account_key_bech_32(&self, key_name: &str) -> Result<String, LocalError> {
@@ -47,46 +85,6 @@ impl ChainNode<'_> {
         Err(LocalError::KeyBech32Failed {
             reason: res["error"].to_string(),
         })
-    }
-
-    fn info_builder(&self, request: &str, extra_params: Option<&[(&str, &str)]>) -> String {
-        // let query_params: &[(&str, &str)] = &[
-        //     ("chain_id", self.rb.chain_id.as_str()),
-        //     ("request", request),
-        // ];
-        
-        // let query_params = match extra_params {
-        //     Some(extra_params) => {
-        //         let mut query_params = query_params.to_vec();
-        //         query_params.extend_from_slice(extra_params);
-        //         query_params.as_slice().clone()
-        //     }
-        //     None => query_params,
-        // };
-        let query_params: Vec<(&str, &str)> = {
-            let mut params = vec![
-                ("chain_id", self.rb.chain_id.as_str()),
-                ("request", request),
-            ];
-            
-            if let Some(extra_params) = extra_params {
-                params.extend_from_slice(extra_params);
-            }
-            
-            params
-        };        
-        let query_params: &[(&str, &str)] = query_params.as_slice();
-
-        let res = self
-            .rb
-            .client
-            .get(format!("{}/info", self.rb.api).as_str())
-            .query(query_params)
-            .send()
-            .unwrap()
-            .text()
-            .unwrap();
-        res
     }
 
     pub fn get_name(&self) -> String {
@@ -139,88 +137,65 @@ impl ChainNode<'_> {
         println!("read_file res: {}", res);
         res
     }
+
+    pub fn is_above_sdk_v47(&self) -> bool {
+        let res = self.info_builder("is_above_sdk_v47", None);
+        println!("is_above_sdk_v47 res: {}", res);
+        match res.parse::<bool>() {
+            Ok(res) => res,
+            Err(_) => {
+                return false;
+            }
+        }
+    }
+
+    pub fn has_command(&self, command: &str) -> String {
+        let res = self.info_builder("has_command", Some(&[("command", &command)]));
+        println!("has_command res: {}", res);
+        res
+    }
+
+    pub fn get_build_information(&self) -> Value {
+        let res = self.info_builder("build_information", None);
+        println!("get_build_inforamtion res: {}", res);        
+        match serde_json::from_str::<Value>(&res) {
+            Ok(res) => res,
+            Err(_) => {
+                return json!({});
+            }
+        }
+    }
+
+    // TODO: test / & change to Result
+    // {"error": "exit code 1:  Error: rpc error: code = NotFound desc = rpc error: code = NotFound desc = proposal 1 doesn't exist: key not found
+    pub fn query_proposal(&self, proposal_id: &str) -> Value {
+        let res = self.info_builder("query_proposal", Some(&[("proposal_id", &proposal_id)]));
+        println!("query_proposal res: {}", res);
+        match serde_json::from_str::<Value>(&res) {
+            Ok(res) => res,
+            Err(_) => {
+                return json!({});
+            }
+        }
+    }
+
+    // TODO: test. Use result
+    pub fn dump_contract_state(&self, contract_addr: &str, height: u64) -> Value {
+        let res = self.info_builder(
+            "dump_contract_state",
+            Some(&[
+                ("contract", &contract_addr),
+                ("height", &height.to_string()),
+            ]),
+        );
+        println!("dump_contract_state res: {}", res);
+        
+        match serde_json::from_str::<Value>(&res) {
+            Ok(res) => res,
+            Err(_) => {
+                return json!({});
+            }
+        }
+    }
 }
 
-// TODO: This should be an action
-// pub fn overwite_genesis_file(content: &str)
-// SetPeers
-
-// pub fn ReadFile(rb: &ChainRequestBuilder, file_path: String) -> String {
-
-// }
-
-// pub fn RecoverKey(rb: &ChainRequestBuilder, key_name: String, mnemonic: String) -> String {
-
-// }
-
-// pub fn IsAboveSDK47(rb: &ChainRequestBuilder) -> bool {
-
-// }
-
-// // this is done on the bin
-// pub fn HasCommand(rb: &ChainRequestBuilder, command: String) -> bool {
-
-// }
-
-// // return a custom struct here
-// pub fn GetBuildInformation(rb: &ChainRequestBuilder) -> String {
-
-// }
-
-// pub fn VoteOnProposal(rb: &ChainRequestBuilder, proposal_id: String, vote: String) -> String {
-
-// }
-
-// pub fn QueryProposal(rb: &ChainRequestBuilder, proposal_id: String) -> String {
-
-// }
-
-// // pub fn SubmitProposal(key_name: String, proposal_json_path: Pathbuf)
-// // pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit) // need to write other code for this to work
-
-// // pub fn DumpContractState(rb: &ChainRequestBuilder, contract_addr: String, height: u64) -> String {
-// //     stdout, _, err := tn.ExecQuery(ctx,
-// // 		"wasm", "contract-state", "all", contractAddress,
-// // 		"--height", fmt.Sprint(height),
-// // 	)
-// // }
-
-// pub fn ExportState(rb: &ChainRequestBuilder, height: u64) -> String {
-
-// }
-
-// // pub fn UnsafeResetAll(rb: &ChainRequestBuilder) -> String {
-
-// // }
-
-// // pub fn StartContainer(rb: &ChainRequestBuilder) -> String {
-
-// // }
-// // pub fn PauseContainer(rb: &ChainRequestBuilder) -> String {
-
-// // }
-// // pub fn UnpauseContainer(rb: &ChainRequestBuilder) -> String {
-
-// // }
-// // pub fn StopContainer(rb: &ChainRequestBuilder) -> String {
-
-// // }
-// // pub fn RemoveContainer(rb: &ChainRequestBuilder) -> String {
-
-// // }
-
-// // pub fn KeyBech32
-// // command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
-// // "--home", tn.HomeDir(),
-// // "--keyring-backend", keyring.BackendTest,
-// // }
-
-// // if bech != "" {
-// // command = append(command, "--bech", bech)
-// // }
-
-// // stdout, stderr, err := tn.Exec(ctx, command, nil)
-// // if err != nil {
-// // return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
-// // }
-// // pub fn AccountKeyBech32(ctx context.Context, name string)

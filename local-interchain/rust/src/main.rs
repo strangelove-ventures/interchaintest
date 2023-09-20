@@ -3,7 +3,6 @@
 use cosmwasm_std::Coin;
 use cosmwasm_std::Uint128;
 use localic_std::cosmwasm::CosmWasm;
-use localic_std::errors::LocalError;
 use reqwest::blocking::Client;
 
 // TODO: Temp wildcards
@@ -27,30 +26,41 @@ fn main() {
 
     let node: ChainNode = ChainNode::new(&rb);
 
-    assert_eq!(node.get_name(), "localjuno-1-val-0-baseic");
+    test_node_information(&node);
 
+    test_paths(&rb);
+    test_queries(&rb);
+    test_binary(&rb);
+    test_bank_send(&rb);
+    test_cosmwasm(&rb);
+}
+
+fn test_node_information(node: &ChainNode) {
+    let v = node.account_key_bech_32("acc0");
+    assert_eq!(v.unwrap(), "juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl");
+
+    let v = node.account_key_bech_32("fake-key987");
+    assert!(v.is_err());
+
+    assert_eq!(node.get_name(), "localjuno-1-val-0-baseic");
     node.get_container_id();
     node.get_host_name();
     node.get_genesis_file_content();
     node.get_home_dir();
     node.get_height();
     node.read_file("./config/app.toml");
+    node.is_above_sdk_v47();
+    node.has_command("genesis"); // false with sdk 45
+    node.has_command("tx"); // every bin has this
+    let res = node.get_build_information(); // every bin has this
+    println!(
+        "res: {}",
+        res["cosmos_sdk_version"].as_str().unwrap_or_default()
+    );
 
-    // test_addrs(&node);
-
-    // test_paths(&rb);
-    // test_queries(&rb);
-    // test_binary(&rb);
-    // test_bank_send(&rb);
-    // test_cosmwasm(&rb);
-}
-
-fn test_addrs(node: &ChainNode) {
-    let v = node.account_key_bech_32("acc0");
-    assert_eq!(v.unwrap(), "juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl");
-
-    let v = node.account_key_bech_32("fake-key987");
-    assert!(v.is_err());
+    // TODO: test these:
+    // node.query_proposal("1");
+    // node.dump_contract_state("contract", 5);
 }
 
 fn test_paths(rb: &ChainRequestBuilder) {

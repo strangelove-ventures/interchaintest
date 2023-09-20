@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -78,28 +79,112 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 		util.Write(w, []byte(val.HostName()))
 	case "home_dir":
 		util.Write(w, []byte(val.HomeDir()))
+	case "is_above_sdk_47", "is_above_sdk_v47":
+		util.Write(w, []byte(strconv.FormatBool(val.IsAboveSDK47(i.ctx))))
+	case "has_command":
+		hasCommand(w, r, form, i, val)
 	case "read_file":
-		if relPath, ok := form["relative_path"]; !ok {
-			util.WriteError(w, fmt.Errorf("relPath not found in query params"))
-			return
-		} else {
-			bz, err := val.ReadFile(i.ctx, relPath[0])
-			if err != nil {
-				util.WriteError(w, err)
-				return
-			}
-
-			util.Write(w, bz)
-		}
+		readFile(w, r, form, i, val)
 	case "height":
 		height, _ := val.Height(i.ctx)
 		util.Write(w, []byte(strconv.Itoa(int(height))))
+	case "dump_contract_state":
+		dumpContractState(w, r, form, i, val)
+	case "query_proposal":
+		queryProposal(w, r, form, i, val)
+	case "build_information":
+		getBuildInfo(w, r, i, val)
 	case "genesis_file_content":
 		v, _ := val.GenesisFileContent(i.ctx)
 		util.Write(w, v)
 	default:
-		util.WriteError(w, fmt.Errorf("invalid get param %s", res[0]))
+		util.WriteError(w, fmt.Errorf("invalid get param: %s. does not exist", res[0]))
 	}
+}
+
+func hasCommand(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+	cmd, ok := form["command"]
+	if !ok {
+		util.WriteError(w, fmt.Errorf("command not found in query params"))
+		return
+	}
+
+	util.Write(w, []byte(strconv.FormatBool(val.HasCommand(i.ctx, cmd[0]))))
+}
+
+func readFile(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+	relPath, ok := form["relative_path"]
+	if !ok {
+		util.WriteError(w, fmt.Errorf("relPath not found in query params"))
+		return
+	}
+
+	bz, err := val.ReadFile(i.ctx, relPath[0])
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	util.Write(w, bz)
+}
+
+func dumpContractState(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+	contract, ok1 := form["contract"]
+	height, ok2 := form["height"]
+	if !ok1 || !ok2 {
+		util.WriteError(w, fmt.Errorf("contract or height not found in query params"))
+		return
+	}
+
+	heightInt, err := strconv.ParseInt(height[0], 10, 64)
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	state, err := val.DumpContractState(i.ctx, contract[0], heightInt)
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	jsonRes, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+	util.Write(w, []byte(jsonRes))
+}
+
+func queryProposal(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+	if proposalID, ok := form["proposal_id"]; !ok {
+		util.WriteError(w, fmt.Errorf("proposal not found in query params"))
+		return
+	} else {
+		propResp, err := val.QueryProposal(i.ctx, proposalID[0])
+		if err != nil {
+			util.WriteError(w, err)
+			return
+		}
+
+		jsonRes, err := json.MarshalIndent(propResp, "", "  ")
+		if err != nil {
+			util.WriteError(w, err)
+			return
+		}
+
+		util.Write(w, jsonRes)
+	}
+}
+
+func getBuildInfo(w http.ResponseWriter, r *http.Request, i *info, val *cosmos.ChainNode) {
+	bi := val.GetBuildInformation(i.ctx)
+	jsonRes, err := json.MarshalIndent(bi, "", "  ")
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+	util.Write(w, []byte(jsonRes))
 }
 
 func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
