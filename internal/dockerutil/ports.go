@@ -20,7 +20,7 @@ func (l Listeners) CloseAll() {
 
 // openListenerOnFreePort opens the next free port
 func openListenerOnFreePort() (*net.TCPListener, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
