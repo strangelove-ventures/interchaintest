@@ -142,7 +142,7 @@ func (c *PenumbraChain) HomeDir() string {
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 	fn := c.getFullNode()
 	if fn.PenumbraAppNode == nil {
-		return fmt.Errorf("no penumbra app nodes on the fullnode for key creation")
+		return fmt.Errorf("no penumbra app nodes configured for key creation")
 	}
 	return fn.PenumbraAppNode.CreateKey(ctx, keyName)
 }
@@ -151,7 +151,7 @@ func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
 	fn := c.getFullNode()
 	if fn.PenumbraAppNode == nil {
-		return fmt.Errorf("no penumbra app nodes on the fullnode for key recovery")
+		return fmt.Errorf("no penumbra app nodes configured for key recovery")
 	}
 	return fn.PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
@@ -160,7 +160,7 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	fn := c.getFullNode()
 	if fn.PenumbraAppNode == nil {
-		return nil, fmt.Errorf("no penumbra app nodes on the fullnode to retreive address from")
+		return nil, fmt.Errorf("no penumbra app nodes configured to retreive an address from")
 	}
 	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }
@@ -221,13 +221,14 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 	fn := c.getFullNode()
 
 	if len(fn.PenumbraClientNodes) == 0 {
-		return fmt.Errorf("no pclientd instances to use when sending funds")
+		return fmt.Errorf("no pclientd instances on the node to use when sending funds")
 	}
 
 	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
 }
 
-// Implements Chain interface
+// SendIBCTransfer attempts to send a fungible token transfer via IBC from the specified account on the source chain
+// to the specified account on the counterparty chain.
 func (c *PenumbraChain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -237,25 +238,26 @@ func (c *PenumbraChain) SendIBCTransfer(
 ) (ibc.Tx, error) {
 	fn := c.getFullNode()
 	if len(fn.PenumbraClientNodes) == 0 {
-		return ibc.Tx{}, fmt.Errorf("no pclientd nodes on the fullnode for ibc transfer")
+		return ibc.Tx{}, fmt.Errorf("no pclientd instances on the node for ibc transfers")
 	}
 	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
-// Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
 
+// Height returns the current chain block height.
 func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 	return c.getFullNode().TendermintNode.Height(ctx)
 }
 
-// Implements Chain interface
+// GetBalance attempts to make a balance request for the specified denom and the account associated with the
+// specified keyName.
 func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
 	fn := c.getFullNode()
 	if len(fn.PenumbraClientNodes) == 0 {
-		return math.Int{}, fmt.Errorf("no pclientd instances on the fullnode for balance requests")
+		return math.Int{}, fmt.Errorf("no pclientd instances on the node for balance requests")
 	}
 
 	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
@@ -266,7 +268,8 @@ func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom st
 	return bal, nil
 }
 
-// Implements Chain interface
+// GetGasFeesInNativeDenom returns the fees used to pay for some compute with the local token denom,
+// where fees = gasPaid * gasPrice.
 func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice

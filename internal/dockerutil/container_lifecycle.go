@@ -159,15 +159,6 @@ func (c *ContainerLifecycle) GetHostPorts(ctx context.Context, portIDs ...string
 	return ports, nil
 }
 
-func (c *ContainerLifecycle) GetIP(ctx context.Context) (string, error) {
-	resp, err := c.client.ContainerInspect(ctx, c.id)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.NetworkSettings.IPAddress, nil
-}
-
 // Running will inspect the container and check its state to determine if it is currently running.
 // If the container is running nil will be returned, otherwise an error is returned.
 func (c *ContainerLifecycle) Running(ctx context.Context) error {
