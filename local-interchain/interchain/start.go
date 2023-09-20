@@ -165,7 +165,14 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 
 	// Starts a non blocking REST server to take action on the chain.
 	go func() {
-		r := router.NewRouter(ctx, ic, config, vals, relayer, eRep, installDir)
+		cosmosChains := map[string]*cosmos.CosmosChain{}
+		for _, chain := range chains {
+			if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
+				cosmosChains[cosmosChain.Config().ChainID] = cosmosChain
+			}
+		}
+
+		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
 
 		if ao.PortOverride != 0 {
 			config.Server.Port = fmt.Sprintf("%d", ao.PortOverride)

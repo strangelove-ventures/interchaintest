@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
@@ -18,6 +19,7 @@ type actions struct {
 	ctx  context.Context
 	ic   *interchaintest.Interchain
 	vals map[string]*cosmos.ChainNode
+	cc   map[string]*cosmos.CosmosChain
 
 	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
@@ -29,11 +31,12 @@ type ActionHandler struct {
 	Cmd     string `json:"cmd"`
 }
 
-func NewActions(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
+func NewActions(ctx context.Context, ic *interchaintest.Interchain, cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
 	return &actions{
 		ctx:     ctx,
 		ic:      ic,
 		vals:    vals,
+		cc:      cosmosChains,
 		relayer: relayer,
 		eRep:    eRep,
 	}
@@ -43,7 +46,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 	var ah ActionHandler
 	err := json.NewDecoder(r.Body).Decode(&ah)
 	if err != nil {
-		util.WriteError(w, err)
+		util.WriteError(w, fmt.Errorf("failed to decode json: %s", err))
 		return
 	}
 
@@ -69,19 +72,59 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 	var output []byte
 	var stdout, stderr []byte
 
+	val := a.vals[chainId]
+
+	// parse out special commands if there are any.
+	cmdMap := make(map[string]string)
+	if strings.Contains(ah.Cmd, "=") {
+		for _, c := range strings.Split(ah.Cmd, ";") {
+			s := strings.Split(c, "=")
+			cmdMap[s[0]] = s[1]
+		}
+	}
+
 	// Node / Docker Linux Actions
 	switch action {
 	case "q", "query":
-		stdout, stderr, err = (a.vals[chainId]).ExecQuery(a.ctx, cmd...)
+		stdout, stderr, err = val.ExecQuery(a.ctx, cmd...)
 	case "b", "bin", "binary":
-		stdout, stderr, err = (a.vals[chainId]).ExecBin(a.ctx, cmd...)
+		stdout, stderr, err = val.ExecBin(a.ctx, cmd...)
 	case "e", "exec", "execute":
-		stdout, stderr, err = (a.vals[chainId]).Exec(a.ctx, cmd, []string{})
+		stdout, stderr, err = val.Exec(a.ctx, cmd, []string{})
+	case "recover-key":
+		kn := cmdMap["keyname"]
+		if err := val.RecoverKey(a.ctx, kn, cmdMap["mnemonic"]); err != nil {
+			if !strings.Contains(err.Error(), "aborted") {
+				util.WriteError(w, fmt.Errorf("failed to recover key: %s", err))
+				return
+			}
+		}
+		stdout = []byte(fmt.Sprintf(`{"recovered_key":"%s"}`, kn))
+	case "overwrite-genesis-file":
+		if err := val.OverwriteGenesisFile(a.ctx, []byte(cmdMap["new_genesis"])); err != nil {
+			util.WriteError(w, fmt.Errorf("failed to override genesis file: %s", err))
+			return
+		}
+		stdout = []byte(fmt.Sprintf(`{"overwrote_genesis_file":"%s"}`, val.ContainerID()))
+	case "add-full-nodes":
+		chain := a.cc[chainId]
+
+		amt, err := strconv.Atoi(cmdMap["amount"])
+		if err != nil {
+			util.WriteError(w, fmt.Errorf("failed to convert amount to int: %s", err))
+			return
+		}
+
+		if err := chain.AddFullNodes(a.ctx, nil, amt); err != nil {
+			util.WriteError(w, fmt.Errorf("failed to add full nodes: %w", err))
+			return
+		}
+
+		stdout = []byte(fmt.Sprintf(`{"added_full_node":"%s"}`, cmdMap["amount"]))
 	}
 
 	// Relayer Actions if the above is not used.
 	if len(stdout) == 0 && len(stderr) == 0 && err == nil {
-
 		if err := a.relayerCheck(w, r); err != nil {
 			return
 		}

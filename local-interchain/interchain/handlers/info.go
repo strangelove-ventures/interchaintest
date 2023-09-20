@@ -28,10 +28,21 @@ type info struct {
 	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
 
+	cc map[string]*cosmos.CosmosChain
+
 	chainId string
 }
 
-func NewInfo(cfg *types.Config, installDir string, ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *info {
+func NewInfo(
+	cfg *types.Config,
+	installDir string,
+	ctx context.Context,
+	ic *interchaintest.Interchain,
+	cosmosChains map[string]*cosmos.CosmosChain,
+	vals map[string]*cosmos.ChainNode,
+	relayer ibc.Relayer,
+	eRep ibc.RelayerExecReporter,
+) *info {
 	return &info{
 		Config:     cfg,
 		InstallDir: installDir,
@@ -39,6 +50,7 @@ func NewInfo(cfg *types.Config, installDir string, ctx context.Context, ic *inte
 		ctx:     ctx,
 		ic:      ic,
 		vals:    vals,
+		cc:      cosmosChains,
 		relayer: relayer,
 		eRep:    eRep,
 	}
@@ -106,36 +118,9 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 func config(w http.ResponseWriter, r *http.Request, val *cosmos.ChainNode) {
 	cfg := val.Chain.Config()
-
-	type Alias struct {
-		Type           string  `json:"type"`
-		Name           string  `json:"name"`
-		ChainID        string  `json:"chain_id"`
-		Bin            string  `json:"bin"`
-		Bech32Prefix   string  `json:"bech32_prefix"`
-		Denom          string  `json:"denom"`
-		CoinType       string  `json:"coin_type"`
-		GasPrices      string  `json:"gas_prices"`
-		GasAdjustment  float64 `json:"gas_adjustment"`
-		TrustingPeriod string  `json:"trusting_period"`
-	}
-
-	alias := Alias{
-		Type:           cfg.Type,
-		Name:           cfg.Name,
-		ChainID:        cfg.ChainID,
-		Bin:            cfg.Bin,
-		Bech32Prefix:   cfg.Bech32Prefix,
-		Denom:          cfg.Denom,
-		CoinType:       cfg.CoinType,
-		GasPrices:      cfg.GasPrices,
-		GasAdjustment:  cfg.GasAdjustment,
-		TrustingPeriod: cfg.TrustingPeriod,
-	}
-
-	jsonRes, err := json.MarshalIndent(alias, "", "  ")
+	jsonRes, err := MarshalIBCChainConfig(cfg)
 	if err != nil {
-		util.WriteError(w, err)
+		util.WriteError(w, fmt.Errorf("failed to marshal config: %w", err))
 		return
 	}
 

@@ -10,11 +10,6 @@ use serde_json::{json, Value};
 // pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit) // need to write other code for this to work
 // pub fn ExportState(rb: &ChainRequestBuilder, height: u64) -> String {
 // pub fn UnsafeResetAll(rb: &ChainRequestBuilder) -> String {
-// pub fn StartContainer(rb: &ChainRequestBuilder) -> String {
-// pub fn PauseContainer(rb: &ChainRequestBuilder) -> String {
-// pub fn UnpauseContainer(rb: &ChainRequestBuilder) -> String {
-// pub fn StopContainer(rb: &ChainRequestBuilder) -> String {
-// pub fn RemoveContainer(rb: &ChainRequestBuilder) -> String {
 
 #[derive(Clone)]
 pub struct ChainNode<'a> {
@@ -53,19 +48,33 @@ impl ChainNode<'_> {
         res
     }
 
-    // pub fn recover_key(&self, key_name: &str, mnemonic: &str) -> Value {
-    //     let config = self.get_chain_config();
-    //     let cmd = format!(
-    //         "echo {} | {} keys add {} --recover --keyring-backend test --coin-type {} --home=%HOME% --output json",
-    //         mnemonic,
-    //         config["bin"].as_str().unwrap(),
-    //         key_name,
-    //         config["coin_type"].as_str().unwrap(),
-    //     );
-    //     println!("recover_key cmd: {}", cmd);
-    //     self.rb.send_request(RequestType::Exec, cmd.as_str(), true)
-    // }
+    // actions
+    pub fn recover_key(&self, key_name: &str, mnemonic: &str) -> Value {
+        let cmd = format!("keyname={};mnemonic={}", key_name, mnemonic);
+        self.rb
+            .send_request(RequestType::RecoverKey, cmd.as_str(), false)
+    }
 
+    pub fn overwrite_genesis_file(&self, content: &str) -> Value {
+        let cmd = format!("new_genesis={}", content);
+        self.rb
+            .send_request(RequestType::OverwriteGenesisFile, cmd.as_str(), false)
+    }
+
+    pub fn set_peers(&self, peers: &str) -> Value {
+        let cmd = format!("new_peers={}", peers);
+        self.rb
+            .send_request(RequestType::SetNewPeers, cmd.as_str(), false)
+    }
+
+    /// add_full_node adds a full node to the network. A full node must already be running on the same network.
+    pub fn add_full_node(&self, amount: u64) -> Value {
+        let cmd = format!("amount={}", amount);
+        self.rb
+            .send_request(RequestType::AddFullNodes, cmd.as_str(), false)
+    }
+
+    // info request
     pub fn account_key_bech_32(&self, key_name: &str) -> Result<String, LocalError> {
         self.key_bech32(key_name, "")
     }
@@ -101,7 +110,7 @@ impl ChainNode<'_> {
 
     pub fn get_chain_config(&self) -> Value {
         let res = self.info_builder("config", None);
-        println!("get_name res: {}", res);
+
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
             Err(_) => {
@@ -112,40 +121,34 @@ impl ChainNode<'_> {
 
     pub fn get_name(&self) -> String {
         let res = self.info_builder("name", None);
-        println!("get_name res: {}", res);
         res
     }
 
     pub fn get_container_id(&self) -> String {
         let res = self.info_builder("container_id", None);
-        println!("get_container_id res: {}", res);
         res
     }
 
     pub fn get_host_name(&self) -> String {
         let res = self.info_builder("hostname", None);
-        println!("get_host_name res: {}", res);
+
         res
     }
 
     pub fn get_genesis_file_content(&self) -> Option<String> {
         match self.info_builder("genesis_file_content", None).as_str() {
             "" => None,
-            res => {
-                println!("get_genesis_file_content res: {}", res);
-                Some(res.to_string())
-            }
+            res => Some(res.to_string()),
         }
     }
     pub fn get_home_dir(&self) -> String {
         let res = self.info_builder("home_dir", None);
-        println!("get_home_dir res: {}", res);
+
         res
     }
 
     pub fn get_height(&self) -> u64 {
         let res = self.info_builder("height", None);
-        println!("get_height res: {}", res);
 
         match res.parse::<u64>() {
             Ok(res) => res,
@@ -157,13 +160,13 @@ impl ChainNode<'_> {
 
     pub fn read_file(&self, relative_path: &str) -> String {
         let res = self.info_builder("read_file", Some(&[("relative_path", &relative_path)]));
-        println!("read_file res: {}", res);
+
         res
     }
 
     pub fn is_above_sdk_v47(&self) -> bool {
         let res = self.info_builder("is_above_sdk_v47", None);
-        println!("is_above_sdk_v47 res: {}", res);
+
         match res.parse::<bool>() {
             Ok(res) => res,
             Err(_) => {
@@ -174,13 +177,13 @@ impl ChainNode<'_> {
 
     pub fn has_command(&self, command: &str) -> String {
         let res = self.info_builder("has_command", Some(&[("command", &command)]));
-        println!("has_command res: {}", res);
+
         res
     }
 
     pub fn get_build_information(&self) -> Value {
         let res = self.info_builder("build_information", None);
-        println!("get_build_inforamtion res: {}", res);
+
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
             Err(_) => {
@@ -193,7 +196,7 @@ impl ChainNode<'_> {
     // {"error": "exit code 1:  Error: rpc error: code = NotFound desc = rpc error: code = NotFound desc = proposal 1 doesn't exist: key not found
     pub fn query_proposal(&self, proposal_id: &str) -> Value {
         let res = self.info_builder("query_proposal", Some(&[("proposal_id", &proposal_id)]));
-        println!("query_proposal res: {}", res);
+
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
             Err(_) => {
@@ -211,7 +214,6 @@ impl ChainNode<'_> {
                 ("height", &height.to_string()),
             ]),
         );
-        println!("dump_contract_state res: {}", res);
 
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,

@@ -225,10 +225,6 @@ impl ChainRequestBuilder {
         command: &str,
         return_text: bool,
     ) -> Value {
-        if command.is_empty() {
-            panic!("cmd cannot be empty");
-        }
-
         let mut cmd: String = command.to_string();
         match request_type {
             RequestType::Query => {
@@ -239,45 +235,42 @@ impl ChainRequestBuilder {
                 }
             }
             _ => {}
-        }
+        };
 
-        if !return_text && request_type != RequestType::Exec {
+        // return JSON if we we did not override that.
+        if !return_text && (request_type == RequestType::Query || request_type == RequestType::Bin)
+        {
             if !cmd.contains("--output=json") && !cmd.contains("--output json") {
                 cmd = format!("{} --output=json", cmd);
             }
         }
 
-        let payload = ActionHandler::new(
-            (&self.chain_id).to_owned(),
-            request_type.as_str().to_string(),
-            cmd,
-        )
-        .to_json();
+        // Build the request payload
+        let payload = ActionHandler::new((&self.chain_id).to_owned(), request_type, cmd).to_json();
 
         if self.log_output {
             println!("[send_request payload]: {}", payload);
-            // println!("[send_request url]: {}", &self.api);
         }
 
-        let req_base = self.client.post(&self.api).json(&payload);
+        let mut rb = self.client.post(&self.api).json(&payload);
 
-        let req: reqwest::blocking::RequestBuilder;
+        let content_type = match return_text {
+            true => "text/plain",
+            false => "application/json",
+        };
+
+        rb = rb
+            .header("Content-Type", content_type)
+            .header("Accept", content_type);
+
+        let res = rb.send().unwrap();
+        let text = res.text();
+
         if return_text {
-            req = req_base
-                .header("Content-Type", "text/plain")
-                .header("Accept", "text/plain");
-        } else {
-            req = req_base
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
+            return return_text_json(text.unwrap_or_default(), None);
         }
 
-        let res = req.send().unwrap();
-        if return_text {
-            return return_text_json(res.text().unwrap(), None);
-        }
-
-        match res.text() {
+        match text {
             Ok(text) => match serde_json::from_str::<Value>(&text) {
                 Ok(json) => json,
                 Err(err) => {
