@@ -1,11 +1,10 @@
 // ref: chain_node.go
+use crate::{errors::LocalError, transactions::ChainRequestBuilder, types::RequestType};
 use serde_json::{json, Value};
-use crate::{errors::LocalError, transactions::ChainRequestBuilder};
 
 // TODO: This should be a POST action rather than a GET. Make a new function here to do so.
 // pub fn overwite_genesis_file(content: &str)
 // SetPeers
-// pub fn RecoverKey(rb: &ChainRequestBuilder, key_name: String, mnemonic: String) -> String {
 // pub fn VoteOnProposal(rb: &ChainRequestBuilder, proposal_id: String, vote: String) -> String {
 // pub fn SubmitProposal(key_name: String, proposal_json_path: Pathbuf)
 // pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit) // need to write other code for this to work
@@ -33,13 +32,13 @@ impl ChainNode<'_> {
                 ("chain_id", self.rb.chain_id.as_str()),
                 ("request", request),
             ];
-            
+
             if let Some(extra_params) = extra_params {
                 params.extend_from_slice(extra_params);
             }
-            
+
             params
-        };        
+        };
         let query_params: &[(&str, &str)] = query_params.as_slice();
 
         let res = self
@@ -53,6 +52,19 @@ impl ChainNode<'_> {
             .unwrap();
         res
     }
+
+    // pub fn recover_key(&self, key_name: &str, mnemonic: &str) -> Value {
+    //     let config = self.get_chain_config();
+    //     let cmd = format!(
+    //         "echo {} | {} keys add {} --recover --keyring-backend test --coin-type {} --home=%HOME% --output json",
+    //         mnemonic,
+    //         config["bin"].as_str().unwrap(),
+    //         key_name,
+    //         config["coin_type"].as_str().unwrap(),
+    //     );
+    //     println!("recover_key cmd: {}", cmd);
+    //     self.rb.send_request(RequestType::Exec, cmd.as_str(), true)
+    // }
 
     pub fn account_key_bech_32(&self, key_name: &str) -> Result<String, LocalError> {
         self.key_bech32(key_name, "")
@@ -85,6 +97,17 @@ impl ChainNode<'_> {
         Err(LocalError::KeyBech32Failed {
             reason: res["error"].to_string(),
         })
+    }
+
+    pub fn get_chain_config(&self) -> Value {
+        let res = self.info_builder("config", None);
+        println!("get_name res: {}", res);
+        match serde_json::from_str::<Value>(&res) {
+            Ok(res) => res,
+            Err(_) => {
+                return json!({});
+            }
+        }
     }
 
     pub fn get_name(&self) -> String {
@@ -157,7 +180,7 @@ impl ChainNode<'_> {
 
     pub fn get_build_information(&self) -> Value {
         let res = self.info_builder("build_information", None);
-        println!("get_build_inforamtion res: {}", res);        
+        println!("get_build_inforamtion res: {}", res);
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
             Err(_) => {
@@ -189,7 +212,7 @@ impl ChainNode<'_> {
             ]),
         );
         println!("dump_contract_state res: {}", res);
-        
+
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
             Err(_) => {
@@ -198,4 +221,3 @@ impl ChainNode<'_> {
         }
     }
 }
-

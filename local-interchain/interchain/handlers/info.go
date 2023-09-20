@@ -71,6 +71,8 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	switch res[0] {
 	case "logs":
 		get_logs(w, r, i)
+	case "config":
+		config(w, r, val)
 	case "name":
 		util.Write(w, []byte(val.Name()))
 	case "container_id":
@@ -100,6 +102,44 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	default:
 		util.WriteError(w, fmt.Errorf("invalid get param: %s. does not exist", res[0]))
 	}
+}
+
+func config(w http.ResponseWriter, r *http.Request, val *cosmos.ChainNode) {
+	cfg := val.Chain.Config()
+
+	type Alias struct {
+		Type           string  `json:"type"`
+		Name           string  `json:"name"`
+		ChainID        string  `json:"chain_id"`
+		Bin            string  `json:"bin"`
+		Bech32Prefix   string  `json:"bech32_prefix"`
+		Denom          string  `json:"denom"`
+		CoinType       string  `json:"coin_type"`
+		GasPrices      string  `json:"gas_prices"`
+		GasAdjustment  float64 `json:"gas_adjustment"`
+		TrustingPeriod string  `json:"trusting_period"`
+	}
+
+	alias := Alias{
+		Type:           cfg.Type,
+		Name:           cfg.Name,
+		ChainID:        cfg.ChainID,
+		Bin:            cfg.Bin,
+		Bech32Prefix:   cfg.Bech32Prefix,
+		Denom:          cfg.Denom,
+		CoinType:       cfg.CoinType,
+		GasPrices:      cfg.GasPrices,
+		GasAdjustment:  cfg.GasAdjustment,
+		TrustingPeriod: cfg.TrustingPeriod,
+	}
+
+	jsonRes, err := json.MarshalIndent(alias, "", "  ")
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	util.Write(w, []byte(jsonRes))
 }
 
 func hasCommand(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {

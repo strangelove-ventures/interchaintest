@@ -26,13 +26,22 @@ fn main() {
 
     let node: ChainNode = ChainNode::new(&rb);
 
-    test_node_information(&node);
+    test_node_actions(&node);
 
+    test_node_information(&node);
     test_paths(&rb);
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
     test_cosmwasm(&rb);
+}
+
+fn test_node_actions(node: &ChainNode) {
+    // let words = "offer excite scare peanut rally speak suggest unit reflect whale cloth speak joy unusual wink session effort hidden angry envelope click race allow buffalo";
+    // let res = node.recover_key("mykey123", words); // juno12zn247pzr4yyz7tt43lg6wv02vdc79taeflm8h
+    // println!("res: {:?}", res);
+    // let v = node.account_key_bech_32("mykey123");
+    // println!("v: {:?}", v);
 }
 
 fn test_node_information(node: &ChainNode) {
@@ -41,6 +50,8 @@ fn test_node_information(node: &ChainNode) {
 
     let v = node.account_key_bech_32("fake-key987");
     assert!(v.is_err());
+
+    node.get_chain_config();
 
     assert_eq!(node.get_name(), "localjuno-1-val-0-baseic");
     node.get_container_id();
