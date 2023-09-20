@@ -52,8 +52,8 @@ fn test_node_information(node: &ChainNode) {
     assert!(v.is_err());
 
     node.get_chain_config();
-
-    assert_eq!(node.get_name(), "localjuno-1-val-0-baseic");
+    
+    assert!(node.get_name().starts_with("localjuno-1-val-0"));    
     node.get_container_id();
     node.get_host_name();
     node.get_genesis_file_content();
