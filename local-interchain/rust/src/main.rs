@@ -8,6 +8,7 @@ use reqwest::blocking::Client;
 // TODO: Temp wildcards
 use localic_std::balances::*;
 use localic_std::bank::*;
+use localic_std::files::*;
 use localic_std::polling::*;
 use localic_std::transactions::*;
 
@@ -21,9 +22,9 @@ fn main() {
     poll_for_start(client.clone(), &API_URL, 150);
 
     let rb: ChainRequestBuilder =
-        ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true, false);
+        ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
 
-    test_paths();
+    test_paths(&rb);
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
@@ -31,11 +32,32 @@ fn main() {
 }
 
 // == test functions ==
-fn test_paths() {
+fn test_paths(rb: &ChainRequestBuilder) {
     println!("current_dir: {:?}", get_current_dir());
     println!("local_interchain_dir: {:?}", get_local_interchain_dir());
     println!("contract_path: {:?}", get_contract_path());
     println!("contract_json_path: {:?}", get_contract_cache_path());
+
+    // upload Makefile to the chain's home dir
+    let arb_file = get_current_dir().join("Makefile");
+    match rb.upload_file(arb_file, true) {
+        Ok(req) => {
+            let res = req.send().unwrap();
+            let body = res.text().unwrap();
+            println!("body: {}", body);
+            assert_eq!(body, "{\"success\":\"file uploaded to localjuno-1\",\"location\":\"/var/cosmos-chain/localjuno-1/Makefile\"}");
+        }
+        Err(err) => {
+            panic!("upload_file failed {:?}", err);
+        }
+    };
+
+    let files = get_files(rb, "/var/cosmos-chain/localjuno-1");        
+    assert!(files.contains(&"Makefile".to_string()));
+    assert!(files.contains(&"config".to_string()));
+    assert!(files.contains(&"data".to_string()));
+    assert!(files.contains(&"keyring-test".to_string()));
+    println!("files: {:?}", files);
 }
 
 fn test_cosmwasm(rb: &ChainRequestBuilder) {
@@ -109,7 +131,7 @@ fn test_queries(rb: &ChainRequestBuilder) {
     get_bank_total_supply(&rb);
 }
 fn test_binary(rb: &ChainRequestBuilder) {
-    rb.binary("config");
+    rb.binary("config", false);
     get_keyring_accounts(&rb);
 
     let decoded = rb.decode_transaction("ClMKUQobL2Nvc21vcy5nb3YudjFiZXRhMS5Nc2dWb3RlEjIIpwISK2p1bm8xZGM3a2MyZzVrZ2wycmdmZHllZGZ6MDl1YTlwZWo1eDNsODc3ZzcYARJmClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECxjGMmYp4MlxxfFWi9x4u+jOleJVde3Cru+HnxAVUJmgSBAoCCH8YNBISCgwKBXVqdW5vEgMyMDQQofwEGkDPE4dCQ4zUh6LIB9wqNXDBx+nMKtg0tEGiIYEH8xlw4H8dDQQStgAe6xFO7I/oYVSWwa2d9qUjs9qyB8r+V0Gy", false);
@@ -117,7 +139,7 @@ fn test_binary(rb: &ChainRequestBuilder) {
 }
 
 fn test_all_accounts(rb: &ChainRequestBuilder) {
-    let res = rb.query("q auth accounts --output=json");
+    let res = rb.query("q auth accounts --output=json", false);
     let accounts = res["accounts"].as_array().unwrap();
 
     accounts.iter().for_each(|account| {
@@ -135,7 +157,7 @@ fn test_all_accounts(rb: &ChainRequestBuilder) {
 }
 
 fn get_keyring_accounts(rb: &ChainRequestBuilder) {
-    let accounts = rb.binary("keys list --keyring-backend=test");
+    let accounts = rb.binary("keys list --keyring-backend=test", false);
 
     let addrs = accounts["addresses"].as_array();
     match addrs {

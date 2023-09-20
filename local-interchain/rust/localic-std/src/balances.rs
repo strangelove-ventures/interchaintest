@@ -3,7 +3,7 @@ use cosmwasm_std::{Coin, Uint128};
 use crate::transactions::ChainRequestBuilder;
 
 pub fn get_balance(req_builder: &ChainRequestBuilder, address: &str) -> Vec<Coin> {
-    let res = req_builder.query(&format!("q bank balances {}", address));
+    let res = req_builder.query(&format!("q bank balances {}", address), false);
     let balances = match res["balances"].as_array() {
         Some(s) => s,
         None => return vec![],
@@ -17,7 +17,7 @@ pub fn get_balance(req_builder: &ChainRequestBuilder, address: &str) -> Vec<Coin
 }
 
 pub fn get_bank_total_supply(req_builder: &ChainRequestBuilder) -> Vec<Coin> {
-    let res = req_builder.query("q bank total");
+    let res = req_builder.query("q bank total", false);
     let supplies = match res["supply"].as_array() {
         Some(s) => s,
         None => return vec![],

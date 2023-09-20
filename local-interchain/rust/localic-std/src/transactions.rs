@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, RequestBuilder};
 use serde_json::Value;
 
 use crate::{
@@ -13,16 +13,10 @@ pub struct ChainRequestBuilder {
     api: String,
     chain_id: String,
     log_output: bool,
-    return_text: bool,
 }
 
 impl ChainRequestBuilder {
-    pub fn new(
-        api: String,
-        chain_id: String,
-        log_output: bool,
-        return_text: bool,
-    ) -> ChainRequestBuilder {
+    pub fn new(api: String, chain_id: String, log_output: bool) -> ChainRequestBuilder {
         if api.is_empty() {
             panic!("api cannot be empty");
         }
@@ -35,37 +29,36 @@ impl ChainRequestBuilder {
             api,
             chain_id,
             log_output,
-            return_text: return_text,
         }
     }
 
     // app binary commands
-    pub fn binary(&self, cmd: &str) -> Value {
-        self.send_request(RequestType::Bin, cmd)
+    pub fn binary(&self, cmd: &str, return_text: bool) -> Value {
+        self.send_request(RequestType::Bin, cmd, return_text)
     }
-    pub fn bin(&self, cmd: &str) -> Value {
-        self.binary(cmd)
+    pub fn bin(&self, cmd: &str, return_text: bool) -> Value {
+        self.binary(cmd, return_text)
     }
 
     // app query commands
-    pub fn query(&self, cmd: &str) -> Value {
-        self.send_request(RequestType::Query, cmd)
+    pub fn query(&self, cmd: &str, return_text: bool) -> Value {
+        self.send_request(RequestType::Query, cmd, return_text)
     }
-    pub fn q(&self, cmd: &str) -> Value {
-        self.query(cmd)
+    pub fn q(&self, cmd: &str, return_text: bool) -> Value {
+        self.query(cmd, return_text)
     }
 
     // container execution commands
-    pub fn execute(&self, cmd: &str) -> Value {
-        self.send_request(RequestType::Exec, cmd)
+    pub fn execute(&self, cmd: &str, return_text: bool) -> Value {
+        self.send_request(RequestType::Exec, cmd, return_text)
     }
-    pub fn exec(&self, cmd: &str) -> Value {
-        self.execute(cmd)
+    pub fn exec(&self, cmd: &str, return_text: bool) -> Value {
+        self.execute(cmd, return_text)
     }
 
     // app transaction commands
     pub fn transaction(&self, cmd: &str, get_data: bool) -> Result<Value, LocalError> {
-        let res = self.binary(&cmd);
+        let res = self.binary(&cmd, false);
         if !get_data {
             return Ok(res);
         }
@@ -91,7 +84,7 @@ impl ChainRequestBuilder {
             cmd = format!("{} --hex", cmd);
         }
 
-        self.binary(cmd.as_str())
+        self.binary(cmd.as_str(), false)
     }
 
     pub fn get_tx_hash(&self, tx_res: &Value) -> Option<String> {
@@ -116,23 +109,26 @@ impl ChainRequestBuilder {
         }
 
         let cmd = format!("tx {} --output=json", tx_hash);
-        let res = self.query(&cmd);
+        let res = self.query(&cmd, false);
         // TODO: the python api returns it as {"tx": res} I am not sure why
         res
-    }
+    }    
 
-    pub fn upload_file(&self, key_name: &str, abs_path: PathBuf) -> Result<u64, LocalError> {
-        let file = abs_path.to_str().unwrap();
+    pub fn upload_file(
+        &self,
+        abs_path: PathBuf,
+        return_text: bool,
+    ) -> Result<RequestBuilder, LocalError> {
+        let file: String = abs_path.to_str().unwrap().to_string();
         if !abs_path.exists() {
-            return Err(LocalError::CWUploadFailed {
-                path: file.to_string(),
+            return Err(LocalError::UploadFailed {
+                path: file,
                 reason: "file does not exist".to_string(),
             });
         }
 
         let payload = serde_json::json!({
             "chain_id": &self.chain_id,
-            "key_name": key_name,
             "file_path": file.to_string(),
         });
 
@@ -143,25 +139,48 @@ impl ChainRequestBuilder {
             url + "/upload"
         };
 
-        let req_base = self.client.post(&url).json(&payload);
-
-        let req: reqwest::blocking::RequestBuilder;
-        if self.return_text {
-            req = req_base
-                .header("Content-Type", "text/plain")
-                .header("Accept", "text/plain");
+        let header: &str;
+        if return_text {
+            header = "Content-Type: text/plain";
         } else {
-            req = req_base
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
+            header = "Content-Type: application/json";
         }
+
+        Ok(self
+            .client
+            .post(&url)
+            .json(&payload)
+            .header("Accept", header)            
+            .header("Content-Type", header))
+    }
+
+    pub fn upload_contract(&self, key_name: &str, abs_path: PathBuf) -> Result<u64, LocalError> {
+        let file = abs_path.to_str().unwrap().to_string();
+        let payload = serde_json::json!({
+            "chain_id": &self.chain_id,
+            "file_path": file,
+            "key_name": key_name,
+        });
+
+        let req = self.upload_file(abs_path, false);
+        if req.is_err() {
+            return Err(req.err().unwrap());
+        }
+
+        let req = req
+            .unwrap()
+            .json(&payload)
+            .header("Upload-Type", "cosmwasm");
+
+        // print req
+        println!("[upload_contract req]: {:?}", req);
 
         let resp = req.send().unwrap();
         match resp.text() {
             Ok(text) => {
                 if text.contains("error") {
-                    return Err(LocalError::CWUploadFailed {
-                        path: file.to_string(),
+                    return Err(LocalError::UploadFailed {
+                        path: file,
                         reason: text.to_string(),
                     });
                 }
@@ -170,8 +189,8 @@ impl ChainRequestBuilder {
                 let json = match serde_json::from_str::<Value>(&text) {
                     Ok(json) => json,
                     Err(err) => {
-                        return Err(LocalError::CWUploadFailed {
-                            path: file.to_string(),
+                        return Err(LocalError::UploadFailed {
+                            path: file,
                             reason: err.to_string(),
                         });
                     }
@@ -181,7 +200,7 @@ impl ChainRequestBuilder {
                 let code_id = match json["code_id"].as_u64() {
                     Some(code_id) => code_id,
                     None => {
-                        return Err(LocalError::CWUploadFailed {
+                        return Err(LocalError::UploadFailed {
                             path: file.to_string(),
                             reason: "code_id not found".to_string(),
                         });
@@ -192,7 +211,7 @@ impl ChainRequestBuilder {
                 Ok(code_id)
             }
             Err(err) => {
-                return Err(LocalError::CWUploadFailed {
+                return Err(LocalError::UploadFailed {
                     path: file.to_string(),
                     reason: err.to_string(),
                 });
@@ -200,7 +219,12 @@ impl ChainRequestBuilder {
         }
     }
 
-    pub fn send_request(&self, request_type: RequestType, command: &str) -> Value {
+    pub fn send_request(
+        &self,
+        request_type: RequestType,
+        command: &str,
+        return_text: bool,
+    ) -> Value {
         if command.is_empty() {
             panic!("cmd cannot be empty");
         }
@@ -217,7 +241,7 @@ impl ChainRequestBuilder {
             _ => {}
         }
 
-        if !self.return_text {
+        if !return_text && request_type != RequestType::Exec {
             if !cmd.contains("--output=json") && !cmd.contains("--output json") {
                 cmd = format!("{} --output=json", cmd);
             }
@@ -238,7 +262,7 @@ impl ChainRequestBuilder {
         let req_base = self.client.post(&self.api).json(&payload);
 
         let req: reqwest::blocking::RequestBuilder;
-        if self.return_text {
+        if return_text {
             req = req_base
                 .header("Content-Type", "text/plain")
                 .header("Accept", "text/plain");
@@ -249,7 +273,7 @@ impl ChainRequestBuilder {
         }
 
         let res = req.send().unwrap();
-        if self.return_text {
+        if return_text {
             return return_text_json(res.text().unwrap(), None);
         }
 

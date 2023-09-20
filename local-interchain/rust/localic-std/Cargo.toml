@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Strangelove Developers"]
 
 [dependencies]
-reqwest = { version = "0.11.20", features = ["blocking", "json"]}
+reqwest = { version = "0.11.20", features = ["blocking", "json", "multipart"]}
 tokio = { version = "1.32.0", features = ["full"] }
 serde_json = {version = "1.0.107"}
 cosmwasm-std = "1.4.0"

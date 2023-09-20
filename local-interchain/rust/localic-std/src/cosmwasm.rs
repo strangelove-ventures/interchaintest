@@ -20,7 +20,7 @@ impl CosmWasm<'_> {
 
     pub fn store_contract(&self, key_name: &str, abs_path: PathBuf) -> Result<u64, LocalError> {
         // TODO: cache
-        match self.rb.upload_file(key_name, abs_path) {
+        match self.rb.upload_contract(key_name, abs_path) {
             Ok(code_id) => Ok(code_id),
             Err(e) => Err(e),
         }
@@ -99,7 +99,7 @@ impl CosmWasm<'_> {
             cmd = format!("{} {}", cmd, updated_flags);
         }
 
-        let res = self.rb.binary(cmd.as_str());
+        let res = self.rb.binary(cmd.as_str(), false);
         println!("execute_contract res: {}", &res);
 
         let tx_hash = self.rb.get_tx_hash(&res);
@@ -124,7 +124,7 @@ impl CosmWasm<'_> {
             contract_addr, msg
         );
         println!("query_contract cmd: {}", cmd);
-        let res = self.rb.query(&cmd);
+        let res = self.rb.query(&cmd, false);
         res
     }
 }

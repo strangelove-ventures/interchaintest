@@ -52,7 +52,8 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch r.Header.Get("Upload-Type") {
+	headerType := r.Header.Get("Upload-Type")
+	switch headerType {
 	case "cosmwasm":
 		// Upload & Store the contract tot he chain.
 		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, srcPath)
