@@ -3,7 +3,6 @@ package penumbra
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -135,7 +134,7 @@ func (c *PenumbraChain) GetHostGRPCAddress() string {
 }
 
 func (c *PenumbraChain) HomeDir() string {
-	panic(errors.New("HomeDir not implemented yet"))
+	return c.getFullNode().PenumbraAppNode.HomeDir()
 }
 
 // CreateKey derives a new key with the given keyName.
@@ -513,7 +512,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
+				fmt.Sprintf("--proxy%sapp=tcp://%s:%s", sep, n.PenumbraAppNode.HostName(), strings.Split(abciPort, "/")[0]),
 				"--rpc.laddr=tcp://0.0.0.0:"+tmPort,
 			)
 		})
