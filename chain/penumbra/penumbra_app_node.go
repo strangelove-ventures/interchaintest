@@ -110,7 +110,6 @@ func (p *PenumbraAppNode) HomeDir() string {
 }
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
-	// TODO go through pclientd instead/also?
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	cmd := []string{"pcli", "-d", keyPath, "keys", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
@@ -136,7 +135,6 @@ func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (s
 
 // RecoverKey restores a key from a given mnemonic.
 func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	// TODO go through pclientd instead/also?
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
@@ -199,9 +197,9 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
 
-	allocationsCsv := []byte("\"amount\",\"denom\",\"address\"\n")
+	allocationsCsv := []byte(`"amount","denom","address"` + "\n")
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf("\"%s\",\"%s\",\"%s\"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"`+"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
 
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
