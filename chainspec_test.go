@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -23,6 +23,31 @@ func TestChainSpec_Config(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("missing UidGid", func(t *testing.T) {
+		s := interchaintest.ChainSpec{
+			Name: "gaia",
+
+			Version: "v7.0.1",
+			ChainConfig: ibc.ChainConfig{
+				Type: "cosmos",
+				// Skip Name, as that is intended to be inherited from ChainName.
+				ChainID: "mychain-123",
+				Images: []ibc.DockerImage{
+					{Repository: "docker.example.com", Version: "latest"},
+				},
+				Bin:            "/bin/true",
+				Bech32Prefix:   "foo",
+				Denom:          "bar",
+				GasPrices:      "1bar",
+				GasAdjustment:  2,
+				TrustingPeriod: "24h",
+			},
+		}
+
+		_, err := s.Config(zaptest.NewLogger(t))
+		require.Error(t, err)
+	})
+
 	t.Run("omit name when all other fields provided", func(t *testing.T) {
 		s := interchaintest.ChainSpec{
 			ChainName: "mychain",
@@ -32,7 +57,7 @@ func TestChainSpec_Config(t *testing.T) {
 				// Skip Name, as that is intended to be inherited from ChainName.
 				ChainID: "mychain-123",
 				Images: []ibc.DockerImage{
-					{Repository: "docker.example.com", Version: "latest"},
+					{Repository: "docker.example.com", Version: "latest", UidGid: "1:1"},
 				},
 				Bin:            "/bin/true",
 				Bech32Prefix:   "foo",
@@ -108,19 +133,6 @@ func TestChainSpec_Config(t *testing.T) {
 		baseCfg, err := baseSpec.Config(zaptest.NewLogger(t))
 		require.NoError(t, err)
 
-		t.Run("GasAdjustment", func(t *testing.T) {
-			g := float64(1234.5)
-			require.NotEqual(t, baseCfg.GasAdjustment, g)
-
-			s := baseSpec
-			s.GasAdjustment = &g
-
-			cfg, err := s.Config(zaptest.NewLogger(t))
-			require.NoError(t, err)
-
-			require.Equal(t, g, cfg.GasAdjustment)
-		})
-
 		t.Run("NoHostMount", func(t *testing.T) {
 			m := true
 			require.NotEqual(t, baseCfg.NoHostMount, m)
@@ -132,18 +144,6 @@ func TestChainSpec_Config(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, m, cfg.NoHostMount)
-		})
-
-		t.Run("UsingNewGenesisCommand", func(t *testing.T) {
-			require.False(t, baseCfg.UsingNewGenesisCommand)
-
-			s := baseSpec
-			s.UsingNewGenesisCommand = true
-
-			cfg, err := s.Config(zaptest.NewLogger(t))
-			require.NoError(t, err)
-
-			require.True(t, cfg.UsingNewGenesisCommand)
 		})
 	})
 

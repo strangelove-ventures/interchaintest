@@ -9,8 +9,8 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 )
 
@@ -29,18 +29,15 @@ type HyperspaceRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *HyperspaceRelayer {
+func NewHyperspaceRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *HyperspaceRelayer {
 	c := hyperspaceCommander{log: log}
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = o.Flags
-		}
-	}
+
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, &c, options...)
 	if err != nil {
 		panic(err) // TODO: return
 	}
+
+	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	coreConfig := HyperspaceRelayerCoreConfig{
 		PrometheusEndpoint: "",
@@ -92,7 +89,6 @@ func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecRep
 func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
 	addrBytes := ""
 	chainID := cfg.ChainID
-	coinType := cfg.CoinType
 	chainType := cfg.Type
 
 	chainConfigFile := chainID + ".config"
@@ -102,8 +98,7 @@ func (r *HyperspaceRelayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecR
 	}
 	switch chainType {
 	case "cosmos":
-		bech32Prefix := cfg.Bech32Prefix
-		config.(*HyperspaceRelayerCosmosChainConfig).Keybase = GenKeyEntry(bech32Prefix, coinType, mnemonic)
+		config.(*HyperspaceRelayerCosmosChainConfig).Mnemonic = mnemonic
 	case "polkadot":
 		config.(*HyperspaceRelayerSubstrateChainConfig).PrivateKey = mnemonic
 	}

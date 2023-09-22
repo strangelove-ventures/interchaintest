@@ -9,8 +9,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 )
 
@@ -24,18 +24,15 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *CosmosRelayer {
 	c := commander{log: log}
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = o.Flags
-		}
-	}
+
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
 		panic(err) // TODO: return
 	}
+
+	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	r := &CosmosRelayer{
 		DockerRelayer: dr,
@@ -66,7 +63,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.3.1"
+	DefaultContainerVersion = "v2.4.1"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.

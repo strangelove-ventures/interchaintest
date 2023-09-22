@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -108,13 +109,13 @@ func TestPushWasmClientCode(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmount), simd)
+	fundAmount := math.NewInt(10_000_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), simd)
 	simd1User := users[0]
 
 	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.FormattedAddress(), simd.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, simd1UserBalInitial)
+	require.True(t, simd1UserBalInitial.Equal(fundAmount))
 
 	simdChain := simd.(*cosmos.CosmosChain)
 

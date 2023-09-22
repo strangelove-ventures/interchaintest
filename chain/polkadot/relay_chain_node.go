@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -18,8 +19,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
@@ -294,6 +295,6 @@ func (p *RelayChainNode) SendFunds(ctx context.Context, keyName string, amount i
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (p *RelayChainNode) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	return GetBalance(p.api, address)
 }

@@ -6,44 +6,50 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	"cosmossdk.io/math"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
 // TestHyperspace setup
-// Must build local docker images of hyperspace, parachain, and polkadot
+// Must build local docker images of hyperspace, parachain, polkadot, ibc-go-simd
 // ###### hyperspace ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/wasm
-// * Commit: 00ee58381df66b035be75721e6e16c2bbf82f076
+// * Pull PR: gh pr checkout 388
 // * Build local Hyperspace docker from centauri repo:
 //    amd64: "docker build -f scripts/hyperspace.Dockerfile -t hyperspace:local ."
-//    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:latest --platform=linux/arm64/v8 .
+//    arm64: "docker build -f scripts/hyperspace.aarch64.Dockerfile -t hyperspace:local --platform=linux/arm64/v8 .
 // ###### parachain ######
 // * Repo: ComposableFi/centauri
-// * Branch: vmarkushin/wasm
-// * Commit: 00ee58381df66b035be75721e6e16c2bbf82f076
+// * Pull PR: gh pr checkout 388
 // * Build local parachain docker from centauri repo:
-//     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed)
+//     ./scripts/build-parachain-node-docker.sh (you can change the script to compile for ARM arch if needed / or change the tag/version name)
 // ###### polkadot ######
 // * Repo: paritytech/polkadot
-// * Branch: release-v0.9.36
+// * Branch: release-v0.9.39
 // * Commit: dc25abc712e42b9b51d87ad1168e453a42b5f0bc
 // * Build local polkadot docker from  polkadot repo
 //     amd64: docker build -f scripts/ci/dockerfiles/polkadot/polkadot_builder.Dockerfile . -t polkadot-node:local
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
+// ##### ibc-go-simd #####
+// * Repo: cosmos/ibc-go
+// * Branch: feat/wasm-clients
+// * Use this PR if it hasn't been merged: gh pr checkout 4306
+// * Build using heighliner:
+//     heighliner build -c ibc-go-simd -g local --local
 
 const (
 	heightDelta      = uint64(20)
@@ -70,7 +76,11 @@ func TestHyperspace(t *testing.T) {
 
 	client, network := interchaintest.DockerSetup(t)
 
-	rep := testreporter.NewNopReporter()
+	// Log location
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+	require.NoError(t, err)
+	// Reporter/logs
+	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
@@ -101,13 +111,13 @@ func TestHyperspace(t *testing.T) {
 				Images: []ibc.DockerImage{
 					{
 						Repository: "polkadot-node",
-						Version:    "local",
+						Version:    "local", // Set your locally built version
 						UidGid:     "1000:1000",
 					},
 					{
 						Repository: "parachain-node",
-						Version:    "latest",
-						//UidGid: "1025:1025",
+						Version:    "latest", // Set your locally built version
+						UidGid:     "1000:1000",
 					},
 				},
 				Bin:            "polkadot",
@@ -129,19 +139,18 @@ func TestHyperspace(t *testing.T) {
 				ChainID: "simd",
 				Images: []ibc.DockerImage{
 					{
-						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-						Version:    "feat-wasm-clients",
+						Repository: "ibc-go-simd",
+						Version:    "local", // Set your locally built version
 						UidGid:     "1025:1025",
 					},
 				},
-				Bin:            "simd",
-				Bech32Prefix:   "cosmos",
-				Denom:          "stake",
-				GasPrices:      "0.00stake",
-				GasAdjustment:  1.3,
-				TrustingPeriod: "504h",
-				CoinType:       "118",
-				//EncodingConfig: WasmClientEncoding(),
+				Bin:                 "simd",
+				Bech32Prefix:        "cosmos",
+				Denom:               "stake",
+				GasPrices:           "0.00stake",
+				GasAdjustment:       1.3,
+				TrustingPeriod:      "504h",
+				CoinType:            "118",
 				NoHostMount:         true,
 				ConfigFileOverrides: configFileOverrides,
 				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
@@ -161,7 +170,7 @@ func TestHyperspace(t *testing.T) {
 		zaptest.NewLogger(t),
 		// These two fields are used to pass in a custom Docker image built locally
 		relayer.ImagePull(false),
-		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"),
+		relayer.CustomDockerImage("hyperspace", "local", "1000:1000"), // Set your locally built version
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -243,12 +252,12 @@ func TestHyperspace(t *testing.T) {
 	transfer := ibc.WalletAmount{
 		Address: polkadotUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
-		Amount:  amountToSend,
+		Amount:  math.NewInt(amountToSend),
 	}
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
-	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	err = testutil.WaitForBlocks(ctx, 15, cosmosChain, polkadotChain)
 	require.NoError(t, err)
 
 	// Verify tokens arrived on parachain user
@@ -261,13 +270,13 @@ func TestHyperspace(t *testing.T) {
 	reflectTransfer := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   "2", // stake
-		Amount:  amountToReflect,
+		Amount:  math.NewInt(amountToReflect),
 	}
 	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), reflectTransfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 
 	// Send 1.88 "UNIT" from Alice to cosmosUser
-	amountUnits := int64(1_880_000_000_000)
+	amountUnits := math.NewInt(1_880_000_000_000)
 	unitTransfer := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   "1", // UNIT
@@ -277,7 +286,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for MsgRecvPacket on cosmos chain
-	finalStakeBal := fundAmount - amountToSend + amountToReflect
+	finalStakeBal := math.NewInt(fundAmount - amountToSend + amountToReflect)
 	err = cosmos.PollForBalance(ctx, cosmosChain, 20, ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
@@ -285,30 +294,45 @@ func TestHyperspace(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	exportStateHeight, err := cosmosChain.Height(ctx)
+	require.NoError(t, err)
+
+	// Wait for a new update state
+	err = testutil.WaitForBlocks(ctx, 5, cosmosChain, polkadotChain)
+	require.NoError(t, err)
+
 	// Verify cosmos user's final "stake" balance
 	cosmosUserStakeBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, finalStakeBal, cosmosUserStakeBal)
+	require.True(t, cosmosUserStakeBal.Equal(finalStakeBal))
 
 	// Verify cosmos user's final "unit" balance
 	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
 	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
 	require.NoError(t, err)
-	require.Equal(t, amountUnits, cosmosUserUnitBal)
+	require.True(t, cosmosUserUnitBal.Equal(amountUnits))
 
 	// Verify parachain user's final "unit" balance (will be less than expected due gas costs for stake tx)
 	parachainUserUnits, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 1)
 	require.NoError(t, err)
-	require.LessOrEqual(t, parachainUserUnits.Amount.Int64(), fundAmount, "parachain user's final unit amount not expected")
+	require.True(t, parachainUserUnits.Amount.LTE(math.NewInt(fundAmount)), "parachain user's final unit amount not expected")
 
 	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-	require.Equal(t, amountToSend-amountToReflect, parachainUserStake.Amount.Int64(), "parachain user's final stake amount not expected")
+	require.True(t, parachainUserStake.Amount.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
+
+	r.StopRelayer(ctx, eRep) //  Stop relayer to export data
+	err = cosmosChain.StopAllNodes(ctx)
+	require.NoError(t, err)
+	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
+	require.NoError(t, err)
+	err = os.WriteFile("exported_state.json", []byte(exportedState), 0644)
+	require.NoError(t, err)
 }
 
 type GetCodeQueryMsgResponse struct {
-	Code []byte `json:"code"`
+	Data []byte `json:"data"`
 }
 
 func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
@@ -319,7 +343,7 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	contractUserBalInitial, err := cosmosChain.GetBalance(ctx, contractUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmountForGov, contractUserBalInitial)
+	require.True(t, contractUserBalInitial.Equal(math.NewInt(fundAmountForGov)))
 
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
@@ -345,10 +369,10 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 
 	var getCodeQueryMsgRsp GetCodeQueryMsgResponse
 	err = cosmosChain.QueryClientContractCode(ctx, codeHash, &getCodeQueryMsgRsp)
-	codeHashByte32 := sha256.Sum256(getCodeQueryMsgRsp.Code)
+	codeHashByte32 := sha256.Sum256(getCodeQueryMsgRsp.Data)
 	codeHash2 := hex.EncodeToString(codeHashByte32[:])
 	require.NoError(t, err)
-	require.NotEmpty(t, getCodeQueryMsgRsp.Code)
+	require.NotEmpty(t, getCodeQueryMsgRsp.Data)
 	require.Equal(t, codeHash, codeHash2)
 
 	return codeHash
@@ -361,15 +385,18 @@ func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChai
 	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")
 
 	// Check balances are correct
+	amount := math.NewInt(fundAmount)
 	polkadotUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, polkadotUserAmount, "Initial polkadot user amount not expected")
+	require.True(t, polkadotUserAmount.Equal(amount), "Initial polkadot user amount not expected")
+
 	parachainUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), "")
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, parachainUserAmount, "Initial parachain user amount not expected")
+	require.True(t, parachainUserAmount.Equal(amount), "Initial parachain user amount not expected")
+
 	cosmosUserAmount, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, cosmosUserAmount, "Initial cosmos user amount not expected")
+	require.True(t, cosmosUserAmount.Equal(amount), "Initial cosmos user amount not expected")
 
 	return polkadotUser, cosmosUser
 }

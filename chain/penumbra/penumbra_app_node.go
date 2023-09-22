@@ -10,8 +10,8 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -138,7 +138,7 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	}
 	allocationsCsv := []byte(`"amount","denom","address"\n`)
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%d","%s","%s"\n`, allocation.Amount, allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"\n`, allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)

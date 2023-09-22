@@ -52,7 +52,8 @@ cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaint
         Images: []ibc.DockerImage{
             {
                 Repository: "ghcr.io/cosmos/ibc-go-simd-e2e",   // FOR LOCAL IMAGE USE: Docker Image Name
-                Version: "pr-1973",                             // FOR LOCAL IMAGE USE: Docker Image Tag  
+                Version: "pr-1973",                             // FOR LOCAL IMAGE USE: Docker Image Tag
+                UidGid: "1025:1025",
             },
         },
         Bin: "simd",

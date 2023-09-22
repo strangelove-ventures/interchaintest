@@ -1,0 +1,14 @@
+bin/
+
+dist/
+
+chains/*_ignored.json
+chains/*_ignore.json
+
+configs/logs.json
+configs/contracts.json
+
+contracts/*.wasm
+
+
+__pycache__/

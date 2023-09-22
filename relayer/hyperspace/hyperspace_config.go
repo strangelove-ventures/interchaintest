@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	bip32 "github.com/tyler-smith/go-bip32"
 	bip39 "github.com/tyler-smith/go-bip39"
 )
@@ -53,8 +53,8 @@ type HyperspaceRelayerCosmosChainConfig struct {
 	GasLimit         uint64   `toml:"gas_limit"`
 	StorePrefix      string   `toml:"store_prefix"`
 	MaxTxSize        uint64   `toml:"max_tx_size"`
-	WasmCodeId       string   `toml:"wasm_code_id"`
-	Keybase          KeyEntry `toml:"keybase"`
+	WasmCodeId       string   `toml:"wasm_code_hash"`
+	Mnemonic         string   `toml:"mnemonic"`
 	ChannelWhitelist []string `toml:"channel_whitelist"`
 }
 

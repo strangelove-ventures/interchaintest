@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
@@ -71,8 +71,8 @@ func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64,
 		if err != nil {
 			return nil, err
 		}
-		if bal != balance.Amount {
-			return nil, fmt.Errorf("balance (%d) does not match expected: (%d)", bal, balance.Amount)
+		if !balance.Amount.Equal(bal) {
+			return nil, fmt.Errorf("balance (%s) does not match expected: (%s)", bal.String(), balance.Amount.String())
 		}
 		return nil, nil
 	}
