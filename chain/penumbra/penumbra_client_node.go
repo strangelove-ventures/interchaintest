@@ -124,7 +124,7 @@ func (p *PenumbraClientNode) Bind() []string {
 }
 
 func (p *PenumbraClientNode) HomeDir() string {
-	return "/home/heighliner"
+	return "/home/pclientd"
 }
 
 func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
