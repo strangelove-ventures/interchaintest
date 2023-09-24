@@ -11,6 +11,7 @@ use localic_std::bank::*;
 use localic_std::files::*;
 use localic_std::node::*;
 use localic_std::polling::*;
+use localic_std::relayer::Relayer;
 use localic_std::transactions::*;
 
 pub mod base;
@@ -24,15 +25,85 @@ fn main() {
     let rb: ChainRequestBuilder =
         ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
 
+    let rb2: ChainRequestBuilder =
+        ChainRequestBuilder::new(API_URL.to_string(), "localjuno-2".to_string(), true);
+
     test_paths(&rb);
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
     test_cosmwasm(&rb);
+    test_ibc_contract_relaying(&rb, &rb2);
 
     let node: ChainNode = ChainNode::new(&rb);
     test_node_information(&node);
     test_node_actions(&node);
+}
+
+fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuilder) {
+    // local-ic start juno_ibc
+    let file_path = get_contract_path().join("cw_ibc_example.wasm");
+    let key_name = "acc0";
+    let key_name2 = "second0";
+
+    // we are relaying the packet from chain2 -> chain1
+    // modify so it works both ways?
+    let relayer = Relayer::new(&rb2);
+
+    // Would be nice to save the contract_addr in this instead on Init.
+    // or make CosmWasm a builder like the Py client
+    let cw1 = CosmWasm::new(&rb1);
+    let cw2 = CosmWasm::new(&rb2);
+
+    let c1_store = cw1.store_contract(key_name, &file_path);
+    let c2_store = cw2.store_contract(key_name2, &file_path);
+    
+    let c1 = cw1.instantiate_contract(key_name, c1_store.unwrap(), "{}", "contractA", None, "");
+    let c2 = cw2.instantiate_contract(key_name2, c2_store.unwrap(), "{}", "contractB", None, "");
+
+    let contract_1 = match c1 {
+        Ok(contract) => contract,
+        Err(err) => {
+            panic!("err: {}", err);
+        }
+    };
+    println!("contract_1: {:?}", contract_1);
+
+    let contract_2 = match c2 {
+        Ok(contract) => contract,
+        Err(err) => {
+            panic!("err: {}", err);
+        }
+    };
+    println!("contract_2: {:?}", contract_2);
+
+    // relayer create wasm connection
+    let wc = relayer.create_wasm_connection(
+        "juno-ibc-1",
+        &contract_1.address,
+        &contract_2.address,
+        "unordered",
+        "counter-1",
+    );
+    println!("wc: {:?}", wc);
+
+    // let channels = relayer.get_channels();
+    // println!("channels: {:?}", channels);
+
+    // then execute on the contract
+    let msg = r#"{"increment":{"channel":"channel-1"}}"#;
+    let res = cw2.execute_contract(&contract_2.address, &key_name2, msg, "");
+    println!("\ncw2.execute_contract: {:?}", res);
+    
+    println!("relayer.flush: {:?}", relayer.flush("juno-ibc-1", "channel-1"));
+
+    // query contract 1
+    let query_res = cw1.query_contract(
+        &contract_1.address,
+        r#"{"get_count":{"channel":"channel-1"}}"#,
+    );
+    println!("\nquery_res: {}", query_res);
+    assert_eq!(query_res, serde_json::json!({"data":{"count":1}}));
 }
 
 fn test_node_actions(node: &ChainNode) {
@@ -94,7 +165,7 @@ fn test_paths(rb: &ChainRequestBuilder) {
 
     // upload Makefile to the chain's home dir
     let arb_file = get_current_dir().join("Makefile");
-    match rb.upload_file(arb_file, true) {
+    match rb.upload_file(&arb_file, true) {
         Ok(req) => {
             let res = req.send().unwrap();
             let body = res.text().unwrap();
@@ -118,7 +189,7 @@ fn test_cosmwasm(rb: &ChainRequestBuilder) {
     let cw = CosmWasm::new(&rb);
 
     let file_path = get_contract_path().join("cw_ibc_example.wasm");
-    let code_id = cw.clone().store_contract("acc0", file_path);
+    let code_id = cw.clone().store_contract("acc0", &file_path);
     println!("code_id: {:?}", code_id);
 
     let code_id = code_id.unwrap_or_default();

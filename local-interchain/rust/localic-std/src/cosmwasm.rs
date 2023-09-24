@@ -18,7 +18,7 @@ impl CosmWasm<'_> {
         CosmWasm { rb }
     }
 
-    pub fn store_contract(&self, key_name: &str, abs_path: PathBuf) -> Result<u64, LocalError> {
+    pub fn store_contract(&self, key_name: &str, abs_path: &PathBuf) -> Result<u64, LocalError> {
         // TODO: cache
         match self.rb.upload_contract(key_name, abs_path) {
             Ok(code_id) => Ok(code_id),
@@ -41,10 +41,11 @@ impl CosmWasm<'_> {
         } else if admin.is_some() {
             updated_flags = format!("{} --admin={}", flags, admin.unwrap());
         }
+        updated_flags = updated_flags.trim().to_string();
 
         let mut cmd = format!("tx wasm instantiate {code_id} {msg} --label={label} --from={account_key} --keyring-backend=test --node=%RPC% --chain-id=%CHAIN_ID% --output=json --gas=auto --gas-adjustment=3.0 --yes", code_id=code_id, msg=msg, label=label, account_key=account_key);
         if !updated_flags.is_empty() {
-            cmd = format!("{}{}", cmd, updated_flags);
+            cmd = format!("{} {}", cmd, updated_flags);
         }
 
         let res = self.rb.tx(cmd.as_str(), false);
@@ -93,6 +94,7 @@ impl CosmWasm<'_> {
             account_key = account_key,
             flags = flags
         );
+        cmd = cmd.trim().to_string();
 
         let updated_flags = flags.to_string();
         if !updated_flags.is_empty() {

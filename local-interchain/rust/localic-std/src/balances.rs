@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::Coin;
 
 use crate::{transactions::ChainRequestBuilder, types::get_coin_from_json};
 

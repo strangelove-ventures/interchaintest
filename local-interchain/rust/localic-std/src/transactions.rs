@@ -116,7 +116,7 @@ impl ChainRequestBuilder {
 
     pub fn upload_file(
         &self,
-        abs_path: PathBuf,
+        abs_path: &PathBuf,
         return_text: bool,
     ) -> Result<RequestBuilder, LocalError> {
         let file: String = abs_path.to_str().unwrap().to_string();
@@ -154,7 +154,7 @@ impl ChainRequestBuilder {
             .header("Content-Type", header))
     }
 
-    pub fn upload_contract(&self, key_name: &str, abs_path: PathBuf) -> Result<u64, LocalError> {
+    pub fn upload_contract(&self, key_name: &str, abs_path: &PathBuf) -> Result<u64, LocalError> {
         let file = abs_path.to_str().unwrap().to_string();
         let payload = serde_json::json!({
             "chain_id": &self.chain_id,
