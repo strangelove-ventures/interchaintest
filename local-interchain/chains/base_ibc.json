@@ -31,8 +31,8 @@
             "bech32_prefix": "juno",
             "denom": "ujuno",
             "docker_image": {
-                "repository": "ghcr.io/cosmoscontracts/juno-e2e",
-                "version": "v14.1.0"
+                "repository": "ghcr.io/cosmoscontracts/juno",
+                "version": "v17.0.0"
             },
             "block_time": "2s",
             "encoding-options": ["juno"],

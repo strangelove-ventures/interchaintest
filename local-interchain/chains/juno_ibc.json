@@ -7,7 +7,7 @@
             "binary": "junod",
             "bech32_prefix": "juno",
             "docker_image": {
-                "repository": "ghcr.io/cosmoscontracts/juno-e2e",
+                "repository": "ghcr.io/cosmoscontracts/juno",
                 "version": "v14.1.0"
             },
             "use_new_genesis_command": false,
@@ -60,7 +60,7 @@
             "bech32_prefix": "juno",
             "denom": "ujuno",
             "docker_image": {
-                "repository": "ghcr.io/cosmoscontracts/juno-e2e",
+                "repository": "ghcr.io/cosmoscontracts/juno",
                 "version": "v14.1.0"
             },
             "genesis": {     
