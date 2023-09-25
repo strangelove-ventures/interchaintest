@@ -1,25 +1,27 @@
 #![allow(dead_code, unused_must_use)]
 
+// Import base libraries
 use cosmwasm_std::Coin;
 use cosmwasm_std::Uint128;
-use localic_std::cosmwasm::CosmWasm;
 use reqwest::blocking::Client;
+use serde_json::json;
 
-// TODO: Temp wildcards
-use localic_std::balances::*;
-use localic_std::bank::*;
+// Import Local-Interchain std library methods
 use localic_std::files::*;
 use localic_std::node::*;
 use localic_std::polling::*;
 use localic_std::relayer::Relayer;
 use localic_std::transactions::*;
 
+// Import Local-Interchain SDK modules
+use localic_std::modules::bank::{bank_send, get_balance, get_bank_total_supply};
+use localic_std::modules::cosmwasm::CosmWasm;
+
+// base helpers for this binary
 pub mod base;
 use base::{
     get_contract_cache_path, get_contract_path, get_current_dir, get_local_interchain_dir, API_URL,
 };
-use serde_json::json;
-
 
 // cargo run --package localic-bin --bin localic-bin
 fn main() {
@@ -35,7 +37,6 @@ fn main() {
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
-    test_cosmwasm(&rb);
     test_ibc_contract_relaying(&rb, &rb2);
 
     let node: ChainNode = ChainNode::new(&rb);
@@ -191,41 +192,6 @@ fn test_paths(rb: &ChainRequestBuilder) {
     println!("files: {:?}", files);
 }
 
-fn test_cosmwasm(rb: &ChainRequestBuilder) {
-    let cw = CosmWasm::new(&rb);
-
-    let file_path = get_contract_path().join("cw_ibc_example.wasm");
-    let code_id = cw.clone().store("acc0", &file_path);
-    println!("code_id: {:?}", code_id);
-
-    let code_id = code_id.unwrap_or_default();
-    if code_id == 0 {
-        panic!("code_id is 0");
-    }
-
-    let msg = r#"{}"#;
-    let res = cw.contract_instantiate(
-        "acc0",
-        code_id,
-        msg,
-        "my-label",
-        Some("juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl"),
-        "",
-    );
-    println!("res: {:?}", res);
-
-    let contract = match res {
-        Ok(contract) => contract,
-        Err(err) => {
-            println!("err: {}", err);
-            return;
-        }
-    };
-
-    let data = cw.query_contract(&contract.address, "{\"get_count\":{\"channel\":\"0\"}}");
-    println!("data: {}", data);
-}
-
 fn test_bank_send(rb: &ChainRequestBuilder) {
     let before_bal = get_balance(&rb, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
 
@@ -259,7 +225,8 @@ fn test_bank_send(rb: &ChainRequestBuilder) {
 
 fn test_queries(rb: &ChainRequestBuilder) {
     test_all_accounts(&rb);
-    get_bank_total_supply(&rb);
+    let c = get_bank_total_supply(&rb);
+    println!("total supply: {:?}", c);
 }
 fn test_binary(rb: &ChainRequestBuilder) {
     rb.binary("config", false);

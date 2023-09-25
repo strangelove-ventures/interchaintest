@@ -16,12 +16,10 @@ pub fn bank_send(
         .collect::<Vec<String>>()
         .join(",");
 
-    let cmd = format!("tx bank send {} {} {} --fees={} --node=%RPC% --chain-id=%CHAIN_ID% --yes --output=json --keyring-backend=test", from_key, to_address, str_coins, fee);        
+    let cmd = format!("tx bank send {from_key} {to_address} {str_coins} --fees={fee} --node=%RPC% --chain-id=%CHAIN_ID% --yes --output=json --keyring-backend=test");
     let tx_data = rb.tx(&cmd, true);
     tx_data
 }
-
-
 
 pub fn get_balance(req_builder: &ChainRequestBuilder, address: &str) -> Vec<Coin> {
     let res = req_builder.query(&format!("q bank balances {}", address), false);

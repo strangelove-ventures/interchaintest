@@ -89,7 +89,6 @@ impl CosmWasm<'_> {
         contract_execute(self.rb, contract_addr, account_key, msg, flags)
     }
 
-    
     pub fn query(&self, msg: &str) -> Value {
         let contract_addr: &str = match &self.contract_addr {
             Some(addr) => addr.as_ref(),
@@ -97,7 +96,6 @@ impl CosmWasm<'_> {
         };
         contract_query(self.rb, contract_addr, msg)
     }
-    
 
     pub fn create_wasm_connection(
         &self,
@@ -165,8 +163,7 @@ pub fn contract_instantiate(
         println!("raw_log: {}", raw_log.clone().unwrap());
     }
 
-    let contract_addr =
-        get_contract_address(rb, tx_hash.clone().unwrap_or_default().as_str());
+    let contract_addr = get_contract_address(rb, tx_hash.clone().unwrap_or_default().as_str());
     match contract_addr {
         Ok(contract_addr) => {
             return Ok(Contract {

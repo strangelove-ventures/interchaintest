@@ -63,15 +63,22 @@ impl ChainRequestBuilder {
             return Ok(res);
         }
 
-        let tx_hash = self.get_tx_hash(&res);
+        let tx_hash = match self.get_tx_hash(&res) {
+            Some(tx_hash) => tx_hash,
+            None => return Err(LocalError::TxHashNotFound {}),
+        };
 
-        match tx_hash {
-            Some(tx_hash) => {
-                let data = self.query_tx_hash(tx_hash);
-                Ok(data)
+        for _ in 0..5 {
+            let data = self.query_tx_hash(&tx_hash);
+
+            if !data.to_string().starts_with("{\"error\":") {
+                return Ok(data);
+            } else {
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
-            None => Err(LocalError::TxHashNotFound {}),
         }
+
+        Err(LocalError::TxHashNotFound {})
     }
     pub fn tx(&self, cmd: &str, get_data: bool) -> Result<Value, LocalError> {
         self.transaction(cmd, get_data)
@@ -103,14 +110,13 @@ impl ChainRequestBuilder {
         }
     }
 
-    pub fn query_tx_hash(&self, tx_hash: String) -> Value {
+    pub fn query_tx_hash(&self, tx_hash: &str) -> Value {
         if tx_hash.is_empty() {
             panic!("tx_hash cannot be empty");
         }
 
         let cmd = format!("tx {} --output=json", tx_hash);
         let res = self.query(&cmd, false);
-        // TODO: the python api returns it as {"tx": res} I am not sure why
         res
     }
 

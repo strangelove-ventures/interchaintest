@@ -1,2 +1,2 @@
-pub mod cosmwasm;
 pub mod bank;
+pub mod cosmwasm;
