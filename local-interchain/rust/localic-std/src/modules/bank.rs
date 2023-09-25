@@ -1,6 +1,27 @@
 use cosmwasm_std::Coin;
+use serde_json::Value;
 
-use crate::{transactions::ChainRequestBuilder, types::get_coin_from_json};
+use crate::{errors::LocalError, transactions::ChainRequestBuilder, types::get_coin_from_json};
+
+pub fn bank_send(
+    rb: &ChainRequestBuilder,
+    from_key: &str,
+    to_address: &str,
+    tokens: Vec<Coin>,
+    fee: Coin,
+) -> Result<Value, LocalError> {
+    let str_coins = tokens
+        .iter()
+        .map(|coin| format!("{}{}", coin.amount, coin.denom))
+        .collect::<Vec<String>>()
+        .join(",");
+
+    let cmd = format!("tx bank send {} {} {} --fees={} --node=%RPC% --chain-id=%CHAIN_ID% --yes --output=json --keyring-backend=test", from_key, to_address, str_coins, fee);        
+    let tx_data = rb.tx(&cmd, true);
+    tx_data
+}
+
+
 
 pub fn get_balance(req_builder: &ChainRequestBuilder, address: &str) -> Vec<Coin> {
     let res = req_builder.query(&format!("q bank balances {}", address), false);

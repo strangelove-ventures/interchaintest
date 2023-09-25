@@ -1,6 +1,3 @@
-pub mod balances;
-pub mod bank;
-pub mod cosmwasm;
 pub mod errors;
 pub mod files;
 pub mod polling;
@@ -9,3 +6,5 @@ pub mod types;
 
 pub mod node;
 pub mod relayer;
+
+pub mod modules;
