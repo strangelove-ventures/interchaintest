@@ -125,7 +125,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
 
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainA)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainB)
 	require.Equal(t, 1, len(users))
 
 	bob := users[0]
@@ -133,7 +133,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 5, chainA)
 	require.NoError(t, err)
 
-	bobBal, err := chainA.GetBalance(ctx, bob.KeyName(), chainA.Config().Denom)
+	bobBal, err := chainB.GetBalance(ctx, bob.KeyName(), chainB.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, initBalance))
 
