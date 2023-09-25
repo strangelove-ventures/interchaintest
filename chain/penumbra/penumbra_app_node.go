@@ -136,7 +136,11 @@ func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (s
 // RecoverKey restores a key from a given mnemonic.
 func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	cmd := []string{"pcli", "-d", keyPath, "keys", "import", "phrase", mnemonic}
+	cmd := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %q | pcli -d %s keys import phrase`, mnemonic, keyPath),
+	}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
@@ -201,6 +205,10 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	for _, allocation := range allocations {
 		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"`+"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
+
+	fmt.Println("Printing allocations CSV")
+	fmt.Printf("%v \n", string(allocationsCsv))
+	fmt.Println()
 
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)

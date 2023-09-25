@@ -195,7 +195,7 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 		return nil, fmt.Errorf("invalid coin type: %w", err)
 	}
 
-	info, mnemonic, err := c.keyring.NewMnemonic(
+	_, mnemonic, err := c.keyring.NewMnemonic(
 		keyName,
 		keyring.English,
 		hd.CreateHDPath(uint32(coinType), 0, 0).String(),
@@ -206,12 +206,13 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	addrBytes, err := info.GetAddress()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
-	}
-
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	//addrBytes, err := info.GetAddress()
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to get address: %w", err)
+	//}
+	//
+	//return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	return c.BuildWallet(ctx, keyName, mnemonic)
 }
 
 // SendFunds will initiate a local transfer from the account associated with the specified keyName,
@@ -425,6 +426,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	for _, wallet := range additionalGenesisWallets {
+		fmt.Printf("Adding additional genesis wallet to allocation csv for %s with token %s and amount %s \n", wallet.Address, wallet.Denom, wallet.Amount.String())
 		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
 			Address: wallet.Address,
 			Denom:   wallet.Denom,
