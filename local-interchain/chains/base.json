@@ -9,8 +9,7 @@
             "docker_image": {
                 "repository": "ghcr.io/cosmoscontracts/juno",
                 "version": "v17.0.0"
-            },
-            "use_new_genesis_command": false,
+            },            
             "gas_prices": "0%DENOM%",
             "chain_type": "cosmos",
             "coin_type": 118,

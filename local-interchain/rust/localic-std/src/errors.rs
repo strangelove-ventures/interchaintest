@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum LocalError {
     #[error("{{msg}}")]
     Custom { msg: String },
@@ -17,8 +17,8 @@ pub enum LocalError {
     #[error("transaction was not successful. status: {code_status}. log: {raw_log}")]
     TxNotSuccessful { code_status: i64, raw_log: String },
 
-    #[error("contract address not found")]
-    ContractAddressNotFound {},
+    #[error("contract address not found. {events}")]
+    ContractAddressNotFound { events: String },
 
     #[error("key_bech32 failed. reason: {reason}")]
     KeyBech32Failed { reason: String },

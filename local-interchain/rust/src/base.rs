@@ -1,7 +1,7 @@
 use std::path;
 
 // Use clap to parse args in the future
-pub const API_URL: &str = "http://localhost:8080";
+pub const API_URL: &str = "http://127.0.0.1:8080";
 
 // local-interchain/rust
 pub fn get_current_dir() -> path::PathBuf {

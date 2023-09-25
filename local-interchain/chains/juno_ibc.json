@@ -8,9 +8,8 @@
             "bech32_prefix": "juno",
             "docker_image": {
                 "repository": "ghcr.io/cosmoscontracts/juno",
-                "version": "v14.1.0"
+                "version": "v17.0.0"
             },
-            "use_new_genesis_command": false,
             "gas_prices": "0%DENOM%",
             "chain_type": "cosmos",
             "coin_type": 118,
@@ -25,15 +24,15 @@
             "genesis": {
                 "modify": [
                     {
-                        "key": "app_state.gov.voting_params.voting_period",
+                        "key": "app_state.gov.params.voting_period",
                         "value": "15s"
                     },
                     {
-                        "key": "app_state.gov.deposit_params.max_deposit_period",
+                        "key": "app_state.gov.params.max_deposit_period",
                         "value": "15s"
                     },
                     {
-                        "key": "app_state.gov.deposit_params.min_deposit.0.denom",
+                        "key": "app_state.gov.params.min_deposit.0.denom",
                         "value": "ujuno"
                     }
                 ],     
@@ -61,7 +60,7 @@
             "denom": "ujuno",
             "docker_image": {
                 "repository": "ghcr.io/cosmoscontracts/juno",
-                "version": "v14.1.0"
+                "version": "v17.0.0"
             },
             "genesis": {     
                 "accounts": [
