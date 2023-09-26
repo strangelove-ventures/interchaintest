@@ -29,7 +29,7 @@ func TokenFactoryChangeAdmin(c *CosmosChain, ctx context.Context, keyName, fullD
 }
 
 // create denom may require a lot of gas if the chain has the DenomCreationGasConsume param enabled
-func TokenFactoryCreateDenom(c *CosmosChain, ctx context.Context, user ibc.Wallet, denomName string, gas uint64) (string, error) {
+func TokenFactoryCreateDenom(c *CosmosChain, ctx context.Context, user ibc.Wallet, denomName string, gas uint64) (string, string, error) {
 	cmd := []string{"tokenfactory", "create-denom", denomName}
 
 	if gas != 0 {
@@ -38,11 +38,10 @@ func TokenFactoryCreateDenom(c *CosmosChain, ctx context.Context, user ibc.Walle
 
 	txHash, err := c.getFullNode().ExecTx(ctx, user.KeyName(), cmd...)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	fmt.Println(txHash)
 
-	return "factory/" + user.FormattedAddress() + "/" + denomName, nil
+	return "factory/" + user.FormattedAddress() + "/" + denomName, txHash, nil
 }
 
 func TokenFactoryForceTransferDenom(c *CosmosChain, ctx context.Context, keyName, fullDenom string, amount uint64, fromAddr, toAddr string) (string, error) {

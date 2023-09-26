@@ -111,7 +111,7 @@ func TokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 	user2 := users[1]
 
 	subDenom := "ictest"
-	tfDenom, err := cosmos.TokenFactoryCreateDenom(chain, ctx, user, subDenom, 2500000)
+	tfDenom, _, err := cosmos.TokenFactoryCreateDenom(chain, ctx, user, subDenom, 2500000)
 	require.NoError(t, err)
 	require.Equal(t, tfDenom, "factory/"+user.FormattedAddress()+"/"+subDenom)
 
