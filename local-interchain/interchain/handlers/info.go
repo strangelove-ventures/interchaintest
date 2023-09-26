@@ -102,10 +102,6 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	case "height":
 		height, _ := val.Height(i.ctx)
 		util.Write(w, []byte(strconv.Itoa(int(height))))
-	case "dump_contract_state":
-		dumpContractState(w, r, form, i, val)
-	case "query_proposal":
-		queryProposal(w, r, form, i, val)
 	case "build_information":
 		getBuildInfo(w, r, i, val)
 	case "genesis_file_content":
@@ -151,55 +147,6 @@ func readFile(w http.ResponseWriter, r *http.Request, form url.Values, i *info, 
 	}
 
 	util.Write(w, bz)
-}
-
-func dumpContractState(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
-	contract, ok1 := form["contract"]
-	height, ok2 := form["height"]
-	if !ok1 || !ok2 {
-		util.WriteError(w, fmt.Errorf("contract or height not found in query params"))
-		return
-	}
-
-	heightInt, err := strconv.ParseInt(height[0], 10, 64)
-	if err != nil {
-		util.WriteError(w, err)
-		return
-	}
-
-	state, err := val.DumpContractState(i.ctx, contract[0], heightInt)
-	if err != nil {
-		util.WriteError(w, err)
-		return
-	}
-
-	jsonRes, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		util.WriteError(w, err)
-		return
-	}
-	util.Write(w, []byte(jsonRes))
-}
-
-func queryProposal(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
-	if proposalID, ok := form["proposal_id"]; !ok {
-		util.WriteError(w, fmt.Errorf("proposal not found in query params"))
-		return
-	} else {
-		propResp, err := val.QueryProposal(i.ctx, proposalID[0])
-		if err != nil {
-			util.WriteError(w, err)
-			return
-		}
-
-		jsonRes, err := json.MarshalIndent(propResp, "", "  ")
-		if err != nil {
-			util.WriteError(w, err)
-			return
-		}
-
-		util.Write(w, jsonRes)
-	}
 }
 
 func getBuildInfo(w http.ResponseWriter, r *http.Request, i *info, val *cosmos.ChainNode) {

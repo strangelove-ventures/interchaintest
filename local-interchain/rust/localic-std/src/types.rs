@@ -13,6 +13,7 @@ pub enum RequestType {
     OverwriteGenesisFile,
     SetNewPeers,
     AddFullNodes,
+    DumpContractState,
 }
 impl RequestType {
     #[must_use]
@@ -26,6 +27,7 @@ impl RequestType {
             RequestType::OverwriteGenesisFile => "overwrite-genesis-file",
             RequestType::SetNewPeers => "set-peers",
             RequestType::AddFullNodes => "add-full-nodes",
+            RequestType::DumpContractState => "dump-contract-state",
         }
     }
 }

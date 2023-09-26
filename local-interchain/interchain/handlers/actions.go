@@ -121,6 +121,8 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		stdout = []byte(fmt.Sprintf(`{"added_full_node":"%s"}`, cmdMap["amount"]))
+	case "dump-contract-state":
+		dumpContractState(w, r, cmdMap, a, val)
 	}
 
 	// Relayer Actions if the above is not used.
@@ -202,4 +204,33 @@ func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string
 
 	ic.Close()
 	<-ctx.Done()
+}
+
+func dumpContractState(w http.ResponseWriter, r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) {
+	contract, ok1 := cmdMap["contract"]
+	height, ok2 := cmdMap["height"]
+	if !ok1 || !ok2 {
+		util.WriteError(w, fmt.Errorf("contract or height not found in commands"))
+		return
+	}
+
+	heightInt, err := strconv.ParseInt(height, 10, 64)
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	state, err := val.DumpContractState(a.ctx, contract, heightInt)
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	jsonRes, err := json.Marshal(state.Models)
+	if err != nil {
+		util.WriteError(w, err)
+		return
+	}
+
+	util.Write(w, jsonRes)
 }

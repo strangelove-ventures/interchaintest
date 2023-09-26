@@ -65,6 +65,13 @@ impl Chain<'_> {
     }
 
     #[must_use]
+    pub fn dump_contract_state(&self, contract_addr: &str, height: u64) -> Value {
+        let cmd = format!("contract={contract_addr};height={height}");
+        self.rb
+            .send_request(RequestType::DumpContractState, cmd.as_str(), false)
+    }
+
+    #[must_use]
     pub fn set_peers(&self, peers: &str) -> Value {
         let cmd = format!("new_peers={peers}");
         self.rb
@@ -92,7 +99,7 @@ impl Chain<'_> {
     /// Returns `Err` if the key bech32 fails on the node.
     pub fn key_bech32(&self, key_name: &str, bech_prefix: &str) -> Result<String, LocalError> {
         let mut cmd =
-            format!("keys show --address {key_name} --home=%HOME% --keyring-backend=test",);
+            format!("keys show --address {key_name} --home=%HOME% --keyring-backend=test");
 
         if !bech_prefix.is_empty() {
             cmd = format!("{cmd} --bech {bech_prefix}");
@@ -182,35 +189,6 @@ impl Chain<'_> {
     #[must_use]
     pub fn get_build_information(&self) -> Value {
         let res = self.info_builder("build_information", None);
-
-        match serde_json::from_str::<Value>(&res) {
-            Ok(res) => res,
-            Err(_) => {
-                json!({})
-            }
-        }
-    }
-
-    // TODO: test / & change to Result
-    #[must_use]
-    pub fn query_proposal(&self, proposal_id: &str) -> Value {
-        let res = self.info_builder("query_proposal", Some(&[("proposal_id", proposal_id)]));
-
-        match serde_json::from_str::<Value>(&res) {
-            Ok(res) => res,
-            Err(_) => {
-                json!({})
-            }
-        }
-    }
-
-    // TODO: test. Use result
-    #[must_use]
-    pub fn dump_contract_state(&self, contract_addr: &str, height: u64) -> Value {
-        let res = self.info_builder(
-            "dump_contract_state",
-            Some(&[("contract", contract_addr), ("height", &height.to_string())]),
-        );
 
         match serde_json::from_str::<Value>(&res) {
             Ok(res) => res,
