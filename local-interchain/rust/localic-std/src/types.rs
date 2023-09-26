@@ -15,6 +15,7 @@ pub enum RequestType {
     AddFullNodes,
 }
 impl RequestType {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         // match handlers/actions.go
         match self {
@@ -38,6 +39,7 @@ pub struct RequestBase {
 }
 
 impl RequestBase {
+    #[must_use]
     pub fn new(
         client: Client,
         url: String,
@@ -60,6 +62,7 @@ pub struct ActionHandler {
 }
 
 impl ActionHandler {
+    #[must_use]
     pub fn new(chain_id: String, action: RequestType, cmd: String) -> ActionHandler {
         ActionHandler {
             chain_id,
@@ -68,8 +71,9 @@ impl ActionHandler {
         }
     }
 
+    #[must_use]
     pub fn to_json_str(&self) -> String {
-        let escaped_cmd = self.cmd.replace("\"", "\\\"");
+        let escaped_cmd = self.cmd.replace('\"', "\\\"");
 
         let json = format!(
             r#"{{"chain_id":"{}","action":"{}","cmd":"{}"}}"#,
@@ -80,9 +84,10 @@ impl ActionHandler {
         json
     }
 
+    #[must_use]
     pub fn to_json(&self) -> serde_json::Value {
         let json = self.to_json_str();
-        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
         json
     }
 }
@@ -106,6 +111,7 @@ pub struct Contract {
     pub admin: Option<String>,
 }
 
+#[must_use]
 pub fn get_coin_from_json(value: &serde_json::Value) -> Coin {
     let amount = value["amount"].as_str().unwrap_or_default();
     let denom = value["denom"].as_str().unwrap_or_default();

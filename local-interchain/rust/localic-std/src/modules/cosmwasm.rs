@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -19,15 +19,17 @@ pub struct CosmWasm<'a> {
 }
 
 impl CosmWasm<'_> {
+    #[must_use]
     pub fn new(rb: &ChainRequestBuilder) -> CosmWasm {
         CosmWasm {
-            rb: rb,
+            rb,
             file_path: None,
             code_id: None,
             contract_addr: None,
         }
     }
 
+    #[must_use]
     pub fn new_from_existing(
         rb: &ChainRequestBuilder,
         file_path: Option<PathBuf>,
@@ -35,25 +37,31 @@ impl CosmWasm<'_> {
         contract_addr: Option<String>,
     ) -> CosmWasm {
         CosmWasm {
-            rb: rb,
-            file_path: file_path,
+            rb,
+            file_path,
             code_id,
             contract_addr,
         }
     }
 
-    pub fn store(&mut self, key_name: &str, abs_path: &PathBuf) -> Result<u64, LocalError> {
+    /// # Errors
+    ///
+    /// Returns `Err` if the `code_id` is not found when uploading the contract.
+    pub fn store(&mut self, key_name: &str, abs_path: &Path) -> Result<u64, LocalError> {
         // TODO: add cache
         match self.rb.upload_contract(key_name, abs_path) {
             Ok(code_id) => {
                 self.code_id = Some(code_id);
-                self.file_path = Some(abs_path.to_owned());
+                self.file_path = Some(abs_path.to_path_buf());
                 Ok(code_id)
             }
             Err(e) => Err(e),
         }
     }
 
+    /// # Errors
+    ///
+    /// Returns `Err` if the contract address is not found in the transaction logs.
     pub fn instantiate(
         &mut self,
         account_key: &str,
@@ -64,24 +72,27 @@ impl CosmWasm<'_> {
     ) -> Result<Contract, LocalError> {
         let code_id: u64 = match &self.code_id {
             Some(code) => code.to_owned(),
-            None => panic!("contract_addr is none"),
+            None => {
+                return Err(LocalError::CWValueIsNone {
+                    value_type: "code_id".to_string(),
+                })
+            }
         };
 
         match contract_instantiate(self.rb, account_key, code_id, msg, label, admin, flags) {
             Ok(contract) => {
-                self.contract_addr = Some(contract.address.to_owned());
+                self.contract_addr = Some(contract.address.clone());
                 Ok(contract)
             }
             Err(e) => Err(e),
         }
     }
 
-    pub fn execute(
-        &self,
-        account_key: &str,
-        msg: &str,
-        flags: &str,
-    ) -> Result<TransactionResponse, LocalError> {
+    /// # Panics
+    ///
+    /// Panics if the contract address already set in the `CosmWasm` object.
+    #[must_use]
+    pub fn execute(&self, account_key: &str, msg: &str, flags: &str) -> TransactionResponse {
         let contract_addr: &str = match &self.contract_addr {
             Some(addr) => addr.as_ref(),
             None => panic!("contract_addr is none"),
@@ -89,6 +100,10 @@ impl CosmWasm<'_> {
         contract_execute(self.rb, contract_addr, account_key, msg, flags)
     }
 
+    /// # Panics
+    ///
+    /// Panics if the contract address already set in the `CosmWasm` object.
+    #[must_use]
     pub fn query(&self, msg: &str) -> Value {
         let contract_addr: &str = match &self.contract_addr {
             Some(addr) => addr.as_ref(),
@@ -97,6 +112,9 @@ impl CosmWasm<'_> {
         contract_query(self.rb, contract_addr, msg)
     }
 
+    /// # Errors
+    ///
+    /// Returns `Err` if the contract address is not found in the transaction logs.
     pub fn create_wasm_connection(
         &self,
         r: &Relayer,
@@ -107,12 +125,20 @@ impl CosmWasm<'_> {
     ) -> Result<Value, LocalError> {
         let contract_addr: String = match &self.contract_addr {
             Some(addr) => addr.to_string(),
-            None => panic!("contract_addr is none"),
+            None => {
+                return Err(LocalError::CWValueIsNone {
+                    value_type: "contract_addr".to_string(),
+                })
+            }
         };
 
         let dst_contract_addr: String = match &dst.contract_addr {
             Some(addr) => addr.to_string(),
-            None => panic!("dst.contract_addr is none"),
+            None => {
+                return Err(LocalError::CWValueIsNone {
+                    value_type: "dst.contract_addr".to_string(),
+                })
+            }
         };
 
         r.create_wasm_connection(
@@ -125,6 +151,9 @@ impl CosmWasm<'_> {
     }
 }
 
+/// # Errors
+///
+/// Returns `Err` if the transaction fails or the contract address is not found.
 pub fn contract_instantiate(
     rb: &ChainRequestBuilder,
     account_key: &str,
@@ -135,24 +164,20 @@ pub fn contract_instantiate(
     flags: &str,
 ) -> Result<Contract, LocalError> {
     let mut updated_flags = flags.to_string();
-    if admin.is_none() && !flags.contains("--no-admin") {
-        updated_flags = format!("{} --no-admin", flags);
-    } else if admin.is_some() {
-        updated_flags = format!("{} --admin={}", flags, admin.unwrap());
+    if let Some(admin) = admin {
+        updated_flags = format!("{flags} --admin={admin}");
+    } else if !flags.contains("--no-admin") {
+        updated_flags = format!("{flags} --no-admin");
     }
+
     updated_flags = updated_flags.trim().to_string();
 
     let mut cmd = format!("tx wasm instantiate {code_id} {msg} --label={label} --from={account_key} --keyring-backend=test --node=%RPC% --chain-id=%CHAIN_ID% --output=json --gas=auto --gas-adjustment=3.0 --yes");
     if !updated_flags.is_empty() {
-        cmd = format!("{} {}", cmd, updated_flags);
+        cmd = format!("{cmd} {updated_flags}");
     }
 
-    let res = rb.tx(cmd.as_str(), false);
-    if res.is_err() {
-        return Err(res.err().unwrap());
-    }
-
-    let res = res.unwrap();
+    let res = rb.tx(cmd.as_str(), false)?;
 
     println!("wasm instantiate res: {}", &res);
 
@@ -160,43 +185,36 @@ pub fn contract_instantiate(
     let raw_log: Option<String> = rb.get_raw_log(&res);
 
     if raw_log.is_some() {
-        println!("raw_log: {}", raw_log.clone().unwrap());
+        println!("raw_log: {}", raw_log.unwrap_or_default());
     }
 
     let contract_addr = get_contract_address(rb, tx_hash.clone().unwrap_or_default().as_str());
     match contract_addr {
-        Ok(contract_addr) => {
-            return Ok(Contract {
-                address: contract_addr,
-                tx_hash: tx_hash.unwrap_or_default(),
-                admin: admin.map(|s| s.to_string()),
-            });
-        }
-        Err(e) => {
-            return Err(e);
-        }
+        Ok(contract_addr) => Ok(Contract {
+            address: contract_addr,
+            tx_hash: tx_hash.unwrap_or_default(),
+            admin: admin.map(std::string::ToString::to_string),
+        }),
+        Err(e) => Err(e),
     }
 }
 
+#[must_use]
 pub fn contract_execute(
     rb: &ChainRequestBuilder,
     contract_addr: &str,
     account_key: &str,
     msg: &str,
     flags: &str,
-) -> Result<TransactionResponse, LocalError> {
+) -> TransactionResponse {
     let mut cmd = format!(
-        "tx wasm execute {contract_addr} {msg} --from={account_key} --keyring-backend=test --home=%HOME% --node=%RPC% --chain-id=%CHAIN_ID% --yes {flags}",
-        contract_addr = contract_addr,
-        msg = msg,
-        account_key = account_key,
-        flags = flags
+        "tx wasm execute {contract_addr} {msg} --from={account_key} --keyring-backend=test --home=%HOME% --node=%RPC% --chain-id=%CHAIN_ID% --yes {flags}"
     );
     cmd = cmd.trim().to_string();
 
     let updated_flags = flags.to_string();
     if !updated_flags.is_empty() {
-        cmd = format!("{} {}", cmd, updated_flags);
+        cmd = format!("{cmd} {updated_flags}");
     }
 
     let res = rb.binary(cmd.as_str(), false);
@@ -207,41 +225,44 @@ pub fn contract_execute(
 
     if let Some(raw_log) = &tx_raw_log {
         if raw_log != "[]" {
-            println!("execute_contract raw_log: {}", raw_log);
+            println!("execute_contract raw_log: {raw_log}");
         }
     }
 
-    Ok(TransactionResponse {
+    TransactionResponse {
         tx_hash,
         rawlog: tx_raw_log,
-    })
+    }
 }
 
+#[must_use]
 pub fn contract_query(rb: &ChainRequestBuilder, contract_addr: &str, msg: &str) -> Value {
     let cmd = format!(
-        "query wasm contract-state smart {} {} --output=json --node=%RPC%",
-        contract_addr, msg
+        "query wasm contract-state smart {contract_addr} {msg} --output=json --node=%RPC%",
     );
-    println!("query_contract cmd: {}", cmd);
-    let res = rb.query(&cmd, false);
-    res
+    println!("query_contract cmd: {cmd}");
+    rb.query(&cmd, false)
 }
 
+/// # Errors
+///
+/// Returns `Err` if the contract address is not found in the transaction logs.
 pub fn get_contract_address(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<String, LocalError> {
     let mut last_error = LocalError::ContractAddressNotFound {
-        events: "".to_string(),
+        events: String::new(),
     };
     for _ in 0..5 {
         let res = get_contract(rb, tx_hash);
         if res.is_ok() {
             return res;
-        } else {
-            last_error = res.err().unwrap();
         }
+
+        let Some(err) = res.err() else { continue };
+        last_error = err;
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
 
-    return Err(last_error);
+    Err(last_error)
 }
 
 fn get_contract(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<String, LocalError> {

@@ -3,4 +3,4 @@ build-bin:
 	@cargo build --release
 
 run-bin: build-bin	
-	@./target/release/local-interchain
+	@./target/release/localic-bin

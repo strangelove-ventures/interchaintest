@@ -1,5 +1,5 @@
 pub mod errors;
-pub mod files;
+pub mod filesystem;
 pub mod polling;
 pub mod transactions;
 pub mod types;

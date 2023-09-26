@@ -7,14 +7,14 @@ use reqwest::blocking::Client;
 use serde_json::json;
 
 // Import Local-Interchain std library methods
-use localic_std::files::*;
-use localic_std::node::*;
-use localic_std::polling::*;
+use localic_std::filesystem::get_files;
+use localic_std::node::Chain;
+use localic_std::polling::poll_for_start;
 use localic_std::relayer::Relayer;
-use localic_std::transactions::*;
+use localic_std::transactions::ChainRequestBuilder;
 
 // Import Local-Interchain SDK modules
-use localic_std::modules::bank::{bank_send, get_balance, get_bank_total_supply};
+use localic_std::modules::bank::{get_balance, get_total_supply, send};
 use localic_std::modules::cosmwasm::CosmWasm;
 
 // base helpers for this binary
@@ -25,13 +25,23 @@ use base::{
 
 // cargo run --package localic-bin --bin localic-bin
 fn main() {
-    poll_for_start(Client::new(), &API_URL, 150);
+    poll_for_start(&Client::new(), API_URL, 150);
 
     let rb: ChainRequestBuilder =
-        ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true);
+        match ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true) {
+            Ok(rb) => rb,
+            Err(err) => {
+                panic!("ChainRequestBuilder failed: {err:?}");
+            }
+        };
 
     let rb2: ChainRequestBuilder =
-        ChainRequestBuilder::new(API_URL.to_string(), "localjuno-2".to_string(), true);
+        match ChainRequestBuilder::new(API_URL.to_string(), "localjuno-2".to_string(), true) {
+            Ok(rb) => rb,
+            Err(err) => {
+                panic!("ChainRequestBuilder failed: {err:?}");
+            }
+        };
 
     test_paths(&rb);
     test_queries(&rb);
@@ -39,7 +49,7 @@ fn main() {
     test_bank_send(&rb);
     test_ibc_contract_relaying(&rb, &rb2);
 
-    let node: ChainNode = ChainNode::new(&rb);
+    let node: Chain = Chain::new(&rb);
     test_node_information(&node);
     test_node_actions(&node);
 }
@@ -50,20 +60,26 @@ fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuild
     let key1 = "acc0";
     let key2 = "second0";
 
-    let relayer = Relayer::new(&rb2);
+    let relayer = Relayer::new(rb2);
 
-    let mut contract_a = CosmWasm::new(&rb1);
-    let mut contract_b = CosmWasm::new(&rb2);
+    let mut contract_a = CosmWasm::new(rb1);
+    let mut contract_b = CosmWasm::new(rb2);
 
     let c1_store = contract_a.store(key1, &file_path);
     let c2_store = contract_b.store(key2, &file_path);
-    assert_eq!(c1_store.unwrap_or_default(), contract_a.code_id.unwrap());
-    assert_eq!(c2_store.unwrap_or_default(), contract_b.code_id.unwrap());
+    assert_eq!(
+        c1_store.unwrap_or_default(),
+        contract_a.code_id.unwrap_or_default()
+    );
+    assert_eq!(
+        c2_store.unwrap_or_default(),
+        contract_b.code_id.unwrap_or_default()
+    );
 
     let ca = contract_a.instantiate(key1, "{}", "contractA", None, "");
     let cb = contract_b.instantiate(key2, "{}", "contractB", None, "");
-    println!("contract_a: {:?}", ca);
-    println!("contract_b: {:?}", cb);
+    println!("contract_a: {ca:?}");
+    println!("contract_b: {cb:?}");
 
     // example: manual relayer connection
     // let wc = relayer.create_wasm_connection(
@@ -82,14 +98,14 @@ fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuild
         "counter-1",
     );
 
-    let channels = relayer.get_channels(rb1.chain_id.to_string());
-    println!("channels: {:?}", channels);
+    let channels = relayer.get_channels(rb1.chain_id.as_str());
+    println!("channels: {channels:?}");
 
     let channel_id = "channel-1";
 
     // then execute on the contract
     let res = contract_b.execute(
-        &key2,
+        key2,
         json!({"increment":{"channel":channel_id}})
             .to_string()
             .as_str(),
@@ -109,24 +125,24 @@ fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuild
             .to_string()
             .as_str(),
     );
-    println!("\nquery_res: {}", query_res);
+    println!("\nquery_res: {query_res:?}");
     assert_eq!(query_res, serde_json::json!({"data":{"count":1}}));
 }
 
-fn test_node_actions(node: &ChainNode) {
+fn test_node_actions(node: &Chain) {
     let keyname = "abc";
     let words = "offer excite scare peanut rally speak suggest unit reflect whale cloth speak joy unusual wink session effort hidden angry envelope click race allow buffalo";
     let expected_addr = "juno1cp8wps50zemt3x5tn3sgqh3x93rlt8cw6tkgx4";
 
     let res = node.recover_key(keyname, words);
-    println!("res: {:?}", res);
+    println!("res: {res:?}");
 
     let acc = node.account_key_bech_32("abc");
-    println!("acc: {:?}", acc);
-    assert_eq!(acc.unwrap(), expected_addr);
+    println!("acc: {acc:?}");
+    assert_eq!(acc.unwrap_or_default(), expected_addr);
 
     let res = node.overwrite_genesis_file(r#"{"test":{}}"#);
-    println!("res: {:?}", res);
+    println!("res: {res:?}");
     node.get_genesis_file_content(); // verify this is updated
 
     // TODO: keep this disabled for now. The chain must already have a full node running to not err.
@@ -134,9 +150,12 @@ fn test_node_actions(node: &ChainNode) {
     // println!("res: {:?}", res);
 }
 
-fn test_node_information(node: &ChainNode) {
+fn test_node_information(node: &Chain) {
     let v = node.account_key_bech_32("acc0");
-    assert_eq!(v.unwrap(), "juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl");
+    assert_eq!(
+        v.unwrap_or_default(),
+        "juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl"
+    );
 
     let v = node.account_key_bech_32("fake-key987");
     assert!(v.is_err());
@@ -173,14 +192,24 @@ fn test_paths(rb: &ChainRequestBuilder) {
     // upload Makefile to the chain's home dir
     let arb_file = get_current_dir().join("Makefile");
     match rb.upload_file(&arb_file, true) {
-        Ok(req) => {
-            let res = req.send().unwrap();
-            let body = res.text().unwrap();
-            println!("body: {}", body);
+        Ok(rb) => {
+            let res = match rb.send() {
+                Ok(r) => r,
+                Err(err) => {
+                    panic!("upload_file failed on request send {err:?}");
+                }
+            };
+            let body = match res.text() {
+                Ok(body) => body,
+                Err(err) => {
+                    panic!("upload_file failed on response body {err:?}");
+                }
+            };
+            println!("body: {body:?}");
             assert_eq!(body, "{\"success\":\"file uploaded to localjuno-1\",\"location\":\"/var/cosmos-chain/localjuno-1/Makefile\"}");
         }
         Err(err) => {
-            panic!("upload_file failed {:?}", err);
+            panic!("upload_file failed {err:?}");
         }
     };
 
@@ -189,87 +218,91 @@ fn test_paths(rb: &ChainRequestBuilder) {
     assert!(files.contains(&"config".to_string()));
     assert!(files.contains(&"data".to_string()));
     assert!(files.contains(&"keyring-test".to_string()));
-    println!("files: {:?}", files);
+    println!("files: {files:?}");
 }
 
 fn test_bank_send(rb: &ChainRequestBuilder) {
-    let before_bal = get_balance(&rb, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
+    let before_bal = get_balance(rb, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
 
-    let res = bank_send(
-        &rb,
+    let res = send(
+        rb,
         "acc0",
         "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0",
-        vec![Coin {
+        &[Coin {
             denom: "ujuno".to_string(),
             amount: Uint128::new(5),
         }],
-        Coin {
+        &Coin {
             denom: "ujuno".to_string(),
             amount: Uint128::new(5000),
         },
     );
     match res {
         Ok(res) => {
-            println!("res: {}", res);
+            println!("res: {res}");
         }
         Err(err) => {
-            println!("err: {}", err);
+            println!("err: {err}");
         }
     }
 
-    let after_amount = get_balance(&rb, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
+    let after_amount = get_balance(rb, "juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0");
 
-    println!("before: {:?}", before_bal);
-    println!("after: {:?}", after_amount);
+    println!("before: {before_bal:?}");
+    println!("after: {after_amount:?}");
 }
 
 fn test_queries(rb: &ChainRequestBuilder) {
-    test_all_accounts(&rb);
-    let c = get_bank_total_supply(&rb);
-    println!("total supply: {:?}", c);
+    test_all_accounts(rb);
+    let c = get_total_supply(rb);
+    println!("total supply: {c:?}");
 }
 fn test_binary(rb: &ChainRequestBuilder) {
     rb.binary("config", false);
-    get_keyring_accounts(&rb);
+    get_keyring_accounts(rb);
 
     let decoded = rb.decode_transaction("ClMKUQobL2Nvc21vcy5nb3YudjFiZXRhMS5Nc2dWb3RlEjIIpwISK2p1bm8xZGM3a2MyZzVrZ2wycmdmZHllZGZ6MDl1YTlwZWo1eDNsODc3ZzcYARJmClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECxjGMmYp4MlxxfFWi9x4u+jOleJVde3Cru+HnxAVUJmgSBAoCCH8YNBISCgwKBXVqdW5vEgMyMDQQofwEGkDPE4dCQ4zUh6LIB9wqNXDBx+nMKtg0tEGiIYEH8xlw4H8dDQQStgAe6xFO7I/oYVSWwa2d9qUjs9qyB8r+V0Gy", false);
-    println!("decoded: {}", decoded);
+    println!("decoded: {decoded:?}");
 }
 
 fn test_all_accounts(rb: &ChainRequestBuilder) {
     let res = rb.query("q auth accounts --output=json", false);
-    // print res
-    println!("res: {}", res);
-    let accounts = res["accounts"].as_array().unwrap();
+    println!("res: {res}");
 
-    accounts.iter().for_each(|account| {
+    let Some(accounts) = res["accounts"].as_array() else {
+        println!("No accounts found.");
+        return;
+    };
+
+    for account in accounts.iter() {
         let acc_type = account["@type"].as_str().unwrap_or_default();
 
         let addr: &str = match acc_type {
-            "/cosmos.auth.v1beta1.ModuleAccount" => account["base_account"]["address"]
+            // "/cosmos.auth.v1beta1.ModuleAccount" => account["base_account"]["address"]
+            "/cosmos.auth.v1beta1.ModuleAccount" => account.get("base_account").unwrap()["address"]
                 .as_str()
                 .unwrap_or_default(),
             _ => account["address"].as_str().unwrap_or_default(),
         };
 
-        println!("{}: {}", acc_type, addr);
-    });
+        println!("{acc_type}: {addr}");
+    }
 }
 
 fn get_keyring_accounts(rb: &ChainRequestBuilder) {
     let accounts = rb.binary("keys list --keyring-backend=test", false);
 
     let addrs = accounts["addresses"].as_array();
-    match addrs {
-        Some(addrs) => {
-            addrs.iter().for_each(|acc| {
+    addrs.map_or_else(
+        || {
+            println!("No accounts found.");
+        },
+        |addrs| {
+            for acc in addrs.iter() {
                 let name = acc["name"].as_str().unwrap_or_default();
                 let address = acc["address"].as_str().unwrap_or_default();
-                println!("Key '{}': {}", name, address);
-            });
-        }
-        None => {
-            println!("No accounts found.");
-        }
-    }
+                println!("Key '{name}': {address}");
+            }
+        },
+    );
 }

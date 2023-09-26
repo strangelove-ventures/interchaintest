@@ -22,4 +22,16 @@ pub enum LocalError {
 
     #[error("key_bech32 failed. reason: {reason}")]
     KeyBech32Failed { reason: String },
+
+    #[error("This CosmWasm object has no value for: {value_type}")]
+    CWValueIsNone { value_type: String },
+
+    #[error("API URL is not found.")]
+    ApiNotFound {},
+
+    #[error("Chain ID is not found.")]
+    ChainIdNotFound {},
+
+    #[error("The local-interchain API server did not start in time.")]
+    ServerDidNotStart {},
 }
