@@ -147,7 +147,7 @@ func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic stri
 	cmd := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | pcli -d %s -n %s keys import phrase`, mnemonic, keyPath, pdUrl),
+		fmt.Sprintf(`echo %q | pcli --home %s -n %s keys import phrase`, mnemonic, keyPath, pdUrl),
 	}
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
