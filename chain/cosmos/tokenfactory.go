@@ -2,8 +2,11 @@ package cosmos
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 func TokenFactoryBurnDenom(c *CosmosChain, ctx context.Context, keyName, fullDenom string, amount uint64) (string, error) {
@@ -26,14 +29,20 @@ func TokenFactoryChangeAdmin(c *CosmosChain, ctx context.Context, keyName, fullD
 }
 
 // create denom may require a lot of gas if the chain has the DenomCreationGasConsume param enabled
-func TokenFactoryCreateDenom(c *CosmosChain, ctx context.Context, keyName, denomName, gas string) (string, error) {
+func TokenFactoryCreateDenom(c *CosmosChain, ctx context.Context, user ibc.Wallet, denomName string, gas uint64) (string, error) {
 	cmd := []string{"tokenfactory", "create-denom", denomName}
 
-	if gas != "" {
-		cmd = append(cmd, "--gas", gas)
+	if gas != 0 {
+		cmd = append(cmd, "--gas", strconv.FormatUint(gas, 10))
 	}
 
-	return c.getFullNode().ExecTx(ctx, keyName, cmd...)
+	txHash, err := c.getFullNode().ExecTx(ctx, user.KeyName(), cmd...)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(txHash)
+
+	return "factory/" + user.FormattedAddress() + "/" + denomName, nil
 }
 
 func TokenFactoryForceTransferDenom(c *CosmosChain, ctx context.Context, keyName, fullDenom string, amount uint64, fromAddr, toAddr string) (string, error) {
@@ -48,16 +57,30 @@ func TokenFactoryMintDenom(c *CosmosChain, ctx context.Context, keyName, fullDen
 	)
 }
 
-func TokenFactoryMintDenomTo(c *CosmosChain, ctx context.Context, keyName, fullDenom, toAddr string, amount uint64) (string, error) {
+func TokenFactoryMintDenomTo(c *CosmosChain, ctx context.Context, keyName, fullDenom string, amount uint64, toAddr string) (string, error) {
 	return c.getFullNode().ExecTx(ctx, keyName,
 		"tokenfactory", "mint-to", toAddr, convertToCoin(amount, fullDenom),
 	)
 }
 
-func TokenFactoryMetadata(c *CosmosChain, ctx context.Context, keyName, fullDenom, ticker, description, exponent string) (string, error) {
+func TokenFactoryMetadata(c *CosmosChain, ctx context.Context, keyName, fullDenom, ticker, description string, exponent uint64) (string, error) {
 	return c.getFullNode().ExecTx(ctx, keyName,
-		"tokenfactory", "modify-metadata", fullDenom, ticker, fmt.Sprintf("'%s'", description), exponent,
+		"tokenfactory", "modify-metadata", fullDenom, ticker, description, strconv.FormatUint(exponent, 10),
 	)
+}
+
+func TokenFactoryGetAdmin(c *CosmosChain, ctx context.Context, fullDenom string) (*QueryDenomAuthorityMetadataResponse, error) {
+	res := &QueryDenomAuthorityMetadataResponse{}
+	stdout, stderr, err := c.getFullNode().ExecQuery(ctx, "tokenfactory", "denom-authority-metadata", fullDenom)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tokenfactory denom-authority-metadata: %w\nstdout: %s\nstderr: %s", err, stdout, stderr)
+	}
+
+	if err := json.Unmarshal(stdout, res); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func convertToCoin(amount uint64, denom string) string {
