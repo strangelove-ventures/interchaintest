@@ -34,6 +34,7 @@ fn main() {
                 panic!("ChainRequestBuilder failed: {err:?}");
             }
         };
+    let node_a: Chain = Chain::new(&rb);
 
     let rb2: ChainRequestBuilder =
         match ChainRequestBuilder::new(API_URL.to_string(), "localjuno-2".to_string(), true) {
@@ -47,14 +48,13 @@ fn main() {
     test_queries(&rb);
     test_binary(&rb);
     test_bank_send(&rb);
-    test_ibc_contract_relaying(&rb, &rb2);
 
-    let node: Chain = Chain::new(&rb);
-    test_node_information(&node);
-    test_node_actions(&node);
+    test_ibc_contract_relaying(&node_a, &rb, &rb2);
+    test_node_information(&node_a);
+    test_node_actions(&node_a);
 }
 
-fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuilder) {
+fn test_ibc_contract_relaying(node: &Chain, rb1: &ChainRequestBuilder, rb2: &ChainRequestBuilder) {
     // local-ic start juno_ibc
     let file_path = get_contract_path().join("cw_ibc_example.wasm");
     let key1 = "acc0";
@@ -127,6 +127,11 @@ fn test_ibc_contract_relaying(rb1: &ChainRequestBuilder, rb2: &ChainRequestBuild
     );
     println!("\nquery_res: {query_res:?}");
     assert_eq!(query_res, serde_json::json!({"data":{"count":1}}));
+
+    // dump the contracts state to JSON
+    let height = node.get_height();
+    let dump_res = node.dump_contract_state(&contract_a.contract_addr.as_ref().unwrap(), height);
+    println!("dump_res: {dump_res:?}");    
 }
 
 fn test_node_actions(node: &Chain) {
@@ -178,9 +183,8 @@ fn test_node_information(node: &Chain) {
         res["cosmos_sdk_version"].as_str().unwrap_or_default()
     );
 
-    // TODO: test these:
-    // node.query_proposal("1");
-    // node.dump_contract_state("contract", 5);
+    // TODO: test:
+    // get_proposal(rb, "1");
 }
 
 fn test_paths(rb: &ChainRequestBuilder) {

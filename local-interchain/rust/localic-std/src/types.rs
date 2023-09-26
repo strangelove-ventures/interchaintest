@@ -96,13 +96,18 @@ impl ActionHandler {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct TransactionResponse {
+    pub status_code: u64,
     pub tx_hash: Option<String>,
-    pub rawlog: Option<String>,
+    pub raw_log: Option<String>,
 }
 
 impl fmt::Display for TransactionResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "tx_hash: {:?}, rawlog: {:?}", self.tx_hash, self.rawlog)
+        write!(
+            f,
+            "status: {:?} tx_hash: {:?}, rawlog: {:?}",
+            self.status_code, self.tx_hash, self.raw_log
+        )
     }
 }
 

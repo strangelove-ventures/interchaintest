@@ -91,8 +91,16 @@ impl CosmWasm<'_> {
     /// # Panics
     ///
     /// Panics if the contract address already set in the `CosmWasm` object.
-    #[must_use]
-    pub fn execute(&self, account_key: &str, msg: &str, flags: &str) -> TransactionResponse {
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the sdk status code can not be found in the JSON blob.
+    pub fn execute(
+        &self,
+        account_key: &str,
+        msg: &str,
+        flags: &str,
+    ) -> Result<TransactionResponse, LocalError> {
         let contract_addr: &str = match &self.contract_addr {
             Some(addr) => addr.as_ref(),
             None => panic!("contract_addr is none"),
@@ -199,14 +207,16 @@ pub fn contract_instantiate(
     }
 }
 
-#[must_use]
+/// # Errors
+///
+/// Returns `Err` if the SDK response code can not be found in the transaction data.
 pub fn contract_execute(
     rb: &ChainRequestBuilder,
     contract_addr: &str,
     account_key: &str,
     msg: &str,
     flags: &str,
-) -> TransactionResponse {
+) -> Result<TransactionResponse, LocalError> {
     let mut cmd = format!(
         "tx wasm execute {contract_addr} {msg} --from={account_key} --keyring-backend=test --home=%HOME% --node=%RPC% --chain-id=%CHAIN_ID% --yes {flags}"
     );
@@ -221,18 +231,24 @@ pub fn contract_execute(
     println!("execute_contract res: {}", &res);
 
     let tx_hash = rb.get_tx_hash(&res);
-    let tx_raw_log = rb.get_raw_log(&res);
+    let raw_log = rb.get_raw_log(&res);
 
-    if let Some(raw_log) = &tx_raw_log {
-        if raw_log != "[]" {
-            println!("execute_contract raw_log: {raw_log}");
+    let status_code = match rb.get_sdk_status_code(&res) {
+        Ok(code_id) => code_id,
+        Err(e) => {
+            return Err(e);
         }
+    };
+
+    if let Some(tx_raw_log) = &raw_log {
+        println!("raw_log: {tx_raw_log}");
     }
 
-    TransactionResponse {
+    Ok(TransactionResponse {
+        status_code,
         tx_hash,
-        rawlog: tx_raw_log,
-    }
+        raw_log,
+    })
 }
 
 #[must_use]

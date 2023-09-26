@@ -117,6 +117,19 @@ impl ChainRequestBuilder {
         tx_hash.map(std::string::ToString::to_string)
     }
 
+    /// # Errors
+    ///
+    /// Returns `Err` if the transaction status code is not found.
+    pub fn get_sdk_status_code(&self, tx_res: &Value) -> Result<u64, LocalError> {
+        let status_id = tx_res["code"].as_u64();
+        match status_id {
+            Some(code) => Ok(code),
+            None => Err(LocalError::SdkTransactionStatusCodeNotFound {
+                reason: "'code' not found in Tx JSON response.".to_string(),
+            }),
+        }
+    }
+
     #[must_use]
     pub fn get_raw_log(&self, tx_res: &Value) -> Option<String> {
         let raw_log = tx_res["raw_log"].as_str();
