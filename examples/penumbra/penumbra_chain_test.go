@@ -35,7 +35,7 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.60.0,v0.34.24",
+			Version: "v0.61.0,v0.34.27",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbra-1",
 			},

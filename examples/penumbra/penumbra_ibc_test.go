@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -16,6 +17,9 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between two Penumbra testnet networks.
+// Two instances of Penumbra will be spun up, the go-relayer will be configured, and an ics-20 token transfer will be
+// conducted from chainA -> chainB.
 func TestPenumbraToPenumbraIBC(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -32,7 +36,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 			Name:    "penumbra",
 			Version: "v0.60.0,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "penumbra-1",
+				ChainID: "penumbraA-0",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
@@ -41,7 +45,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 			Name:    "penumbra",
 			Version: "v0.60.0,v0.34.24",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "penumbra-2",
+				ChainID: "penumbraB-0",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
@@ -63,6 +67,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 		relayer.DockerImage(&i),
+		relayer.ImagePull(false),
 	).Build(t, client, network)
 
 	const pathName = "ab"
@@ -112,7 +117,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	)
 
 	// Fund users and check init balances
-	initBalance := math.NewInt(1_000_000)
+	initBalance := math.NewInt(1_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainA)
 	require.Equal(t, 1, len(users))
 
@@ -137,6 +142,56 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, initBalance))
 
-	//bobAddr, err := chainA.GetAddress(ctx, bob.KeyName())
+	// Compose ics-20 transfer details and initialize transfer
+	bobAddr, err := chainB.GetAddress(ctx, bob.KeyName())
+	require.NoError(t, err)
+	t.Logf("Bob Addr From App: %s \n", bobAddr)
+
+	transferAmount := math.NewInt(1_000_000)
+	transfer := ibc.WalletAmount{
+		Address: string(bobAddr),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainA.Config().ChainID, chainB.Config().ChainID)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	expectedBal := initBalance.Sub(transferAmount)
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
+
+	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
+	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
+	ibcDenomTrace := transfertypes.ParseDenomTrace(ibcDenom)
+	chainADenomOnChainB := ibcDenomTrace.IBCDenom()
+
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
+
+	//aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
 	//require.NoError(t, err)
+	//t.Logf("Alice Addr From App: %s \n", aliceAddr)
+	//
+	//aliceClient := chainA.PenumbraNodes[0].PenumbraClientNodes[alice.KeyName()]
+	//bobClient := chainB.PenumbraNodes[0].PenumbraClientNodes[bob.KeyName()]
+	//
+	//aAddr, err := aliceClient.GetAddress(ctx)
+	//require.NoError(t, err)
+	//t.Logf("Alice Addr From Client: %s \n", aAddr)
+	//
+	//bAddr, err := bobClient.GetAddress(ctx)
+	//require.NoError(t, err)
+	//t.Logf("Bob Addr From Client: %s \n", bAddr)
+	//
+	//require.Equal(t, aliceAddr, aAddr)
+	//require.Equal(t, bobAddr, bAddr)
 }

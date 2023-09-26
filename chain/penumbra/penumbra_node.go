@@ -64,6 +64,11 @@ func (p *PenumbraNode) CreateClientNode(
 	spendKey string,
 	fullViewingKey string,
 ) error {
+	addr, err := p.PenumbraAppNode.GetAddress(ctx, keyName)
+	if err != nil {
+		return err
+	}
+
 	p.clientsMu.Lock()
 	clientNode, err := NewClientNode(
 		ctx,
@@ -75,8 +80,8 @@ func (p *PenumbraNode) CreateClientNode(
 		image,
 		dockerClient,
 		networkID,
-		p.address,
-		p.addrString,
+		addr,
+		string(addr),
 	)
 	if err != nil {
 		p.clientsMu.Unlock()
@@ -85,14 +90,12 @@ func (p *PenumbraNode) CreateClientNode(
 	p.PenumbraClientNodes[keyName] = clientNode
 	p.clientsMu.Unlock()
 
-	if err := clientNode.Initialize(ctx, spendKey, fullViewingKey); err != nil {
+	pdAddr := "tcp://" + p.PenumbraAppNode.HostName() + ":" + strings.Split(grpcPort, "/")[0]
+	if err := clientNode.Initialize(ctx, pdAddr, spendKey, fullViewingKey); err != nil {
 		return err
 	}
 
-	if err := clientNode.CreateNodeContainer(
-		ctx,
-		"tcp://"+p.PenumbraAppNode.HostName()+":"+strings.Split(grpcPort, "/")[0],
-	); err != nil {
+	if err := clientNode.CreateNodeContainer(ctx); err != nil {
 		return err
 	}
 

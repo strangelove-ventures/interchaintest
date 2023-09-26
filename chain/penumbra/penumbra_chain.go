@@ -219,9 +219,8 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 // amount, token denom, and recipient are specified in the amount.
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	fn := c.getFullNode()
-
 	if len(fn.PenumbraClientNodes) == 0 {
-		return fmt.Errorf("no pclientd instances on the node to use when sending funds")
+		return fmt.Errorf("no pclientd instances configured to use when sending funds")
 	}
 
 	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
@@ -238,8 +237,9 @@ func (c *PenumbraChain) SendIBCTransfer(
 ) (ibc.Tx, error) {
 	fn := c.getFullNode()
 	if len(fn.PenumbraClientNodes) == 0 {
-		return ibc.Tx{}, fmt.Errorf("no pclientd instances on the node for ibc transfers")
+		return ibc.Tx{}, fmt.Errorf("no pclientd instances configured to use when sending ibc transfers")
 	}
+
 	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
@@ -257,7 +257,7 @@ func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
 func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
 	fn := c.getFullNode()
 	if len(fn.PenumbraClientNodes) == 0 {
-		return math.Int{}, fmt.Errorf("no pclientd instances on the node for balance requests")
+		return math.Int{}, fmt.Errorf("no pclientd instances configured to use for balance requests")
 	}
 
 	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
@@ -598,13 +598,13 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (c PenumbraChain) CreateClientNode(
+func (c *PenumbraChain) CreateClientNode(
 	ctx context.Context,
 	keyName string,
 ) error {
 	val := c.getFullNode()
 	if val == nil {
-		return fmt.Errorf("there are no penumbra nodes configured to create a client on")
+		return fmt.Errorf("there are no penumbra nodes configured to use when initializing a new instance of pclientd")
 	}
 
 	fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)

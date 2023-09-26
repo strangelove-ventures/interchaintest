@@ -589,14 +589,14 @@ panacea:
 penumbra:
   name: penumbra
   type: penumbra
-  bin: tendermint
+  bin: cometbft
   bech32-prefix: penumbrav2t
   denom: upenumbra
   gas-prices: 0.0upenumbra
   gas-adjustment: 1.3
   trusting-period: 672h
   images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/tendermint
+    - repository: ghcr.io/strangelove-ventures/heighliner/cometbft
       uid-gid: 1025:1025
     - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
       uid-gid: 1025:1025

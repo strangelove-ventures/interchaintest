@@ -10,11 +10,18 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	clientv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/client/v1alpha1"
-	cryptov1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/crypto/v1alpha1"
+	assetv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
+	feev1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/fee/v1alpha1"
+	ibcv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
+	shielded_poolv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
+	keysv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1alpha1"
+	numv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1alpha1"
+	transactionv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1alpha1"
 	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1alpha1"
 	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1alpha1"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -127,9 +134,29 @@ func (p *PenumbraClientNode) HomeDir() string {
 	return "/home/pclientd"
 }
 
+// GetAddress returns the Bech32m encoded string of the inner bytes as a slice of bytes.
 func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
-	// TODO make grpc call to pclientd to get address
-	panic("not yet implemented")
+	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer channel.Close()
+
+	addrReq := &viewv1alpha1.AddressByIndexRequest{
+		AddressIndex: &keysv1alpha1.AddressIndex{
+			Account: 0,
+		},
+		// DisplayConfirm: true,
+	}
+
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+
+	resp, err := viewClient.AddressByIndex(ctx, addrReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Address.Inner, nil
 }
 
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
@@ -145,14 +172,14 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
 		AccountGroupId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
-			Value: &cryptov1alpha1.Value{
-				Amount: &cryptov1alpha1.Amount{
+			Value: &assetv1alpha1.Value{
+				Amount: &numv1alpha1.Amount{
 					Lo: lo,
 					Hi: hi,
 				},
-				AssetId: &cryptov1alpha1.AssetId{AltBaseDenom: amount.Denom},
+				AssetId: &assetv1alpha1.AssetId{AltBaseDenom: amount.Denom},
 			},
-			Address: &cryptov1alpha1.Address{AltBech32M: amount.Address},
+			Address: &keysv1alpha1.Address{AltBech32M: amount.Address},
 		}},
 	}
 
@@ -167,7 +194,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
-		AccountGroupId:    &cryptov1alpha1.AccountGroupId{Inner: make([]byte, 32)},
+		AccountGroupId:    &keysv1alpha1.AccountGroupId{Inner: make([]byte, 32)},
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
@@ -207,8 +234,196 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	// TODO make grpc call to pclientd to send ibc transfer
-	panic("not yet implemented")
+	fmt.Println("In SendIBCTransfer from client perspective.")
+
+	channel, err := grpc.Dial(
+		p.hostGRPCPort,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+	defer channel.Close()
+
+	//fmt.Println("Building MsgTransfer...")
+	// TODO may need to be more defensive than this. additionally we may want to validate the addr string
+	if p.addrString == "" {
+		return ibc.Tx{}, fmt.Errorf("address string was not cached on pclientd instance for key with name %s", p.KeyName)
+	}
+
+	timeoutHeight, timeoutTimestamp := ibcTransferTimeouts(options)
+
+	//msgTransfer := &transfertypes.MsgTransfer{
+	//	// TODO: there may be edge cases where this port is incorrect e.g. smart contracts or other actors
+	//	SourcePort:       transfertypes.PortID,
+	//	SourceChannel:    channelID,
+	//	Token:            sdk.NewCoin(amount.Denom, amount.Amount),
+	//	Sender:           p.addrString,
+	//	Receiver:         amount.Address,
+	//	TimeoutHeight:    timeoutHeight,
+	//	TimeoutTimestamp: timeoutTimestamp,
+	//	Memo:             options.Memo,
+	//}
+
+	fmt.Println("Building Ics20Withdrawal...")
+	hi, lo := translateBigInt(amount.Amount)
+
+	withdrawal := &ibcv1alpha1.Ics20Withdrawal{
+		Amount: &numv1alpha1.Amount{
+			Lo: lo,
+			Hi: hi,
+		},
+		Denom: &assetv1alpha1.Denom{
+			Denom: amount.Denom,
+		},
+		DestinationChainAddress: amount.Address,
+		ReturnAddress: &keysv1alpha1.Address{
+			AltBech32M: p.addrString,
+		},
+		TimeoutHeight: &timeoutHeight,
+		TimeoutTime:   timeoutTimestamp,
+		SourceChannel: channelID,
+	}
+
+	//anyMsg, err := codectypes.NewAnyWithValue(withdrawal)
+	//if err != nil {
+	//	return ibc.Tx{}, err
+	//}
+
+	//fmt.Printf("MsgTransfer built: %+v \n", msgTransfer)
+	fmt.Printf("Ics20Withdrawal built: %+v \n", withdrawal)
+
+	// TODO: Maybe Ics20Withdrawal is actually composed like this?
+
+	//ap := &transactionv1alpha1.ActionPlan{
+	//	Action: &transactionv1alpha1.Action_Ics20Withdrawal{
+	//		Ics20Withdrawal: withdrawal,
+	//	},
+	//}
+
+	fmt.Println("Building Action...")
+	action := &transactionv1alpha1.Action{
+		Action: &transactionv1alpha1.Action_Ics20Withdrawal{
+			Ics20Withdrawal: withdrawal,
+		},
+	}
+
+	fmt.Println("Building TransactionBody...")
+	txBody := &transactionv1alpha1.TransactionBody{
+		Actions: []*transactionv1alpha1.Action{
+			action,
+		},
+		TransactionParameters: &transactionv1alpha1.TransactionParameters{},
+		Fee: &feev1alpha1.Fee{
+			Amount: &numv1alpha1.Amount{
+				Lo: 0,
+				Hi: 0,
+			},
+		},
+		MemoData: &transactionv1alpha1.MemoData{},
+	}
+
+	fmt.Println("Building Transaction...")
+	tx := &transactionv1alpha1.Transaction{
+		Body:       txBody,
+		BindingSig: nil,
+		Anchor:     nil,
+	}
+
+	fmt.Println("Building BroadcastTransactionRequest")
+	btr := &viewv1alpha1.BroadcastTransactionRequest{
+		Transaction:    tx,
+		AwaitDetection: true,
+	}
+
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+
+	fmt.Println("Sending BroadcastTransactionRequest...")
+	broadcastResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+	fmt.Println("Received BroadcastTransactionResponse")
+
+	//// Generate a transaction plan for initiating an ics-20 transfer
+	//fmt.Println("Building TransactionPlannerRequest...")
+	//tpr := &viewv1alpha1.TransactionPlannerRequest{
+	//	AccountGroupId: nil,
+	//	IbcActions: []*ibcv1alpha1.IbcAction{
+	//		{RawAction: anyMsg},
+	//	},
+	//}
+	//
+	//
+	//
+	//fmt.Println("Sending TransactionPlannerRequest...")
+	//resp, err := viewClient.TransactionPlanner(ctx, tpr)
+	//if err != nil {
+	//	return ibc.Tx{}, err
+	//}
+	//fmt.Println("Received TransactionPlannerResponse")
+	//
+	//// Get authorization data for the transaction from pclientd (signing).
+	//custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+	//
+	//fmt.Println("Building AuthorizeRequest...")
+	//authorizeReq := &custodyv1alpha1.AuthorizeRequest{
+	//	Plan:              resp.Plan,
+	//	AccountGroupId:    &cryptov1alpha1.AccountGroupId{Inner: make([]byte, 32)},
+	//	PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
+	//}
+	//
+	//fmt.Println("Sending AuthorizeRequest...")
+	//authData, err := custodyClient.Authorize(ctx, authorizeReq)
+	//if err != nil {
+	//	return ibc.Tx{}, err
+	//}
+	//fmt.Println("Received AuthorizeResponse")
+	//
+	//// Have pclientd build and sign the planned transaction.
+	//fmt.Println("Building WitnessAndBuildRequest...")
+	//wbr := &viewv1alpha1.WitnessAndBuildRequest{
+	//	TransactionPlan:   resp.Plan,
+	//	AuthorizationData: authData.Data,
+	//}
+	//
+	//fmt.Println("Sending WitnessAndBuildRequest...")
+	//tx, err := viewClient.WitnessAndBuild(ctx, wbr)
+	//if err != nil {
+	//	return ibc.Tx{}, err
+	//}
+	//fmt.Println("Received WitnessAndBuildResponse...")
+	//
+	//// Have pclientd broadcast and await confirmation of the built transaction.
+	//fmt.Println("Building BroadcastTxRequest...")
+	//btr := &viewv1alpha1.BroadcastTransactionRequest{
+	//	Transaction:    tx.Transaction,
+	//	AwaitDetection: true,
+	//}
+	//
+	//fmt.Println("Sending BroadcastTxRequest...")
+	//broadcastResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	//if err != nil {
+	//	return ibc.Tx{}, err
+	//}
+	//fmt.Println("Received BroadcastTxResponse...")
+
+	// TODO: fill in rest of tx details
+	return ibc.Tx{
+		Height:   broadcastResp.DetectionHeight,
+		TxHash:   string(broadcastResp.Id.Hash),
+		GasSpent: 0,
+		Packet: ibc.Packet{
+			Sequence:         0,
+			SourcePort:       "",
+			SourceChannel:    "",
+			DestPort:         "",
+			DestChannel:      "",
+			Data:             nil,
+			TimeoutHeight:    "",
+			TimeoutTimestamp: 0,
+		},
+	}, nil
 }
 
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
@@ -224,10 +439,10 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 
 	balanceRequest := &viewv1alpha1.BalancesRequest{
-		AccountFilter: &cryptov1alpha1.AddressIndex{
+		AccountFilter: &keysv1alpha1.AddressIndex{
 			Account: 0,
 		},
-		AssetIdFilter: &cryptov1alpha1.AssetId{
+		AssetIdFilter: &assetv1alpha1.AssetId{
 			AltBaseDenom: denom,
 		},
 	}
@@ -301,7 +516,7 @@ func translateBigInt(i math.Int) (uint64, uint64) {
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
-func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *cryptov1alpha1.AssetId) (*cryptov1alpha1.DenomMetadata, error) {
+func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *assetv1alpha1.AssetId) (*assetv1alpha1.DenomMetadata, error) {
 	channel, err := grpc.Dial(
 		p.hostGRPCPort,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -311,8 +526,8 @@ func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *cryp
 	}
 	defer channel.Close()
 
-	queryClient := clientv1alpha1.NewSpecificQueryServiceClient(channel)
-	req := &clientv1alpha1.DenomMetadataByIdRequest{
+	queryClient := shielded_poolv1alpha1.NewQueryServiceClient(channel)
+	req := &shielded_poolv1alpha1.DenomMetadataByIdRequest{
 		ChainId: p.Chain.Config().ChainID,
 		AssetId: assetId,
 	}
@@ -334,13 +549,15 @@ func (p *PenumbraClientNode) WriteFile(ctx context.Context, content []byte, relP
 }
 
 // Initialize loads the view and spend keys into the pclientd config.
-func (p *PenumbraClientNode) Initialize(ctx context.Context, spendKey, fullViewingKey string) error {
+func (p *PenumbraClientNode) Initialize(ctx context.Context, pdAddress, spendKey, fullViewingKey string) error {
 	c := make(testutil.Toml)
 
 	kmsConfig := make(testutil.Toml)
 	kmsConfig["spend_key"] = spendKey
 	c["kms_config"] = kmsConfig
-	c["fvk"] = fullViewingKey
+	c["full_viewing_key"] = fullViewingKey
+	c["grpc_url"] = pdAddress
+	c["bind_addr"] = "0.0.0.0:" + strings.Split(pclientdPort, "/")[0]
 
 	buf := new(bytes.Buffer)
 	if err := toml.NewEncoder(buf).Encode(c); err != nil {
@@ -350,16 +567,17 @@ func (p *PenumbraClientNode) Initialize(ctx context.Context, spendKey, fullViewi
 	return p.WriteFile(ctx, buf.Bytes(), "config.toml")
 }
 
-func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress string) error {
+func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{
 		"pclientd",
 		"--home", p.HomeDir(),
-		"--node", pdAddress,
+		//"--node", pdAddress,
 		"start",
-		"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
+		//"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
 	}
 
 	var env []string
+	env = append(env, "RUST_LOG=debug")
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
 }
@@ -393,4 +611,39 @@ func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []strin
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
+}
+
+// ibcTransferTimeouts returns a relative block height and timestamp timeout value to be used when sending an ics-20 transfer.
+func ibcTransferTimeouts(options ibc.TransferOptions) (clienttypes.Height, uint64) {
+	var (
+		timeoutHeight    clienttypes.Height
+		timeoutTimestamp uint64
+	)
+
+	// timeout is nil - use ics-20 defaults
+	// timeout height and timestamp both set to 0 - use ics-20 defaults
+	// timeout height and timestamp both have values greater than 0 - pass through values
+	// timeout height or timestamp greater than 0 but other is zero - pass through values
+	switch {
+	case options.Timeout == nil:
+		timeoutHeight, timeoutTimestamp = defaultTransferTimeouts()
+	case options.Timeout.NanoSeconds == 0 && options.Timeout.Height == 0:
+		timeoutHeight, timeoutTimestamp = defaultTransferTimeouts()
+	default:
+		timeoutTimestamp = options.Timeout.NanoSeconds
+		timeoutHeight = clienttypes.NewHeight(0, options.Timeout.Height)
+	}
+
+	return timeoutHeight, timeoutTimestamp
+}
+
+// defaultTransferTimeouts returns the default relative timeout values from ics-20 for both block height and timestamp
+// based timeouts.
+// see: https://github.com/cosmos/ibc-go/blob/0364aae96f0326651c411ed0f3486be570280e5c/modules/apps/transfer/types/packet.go#L22-L33
+func defaultTransferTimeouts() (clienttypes.Height, uint64) {
+	t, err := clienttypes.ParseHeight(transfertypes.DefaultRelativePacketTimeoutHeight)
+	if err != nil {
+		panic(fmt.Errorf("cannot parse packet timeout height string when retrieving default value: %w", err))
+	}
+	return t, transfertypes.DefaultRelativePacketTimeoutTimestamp
 }
