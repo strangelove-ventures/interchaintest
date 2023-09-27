@@ -120,6 +120,12 @@ impl CosmWasm<'_> {
         contract_query(self.rb, contract_addr, msg)
     }
 
+    // make a query request which uses a serde_json::Value as the msg
+    #[must_use]
+    pub fn query_value(&self, msg: &Value) -> Value {
+        self.query(msg.to_string().as_str())
+    }
+
     /// # Errors
     ///
     /// Returns `Err` if the contract address is not found in the transaction logs.

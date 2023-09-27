@@ -119,19 +119,14 @@ fn test_ibc_contract_relaying(node: &Chain, rb1: &ChainRequestBuilder, rb2: &Cha
         relayer.flush("juno-ibc-1", channel_id)
     );
 
-    // query contract
-    let query_res = contract_a.query(
-        json!({"get_count":{"channel":channel_id}})
-            .to_string()
-            .as_str(),
-    );
+    let query_res = contract_a.query_value(&json!({"get_count":{"channel":channel_id}}));
     println!("\nquery_res: {query_res:?}");
     assert_eq!(query_res, serde_json::json!({"data":{"count":1}}));
 
     // dump the contracts state to JSON
     let height = node.get_height();
     let dump_res = node.dump_contract_state(&contract_a.contract_addr.as_ref().unwrap(), height);
-    println!("dump_res: {dump_res:?}");    
+    println!("dump_res: {dump_res:?}");
 }
 
 fn test_node_actions(node: &Chain) {

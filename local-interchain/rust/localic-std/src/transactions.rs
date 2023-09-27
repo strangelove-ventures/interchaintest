@@ -8,6 +8,7 @@ use crate::{
     types::{ActionHandler, RequestType},
 };
 
+#[derive(Debug)]
 pub struct ChainRequestBuilder {
     pub client: Client,
     pub api: String,
