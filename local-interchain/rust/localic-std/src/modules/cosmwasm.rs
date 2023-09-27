@@ -193,8 +193,6 @@ pub fn contract_instantiate(
 
     let res = rb.tx(cmd.as_str(), false)?;
 
-    println!("wasm instantiate res: {}", &res);
-
     let tx_hash: Option<String> = rb.get_tx_hash(&res);
     let raw_log: Option<String> = rb.get_raw_log(&res);
 
@@ -234,7 +232,6 @@ pub fn contract_execute(
     }
 
     let res = rb.binary(cmd.as_str(), false);
-    println!("execute_contract res: {}", &res);
 
     let tx_hash = rb.get_tx_hash(&res);
     let raw_log = rb.get_raw_log(&res);
@@ -262,7 +259,6 @@ pub fn contract_query(rb: &ChainRequestBuilder, contract_addr: &str, msg: &str) 
     let cmd = format!(
         "query wasm contract-state smart {contract_addr} {msg} --output=json --node=%RPC%",
     );
-    println!("query_contract cmd: {cmd}");
     rb.query(&cmd, false)
 }
 

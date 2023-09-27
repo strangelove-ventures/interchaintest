@@ -49,8 +49,6 @@ impl Relayer<'_> {
             .header("Content-Type", "Content-Type: application/json")
             .send();
 
-        println!("relayer execute res: {res:?}");
-
         if return_text {
             let res_text = match res {
                 Ok(res) => res.text().unwrap_or_default(),
@@ -101,11 +99,7 @@ impl Relayer<'_> {
             "rly tx channel {path} --src-port {source} --dst-port {destination} --order {order} --version {version}",
         );
 
-        println!("create_wasm_connection cmd: {cmd}");
-
-        let res = self.execute(cmd.as_str(), false);
-        println!("create_wasm_connection res: {res:?}");
-        res
+        self.execute(cmd.as_str(), false)
     }
 
     /// # Errors

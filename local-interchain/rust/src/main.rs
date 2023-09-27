@@ -212,7 +212,13 @@ fn test_paths(rb: &ChainRequestBuilder) {
         }
     };
 
-    let files = get_files(rb, "/var/cosmos-chain/localjuno-1");
+    let files = match get_files(rb, "/var/cosmos-chain/localjuno-1") {
+        Ok(files) => files,
+        Err(err) => {
+            panic!("get_files failed {err:?}");
+        }
+    };
+    
     assert!(files.contains(&"Makefile".to_string()));
     assert!(files.contains(&"config".to_string()));
     assert!(files.contains(&"data".to_string()));

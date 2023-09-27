@@ -26,11 +26,9 @@ impl ChainRequestBuilder {
         log_output: bool,
     ) -> Result<ChainRequestBuilder, LocalError> {
         if api.is_empty() {
-            println!("api cannot be empty");
             return Err(LocalError::ApiNotFound {});
         }
         if chain_id.is_empty() {
-            println!("chain_id cannot be empty");
             return Err(LocalError::ChainIdNotFound {});
         }
 
@@ -226,9 +224,6 @@ impl ChainRequestBuilder {
         let req = self.upload_file(abs_path, false)?;
 
         let req = req.json(&payload).header("Upload-Type", "cosmwasm");
-
-        // print req
-        println!("[upload_contract req]: {req:?}");
 
         let resp = match req.send() {
             Ok(resp) => resp,
