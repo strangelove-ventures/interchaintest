@@ -12,7 +12,7 @@ build:
 
 .PHONY: run
 run:
-	../bin/local-ic $(filter-out $@,$(MAKECMDGOALS))
+	go run ./cmd/local-ic $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: install
 install:
