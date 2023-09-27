@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
@@ -20,7 +22,7 @@ type PenumbraAppNode struct {
 
 	Index        int
 	VolumeName   string
-	Chain        ibc.Chain
+	Chain        *PenumbraChain
 	TestName     string
 	NetworkID    string
 	DockerClient *client.Client
@@ -33,15 +35,59 @@ type PenumbraAppNode struct {
 	hostGRPCPort string
 }
 
+func NewPenumbraAppNode(
+	ctx context.Context,
+	log *zap.Logger,
+	chain *PenumbraChain,
+	index int,
+	testName string,
+	dockerClient *dockerclient.Client,
+	networkID string,
+	image ibc.DockerImage,
+) (*PenumbraAppNode, error) {
+	pn := &PenumbraAppNode{log: log, Index: index, Chain: chain,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+
+	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
+
+	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel:   testName,
+			dockerutil.NodeOwnerLabel: pn.Name(),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating penumbra volume: %w", err)
+	}
+	pn.VolumeName = pv.Name
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: log,
+
+		Client: dockerClient,
+
+		VolumeName: pn.VolumeName,
+		ImageRef:   pn.Image.Ref(),
+		TestName:   pn.TestName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return nil, fmt.Errorf("set penumbra volume owner: %w", err)
+	}
+
+	return pn, nil
+}
+
 const (
-	valKey         = "validator"
-	rpcPort        = "26657/tcp"
-	tendermintPort = "26658/tcp"
-	grpcPort       = "9090/tcp"
+	valKey      = "validator"
+	rpcPort     = "26657/tcp"
+	abciPort    = "26658/tcp"
+	grpcPort    = "8080/tcp"
+	metricsPort = "9000/tcp"
 )
 
 var exposedPorts = nat.PortSet{
-	nat.Port(tendermintPort): {},
+	nat.Port(abciPort):    {},
+	nat.Port(grpcPort):    {},
+	nat.Port(metricsPort): {},
 }
 
 // Name of the test node container
@@ -72,6 +118,19 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 	return nil
+}
+
+func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	cmd := []string{"pcli", "-d", keyPath, "keys", "export", "full-viewing-key"}
+	stdout, _, err := p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	split := strings.Split(string(stdout), "\n")
+
+	return split[len(split)-2], nil
 }
 
 // RecoverKey restores a key from a given mnemonic.
@@ -132,47 +191,69 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
+
 	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
 	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
-	allocationsCsv := []byte(`"amount","denom","address"\n`)
+
+	allocationsCsv := []byte(`"amount","denom","address"` + "\n")
 	for _, allocation := range allocations {
-		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"\n`, allocation.Amount.String(), allocation.Denom, allocation.Address))...)
+		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"`+"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
+
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
 	}
+
 	cmd := []string{
 		"pd",
 		"testnet",
 		"generate",
 		"--chain-id", chainID,
+		"--preserve-chain-id",
 		"--validators-input-file", p.ValidatorsInputFileContainer(),
 		"--allocations-input-file", p.AllocationsInputFileContainer(),
 	}
 	_, _, err = p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return fmt.Errorf("failed to exec testnet generate: %w", err)
+	}
+
 	return err
 }
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := []string{"pcli", "-d", p.HomeDir(), "addr", "list"}
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "-d", keyPath, "-n", pdUrl, "view", "address"}
+
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
 	}
-	addresses := strings.Split(string(stdout), "\n")
-	for _, address := range addresses {
-		fields := strings.Fields(address)
-		if len(fields) < 3 {
-			continue
-		}
-		if fields[1] == keyName {
-			// TODO penumbra address is bech32m. need to decode to bytes here
-			return []byte(fields[2]), nil
-		}
+
+	if len(stdout) == 0 {
+		return []byte{}, errors.New("address not found")
 	}
-	return []byte{}, errors.New("address not found")
+
+	addr := strings.TrimSpace(string(stdout))
+	return []byte(addr), nil
+}
+
+// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
+func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "-d", keyPath, "-n", pdUrl, "view", "balance"}
+
+	stdout, _, err := p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	fmt.Printf("STDOUT BAL: '%s'\n", string(stdout))
+	return 0, nil
 }
 
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
@@ -195,24 +276,17 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 
 }
 
-func (p *PenumbraAppNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return errors.New("not yet implemented")
-}
+func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAddress string) error {
+	cmd := []string{
+		"pd", "start",
+		"--abci-bind", "0.0.0.0:" + strings.Split(abciPort, "/")[0],
+		"--grpc-bind", "0.0.0.0:" + strings.Split(grpcPort, "/")[0],
+		"--metrics-bind", "0.0.0.0:" + strings.Split(metricsPort, "/")[0],
+		"--tendermint-addr", "http://" + tendermintAddress,
+		"--home", p.HomeDir(),
+	}
 
-func (p *PenumbraAppNode) SendIBCTransfer(
-	ctx context.Context,
-	channelID string,
-	keyName string,
-	amount ibc.WalletAmount,
-	options ibc.TransferOptions,
-) (ibc.Tx, error) {
-	return ibc.Tx{}, errors.New("not yet implemented")
-}
-
-func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
-	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
-
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, nil)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {

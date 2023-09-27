@@ -1,7 +1,6 @@
 package penumbra
 
 import (
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -29,7 +28,7 @@ func (w *PenumbraWallet) KeyName() string {
 
 // Get Address formatted with chain's prefix
 func (w *PenumbraWallet) FormattedAddress() string {
-	return types.MustBech32ifyAddressBytes(w.chainCfg.Bech32Prefix, w.address)
+	return string(w.address)
 }
 
 // Get mnemonic, only used for relayer wallets
@@ -43,5 +42,5 @@ func (w *PenumbraWallet) Address() []byte {
 }
 
 func (w *PenumbraWallet) FormattedAddressWithPrefix(prefix string) string {
-	return types.MustBech32ifyAddressBytes(prefix, w.address)
+	return string(w.address)
 }
