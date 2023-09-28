@@ -2,7 +2,11 @@
 
 A simple way to config and run IBC local chain testing environments with any language of choice for interaction.
 
-## Installing
+## Repository CI
+
+- [**Rust**](./rust/README.md)
+
+## Installing Locally
 
 **Install on Mac / Linux**
 ```bash
