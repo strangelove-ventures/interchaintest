@@ -130,10 +130,10 @@ impl Relayer<'_> {
         let mut channels: Vec<Channel> = Vec::new();
 
         let Some(c) = channel_json.as_array() else {
-                            return Err(LocalError::Custom {
-                                msg: "channel_json is not an array".to_string(),
-                            })
-                        };
+            return Err(LocalError::Custom {
+                msg: "channel_json is not an array".to_string(),
+            })
+        };
 
         for channel in c {
             let channel_id = channel["channel_id"]

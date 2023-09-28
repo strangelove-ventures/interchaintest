@@ -271,7 +271,7 @@ fn test_binary(rb: &ChainRequestBuilder) {
 }
 
 fn test_all_accounts(rb: &ChainRequestBuilder) {
-    let res = rb.query("q auth accounts --output=json", false);
+    let res = rb.query("q auth accounts", false);
     println!("res: {res}");
 
     let Some(accounts) = res["accounts"].as_array() else {

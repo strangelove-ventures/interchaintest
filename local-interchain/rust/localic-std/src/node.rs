@@ -83,7 +83,6 @@ impl Chain<'_> {
             .send_request(RequestType::AddFullNodes, cmd.as_str(), false)
     }
 
-    // info request
     /// # Errors
     ///
     /// Returns `Err` if the key bech32 fails on the node.

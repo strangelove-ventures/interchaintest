@@ -49,6 +49,11 @@ impl CosmWasm<'_> {
     /// Returns `Err` if the `code_id` is not found when uploading the contract.
     pub fn store(&mut self, key_name: &str, abs_path: &Path) -> Result<u64, LocalError> {
         // TODO: add cache
+        println!(
+            "uploading contract to {}: {}",
+            self.rb.chain_id.as_str(),
+            abs_path.to_str().unwrap_or_default()
+        );
         match self.rb.upload_contract(key_name, abs_path) {
             Ok(code_id) => {
                 self.code_id = Some(code_id);
@@ -88,10 +93,6 @@ impl CosmWasm<'_> {
         }
     }
 
-    /// # Panics
-    ///
-    /// Panics if the contract address already set in the `CosmWasm` object.
-    ///
     /// # Errors
     ///
     /// Returns `Err` if the sdk status code can not be found in the JSON blob.
@@ -103,7 +104,11 @@ impl CosmWasm<'_> {
     ) -> Result<TransactionResponse, LocalError> {
         let contract_addr: &str = match &self.contract_addr {
             Some(addr) => addr.as_ref(),
-            None => panic!("contract_addr is none"),
+            None => {
+                return Err(LocalError::CWValueIsNone {
+                    value_type: "contract_addr".to_string(),
+                })
+            }
         };
         contract_execute(self.rb, contract_addr, account_key, msg, flags)
     }
@@ -186,7 +191,7 @@ pub fn contract_instantiate(
 
     updated_flags = updated_flags.trim().to_string();
 
-    let mut cmd = format!("tx wasm instantiate {code_id} {msg} --label={label} --from={account_key} --keyring-backend=test --node=%RPC% --chain-id=%CHAIN_ID% --output=json --gas=auto --gas-adjustment=3.0 --yes");
+    let mut cmd = format!("tx wasm instantiate {code_id} {msg} --label={label} --from={account_key} --output=json --gas=auto --gas-adjustment=3.0");
     if !updated_flags.is_empty() {
         cmd = format!("{cmd} {updated_flags}");
     }
@@ -259,7 +264,7 @@ pub fn contract_execute(
 
 #[must_use]
 pub fn contract_query(rb: &ChainRequestBuilder, contract_addr: &str, msg: &str) -> Value {
-    let cmd = format!("query wasm contract-state smart {contract_addr} {msg} --node=%RPC%",);
+    let cmd = format!("query wasm contract-state smart {contract_addr} {msg}",);
     rb.query(&cmd, false)
 }
 
