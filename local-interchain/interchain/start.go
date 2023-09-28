@@ -15,6 +15,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/strangelove-ventures/localinterchain/interchain/router"
+	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
 )
 
@@ -173,6 +174,11 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 		}
 
 		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
+
+		config.Server = types.RestServer{
+			Host: "127.0.0.1",
+			Port: "8080",
+		}
 
 		if ao.PortOverride != 0 {
 			config.Server.Port = fmt.Sprintf("%d", ao.PortOverride)
