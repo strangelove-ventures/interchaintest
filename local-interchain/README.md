@@ -35,7 +35,7 @@ Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for i
 
 ## REST API
 
-A rest API can be found at `curl localhost:8080/` by default. Other actions can take place here such as file uploads, actions, querying chain config information, and more!
+A rest API can be found at `curl 127.0.0.1:8080/` by default. Other actions can take place here such as file uploads, actions, querying chain config information, and more!
 
 Read more about the API [here](./docs/REST_API.md)
 
@@ -52,8 +52,8 @@ Read more about the API [here](./docs/REST_API.md)
   {
     "chain_id": "exampleid-1",
     "chain_name": "example",
-    "rpc_address": "http://localhost:38829",
-    "grpc_address": "localhost:34917",
+    "rpc_address": "http://127.0.0.1:38829",
+    "grpc_address": "127.0.0.1:34917",
     "ibc_paths": []
   }
 ]

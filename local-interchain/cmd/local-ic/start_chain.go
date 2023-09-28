@@ -41,10 +41,3 @@ var startCmd = &cobra.Command{
 		})
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(startCmd)
-
-	startCmd.Flags().String(FlagAPIAddressOverride, "", "Override the default API host address")
-	startCmd.Flags().Uint16(FlagAPIPortOverride, 0, "Override the default API port")
-}

@@ -1,6 +1,6 @@
 
 MAKE_REQUEST() {
-    curl http://localhost:8080/ --include --header "Content-Type: application/json" -X $1 --data "$2"
+    curl http://127.0.0.1:8080/ --include --header "Content-Type: application/json" -X $1 --data "$2"
 }
 
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank total"}'

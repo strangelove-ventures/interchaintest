@@ -194,6 +194,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 	return c.Validators[0]
 }
 
+func (c *CosmosChain) GetNode() *ChainNode {
+	return c.Validators[0]
+}
+
 // Exec implements ibc.Chain.
 func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.getFullNode().Exec(ctx, cmd, env)

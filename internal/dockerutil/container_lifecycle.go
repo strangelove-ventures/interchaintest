@@ -42,6 +42,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	volumeBinds []string,
 	hostName string,
 	cmd []string,
+	env []string,
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(
@@ -64,6 +65,7 @@ func (c *ContainerLifecycle) CreateContainer(
 			Image: imageRef,
 
 			Entrypoint: []string{},
+			Env:        env,
 			Cmd:        cmd,
 
 			Hostname: hostName,
