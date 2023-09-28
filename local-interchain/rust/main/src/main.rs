@@ -218,7 +218,7 @@ fn test_paths(rb: &ChainRequestBuilder) {
             panic!("get_files failed {err:?}");
         }
     };
-    
+
     assert!(files.contains(&"Makefile".to_string()));
     assert!(files.contains(&"config".to_string()));
     assert!(files.contains(&"data".to_string()));

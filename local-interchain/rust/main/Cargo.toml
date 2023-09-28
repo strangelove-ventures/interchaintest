@@ -1,12 +1,12 @@
 [package]
-name = "localic-std"
+name = "localic-bin"
 version = "0.0.1"
 edition = "2021"
 authors = ["Strangelove Developers"]
 
-[lib]
-name = "localic_std"
-path = "./src/lib.rs"
+[[bin]]
+name = "localic-bin"
+path = "src/main.rs"
 
 [dependencies]
 reqwest.workspace = true
@@ -14,3 +14,5 @@ tokio.workspace = true
 serde_json.workspace = true
 cosmwasm-std.workspace = true
 thiserror.workspace = true
+
+localic-std.workspace = true
