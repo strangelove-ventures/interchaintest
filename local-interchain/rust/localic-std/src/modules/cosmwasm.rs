@@ -221,9 +221,7 @@ pub fn contract_execute(
     msg: &str,
     flags: &str,
 ) -> Result<TransactionResponse, LocalError> {
-    let mut cmd = format!(
-        "tx wasm execute {contract_addr} {msg} --from={account_key} --keyring-backend=test --home=%HOME% --node=%RPC% --chain-id=%CHAIN_ID% --yes {flags}"
-    );
+    let mut cmd = format!("tx wasm execute {contract_addr} {msg} --from={account_key} {flags}");
     cmd = cmd.trim().to_string();
 
     let updated_flags = flags.to_string();
@@ -231,7 +229,12 @@ pub fn contract_execute(
         cmd = format!("{cmd} {updated_flags}");
     }
 
-    let res = rb.binary(cmd.as_str(), false);
+    let res = match rb.tx(cmd.as_str(), false) {
+        Ok(res) => res,
+        Err(e) => {
+            return Err(e);
+        }
+    };
 
     let tx_hash = rb.get_tx_hash(&res);
     let raw_log = rb.get_raw_log(&res);
@@ -256,9 +259,7 @@ pub fn contract_execute(
 
 #[must_use]
 pub fn contract_query(rb: &ChainRequestBuilder, contract_addr: &str, msg: &str) -> Value {
-    let cmd = format!(
-        "query wasm contract-state smart {contract_addr} {msg} --output=json --node=%RPC%",
-    );
+    let cmd = format!("query wasm contract-state smart {contract_addr} {msg} --node=%RPC%",);
     rb.query(&cmd, false)
 }
 

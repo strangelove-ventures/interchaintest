@@ -55,7 +55,7 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 	headerType := r.Header.Get("Upload-Type")
 	switch headerType {
 	case "cosmwasm":
-		// Upload & Store the contract tot he chain.
+		// Upload & Store the contract on chain.
 		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, srcPath)
 		if err != nil {
 			util.WriteError(w, err)
@@ -65,7 +65,7 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		util.Write(w, []byte(fmt.Sprintf(`{"code_id":%s}`, codeId)))
 		return
 	default:
-		// Upload the file to the chain's docker volume.
+		// Upload the file to the docker volume (val[0]).
 		_, file := filepath.Split(srcPath)
 		if err := u.vals[chainId].CopyFile(u.ctx, srcPath, file); err != nil {
 			util.WriteError(w, fmt.Errorf(`{"error":"writing contract file to docker volume: %w"}`, err))

@@ -2,13 +2,10 @@
 use crate::{errors::LocalError, transactions::ChainRequestBuilder, types::RequestType};
 use serde_json::{json, Value};
 
-// TODO: This should be a POST action rather than a GET. Make a new function here to do so.
-// pub fn overwite_genesis_file(content: &str)
-// SetPeers
+// TODO:
 // pub fn VoteOnProposal(rb: &ChainRequestBuilder, proposal_id: String, vote: String) -> String {
 // pub fn SubmitProposal(key_name: String, proposal_json_path: Pathbuf)
-// pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit) // need to write other code for this to work
-// pub fn ExportState(rb: &ChainRequestBuilder, height: u64) -> String {
+// pub fn UpgradeProposal(key_name: String, upgradeheight, title, description, deposit)
 // pub fn UnsafeResetAll(rb: &ChainRequestBuilder) -> String {
 
 #[derive(Clone)]

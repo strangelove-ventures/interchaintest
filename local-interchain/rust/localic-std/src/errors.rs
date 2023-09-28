@@ -35,8 +35,8 @@ pub enum LocalError {
     #[error("The local-interchain API server did not start in time.")]
     ServerDidNotStart {},
 
-    #[error("Could not find the SDK status code in the Tx data. {reason}")]
-    SdkTransactionStatusCodeNotFound { reason: String },
+    #[error("Could not find the SDK status code in the Tx data. {reason}. tx_res: {tx_res}")]
+    SdkTransactionStatusCodeNotFound { reason: String, tx_res: String },
 
     #[error("Could not get filesystem files. {error}")]
     GetFilesError { error: String },

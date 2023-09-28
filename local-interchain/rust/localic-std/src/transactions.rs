@@ -74,7 +74,23 @@ impl ChainRequestBuilder {
     ///
     /// Returns `Err` if the transaction fails.
     pub fn transaction(&self, cmd: &str, get_data: bool) -> Result<Value, LocalError> {
-        let res = self.binary(cmd, false);
+        let command = set_missing_required_args(
+            cmd,
+            vec![
+                "--node=%RPC%",
+                "--chain-id=%CHAIN_ID%",
+                "--keyring-backend=test",
+                "--home=%HOME%",
+            ],
+        );
+
+        let command = if command.contains("--yes") {
+            command
+        } else {
+            format!("{command} --yes")
+        };
+
+        let res = self.binary(command.as_str(), false);
         if !get_data {
             return Ok(res);
         }
@@ -125,6 +141,7 @@ impl ChainRequestBuilder {
             Some(code) => Ok(code),
             None => Err(LocalError::SdkTransactionStatusCodeNotFound {
                 reason: "'code' not found in Tx JSON response.".to_string(),
+                tx_res: tx_res.to_string(),
             }),
         }
     }
@@ -289,12 +306,12 @@ impl ChainRequestBuilder {
         };
 
         // return JSON if we we did not override that.
-        if !return_text
-            && (request_type == RequestType::Query || request_type == RequestType::Bin)
-            && !cmd.contains("--output=json")
-            && !cmd.contains("--output json")
+        if !return_text && (request_type == RequestType::Query || request_type == RequestType::Bin)
         {
-            cmd = format!("{cmd} --output=json");
+            cmd = set_missing_required_args(
+                cmd.as_str(),
+                vec!["--node=%RPC%", "--chain-id=%CHAIN_ID%", "--output=json"],
+            );
         }
 
         // Build the request payload
@@ -346,4 +363,23 @@ fn return_text_json(text: &str, err: Option<String>) -> Value {
             err => Some(err),
         },
     })
+}
+
+/// Sets missing command arguments that are required (such as the chain-id, keyring-backend, node, etc).
+/// `required` elements must contain an '=' sign to be valid.
+fn set_missing_required_args(cmd: &str, required: Vec<&str>) -> String {
+    let mut command = cmd.to_string();
+
+    for arg in required {
+        let parsed_args: String = match arg.split_once('=') {
+            Some((a, b)) => format!("{a} {b}"),
+            None => panic!("{arg} must have an '=' sign to be valie in the `required` argument"),
+        };
+
+        if !command.contains(arg) && !command.contains(parsed_args.as_str()) {
+            command = format!("{command} {arg}");
+        }
+    }
+
+    command
 }

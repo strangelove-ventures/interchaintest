@@ -19,7 +19,8 @@ pub fn send(
         .collect::<Vec<String>>()
         .join(",");
 
-    let cmd = format!("tx bank send {from_key} {to_address} {str_coins} --fees={fee} --node=%RPC% --chain-id=%CHAIN_ID% --yes --output=json --keyring-backend=test");
+    let cmd =
+        format!("tx bank send {from_key} {to_address} {str_coins} --fees={fee} --output=json");
     rb.tx(&cmd, true)
 }
 

@@ -4,6 +4,6 @@ use crate::transactions::ChainRequestBuilder;
 
 #[must_use]
 pub fn get_proposal(req_builder: &ChainRequestBuilder, proposal_id: u64) -> Value {
-    let cmd = format!("q gov proposal {proposal_id} --output=json");
+    let cmd = format!("q gov proposal {proposal_id}");
     req_builder.query(cmd.as_str(), false)
 }
