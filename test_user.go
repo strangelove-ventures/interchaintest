@@ -37,6 +37,14 @@ func GetAndFundTestUserWithMnemonic(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get funds from faucet: %w", err)
 	}
+
+	// If this chain is an instance of Penumbra we need to initialize a new pclientd instance for the
+	// newly created test user account.
+	err = CreatePenumbraClient(ctx, chain, keyName)
+	if err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
 

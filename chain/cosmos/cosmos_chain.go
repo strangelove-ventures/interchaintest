@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 
-	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -191,6 +191,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 		return c.FullNodes[0]
 	}
 	// use first validator
+	return c.Validators[0]
+}
+
+func (c *CosmosChain) GetNode() *ChainNode {
 	return c.Validators[0]
 }
 
@@ -390,8 +394,8 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 		return tx, "", err
 	}
 	message := wasmtypes.MsgStoreCode{
-		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
-		Code:   content,
+		Signer:       types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
+		WasmByteCode: content,
 	}
 	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
 	if err != nil {
@@ -535,12 +539,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
+func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 	defer conn.Close()
 
@@ -548,7 +552,7 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	res, err := queryClient.Balance(ctx, params)
 
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 
 	return res.Balance.Amount, nil
@@ -582,7 +586,7 @@ func (c *CosmosChain) getTransaction(txhash string) (*types.TxResponse, error) {
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
-	return int64(fees)
+	return int64(math.Ceil(fees))
 }
 
 func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {

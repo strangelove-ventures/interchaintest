@@ -24,18 +24,15 @@ type CosmosRelayer struct {
 	*relayer.DockerRelayer
 }
 
-func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *CosmosRelayer {
+func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *CosmosRelayer {
 	c := commander{log: log}
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = o.Flags
-		}
-	}
+
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
 		panic(err) // TODO: return
 	}
+
+	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	r := &CosmosRelayer{
 		DockerRelayer: dr,
@@ -80,6 +77,9 @@ func Capabilities() map[relayer.Capability]bool {
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	chainType := chainConfig.Type
+	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
+		chainType = "substrate"
+	}
 	return CosmosRelayerChainConfig{
 		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{
