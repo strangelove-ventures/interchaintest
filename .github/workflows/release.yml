@@ -8,7 +8,7 @@ env:
     GO_VERSION: 1.21
 
 jobs:
-  release-alpine-static:
+  release-static-binary:
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
@@ -20,11 +20,11 @@ jobs:
         with:
             go-version: ${{ env.GO_VERSION }}
 
-      # this must be go install vs make install as to not statically link the binary
+      # This must be go install vs make install as to not statically link the binary
       # to the worker node.
       - run: cd local-interchain && go mod tidy && go install ./...
 
-      - run: cp $GOPATH/bin/local-ic ./local-ic
+      - run: cp $HOME/go/bin/local-ic ./local-ic
       - run: chmod +x ./local-ic
 
       - name: Release
