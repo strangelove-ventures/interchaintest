@@ -1,0 +1,35 @@
+name: release binary
+
+on:
+  release:
+    types: [created]
+
+env:
+    GO_VERSION: 1.21
+
+jobs:
+  release-alpine-static:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout interchaintest
+        uses: actions/checkout@v4
+
+      - name: Setup go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v4
+        with:
+            go-version: ${{ env.GO_VERSION }}
+
+      # this must be go install vs make install as to not statically link the binary
+      # to the worker node.
+      - run: cd local-interchain && go mod tidy && go install ./...
+
+      - run: cp $GOPATH/bin/local-ic ./local-ic
+      - run: chmod +x ./local-ic
+
+      - name: Release
+        uses: softprops/action-gh-release@v1        
+        with:
+          token: ${{ github.token }}
+          files: |
+            local-ic            
