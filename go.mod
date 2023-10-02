@@ -45,7 +45,7 @@ require (
 	golang.org/x/crypto v0.13.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.13.0
-	google.golang.org/grpc v1.58.1
+	google.golang.org/grpc v1.58.2
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.26.0
 )
