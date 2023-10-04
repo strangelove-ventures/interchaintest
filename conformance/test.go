@@ -445,6 +445,10 @@ func testPacketRelaySuccess(
 		req.NoError(err, "failed to get acknowledgement on destination chain")
 		req.NoError(dstAck.Validate(), "invalid acknowledgement on destination chain")
 
+		// Even though we poll for the ack, there may be timing issues where balances are not fully reconciled yet.
+		// So we have a small buffer here.
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
+
 		// get ibc denom for dst denom on src chain
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
 		srcIbcDenom := dstDenomTrace.IBCDenom()
@@ -496,7 +500,7 @@ func testPacketRelayFail(
 
 		// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
 		// So we have a small buffer here.
-		require.NoError(t, testutil.WaitForBlocks(ctx, 2, srcChain, dstChain))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
 
 		// get ibc denom for src denom on dst chain
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
@@ -524,6 +528,10 @@ func testPacketRelayFail(
 		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")
 		req.NoError(timeout.Validate(), "invalid timeout packet on destination chain")
+
+		// Even though we poll for the timeout, there may be timing issues where balances are not fully reconciled yet.
+		// So we have a small buffer here.
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
 
 		// get ibc denom for dst denom on src chain
 		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
