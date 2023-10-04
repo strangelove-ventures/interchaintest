@@ -41,7 +41,7 @@ def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
 
 class CosmWasm:
     def __init__(self, api: str, chain_id: str, addr_override: str = ""):
-        self.api = api  # http://localhost:8080
+        self.api = api  # http://127.0.0.1:8080
         self.chain_id = chain_id
 
         self.code_id: int = -1
@@ -254,7 +254,7 @@ class CosmWasm:
 if __name__ == "__main__":
     CosmWasm.download_base_contracts()
 
-    cw = CosmWasm(api="http://localhost:8080", chain_id="localjuno-1")
+    cw = CosmWasm(api="http://127.0.0.1:8080", chain_id="localjuno-1")
 
     cw.store_contract("acc0", os.path.join(contracts_storage_dir, "cw721_base.wasm"))
 

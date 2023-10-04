@@ -20,7 +20,7 @@ jobs:
           go-version: '1.21'
 
       - name: checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # cleanup environment on self-hosted test runner
       - name: clean
@@ -42,7 +42,7 @@ jobs:
           cache: false
 
       - name: checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # cleanup environment on self-hosted test runner
       - name: clean
@@ -64,7 +64,7 @@ jobs:
           cache: false
 
       - name: checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # cleanup environment on self-hosted test runner
       - name: clean

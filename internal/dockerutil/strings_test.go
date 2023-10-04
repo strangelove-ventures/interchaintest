@@ -40,7 +40,7 @@ func TestGetHostPort(t *testing.T) {
 						},
 					},
 				},
-			}, "test", "localhost:3000",
+			}, "test", "127.0.0.1:3000",
 		},
 
 		{types.ContainerJSON{}, "", ""},

@@ -27,7 +27,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
 
 ## Defaults
 
-By default, the API is served at <http://localhost:8080/>. You can modify this before starting the chain via [the configs/server.json configuration file](../configs/server.json).
+By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the chain via [the configs/server.json configuration file](../configs/server.json).
 
 ## Environment Variables
 
@@ -94,7 +94,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
   "chain_id": "localjuno-1",
   "action": "query",
   "cmd": "bank total"
-}' http://localhost:8080/
+}' http://127.0.0.1:8080/
 # {"supply":[{"denom":"ujuno","amount":"110020857635458"}],"pagination":{"next_key":null,"total":"0"}}
 
 
@@ -104,7 +104,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
   "chain_id": "localjuno-1",
   "action": "binary",
   "cmd": "config keyring-backend test"
-}' http://localhost:8080/
+}' http://127.0.0.1:8080/
 
 
 # Execute a Tx sending funds 
@@ -113,7 +113,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
   "chain_id": "localjuno-1",
   "action": "binary",
   "cmd": "tx bank send acc0 juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 500ujuno --fees 5000ujuno --node %RPC% --chain-id=%CHAIN_ID% --yes --output json"
-}' http://localhost:8080/
+}' http://127.0.0.1:8080/
 
 
 # Querying said Tx hash returned from above.
@@ -124,7 +124,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
   "chain_id": "localjuno-1",
   "action": "query",
   "cmd": "tx 7C68B0E0AFF733D93636BAD69D645B11C9C11C5C883394E99658BFCC05BF20DD"
-}' http://localhost:8080/
+}' http://127.0.0.1:8080/
 ```
 
 ### Python
@@ -136,7 +136,7 @@ A full Python client can be found in the [scripts folder](../scripts/). This is 
 
 import httpx  # pip install httpx
 
-api = "http://localhost:8080/"
+api = "http://127.0.0.1:8080/"
 
 # Pushes through any packets pending on channel-0 (both ways)
 print(

@@ -30,7 +30,3 @@ var startCmd = &cobra.Command{
 		interchain.StartChain(parentDir, configPath)
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(startCmd)
-}
