@@ -971,7 +971,11 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 		if err := json.Unmarshal([]byte(q), &jsonMap); err != nil {
 			return err
 		}
-		queryMsg = jsonMap
+
+		query, err = json.Marshal(jsonMap)
+		if err != nil {
+			return err
+		}
 	} else {
 		query, err = json.Marshal(queryMsg)
 		if err != nil {
