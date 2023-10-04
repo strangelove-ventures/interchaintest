@@ -15,10 +15,8 @@ import (
 )
 
 func TestJunoStateExport(t *testing.T) {
-	// SDK v45
-	CosmosChainStateExportTest(t, "juno", "v15.0.0")
 	// SDK v47
-	CosmosChainStateExportTest(t, "juno", "v16.0.0")
+	CosmosChainStateExportTest(t, "juno", "v17.0.0")
 }
 
 func CosmosChainStateExportTest(t *testing.T, name, version string) {
@@ -28,8 +26,6 @@ func CosmosChainStateExportTest(t *testing.T, name, version string) {
 
 	numVals := 1
 	numFullNodes := 0
-
-	// TODO: Verify ModifyGenesis works for both chains, and that the export values line up here.
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
