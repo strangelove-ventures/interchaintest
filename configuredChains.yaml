@@ -553,7 +553,7 @@ neutron:
   gas-adjustment: 1.3
   trusting-period: 336h
   images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/lum
+    - repository: ghcr.io/strangelove-ventures/heighliner/neutron
       uid-gid: 1025:1025
   no-host-mount: false
 
