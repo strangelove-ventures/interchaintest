@@ -45,7 +45,10 @@ func compile(image string, version string, repoPath string) (string, error) {
 	}
 
 	defer reader.Close()
-	io.Copy(os.Stdout, reader)
+	_, err = io.Copy(os.Stdout, reader)
+	if err != nil {
+		return "", fmt.Errorf("io copy %s: %w", imageFull, err)
+	}
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: imageFull,
@@ -91,7 +94,10 @@ func compile(image string, version string, repoPath string) (string, error) {
 		return "", fmt.Errorf("logs container %s: %w", imageFull, err)
 	}
 
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	if err != nil {
+		return "", fmt.Errorf("std copy %s: %w", imageFull, err)
+	}
 
 	err = cli.ContainerStop(ctx, resp.ID, container.StopOptions{})
 	if err != nil {

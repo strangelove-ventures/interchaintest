@@ -91,7 +91,7 @@ func (w *Workspace) WaitForCompile() (map[string]string, error) {
 	contractBinaries := make(map[string]string)
 	select {
 	case err := <-w.errChan:
-		return nil, err
+		return contractBinaries, err
 	case contractBinaries = <-w.wasmBinariesChan:
 	}
 	return contractBinaries, nil
