@@ -20,7 +20,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.11
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc6
-	github.com/cosmos/ibc-go/v8 v8.0.0-beta.0
+	github.com/cosmos/ibc-go/v8 v8.0.0-beta.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.6+incompatible
@@ -45,9 +45,9 @@ require (
 	golang.org/x/crypto v0.13.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.13.0
-	google.golang.org/grpc v1.58.1
+	google.golang.org/grpc v1.58.2
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.25.0
+	modernc.org/sqlite v1.26.0
 )
 
 require (
