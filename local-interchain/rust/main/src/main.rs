@@ -83,7 +83,7 @@ fn test_ibc_contract_relaying(node: &Chain, rb1: &ChainRequestBuilder, rb2: &Cha
     println!("contract_b: {cb:?}");
 
     // example: manual relayer connection
-    // let wc = relayer.create_connection(
+    // let wc = relayer.create_channel(
     //     "juno-ibc-1",
     //     format!("wasm.{}", &contract_a.contract_addr.as_ref().unwrap()).as_str(),
     //     format!("wasm.{}", &contract_b.contract_addr.as_ref().unwrap()).as_str(),

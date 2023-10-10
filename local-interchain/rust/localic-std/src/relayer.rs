@@ -76,8 +76,8 @@ impl Relayer<'_> {
 
     /// # Errors
     ///
-    /// Returns `Err` if the relayer is not able to create the connection between 2 channels.
-    pub fn create_connection(
+    /// Returns `Err` if the relayer is not able to create the channel between 2 channels.
+    pub fn create_channel(
         &self,
         path: &str,
         src: &str,

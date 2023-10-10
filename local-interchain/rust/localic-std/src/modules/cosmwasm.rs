@@ -163,7 +163,7 @@ impl CosmWasm<'_> {
         let src: String = format!("wasm.{}", contract_addr.as_str());
         let dst = format!("wasm.{}", dst_contract_addr.as_str());
 
-        r.create_connection(path, src.as_str(), dst.as_str(), order, version)
+        r.create_channel(path, src.as_str(), dst.as_str(), order, version)
     }
 }
 
