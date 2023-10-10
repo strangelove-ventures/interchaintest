@@ -32,17 +32,17 @@ var startCmd = &cobra.Command{
 			configPath = filepath.Base(configPath)
 		}
 
-		apiAddrOverride, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
-		apiPortOverride, _ := cmd.Flags().GetUint16(FlagAPIPortOverride)
+		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
+		apiPort, _ := cmd.Flags().GetUint16(FlagAPIPortOverride)
 
-		interchain.StartChain(parentDir, configPath, &interchain.AppOverrides{
-			AddressOverride: apiAddrOverride,
-			PortOverride:    apiPortOverride,
+		interchain.StartChain(parentDir, configPath, &interchain.AppConfig{
+			Address: apiAddr,
+			Port:    apiPort,
 		})
 	},
 }
 
 func init() {
-	startCmd.Flags().String(FlagAPIAddressOverride, "", "override the default API address")
-	startCmd.Flags().Uint16(FlagAPIPortOverride, 0, "override the default API port")
+	startCmd.Flags().String(FlagAPIAddressOverride, "127.0.0.1", "override the default API address")
+	startCmd.Flags().Uint16(FlagAPIPortOverride, 8080, "override the default API port")
 }

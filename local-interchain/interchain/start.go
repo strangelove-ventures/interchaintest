@@ -19,12 +19,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type AppOverrides struct {
-	AddressOverride string
-	PortOverride    uint16
+type AppConfig struct {
+	Address string
+	Port    uint16
 }
 
-func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
+func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -176,15 +176,8 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
 
 		config.Server = types.RestServer{
-			Host: "127.0.0.1",
-			Port: "8080",
-		}
-
-		if ao.PortOverride != 0 {
-			config.Server.Port = fmt.Sprintf("%d", ao.PortOverride)
-		}
-		if ao.AddressOverride != "" {
-			config.Server.Host = ao.AddressOverride
+			Host: ac.Address,
+			Port: fmt.Sprintf("%d", ac.Port),
 		}
 
 		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
