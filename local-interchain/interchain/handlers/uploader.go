@@ -22,7 +22,7 @@ type Uploader struct {
 	FilePath string `json:"file_path"`
 
 	// Upload-Type: cosmwasm only
-	KeyName string `json:"key_name"`
+	KeyName string `json:"key_name,omitempty"`
 }
 
 func NewUploader(ctx context.Context, vals map[string]*cosmos.ChainNode) *upload {
