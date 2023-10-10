@@ -465,7 +465,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	var gasPriceFound, gasAdjustmentFound = false, false
+	var gasPriceFound, gasAdjustmentFound, feesFound = false, false, false
 	for i := 0; i < len(command); i++ {
 		if command[i] == "--gas-prices" {
 			gasPriceFound = true
@@ -473,8 +473,11 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		if command[i] == "--gas-adjustment" {
 			gasAdjustmentFound = true
 		}
+		if command[i] == "--fees" {
+			feesFound = true
+		}
 	}
-	if !gasPriceFound {
+	if !gasPriceFound && !feesFound {
 		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
 	}
 	if !gasAdjustmentFound {
@@ -799,14 +802,17 @@ type CodeInfosResponse struct {
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
+func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
 	_, file := filepath.Split(fileName)
 	err := tn.CopyFile(ctx, fileName, file)
 	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
+	cmd := []string{"wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	if _, err := tn.ExecTx(ctx, keyName, cmd...); err != nil {
 		return "", err
 	}
 
@@ -975,10 +981,11 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return tn.ExecTx(ctx, keyName,
-		"wasm", "execute", contractAddress, message,
-	)
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+	cmd := []string{"wasm", "execute", contractAddress, message}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	return tn.ExecTx(ctx, keyName, cmd...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -996,7 +1003,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 }
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
+func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return "", err
@@ -1007,7 +1014,10 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	_, err = tn.ExecTx(ctx, keyName, "ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	cmd := []string{"ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto"}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	_, err = tn.ExecTx(ctx, keyName, cmd...)
 	if err != nil {
 		return "", err
 	}
