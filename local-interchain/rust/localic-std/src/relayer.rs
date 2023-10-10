@@ -76,8 +76,8 @@ impl Relayer<'_> {
 
     /// # Errors
     ///
-    /// Returns `Err` if the relayer is not able to create the connection between 2 contracts.
-    pub fn create_wasm_connection(
+    /// Returns `Err` if the relayer is not able to create the connection between 2 channels.
+    pub fn create_connection(
         &self,
         path: &str,
         src: &str,
@@ -85,15 +85,8 @@ impl Relayer<'_> {
         order: &str,
         version: &str,
     ) -> Result<Value, LocalError> {
-        let mut source: String = src.to_string();
-        let mut destination: String = dst.to_string();
-
-        if !src.starts_with("wasm.") {
-            source = format!("wasm.{source}");
-        }
-        if !destination.starts_with("wasm.") {
-            destination = format!("wasm.{destination}");
-        }
+        let source: String = src.to_string();
+        let destination: String = dst.to_string();
 
         let cmd = format!(
             "rly tx channel {path} --src-port {source} --dst-port {destination} --order {order} --version {version}",

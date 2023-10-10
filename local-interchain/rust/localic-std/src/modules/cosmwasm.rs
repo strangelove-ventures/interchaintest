@@ -160,13 +160,10 @@ impl CosmWasm<'_> {
             }
         };
 
-        r.create_wasm_connection(
-            path,
-            contract_addr.as_str(),
-            dst_contract_addr.as_str(),
-            order,
-            version,
-        )
+        let src: String = format!("wasm.{}", contract_addr.as_str());
+        let dst = format!("wasm.{}", dst_contract_addr.as_str());
+
+        r.create_connection(path, src.as_str(), dst.as_str(), order, version)
     }
 }
 

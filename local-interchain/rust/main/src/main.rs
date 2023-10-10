@@ -23,6 +23,7 @@ use base::{
     get_contract_cache_path, get_contract_path, get_current_dir, get_local_interchain_dir, API_URL,
 };
 
+// local-ic start juno_ibc
 // cargo run --package localic-bin --bin localic-bin
 fn main() {
     poll_for_start(&Client::new(), API_URL, 150);
@@ -82,10 +83,10 @@ fn test_ibc_contract_relaying(node: &Chain, rb1: &ChainRequestBuilder, rb2: &Cha
     println!("contract_b: {cb:?}");
 
     // example: manual relayer connection
-    // let wc = relayer.create_wasm_connection(
+    // let wc = relayer.create_connection(
     //     "juno-ibc-1",
-    //     &contract_a.contract_addr.as_ref().unwrap(),
-    //     &contract_b.contract_addr.as_ref().unwrap(),
+    //     format!("wasm.{}", &contract_a.contract_addr.as_ref().unwrap()).as_str(),
+    //     format!("wasm.{}", &contract_b.contract_addr.as_ref().unwrap()).as_str(),
     //     "unordered",
     //     "counter-1",
     // );
