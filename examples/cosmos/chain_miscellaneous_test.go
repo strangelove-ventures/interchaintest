@@ -4,16 +4,10 @@ import (
 	"context"
 	"testing"
 
-<<<<<<< HEAD
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-=======
-	"cosmossdk.io/math"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
->>>>>>> fcfcac6 (Adds x/tokenfactory helper methods (#798))
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
