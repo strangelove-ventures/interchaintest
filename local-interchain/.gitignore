@@ -9,6 +9,7 @@ configs/logs.json
 configs/contracts.json
 
 contracts/*.wasm
+!contracts/cw_ibc_example.wasm
 
 
 __pycache__/

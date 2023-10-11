@@ -18,7 +18,8 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/strangelove-ventures/interchaintest/v7 v7.0.0-00010101000000-000000000000
 	github.com/tyler-smith/go-bip39 v1.1.0
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
+
 )
 
 require (

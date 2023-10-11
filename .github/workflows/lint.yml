@@ -14,3 +14,24 @@ jobs:
           version: latest
           only-new-issues: true
           args: --timeout=5m
+
+  clippy-lint:
+    defaults:
+      run:
+        working-directory: local-interchain/rust/localic-std
+    runs-on:  ubuntu-latest    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install stable with clippy and rustfmt
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt, clippy
+    - name: Install clippy
+      run: rustup component add clippy
+    - name: Update
+      run: cargo update
+    - name: Run clippy
+      run: make lint
+        
