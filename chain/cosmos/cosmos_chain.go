@@ -476,6 +476,11 @@ func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*Pa
 	return c.getFullNode().QueryParam(ctx, subspace, key)
 }
 
+// QueryBankMetadata returns the metadata of a given token denomination.
+func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	return c.getFullNode().QueryBankMetadata(ctx, denom)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
