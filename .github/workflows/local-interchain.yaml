@@ -20,7 +20,7 @@ jobs:
         working-directory: ./local-interchain
     steps:
       - name: Checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
