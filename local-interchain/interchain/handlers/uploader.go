@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
@@ -18,8 +19,10 @@ type upload struct {
 
 type Uploader struct {
 	ChainId  string `json:"chain_id"`
-	KeyName  string `json:"key_name"`
-	FileName string `json:"file_name"`
+	FilePath string `json:"file_path"`
+
+	// Upload-Type: cosmwasm only
+	KeyName string `json:"key_name,omitempty"`
 }
 
 func NewUploader(ctx context.Context, vals map[string]*cosmos.ChainNode) *upload {
@@ -37,7 +40,11 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Uploader: %+v", u)
+	srcPath := upload.FilePath
+	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+		util.WriteError(w, fmt.Errorf("file %s does not exist on the source machine", srcPath))
+		return
+	}
 
 	chainId := upload.ChainId
 	if _, ok := u.vals[chainId]; !ok {
@@ -45,12 +52,28 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, upload.FileName)
+	headerType := r.Header.Get("Upload-Type")
+	switch headerType {
+	case "cosmwasm":
+		// Upload & Store the contract on chain.
+		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, srcPath)
+		if err != nil {
+			util.WriteError(w, err)
+			return
+		}
 
-	if err != nil {
-		util.WriteError(w, err)
+		util.Write(w, []byte(fmt.Sprintf(`{"code_id":%s}`, codeId)))
 		return
-	}
+	default:
+		// Upload the file to the docker volume (val[0]).
+		_, file := filepath.Split(srcPath)
+		if err := u.vals[chainId].CopyFile(u.ctx, srcPath, file); err != nil {
+			util.WriteError(w, fmt.Errorf(`{"error":"writing contract file to docker volume: %w"}`, err))
+			return
+		}
 
-	util.Write(w, []byte(fmt.Sprintf(`{"code_id":%s}`, codeId)))
+		home := u.vals[chainId].HomeDir()
+		fileLoc := filepath.Join(home, file)
+		util.Write(w, []byte(fmt.Sprintf(`{"success":"file uploaded to %s","location":"%s"}`, chainId, fileLoc)))
+	}
 }
