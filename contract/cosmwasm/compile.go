@@ -14,16 +14,31 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/hashicorp/go-version"
 )
 
 // compile will compile the specified repo using the specified docker image and version
-func compile(image string, version string, repoPath string) (string, error) {
+func compile(image string, optVersion string, repoPath string) (string, error) {
 	// Set the image to pull/use
 	arch := ""
 	if runtime.GOARCH == "arm64" {
 		arch = "-arm64"
 	}
-	imageFull := image + arch + ":" + version
+	imageFull := image + arch + ":" + optVersion
+
+	// Check if version is less than 0.13.0, if so, use old cache directory
+	cacheDir := "/target"
+	versionThresh, err := version.NewVersion("0.13.0")
+	if err != nil {
+		return "", fmt.Errorf("version threshold 0.13.0: %w", err)
+	}
+	myVersion, err := version.NewVersion(optVersion)
+	if err != nil {
+		return "", fmt.Errorf("version %s: %w", optVersion, err)
+	}
+	if myVersion.LessThan(versionThresh) {
+		cacheDir = "/code/target"
+	}
 
 	// Get absolute path of contract project
 	pwd, err := os.Getwd()
@@ -63,7 +78,7 @@ func compile(image string, version string, repoPath string) (string, error) {
 			{
 				Type: mount.TypeVolume,
 				Source: filepath.Base(repoPathFull)+"_cache",
-				Target: "/target",
+				Target: cacheDir,
 			},
 			{
 				Type: mount.TypeVolume,
