@@ -73,7 +73,7 @@ func (c *Contract) Compile() *Contract {
 	return c
 }
 
-// WaitForCompile will wait until coyympilation is complete, this can be called after chain setup
+// WaitForCompile will wait until compilation is complete, this can be called after chain setup
 // Successful compilation will return the binary location in a channel
 func (c *Contract) WaitForCompile() (string, error) {
 	contractBinary := ""
