@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "contracts/contract1",
+    "contracts/contract2"
+]
+
+[workspace.dependencies]
+cosmwasm-schema = "1.1.2"
+cosmwasm-std = "1.1.2"
+cw-storage-plus = "0.13.2"
+thiserror = {version = "1.0.31"}
