@@ -86,7 +86,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	testBroadcaster(ctx, t, chain, users)
 	testQueryCmd(ctx, t, chain)
 	testHasCommand(ctx, t, chain)
-
+	testTokenFactory(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
 }
 
@@ -314,6 +314,68 @@ func testHasCommand(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	require.False(t, tn.HasCommand(ctx, "incorrectcmd"))
 }
 
+func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	user := users[0]
+	user2 := users[1]
+
+	subDenom := "ictest"
+	tfDenom, _, err := cosmos.TokenFactoryCreateDenom(chain, ctx, user, subDenom, 2500000)
+	require.NoError(t, err)
+	require.Equal(t, tfDenom, "factory/"+user.FormattedAddress()+"/"+subDenom)
+
+	// modify metadata
+	stdout, err := cosmos.TokenFactoryMetadata(chain, ctx, user.KeyName(), tfDenom, "SYMBOL", "description here", 6)
+	t.Log(stdout, err)
+	require.NoError(t, err)
+
+	// verify metadata
+	md, err := chain.QueryBankMetadata(ctx, tfDenom)
+	require.NoError(t, err)
+	require.Equal(t, md.Metadata.Description, "description here")
+	require.Equal(t, md.Metadata.Symbol, "SYMBOL")
+	require.Equal(t, md.Metadata.DenomUnits[1].Exponent, 6)
+
+	// mint tokens
+	_, err = cosmos.TokenFactoryMintDenom(chain, ctx, user.KeyName(), tfDenom, 1)
+	require.NoError(t, err)
+	validateBalance(ctx, t, chain, user, tfDenom, 1)
+
+	// mint-to
+	_, err = cosmos.TokenFactoryMintDenomTo(chain, ctx, user.KeyName(), tfDenom, 3, user2.FormattedAddress())
+	require.NoError(t, err)
+	validateBalance(ctx, t, chain, user2, tfDenom, 3)
+
+	// force transfer 1 from user2 (3) to user1 (1)
+	_, err = cosmos.TokenFactoryForceTransferDenom(chain, ctx, user.KeyName(), tfDenom, 1, user2.FormattedAddress(), user.FormattedAddress())
+	require.NoError(t, err)
+	validateBalance(ctx, t, chain, user, tfDenom, 2)
+	validateBalance(ctx, t, chain, user2, tfDenom, 2)
+
+	// burn token from account
+	_, err = cosmos.TokenFactoryBurnDenomFrom(chain, ctx, user.KeyName(), tfDenom, 1, user.FormattedAddress())
+	require.NoError(t, err)
+	validateBalance(ctx, t, chain, user, tfDenom, 1)
+
+	prevAdmin, err := cosmos.TokenFactoryGetAdmin(chain, ctx, tfDenom)
+	require.NoError(t, err)
+	require.Equal(t, prevAdmin.AuthorityMetadata.Admin, user.FormattedAddress())
+
+	// change admin, then we will burn the token-from
+	_, err = cosmos.TokenFactoryChangeAdmin(chain, ctx, user.KeyName(), tfDenom, user2.FormattedAddress())
+	require.NoError(t, err)
+
+	// validate new admin is set
+	tfAdmin, err := cosmos.TokenFactoryGetAdmin(chain, ctx, tfDenom)
+	require.NoError(t, err)
+	require.Equal(t, tfAdmin.AuthorityMetadata.Admin, user2.FormattedAddress())
+
+	// burn
+	_, err = cosmos.TokenFactoryBurnDenomFrom(chain, ctx, user2.KeyName(), tfDenom, 1, user.FormattedAddress())
+	require.NoError(t, err)
+	validateBalance(ctx, t, chain, user, tfDenom, 0)
+
+}
+
 // helpers
 func sendTokens(ctx context.Context, chain *cosmos.CosmosChain, from, to ibc.Wallet, token string, amount int64) (ibc.WalletAmount, error) {
 	if token == "" {
@@ -327,4 +389,10 @@ func sendTokens(ctx context.Context, chain *cosmos.CosmosChain, from, to ibc.Wal
 	}
 	err := chain.SendFunds(ctx, from.KeyName(), sendAmt)
 	return sendAmt, err
+}
+
+func validateBalance(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user ibc.Wallet, tfDenom string, expected int64) {
+	balance, err := chain.GetBalance(ctx, user.FormattedAddress(), tfDenom)
+	require.NoError(t, err)
+	require.Equal(t, balance, math.NewInt(expected))
 }

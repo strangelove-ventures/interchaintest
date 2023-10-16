@@ -41,7 +41,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 		cosmos.NewGenesisKV("app_state.gov.deposit_params.min_deposit.0.denom", "ujuno"),
 	}
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
+	chains := interchaintest.CreateChainsWithChainSpecs(t, []*interchaintest.ChainSpec{
 		{
 			Name:      chainName,
 			ChainName: chainName,
@@ -56,9 +56,6 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 			Version:   "v7.0.3",
 		},
 	})
-
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
 
 	client, network := interchaintest.DockerSetup(t)
 

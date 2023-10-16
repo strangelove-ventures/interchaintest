@@ -1,7 +1,6 @@
 package cosmos_test
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
 
 func TestJunoParamChange(t *testing.T) {
@@ -34,40 +32,16 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 		cosmos.NewGenesisKV("app_state.gov.deposit_params.min_deposit.0.denom", "ujuno"),
 	}
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			Name:      name,
-			ChainName: name,
-			Version:   version,
-			ChainConfig: ibc.ChainConfig{
-				Denom:         "ujuno",
-				ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
-			},
-			NumValidators: &numVals,
-			NumFullNodes:  &numFullNodes,
-		},
-	})
+	cfg := ibc.ChainConfig{
+		Denom:         "ujuno",
+		ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
+	}
 
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
-
+	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodes, name, version, cfg)
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := interchaintest.NewInterchain().
-		AddChain(chain)
-
-	ctx := context.Background()
-	client, network := interchaintest.DockerSetup(t)
-
-	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
-		SkipPathCreation: true,
-	}))
-	t.Cleanup(func() {
-		_ = ic.Close()
-	})
+	enableBlockDB := false
+	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
 	const userFunds = int64(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
