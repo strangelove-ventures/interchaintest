@@ -30,13 +30,13 @@ func TestInterchainAccounts(t *testing.T) {
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0", UidGid: "1025:1025"}},
 			},
 		},
 		{
 			Name: "icad",
 			ChainConfig: ibc.ChainConfig{
-				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0"}},
+				Images: []ibc.DockerImage{{Repository: "ghcr.io/cosmos/ibc-go-icad", Version: "v0.5.0", UidGid: "1025:1025"}},
 			},
 		},
 	})
@@ -44,9 +44,19 @@ func TestInterchainAccounts(t *testing.T) {
 	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
 	// Build chains with a relayer
+	// Get a relayer instance
+	// client, network := interchaintest.DockerSetup(t)
+	// r := interchaintest.NewBuiltinRelayerFactory(
+	// 	ibc.CosmosRly,
+	// 	zaptest.NewLogger(t),
+	// 	relayer.StartupFlags("-p", "events", "-b", "100"),
+	// ).Build(t, client, network)
+
+	// Build the network; spin up the chains and configure the relayer
 	const pathName = "test-path"
 	relayerFlags := []string{"-p", "events", "-b", "100"}
 	enableBlockDB := false
+	skipRelayerPathCreation := true
 
 	ctx, _, r, _, eRep, _, _ := interchaintest.BuildInitialChainWithRelayer(
 		t,
@@ -61,6 +71,7 @@ func TestInterchainAccounts(t *testing.T) {
 				Path:   pathName,
 			},
 		},
+		skipRelayerPathCreation,
 	)
 
 	// Fund a user account on chain1 and chain2

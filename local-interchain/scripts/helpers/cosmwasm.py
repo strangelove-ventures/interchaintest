@@ -11,13 +11,13 @@ root_dir = os.path.dirname(os.path.dirname(os.path.dirname(fp)))
 contracts_storage_dir = os.path.join(root_dir, "contracts")
 
 
-def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
+def upload_contract(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
     print(f"[upload_file] ({rb.chain_id}) {abs_path}")
 
     payload = {
         "chain_id": rb.chain_id,
         "key_name": key_name,
-        "file_name": abs_path,
+        "file_path": abs_path,
     }
 
     url = rb.api
@@ -26,10 +26,11 @@ def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
     else:
         url += "/upload"
 
+    # Setting "Upload-Type": "cosmwasm" uploads the file and stores it on the chain.
     res = post(
         url,
         json=payload,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "Upload-Type": "cosmwasm"},
         timeout=120,
     )
 
@@ -41,7 +42,7 @@ def upload_file(rb: RequestBuilder, key_name: str, abs_path: str) -> dict:
 
 class CosmWasm:
     def __init__(self, api: str, chain_id: str, addr_override: str = ""):
-        self.api = api  # http://localhost:8080
+        self.api = api  # http://127.0.0.1:8080
         self.chain_id = chain_id
 
         self.code_id: int = -1
@@ -74,7 +75,7 @@ class CosmWasm:
             print(f"[Cache] CodeID={self.code_id} for {sub_file_path}")
             return self
 
-        res = upload_file(self.rb, key_name, abs_path)
+        res = upload_contract(self.rb, key_name, abs_path)
         if "error" in res:
             raise Exception(res["error"])
 
@@ -254,7 +255,7 @@ class CosmWasm:
 if __name__ == "__main__":
     CosmWasm.download_base_contracts()
 
-    cw = CosmWasm(api="http://localhost:8080", chain_id="localjuno-1")
+    cw = CosmWasm(api="http://127.0.0.1:8080", chain_id="localjuno-1")
 
     cw.store_contract("acc0", os.path.join(contracts_storage_dir, "cw721_base.wasm"))
 

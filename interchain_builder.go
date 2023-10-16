@@ -71,6 +71,7 @@ func BuildInitialChainWithRelayer(
 	rly ibc.RelayerImplementation,
 	relayerFlags []string,
 	links []InterchainLink,
+	skipPathCreations bool,
 ) (context.Context, *Interchain, ibc.Relayer, *testreporter.Reporter, *testreporter.RelayerExecReporter, *client.Client, string) {
 	ctx := context.Background()
 	rep := testreporter.NewNopReporter()
@@ -87,7 +88,7 @@ func BuildInitialChainWithRelayer(
 		r = NewBuiltinRelayerFactory(
 			rly,
 			zaptest.NewLogger(t),
-			relayer.RelayerOptionExtraStartFlags{Flags: relayerFlags},
+			relayer.StartupFlags(relayerFlags...),
 		).Build(t, client, network)
 
 		ic.AddRelayer(r, "relayer")
@@ -102,7 +103,7 @@ func BuildInitialChainWithRelayer(
 		TestName:         t.Name(),
 		Client:           client,
 		NetworkID:        network,
-		SkipPathCreation: true,
+		SkipPathCreation: skipPathCreations,
 	}
 	if enableBlockDB {
 		// This can be used to write to the block database which will index all block data e.g. txs, msgs, events, etc.
@@ -126,6 +127,6 @@ func BuildInitialChainWithRelayer(
 }
 
 func BuildInitialChain(t *testing.T, chains []ibc.Chain, enableBlockDB bool) (context.Context, *Interchain, *client.Client, string) {
-	ctx, ic, _, _, _, client, network := BuildInitialChainWithRelayer(t, chains, enableBlockDB, 0, nil, nil)
+	ctx, ic, _, _, _, client, network := BuildInitialChainWithRelayer(t, chains, enableBlockDB, 0, nil, nil, true)
 	return ctx, ic, client, network
 }

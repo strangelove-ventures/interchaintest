@@ -1,0 +1,14 @@
+[package]
+name = "intro-contract"
+version = "0.1.0"
+edition = "2021"
+authors = ["Strangelove developers"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cosmwasm-schema = "1.1.2"
+cosmwasm-std = "1.1.2"
+cw-storage-plus = "0.13.2"
+thiserror = {version = "1.0.31"}

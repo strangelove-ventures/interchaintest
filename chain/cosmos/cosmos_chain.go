@@ -194,6 +194,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 	return c.Validators[0]
 }
 
+func (c *CosmosChain) GetNode() *ChainNode {
+	return c.Validators[0]
+}
+
 // Exec implements ibc.Chain.
 func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.getFullNode().Exec(ctx, cmd, env)
@@ -390,8 +394,8 @@ func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName str
 		return tx, "", err
 	}
 	message := wasmtypes.MsgStoreCode{
-		Signer: types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
-		WasmByteCode:   content,
+		Signer:       types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, authtypes.NewModuleAddress(govtypes.ModuleName)),
+		WasmByteCode: content,
 	}
 	msg, err := c.cfg.EncodingConfig.Codec.MarshalInterfaceJSON(&message)
 	if err != nil {
@@ -472,6 +476,11 @@ func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*Pa
 	return c.getFullNode().QueryParam(ctx, subspace, key)
 }
 
+// QueryBankMetadata returns the metadata of a given token denomination.
+func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	return c.getFullNode().QueryBankMetadata(ctx, denom)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
@@ -493,8 +502,8 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreContract(ctx, keyName, fileName)
+func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
+	return c.getFullNode().StoreContract(ctx, keyName, fileName, extraExecTxArgs...)
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
@@ -503,8 +512,8 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -518,8 +527,8 @@ func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress str
 }
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
+func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
+	return c.getFullNode().StoreClientContract(ctx, keyName, fileName, extraExecTxArgs...)
 }
 
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output

@@ -54,6 +54,14 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		}
 	}
 
+	if len(s.ChainConfig.Images) > 0 {
+		for i, image := range s.ChainConfig.Images {
+			if err := image.Validate(); err != nil {
+				return nil, fmt.Errorf("ChainConfig.Images[%d] is invalid: %s", i, err)
+			}
+		}
+	}
+
 	// s.Name and chainConfig.Name are interchangeable
 	if s.Name == "" && s.ChainConfig.Name != "" {
 		s.Name = s.ChainConfig.Name

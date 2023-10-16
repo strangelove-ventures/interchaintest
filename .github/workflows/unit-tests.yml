@@ -20,7 +20,7 @@ jobs:
           go-version: '1.21'
 
       - name: checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # run tests
       - name: run unit tests

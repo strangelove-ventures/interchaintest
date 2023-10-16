@@ -28,9 +28,8 @@ func CosmosChainStateExportTest(t *testing.T, name, version string) {
 	numVals := 1
 	numFullNodes := 0
 
-	cfg := ibc.ChainConfig{
-		Denom: "ujuno",
-	}
+	// defaults to Juno
+	cfg := ibc.ChainConfig{}
 
 	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodes, name, version, cfg)
 	chain := chains[0].(*cosmos.CosmosChain)
