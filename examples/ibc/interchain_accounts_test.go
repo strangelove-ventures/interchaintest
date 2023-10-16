@@ -8,21 +8,11 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-<<<<<<< HEAD
 	chantypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-=======
-	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
->>>>>>> 2c47fa0 (Simplify verbose boilerplate builder (#773))
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,16 +41,7 @@ func TestInterchainAccounts(t *testing.T) {
 		},
 	})
 
-	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
-
-	// Build chains with a relayer
-	// Get a relayer instance
-	// client, network := interchaintest.DockerSetup(t)
-	// r := interchaintest.NewBuiltinRelayerFactory(
-	// 	ibc.CosmosRly,
-	// 	zaptest.NewLogger(t),
-	// 	relayer.StartupFlags("-p", "events", "-b", "100"),
-	// ).Build(t, client, network)
+	chain1, chain2 := chains[0], chains[1]
 
 	// Build the network; spin up the chains and configure the relayer
 	const pathName = "test-path"
