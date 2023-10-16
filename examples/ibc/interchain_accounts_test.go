@@ -41,7 +41,7 @@ func TestInterchainAccounts(t *testing.T) {
 		},
 	})
 
-	chain1, chain2 := chains[0], chains[1]
+	chain1, chain2 := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
 	// Build the network; spin up the chains and configure the relayer
 	const pathName = "test-path"
