@@ -27,7 +27,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
 
 ## Defaults
 
-By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the chain via [the configs/server.json configuration file](../configs/server.json).
+By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the binary with `--api-address` and `--api-port`.
 
 ## Environment Variables
 

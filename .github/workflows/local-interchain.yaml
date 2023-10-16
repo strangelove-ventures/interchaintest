@@ -15,13 +15,65 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: build
+    defaults:
+      run:
+        working-directory: ./local-interchain
     steps:
       - name: Checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
         with:
             go-version: ${{ env.GO_VERSION }}
 
-      - run: cd local-interchain && go mod tidy && make install
+      - name: build local-interchain        
+        run: go mod tidy && make install
+
+      - name: Upload localic artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: local-ic
+          path: ~/go/bin/local-ic          
+
+  # TOOO: put the python workflow here. (https://github.com/strangelove-ventures/interchaintest/pull/775)
+
+  rust-e2e:
+    name: rust e2e
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./local-interchain
+    strategy:
+      fail-fast: false
+      
+    steps:
+      - name: checkout chain
+        uses: actions/checkout@v3
+
+      - name: Install latest toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Download Tarball Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: local-ic
+          path: /tmp
+      
+      - name: Make local-ic executable
+        run: chmod +x /tmp/local-ic
+
+      - name: Start background ibc local-interchain        
+        run: /tmp/local-ic start juno_ibc --api-port 8080 &
+      
+      - name: Run Rust Script
+        run: cd rust && cargo run --package localic-bin --bin localic-bin
+
+      - name: Cleanup        
+        run: killall local-ic && exit 0

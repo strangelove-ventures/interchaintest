@@ -2,7 +2,11 @@
 
 A simple way to config and run IBC local chain testing environments with any language of choice for interaction.
 
-## Installing
+## Repository CI
+
+- [**Rust**](./rust/README.md)
+
+## Installing Locally
 
 **Install on Mac / Linux**
 ```bash
@@ -102,8 +106,7 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "gas_prices": "0%DENOM%",
     "gas_adjustment": 2.0,
     "number_vals": 1,
-    "number_node": 0,
-    "use_new_genesis_command": false,
+    "number_node": 0,    
     "ibc_paths": ["juno-ibc-1"],
     "debugging": true,
     "block_time": "500ms",
