@@ -11,7 +11,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 )
 
 func TestJunoStateExport(t *testing.T) {
@@ -29,39 +28,14 @@ func CosmosChainStateExportTest(t *testing.T, name, version string) {
 	numVals := 1
 	numFullNodes := 0
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			Name:      name,
-			ChainName: name,
-			Version:   version,
-			ChainConfig: ibc.ChainConfig{
-				Denom: "ujuno",
-			},
-			NumValidators: &numVals,
-			NumFullNodes:  &numFullNodes,
-		},
-	})
+	// defaults to Juno
+	cfg := ibc.ChainConfig{}
 
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
-
+	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodes, name, version, cfg)
 	chain := chains[0].(*cosmos.CosmosChain)
 
-	ic := interchaintest.NewInterchain().
-		AddChain(chain)
-
-	ctx := context.Background()
-	client, network := interchaintest.DockerSetup(t)
-
-	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
-		SkipPathCreation: true,
-	}))
-	t.Cleanup(func() {
-		_ = ic.Close()
-	})
+	enableBlockDB := false
+	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
 	HaltChainAndExportGenesis(ctx, t, chain, nil, 3)
 }
