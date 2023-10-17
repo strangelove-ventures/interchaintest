@@ -476,6 +476,11 @@ func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*Pa
 	return c.getFullNode().QueryParam(ctx, subspace, key)
 }
 
+// QueryBankMetadata returns the metadata of a given token denomination.
+func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	return c.getFullNode().QueryBankMetadata(ctx, denom)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
@@ -1054,7 +1059,7 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
 		if ok {
 			acks = append(acks, found)
@@ -1087,7 +1092,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
 func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
 		if ok {
 			timeouts = append(timeouts, found)

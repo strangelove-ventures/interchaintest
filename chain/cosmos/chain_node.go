@@ -1135,6 +1135,20 @@ func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*Par
 	return &param, nil
 }
 
+// QueryBankMetadata returns the bank metadata of a token denomination.
+func (tn *ChainNode) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "bank", "denom-metadata", "--denom", denom)
+	if err != nil {
+		return nil, err
+	}
+	var meta BankMetaData
+	err = json.Unmarshal(stdout, &meta)
+	if err != nil {
+		return nil, err
+	}
+	return &meta, nil
+}
+
 // DumpContractState dumps the state of a contract at a block height.
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
