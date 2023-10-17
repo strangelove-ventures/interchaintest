@@ -6,19 +6,13 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-<<<<<<< HEAD
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-=======
 
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
->>>>>>> 8caf914 (Add more testing, remove redundant (#772))
+	"github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -275,7 +269,7 @@ func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChai
 		ctx,
 		b,
 		users[0],
-		banktypes.NewMsgMultiSend(in, out),
+		banktypes.NewMsgMultiSend([]banktypes.Input{in}, out),
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, txResp.TxHash)
