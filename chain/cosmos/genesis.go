@@ -16,7 +16,10 @@ type GenesisKV struct {
 }
 
 func NewGenesisKV(key string, value interface{}) GenesisKV {
-	return GenesisKV{Key: key, Value: value}
+	return GenesisKV{
+		Key:   key,
+		Value: value,
+	}
 }
 
 func ModifyGenesis(genesisKV []GenesisKV) func(ibc.ChainConfig, []byte) ([]byte, error) {
