@@ -15,6 +15,10 @@ type GenesisKV struct {
 	Value interface{} `json:"value"`
 }
 
+func NewGenesisKV(key string, value interface{}) GenesisKV {
+	return GenesisKV{Key: key, Value: value}
+}
+
 func ModifyGenesis(genesisKV []GenesisKV) func(ibc.ChainConfig, []byte) ([]byte, error) {
 	return func(chainConfig ibc.ChainConfig, genbz []byte) ([]byte, error) {
 		g := make(map[string]interface{})
