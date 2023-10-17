@@ -14,10 +14,8 @@ import (
 )
 
 func TestJunoStateExport(t *testing.T) {
-	// SDK v45
-	CosmosChainStateExportTest(t, "juno", "v15.0.0")
 	// SDK v47
-	CosmosChainStateExportTest(t, "juno", "v16.0.0")
+	CosmosChainStateExportTest(t, "juno", "v17.0.0")
 }
 
 func CosmosChainStateExportTest(t *testing.T, name, version string) {
