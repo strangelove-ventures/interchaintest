@@ -46,14 +46,12 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	// configs Folder
 	configsDir := filepath.Join(installDir, "configs")
 	relayerFilePath := filepath.Join(configsDir, "relayer.json")
-	serverFilePath := filepath.Join(configsDir, "server.json")
 
 	config, err := loadConfig(config, cfgFilePath)
 	if err != nil {
 		return nil, err
 	}
 	config, _ = loadConfig(config, relayerFilePath)
-	config, _ = loadConfig(config, serverFilePath)
 
 	log.Println("Using directory:", installDir)
 	log.Println("Using chain config:", cfgFilePath)
