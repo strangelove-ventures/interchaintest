@@ -375,6 +375,16 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
+// GetGovernanceAddress performs a query to get the address of the chain's x/gov module
+func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
+	return c.GetModuleAddress(ctx, govtypes.ModuleName)
+}
+
+// GetModuleAddress performs a query to get the address of the specified chain module
+func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	return c.getFullNode().GetModuleAddress(ctx, moduleName)
+}
+
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
