@@ -22,7 +22,7 @@ def main():
     poll_for_start(API_URL, waitSeconds=120)
 
     bin_test()
-    # tx_test()
+    tx_test()
 
 
 # Test to ensure the base layer works and returns data properly
