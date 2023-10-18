@@ -196,24 +196,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	// Save to logs.json file for runtime chain information.
 	DumpChainsInfoToLogs(installDir, config, chains, connections)
 
-	// Starts a non blocking REST server to take action on the chain.
-	go func() {
-		r := router.NewRouter(ctx, ic, config, vals, relayer, eRep, installDir)
-
-		if ao.PortOverride != 0 {
-			config.Server.Port = fmt.Sprintf("%d", ao.PortOverride)
-		}
-		if ao.AddressOverride != "" {
-			config.Server.Host = ao.AddressOverride
-		}
-
-		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
-		if err := http.ListenAndServe(server, r); err != nil {
-			log.Default().Println(err)
-		}
-
-		log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
-	}()
+	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		log.Fatal("WaitForBlocks StartChain: ", err)
