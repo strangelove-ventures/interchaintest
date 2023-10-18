@@ -14,12 +14,8 @@ contracts_json_path = os.path.join(parent_dir, "configs", "contracts.json")
 if not os.path.exists(contracts_path):
     os.mkdir(contracts_path)
 
-server_config = {}
-with open(os.path.join(parent_dir, "configs", "server.json")) as f:
-    server_config = json.load(f)["server"]
-
-HOST = server_config["host"]
-PORT = server_config["port"]
+HOST = "127.0.0.1"
+PORT = 8080
 
 # == Setup global parsers ==
 parser = argparse.ArgumentParser(
