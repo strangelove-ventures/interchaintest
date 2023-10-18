@@ -543,6 +543,20 @@ lumnetwork:
       uid-gid: 1025:1025
   no-host-mount: false
 
+neutron:
+  name: neutron
+  type: cosmos
+  bin: neutrond
+  bech32-prefix: neutron
+  denom: untrn
+  gas-prices: 0.01untrn
+  gas-adjustment: 1.3
+  trusting-period: 336h
+  images:
+    - repository: ghcr.io/strangelove-ventures/heighliner/neutron
+      uid-gid: 1025:1025
+  no-host-mount: false
+
 omniflixhub:
   name: omniflixhub
   type: cosmos
@@ -590,7 +604,7 @@ penumbra:
   name: penumbra
   type: penumbra
   bin: tendermint
-  bech32-prefix: penumbra
+  bech32-prefix: penumbrav2t
   denom: upenumbra
   gas-prices: 0.0upenumbra
   gas-adjustment: 1.3

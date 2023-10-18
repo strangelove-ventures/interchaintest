@@ -15,15 +15,16 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/strangelove-ventures/localinterchain/interchain/router"
+	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
 )
 
-type AppOverrides struct {
-	AddressOverride string
-	PortOverride    uint16
+type AppConfig struct {
+	Address string
+	Port    uint16
 }
 
-func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
+func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -162,6 +163,28 @@ func StartChain(installDir, chainCfgFile string, ao *AppOverrides) {
 			vals[chainID] = cosmosChain.Validators[0]
 		}
 	}
+
+	// Starts a non blocking REST server to take action on the chain.
+	go func() {
+		cosmosChains := map[string]*cosmos.CosmosChain{}
+		for _, chain := range chains {
+			if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
+				cosmosChains[cosmosChain.Config().ChainID] = cosmosChain
+			}
+		}
+
+		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
+
+		config.Server = types.RestServer{
+			Host: ac.Address,
+			Port: fmt.Sprintf("%d", ac.Port),
+		}
+
+		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
+		if err := http.ListenAndServe(server, r); err != nil {
+			log.Default().Println(err)
+		}
+	}()
 
 	AddGenesisKeysToKeyring(ctx, config, chains)
 

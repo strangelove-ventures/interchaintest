@@ -59,7 +59,3 @@ func GetFiles() []string {
 
 	return fileNames
 }
-
-func init() {
-	rootCmd.AddCommand(chainsCmd)
-}

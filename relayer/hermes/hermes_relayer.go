@@ -60,19 +60,15 @@ type pathChainConfig struct {
 }
 
 // NewHermesRelayer returns a new hermes relayer.
-func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOption) *Relayer {
+func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *Relayer {
 	c := commander{log: log}
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case relayer.RelayerOptionExtraStartFlags:
-			c.extraStartFlags = o.Flags
-		}
-	}
+
 	options = append(options, relayer.HomeDir(hermesHome))
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
 		panic(err)
 	}
+	c.extraStartFlags = dr.GetExtraStartupFlags()
 
 	return &Relayer{
 		DockerRelayer: dr,

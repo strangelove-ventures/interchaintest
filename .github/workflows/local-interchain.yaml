@@ -20,7 +20,7 @@ jobs:
         working-directory: ./local-interchain
     steps:
       - name: Checkout interchaintest
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v4
@@ -36,7 +36,48 @@ jobs:
           name: local-ic
           path: ~/go/bin/local-ic          
 
-  e2e-tests:
+
+  rust:
+    name: rust e2e
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./local-interchain
+    strategy:
+      fail-fast: false
+      
+    steps:
+      - name: checkout chain
+        uses: actions/checkout@v3
+
+      - name: Install latest toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Download Tarball Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: local-ic
+          path: /tmp
+      
+      - name: Make local-ic executable
+        run: chmod +x /tmp/local-ic
+
+      - name: Start background ibc local-interchain        
+        run: /tmp/local-ic start juno_ibc --api-port 8080 &
+      
+      - name: Run Rust Script
+        run: cd rust && cargo run --package localic-bin --bin localic-bin
+
+      - name: Cleanup        
+        run: killall local-ic && exit 0
+
+  python:
     name: e2e tests
     needs: build
     runs-on: ubuntu-latest

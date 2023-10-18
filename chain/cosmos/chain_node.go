@@ -444,7 +444,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	var gasPriceFound, gasAdjustmentFound = false, false
+	var gasPriceFound, gasAdjustmentFound, feesFound = false, false, false
 	for i := 0; i < len(command); i++ {
 		if command[i] == "--gas-prices" {
 			gasPriceFound = true
@@ -452,8 +452,11 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		if command[i] == "--gas-adjustment" {
 			gasAdjustmentFound = true
 		}
+		if command[i] == "--fees" {
+			feesFound = true
+		}
 	}
-	if !gasPriceFound {
+	if !gasPriceFound && !feesFound {
 		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
 	}
 	if !gasAdjustmentFound {
@@ -728,6 +731,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+		"--gas", "auto",
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -778,14 +782,17 @@ type CodeInfosResponse struct {
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
+func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
 	_, file := filepath.Split(fileName)
 	err := tn.CopyFile(ctx, fileName, file)
 	if err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	if _, err := tn.ExecTx(ctx, keyName, "wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"); err != nil {
+	cmd := []string{"wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	if _, err := tn.ExecTx(ctx, keyName, cmd...); err != nil {
 		return "", err
 	}
 
@@ -843,6 +850,82 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 	return false
 }
 
+// GetBuildInformation returns the build information and dependencies for the chain binary.
+func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInformation {
+	stdout, _, err := tn.ExecBin(ctx, "version", "--long", "--output", "json")
+	if err != nil {
+		return nil
+	}
+
+	type tempBuildDeps struct {
+		Name             string   `json:"name"`
+		ServerName       string   `json:"server_name"`
+		Version          string   `json:"version"`
+		Commit           string   `json:"commit"`
+		BuildTags        string   `json:"build_tags"`
+		Go               string   `json:"go"`
+		BuildDeps        []string `json:"build_deps"`
+		CosmosSdkVersion string   `json:"cosmos_sdk_version"`
+	}
+
+	var deps tempBuildDeps
+	if err := json.Unmarshal([]byte(stdout), &deps); err != nil {
+		return nil
+	}
+
+	getRepoAndVersion := func(dep string) (string, string) {
+		split := strings.Split(dep, "@")
+		return split[0], split[1]
+	}
+
+	var buildDeps []BuildDependency
+	for _, dep := range deps.BuildDeps {
+		var bd BuildDependency
+
+		if strings.Contains(dep, "=>") {
+			// Ex: "github.com/aaa/bbb@v1.2.1 => github.com/ccc/bbb@v1.2.0"
+			split := strings.Split(dep, " => ")
+			main, replacement := split[0], split[1]
+
+			parent, parentVersion := getRepoAndVersion(main)
+			r, rV := getRepoAndVersion(replacement)
+
+			bd = BuildDependency{
+				Parent:             parent,
+				Version:            parentVersion,
+				IsReplacement:      true,
+				Replacement:        r,
+				ReplacementVersion: rV,
+			}
+
+		} else {
+			// Ex: "github.com/aaa/bbb@v0.0.0-20191008050251-8e49817e8af4"
+			parent, version := getRepoAndVersion(dep)
+
+			bd = BuildDependency{
+				Parent:             parent,
+				Version:            version,
+				IsReplacement:      false,
+				Replacement:        "",
+				ReplacementVersion: "",
+			}
+		}
+
+		buildDeps = append(buildDeps, bd)
+	}
+
+	return &BinaryBuildInformation{
+		BuildDeps:        buildDeps,
+		Name:             deps.Name,
+		ServerName:       deps.ServerName,
+		Version:          deps.Version,
+		Commit:           deps.Commit,
+		BuildTags:        deps.BuildTags,
+		Go:               deps.Go,
+		CosmosSdkVersion: deps.CosmosSdkVersion,
+	}
+}
+
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
 	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
@@ -878,10 +961,11 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return tn.ExecTx(ctx, keyName,
-		"wasm", "execute", contractAddress, message,
-	)
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+	cmd := []string{"wasm", "execute", contractAddress, message}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	return tn.ExecTx(ctx, keyName, cmd...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -899,7 +983,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 }
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
+func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return "", err
@@ -910,7 +994,10 @@ func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fi
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 
-	_, err = tn.ExecTx(ctx, keyName, "ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto")
+	cmd := []string{"ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto"}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	_, err = tn.ExecTx(ctx, keyName, cmd...)
 	if err != nil {
 		return "", err
 	}
@@ -930,6 +1017,30 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 	}
 	err = json.Unmarshal([]byte(stdout), response)
 	return err
+}
+
+// GetModuleAddress performs a query to get the address of the specified chain module
+func (tn *ChainNode) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	queryRes, err := tn.GetModuleAccount(ctx, moduleName)
+	if err != nil {
+		return "", err
+	}
+	return queryRes.Account.BaseAccount.Address, nil
+}
+
+// GetModuleAccount performs a query to get the account details of the specified chain module
+func (tn *ChainNode) GetModuleAccount(ctx context.Context, moduleName string) (QueryModuleAccountResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "auth", "module-account", moduleName)
+	if err != nil {
+		return QueryModuleAccountResponse{}, err
+	}
+
+	queryRes := QueryModuleAccountResponse{}
+	err = json.Unmarshal(stdout, &queryRes)
+	if err != nil {
+		return QueryModuleAccountResponse{}, err
+	}
+	return queryRes, nil
 }
 
 // VoteOnProposal submits a vote for the specified proposal.
@@ -1048,6 +1159,20 @@ func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*Par
 	return &param, nil
 }
 
+// QueryBankMetadata returns the bank metadata of a token denomination.
+func (tn *ChainNode) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "bank", "denom-metadata", "--denom", denom)
+	if err != nil {
+		return nil, err
+	}
+	var meta BankMetaData
+	err = json.Unmarshal(stdout, &meta)
+	if err != nil {
+		return nil, err
+	}
+	return &meta, nil
+}
+
 // DumpContractState dumps the state of a contract at a block height.
 func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
@@ -1122,7 +1247,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd, nil)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

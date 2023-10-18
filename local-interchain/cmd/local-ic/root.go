@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	// This must be global for the Makefile to build properly (ldflags).
 	MakeFileInstallDirectory string
 )
 
