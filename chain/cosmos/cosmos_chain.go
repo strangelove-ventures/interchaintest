@@ -375,6 +375,16 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
+// GetGovernanceAddress performs a query to get the address of the chain's x/gov module
+func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
+	return c.GetModuleAddress(ctx, govtypes.ModuleName)
+}
+
+// GetModuleAddress performs a query to get the address of the specified chain module
+func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	return c.getFullNode().GetModuleAddress(ctx, moduleName)
+}
+
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
@@ -476,6 +486,11 @@ func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*Pa
 	return c.getFullNode().QueryParam(ctx, subspace, key)
 }
 
+// QueryBankMetadata returns the metadata of a given token denomination.
+func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
+	return c.getFullNode().QueryBankMetadata(ctx, denom)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.getTransaction(txHash)
 	if err != nil {
@@ -497,8 +512,8 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreContract(ctx, keyName, fileName)
+func (c *CosmosChain) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
+	return c.getFullNode().StoreContract(ctx, keyName, fileName, extraExecTxArgs...)
 }
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
@@ -507,8 +522,8 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string) (txHash string, err error) {
-	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message)
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
@@ -522,8 +537,8 @@ func (c *CosmosChain) DumpContractState(ctx context.Context, contractAddress str
 }
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string) (string, error) {
-	return c.getFullNode().StoreClientContract(ctx, keyName, fileName)
+func (c *CosmosChain) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
+	return c.getFullNode().StoreClientContract(ctx, keyName, fileName, extraExecTxArgs...)
 }
 
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
@@ -1054,7 +1069,7 @@ func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
 		if ok {
 			acks = append(acks, found)
@@ -1087,7 +1102,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
 func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
-	err := rangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
 		if ok {
 			timeouts = append(timeouts, found)

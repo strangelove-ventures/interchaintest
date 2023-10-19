@@ -127,3 +127,41 @@ type BinaryBuildInformation struct {
 	BuildDeps        []BuildDependency `json:"build_deps"`
 	CosmosSdkVersion string            `json:"cosmos_sdk_version"`
 }
+
+type BankMetaData struct {
+	Metadata struct {
+		Description string `json:"description"`
+		DenomUnits  []struct {
+			Denom    string   `json:"denom"`
+			Exponent int      `json:"exponent"`
+			Aliases  []string `json:"aliases"`
+		} `json:"denom_units"`
+		Base    string `json:"base"`
+		Display string `json:"display"`
+		Name    string `json:"name"`
+		Symbol  string `json:"symbol"`
+		URI     string `json:"uri"`
+		URIHash string `json:"uri_hash"`
+	} `json:"metadata"`
+}
+
+type QueryDenomAuthorityMetadataResponse struct {
+	AuthorityMetadata DenomAuthorityMetadata `protobuf:"bytes,1,opt,name=authority_metadata,json=authorityMetadata,proto3" json:"authority_metadata" yaml:"authority_metadata"`
+}
+
+type DenomAuthorityMetadata struct {
+	// Can be empty for no admin, or a valid address
+	Admin string `protobuf:"bytes,1,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
+}
+
+type QueryModuleAccountResponse struct {
+	Account struct {
+		BaseAccount struct {
+			AccountNumber string `json:"account_number"`
+			Address       string `json:"address"`
+			PubKey        string `json:"pub_key"`
+			Sequence      string `json:"sequence"`
+		} `json:"base_account"`
+		Name string `json:"name"`
+	} `json:"account"`
+}

@@ -61,13 +61,7 @@ func TestSDKBoundaries(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			t.Parallel()
 
-			cf := interchaintest.NewBuiltinChainFactory(
-				zaptest.NewLogger(t),
-				tt.chainSpecs,
-			)
-
-			chains, err := cf.Chains(t.Name())
-			require.NoError(t, err)
+			chains := interchaintest.CreateChainsWithChainSpecs(t, tt.chainSpecs)
 
 			client, network := interchaintest.DockerSetup(t)
 
