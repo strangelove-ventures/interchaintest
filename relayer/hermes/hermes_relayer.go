@@ -77,8 +77,8 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 
 // AddChainConfiguration is called once per chain configuration, which means that in the case of hermes, the single
 // config file is overwritten with a new entry each time this function is called.
-func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
-	configContent, err := r.configContent(chainConfig, keyName, rpcAddr, grpcAddr)
+func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, fallbackRpc []string) error {
+	configContent, err := r.configContent(chainConfig, keyName, rpcAddr, grpcAddr, fallbackRpc)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
@@ -251,7 +251,7 @@ func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter,
 // configContent returns the contents of the hermes config file as a byte array. Note: as hermes expects a single file
 // rather than multiple config files, we need to maintain a list of chain configs each time they are added to write the
 // full correct file update calling Relayer.AddChainConfiguration.
-func (r *Relayer) configContent(cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (r *Relayer) configContent(cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, fallbackRpc []string) ([]byte, error) {
 	r.chainConfigs = append(r.chainConfigs, ChainConfig{
 		cfg:      cfg,
 		keyName:  keyName,

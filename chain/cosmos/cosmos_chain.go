@@ -147,7 +147,7 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,
@@ -206,6 +206,11 @@ func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (std
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
+}
+
+// Implements Chain interface
+func (c *CosmosChain) GetFallbackRPCAddress() []string {
+	return []string{} //Todo: return fallback rpc's correctly
 }
 
 // Implements Chain interface
@@ -871,7 +876,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,
@@ -903,7 +908,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,

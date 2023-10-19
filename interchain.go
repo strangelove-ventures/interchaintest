@@ -414,16 +414,17 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 
 	for r, chains := range ic.relayerChains() {
 		for _, c := range chains {
-			rpcAddr, grpcAddr := c.GetRPCAddress(), c.GetGRPCAddress()
+			rpcAddr, grpcAddr, fallbackRpc := c.GetRPCAddress(), c.GetGRPCAddress(), c.GetFallbackRPCAddress()
 			if !r.UseDockerNetwork() {
 				rpcAddr, grpcAddr = c.GetHostRPCAddress(), c.GetHostGRPCAddress()
+				fallbackRpc = c.GetFallbackRPCAddress()
 			}
 
 			chainName := ic.chains[c]
 			if err := r.AddChainConfiguration(ctx,
 				rep,
 				c.Config(), chainName,
-				rpcAddr, grpcAddr,
+				rpcAddr, grpcAddr, fallbackRpc,
 			); err != nil {
 				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}

@@ -37,6 +37,10 @@ type Chain interface {
 	// Note that this will not return a valid value until after Start returns.
 	GetHostRPCAddress() string
 
+	// GetFallbackRPCAddress returns the fallback rpc address's that can be reached by processes on the host machine.
+	// Note that this will not return a valid value until after Start returns.
+	GetFallbackRPCAddress() []string
+
 	// GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
 	// Note that this will not return a valid value until after Start returns.
 	GetHostGRPCAddress() string
