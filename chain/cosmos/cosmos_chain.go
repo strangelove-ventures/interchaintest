@@ -17,7 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	chanTypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
