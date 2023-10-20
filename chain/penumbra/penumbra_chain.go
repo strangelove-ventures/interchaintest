@@ -206,12 +206,6 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 		return nil, fmt.Errorf("failed to create mnemonic: %w", err)
 	}
 
-	//addrBytes, err := info.GetAddress()
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to get address: %w", err)
-	//}
-	//
-	//return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 	return c.BuildWallet(ctx, keyName, mnemonic)
 }
 
@@ -240,6 +234,7 @@ func (c *PenumbraChain) SendIBCTransfer(
 		return ibc.Tx{}, fmt.Errorf("no pclientd instances configured to use when sending ibc transfers")
 	}
 
+	//return fn.PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
 	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
@@ -426,7 +421,6 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		fmt.Printf("Adding additional genesis wallet to allocation csv for %s with token %s and amount %s \n", wallet.Address, wallet.Denom, wallet.Amount.String())
 		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
 			Address: wallet.Address,
 			Denom:   wallet.Denom,

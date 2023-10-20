@@ -16,12 +16,10 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	assetv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
-	feev1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/fee/v1alpha1"
 	ibcv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
 	shielded_poolv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
 	keysv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1alpha1"
 	numv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1alpha1"
-	transactionv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1alpha1"
 	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1alpha1"
 	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1alpha1"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -170,7 +168,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	// Generate a transaction plan sending funds to an address.
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		AccountGroupId: nil,
+		WalletId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &assetv1alpha1.Value{
 				Amount: &numv1alpha1.Amount{
@@ -194,7 +192,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
-		AccountGroupId:    &keysv1alpha1.AccountGroupId{Inner: make([]byte, 32)},
+		WalletId:          &keysv1alpha1.WalletId{Inner: make([]byte, 32)},
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
@@ -245,25 +243,12 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 	defer channel.Close()
 
-	//fmt.Println("Building MsgTransfer...")
 	// TODO may need to be more defensive than this. additionally we may want to validate the addr string
 	if p.addrString == "" {
 		return ibc.Tx{}, fmt.Errorf("address string was not cached on pclientd instance for key with name %s", p.KeyName)
 	}
 
 	timeoutHeight, timeoutTimestamp := ibcTransferTimeouts(options)
-
-	//msgTransfer := &transfertypes.MsgTransfer{
-	//	// TODO: there may be edge cases where this port is incorrect e.g. smart contracts or other actors
-	//	SourcePort:       transfertypes.PortID,
-	//	SourceChannel:    channelID,
-	//	Token:            sdk.NewCoin(amount.Denom, amount.Amount),
-	//	Sender:           p.addrString,
-	//	Receiver:         amount.Address,
-	//	TimeoutHeight:    timeoutHeight,
-	//	TimeoutTimestamp: timeoutTimestamp,
-	//	Memo:             options.Memo,
-	//}
 
 	fmt.Println("Building Ics20Withdrawal...")
 	hi, lo := translateBigInt(amount.Amount)
@@ -285,133 +270,58 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		SourceChannel: channelID,
 	}
 
-	//anyMsg, err := codectypes.NewAnyWithValue(withdrawal)
-	//if err != nil {
-	//	return ibc.Tx{}, err
-	//}
-
-	//fmt.Printf("MsgTransfer built: %+v \n", msgTransfer)
-	fmt.Printf("Ics20Withdrawal built: %+v \n", withdrawal)
-
-	// TODO: Maybe Ics20Withdrawal is actually composed like this?
-
-	//ap := &transactionv1alpha1.ActionPlan{
-	//	Action: &transactionv1alpha1.Action_Ics20Withdrawal{
-	//		Ics20Withdrawal: withdrawal,
-	//	},
-	//}
-
-	fmt.Println("Building Action...")
-	action := &transactionv1alpha1.Action{
-		Action: &transactionv1alpha1.Action_Ics20Withdrawal{
-			Ics20Withdrawal: withdrawal,
-		},
-	}
-
-	fmt.Println("Building TransactionBody...")
-	txBody := &transactionv1alpha1.TransactionBody{
-		Actions: []*transactionv1alpha1.Action{
-			action,
-		},
-		TransactionParameters: &transactionv1alpha1.TransactionParameters{},
-		Fee: &feev1alpha1.Fee{
-			Amount: &numv1alpha1.Amount{
-				Lo: 0,
-				Hi: 0,
-			},
-		},
-		MemoData: &transactionv1alpha1.MemoData{},
-	}
-
-	fmt.Println("Building Transaction...")
-	tx := &transactionv1alpha1.Transaction{
-		Body:       txBody,
-		BindingSig: nil,
-		Anchor:     nil,
-	}
-
-	fmt.Println("Building BroadcastTransactionRequest")
-	btr := &viewv1alpha1.BroadcastTransactionRequest{
-		Transaction:    tx,
-		AwaitDetection: true,
+	// Generate a transaction plan sending ics_20 transfer
+	tpr := &viewv1alpha1.TransactionPlannerRequest{
+		WalletId:         nil,
+		Ics20Withdrawals: []*ibcv1alpha1.Ics20Withdrawal{withdrawal},
 	}
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
 
-	fmt.Println("Sending BroadcastTransactionRequest...")
-	broadcastResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
 		return ibc.Tx{}, err
 	}
-	fmt.Println("Received BroadcastTransactionResponse")
 
-	//// Generate a transaction plan for initiating an ics-20 transfer
-	//fmt.Println("Building TransactionPlannerRequest...")
-	//tpr := &viewv1alpha1.TransactionPlannerRequest{
-	//	AccountGroupId: nil,
-	//	IbcActions: []*ibcv1alpha1.IbcAction{
-	//		{RawAction: anyMsg},
-	//	},
-	//}
-	//
-	//
-	//
-	//fmt.Println("Sending TransactionPlannerRequest...")
-	//resp, err := viewClient.TransactionPlanner(ctx, tpr)
-	//if err != nil {
-	//	return ibc.Tx{}, err
-	//}
-	//fmt.Println("Received TransactionPlannerResponse")
-	//
-	//// Get authorization data for the transaction from pclientd (signing).
-	//custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
-	//
-	//fmt.Println("Building AuthorizeRequest...")
-	//authorizeReq := &custodyv1alpha1.AuthorizeRequest{
-	//	Plan:              resp.Plan,
-	//	AccountGroupId:    &cryptov1alpha1.AccountGroupId{Inner: make([]byte, 32)},
-	//	PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
-	//}
-	//
-	//fmt.Println("Sending AuthorizeRequest...")
-	//authData, err := custodyClient.Authorize(ctx, authorizeReq)
-	//if err != nil {
-	//	return ibc.Tx{}, err
-	//}
-	//fmt.Println("Received AuthorizeResponse")
-	//
-	//// Have pclientd build and sign the planned transaction.
-	//fmt.Println("Building WitnessAndBuildRequest...")
-	//wbr := &viewv1alpha1.WitnessAndBuildRequest{
-	//	TransactionPlan:   resp.Plan,
-	//	AuthorizationData: authData.Data,
-	//}
-	//
-	//fmt.Println("Sending WitnessAndBuildRequest...")
-	//tx, err := viewClient.WitnessAndBuild(ctx, wbr)
-	//if err != nil {
-	//	return ibc.Tx{}, err
-	//}
-	//fmt.Println("Received WitnessAndBuildResponse...")
-	//
-	//// Have pclientd broadcast and await confirmation of the built transaction.
-	//fmt.Println("Building BroadcastTxRequest...")
-	//btr := &viewv1alpha1.BroadcastTransactionRequest{
-	//	Transaction:    tx.Transaction,
-	//	AwaitDetection: true,
-	//}
-	//
-	//fmt.Println("Sending BroadcastTxRequest...")
-	//broadcastResp, err := viewClient.BroadcastTransaction(ctx, btr)
-	//if err != nil {
-	//	return ibc.Tx{}, err
-	//}
-	//fmt.Println("Received BroadcastTxResponse...")
+	// Get authorization data for the transaction from pclientd (signing).
+	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
+		Plan:              resp.Plan,
+		WalletId:          &keysv1alpha1.WalletId{Inner: make([]byte, 32)},
+		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
+	}
+
+	authData, err := custodyClient.Authorize(ctx, authorizeReq)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	// Have pclientd build and sign the planned transaction.
+	wbr := &viewv1alpha1.WitnessAndBuildRequest{
+		TransactionPlan:   resp.Plan,
+		AuthorizationData: authData.Data,
+	}
+
+	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	// Have pclientd broadcast and await confirmation of the built transaction.
+	btr := &viewv1alpha1.BroadcastTransactionRequest{
+		Transaction:    tx.Transaction,
+		AwaitDetection: true,
+	}
+
+	txResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
 
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
-		Height:   broadcastResp.DetectionHeight,
-		TxHash:   string(broadcastResp.Id.Hash),
+		Height:   txResp.DetectionHeight,
+		TxHash:   string(txResp.Id.Hash),
 		GasSpent: 0,
 		Packet: ibc.Packet{
 			Sequence:         0,

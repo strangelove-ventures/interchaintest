@@ -132,11 +132,6 @@ func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (s
 
 	split := strings.Split(string(stdout), "\n")
 
-	fmt.Println("App FVK Call")
-	fmt.Printf("STDOUT: %s \n", string(stdout))
-	fmt.Printf("SPLIT: %s \n", split)
-	fmt.Printf("SPLIT EDIT: %s \n", split[len(split)-2])
-
 	return split[len(split)-2], nil
 }
 
@@ -214,10 +209,6 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	for _, allocation := range allocations {
 		allocationsCsv = append(allocationsCsv, []byte(fmt.Sprintf(`"%s","%s","%s"`+"\n", allocation.Amount.String(), allocation.Denom, allocation.Address))...)
 	}
-
-	fmt.Println("Printing allocations CSV")
-	fmt.Printf("%v \n", string(allocationsCsv))
-	fmt.Println()
 
 	if err := fw.WriteFile(ctx, p.VolumeName, "allocations.csv", allocationsCsv); err != nil {
 		return fmt.Errorf("error writing allocations to file: %w", err)
@@ -340,4 +331,45 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
+}
+
+func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, opts ibc.TransferOptions) (ibc.Tx, error) {
+	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+
+	parts := strings.Split(channelID, "-")
+	chanNum := parts[1]
+
+	cmd := []string{"pcli", "--home", keyPath, "-n", pdUrl, "tx", "withdraw",
+		"--to", amount.Address,
+		"--channel", chanNum,
+		"--timeout-height", fmt.Sprintf("0-%d", opts.Timeout.Height),
+		fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+	}
+
+	stdout, stderr, err := p.Exec(ctx, cmd, nil)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	fmt.Printf("STDOUT: %s \n", string(stdout))
+	fmt.Printf("STDERR: %s \n", string(stderr))
+
+	tx := ibc.Tx{
+		Height:   0,
+		TxHash:   "",
+		GasSpent: 0,
+		Packet: ibc.Packet{
+			Sequence:         0,
+			SourcePort:       "",
+			SourceChannel:    "",
+			DestPort:         "",
+			DestChannel:      "",
+			Data:             nil,
+			TimeoutHeight:    "",
+			TimeoutTimestamp: 0,
+		},
+	}
+
+	return tx, nil
 }
