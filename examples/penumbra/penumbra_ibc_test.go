@@ -34,7 +34,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.61.0,v0.34.27",
+			Version: "v0.62.0,v0.37.2",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -43,7 +43,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 		},
 		{
 			Name:    "penumbra",
-			Version: "v0.61.0,v0.34.27",
+			Version: "v0.62.0,v0.37.2",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraB-0",
 			},
@@ -59,9 +59,9 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chainB := chains[1].(*penumbra.PenumbraChain)
 
 	i := ibc.DockerImage{
-		Repository: "ghcr.io/cosmos/relayer",
-		Version:    "main",
-		UidGid:     "1025:1025",
+		Repository: "relayer",
+		Version:    "local",
+		UidGid:     "100:1000",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
@@ -157,7 +157,16 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainA.Config().ChainID, chainB.Config().ChainID)
 	require.NoError(t, err)
 
-	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{})
+	h, err := chainA.Height(ctx)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: 0,
+			Height:      h + 50,
+		},
+		Memo: "",
+	})
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 5, chainA)
@@ -173,25 +182,216 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	ibcDenomTrace := transfertypes.ParseDenomTrace(ibcDenom)
 	chainADenomOnChainB := ibcDenomTrace.IBCDenom()
 
-	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), chainADenomOnChainB)
+	t.Logf("Prefixed Denom: %s \n", ibcDenom)
+	t.Logf("Denom Trace: %s \n", ibcDenomTrace.String())
+	t.Logf("IBC Denom: %s \n", chainADenomOnChainB)
+
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
+}
+
+// TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between Penumbra and Cosmos testnet networks.
+// An instance of Penumbra and a basic Cosmos network will be spun up, the go-relayer will be configured,
+// and an ics-20 token transfer will be conducted from Penumbra -> Cosmos and then back from Cosmos -> Penumbra.
+func TestPenumbraToCosmosIBC(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	t.Parallel()
+	client, network := interchaintest.DockerSetup(t)
+
+	nv := 2
+	fn := 0
+
+	image := ibc.DockerImage{
+		Repository: "ghcr.io/cosmos/ibc-go-simd",
+		Version:    "v8.0.0-beta.1",
+		UidGid:     "100:1000",
+	}
+
+	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
+		{
+			Name:    "penumbra",
+			Version: "v0.61.0,v0.34.27",
+			ChainConfig: ibc.ChainConfig{
+				ChainID: "penumbraA-0",
+			},
+			NumValidators: &nv,
+			NumFullNodes:  &fn,
+		},
+		{
+			Name:          "ibc-go-simd",
+			ChainName:     "simd",
+			Version:       "main",
+			NumValidators: &nv,
+			NumFullNodes:  &fn,
+			ChainConfig: ibc.ChainConfig{
+				Type:          "cosmos",
+				Name:          "simd",
+				ChainID:       "cosmos-0",
+				Images:        []ibc.DockerImage{image},
+				Bin:           "simd",
+				Bech32Prefix:  "cosmos",
+				Denom:         "stake",
+				CoinType:      "118",
+				GasPrices:     "0.0stake",
+				GasAdjustment: 1.1,
+			},
+		},
+	},
+	).Chains(t.Name())
+	require.NoError(t, err, "failed to get chains")
+	require.Len(t, chains, 2)
+
+	chainA := chains[0].(*penumbra.PenumbraChain)
+	chainB := chains[1]
+
+	i := ibc.DockerImage{
+		Repository: "relayer",
+		Version:    "local",
+		UidGid:     "100:1000",
+	}
+	r := interchaintest.NewBuiltinRelayerFactory(
+		ibc.CosmosRly,
+		zaptest.NewLogger(t),
+		relayer.DockerImage(&i),
+		relayer.ImagePull(false),
+	).Build(t, client, network)
+
+	const pathName = "ab"
+
+	ic := interchaintest.NewInterchain().
+		AddChain(chainA).
+		AddChain(chainB).
+		AddRelayer(r, "relayer").
+		AddLink(interchaintest.InterchainLink{
+			Chain1:            chainA,
+			Chain2:            chainB,
+			Relayer:           r,
+			Path:              pathName,
+			CreateClientOpts:  ibc.CreateClientOptions{},
+			CreateChannelOpts: ibc.CreateChannelOptions{},
+		})
+
+	ctx := context.Background()
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
+
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: false,
+	}))
+
+	t.Cleanup(func() {
+		err := ic.Close()
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	// Start the relayer
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	t.Cleanup(
+		func() {
+			err := r.StopRelayer(ctx, eRep)
+			if err != nil {
+				panic(fmt.Errorf("an error occured while stopping the relayer: %s", err))
+			}
+		},
+	)
+
+	// Fund users and check init balances
+	initBalance := math.NewInt(1_000_000_000)
+	pUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainA)
+	require.Equal(t, 1, len(pUsers))
+
+	alice := pUsers[0]
+
+	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err := chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	cUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainB)
+	require.Equal(t, 1, len(cUsers))
+
+	bob := cUsers[0]
+
+	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	bobBal, err := chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, initBalance))
+
+	// Compose ics-20 transfer details and initialize transfer
+	transferAmount := math.NewInt(1_000_000)
+	transfer := ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainA.Config().ChainID, chainB.Config().ChainID)
+	require.NoError(t, err)
+
+	h, err := chainA.Height(ctx)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: 0,
+			Height:      h + 50,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	expectedBal := initBalance.Sub(transferAmount)
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
+
+	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
+	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
+	ibcDenomTrace := transfertypes.ParseDenomTrace(ibcDenom)
+	chainADenomOnChainB := ibcDenomTrace.IBCDenom()
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
-	//aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
-	//require.NoError(t, err)
-	//t.Logf("Alice Addr From App: %s \n", aliceAddr)
-	//
-	//aliceClient := chainA.PenumbraNodes[0].PenumbraClientNodes[alice.KeyName()]
-	//bobClient := chainB.PenumbraNodes[0].PenumbraClientNodes[bob.KeyName()]
-	//
-	//aAddr, err := aliceClient.GetAddress(ctx)
-	//require.NoError(t, err)
-	//t.Logf("Alice Addr From Client: %s \n", aAddr)
-	//
-	//bAddr, err := bobClient.GetAddress(ctx)
-	//require.NoError(t, err)
-	//t.Logf("Bob Addr From Client: %s \n", bAddr)
-	//
-	//require.Equal(t, aliceAddr, aAddr)
-	//require.Equal(t, bobAddr, bAddr)
+	aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
+	require.NoError(t, err)
+
+	transfer = ibc.WalletAmount{
+		Address: string(aliceAddr),
+		Denom:   ibcDenomTrace.IBCDenom(),
+		Amount:  transferAmount,
+	}
+
+	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
 }
