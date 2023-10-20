@@ -8,10 +8,7 @@ import (
 	fmt "fmt"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
-	v1alpha11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
-	v1alpha12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/stake/v1alpha1"
-	v1alpha13 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1alpha1"
-	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1alpha1"
+	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -82,40 +79,6 @@ type ChainParameters struct {
 	ChainId string `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	// The duration of each epoch, in number of blocks.
 	EpochDuration uint64 `protobuf:"varint,2,opt,name=epoch_duration,json=epochDuration,proto3" json:"epoch_duration,omitempty"`
-	// The number of epochs an unbonding note for before being released.
-	UnbondingEpochs uint64 `protobuf:"varint,3,opt,name=unbonding_epochs,json=unbondingEpochs,proto3" json:"unbonding_epochs,omitempty"`
-	// The maximum number of validators in the consensus set.
-	ActiveValidatorLimit uint64 `protobuf:"varint,4,opt,name=active_validator_limit,json=activeValidatorLimit,proto3" json:"active_validator_limit,omitempty"`
-	// The base reward rate, expressed in basis points of basis points
-	BaseRewardRate uint64 `protobuf:"varint,9,opt,name=base_reward_rate,json=baseRewardRate,proto3" json:"base_reward_rate,omitempty"`
-	// The penalty for slashing due to misbehavior.
-	SlashingPenaltyMisbehavior uint64 `protobuf:"varint,5,opt,name=slashing_penalty_misbehavior,json=slashingPenaltyMisbehavior,proto3" json:"slashing_penalty_misbehavior,omitempty"`
-	// The penalty for slashing due to downtime.
-	SlashingPenaltyDowntime uint64 `protobuf:"varint,10,opt,name=slashing_penalty_downtime,json=slashingPenaltyDowntime,proto3" json:"slashing_penalty_downtime,omitempty"`
-	// The number of blocks in the window to check for downtime.
-	SignedBlocksWindowLen uint64 `protobuf:"varint,11,opt,name=signed_blocks_window_len,json=signedBlocksWindowLen,proto3" json:"signed_blocks_window_len,omitempty"`
-	// The maximum number of blocks in the window each validator can miss signing without slashing.
-	MissedBlocksMaximum uint64 `protobuf:"varint,12,opt,name=missed_blocks_maximum,json=missedBlocksMaximum,proto3" json:"missed_blocks_maximum,omitempty"`
-	// Whether IBC (forming connections, processing IBC packets) is enabled.
-	IbcEnabled bool `protobuf:"varint,6,opt,name=ibc_enabled,json=ibcEnabled,proto3" json:"ibc_enabled,omitempty"`
-	// Whether inbound ICS-20 transfers are enabled
-	InboundIcs20TransfersEnabled bool `protobuf:"varint,7,opt,name=inbound_ics20_transfers_enabled,json=inboundIcs20TransfersEnabled,proto3" json:"inbound_ics20_transfers_enabled,omitempty"`
-	// Whether outbound ICS-20 transfers are enabled
-	OutboundIcs20TransfersEnabled bool `protobuf:"varint,8,opt,name=outbound_ics20_transfers_enabled,json=outboundIcs20TransfersEnabled,proto3" json:"outbound_ics20_transfers_enabled,omitempty"`
-	// The number of blocks during which a proposal is voted on.
-	ProposalVotingBlocks uint64 `protobuf:"varint,20,opt,name=proposal_voting_blocks,json=proposalVotingBlocks,proto3" json:"proposal_voting_blocks,omitempty"`
-	// The deposit required to create a proposal.
-	ProposalDepositAmount *v1alpha1.Amount `protobuf:"bytes,21,opt,name=proposal_deposit_amount,json=proposalDepositAmount,proto3" json:"proposal_deposit_amount,omitempty"`
-	// The quorum required for a proposal to be considered valid, as a fraction of the total stake
-	// weight of the network.
-	ProposalValidQuorum string `protobuf:"bytes,22,opt,name=proposal_valid_quorum,json=proposalValidQuorum,proto3" json:"proposal_valid_quorum,omitempty"`
-	// The threshold for a proposal to pass voting, as a ratio of "yes" votes over "no" votes.
-	ProposalPassThreshold string `protobuf:"bytes,23,opt,name=proposal_pass_threshold,json=proposalPassThreshold,proto3" json:"proposal_pass_threshold,omitempty"`
-	// The threshold for a proposal to be slashed, regardless of whether the "yes" and "no" votes
-	// would have passed it, as a ratio of "no" votes over all total votes.
-	ProposalSlashThreshold string `protobuf:"bytes,24,opt,name=proposal_slash_threshold,json=proposalSlashThreshold,proto3" json:"proposal_slash_threshold,omitempty"`
-	// Whether DAO spend proposals are enabled.
-	DaoSpendProposalsEnabled bool `protobuf:"varint,25,opt,name=dao_spend_proposals_enabled,json=daoSpendProposalsEnabled,proto3" json:"dao_spend_proposals_enabled,omitempty"`
 }
 
 func (m *ChainParameters) Reset()         { *m = ChainParameters{} }
@@ -163,118 +126,6 @@ func (m *ChainParameters) GetEpochDuration() uint64 {
 		return m.EpochDuration
 	}
 	return 0
-}
-
-func (m *ChainParameters) GetUnbondingEpochs() uint64 {
-	if m != nil {
-		return m.UnbondingEpochs
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetActiveValidatorLimit() uint64 {
-	if m != nil {
-		return m.ActiveValidatorLimit
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetBaseRewardRate() uint64 {
-	if m != nil {
-		return m.BaseRewardRate
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetSlashingPenaltyMisbehavior() uint64 {
-	if m != nil {
-		return m.SlashingPenaltyMisbehavior
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetSlashingPenaltyDowntime() uint64 {
-	if m != nil {
-		return m.SlashingPenaltyDowntime
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetSignedBlocksWindowLen() uint64 {
-	if m != nil {
-		return m.SignedBlocksWindowLen
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetMissedBlocksMaximum() uint64 {
-	if m != nil {
-		return m.MissedBlocksMaximum
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetIbcEnabled() bool {
-	if m != nil {
-		return m.IbcEnabled
-	}
-	return false
-}
-
-func (m *ChainParameters) GetInboundIcs20TransfersEnabled() bool {
-	if m != nil {
-		return m.InboundIcs20TransfersEnabled
-	}
-	return false
-}
-
-func (m *ChainParameters) GetOutboundIcs20TransfersEnabled() bool {
-	if m != nil {
-		return m.OutboundIcs20TransfersEnabled
-	}
-	return false
-}
-
-func (m *ChainParameters) GetProposalVotingBlocks() uint64 {
-	if m != nil {
-		return m.ProposalVotingBlocks
-	}
-	return 0
-}
-
-func (m *ChainParameters) GetProposalDepositAmount() *v1alpha1.Amount {
-	if m != nil {
-		return m.ProposalDepositAmount
-	}
-	return nil
-}
-
-func (m *ChainParameters) GetProposalValidQuorum() string {
-	if m != nil {
-		return m.ProposalValidQuorum
-	}
-	return ""
-}
-
-func (m *ChainParameters) GetProposalPassThreshold() string {
-	if m != nil {
-		return m.ProposalPassThreshold
-	}
-	return ""
-}
-
-func (m *ChainParameters) GetProposalSlashThreshold() string {
-	if m != nil {
-		return m.ProposalSlashThreshold
-	}
-	return ""
-}
-
-func (m *ChainParameters) GetDaoSpendProposalsEnabled() bool {
-	if m != nil {
-		return m.DaoSpendProposalsEnabled
-	}
-	return false
 }
 
 // The ratio between two numbers, used in governance to describe vote thresholds and quorums.
@@ -386,7 +237,7 @@ func (m *FmdParameters) GetAsOfBlockHeight() uint64 {
 }
 
 type KnownAssets struct {
-	Assets []*v1alpha11.DenomMetadata `protobuf:"bytes,1,rep,name=assets,proto3" json:"assets,omitempty"`
+	Assets []*v1alpha1.DenomMetadata `protobuf:"bytes,1,rep,name=assets,proto3" json:"assets,omitempty"`
 }
 
 func (m *KnownAssets) Reset()         { *m = KnownAssets{} }
@@ -422,7 +273,7 @@ func (m *KnownAssets) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_KnownAssets proto.InternalMessageInfo
 
-func (m *KnownAssets) GetAssets() []*v1alpha11.DenomMetadata {
+func (m *KnownAssets) GetAssets() []*v1alpha1.DenomMetadata {
 	if m != nil {
 		return m.Assets
 	}
@@ -527,102 +378,17 @@ func (m *SpendInfo) GetSpendHeight() uint64 {
 	return 0
 }
 
-type GenesisAppState struct {
-	// Types that are valid to be assigned to GenesisAppState:
-	//	*GenesisAppState_GenesisContent
-	//	*GenesisAppState_GenesisCheckpoint
-	GenesisAppState isGenesisAppState_GenesisAppState `protobuf_oneof:"genesis_app_state"`
-}
-
-func (m *GenesisAppState) Reset()         { *m = GenesisAppState{} }
-func (m *GenesisAppState) String() string { return proto.CompactTextString(m) }
-func (*GenesisAppState) ProtoMessage()    {}
-func (*GenesisAppState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{7}
-}
-func (m *GenesisAppState) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GenesisAppState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GenesisAppState.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GenesisAppState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisAppState.Merge(m, src)
-}
-func (m *GenesisAppState) XXX_Size() int {
-	return m.Size()
-}
-func (m *GenesisAppState) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisAppState.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisAppState proto.InternalMessageInfo
-
-type isGenesisAppState_GenesisAppState interface {
-	isGenesisAppState_GenesisAppState()
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type GenesisAppState_GenesisContent struct {
-	GenesisContent *GenesisContent `protobuf:"bytes,1,opt,name=genesis_content,json=genesisContent,proto3,oneof" json:"genesis_content,omitempty"`
-}
-type GenesisAppState_GenesisCheckpoint struct {
-	GenesisCheckpoint []byte `protobuf:"bytes,2,opt,name=genesis_checkpoint,json=genesisCheckpoint,proto3,oneof" json:"genesis_checkpoint,omitempty"`
-}
-
-func (*GenesisAppState_GenesisContent) isGenesisAppState_GenesisAppState()    {}
-func (*GenesisAppState_GenesisCheckpoint) isGenesisAppState_GenesisAppState() {}
-
-func (m *GenesisAppState) GetGenesisAppState() isGenesisAppState_GenesisAppState {
-	if m != nil {
-		return m.GenesisAppState
-	}
-	return nil
-}
-
-func (m *GenesisAppState) GetGenesisContent() *GenesisContent {
-	if x, ok := m.GetGenesisAppState().(*GenesisAppState_GenesisContent); ok {
-		return x.GenesisContent
-	}
-	return nil
-}
-
-func (m *GenesisAppState) GetGenesisCheckpoint() []byte {
-	if x, ok := m.GetGenesisAppState().(*GenesisAppState_GenesisCheckpoint); ok {
-		return x.GenesisCheckpoint
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*GenesisAppState) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*GenesisAppState_GenesisContent)(nil),
-		(*GenesisAppState_GenesisCheckpoint)(nil),
-	}
-}
-
+// Chain-specific genesis content.
 type GenesisContent struct {
-	ChainParams *ChainParameters             `protobuf:"bytes,1,opt,name=chain_params,json=chainParams,proto3" json:"chain_params,omitempty"`
-	Validators  []*v1alpha12.Validator       `protobuf:"bytes,2,rep,name=validators,proto3" json:"validators,omitempty"`
-	Allocations []*GenesisContent_Allocation `protobuf:"bytes,3,rep,name=allocations,proto3" json:"allocations,omitempty"`
+	// The ChainParameters present at genesis.
+	ChainParams *ChainParameters `protobuf:"bytes,1,opt,name=chain_params,json=chainParams,proto3" json:"chain_params,omitempty"`
 }
 
 func (m *GenesisContent) Reset()         { *m = GenesisContent{} }
 func (m *GenesisContent) String() string { return proto.CompactTextString(m) }
 func (*GenesisContent) ProtoMessage()    {}
 func (*GenesisContent) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{8}
+	return fileDescriptor_aca0b6fc4499b003, []int{7}
 }
 func (m *GenesisContent) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -658,80 +424,6 @@ func (m *GenesisContent) GetChainParams() *ChainParameters {
 	return nil
 }
 
-func (m *GenesisContent) GetValidators() []*v1alpha12.Validator {
-	if m != nil {
-		return m.Validators
-	}
-	return nil
-}
-
-func (m *GenesisContent) GetAllocations() []*GenesisContent_Allocation {
-	if m != nil {
-		return m.Allocations
-	}
-	return nil
-}
-
-type GenesisContent_Allocation struct {
-	Amount  *v1alpha1.Amount   `protobuf:"bytes,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	Denom   string             `protobuf:"bytes,2,opt,name=denom,proto3" json:"denom,omitempty"`
-	Address *v1alpha13.Address `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-}
-
-func (m *GenesisContent_Allocation) Reset()         { *m = GenesisContent_Allocation{} }
-func (m *GenesisContent_Allocation) String() string { return proto.CompactTextString(m) }
-func (*GenesisContent_Allocation) ProtoMessage()    {}
-func (*GenesisContent_Allocation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{8, 0}
-}
-func (m *GenesisContent_Allocation) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GenesisContent_Allocation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GenesisContent_Allocation.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GenesisContent_Allocation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisContent_Allocation.Merge(m, src)
-}
-func (m *GenesisContent_Allocation) XXX_Size() int {
-	return m.Size()
-}
-func (m *GenesisContent_Allocation) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisContent_Allocation.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisContent_Allocation proto.InternalMessageInfo
-
-func (m *GenesisContent_Allocation) GetAmount() *v1alpha1.Amount {
-	if m != nil {
-		return m.Amount
-	}
-	return nil
-}
-
-func (m *GenesisContent_Allocation) GetDenom() string {
-	if m != nil {
-		return m.Denom
-	}
-	return ""
-}
-
-func (m *GenesisContent_Allocation) GetAddress() *v1alpha13.Address {
-	if m != nil {
-		return m.Address
-	}
-	return nil
-}
-
 type Epoch struct {
 	Index       uint64 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
 	StartHeight uint64 `protobuf:"varint,2,opt,name=start_height,json=startHeight,proto3" json:"start_height,omitempty"`
@@ -741,7 +433,7 @@ func (m *Epoch) Reset()         { *m = Epoch{} }
 func (m *Epoch) String() string { return proto.CompactTextString(m) }
 func (*Epoch) ProtoMessage()    {}
 func (*Epoch) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{9}
+	return fileDescriptor_aca0b6fc4499b003, []int{8}
 }
 func (m *Epoch) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -792,7 +484,7 @@ func (m *EpochByHeightRequest) Reset()         { *m = EpochByHeightRequest{} }
 func (m *EpochByHeightRequest) String() string { return proto.CompactTextString(m) }
 func (*EpochByHeightRequest) ProtoMessage()    {}
 func (*EpochByHeightRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{10}
+	return fileDescriptor_aca0b6fc4499b003, []int{9}
 }
 func (m *EpochByHeightRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -836,7 +528,7 @@ func (m *EpochByHeightResponse) Reset()         { *m = EpochByHeightResponse{} }
 func (m *EpochByHeightResponse) String() string { return proto.CompactTextString(m) }
 func (*EpochByHeightResponse) ProtoMessage()    {}
 func (*EpochByHeightResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_aca0b6fc4499b003, []int{11}
+	return fileDescriptor_aca0b6fc4499b003, []int{10}
 }
 func (m *EpochByHeightResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -880,9 +572,7 @@ func init() {
 	proto.RegisterType((*KnownAssets)(nil), "penumbra.core.component.chain.v1alpha1.KnownAssets")
 	proto.RegisterType((*NoteSource)(nil), "penumbra.core.component.chain.v1alpha1.NoteSource")
 	proto.RegisterType((*SpendInfo)(nil), "penumbra.core.component.chain.v1alpha1.SpendInfo")
-	proto.RegisterType((*GenesisAppState)(nil), "penumbra.core.component.chain.v1alpha1.GenesisAppState")
 	proto.RegisterType((*GenesisContent)(nil), "penumbra.core.component.chain.v1alpha1.GenesisContent")
-	proto.RegisterType((*GenesisContent_Allocation)(nil), "penumbra.core.component.chain.v1alpha1.GenesisContent.Allocation")
 	proto.RegisterType((*Epoch)(nil), "penumbra.core.component.chain.v1alpha1.Epoch")
 	proto.RegisterType((*EpochByHeightRequest)(nil), "penumbra.core.component.chain.v1alpha1.EpochByHeightRequest")
 	proto.RegisterType((*EpochByHeightResponse)(nil), "penumbra.core.component.chain.v1alpha1.EpochByHeightResponse")
@@ -893,91 +583,52 @@ func init() {
 }
 
 var fileDescriptor_aca0b6fc4499b003 = []byte{
-	// 1343 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x56, 0x4b, 0x6f, 0x1c, 0x45,
-	0x10, 0xf6, 0x38, 0x7e, 0xc4, 0xb5, 0x7e, 0x84, 0x8e, 0xed, 0x4c, 0x4c, 0x70, 0xcc, 0x2a, 0x89,
-	0x4c, 0xa2, 0xec, 0x92, 0x25, 0x4a, 0xa2, 0x85, 0xa0, 0xd8, 0x6b, 0x63, 0x47, 0x24, 0xb0, 0x19,
-	0x47, 0x41, 0x8a, 0x2c, 0xb5, 0x7a, 0x67, 0xda, 0xbb, 0x2d, 0xcf, 0x74, 0x4f, 0xa6, 0x7b, 0xd6,
-	0xf1, 0x99, 0x2b, 0x07, 0xfe, 0x00, 0x1c, 0x38, 0xf2, 0x13, 0xb8, 0x23, 0x21, 0x4e, 0x39, 0x72,
-	0x44, 0xce, 0x8d, 0x1b, 0x67, 0x2e, 0xa8, 0xbb, 0xe7, 0xe1, 0x5d, 0x08, 0x5a, 0x72, 0x19, 0xa9,
-	0xaa, 0xbe, 0xef, 0x9b, 0xea, 0x47, 0x55, 0x35, 0x34, 0x62, 0xca, 0xd3, 0xa8, 0x93, 0x90, 0xba,
-	0x2f, 0x12, 0x5a, 0xf7, 0x45, 0x14, 0x0b, 0x4e, 0xb9, 0xaa, 0xfb, 0x3d, 0xc2, 0x78, 0xbd, 0x7f,
-	0x8b, 0x84, 0x71, 0x8f, 0xdc, 0xb2, 0x66, 0x2d, 0x4e, 0x84, 0x12, 0xe8, 0x5a, 0xce, 0xa9, 0x69,
-	0x4e, 0xad, 0xe0, 0xd4, 0x2c, 0x28, 0xe7, 0xac, 0x5c, 0x19, 0xd4, 0xe6, 0x69, 0x54, 0xea, 0xf1,
-	0x34, 0xb2, 0x6a, 0x2b, 0xd7, 0x06, 0x51, 0x87, 0xf4, 0x58, 0x96, 0x30, 0x6d, 0x65, 0xb8, 0xf5,
-	0x41, 0x1c, 0x91, 0x92, 0xaa, 0x12, 0x68, 0xcc, 0x0c, 0xf9, 0xc6, 0x35, 0x49, 0x45, 0x0e, 0x69,
-	0xc9, 0x31, 0xa6, 0xe5, 0x54, 0xab, 0x00, 0xdb, 0x07, 0x07, 0xd4, 0x57, 0xbb, 0x44, 0xf6, 0xd0,
-	0x22, 0x4c, 0x32, 0xce, 0x69, 0xe2, 0x3a, 0x6b, 0xce, 0xfa, 0xac, 0x67, 0x8d, 0xea, 0x9f, 0xd3,
-	0xb0, 0xd0, 0xd2, 0x4b, 0x6c, 0x93, 0x84, 0x44, 0x54, 0xd1, 0x44, 0xa2, 0x8b, 0x70, 0xd6, 0xac,
-	0x1a, 0xb3, 0xc0, 0x80, 0x67, 0xbc, 0x69, 0x63, 0x3f, 0x0c, 0xd0, 0x55, 0x98, 0xa7, 0xb1, 0xf0,
-	0x7b, 0x38, 0x48, 0x13, 0xa2, 0x98, 0xe0, 0xee, 0xf8, 0x9a, 0xb3, 0x3e, 0xe1, 0xcd, 0x19, 0xef,
-	0x56, 0xe6, 0x44, 0x1f, 0xc0, 0xb9, 0x94, 0x77, 0x04, 0x0f, 0x18, 0xef, 0x62, 0x13, 0x92, 0xee,
-	0x19, 0x03, 0x5c, 0x28, 0xfc, 0xdb, 0xc6, 0x8d, 0x6e, 0xc3, 0x32, 0xf1, 0x15, 0xeb, 0x53, 0xdc,
-	0x27, 0x21, 0x0b, 0x88, 0x12, 0x09, 0x0e, 0x59, 0xc4, 0x94, 0x3b, 0x61, 0x08, 0x8b, 0x36, 0xfa,
-	0x2c, 0x0f, 0x3e, 0xd2, 0x31, 0xb4, 0x0e, 0xe7, 0x3a, 0x44, 0x52, 0x9c, 0xd0, 0x23, 0x92, 0x04,
-	0x38, 0x21, 0x8a, 0xba, 0x33, 0x06, 0x3f, 0xaf, 0xfd, 0x9e, 0x71, 0x7b, 0x44, 0x51, 0xf4, 0x00,
-	0x2e, 0xc9, 0x90, 0xc8, 0x9e, 0xce, 0x24, 0xa6, 0x9c, 0x84, 0xea, 0x18, 0x47, 0x4c, 0x76, 0x68,
-	0x8f, 0xf4, 0x99, 0x48, 0xdc, 0x49, 0xc3, 0x5a, 0xc9, 0x31, 0x6d, 0x0b, 0x79, 0x5c, 0x22, 0x50,
-	0x13, 0x2e, 0xfe, 0x43, 0x21, 0x10, 0x47, 0x5c, 0xb1, 0x88, 0xba, 0x60, 0xe8, 0x17, 0x86, 0xe8,
-	0x5b, 0x59, 0x18, 0xdd, 0x05, 0x57, 0xb2, 0x2e, 0xa7, 0x01, 0xee, 0x84, 0xc2, 0x3f, 0x94, 0xf8,
-	0x88, 0xf1, 0x40, 0x1c, 0xe1, 0x90, 0x72, 0xb7, 0x62, 0xa8, 0x4b, 0x36, 0xbe, 0x69, 0xc2, 0x5f,
-	0x99, 0xe8, 0x23, 0xca, 0x51, 0x03, 0x96, 0x22, 0x26, 0x65, 0x49, 0x8c, 0xc8, 0x4b, 0x16, 0xa5,
-	0x91, 0x3b, 0x6b, 0x58, 0xe7, 0x6d, 0xd0, 0xb2, 0x1e, 0xdb, 0x10, 0xba, 0x0c, 0x15, 0xd6, 0xf1,
-	0x31, 0xe5, 0xa4, 0x13, 0xd2, 0xc0, 0x9d, 0x5a, 0x73, 0xd6, 0xcf, 0x7a, 0xc0, 0x3a, 0xfe, 0xb6,
-	0xf5, 0xa0, 0x6d, 0xb8, 0xcc, 0x78, 0x47, 0xa4, 0x3c, 0xc0, 0xcc, 0x97, 0x8d, 0x0f, 0xb1, 0x4a,
-	0x08, 0x97, 0x07, 0x34, 0x91, 0x05, 0x69, 0xda, 0x90, 0x2e, 0x65, 0xb0, 0x87, 0x1a, 0xf5, 0x34,
-	0x07, 0xe5, 0x32, 0x3b, 0xb0, 0x26, 0x52, 0xf5, 0xdf, 0x3a, 0x67, 0x8d, 0xce, 0x7b, 0x39, 0xee,
-	0xdf, 0x85, 0x6e, 0xc3, 0x72, 0x9c, 0x88, 0x58, 0x48, 0x12, 0xe2, 0xbe, 0x50, 0x7a, 0x83, 0xed,
-	0x6a, 0xdd, 0x45, 0x7b, 0xf6, 0x79, 0xf4, 0x99, 0x09, 0xda, 0xd5, 0xa2, 0xe7, 0x70, 0xa1, 0x60,
-	0x05, 0x34, 0x16, 0x92, 0x29, 0x4c, 0x22, 0x91, 0x72, 0xe5, 0x2e, 0xad, 0x39, 0xeb, 0x95, 0x46,
-	0xb5, 0x36, 0x58, 0xcc, 0xba, 0x2e, 0xf3, 0x02, 0xa9, 0x6d, 0x18, 0xa4, 0xb7, 0x94, 0x4b, 0x6c,
-	0x59, 0x05, 0xeb, 0xd6, 0xdb, 0x5e, 0x66, 0xa4, 0xaf, 0x1c, 0x7e, 0x91, 0x8a, 0x24, 0x8d, 0xdc,
-	0x65, 0x53, 0x07, 0xe7, 0x8b, 0x84, 0x74, 0xec, 0x89, 0x09, 0xa1, 0x3b, 0xa7, 0xf2, 0x89, 0x89,
-	0x94, 0x58, 0xf5, 0x12, 0x2a, 0x7b, 0x22, 0x0c, 0xdc, 0x0b, 0x86, 0x55, 0x48, 0xb6, 0x89, 0x94,
-	0x4f, 0xf3, 0x20, 0xba, 0x07, 0x6e, 0xc1, 0x33, 0xf7, 0xe7, 0x14, 0xd1, 0x35, 0xc4, 0x62, 0x77,
-	0xf6, 0x74, 0xb8, 0x64, 0xde, 0x87, 0x77, 0x03, 0x22, 0xb0, 0x8c, 0x29, 0x0f, 0x70, 0x8e, 0x29,
-	0xf7, 0xfe, 0xa2, 0xd9, 0x7b, 0x37, 0x20, 0x62, 0x4f, 0x23, 0xda, 0x39, 0x20, 0xdb, 0xf6, 0xea,
-	0x0e, 0x4c, 0x7a, 0xba, 0x4e, 0xd1, 0x25, 0x98, 0xe1, 0x69, 0x44, 0x13, 0x5d, 0x57, 0xa6, 0xd2,
-	0x27, 0xbc, 0xd2, 0x81, 0xd6, 0xa0, 0x12, 0x50, 0x2e, 0x22, 0xc6, 0x4d, 0xdc, 0x16, 0xfa, 0x69,
-	0x57, 0xd5, 0x87, 0xb9, 0xcf, 0xa2, 0xe0, 0x54, 0xe7, 0xb8, 0x0a, 0xf3, 0x71, 0x42, 0x7d, 0x26,
-	0x99, 0xe0, 0xb8, 0xc3, 0x94, 0x34, 0xaa, 0x73, 0xde, 0x5c, 0xe1, 0xdd, 0x64, 0x4a, 0xa2, 0x1b,
-	0x80, 0x88, 0xc4, 0xe2, 0xc0, 0x9e, 0x36, 0xee, 0x51, 0xd6, 0xed, 0xa9, 0xec, 0x07, 0x0b, 0x44,
-	0x7e, 0x79, 0x60, 0x4e, 0x7a, 0xd7, 0xb8, 0xab, 0x1e, 0x54, 0x3e, 0xe7, 0xe2, 0x88, 0x6f, 0xe8,
-	0x6e, 0x28, 0x51, 0x0b, 0xa6, 0x4c, 0x5f, 0xd4, 0xd2, 0x67, 0xd6, 0x2b, 0x8d, 0x1b, 0x43, 0x87,
-	0x6d, 0x9b, 0x66, 0x71, 0xdc, 0x5b, 0x3a, 0xdd, 0xc7, 0x54, 0x91, 0x80, 0x28, 0xe2, 0x65, 0x54,
-	0xdd, 0x19, 0xbf, 0x10, 0x8a, 0xee, 0x89, 0x34, 0xf1, 0xe9, 0x1b, 0x3a, 0xe3, 0xd7, 0x0e, 0xcc,
-	0x98, 0xfd, 0x7b, 0xc8, 0x0f, 0x04, 0xda, 0x83, 0x0a, 0x17, 0x8a, 0x62, 0x69, 0x28, 0x06, 0x59,
-	0x69, 0x34, 0x6a, 0xa3, 0x4d, 0x8d, 0x5a, 0xf9, 0x33, 0x0f, 0x78, 0xf9, 0xe3, 0xf7, 0x61, 0xd6,
-	0x9e, 0xe1, 0xc0, 0x0e, 0x54, 0x8c, 0x2f, 0x5b, 0xfd, 0x4f, 0x0e, 0x2c, 0xec, 0x50, 0x4e, 0x25,
-	0x93, 0x1b, 0x71, 0xbc, 0xa7, 0x74, 0x4b, 0x23, 0xb0, 0xd0, 0xb5, 0x2e, 0xec, 0x0b, 0xae, 0x28,
-	0x57, 0x59, 0x3e, 0x77, 0x46, 0xcd, 0x27, 0x53, 0x6c, 0x59, 0xf6, 0xee, 0x98, 0x37, 0xdf, 0x1d,
-	0xf0, 0xa0, 0x3a, 0xa0, 0xe2, 0x17, 0x3d, 0xea, 0x1f, 0xc6, 0x82, 0x71, 0x9b, 0xdf, 0xec, 0xee,
-	0x98, 0xf7, 0x4e, 0x8e, 0x2e, 0x42, 0x9b, 0xe7, 0x21, 0x77, 0x62, 0x12, 0xc7, 0x58, 0xea, 0x44,
-	0xab, 0x3f, 0x9f, 0x81, 0xf9, 0xc1, 0x5f, 0xa1, 0xe7, 0x30, 0x6b, 0x67, 0x4b, 0xac, 0x6f, 0x8d,
-	0xcc, 0x12, 0xbf, 0x3b, 0x6a, 0xe2, 0x43, 0xa3, 0xca, 0xab, 0xf8, 0x85, 0x43, 0xa2, 0x27, 0x00,
-	0xc5, 0x0c, 0x91, 0xee, 0xb8, 0xb9, 0x1e, 0xb7, 0xde, 0xa8, 0x6c, 0x27, 0x65, 0xa1, 0x5c, 0x0c,
-	0x18, 0xef, 0x94, 0x08, 0xf2, 0xa1, 0x42, 0xc2, 0x50, 0xf8, 0x66, 0xac, 0xe9, 0x19, 0xa6, 0x35,
-	0x37, 0xde, 0x6e, 0x9b, 0x6b, 0x1b, 0x85, 0x92, 0x77, 0x5a, 0x75, 0xe5, 0x7b, 0x07, 0xa0, 0x8c,
-	0xa1, 0x26, 0x4c, 0x65, 0xed, 0xcc, 0x19, 0xb9, 0x9d, 0x65, 0x0c, 0x7d, 0x95, 0x4d, 0x81, 0x9a,
-	0xa3, 0x9a, 0xf1, 0xac, 0x81, 0x3e, 0x85, 0x69, 0x12, 0x04, 0x09, 0x95, 0x76, 0x0a, 0x57, 0x1a,
-	0x57, 0x86, 0x24, 0xcd, 0x93, 0xa4, 0xd4, 0xb4, 0x58, 0x2f, 0x27, 0x55, 0x1f, 0xc0, 0xa4, 0x99,
-	0xd6, 0xb6, 0x52, 0x02, 0xfa, 0x32, 0x6b, 0x16, 0xd6, 0x30, 0xd7, 0x58, 0x91, 0x44, 0x0d, 0x5f,
-	0x63, 0xed, 0xcb, 0xae, 0x71, 0x0d, 0x16, 0x8d, 0xc2, 0xe6, 0xb1, 0x75, 0x78, 0xf4, 0x45, 0x4a,
-	0xa5, 0x42, 0xcb, 0x30, 0x95, 0x91, 0xac, 0x62, 0x66, 0x55, 0xf7, 0x61, 0x69, 0x08, 0x2f, 0x63,
-	0xc1, 0x25, 0x45, 0x2d, 0x98, 0x34, 0xef, 0x89, 0x6c, 0x6f, 0x6e, 0x8e, 0x7a, 0x14, 0x46, 0xcd,
-	0xb3, 0xdc, 0xc6, 0x77, 0x0e, 0xcc, 0x3e, 0x49, 0x69, 0x72, 0xbc, 0x47, 0x93, 0x3e, 0xf3, 0x29,
-	0xfa, 0xc6, 0x81, 0xb9, 0x81, 0xff, 0xa1, 0x4f, 0xfe, 0x97, 0xf0, 0xd0, 0xb2, 0x56, 0xee, 0xbf,
-	0x25, 0xdb, 0x2e, 0x72, 0xf3, 0xaf, 0xf1, 0x5f, 0x4e, 0x56, 0x9d, 0x57, 0x27, 0xab, 0xce, 0xef,
-	0x27, 0xab, 0xce, 0xb7, 0xaf, 0x57, 0xc7, 0x5e, 0xbd, 0x5e, 0x1d, 0xfb, 0xed, 0xf5, 0xea, 0x18,
-	0x5c, 0xf7, 0x45, 0x34, 0xa2, 0xf8, 0x26, 0xd8, 0x6a, 0xd1, 0x6f, 0xc1, 0xb6, 0xf3, 0x3c, 0xec,
-	0x32, 0xd5, 0x4b, 0x3b, 0x1a, 0x5e, 0x97, 0x7a, 0x60, 0x77, 0x69, 0x28, 0xfa, 0xf4, 0x66, 0x9f,
-	0x72, 0x95, 0x26, 0x54, 0xd6, 0x19, 0x57, 0x34, 0x31, 0x12, 0x8a, 0x4a, 0x55, 0xef, 0xdf, 0xcb,
-	0xde, 0xcb, 0xa3, 0xbd, 0xa6, 0x3f, 0x36, 0x66, 0x6e, 0xfd, 0x30, 0x3e, 0xd1, 0x6e, 0xb5, 0x5a,
-	0x3f, 0x8e, 0x5f, 0x6b, 0xe7, 0xb9, 0xb6, 0x74, 0xae, 0xad, 0x22, 0x57, 0x93, 0x5b, 0xed, 0x59,
-	0x86, 0xff, 0xb5, 0x04, 0xee, 0x6b, 0xe0, 0x7e, 0x01, 0xdc, 0x37, 0xc0, 0xfd, 0x1c, 0x78, 0x32,
-	0xde, 0x18, 0x0d, 0xb8, 0xbf, 0xd3, 0xde, 0xcc, 0xfb, 0xfe, 0x1f, 0xe3, 0xd7, 0x73, 0x52, 0xb3,
-	0xa9, 0x59, 0xfa, 0x9b, 0xd1, 0x9a, 0x4d, 0xc3, 0x6b, 0x36, 0x73, 0x62, 0x67, 0xca, 0xbc, 0x9e,
-	0x3f, 0xfa, 0x3b, 0x00, 0x00, 0xff, 0xff, 0x48, 0x2a, 0xfa, 0x46, 0x47, 0x0c, 0x00, 0x00,
+	// 718 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x54, 0xc1, 0x6e, 0x13, 0x49,
+	0x10, 0xcd, 0x78, 0xe3, 0xec, 0xa6, 0x6c, 0x27, 0xd2, 0x28, 0xbb, 0xca, 0x46, 0x2b, 0x2b, 0x3b,
+	0x52, 0x22, 0x2b, 0x51, 0xc6, 0x8a, 0xf7, 0xb0, 0xc8, 0x80, 0x04, 0x9e, 0x84, 0x24, 0x42, 0x80,
+	0x19, 0x4b, 0x1c, 0x22, 0x4b, 0x56, 0x7b, 0xa6, 0x1c, 0x8f, 0xb0, 0xbb, 0x87, 0xee, 0x1e, 0x43,
+	0xce, 0x5c, 0x39, 0xf0, 0x03, 0x5c, 0x38, 0xf2, 0x25, 0x88, 0x53, 0x8e, 0x1c, 0x91, 0x73, 0xe3,
+	0x17, 0xb8, 0xa0, 0xee, 0x9e, 0xb1, 0x63, 0x4b, 0x48, 0x86, 0x8b, 0xe5, 0x7a, 0x7e, 0xef, 0xd5,
+	0xeb, 0xea, 0x72, 0x43, 0x2d, 0x46, 0x9a, 0x0c, 0xbb, 0x9c, 0x54, 0x03, 0xc6, 0xb1, 0x1a, 0xb0,
+	0x61, 0xcc, 0x28, 0x52, 0x59, 0x0d, 0xfa, 0x24, 0xa2, 0xd5, 0xd1, 0x21, 0x19, 0xc4, 0x7d, 0x72,
+	0x68, 0x4a, 0x37, 0xe6, 0x4c, 0x32, 0x7b, 0x37, 0xd3, 0xb8, 0x4a, 0xe3, 0x4e, 0x34, 0xae, 0x21,
+	0x65, 0x9a, 0xad, 0xca, 0xac, 0x37, 0x11, 0x02, 0xe5, 0xd4, 0x51, 0x97, 0xc6, 0xd1, 0x71, 0x00,
+	0x8e, 0x7b, 0x3d, 0x0c, 0xe4, 0x29, 0x11, 0x7d, 0x7b, 0x03, 0xf2, 0x11, 0xa5, 0xc8, 0x37, 0xad,
+	0x6d, 0xab, 0x52, 0xf4, 0x4d, 0xe1, 0xb4, 0x60, 0xdd, 0x53, 0xfe, 0x4d, 0xc2, 0xc9, 0x10, 0x25,
+	0x72, 0x61, 0xff, 0x0d, 0x7f, 0xe8, 0x96, 0x9d, 0x28, 0xd4, 0xdc, 0x55, 0xff, 0x77, 0x5d, 0x9f,
+	0x85, 0xf6, 0x0e, 0xac, 0x61, 0xcc, 0x82, 0x7e, 0x27, 0x4c, 0x38, 0x91, 0x11, 0xa3, 0x9b, 0xb9,
+	0x6d, 0xab, 0xb2, 0xec, 0x97, 0x34, 0x7a, 0x94, 0x82, 0xce, 0x09, 0xe4, 0x7d, 0xf5, 0xcd, 0xfe,
+	0x07, 0x56, 0x69, 0x32, 0x44, 0x4e, 0x24, 0x33, 0x7d, 0x97, 0xfd, 0x29, 0x60, 0x6f, 0x43, 0x21,
+	0x44, 0xca, 0x86, 0x11, 0xd5, 0xbf, 0x1b, 0xab, 0x9b, 0x90, 0x13, 0x40, 0xe9, 0xc1, 0x30, 0xbc,
+	0x91, 0x6d, 0x07, 0xd6, 0x62, 0x8e, 0x41, 0x24, 0x22, 0x46, 0x3b, 0xdd, 0x48, 0x0a, 0xed, 0x5a,
+	0xf2, 0x4b, 0x13, 0xb4, 0x11, 0x49, 0x61, 0xef, 0x83, 0x4d, 0x44, 0x87, 0xf5, 0x3a, 0xdd, 0x01,
+	0x0b, 0x9e, 0x77, 0xfa, 0x18, 0x5d, 0xf4, 0x65, 0xda, 0x60, 0x9d, 0x88, 0x27, 0xbd, 0x86, 0xc2,
+	0x4f, 0x35, 0xec, 0xf8, 0x50, 0x78, 0x48, 0xd9, 0x4b, 0x7a, 0x5f, 0x8d, 0x4e, 0xd8, 0x1e, 0xac,
+	0xe8, 0x21, 0x2a, 0xeb, 0xdf, 0x2a, 0x85, 0xda, 0xbe, 0x3b, 0x7b, 0x31, 0x66, 0xc2, 0xd9, 0xc0,
+	0xdd, 0x23, 0x15, 0xf7, 0x11, 0x4a, 0x12, 0x12, 0x49, 0xfc, 0x54, 0xaa, 0x46, 0xff, 0x98, 0x49,
+	0x6c, 0xb1, 0x84, 0x07, 0xf8, 0x83, 0xd1, 0xbf, 0xb6, 0x60, 0xb5, 0x15, 0x23, 0x0d, 0xcf, 0x68,
+	0x8f, 0xd9, 0x2d, 0x28, 0x50, 0x26, 0xb1, 0x23, 0xb4, 0x44, 0x33, 0x0b, 0xb5, 0x9a, 0xbb, 0xd8,
+	0x52, 0xb8, 0xd3, 0x66, 0x3e, 0xd0, 0x69, 0xe3, 0x7f, 0xa1, 0x28, 0x54, 0x87, 0xd9, 0x09, 0x14,
+	0x34, 0x96, 0x9e, 0x7e, 0x00, 0x6b, 0x27, 0x48, 0x51, 0x44, 0xc2, 0x63, 0x54, 0x22, 0x95, 0xf6,
+	0x39, 0x14, 0xcd, 0xfd, 0xc7, 0x6a, 0xee, 0x22, 0x8d, 0xf2, 0xff, 0xa2, 0x51, 0xe6, 0xd6, 0xc9,
+	0x2f, 0x04, 0x13, 0x40, 0x38, 0xf7, 0x20, 0x7f, 0xac, 0x56, 0xc5, 0x8c, 0x24, 0xc4, 0x57, 0xe9,
+	0x56, 0x98, 0x42, 0xe7, 0x95, 0x84, 0xcb, 0xf9, 0xbc, 0x0a, 0x4b, 0xf3, 0xba, 0xb0, 0xa1, 0x1d,
+	0x1a, 0x97, 0x06, 0xf0, 0xf1, 0x45, 0x82, 0x42, 0xda, 0x7f, 0xc1, 0x4a, 0x2a, 0x32, 0x8e, 0x69,
+	0xe5, 0xb4, 0xe1, 0xcf, 0x39, 0xbe, 0x88, 0x19, 0x15, 0x68, 0x7b, 0x90, 0xd7, 0x5b, 0x9b, 0x9e,
+	0xef, 0x60, 0xd1, 0xf3, 0x69, 0x37, 0xdf, 0x68, 0x6b, 0xef, 0x2c, 0x28, 0x3e, 0x4d, 0x90, 0x5f,
+	0xb6, 0x90, 0x8f, 0xa2, 0x00, 0xed, 0x37, 0x16, 0x94, 0x66, 0xfa, 0xd9, 0x77, 0x7e, 0xca, 0x78,
+	0xee, 0x58, 0x5b, 0x77, 0x7f, 0x51, 0x6d, 0x0e, 0xd9, 0xf8, 0x96, 0xfb, 0x38, 0x2e, 0x5b, 0x57,
+	0xe3, 0xb2, 0xf5, 0x65, 0x5c, 0xb6, 0xde, 0x5e, 0x97, 0x97, 0xae, 0xae, 0xcb, 0x4b, 0x9f, 0xaf,
+	0xcb, 0x4b, 0xb0, 0x17, 0xb0, 0xe1, 0x82, 0xe6, 0x0d, 0x30, 0x97, 0xaa, 0x5e, 0x95, 0xa6, 0x75,
+	0x3e, 0xb8, 0x88, 0x64, 0x3f, 0xe9, 0x2a, 0x7a, 0x55, 0x48, 0x4e, 0xe8, 0x05, 0x0e, 0xd8, 0x08,
+	0x0f, 0x46, 0x48, 0x65, 0xc2, 0x51, 0x54, 0x23, 0x2a, 0x91, 0x6b, 0x0b, 0x89, 0x42, 0x56, 0x47,
+	0xb7, 0xd2, 0x77, 0x6f, 0xb1, 0x57, 0xf1, 0xb6, 0x2e, 0xb3, 0xea, 0x7d, 0x6e, 0xb9, 0xe9, 0x79,
+	0xde, 0x87, 0xdc, 0x6e, 0x33, 0xcb, 0xea, 0xa9, 0xac, 0xde, 0x24, 0xab, 0xce, 0xe6, 0x3e, 0x4b,
+	0xf9, 0x9f, 0xa6, 0xc4, 0xb6, 0x22, 0xb6, 0x27, 0xc4, 0xb6, 0x26, 0xb6, 0x33, 0xe2, 0x38, 0x57,
+	0x5b, 0x8c, 0xd8, 0x3e, 0x69, 0x36, 0xb2, 0x3f, 0xf8, 0xd7, 0xdc, 0x5e, 0x26, 0xaa, 0xd7, 0x95,
+	0x4a, 0x7d, 0xa6, 0xb2, 0x7a, 0x5d, 0xeb, 0xea, 0xf5, 0x4c, 0xd8, 0x5d, 0xd1, 0xef, 0xf0, 0x7f,
+	0xdf, 0x03, 0x00, 0x00, 0xff, 0xff, 0xa3, 0x4b, 0x50, 0xc3, 0x0f, 0x06, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1112,131 +763,6 @@ func (m *ChainParameters) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.DaoSpendProposalsEnabled {
-		i--
-		if m.DaoSpendProposalsEnabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xc8
-	}
-	if len(m.ProposalSlashThreshold) > 0 {
-		i -= len(m.ProposalSlashThreshold)
-		copy(dAtA[i:], m.ProposalSlashThreshold)
-		i = encodeVarintChain(dAtA, i, uint64(len(m.ProposalSlashThreshold)))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xc2
-	}
-	if len(m.ProposalPassThreshold) > 0 {
-		i -= len(m.ProposalPassThreshold)
-		copy(dAtA[i:], m.ProposalPassThreshold)
-		i = encodeVarintChain(dAtA, i, uint64(len(m.ProposalPassThreshold)))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xba
-	}
-	if len(m.ProposalValidQuorum) > 0 {
-		i -= len(m.ProposalValidQuorum)
-		copy(dAtA[i:], m.ProposalValidQuorum)
-		i = encodeVarintChain(dAtA, i, uint64(len(m.ProposalValidQuorum)))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xb2
-	}
-	if m.ProposalDepositAmount != nil {
-		{
-			size, err := m.ProposalDepositAmount.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintChain(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xaa
-	}
-	if m.ProposalVotingBlocks != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.ProposalVotingBlocks))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xa0
-	}
-	if m.MissedBlocksMaximum != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.MissedBlocksMaximum))
-		i--
-		dAtA[i] = 0x60
-	}
-	if m.SignedBlocksWindowLen != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.SignedBlocksWindowLen))
-		i--
-		dAtA[i] = 0x58
-	}
-	if m.SlashingPenaltyDowntime != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.SlashingPenaltyDowntime))
-		i--
-		dAtA[i] = 0x50
-	}
-	if m.BaseRewardRate != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.BaseRewardRate))
-		i--
-		dAtA[i] = 0x48
-	}
-	if m.OutboundIcs20TransfersEnabled {
-		i--
-		if m.OutboundIcs20TransfersEnabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x40
-	}
-	if m.InboundIcs20TransfersEnabled {
-		i--
-		if m.InboundIcs20TransfersEnabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x38
-	}
-	if m.IbcEnabled {
-		i--
-		if m.IbcEnabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x30
-	}
-	if m.SlashingPenaltyMisbehavior != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.SlashingPenaltyMisbehavior))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.ActiveValidatorLimit != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.ActiveValidatorLimit))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.UnbondingEpochs != 0 {
-		i = encodeVarintChain(dAtA, i, uint64(m.UnbondingEpochs))
-		i--
-		dAtA[i] = 0x18
-	}
 	if m.EpochDuration != 0 {
 		i = encodeVarintChain(dAtA, i, uint64(m.EpochDuration))
 		i--
@@ -1425,75 +951,6 @@ func (m *SpendInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *GenesisAppState) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenesisAppState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenesisAppState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.GenesisAppState != nil {
-		{
-			size := m.GenesisAppState.Size()
-			i -= size
-			if _, err := m.GenesisAppState.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *GenesisAppState_GenesisContent) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenesisAppState_GenesisContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.GenesisContent != nil {
-		{
-			size, err := m.GenesisContent.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintChain(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-func (m *GenesisAppState_GenesisCheckpoint) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenesisAppState_GenesisCheckpoint) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.GenesisCheckpoint != nil {
-		i -= len(m.GenesisCheckpoint)
-		copy(dAtA[i:], m.GenesisCheckpoint)
-		i = encodeVarintChain(dAtA, i, uint64(len(m.GenesisCheckpoint)))
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
 func (m *GenesisContent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1514,91 +971,9 @@ func (m *GenesisContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.Allocations) > 0 {
-		for iNdEx := len(m.Allocations) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Allocations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintChain(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	if len(m.Validators) > 0 {
-		for iNdEx := len(m.Validators) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Validators[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintChain(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
 	if m.ChainParams != nil {
 		{
 			size, err := m.ChainParams.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintChain(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *GenesisContent_Allocation) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenesisContent_Allocation) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenesisContent_Allocation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Address != nil {
-		{
-			size, err := m.Address.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintChain(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Denom) > 0 {
-		i -= len(m.Denom)
-		copy(dAtA[i:], m.Denom)
-		i = encodeVarintChain(dAtA, i, uint64(len(m.Denom)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.Amount != nil {
-		{
-			size, err := m.Amount.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1744,58 +1119,6 @@ func (m *ChainParameters) Size() (n int) {
 	if m.EpochDuration != 0 {
 		n += 1 + sovChain(uint64(m.EpochDuration))
 	}
-	if m.UnbondingEpochs != 0 {
-		n += 1 + sovChain(uint64(m.UnbondingEpochs))
-	}
-	if m.ActiveValidatorLimit != 0 {
-		n += 1 + sovChain(uint64(m.ActiveValidatorLimit))
-	}
-	if m.SlashingPenaltyMisbehavior != 0 {
-		n += 1 + sovChain(uint64(m.SlashingPenaltyMisbehavior))
-	}
-	if m.IbcEnabled {
-		n += 2
-	}
-	if m.InboundIcs20TransfersEnabled {
-		n += 2
-	}
-	if m.OutboundIcs20TransfersEnabled {
-		n += 2
-	}
-	if m.BaseRewardRate != 0 {
-		n += 1 + sovChain(uint64(m.BaseRewardRate))
-	}
-	if m.SlashingPenaltyDowntime != 0 {
-		n += 1 + sovChain(uint64(m.SlashingPenaltyDowntime))
-	}
-	if m.SignedBlocksWindowLen != 0 {
-		n += 1 + sovChain(uint64(m.SignedBlocksWindowLen))
-	}
-	if m.MissedBlocksMaximum != 0 {
-		n += 1 + sovChain(uint64(m.MissedBlocksMaximum))
-	}
-	if m.ProposalVotingBlocks != 0 {
-		n += 2 + sovChain(uint64(m.ProposalVotingBlocks))
-	}
-	if m.ProposalDepositAmount != nil {
-		l = m.ProposalDepositAmount.Size()
-		n += 2 + l + sovChain(uint64(l))
-	}
-	l = len(m.ProposalValidQuorum)
-	if l > 0 {
-		n += 2 + l + sovChain(uint64(l))
-	}
-	l = len(m.ProposalPassThreshold)
-	if l > 0 {
-		n += 2 + l + sovChain(uint64(l))
-	}
-	l = len(m.ProposalSlashThreshold)
-	if l > 0 {
-		n += 2 + l + sovChain(uint64(l))
-	}
-	if m.DaoSpendProposalsEnabled {
-		n += 3
-	}
 	return n
 }
 
@@ -1873,42 +1196,6 @@ func (m *SpendInfo) Size() (n int) {
 	return n
 }
 
-func (m *GenesisAppState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.GenesisAppState != nil {
-		n += m.GenesisAppState.Size()
-	}
-	return n
-}
-
-func (m *GenesisAppState_GenesisContent) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.GenesisContent != nil {
-		l = m.GenesisContent.Size()
-		n += 1 + l + sovChain(uint64(l))
-	}
-	return n
-}
-func (m *GenesisAppState_GenesisCheckpoint) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.GenesisCheckpoint != nil {
-		l = len(m.GenesisCheckpoint)
-		n += 1 + l + sovChain(uint64(l))
-	}
-	return n
-}
 func (m *GenesisContent) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1917,39 +1204,6 @@ func (m *GenesisContent) Size() (n int) {
 	_ = l
 	if m.ChainParams != nil {
 		l = m.ChainParams.Size()
-		n += 1 + l + sovChain(uint64(l))
-	}
-	if len(m.Validators) > 0 {
-		for _, e := range m.Validators {
-			l = e.Size()
-			n += 1 + l + sovChain(uint64(l))
-		}
-	}
-	if len(m.Allocations) > 0 {
-		for _, e := range m.Allocations {
-			l = e.Size()
-			n += 1 + l + sovChain(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *GenesisContent_Allocation) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Amount != nil {
-		l = m.Amount.Size()
-		n += 1 + l + sovChain(uint64(l))
-	}
-	l = len(m.Denom)
-	if l > 0 {
-		n += 1 + l + sovChain(uint64(l))
-	}
-	if m.Address != nil {
-		l = m.Address.Size()
 		n += 1 + l + sovChain(uint64(l))
 	}
 	return n
@@ -2165,370 +1419,6 @@ func (m *ChainParameters) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UnbondingEpochs", wireType)
-			}
-			m.UnbondingEpochs = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.UnbondingEpochs |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ActiveValidatorLimit", wireType)
-			}
-			m.ActiveValidatorLimit = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ActiveValidatorLimit |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SlashingPenaltyMisbehavior", wireType)
-			}
-			m.SlashingPenaltyMisbehavior = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SlashingPenaltyMisbehavior |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IbcEnabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IbcEnabled = bool(v != 0)
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InboundIcs20TransfersEnabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.InboundIcs20TransfersEnabled = bool(v != 0)
-		case 8:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OutboundIcs20TransfersEnabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.OutboundIcs20TransfersEnabled = bool(v != 0)
-		case 9:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BaseRewardRate", wireType)
-			}
-			m.BaseRewardRate = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BaseRewardRate |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 10:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SlashingPenaltyDowntime", wireType)
-			}
-			m.SlashingPenaltyDowntime = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SlashingPenaltyDowntime |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 11:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SignedBlocksWindowLen", wireType)
-			}
-			m.SignedBlocksWindowLen = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SignedBlocksWindowLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 12:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MissedBlocksMaximum", wireType)
-			}
-			m.MissedBlocksMaximum = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.MissedBlocksMaximum |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 20:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposalVotingBlocks", wireType)
-			}
-			m.ProposalVotingBlocks = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ProposalVotingBlocks |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 21:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposalDepositAmount", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ProposalDepositAmount == nil {
-				m.ProposalDepositAmount = &v1alpha1.Amount{}
-			}
-			if err := m.ProposalDepositAmount.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 22:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposalValidQuorum", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ProposalValidQuorum = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 23:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposalPassThreshold", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ProposalPassThreshold = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 24:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposalSlashThreshold", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ProposalSlashThreshold = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 25:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DaoSpendProposalsEnabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.DaoSpendProposalsEnabled = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipChain(dAtA[iNdEx:])
@@ -2784,7 +1674,7 @@ func (m *KnownAssets) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Assets = append(m.Assets, &v1alpha11.DenomMetadata{})
+			m.Assets = append(m.Assets, &v1alpha1.DenomMetadata{})
 			if err := m.Assets[len(m.Assets)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -2999,124 +1889,6 @@ func (m *SpendInfo) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GenesisAppState) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowChain
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GenesisAppState: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenesisAppState: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GenesisContent", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &GenesisContent{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.GenesisAppState = &GenesisAppState_GenesisContent{v}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GenesisCheckpoint", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := make([]byte, postIndex-iNdEx)
-			copy(v, dAtA[iNdEx:postIndex])
-			m.GenesisAppState = &GenesisAppState_GenesisCheckpoint{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipChain(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthChain
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -3179,228 +1951,6 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				m.ChainParams = &ChainParameters{}
 			}
 			if err := m.ChainParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Validators", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Validators = append(m.Validators, &v1alpha12.Validator{})
-			if err := m.Validators[len(m.Validators)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Allocations", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Allocations = append(m.Allocations, &GenesisContent_Allocation{})
-			if err := m.Allocations[len(m.Allocations)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipChain(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthChain
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *GenesisContent_Allocation) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowChain
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Allocation: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Allocation: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Amount", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Amount == nil {
-				m.Amount = &v1alpha1.Amount{}
-			}
-			if err := m.Amount.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Denom", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Denom = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthChain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthChain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Address == nil {
-				m.Address = &v1alpha13.Address{}
-			}
-			if err := m.Address.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

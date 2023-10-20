@@ -10,6 +10,12 @@ import (
 	proto "github.com/cosmos/gogoproto/proto"
 	types "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/chain/v1alpha1"
+	v1alpha11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/dao/v1alpha1"
+	v1alpha15 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/fee/v1alpha1"
+	v1alpha12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/governance/v1alpha1"
+	v1alpha13 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
+	v1alpha16 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
+	v1alpha14 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/stake/v1alpha1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -300,24 +306,33 @@ func (m *PrefixValueResponse) GetValue() []byte {
 	return nil
 }
 
-// Requests the global configuration data for the chain.
-type ChainParametersRequest struct {
-	// The expected chain id (empty string if no expectation).
-	ChainId string `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+type AppParameters struct {
+	// Chain module parameters.
+	ChainParams *v1alpha1.ChainParameters `protobuf:"bytes,1,opt,name=chain_params,json=chainParams,proto3" json:"chain_params,omitempty"`
+	// DAO module parameters.
+	DaoParams *v1alpha11.DaoParameters `protobuf:"bytes,2,opt,name=dao_params,json=daoParams,proto3" json:"dao_params,omitempty"`
+	// Governance module parameters.
+	GovernanceParams *v1alpha12.GovernanceParameters `protobuf:"bytes,3,opt,name=governance_params,json=governanceParams,proto3" json:"governance_params,omitempty"`
+	// IBC module parameters.
+	IbcParams *v1alpha13.IbcParameters `protobuf:"bytes,4,opt,name=ibc_params,json=ibcParams,proto3" json:"ibc_params,omitempty"`
+	// Stake module parameters.
+	StakeParams *v1alpha14.StakeParameters `protobuf:"bytes,5,opt,name=stake_params,json=stakeParams,proto3" json:"stake_params,omitempty"`
+	// Fee module parameters.
+	FeeParams *v1alpha15.FeeParameters `protobuf:"bytes,6,opt,name=fee_params,json=feeParams,proto3" json:"fee_params,omitempty"`
 }
 
-func (m *ChainParametersRequest) Reset()         { *m = ChainParametersRequest{} }
-func (m *ChainParametersRequest) String() string { return proto.CompactTextString(m) }
-func (*ChainParametersRequest) ProtoMessage()    {}
-func (*ChainParametersRequest) Descriptor() ([]byte, []int) {
+func (m *AppParameters) Reset()         { *m = AppParameters{} }
+func (m *AppParameters) String() string { return proto.CompactTextString(m) }
+func (*AppParameters) ProtoMessage()    {}
+func (*AppParameters) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e3359d6f6803c6c6, []int{4}
 }
-func (m *ChainParametersRequest) XXX_Unmarshal(b []byte) error {
+func (m *AppParameters) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ChainParametersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AppParameters) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ChainParametersRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_AppParameters.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -327,41 +342,122 @@ func (m *ChainParametersRequest) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return b[:n], nil
 	}
 }
-func (m *ChainParametersRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ChainParametersRequest.Merge(m, src)
+func (m *AppParameters) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AppParameters.Merge(m, src)
 }
-func (m *ChainParametersRequest) XXX_Size() int {
+func (m *AppParameters) XXX_Size() int {
 	return m.Size()
 }
-func (m *ChainParametersRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ChainParametersRequest.DiscardUnknown(m)
+func (m *AppParameters) XXX_DiscardUnknown() {
+	xxx_messageInfo_AppParameters.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ChainParametersRequest proto.InternalMessageInfo
+var xxx_messageInfo_AppParameters proto.InternalMessageInfo
 
-func (m *ChainParametersRequest) GetChainId() string {
+func (m *AppParameters) GetChainParams() *v1alpha1.ChainParameters {
+	if m != nil {
+		return m.ChainParams
+	}
+	return nil
+}
+
+func (m *AppParameters) GetDaoParams() *v1alpha11.DaoParameters {
+	if m != nil {
+		return m.DaoParams
+	}
+	return nil
+}
+
+func (m *AppParameters) GetGovernanceParams() *v1alpha12.GovernanceParameters {
+	if m != nil {
+		return m.GovernanceParams
+	}
+	return nil
+}
+
+func (m *AppParameters) GetIbcParams() *v1alpha13.IbcParameters {
+	if m != nil {
+		return m.IbcParams
+	}
+	return nil
+}
+
+func (m *AppParameters) GetStakeParams() *v1alpha14.StakeParameters {
+	if m != nil {
+		return m.StakeParams
+	}
+	return nil
+}
+
+func (m *AppParameters) GetFeeParams() *v1alpha15.FeeParameters {
+	if m != nil {
+		return m.FeeParams
+	}
+	return nil
+}
+
+// Requests the global configuration data for the app.
+type AppParametersRequest struct {
+	// The expected chain id (empty string if no expectation).
+	ChainId string `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+}
+
+func (m *AppParametersRequest) Reset()         { *m = AppParametersRequest{} }
+func (m *AppParametersRequest) String() string { return proto.CompactTextString(m) }
+func (*AppParametersRequest) ProtoMessage()    {}
+func (*AppParametersRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{5}
+}
+func (m *AppParametersRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AppParametersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AppParametersRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AppParametersRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AppParametersRequest.Merge(m, src)
+}
+func (m *AppParametersRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *AppParametersRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AppParametersRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AppParametersRequest proto.InternalMessageInfo
+
+func (m *AppParametersRequest) GetChainId() string {
 	if m != nil {
 		return m.ChainId
 	}
 	return ""
 }
 
-type ChainParametersResponse struct {
-	ChainParameters *v1alpha1.ChainParameters `protobuf:"bytes,1,opt,name=chain_parameters,json=chainParameters,proto3" json:"chain_parameters,omitempty"`
+type AppParametersResponse struct {
+	AppParameters *AppParameters `protobuf:"bytes,1,opt,name=app_parameters,json=appParameters,proto3" json:"app_parameters,omitempty"`
 }
 
-func (m *ChainParametersResponse) Reset()         { *m = ChainParametersResponse{} }
-func (m *ChainParametersResponse) String() string { return proto.CompactTextString(m) }
-func (*ChainParametersResponse) ProtoMessage()    {}
-func (*ChainParametersResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{5}
+func (m *AppParametersResponse) Reset()         { *m = AppParametersResponse{} }
+func (m *AppParametersResponse) String() string { return proto.CompactTextString(m) }
+func (*AppParametersResponse) ProtoMessage()    {}
+func (*AppParametersResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{6}
 }
-func (m *ChainParametersResponse) XXX_Unmarshal(b []byte) error {
+func (m *AppParametersResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ChainParametersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AppParametersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ChainParametersResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_AppParametersResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -371,21 +467,205 @@ func (m *ChainParametersResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *ChainParametersResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ChainParametersResponse.Merge(m, src)
+func (m *AppParametersResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AppParametersResponse.Merge(m, src)
 }
-func (m *ChainParametersResponse) XXX_Size() int {
+func (m *AppParametersResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *ChainParametersResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ChainParametersResponse.DiscardUnknown(m)
+func (m *AppParametersResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AppParametersResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ChainParametersResponse proto.InternalMessageInfo
+var xxx_messageInfo_AppParametersResponse proto.InternalMessageInfo
 
-func (m *ChainParametersResponse) GetChainParameters() *v1alpha1.ChainParameters {
+func (m *AppParametersResponse) GetAppParameters() *AppParameters {
 	if m != nil {
-		return m.ChainParameters
+		return m.AppParameters
+	}
+	return nil
+}
+
+type GenesisAppState struct {
+	// Types that are valid to be assigned to GenesisAppState:
+	//	*GenesisAppState_GenesisContent
+	//	*GenesisAppState_GenesisCheckpoint
+	GenesisAppState isGenesisAppState_GenesisAppState `protobuf_oneof:"genesis_app_state"`
+}
+
+func (m *GenesisAppState) Reset()         { *m = GenesisAppState{} }
+func (m *GenesisAppState) String() string { return proto.CompactTextString(m) }
+func (*GenesisAppState) ProtoMessage()    {}
+func (*GenesisAppState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{7}
+}
+func (m *GenesisAppState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenesisAppState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenesisAppState.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenesisAppState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenesisAppState.Merge(m, src)
+}
+func (m *GenesisAppState) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenesisAppState) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenesisAppState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenesisAppState proto.InternalMessageInfo
+
+type isGenesisAppState_GenesisAppState interface {
+	isGenesisAppState_GenesisAppState()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type GenesisAppState_GenesisContent struct {
+	GenesisContent *GenesisContent `protobuf:"bytes,1,opt,name=genesis_content,json=genesisContent,proto3,oneof" json:"genesis_content,omitempty"`
+}
+type GenesisAppState_GenesisCheckpoint struct {
+	GenesisCheckpoint []byte `protobuf:"bytes,2,opt,name=genesis_checkpoint,json=genesisCheckpoint,proto3,oneof" json:"genesis_checkpoint,omitempty"`
+}
+
+func (*GenesisAppState_GenesisContent) isGenesisAppState_GenesisAppState()    {}
+func (*GenesisAppState_GenesisCheckpoint) isGenesisAppState_GenesisAppState() {}
+
+func (m *GenesisAppState) GetGenesisAppState() isGenesisAppState_GenesisAppState {
+	if m != nil {
+		return m.GenesisAppState
+	}
+	return nil
+}
+
+func (m *GenesisAppState) GetGenesisContent() *GenesisContent {
+	if x, ok := m.GetGenesisAppState().(*GenesisAppState_GenesisContent); ok {
+		return x.GenesisContent
+	}
+	return nil
+}
+
+func (m *GenesisAppState) GetGenesisCheckpoint() []byte {
+	if x, ok := m.GetGenesisAppState().(*GenesisAppState_GenesisCheckpoint); ok {
+		return x.GenesisCheckpoint
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*GenesisAppState) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*GenesisAppState_GenesisContent)(nil),
+		(*GenesisAppState_GenesisCheckpoint)(nil),
+	}
+}
+
+type GenesisContent struct {
+	// Stake module genesis state.
+	StakeContent *v1alpha14.GenesisContent `protobuf:"bytes,1,opt,name=stake_content,json=stakeContent,proto3" json:"stake_content,omitempty"`
+	// Shielded pool module genesis state.
+	ShieldedPoolContent *v1alpha16.GenesisContent `protobuf:"bytes,2,opt,name=shielded_pool_content,json=shieldedPoolContent,proto3" json:"shielded_pool_content,omitempty"`
+	// Governance module genesis state.
+	GovernanceContent *v1alpha12.GenesisContent `protobuf:"bytes,3,opt,name=governance_content,json=governanceContent,proto3" json:"governance_content,omitempty"`
+	// IBC module genesis state.
+	IbcContent *v1alpha13.GenesisContent `protobuf:"bytes,4,opt,name=ibc_content,json=ibcContent,proto3" json:"ibc_content,omitempty"`
+	// Chain module genesis state.
+	ChainContent *v1alpha1.GenesisContent `protobuf:"bytes,5,opt,name=chain_content,json=chainContent,proto3" json:"chain_content,omitempty"`
+	// DAO module genesis state.
+	DaoContent *v1alpha11.GenesisContent `protobuf:"bytes,6,opt,name=dao_content,json=daoContent,proto3" json:"dao_content,omitempty"`
+	// Fee module genesis state.
+	FeeContent *v1alpha15.GenesisContent `protobuf:"bytes,7,opt,name=fee_content,json=feeContent,proto3" json:"fee_content,omitempty"`
+}
+
+func (m *GenesisContent) Reset()         { *m = GenesisContent{} }
+func (m *GenesisContent) String() string { return proto.CompactTextString(m) }
+func (*GenesisContent) ProtoMessage()    {}
+func (*GenesisContent) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{8}
+}
+func (m *GenesisContent) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenesisContent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenesisContent.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenesisContent) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenesisContent.Merge(m, src)
+}
+func (m *GenesisContent) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenesisContent) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenesisContent.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenesisContent proto.InternalMessageInfo
+
+func (m *GenesisContent) GetStakeContent() *v1alpha14.GenesisContent {
+	if m != nil {
+		return m.StakeContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetShieldedPoolContent() *v1alpha16.GenesisContent {
+	if m != nil {
+		return m.ShieldedPoolContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetGovernanceContent() *v1alpha12.GenesisContent {
+	if m != nil {
+		return m.GovernanceContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetIbcContent() *v1alpha13.GenesisContent {
+	if m != nil {
+		return m.IbcContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetChainContent() *v1alpha1.GenesisContent {
+	if m != nil {
+		return m.ChainContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetDaoContent() *v1alpha11.GenesisContent {
+	if m != nil {
+		return m.DaoContent
+	}
+	return nil
+}
+
+func (m *GenesisContent) GetFeeContent() *v1alpha15.GenesisContent {
+	if m != nil {
+		return m.FeeContent
 	}
 	return nil
 }
@@ -396,8 +676,11 @@ func init() {
 	proto.RegisterType((*KeyValueResponse_Value)(nil), "penumbra.core.app.v1alpha1.KeyValueResponse.Value")
 	proto.RegisterType((*PrefixValueRequest)(nil), "penumbra.core.app.v1alpha1.PrefixValueRequest")
 	proto.RegisterType((*PrefixValueResponse)(nil), "penumbra.core.app.v1alpha1.PrefixValueResponse")
-	proto.RegisterType((*ChainParametersRequest)(nil), "penumbra.core.app.v1alpha1.ChainParametersRequest")
-	proto.RegisterType((*ChainParametersResponse)(nil), "penumbra.core.app.v1alpha1.ChainParametersResponse")
+	proto.RegisterType((*AppParameters)(nil), "penumbra.core.app.v1alpha1.AppParameters")
+	proto.RegisterType((*AppParametersRequest)(nil), "penumbra.core.app.v1alpha1.AppParametersRequest")
+	proto.RegisterType((*AppParametersResponse)(nil), "penumbra.core.app.v1alpha1.AppParametersResponse")
+	proto.RegisterType((*GenesisAppState)(nil), "penumbra.core.app.v1alpha1.GenesisAppState")
+	proto.RegisterType((*GenesisContent)(nil), "penumbra.core.app.v1alpha1.GenesisContent")
 }
 
 func init() {
@@ -405,45 +688,71 @@ func init() {
 }
 
 var fileDescriptor_e3359d6f6803c6c6 = []byte{
-	// 595 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcf, 0x6e, 0xd3, 0x4e,
-	0x10, 0xae, 0x5d, 0xa5, 0xbf, 0xfc, 0xb6, 0x95, 0x12, 0x2d, 0xa8, 0x04, 0x4b, 0xb5, 0xaa, 0x80,
-	0xa0, 0x12, 0x60, 0x93, 0xe4, 0x00, 0x18, 0x71, 0x48, 0x72, 0x28, 0x08, 0x55, 0x32, 0x01, 0xf5,
-	0x80, 0x22, 0xd0, 0xda, 0x99, 0x36, 0x56, 0x63, 0x7b, 0x59, 0xaf, 0x2d, 0x82, 0xc4, 0x3b, 0xf0,
-	0x0c, 0x1c, 0x91, 0xb8, 0xf2, 0x0c, 0x88, 0x53, 0x8f, 0x1c, 0x51, 0x72, 0xe3, 0x29, 0xd0, 0xda,
-	0xeb, 0xfc, 0x2b, 0x09, 0xe9, 0xcd, 0xb3, 0xf3, 0xcd, 0x37, 0xdf, 0xce, 0x37, 0x5e, 0x74, 0x93,
-	0x42, 0x10, 0xfb, 0x0e, 0x23, 0xa6, 0x1b, 0x32, 0x30, 0x09, 0xa5, 0x66, 0x52, 0x23, 0x03, 0xda,
-	0x27, 0x35, 0x11, 0x18, 0x94, 0x85, 0x3c, 0xc4, 0x5a, 0x8e, 0x32, 0x04, 0xca, 0x10, 0x89, 0x1c,
-	0xa5, 0xd5, 0xe7, 0x19, 0xdc, 0xd0, 0xa7, 0x61, 0x00, 0x01, 0x37, 0xdd, 0x3e, 0xf1, 0x82, 0x29,
-	0x5b, 0x1a, 0x66, 0x7c, 0xda, 0x6d, 0xcf, 0x71, 0x27, 0x70, 0xdf, 0xe3, 0xbe, 0xc0, 0x27, 0xb5,
-	0x99, 0x28, 0x03, 0x56, 0x5f, 0xa1, 0xd2, 0x73, 0x18, 0x1e, 0x93, 0x41, 0x0c, 0x1d, 0x78, 0x17,
-	0x43, 0xc4, 0xf1, 0x75, 0x54, 0x4c, 0xa9, 0xde, 0x7a, 0xbd, 0x8a, 0xb2, 0xaf, 0x1c, 0xfc, 0xdf,
-	0xf9, 0x2f, 0x8d, 0x9f, 0xf5, 0x70, 0x19, 0x6d, 0x9e, 0xc1, 0xb0, 0xa2, 0xa6, 0xa7, 0xe2, 0x13,
-	0x5f, 0x45, 0x05, 0xca, 0xc2, 0xf0, 0xa4, 0xb2, 0xb9, 0xaf, 0x1c, 0x14, 0x3b, 0x59, 0x50, 0xfd,
-	0xa6, 0xa0, 0xf2, 0x94, 0x36, 0xa2, 0x61, 0x10, 0x01, 0x7e, 0x8a, 0x0a, 0x89, 0x38, 0x48, 0x49,
-	0xb7, 0xeb, 0x75, 0x63, 0xf9, 0x9d, 0x8d, 0xc5, 0x62, 0x23, 0x8b, 0x32, 0x02, 0xfc, 0x28, 0x6f,
-	0xaa, 0xa6, 0x4c, 0x37, 0x0c, 0xcf, 0x71, 0x33, 0x92, 0x99, 0xfb, 0x25, 0x35, 0xe3, 0x08, 0xd8,
-	0xd9, 0x00, 0x6c, 0x01, 0x95, 0xca, 0xb4, 0x3d, 0x54, 0x48, 0xa9, 0x84, 0xf0, 0xa9, 0x9a, 0x1d,
-	0xc9, 0x5c, 0x3d, 0x44, 0xd8, 0x66, 0x70, 0xe2, 0xbd, 0x5f, 0x77, 0x22, 0xbb, 0x68, 0x8b, 0xa6,
-	0x05, 0x72, 0x28, 0x32, 0xaa, 0x3e, 0x41, 0x57, 0xe6, 0x88, 0xe4, 0x0c, 0xe4, 0x00, 0x95, 0xb9,
-	0x01, 0x66, 0x3a, 0xd4, 0x59, 0x1d, 0x0d, 0xb4, 0xdb, 0x16, 0x1d, 0x6c, 0xc2, 0x88, 0x0f, 0x1c,
-	0x58, 0xf4, 0x6f, 0x2d, 0xd5, 0x8f, 0xe8, 0xda, 0x85, 0x22, 0xd9, 0xd7, 0x41, 0xe5, 0xac, 0x8a,
-	0x4e, 0x72, 0xd2, 0x86, 0x07, 0x0b, 0x36, 0x4c, 0xd6, 0xcb, 0xc8, 0xf6, 0x69, 0x62, 0xc9, 0x22,
-	0x75, 0xc9, 0x9d, 0x3f, 0xa8, 0x8f, 0x55, 0xb4, 0xf3, 0x22, 0x06, 0x36, 0x7c, 0x09, 0x2c, 0xf1,
-	0x5c, 0xc0, 0x1f, 0x50, 0x69, 0xa1, 0x08, 0xaf, 0x34, 0xfd, 0xef, 0x37, 0xd6, 0x1a, 0x97, 0xaa,
-	0x91, 0x17, 0x06, 0x54, 0xcc, 0x77, 0x08, 0xdf, 0x59, 0x6f, 0xd3, 0xb2, 0x6e, 0x77, 0x2f, 0xb3,
-	0x96, 0x98, 0xa2, 0xed, 0x19, 0x9b, 0xb1, 0xb1, 0xaa, 0xf8, 0xe2, 0x62, 0x69, 0xe6, 0xda, 0xf8,
-	0xac, 0xdf, 0x7d, 0xa5, 0xf5, 0x55, 0xfd, 0x3e, 0xd2, 0x95, 0xf3, 0x91, 0xae, 0xfc, 0x1a, 0xe9,
-	0xca, 0xa7, 0xb1, 0xbe, 0x71, 0x3e, 0xd6, 0x37, 0x7e, 0x8e, 0xf5, 0x0d, 0xa4, 0xbb, 0xa1, 0xbf,
-	0x82, 0xb0, 0x55, 0x6c, 0x52, 0x6a, 0x8b, 0xbf, 0xde, 0x56, 0x5e, 0xbf, 0x39, 0xf5, 0x78, 0x3f,
-	0x76, 0x84, 0xdd, 0x66, 0xc4, 0x19, 0x09, 0x4e, 0x61, 0x10, 0x26, 0x70, 0x2f, 0x81, 0x80, 0xc7,
-	0x0c, 0x22, 0xd3, 0x0b, 0x38, 0xb0, 0xd4, 0x62, 0x0e, 0x11, 0x37, 0x93, 0x87, 0xf2, 0xb9, 0x59,
-	0xfe, 0x9c, 0x3d, 0x26, 0x94, 0xe6, 0xdf, 0x9f, 0xd5, 0x4d, 0xbb, 0xdd, 0xfc, 0xa2, 0x6a, 0x76,
-	0x2e, 0xa7, 0x2d, 0xe4, 0x34, 0x29, 0x35, 0x8e, 0x25, 0xe4, 0xc7, 0x34, 0xd9, 0x15, 0xc9, 0x6e,
-	0x93, 0xd2, 0x6e, 0x9e, 0x1c, 0xa9, 0xb7, 0x96, 0x27, 0xbb, 0x87, 0x76, 0xeb, 0x08, 0x38, 0xe9,
-	0x11, 0x4e, 0x7e, 0xab, 0x7b, 0x39, 0xd0, 0xb2, 0x04, 0xd2, 0xb2, 0x9a, 0x94, 0x5a, 0x56, 0x8e,
-	0x75, 0xb6, 0xd2, 0x77, 0xae, 0xf1, 0x27, 0x00, 0x00, 0xff, 0xff, 0x9d, 0x3d, 0xb8, 0x98, 0x88,
-	0x05, 0x00, 0x00,
+	// 1023 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x96, 0x5f, 0x6f, 0x1b, 0x45,
+	0x10, 0xc0, 0x73, 0x4e, 0x9d, 0x26, 0x9b, 0xbf, 0xdd, 0xb4, 0x28, 0x58, 0xaa, 0x55, 0x19, 0x04,
+	0xe5, 0xdf, 0xb9, 0x4e, 0x11, 0x7f, 0x5c, 0x40, 0xb2, 0x83, 0x48, 0x2a, 0x54, 0xc9, 0x38, 0xb4,
+	0x0f, 0x25, 0x22, 0x5a, 0xdf, 0x8d, 0xed, 0x23, 0xf6, 0xed, 0x72, 0xb7, 0xb6, 0xc8, 0xb7, 0xe0,
+	0x33, 0xf0, 0x88, 0x04, 0x3c, 0x20, 0xf1, 0x19, 0x10, 0x4f, 0x7d, 0xe4, 0x05, 0x09, 0x25, 0x6f,
+	0x7c, 0x0a, 0xb4, 0xff, 0xee, 0xf6, 0xae, 0xba, 0x9c, 0xf3, 0x76, 0x33, 0x3b, 0xf3, 0x9b, 0xb9,
+	0xd9, 0x99, 0xdd, 0x45, 0xaf, 0x33, 0x08, 0x67, 0xd3, 0x41, 0x44, 0x9a, 0x1e, 0x8d, 0xa0, 0x49,
+	0x18, 0x6b, 0xce, 0x5b, 0x64, 0xc2, 0xc6, 0xa4, 0x25, 0x04, 0x97, 0x45, 0x94, 0x53, 0x5c, 0x33,
+	0x56, 0xae, 0xb0, 0x72, 0xc5, 0x82, 0xb1, 0xaa, 0xed, 0x67, 0x09, 0x1e, 0x9d, 0x32, 0x1a, 0x42,
+	0xc8, 0x9b, 0xde, 0x98, 0x04, 0x61, 0x4a, 0x93, 0xa2, 0xe2, 0x15, 0xfb, 0xc4, 0x9c, 0x9c, 0x41,
+	0xea, 0x23, 0x45, 0xed, 0xd3, 0x2d, 0xf4, 0x19, 0x07, 0x30, 0xf1, 0xc1, 0x3f, 0x65, 0x94, 0x4e,
+	0x2c, 0x5f, 0x5b, 0xad, 0x19, 0x9f, 0x14, 0x31, 0x46, 0x74, 0x0e, 0x51, 0x48, 0x42, 0xcf, 0x0a,
+	0x9e, 0xea, 0xb4, 0xb7, 0x5b, 0xe4, 0x1d, 0x0c, 0xbc, 0xd4, 0x2d, 0x18, 0x78, 0x65, 0xf6, 0x43,
+	0xb0, 0xc2, 0x0c, 0xa1, 0x94, 0xef, 0x13, 0x9a, 0xda, 0xfb, 0x84, 0x6a, 0xfb, 0x37, 0x45, 0x5c,
+	0x63, 0x3a, 0x0d, 0xf8, 0x54, 0xd8, 0xce, 0x5b, 0x96, 0xa4, 0x0c, 0x1b, 0x5f, 0xa3, 0xed, 0x2f,
+	0xe1, 0xfc, 0x19, 0x99, 0xcc, 0xa0, 0x0f, 0xdf, 0xcf, 0x20, 0xe6, 0xf8, 0x55, 0xb4, 0x2a, 0x37,
+	0xe4, 0x34, 0xf0, 0xf7, 0x9c, 0x7b, 0xce, 0xfd, 0xb5, 0xfe, 0x4d, 0x29, 0x3f, 0xf6, 0xf1, 0x0e,
+	0x5a, 0x3e, 0x83, 0xf3, 0xbd, 0x8a, 0xd4, 0x8a, 0x4f, 0x7c, 0x1b, 0x55, 0x59, 0x44, 0xe9, 0x70,
+	0x6f, 0xf9, 0x9e, 0x73, 0x7f, 0xb5, 0xaf, 0x84, 0xc6, 0x1f, 0x0e, 0xda, 0x49, 0xb1, 0x31, 0xa3,
+	0x61, 0x0c, 0xf8, 0x08, 0x55, 0xe7, 0x42, 0x21, 0xa1, 0xeb, 0xfb, 0xfb, 0x6e, 0x71, 0xe7, 0xb8,
+	0x79, 0x67, 0x57, 0x49, 0x0a, 0x80, 0x3f, 0x36, 0x41, 0x2b, 0x92, 0xf4, 0x9a, 0x2b, 0x0a, 0x2b,
+	0x21, 0xd6, 0xff, 0xcd, 0x5b, 0xee, 0x13, 0x88, 0xce, 0x26, 0xd0, 0x13, 0xa6, 0x3a, 0xb3, 0xda,
+	0x5d, 0x54, 0x95, 0x28, 0x91, 0x78, 0x9a, 0xcd, 0x86, 0x26, 0x37, 0x0e, 0x11, 0xee, 0x45, 0x30,
+	0x0c, 0x7e, 0x58, 0xb4, 0x22, 0xaf, 0xa0, 0x15, 0x26, 0x1d, 0x74, 0x51, 0xb4, 0xd4, 0xf8, 0x14,
+	0xed, 0x66, 0x40, 0xba, 0x06, 0xba, 0x80, 0x4e, 0xa6, 0x80, 0x2a, 0x8f, 0x8a, 0x9d, 0xc7, 0xef,
+	0x37, 0xd0, 0x66, 0x87, 0xb1, 0x1e, 0x89, 0xc8, 0x14, 0x38, 0x44, 0x31, 0x7e, 0x8e, 0x36, 0x54,
+	0x0e, 0x4c, 0xe8, 0x62, 0x5d, 0xc4, 0x0f, 0x73, 0x45, 0x4c, 0x1a, 0xc3, 0x55, 0x33, 0x95, 0x14,
+	0xf4, 0x40, 0x88, 0x29, 0xae, 0xbf, 0xee, 0x25, 0x8a, 0x18, 0xf7, 0x11, 0xf2, 0x09, 0x35, 0x64,
+	0x55, 0xd4, 0x87, 0x85, 0x64, 0xd1, 0x65, 0x09, 0xf7, 0x73, 0x42, 0x2d, 0xea, 0x9a, 0xaf, 0xc5,
+	0x18, 0x87, 0xe8, 0x56, 0x3a, 0x25, 0x06, 0xbd, 0x2c, 0xd1, 0x9d, 0x42, 0xb4, 0x35, 0x57, 0x49,
+	0x84, 0xc3, 0x44, 0x67, 0x05, 0xda, 0x19, 0x65, 0xb5, 0xf2, 0x1f, 0x82, 0x81, 0x67, 0x02, 0xdd,
+	0x28, 0xf9, 0x07, 0xd1, 0x30, 0x49, 0x84, 0xc7, 0x03, 0xcf, 0xfe, 0x87, 0x40, 0x8b, 0xb2, 0xe6,
+	0xf2, 0x98, 0x31, 0xd4, 0x6a, 0x49, 0xcd, 0xd5, 0x99, 0x94, 0x70, 0x8f, 0x85, 0x68, 0xd7, 0x3c,
+	0x4e, 0x14, 0x32, 0xdf, 0x21, 0x24, 0xe4, 0x95, 0x92, 0x7c, 0xc5, 0x49, 0x90, 0x70, 0xbf, 0x00,
+	0x9b, 0xba, 0x36, 0xd4, 0x62, 0xdc, 0x68, 0xa1, 0xdb, 0x99, 0xa6, 0x29, 0xef, 0xdf, 0x46, 0x80,
+	0xee, 0xe4, 0x5c, 0x74, 0xa7, 0xf6, 0xd0, 0x16, 0x61, 0x4c, 0xe5, 0x27, 0x57, 0x74, 0xc7, 0xbd,
+	0x75, 0xd5, 0xd8, 0x66, 0x51, 0x9b, 0xc4, 0x16, 0x1b, 0xbf, 0x3a, 0x68, 0xfb, 0x10, 0x42, 0x88,
+	0x83, 0xb8, 0xc3, 0xd8, 0x31, 0x27, 0x1c, 0xf0, 0x53, 0xb4, 0x3d, 0x52, 0xaa, 0x53, 0x8f, 0x86,
+	0x1c, 0x42, 0xae, 0xc3, 0xbc, 0x7d, 0x55, 0x18, 0x4d, 0x39, 0x50, 0x1e, 0x47, 0x4b, 0xfd, 0xad,
+	0x51, 0x46, 0x83, 0x9b, 0x08, 0x27, 0xd8, 0x31, 0x78, 0x67, 0x8c, 0x06, 0x21, 0x57, 0x13, 0x76,
+	0xb4, 0xd4, 0xbf, 0x65, 0xac, 0x93, 0xa5, 0xee, 0x2e, 0x32, 0xca, 0x53, 0xf1, 0xd7, 0xb1, 0x48,
+	0xae, 0xf1, 0x5b, 0x15, 0x6d, 0x65, 0x43, 0xe1, 0x6f, 0xd0, 0xa6, 0xea, 0x88, 0x6c, 0xb6, 0x1f,
+	0x2c, 0xda, 0x12, 0x59, 0x5c, 0x5f, 0xb5, 0x97, 0x81, 0x47, 0xe8, 0x4e, 0xe6, 0x66, 0x4a, 0x82,
+	0xa8, 0x89, 0xfc, 0xac, 0x38, 0x48, 0xe6, 0x3e, 0x2b, 0x0a, 0xb6, 0x6b, 0xcc, 0x7a, 0x94, 0x4e,
+	0x4c, 0xcc, 0xef, 0x10, 0xb6, 0xc6, 0xd4, 0x04, 0x54, 0x73, 0xfa, 0xe8, 0x7a, 0x73, 0x9a, 0x8d,
+	0x66, 0x4d, 0xbf, 0x89, 0xf5, 0x14, 0xad, 0x8b, 0x11, 0x35, 0x41, 0xd4, 0x8c, 0xbe, 0xbf, 0xd8,
+	0x8c, 0xe6, 0xe8, 0x62, 0xd6, 0xad, 0x3d, 0x51, 0xdd, 0x6d, 0xc0, 0xd5, 0x92, 0x3d, 0xc9, 0x1d,
+	0x8d, 0xf9, 0x3d, 0x91, 0xcb, 0x56, 0xce, 0xe2, 0x68, 0x34, 0xe8, 0x95, 0x92, 0x9c, 0x33, 0x67,
+	0x63, 0x3e, 0x67, 0x9f, 0x50, 0x0b, 0x2b, 0xa6, 0xdf, 0x60, 0x6f, 0x96, 0x60, 0x33, 0xe3, 0x9f,
+	0xc7, 0x0e, 0xc1, 0x54, 0x78, 0xff, 0x9f, 0x0a, 0xda, 0xf8, 0x6a, 0x06, 0xd1, 0xf9, 0x31, 0x44,
+	0xf3, 0xc0, 0x03, 0xcc, 0xf3, 0xd7, 0xc8, 0x83, 0xc5, 0xc7, 0x57, 0x1d, 0x1e, 0xb5, 0xd6, 0x35,
+	0x3c, 0xf4, 0xd9, 0x01, 0x68, 0xd5, 0x5c, 0xe0, 0xf8, 0x9d, 0xc5, 0xae, 0x79, 0x15, 0xeb, 0xdd,
+	0xeb, 0xbc, 0x09, 0x30, 0x43, 0xeb, 0xd6, 0x1d, 0x8b, 0xdd, 0xab, 0x9c, 0x5f, 0xbe, 0xd5, 0x6b,
+	0xcd, 0x85, 0xed, 0x55, 0xbc, 0x07, 0x4e, 0xf7, 0x97, 0xca, 0x9f, 0x17, 0x75, 0xe7, 0xc5, 0x45,
+	0xdd, 0xf9, 0xf7, 0xa2, 0xee, 0xfc, 0x78, 0x59, 0x5f, 0x7a, 0x71, 0x59, 0x5f, 0xfa, 0xfb, 0xb2,
+	0xbe, 0x84, 0xea, 0x1e, 0x9d, 0x5e, 0x01, 0xec, 0xae, 0x8a, 0x52, 0x89, 0x27, 0x57, 0xcf, 0x79,
+	0xfe, 0xed, 0x28, 0xe0, 0xe3, 0xd9, 0x40, 0x6c, 0x70, 0x33, 0xe6, 0x11, 0x09, 0x47, 0x30, 0xa1,
+	0x73, 0x78, 0x6f, 0x0e, 0x21, 0x9f, 0x45, 0x10, 0x37, 0x83, 0x90, 0x43, 0x24, 0xfb, 0x90, 0x43,
+	0xcc, 0x9b, 0xf3, 0x8f, 0xf4, 0x8b, 0xb9, 0xf8, 0x45, 0xfe, 0x88, 0x30, 0x66, 0xbe, 0x7f, 0xaa,
+	0x2c, 0xf7, 0x0e, 0x3a, 0x3f, 0x57, 0x6a, 0x3d, 0x93, 0xce, 0x81, 0x48, 0xa7, 0xc3, 0x98, 0xfb,
+	0x4c, 0x9b, 0xfc, 0x95, 0x2e, 0x9e, 0x88, 0xc5, 0x93, 0x0e, 0x63, 0x27, 0x66, 0xf1, 0xa2, 0xf2,
+	0x46, 0xf1, 0xe2, 0xc9, 0x61, 0xaf, 0xfb, 0x04, 0x38, 0xf1, 0x09, 0x27, 0xff, 0x55, 0xee, 0x1a,
+	0xc3, 0x76, 0x5b, 0x58, 0xb6, 0xdb, 0x1d, 0xc6, 0xda, 0x6d, 0x63, 0x3b, 0x58, 0x91, 0x8f, 0xcc,
+	0x87, 0xff, 0x07, 0x00, 0x00, 0xff, 0xff, 0x8a, 0x19, 0xb7, 0x53, 0x4b, 0x0c, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -458,8 +767,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryServiceClient interface {
-	// Gets the chain parameters.
-	ChainParameters(ctx context.Context, in *ChainParametersRequest, opts ...grpc.CallOption) (*ChainParametersResponse, error)
+	// Gets the app parameters.
+	AppParameters(ctx context.Context, in *AppParametersRequest, opts ...grpc.CallOption) (*AppParametersResponse, error)
 	// General-purpose key-value state query API, that can be used to query
 	// arbitrary keys in the JMT storage.
 	KeyValue(ctx context.Context, in *KeyValueRequest, opts ...grpc.CallOption) (*KeyValueResponse, error)
@@ -477,9 +786,9 @@ func NewQueryServiceClient(cc grpc1.ClientConn) QueryServiceClient {
 	return &queryServiceClient{cc}
 }
 
-func (c *queryServiceClient) ChainParameters(ctx context.Context, in *ChainParametersRequest, opts ...grpc.CallOption) (*ChainParametersResponse, error) {
-	out := new(ChainParametersResponse)
-	err := c.cc.Invoke(ctx, "/penumbra.core.app.v1alpha1.QueryService/ChainParameters", in, out, opts...)
+func (c *queryServiceClient) AppParameters(ctx context.Context, in *AppParametersRequest, opts ...grpc.CallOption) (*AppParametersResponse, error) {
+	out := new(AppParametersResponse)
+	err := c.cc.Invoke(ctx, "/penumbra.core.app.v1alpha1.QueryService/AppParameters", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -529,8 +838,8 @@ func (x *queryServicePrefixValueClient) Recv() (*PrefixValueResponse, error) {
 
 // QueryServiceServer is the server API for QueryService service.
 type QueryServiceServer interface {
-	// Gets the chain parameters.
-	ChainParameters(context.Context, *ChainParametersRequest) (*ChainParametersResponse, error)
+	// Gets the app parameters.
+	AppParameters(context.Context, *AppParametersRequest) (*AppParametersResponse, error)
 	// General-purpose key-value state query API, that can be used to query
 	// arbitrary keys in the JMT storage.
 	KeyValue(context.Context, *KeyValueRequest) (*KeyValueResponse, error)
@@ -544,8 +853,8 @@ type QueryServiceServer interface {
 type UnimplementedQueryServiceServer struct {
 }
 
-func (*UnimplementedQueryServiceServer) ChainParameters(ctx context.Context, req *ChainParametersRequest) (*ChainParametersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ChainParameters not implemented")
+func (*UnimplementedQueryServiceServer) AppParameters(ctx context.Context, req *AppParametersRequest) (*AppParametersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppParameters not implemented")
 }
 func (*UnimplementedQueryServiceServer) KeyValue(ctx context.Context, req *KeyValueRequest) (*KeyValueResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KeyValue not implemented")
@@ -558,20 +867,20 @@ func RegisterQueryServiceServer(s grpc1.Server, srv QueryServiceServer) {
 	s.RegisterService(&_QueryService_serviceDesc, srv)
 }
 
-func _QueryService_ChainParameters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ChainParametersRequest)
+func _QueryService_AppParameters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppParametersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServiceServer).ChainParameters(ctx, in)
+		return srv.(QueryServiceServer).AppParameters(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/penumbra.core.app.v1alpha1.QueryService/ChainParameters",
+		FullMethod: "/penumbra.core.app.v1alpha1.QueryService/AppParameters",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServiceServer).ChainParameters(ctx, req.(*ChainParametersRequest))
+		return srv.(QueryServiceServer).AppParameters(ctx, req.(*AppParametersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -620,8 +929,8 @@ var _QueryService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*QueryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ChainParameters",
-			Handler:    _QueryService_ChainParameters_Handler,
+			MethodName: "AppParameters",
+			Handler:    _QueryService_AppParameters_Handler,
 		},
 		{
 			MethodName: "KeyValue",
@@ -836,7 +1145,7 @@ func (m *PrefixValueResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ChainParametersRequest) Marshal() (dAtA []byte, err error) {
+func (m *AppParameters) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -846,12 +1155,107 @@ func (m *ChainParametersRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ChainParametersRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *AppParameters) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ChainParametersRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AppParameters) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.FeeParams != nil {
+		{
+			size, err := m.FeeParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.StakeParams != nil {
+		{
+			size, err := m.StakeParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.IbcParams != nil {
+		{
+			size, err := m.IbcParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.GovernanceParams != nil {
+		{
+			size, err := m.GovernanceParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.DaoParams != nil {
+		{
+			size, err := m.DaoParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.ChainParams != nil {
+		{
+			size, err := m.ChainParams.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AppParametersRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AppParametersRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AppParametersRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -866,7 +1270,7 @@ func (m *ChainParametersRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	return len(dAtA) - i, nil
 }
 
-func (m *ChainParametersResponse) Marshal() (dAtA []byte, err error) {
+func (m *AppParametersResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -876,19 +1280,195 @@ func (m *ChainParametersResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ChainParametersResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *AppParametersResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ChainParametersResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AppParametersResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.ChainParameters != nil {
+	if m.AppParameters != nil {
 		{
-			size, err := m.ChainParameters.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.AppParameters.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GenesisAppState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenesisAppState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenesisAppState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.GenesisAppState != nil {
+		{
+			size := m.GenesisAppState.Size()
+			i -= size
+			if _, err := m.GenesisAppState.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GenesisAppState_GenesisContent) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenesisAppState_GenesisContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.GenesisContent != nil {
+		{
+			size, err := m.GenesisContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *GenesisAppState_GenesisCheckpoint) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenesisAppState_GenesisCheckpoint) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.GenesisCheckpoint != nil {
+		i -= len(m.GenesisCheckpoint)
+		copy(dAtA[i:], m.GenesisCheckpoint)
+		i = encodeVarintApp(dAtA, i, uint64(len(m.GenesisCheckpoint)))
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *GenesisContent) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenesisContent) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenesisContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.FeeContent != nil {
+		{
+			size, err := m.FeeContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.DaoContent != nil {
+		{
+			size, err := m.DaoContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.ChainContent != nil {
+		{
+			size, err := m.ChainContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.IbcContent != nil {
+		{
+			size, err := m.IbcContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.GovernanceContent != nil {
+		{
+			size, err := m.GovernanceContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.ShieldedPoolContent != nil {
+		{
+			size, err := m.ShieldedPoolContent.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintApp(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.StakeContent != nil {
+		{
+			size, err := m.StakeContent.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -996,7 +1576,40 @@ func (m *PrefixValueResponse) Size() (n int) {
 	return n
 }
 
-func (m *ChainParametersRequest) Size() (n int) {
+func (m *AppParameters) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ChainParams != nil {
+		l = m.ChainParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.DaoParams != nil {
+		l = m.DaoParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.GovernanceParams != nil {
+		l = m.GovernanceParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.IbcParams != nil {
+		l = m.IbcParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.StakeParams != nil {
+		l = m.StakeParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.FeeParams != nil {
+		l = m.FeeParams.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	return n
+}
+
+func (m *AppParametersRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1009,14 +1622,87 @@ func (m *ChainParametersRequest) Size() (n int) {
 	return n
 }
 
-func (m *ChainParametersResponse) Size() (n int) {
+func (m *AppParametersResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.ChainParameters != nil {
-		l = m.ChainParameters.Size()
+	if m.AppParameters != nil {
+		l = m.AppParameters.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	return n
+}
+
+func (m *GenesisAppState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.GenesisAppState != nil {
+		n += m.GenesisAppState.Size()
+	}
+	return n
+}
+
+func (m *GenesisAppState_GenesisContent) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.GenesisContent != nil {
+		l = m.GenesisContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	return n
+}
+func (m *GenesisAppState_GenesisCheckpoint) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.GenesisCheckpoint != nil {
+		l = len(m.GenesisCheckpoint)
+		n += 1 + l + sovApp(uint64(l))
+	}
+	return n
+}
+func (m *GenesisContent) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.StakeContent != nil {
+		l = m.StakeContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.ShieldedPoolContent != nil {
+		l = m.ShieldedPoolContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.GovernanceContent != nil {
+		l = m.GovernanceContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.IbcContent != nil {
+		l = m.IbcContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.ChainContent != nil {
+		l = m.ChainContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.DaoContent != nil {
+		l = m.DaoContent.Size()
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.FeeContent != nil {
+		l = m.FeeContent.Size()
 		n += 1 + l + sovApp(uint64(l))
 	}
 	return n
@@ -1598,7 +2284,7 @@ func (m *PrefixValueResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ChainParametersRequest) Unmarshal(dAtA []byte) error {
+func (m *AppParameters) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1621,10 +2307,276 @@ func (m *ChainParametersRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ChainParametersRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: AppParameters: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChainParametersRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: AppParameters: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChainParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ChainParams == nil {
+				m.ChainParams = &v1alpha1.ChainParameters{}
+			}
+			if err := m.ChainParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DaoParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DaoParams == nil {
+				m.DaoParams = &v1alpha11.DaoParameters{}
+			}
+			if err := m.DaoParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GovernanceParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.GovernanceParams == nil {
+				m.GovernanceParams = &v1alpha12.GovernanceParameters{}
+			}
+			if err := m.GovernanceParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IbcParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.IbcParams == nil {
+				m.IbcParams = &v1alpha13.IbcParameters{}
+			}
+			if err := m.IbcParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StakeParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.StakeParams == nil {
+				m.StakeParams = &v1alpha14.StakeParameters{}
+			}
+			if err := m.StakeParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FeeParams", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.FeeParams == nil {
+				m.FeeParams = &v1alpha15.FeeParameters{}
+			}
+			if err := m.FeeParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApp(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApp
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AppParametersRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApp
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AppParametersRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AppParametersRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1680,7 +2632,7 @@ func (m *ChainParametersRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ChainParametersResponse) Unmarshal(dAtA []byte) error {
+func (m *AppParametersResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1703,15 +2655,15 @@ func (m *ChainParametersResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ChainParametersResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: AppParametersResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChainParametersResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: AppParametersResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ChainParameters", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AppParameters", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1738,10 +2690,430 @@ func (m *ChainParametersResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.ChainParameters == nil {
-				m.ChainParameters = &v1alpha1.ChainParameters{}
+			if m.AppParameters == nil {
+				m.AppParameters = &AppParameters{}
 			}
-			if err := m.ChainParameters.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.AppParameters.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApp(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApp
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GenesisAppState) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApp
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GenesisAppState: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GenesisAppState: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &GenesisContent{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.GenesisAppState = &GenesisAppState_GenesisContent{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisCheckpoint", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := make([]byte, postIndex-iNdEx)
+			copy(v, dAtA[iNdEx:postIndex])
+			m.GenesisAppState = &GenesisAppState_GenesisCheckpoint{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApp(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApp
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GenesisContent) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApp
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GenesisContent: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GenesisContent: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StakeContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.StakeContent == nil {
+				m.StakeContent = &v1alpha14.GenesisContent{}
+			}
+			if err := m.StakeContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ShieldedPoolContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ShieldedPoolContent == nil {
+				m.ShieldedPoolContent = &v1alpha16.GenesisContent{}
+			}
+			if err := m.ShieldedPoolContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GovernanceContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.GovernanceContent == nil {
+				m.GovernanceContent = &v1alpha12.GenesisContent{}
+			}
+			if err := m.GovernanceContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IbcContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.IbcContent == nil {
+				m.IbcContent = &v1alpha13.GenesisContent{}
+			}
+			if err := m.IbcContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChainContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ChainContent == nil {
+				m.ChainContent = &v1alpha1.GenesisContent{}
+			}
+			if err := m.ChainContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DaoContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DaoContent == nil {
+				m.DaoContent = &v1alpha11.GenesisContent{}
+			}
+			if err := m.DaoContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FeeContent", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.FeeContent == nil {
+				m.FeeContent = &v1alpha15.GenesisContent{}
+			}
+			if err := m.FeeContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
