@@ -1035,6 +1035,30 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 	return err
 }
 
+// GetModuleAddress performs a query to get the address of the specified chain module
+func (tn *ChainNode) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	queryRes, err := tn.GetModuleAccount(ctx, moduleName)
+	if err != nil {
+		return "", err
+	}
+	return queryRes.Account.BaseAccount.Address, nil
+}
+
+// GetModuleAccount performs a query to get the account details of the specified chain module
+func (tn *ChainNode) GetModuleAccount(ctx context.Context, moduleName string) (QueryModuleAccountResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "auth", "module-account", moduleName)
+	if err != nil {
+		return QueryModuleAccountResponse{}, err
+	}
+
+	queryRes := QueryModuleAccountResponse{}
+	err = json.Unmarshal(stdout, &queryRes)
+	if err != nil {
+		return QueryModuleAccountResponse{}, err
+	}
+	return queryRes, nil
+}
+
 // VoteOnProposal submits a vote for the specified proposal.
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,

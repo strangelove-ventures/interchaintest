@@ -25,7 +25,7 @@ type CosmosRelayer struct {
 }
 
 func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, networkID string, options ...relayer.RelayerOpt) *CosmosRelayer {
-	c := commander{log: log}
+	c := &commander{log: log}
 
 	dr, err := relayer.NewDockerRelayer(context.TODO(), log, testName, cli, networkID, c, options...)
 	if err != nil {
