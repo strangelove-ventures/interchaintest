@@ -10,6 +10,32 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
+var ProposalStatus_name = map[int32]string{
+	0: "PROPOSAL_STATUS_UNSPECIFIED",
+	1: "PROPOSAL_STATUS_DEPOSIT_PERIOD",
+	2: "PROPOSAL_STATUS_VOTING_PERIOD",
+	3: "PROPOSAL_STATUS_PASSED",
+	4: "PROPOSAL_STATUS_REJECTED",
+	5: "PROPOSAL_STATUS_FAILED",
+}
+
+var ProposalStatus_value = map[string]int32{
+	"PROPOSAL_STATUS_UNSPECIFIED":    0,
+	"PROPOSAL_STATUS_DEPOSIT_PERIOD": 1,
+	"PROPOSAL_STATUS_VOTING_PERIOD":  2,
+	"PROPOSAL_STATUS_PASSED":         3,
+	"PROPOSAL_STATUS_REJECTED":       4,
+	"PROPOSAL_STATUS_FAILED":         5,
+}
+
+func ConvertStatus(status string) int {
+	return int(ProposalStatus_value[status])
+}
+
+func ConvertStatusInt(status int) string {
+	return ProposalStatus_name[int32(status)]
+}
+
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
 func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status string) (ProposalResponse, error) {
 	var zero ProposalResponse
@@ -18,8 +44,8 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 		if err != nil {
 			return zero, err
 		}
-		if p.Status != status {
-			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", p.Status, status)
+		if p.Proposal.Status != ConvertStatus(status) {
+			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", ConvertStatusInt(p.Proposal.Status), status)
 		}
 		return *p, nil
 	}

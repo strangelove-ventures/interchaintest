@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"encoding/json"
+	"time"
 )
 
 const (
@@ -66,17 +67,40 @@ type SoftwareUpgradeProposal struct {
 	Info        string // optional
 }
 
-// ProposalResponse is the proposal query response.
+// ProposalResponse is the response from querying a proposal
+// SDK v50 - appd q gov proposal #
 type ProposalResponse struct {
-	ProposalID       string                   `json:"proposal_id"`
-	Content          ProposalContent          `json:"content"`
-	Status           string                   `json:"status"`
-	FinalTallyResult ProposalFinalTallyResult `json:"final_tally_result"`
-	SubmitTime       string                   `json:"submit_time"`
-	DepositEndTime   string                   `json:"deposit_end_time"`
-	TotalDeposit     []ProposalDeposit        `json:"total_deposit"`
-	VotingStartTime  string                   `json:"voting_start_time"`
-	VotingEndTime    string                   `json:"voting_end_time"`
+	Proposal struct {
+		ID       string `json:"id"`
+		Messages []struct {
+			Type  string `json:"type"`
+			Value struct {
+				Sender           string `json:"sender"`
+				ValidatorAddress string `json:"validator_address"`
+				Power            string `json:"power"`
+				Unsafe           bool   `json:"unsafe"`
+			} `json:"value"`
+		} `json:"messages"`
+		Status           int `json:"status"`
+		FinalTallyResult struct {
+			YesCount        string `json:"yes_count"`
+			AbstainCount    string `json:"abstain_count"`
+			NoCount         string `json:"no_count"`
+			NoWithVetoCount string `json:"no_with_veto_count"`
+		} `json:"final_tally_result"`
+		SubmitTime     time.Time `json:"submit_time"`
+		DepositEndTime time.Time `json:"deposit_end_time"`
+		TotalDeposit   []struct {
+			Denom  string `json:"denom"`
+			Amount string `json:"amount"`
+		} `json:"total_deposit"`
+		VotingStartTime time.Time `json:"voting_start_time"`
+		VotingEndTime   time.Time `json:"voting_end_time"`
+		Metadata        string    `json:"metadata"`
+		Title           string    `json:"title"`
+		Summary         string    `json:"summary"`
+		Proposer        string    `json:"proposer"`
+	} `json:"proposal"`
 }
 
 type ProposalContent struct {
