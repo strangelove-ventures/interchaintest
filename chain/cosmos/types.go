@@ -25,6 +25,10 @@ type TxProposalv1 struct {
 	Deposit  string            `json:"deposit"`
 	Title    string            `json:"title"`
 	Summary  string            `json:"summary"`
+
+	// SDK v50
+	Proposer  string `json:"proposer"`
+	Expedited bool   `json:"expedited"`
 }
 
 // TxProposal contains chain proposal transaction details.

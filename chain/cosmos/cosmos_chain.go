@@ -439,7 +439,7 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 }
 
 // Build a gov v1 proposal type.
-func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
 	var propType TxProposalv1
 	rawMsgs := make([]json.RawMessage, len(messages))
 
@@ -457,6 +457,10 @@ func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summa
 		Deposit:  depositStr,
 		Title:    title,
 		Summary:  summary,
+
+		// SDK v50
+		Proposer:  proposer,
+		Expedited: expedited,
 	}
 
 	return propType, nil
