@@ -10,15 +10,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	subnetevm "github.com/strangelove-ventures/interchaintest/v7/examples/avalanche/subnet-evm"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
-
-//go:embed subnet-evm/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
-var subnetevmVM []byte
-
-//go:embed subnet-evm/genesis.json
-var subnetevmGenesis []byte
 
 func TestAvalancheChainStart(t *testing.T) {
 	if testing.Short() {
@@ -39,9 +34,10 @@ func TestAvalancheChainStart(t *testing.T) {
 				ChainID: "neto-123123",
 				AvalancheSubnets: []ibc.AvalancheSubnetConfig{
 					{
-						Name:    "subnetevm",
-						VM:      subnetevmVM,
-						Genesis: subnetevmGenesis,
+						Name:                "subnetevm",
+						VM:                  subnetevm.VM,
+						Genesis:             subnetevm.Genesis,
+						SubnetClientFactory: subnetevm.NewSubnetEvmClient,
 					},
 				},
 			},
@@ -79,7 +75,6 @@ func TestAvalancheChainStart(t *testing.T) {
 			Address: "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FD",
 			Amount:  2000000,
 		})
-
 	})
 	eg.Go(func() error {
 		return testutil.WaitForBlocks(subnetCtx, 1, chain)

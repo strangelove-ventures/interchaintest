@@ -103,6 +103,7 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 			subnetOpts[i].Name = c.cfg.AvalancheSubnets[i].Name
 			subnetOpts[i].VM = c.cfg.AvalancheSubnets[i].VM
 			subnetOpts[i].Genesis = c.cfg.AvalancheSubnets[i].Genesis
+			subnetOpts[i].SCFactory = c.cfg.AvalancheSubnets[i].SubnetClientFactory
 			vmName := make([]byte, 32)
 			copy(vmName[:], []byte(c.cfg.AvalancheSubnets[i].Name))
 			subnetOpts[i].VmID, err = ids.ToID(vmName)

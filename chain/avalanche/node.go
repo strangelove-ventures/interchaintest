@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,10 +25,6 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v7/chain/avalanche/lib"
@@ -72,10 +67,11 @@ type (
 	}
 
 	AvalancheNodeSubnetOpts struct {
-		Name    string
-		VmID    ids.ID
-		VM      []byte
-		Genesis []byte
+		Name      string
+		VmID      ids.ID
+		VM        []byte
+		Genesis   []byte
+		SCFactory ibc.AvalancheSubnetClientFactory
 
 		subnet ids.ID
 		chain  ids.ID
@@ -260,6 +256,31 @@ func (n *AvalancheNode) GRPCPort() string {
 	panic(errors.New("doesn't support grpc"))
 }
 
+func (n *AvalancheNode) chainClient(id string) (ibc.AvalancheSubnetClient, error) {
+	addr := fmt.Sprintf("http://127.0.0.1:%s", n.RPCPort())
+	strpk := n.options.Credentials.PK.String()
+	switch id {
+	case "x", "p", "c":
+		host := fmt.Sprintf("%s/ext/bc/%s", addr, strings.ToUpper(id))
+		if id == "x" {
+			return NewXChainClient(host, strpk)
+		} else if id == "p" {
+			return NewPChainClient(host, strpk)
+		} else {
+			return NewCChainClient(host, strpk)
+		}
+	default:
+		subnetID, err := strconv.Atoi(id)
+		if err != nil || subnetID >= len(n.options.Subnets) {
+			return nil, fmt.Errorf("not valid subnet id: %w", err)
+		}
+		return n.options.Subnets[subnetID].SCFactory(
+			fmt.Sprintf("%s/ext/bc/%s", addr, n.options.Subnets[subnetID].chain),
+			strpk,
+		)
+	}
+}
+
 func (n *AvalancheNode) CreateKey(ctx context.Context, keyName string) error {
 	// ToDo: create key
 	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
@@ -281,80 +302,26 @@ func (n *AvalancheNode) GetAddress(ctx context.Context, keyName string) ([]byte,
 }
 
 func (n *AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	// ToDo: send some amount to keyName from rootAddress
-	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
-	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/cross-chain-transfers.md
-	// IF allocated chain subnet config:
-	//   - Blockchain Handlers: /ext/bc/[chainID]
-	//   - VM Handlers: /ext/vm/[vmID]
-	// panic("ToDo: implement me")
-
-	rawSubnet, ok := ctx.Value("subnet").(string)
+	rawSubnetID, ok := ctx.Value("subnet").(string)
+	rawSubnetID = strings.ToLower(rawSubnetID)
 	if !ok {
-		return fmt.Errorf("can't read subnet from context")
+		if strings.HasPrefix(amount.Address, "X-") {
+			rawSubnetID = "x"
+		} else if strings.HasPrefix(amount.Address, "P-") {
+			rawSubnetID = "p"
+		} else if strings.HasPrefix(amount.Address, "0x") {
+			rawSubnetID = "c"
+		} else {
+			return fmt.Errorf("address have uknown format: %s", amount.Address)
+		}
+		rawSubnetID = "x"
 	}
-
-	subnet, err := strconv.Atoi(rawSubnet)
+	n.logger.Info("create client", zap.String("subnet", rawSubnetID))
+	client, err := n.chainClient(rawSubnetID)
 	if err != nil {
-		return fmt.Errorf("can't parse subnet idx from context: %w", err)
+		return fmt.Errorf("subnet client creation error: %w", err)
 	}
-
-	chain := n.options.Subnets[subnet].chain
-	rpcUrl := fmt.Sprintf("http://127.0.0.1:%s/ext/bc/%s/rpc", n.RPCPort(), chain)
-
-	client, err := ethclient.Dial(rpcUrl)
-	if err != nil {
-		return fmt.Errorf("can't create client for subnet[%s]: %w", chain, err)
-	}
-
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return fmt.Errorf("can't connect to subnet[%s][%s]: %w", chain, rpcUrl, err)
-	}
-
-	n.logger.Info(
-		"connected to subnet",
-		zap.String("subnet", chain.String()),
-		zap.Uint64("chainID", chainID.Uint64()),
-	)
-
-	privateKey, err := crypto.HexToECDSA(keyName)
-	if err != nil {
-		return fmt.Errorf("can't parse private key: %s", err)
-	}
-
-	senderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	senderNonce, err := client.PendingNonceAt(ctx, senderAddr)
-	if err != nil {
-		return fmt.Errorf("can't get nonce: %w", err)
-	}
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return fmt.Errorf("can't get gas price: %w", err)
-	}
-
-	toAddress := ethcommon.HexToAddress(amount.Address)
-
-	utx := ethtypes.NewTransaction(senderNonce, toAddress, big.NewInt(amount.Amount), 21000, gasPrice, nil)
-
-	signedTx, err := ethtypes.SignTx(utx, ethtypes.NewEIP155Signer(chainID), privateKey)
-	if err != nil {
-		return fmt.Errorf("can't sign transaction: %w", err)
-	}
-
-	err = client.SendTransaction(ctx, signedTx)
-	if err != nil {
-		return fmt.Errorf("can't send EVM tx: %w", err)
-	}
-
-	n.logger.Info(
-		"successfully sent EVM tx to subnet",
-		zap.Any("hash", signedTx.Hash()),
-	)
-
-	return nil
+	return client.SendFunds(ctx, keyName, amount)
 }
 
 func (n *AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
@@ -362,44 +329,37 @@ func (n *AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName 
 }
 
 func (n *AvalancheNode) Height(ctx context.Context) (uint64, error) {
-	rawSubnet, ok := ctx.Value("subnet").(string)
-	// we have subnet passed via context
-	if ok {
-		subnet, err := strconv.Atoi(rawSubnet)
-		if err != nil {
-			return 0, fmt.Errorf("can't parse subnet idx from context: %w", err)
-		}
-
-		chain := n.options.Subnets[subnet].chain
-		rpcUrl := fmt.Sprintf("http://127.0.0.1:%s/ext/bc/%s/rpc", n.RPCPort(), chain)
-
-		client, err := ethclient.Dial(rpcUrl)
-		if err != nil {
-			return 0, fmt.Errorf("can't create client for subnet[%s]: %w", chain, err)
-		}
-
-		return client.BlockNumber(ctx)
+	rawSubnetID, ok := ctx.Value("subnet").(string)
+	rawSubnetID = strings.ToLower(rawSubnetID)
+	if !ok {
+		return platformvm.NewClient(fmt.Sprintf("http://127.0.0.1:%s", n.RPCPort())).GetHeight(ctx)
 	}
-
-	return platformvm.NewClient(fmt.Sprintf("http://127.0.0.1:%s", n.RPCPort())).GetHeight(ctx)
+	client, err := n.chainClient(rawSubnetID)
+	if err != nil {
+		return 0, fmt.Errorf("subnet client creation error: %w", err)
+	}
+	return client.Height(ctx)
 }
 
 func (n *AvalancheNode) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	if strings.HasPrefix(address, "X-") {
-		// ToDo: call /ext/bc/X (method avm.getBalance)
-		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-x-chain-balance
-		panic("ToDo: implement me")
-	} else if strings.HasPrefix(address, "P-") {
-		// ToDo: call /ext/bc/P (method platform.getBalance)
-		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-p-chain-balance
-		panic("ToDo: implement me")
-	} else if strings.HasPrefix(address, "0x") {
-		// ToDo: call /ext/bc/C/rpc (method eth_getBalance)
-		// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md#check-the-c-chain-balance
-		panic("ToDo: implement me")
+	rawSubnetID, ok := ctx.Value("subnet").(string)
+	rawSubnetID = strings.ToLower(rawSubnetID)
+	if !ok {
+		if strings.HasPrefix(address, "X-") {
+			rawSubnetID = "x"
+		} else if strings.HasPrefix(address, "P-") {
+			rawSubnetID = "p"
+		} else if strings.HasPrefix(address, "0x") {
+			rawSubnetID = "c"
+		} else {
+			return 0, fmt.Errorf("address have uknown format: %s", address)
+		}
 	}
-	// if allocated subnet, we must call /ext/bc/[chainID]
-	return 0, fmt.Errorf("address should be have prefix X, P, 0x. current address: %s", address)
+	client, err := n.chainClient(rawSubnetID)
+	if err != nil {
+		return 0, fmt.Errorf("subnet client creation error: %w", err)
+	}
+	return client.GetBalance(ctx, address, denom)
 }
 
 func (n *AvalancheNode) IP() string {
