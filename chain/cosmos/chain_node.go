@@ -990,10 +990,26 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
-	query, err := json.Marshal(queryMsg)
-	if err != nil {
-		return err
+	var query []byte
+	var err error
+
+	if q, ok := queryMsg.(string); ok {
+		var jsonMap map[string]interface{}
+		if err := json.Unmarshal([]byte(q), &jsonMap); err != nil {
+			return err
+		}
+
+		query, err = json.Marshal(jsonMap)
+		if err != nil {
+			return err
+		}
+	} else {
+		query, err = json.Marshal(queryMsg)
+		if err != nil {
+			return err
+		}
 	}
+
 	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
 	if err != nil {
 		return err
