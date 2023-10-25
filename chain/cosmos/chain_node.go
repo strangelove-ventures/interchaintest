@@ -834,7 +834,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	return res.CodeInfos[0].CodeID, nil
 }
 
-func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
+func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *types.TxResponse
 	err := retry.Do(func() error {
@@ -958,7 +958,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 		return "", err
 	}
 
-	txResp, err := tn.getTransaction(tn.CliContext(), txHash)
+	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
 	if err != nil {
 		return "", fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -981,11 +981,25 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
 	cmd := []string{"wasm", "execute", contractAddress, message}
 	cmd = append(cmd, extraExecTxArgs...)
 
-	return tn.ExecTx(ctx, keyName, cmd...)
+	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
+	if err != nil {
+		return &types.TxResponse{}, err
+	}
+
+	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+
+	if txResp.Code != 0 {
+		return txResp, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
+	}
+
+	return txResp, nil
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
