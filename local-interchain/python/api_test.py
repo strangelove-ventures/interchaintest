@@ -92,10 +92,13 @@ def bin_test():
 
     assert len(rb.binary("keys list --output=json")) > 0
 
-    # this query returns a dict with suply as the key, validate it is there
+    # this query returns a dict with supply as the key, validate it is there
     assert "supply" in rb.query("bank total")
 
-    rb.query("bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 --output=json")
+    d = rb.query(
+        "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0 --output=json"
+    )
+    assert len(d["balances"]) == 0
 
 
 # Test to ensure Transactions and getting that data returns properly
