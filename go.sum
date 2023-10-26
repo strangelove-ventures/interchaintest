@@ -795,8 +795,6 @@ github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE
 github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0/go.mod h1:4Zcjuz89kmFXt9morQgcfYZAYZ5n8WHjt81YYWIwtTM=
 github.com/coinbase/rosetta-sdk-go v0.6.10/go.mod h1:J/JFMsfcePrjJZkwQFLh+hJErkAmdm9Iyy3D5Y0LfXo=
 github.com/coinbase/rosetta-sdk-go v0.7.9 h1:lqllBjMnazTjIqYrOGv8h8jxjg9+hJazIGZr9ZvoCcA=
-github.com/coinbase/rosetta-sdk-go/types v1.0.0 h1:jpVIwLcPoOeCR6o1tU+Xv7r5bMONNbHU7MuEHboiFuA=
-github.com/coinbase/rosetta-sdk-go/types v1.0.0/go.mod h1:eq7W2TMRH22GTW0N0beDnN931DW0/WOI1R2sdHNHG4c=
 github.com/cometbft/cometbft v0.34.27 h1:ri6BvmwjWR0gurYjywcBqRe4bbwc3QVs9KRcCzgh/J0=
 github.com/cometbft/cometbft v0.34.27/go.mod h1:BcCbhKv7ieM0KEddnYXvQZR+pZykTKReJJYf7YC7qhw=
 github.com/cometbft/cometbft-db v0.7.0 h1:uBjbrBx4QzU0zOEnU8KxoDl18dMNgDh+zZRUE0ucsbo=
