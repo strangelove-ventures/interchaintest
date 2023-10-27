@@ -6,26 +6,59 @@ Formerly known as `ibctest`.
 [![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/interchaintest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/interchaintest@main)
 [![License: Apache-2.0](https://img.shields.io/github/license/strangelove-ventures/interchaintest.svg?style=flat-square)](https://github.com/strangelove-ventures/interchaintest/blob/main/create-test-readme/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/strangelove-ventures/interchaintest)](https://goreportcard.com/report/github.com/strangelove-ventures/interchaintest)
-
-
-
-`interchaintest` orchestrates Go tests that utilize Docker containers for multiple
-[IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
-
-It allows users to quickly spin up custom testnets and dev environments to test IBC, chain infrastructures, smart contracts, etc.
+[![Conforms to README.lint](https://img.shields.io/badge/README.lint-conforming-brightgreen)](https://github.com/strangelove-ventures/readme-dot-lint)
 </div>
 
-## Table Of Contents
-- [Branch Versioning](#maintained-branches)
-- **Use Cases:**
-    - **Importing as a Module**
-        - [Chain Integration and GitHub CI](./docs/ciTests.md)
-    -  **Running as a Binary**
-        - [Building Binary](./docs/buildBinary.md)
-        - [Running Conformance Tests](./docs/conformanceTests.md) - Suite of built-in tests that test high-level IBC compatibility
-- [Write Custom Tests](./docs/writeCustomTests.md)
+
+
+🌌 Why use Interchaintest?
+=============================
+
+In order to ship production-grade software for the Interchain, we needed sophisticated developer tooling...but IBC and Web3 have a *lot* of moving parts, which can lead to a steep learning curve and all sorts of pain. Recognize any of these?
+
+- repeatedly building repo-specific, Docker- and shell-based testing solutions,
+- duplication of effort, and
+- difficulty in repurposing existing testing harnesses for new problem domains.
+
+We built `interchaintest` to extract patterns and create a generic test harness: a use-case-agnostic framework for generating repeatable, diagnostic tests for every aspect of IBC.
+
+Read more at the [Announcing `interchaintest` blog post](https://strange.love/blog/announcing-interchaintest).
+
+🌌🌌 Who benefits from Interchaintest?
+=============================
+
+`interchaintest` is for developers who expect top-shelf testing tools when working in IBC.
+
+
+🌌🌌🌌 What does Interchaintest do?
+=============================
+
+Interchaintest is a framework for testing blockchain functionality and interoperability between chains, primarily with the Inter-Blockchain Communication (IBC) protocol.
+
+Want to quickly spin up custom testnets and dev environments to test IBC, chain infrastructures, smart contracts, etc.? `interchaintest` orchestrates Go tests that utilize Docker containers for multiple
+[IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
+
+
+
+🌌🌌🌌🌌 How do I use it?
+=============================
+
+## Installation
+- To seamlessly build and test current iterations of your chain (both locally and within GitHub's continuous integration (CI) pipeline), [import `interchaintest` as a Module](./docs/ciTests.md).
+- When [running conformance tests](./docs/conformanceTests.md) (a suite of built-in tests that test high-level IBC compatibility) with custom chain sets, it may be more more convenient to [run `interchaintest` as a binary](./docs/buildBinary.md).
+
+## Usage
+
+- A tutorial on [Writing Custom Tests](./docs/writeCustomTests.md)
+
+## Reference
 - [Environment Variable Options](./docs/envOptions.md)
 - [Retaining Data on Failed Tests](./docs/retainingDataOnFailedTests.md)
+
+
+🌌🌌🌌🌌🌌 Extras
+=============================
+
 
 
 ### Maintained Branches
