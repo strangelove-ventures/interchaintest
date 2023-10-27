@@ -1,10 +1,13 @@
+# flake8: noqa
+
 import json
 import os
 from base64 import b64decode, b64encode
 
+from httpx import get, post
+
 from helpers.file_cache import Cache
 from helpers.transactions import RequestBuilder, get_transaction_response
-from httpx import get, post
 
 fp = os.path.realpath(__file__)
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(fp)))
@@ -61,16 +64,13 @@ class CosmWasm:
     def store_contract(self, key_name: str, abs_path: str) -> "CosmWasm":
         ictest_chain_start = Cache.get_chain_start_time_from_logs()
         if ictest_chain_start == -1:
-            return self
-
-        Cache.default_contracts_json()
+            ictest_chain_start = 0
+            Cache.reset_contracts_cache_json()
 
         contracts = Cache.get_cache_or_default({}, ictest_chain_start)
-
         sha1 = Cache.get_file_hash(abs_path, self.chain_id)
         if sha1 in contracts["file_cache"]:
             self.code_id = contracts["file_cache"][sha1]
-
             sub_file_path = abs_path.split("/")[-1]
             print(f"[Cache] CodeID={self.code_id} for {sub_file_path}")
             return self
@@ -167,7 +167,11 @@ class CosmWasm:
     def get_contract_address(rb: RequestBuilder, tx_hash: str) -> str:
         res_json = rb.query(f"tx {tx_hash} --output=json")
 
-        code = int(res_json["code"])
+        try:
+            code = int(res_json["code"])
+        except:
+            code = -1
+
         if code != 0:
             raw = res_json["raw_log"]
             return raw

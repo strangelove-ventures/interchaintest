@@ -1,3 +1,4 @@
+# flakes8: noqa E501
 import hashlib
 import json
 import os
@@ -12,7 +13,7 @@ logs_path = os.path.join(root_dir, "configs", "logs.json")
 
 class Cache:
     @staticmethod
-    def default_contracts_json():
+    def reset_contracts_cache_json():
         if not os.path.exists(contracts_json_path):
             with open(contracts_json_path, "w") as f:
                 f.write(json.dumps({"start_time": 0, "file_cache": {}}))
@@ -22,15 +23,24 @@ class Cache:
         with open(logs_path, "r") as f:
             logs = dict(json.load(f))
 
-        return int(logs.get("start_time", -1))
+        res = logs.get("start_time", -1)
+        if isinstance(res, str):
+            res = res.replace("\n", "")
+
+        return int(res)
 
     @staticmethod
     def get_cache_or_default(contracts: dict, ictest_chain_start: int) -> dict:
-        with open(contracts_json_path, "r") as f:
-            cache_time = dict(json.load(f)).get("start_time", 0)
+        cache_time: str | int = 0
+        if os.path.exists(contracts_json_path):
+            with open(contracts_json_path, "r") as f:
+                c = dict(json.load(f))
+                cache_time = c.get("start_time", 0)
+                if isinstance(cache_time, str):
+                    cache_time = cache_time.replace("\n", "")
 
         if cache_time == 0 or cache_time != ictest_chain_start:
-            # reset cache, and set cache time to current interchain_test time # noqa
+            # reset cache, and set cache time to current interchain_test time
             contracts["start_time"] = ictest_chain_start
             contracts["file_cache"] = {}
 
@@ -72,4 +82,4 @@ class Cache:
 
 
 # We always run this to start.
-Cache.default_contracts_json()
+Cache.reset_contracts_cache_json()
