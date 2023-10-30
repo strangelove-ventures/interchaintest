@@ -234,8 +234,8 @@ func (c *PenumbraChain) SendIBCTransfer(
 		return ibc.Tx{}, fmt.Errorf("no pclientd instances configured to use when sending ibc transfers")
 	}
 
-	//return fn.PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
-	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
+	return fn.PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
+	//return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
