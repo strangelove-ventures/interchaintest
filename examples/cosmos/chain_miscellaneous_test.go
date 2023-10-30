@@ -11,16 +11,10 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-<<<<<<< HEAD
+	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-=======
-	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
->>>>>>> 10163ee (wasm exec returns response & err (#842))
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
