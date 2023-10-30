@@ -11,12 +11,12 @@ const (
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
 
-	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
-	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
-	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
-	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
-	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
-	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
+	ProposalStatusUnspecified   = 0
+	ProposalStatusDepositPeriod = 1
+	ProposalStatusVotingPeriod  = 2
+	ProposalStatusPassed        = 3
+	ProposalStatusRejected      = 4
+	ProposalStatusFailed        = 5
 )
 
 // TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)
@@ -68,52 +68,40 @@ type SoftwareUpgradeProposal struct {
 }
 
 // ProposalResponse is the response from querying a proposal
-// SDK v50 - appd q gov proposal #
+// SDK v50+ only
 type ProposalResponse struct {
 	Proposal struct {
-		ID       string `json:"id"`
-		Messages []struct {
-			Type  string `json:"type"`
-			Value struct {
-				Sender           string `json:"sender"`
-				ValidatorAddress string `json:"validator_address"`
-				Power            string `json:"power"`
-				Unsafe           bool   `json:"unsafe"`
-			} `json:"value"`
-		} `json:"messages"`
-		Status           int `json:"status"`
-		FinalTallyResult struct {
-			YesCount        string `json:"yes_count"`
-			AbstainCount    string `json:"abstain_count"`
-			NoCount         string `json:"no_count"`
-			NoWithVetoCount string `json:"no_with_veto_count"`
-		} `json:"final_tally_result"`
-		SubmitTime     time.Time `json:"submit_time"`
-		DepositEndTime time.Time `json:"deposit_end_time"`
-		TotalDeposit   []struct {
-			Denom  string `json:"denom"`
-			Amount string `json:"amount"`
-		} `json:"total_deposit"`
-		VotingStartTime time.Time `json:"voting_start_time"`
-		VotingEndTime   time.Time `json:"voting_end_time"`
-		Metadata        string    `json:"metadata"`
-		Title           string    `json:"title"`
-		Summary         string    `json:"summary"`
-		Proposer        string    `json:"proposer"`
+		ID               string                   `json:"id"`
+		Messages         []ProposalMessage        `json:"messages"`
+		Status           int                      `json:"status"`
+		FinalTallyResult ProposalFinalTallyResult `json:"final_tally_result"`
+		SubmitTime       time.Time                `json:"submit_time"`
+		DepositEndTime   time.Time                `json:"deposit_end_time"`
+		TotalDeposit     []ProposalDeposit        `json:"total_deposit"`
+		VotingStartTime  time.Time                `json:"voting_start_time"`
+		VotingEndTime    time.Time                `json:"voting_end_time"`
+		Metadata         string                   `json:"metadata"`
+		Title            string                   `json:"title"`
+		Summary          string                   `json:"summary"`
+		Proposer         string                   `json:"proposer"`
 	} `json:"proposal"`
 }
 
-type ProposalContent struct {
-	Type        string `json:"@type"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+type ProposalMessage struct {
+	Type  string `json:"type"`
+	Value struct {
+		Sender           string `json:"sender"`
+		ValidatorAddress string `json:"validator_address"`
+		Power            string `json:"power"`
+		Unsafe           bool   `json:"unsafe"`
+	} `json:"value"`
 }
 
 type ProposalFinalTallyResult struct {
-	Yes        string `json:"yes"`
-	Abstain    string `json:"abstain"`
-	No         string `json:"no"`
-	NoWithVeto string `json:"no_with_veto"`
+	Yes        string `json:"yes_count"`
+	Abstain    string `json:"abstain_count"`
+	No         string `json:"no_count"`
+	NoWithVeto string `json:"no_with_veto_count"`
 }
 
 type ProposalDeposit struct {
