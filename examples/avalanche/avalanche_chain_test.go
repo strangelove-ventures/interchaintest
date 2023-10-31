@@ -1,4 +1,4 @@
-package penumbra_test
+package avalanche_test
 
 import (
 	"context"

@@ -1,5 +1,7 @@
 package avalanche
 
+import "time"
+
 type (
 	GenesisLockedAmount struct {
 		Amount   uint32 `json:"amount"`
@@ -37,7 +39,7 @@ func NewGenesis(networkID uint32, allocations []GenesisAllocation, initialStaked
 	return Genesis{
 		NetworkID:                  networkID,
 		Allocations:                allocations,
-		StartTime:                  1660536000,
+		StartTime:                  uint32(time.Now().Unix()),
 		InitialStakeDuration:       31536000,
 		InitialStakeDurationOffset: 5400,
 		InitialStakedFunds:         initialStakedFunds,
