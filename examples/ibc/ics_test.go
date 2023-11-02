@@ -38,8 +38,7 @@ func TestICS(t *testing.T) {
 	client, network := ibctest.DockerSetup(t)
 
 	r := ibctest.NewBuiltinRelayerFactory(
-		// ibc.CosmosRly,
-		ibc.Hermes,
+		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 	).Build(t, client, network)
 
