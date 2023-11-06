@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	ibctest "github.com/strangelove-ventures/interchaintest/v7"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
@@ -25,7 +25,7 @@ func TestICS(t *testing.T) {
 	ctx := context.Background()
 
 	// Chain Factory
-	cf := ibctest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*ibctest.ChainSpec{
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "ics-provider", Version: "v3.1.0", ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5}},
 		{Name: "ics-consumer", Version: "v3.1.0"},
 	})
@@ -35,20 +35,20 @@ func TestICS(t *testing.T) {
 	provider, consumer := chains[0], chains[1]
 
 	// Relayer Factory
-	client, network := ibctest.DockerSetup(t)
+	client, network := interchaintest.DockerSetup(t)
 
-	r := ibctest.NewBuiltinRelayerFactory(
+	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
 	).Build(t, client, network)
 
 	// Prep Interchain
 	const ibcPath = "ics-path"
-	ic := ibctest.NewInterchain().
+	ic := interchaintest.NewInterchain().
 		AddChain(provider).
 		AddChain(consumer).
 		AddRelayer(r, "relayer").
-		AddProviderConsumerLink(ibctest.ProviderConsumerLink{
+		AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
 			Provider: provider,
 			Consumer: consumer,
 			Relayer:  r,
@@ -56,18 +56,18 @@ func TestICS(t *testing.T) {
 		})
 
 	// Log location
-	f, err := ibctest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
 	require.NoError(t, err)
 	// Reporter/logs
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 
 	// Build interchain
-	err = ic.Build(ctx, eRep, ibctest.InterchainBuildOptions{
+	err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: ibctest.DefaultBlockDatabaseFilepath(),
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false,
 	})
