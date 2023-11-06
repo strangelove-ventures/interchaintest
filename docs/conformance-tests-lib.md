@@ -12,10 +12,6 @@ You can view all the specific conformance test by reviewing them in the [conform
 `interchaintest` can be imported into your own packages to be used as a library as well as being used from the 
 binary itself, see [here](conformance-tests-bin.md).
 
-`interchaintest` does not currently follow semver due to the tightly coupled nature of the package with ibc-go,
-as a result there are no tagged versions available for importing. To import `interchaintest` into your own repo
-you can use `go get github.com/strangelove-ventures/interchaintest/v8@commit-sha`
-
 A common pattern when importing `interchaintest` into your own repositories is to use a Go submodule. The reason being
 is that there are some replace directives being used in `interchaintest` which may force your main modules `go.mod`
 to use specific versions of dependencies. To avoid this issue one will typically create a new package, such as
