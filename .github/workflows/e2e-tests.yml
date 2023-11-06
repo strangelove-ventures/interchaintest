@@ -11,7 +11,7 @@ concurrency:
 jobs:
   test-conformance:
     name: test-conformance
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       # Install and setup go
       - name: Set up Go 1.19
@@ -32,7 +32,7 @@ jobs:
         run: (go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
   test-ibc-examples:
     name: test-ibc-examples
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       # Install and setup go
       - name: Set up Go 1.19
@@ -54,7 +54,7 @@ jobs:
         run: go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
   test-cosmos-examples:
     name: test-cosmos-examples
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       # Install and setup go
       - name: Set up Go 1.19
