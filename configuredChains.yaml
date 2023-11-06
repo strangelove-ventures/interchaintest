@@ -412,7 +412,7 @@ ics-consumer:
   gas-adjustment: 1.1
   trusting-period: 96h
   images:
-    - repository: ics
+    - repository: ghcr.io/strangelove-ventures/heighliner/ics
       uid-gid: 1025:1025
   no-host-mount: false
 
