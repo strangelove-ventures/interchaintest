@@ -6,34 +6,45 @@ import (
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
-var ProposalStatus_name = map[int32]string{
-	0: "PROPOSAL_STATUS_UNSPECIFIED",
-	1: "PROPOSAL_STATUS_DEPOSIT_PERIOD",
-	2: "PROPOSAL_STATUS_VOTING_PERIOD",
-	3: "PROPOSAL_STATUS_PASSED",
-	4: "PROPOSAL_STATUS_REJECTED",
-	5: "PROPOSAL_STATUS_FAILED",
+// ConvertProposalStatus converts a proposal status int to a string from IBC-Go v8 / SDK v50 chains.
+func ConvertStatus(status int) string {
+	return govtypes.ProposalStatus_name[int32(status)]
 }
 
-// ConvertProposalStatus converts a proposal status int to a string for SDK v50+ chains.
-func ConvertProposalStatus(status int) string {
-	return ProposalStatus_name[int32(status)]
+// PollForProposalStatus attempts to find a proposal with matching ID and status using IBC-Go v8 / SDK v50.
+func PollForProposalStatusV8(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status int) (ProposalResponseV8, error) {
+	var pr ProposalResponseV8
+	doPoll := func(ctx context.Context, height uint64) (ProposalResponseV8, error) {
+		p, err := chain.QueryProposalV8(ctx, proposalID)
+		if err != nil {
+			return pr, err
+		}
+
+		if p.Proposal.Status != status {
+			return pr, fmt.Errorf("proposal status (%d / %s) does not match expected: (%d / %s)", p.Proposal.Status, ConvertStatus(p.Proposal.Status), status, ConvertStatus(status))
+		}
+		return *p, nil
+	}
+	bp := testutil.BlockPoller[ProposalResponseV8]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
-func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status int) (ProposalResponse, error) {
+func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status string) (ProposalResponse, error) {
 	var zero ProposalResponse
 	doPoll := func(ctx context.Context, height uint64) (ProposalResponse, error) {
 		p, err := chain.QueryProposal(ctx, proposalID)
 		if err != nil {
 			return zero, err
 		}
-		if p.Proposal.Status != status {
-			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", ConvertProposalStatus(p.Proposal.Status), ConvertProposalStatus(status))
+		if p.Status != status {
+			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", p.Status, status)
 		}
 		return *p, nil
 	}

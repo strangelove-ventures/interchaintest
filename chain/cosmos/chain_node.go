@@ -1082,6 +1082,20 @@ func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*Pro
 	return &proposal, nil
 }
 
+// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
+func (tn *ChainNode) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
+	if err != nil {
+		return nil, err
+	}
+	var proposal ProposalResponseV8
+	err = json.Unmarshal(stdout, &proposal)
+	if err != nil {
+		return nil, err
+	}
+	return &proposal, nil
+}
+
 // SubmitProposal submits a gov v1 proposal to the chain.
 func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
 	// Write msg to container

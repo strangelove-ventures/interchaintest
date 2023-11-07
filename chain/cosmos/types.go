@@ -11,12 +11,21 @@ const (
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
 
-	ProposalStatusUnspecified   = 0
-	ProposalStatusDepositPeriod = 1
-	ProposalStatusVotingPeriod  = 2
-	ProposalStatusPassed        = 3
-	ProposalStatusRejected      = 4
-	ProposalStatusFailed        = 5
+	// IBC-Go <= v7 / SDK <= v0.47
+	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
+	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
+	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
+	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
+	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
+	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
+
+	// IBC-Go v8 / SDK v50
+	ProposalStatusUnspecifiedV8   = 0
+	ProposalStatusDepositPeriodV8 = 1
+	ProposalStatusVotingPeriodV8  = 2
+	ProposalStatusPassedV8        = 3
+	ProposalStatusRejectedV8      = 4
+	ProposalStatusFailedV8        = 5
 )
 
 // TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)
@@ -27,9 +36,9 @@ type TxProposalv1 struct {
 	Title    string            `json:"title"`
 	Summary  string            `json:"summary"`
 
-	// SDK v50
-	Proposer  string `json:"proposer"`
-	Expedited bool   `json:"expedited"`
+	// SDK v50 only
+	Proposer  string `json:"proposer,omitempty"`
+	Expedited bool   `json:"expedited,omitempty"`
 }
 
 // TxProposal contains chain proposal transaction details.
@@ -67,23 +76,35 @@ type SoftwareUpgradeProposal struct {
 	Info        string // optional
 }
 
-// ProposalResponse is the response from querying a proposal
-// SDK v50+ only
+// ProposalResponse is the proposal query response.
 type ProposalResponse struct {
+	ProposalID       string                   `json:"proposal_id"`
+	Content          ProposalContent          `json:"content"`
+	Status           string                   `json:"status"`
+	FinalTallyResult ProposalFinalTallyResult `json:"final_tally_result"`
+	SubmitTime       string                   `json:"submit_time"`
+	DepositEndTime   string                   `json:"deposit_end_time"`
+	TotalDeposit     []ProposalDeposit        `json:"total_deposit"`
+	VotingStartTime  string                   `json:"voting_start_time"`
+	VotingEndTime    string                   `json:"voting_end_time"`
+}
+
+// ProposalResponse is the proposal query response for IBC-Go v8 / SDK v50.
+type ProposalResponseV8 struct {
 	Proposal struct {
-		ID               string                   `json:"id"`
-		Messages         []ProposalMessage        `json:"messages"`
-		Status           int                      `json:"status"`
-		FinalTallyResult ProposalFinalTallyResult `json:"final_tally_result"`
-		SubmitTime       time.Time                `json:"submit_time"`
-		DepositEndTime   time.Time                `json:"deposit_end_time"`
-		TotalDeposit     []ProposalDeposit        `json:"total_deposit"`
-		VotingStartTime  time.Time                `json:"voting_start_time"`
-		VotingEndTime    time.Time                `json:"voting_end_time"`
-		Metadata         string                   `json:"metadata"`
-		Title            string                   `json:"title"`
-		Summary          string                   `json:"summary"`
-		Proposer         string                   `json:"proposer"`
+		ID               string                     `json:"id"`
+		Messages         []ProposalMessageV8        `json:"messages"`
+		Status           int                        `json:"status"`
+		FinalTallyResult ProposalFinalTallyResultV8 `json:"final_tally_result"`
+		SubmitTime       time.Time                  `json:"submit_time"`
+		DepositEndTime   time.Time                  `json:"deposit_end_time"`
+		TotalDeposit     []ProposalDeposit          `json:"total_deposit"`
+		VotingStartTime  time.Time                  `json:"voting_start_time"`
+		VotingEndTime    time.Time                  `json:"voting_end_time"`
+		Metadata         string                     `json:"metadata"`
+		Title            string                     `json:"title"`
+		Summary          string                     `json:"summary"`
+		Proposer         string                     `json:"proposer"`
 	} `json:"proposal"`
 }
 
@@ -97,11 +118,34 @@ type ProposalMessage struct {
 	} `json:"value"`
 }
 
+type ProposalContent struct {
+	Type        string `json:"@type"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 type ProposalFinalTallyResult struct {
 	Yes        string `json:"yes_count"`
 	Abstain    string `json:"abstain_count"`
 	No         string `json:"no_count"`
 	NoWithVeto string `json:"no_with_veto_count"`
+}
+
+type ProposalFinalTallyResultV8 struct {
+	Yes        string `json:"yes_count"`
+	Abstain    string `json:"abstain_count"`
+	No         string `json:"no_count"`
+	NoWithVeto string `json:"no_with_veto_count"`
+}
+
+type ProposalMessageV8 struct {
+	Type  string `json:"type"`
+	Value struct {
+		Sender           string `json:"sender"`
+		ValidatorAddress string `json:"validator_address"`
+		Power            string `json:"power"`
+		Unsafe           bool   `json:"unsafe"`
+	} `json:"value"`
 }
 
 type ProposalDeposit struct {
