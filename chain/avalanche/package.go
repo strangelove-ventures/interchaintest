@@ -13,6 +13,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -139,39 +140,40 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 	}
 
 	avaxAddr, _ := address.Format("X", chainId.Name, key.Address().Bytes())
+	ethAddr := crypto.PubkeyToAddress(key.ToECDSA().PublicKey).Hex()
 	allocations := []GenesisAllocation{
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{{Amount: 2000000000}, {Amount: 1000000000}},
 		},
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{{Amount: 2000000000}, {Amount: 1000000000}},
 		},
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{},
 		},
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{},
 		},
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{{Amount: 4000000000, Locktime: uint32(time.Second)}},
 		},
 		{
-			ETHAddr:        "0x" + key.PublicKey().Address().Hex(),
+			ETHAddr:        ethAddr,
 			AVAXAddr:       avaxAddr,
 			InitialAmount:  4000000000,
 			UnlockSchedule: []GenesisLockedAmount{{Amount: 4000000000, Locktime: uint32(time.Second)}},
