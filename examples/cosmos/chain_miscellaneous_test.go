@@ -7,9 +7,11 @@ import (
 
 	"cosmossdk.io/math"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -44,10 +46,11 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 			ChainName: name,
 			Version:   version,
 			ChainConfig: ibc.ChainConfig{
-				Denom:         "ujuno",
-				Bech32Prefix:  "juno",
-				CoinType:      "118",
-				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
+				Denom:          "ujuno",
+				Bech32Prefix:   "juno",
+				CoinType:       "118",
+				ModifyGenesis:  cosmos.ModifyGenesis(sdk47Genesis),
+				EncodingConfig: wasmEncoding(),
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
@@ -87,8 +90,15 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	testQueryCmd(ctx, t, chain)
 	testHasCommand(ctx, t, chain)
 	testTokenFactory(ctx, t, chain, users)
+	testFailedCWExecute(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
 	testGetGovernanceAddress(ctx, t, chain)
+}
+
+func wasmEncoding() *testutil.TestEncodingConfig {
+	cfg := cosmos.DefaultEncoding()
+	wasmtypes.RegisterInterfaces(cfg.InterfaceRegistry)
+	return &cfg
 }
 
 func testBuildDependencies(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -127,6 +137,28 @@ func testBuildDependencies(ctx context.Context, t *testing.T, chain *cosmos.Cosm
 			require.Equal(t, len(dep.ReplacementVersion), 0, "ReplacementVersion: %s is not 0.", dep.ReplacementVersion)
 		}
 	}
+}
+
+func testFailedCWExecute(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	user := users[0]
+	keyName := user.KeyName()
+
+	codeId, err := chain.StoreContract(ctx, keyName, "sample_contracts/cw_template.wasm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contractAddr, err := chain.InstantiateContract(ctx, keyName, codeId, `{"count":0}`, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// execute on the contract with the wrong message (err)
+	txResp, err := chain.ExecuteContract(ctx, keyName, contractAddr, `{"not_a_func":{}}`)
+	require.Error(t, err)
+	fmt.Printf("txResp.RawLog: %+v\n", txResp.RawLog)
+	fmt.Printf("err: %+v\n", err)
+	require.Contains(t, err.Error(), "failed to execute message")
 }
 
 func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {

@@ -278,19 +278,9 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	logger.Info("Executing msg ->", zap.String("msg", msg))
 
 	//Query the contract on chain 1. The contract makes an interchain query to chain 2 to get the chain 2 user's balance.
-	hash, err := chain1CChain.ExecuteContract(ctx, chain1User.KeyName(), contractAddr, msg)
-
+	resp, err := chain1CChain.ExecuteContract(ctx, chain1User.KeyName(), contractAddr, msg)
 	require.NoError(t, err)
-
-	// Check the results from the interchain query above.
-	cmd = []string{chain1.Config().Bin, "query", "tx", hash,
-		"--node", chain1.GetRPCAddress(),
-		"--home", chain1.HomeDir(),
-		"--chain-id", chain1.Config().ChainID,
-		"--output", "json",
-	}
-	_, _, err = chain1.Exec(ctx, cmd, nil)
-	require.NoError(t, err)
+	require.NotNil(t, resp)
 
 	// Wait a few blocks for query to be sent to counterparty.
 	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
