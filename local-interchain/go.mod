@@ -73,6 +73,7 @@ require (
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc1 // indirect
 	github.com/cosmos/ibc-go/v7 v7.3.0 // indirect
 	github.com/cosmos/ics23/go v0.10.0 // indirect
+	github.com/cosmos/interchain-security/v3 v3.1.1-0.20231102122221-81650a84f989 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.13.0 // indirect
 	github.com/cosmos/rosetta-sdk-go v0.10.0 // indirect
 	github.com/creachadair/taskgroup v0.4.2 // indirect
@@ -114,7 +115,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/orderedcode v0.0.1 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/google/uuid v1.3.1 // indirect
@@ -246,6 +247,6 @@ require (
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
-	pgregory.net/rapid v1.0.0 // indirect
+	pgregory.net/rapid v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )

@@ -16,12 +16,13 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/cosmos/ibc-go/v7 v7.3.0
+	github.com/cosmos/interchain-security/v3 v3.1.1-0.20231102122221-81650a84f989
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gdamore/tcell/v2 v2.6.0
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
@@ -239,7 +240,7 @@ require (
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
-	pgregory.net/rapid v1.0.0 // indirect
+	pgregory.net/rapid v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
