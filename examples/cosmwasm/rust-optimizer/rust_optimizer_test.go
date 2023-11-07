@@ -19,9 +19,9 @@ import (
 
 // TestRustOptimizerContract compiles a cosmwasm contract using cosmwasm/rust-optimizer
 // It then spins up a juno chain and executes tests
-func TestRustOptimizerContract(t *testing.T) {		
-	if testing.Short() {		
-		t.Skip("skipping in short mode")		
+func TestRustOptimizerContract(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
 	}
 
 	t.Parallel()
@@ -32,61 +32,61 @@ func TestRustOptimizerContract(t *testing.T) {
 	// Compilation runs in parallel with chain setup, waiting if necessary before StoreContract
 	contract := cosmwasm.NewContract("contract").WithVersion("0.13.0").Compile()
 
-	ctx := context.Background()		
+	ctx := context.Background()
 
-	// Chain Factory		
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{		
+	// Chain Factory
+	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name: "juno", 
+			Name:    "juno",
 			Version: "latest",
-			ChainConfig: ibc.ChainConfig{		
-				GasPrices:      "0.00ujuno",		
+			ChainConfig: ibc.ChainConfig{
+				GasPrices:      "0.00ujuno",
 				EncodingConfig: wasm.WasmEncoding(),
 			},
 		},
-	})		
+	})
 
-	chains, err := cf.Chains(t.Name())		
-	require.NoError(t, err)		
+	chains, err := cf.Chains(t.Name())
+	require.NoError(t, err)
 	juno := chains[0].(*cosmos.CosmosChain)
 
-	client, network := interchaintest.DockerSetup(t)		
+	client, network := interchaintest.DockerSetup(t)
 
-	// Prep Interchain		
+	// Prep Interchain
 	ic := interchaintest.NewInterchain().AddChain(juno)
 
-	rep := testreporter.NewNopReporter()	
-	eRep := rep.RelayerExecReporter(t)		
+	rep := testreporter.NewNopReporter()
+	eRep := rep.RelayerExecReporter(t)
 
-	// Build interchain		
-	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{		
-		TestName:          t.Name(),		
-		Client:            client,		
-		NetworkID:         network,		
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),		
-		SkipPathCreation:  true,		
-	}))		
-	t.Cleanup(func() {		
-		_ = ic.Close()		
-	})		
+	// Build interchain
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
+		TestName:          t.Name(),
+		Client:            client,
+		NetworkID:         network,
+		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation:  true,
+	}))
+	t.Cleanup(func() {
+		_ = ic.Close()
+	})
 
-	// Create and Fund User Wallets		
-	initBal := math.NewInt(100_000_000)		
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal.Int64(), juno)		
-	junoUser := users[0]		
+	// Create and Fund User Wallets
+	initBal := math.NewInt(100_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal, juno)
+	junoUser := users[0]
 
-	err = testutil.WaitForBlocks(ctx, 2, juno)		
-	require.NoError(t, err)		
+	err = testutil.WaitForBlocks(ctx, 2, juno)
+	require.NoError(t, err)
 
 	// Verify balance
-	junoUserBalInitial, err := juno.GetBalance(ctx, junoUser.FormattedAddress(), juno.Config().Denom)		
-	require.NoError(t, err)		
-	require.True(t, junoUserBalInitial.Equal(initBal))		
+	junoUserBalInitial, err := juno.GetBalance(ctx, junoUser.FormattedAddress(), juno.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, junoUserBalInitial.Equal(initBal))
 
 	// Wait for contract to finish compiling
 	contractBinary, err := contract.WaitForCompile()
 	require.NoError(t, err)
-	
+
 	// Store contract
 	contractCodeId, err := juno.StoreContract(ctx, junoUser.KeyName(), contractBinary)
 	require.NoError(t, err)

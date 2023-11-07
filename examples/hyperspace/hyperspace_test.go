@@ -213,7 +213,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 
 	// Fund users on both cosmos and parachain, mints Asset 1 for Alice
-	fundAmount := int64(12_333_000_000_000)
+	fundAmount := math.NewInt(12_333_000_000_000)
 	polkadotUser, cosmosUser := fundUsers(t, ctx, fundAmount, polkadotChain, cosmosChain)
 
 	err = r.GeneratePath(ctx, eRep, cosmosChain.Config().ChainID, polkadotChain.Config().ChainID, pathName)
@@ -248,11 +248,11 @@ func TestHyperspace(t *testing.T) {
 	})
 
 	// Send 1.77 stake from cosmosUser to parachainUser
-	amountToSend := int64(1_770_000)
+	amountToSend := math.NewInt(1_770_000)
 	transfer := ibc.WalletAmount{
 		Address: polkadotUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
-		Amount:  math.NewInt(amountToSend),
+		Amount:  amountToSend,
 	}
 	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
@@ -263,14 +263,14 @@ func TestHyperspace(t *testing.T) {
 	// Verify tokens arrived on parachain user
 	parachainUserStake, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-	require.Equal(t, amountToSend, parachainUserStake.Amount.Int64(), "parachain user's stake amount not expected after first tx")
+	require.Equal(t, amountToSend, parachainUserStake.Amount, "parachain user's stake amount not expected after first tx")
 
 	// Send 1.16 stake from parachainUser to cosmosUser
-	amountToReflect := int64(1_160_000)
+	amountToReflect := math.NewInt(1_160_000)
 	reflectTransfer := ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   "2", // stake
-		Amount:  math.NewInt(amountToReflect),
+		Amount:  amountToReflect,
 	}
 	_, err = polkadotChain.SendIBCTransfer(ctx, "channel-0", polkadotUser.KeyName(), reflectTransfer, ibc.TransferOptions{})
 	require.NoError(t, err)
@@ -286,7 +286,8 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for MsgRecvPacket on cosmos chain
-	finalStakeBal := math.NewInt(fundAmount - amountToSend + amountToReflect)
+	// finalStakeBal := math.NewInt(fundAmount - amountToSend + amountToReflect)
+	finalStakeBal := fundAmount
 	err = cosmos.PollForBalance(ctx, cosmosChain, 20, ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
@@ -315,12 +316,12 @@ func TestHyperspace(t *testing.T) {
 	// Verify parachain user's final "unit" balance (will be less than expected due gas costs for stake tx)
 	parachainUserUnits, err := polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 1)
 	require.NoError(t, err)
-	require.True(t, parachainUserUnits.Amount.LTE(math.NewInt(fundAmount)), "parachain user's final unit amount not expected")
+	require.True(t, parachainUserUnits.Amount.LTE(fundAmount), "parachain user's final unit amount not expected")
 
 	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-	require.True(t, parachainUserStake.Amount.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
+	require.True(t, parachainUserStake.Amount.Equal(amountToSend.Sub(amountToReflect)), "parachain user's final stake amount not expected")
 
 	r.StopRelayer(ctx, eRep) //  Stop relayer to export data
 	err = cosmosChain.StopAllNodes(ctx)
@@ -337,13 +338,13 @@ type GetCodeQueryMsgResponse struct {
 
 func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosmos.CosmosChain) string {
 	// Set up cosmos user for pushing new wasm code msg via governance
-	fundAmountForGov := int64(10_000_000_000)
-	contractUsers := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(fundAmountForGov), cosmosChain)
+	fundAmountForGov := math.NewInt(10_000_000_000)
+	contractUsers := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmountForGov, cosmosChain)
 	contractUser := contractUsers[0]
 
 	contractUserBalInitial, err := cosmosChain.GetBalance(ctx, contractUser.FormattedAddress(), cosmosChain.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, contractUserBalInitial.Equal(math.NewInt(fundAmountForGov)))
+	require.True(t, contractUserBalInitial.Equal(fundAmountForGov))
 
 	proposal := cosmos.TxProposalv1{
 		Metadata: "none",
@@ -378,14 +379,14 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 	return codeHash
 }
 
-func fundUsers(t *testing.T, ctx context.Context, fundAmount int64, polkadotChain ibc.Chain, cosmosChain ibc.Chain) (ibc.Wallet, ibc.Wallet) {
+func fundUsers(t *testing.T, ctx context.Context, fundAmount math.Int, polkadotChain ibc.Chain, cosmosChain ibc.Chain) (ibc.Wallet, ibc.Wallet) {
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", fundAmount, polkadotChain, cosmosChain)
 	polkadotUser, cosmosUser := users[0], users[1]
 	err := testutil.WaitForBlocks(ctx, 2, polkadotChain, cosmosChain) // Only waiting 1 block is flaky for parachain
 	require.NoError(t, err, "cosmos or polkadot chain failed to make blocks")
 
 	// Check balances are correct
-	amount := math.NewInt(fundAmount)
+	amount := fundAmount
 	polkadotUserAmount, err := polkadotChain.GetBalance(ctx, polkadotUser.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, polkadotUserAmount.Equal(amount), "Initial polkadot user amount not expected")
