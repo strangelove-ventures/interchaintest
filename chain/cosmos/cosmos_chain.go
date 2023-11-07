@@ -390,6 +390,11 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
+// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
+func (c *CosmosChain) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
+	return c.getFullNode().QueryProposalV8(ctx, proposalID)
+}
+
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
@@ -439,7 +444,9 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 }
 
 // Build a gov v1 proposal type.
-func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+//
+// The proposer field should only be set for IBC-Go v8 / SDK v50 chains.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
 	var propType TxProposalv1
 	rawMsgs := make([]json.RawMessage, len(messages))
 
@@ -457,6 +464,12 @@ func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summa
 		Deposit:  depositStr,
 		Title:    title,
 		Summary:  summary,
+	}
+
+	// SDK v50 only
+	if proposer != "" {
+		propType.Proposer = proposer
+		propType.Expedited = expedited
 	}
 
 	return propType, nil
