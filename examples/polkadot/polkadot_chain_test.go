@@ -157,13 +157,13 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 
 	// Fund user1 on both relay and parachain, must wait a block to fund user2 due to same faucet address
 	fundAmount := math.NewInt(12_333_000_000_000)
-	users1 := interchaintest.GetAndFundTestUsers(t, ctx, "user1", fundAmount.Int64(), polkadotChain)
+	users1 := interchaintest.GetAndFundTestUsers(t, ctx, "user1", fundAmount, polkadotChain)
 	user1 := users1[0]
 	err = testutil.WaitForBlocks(ctx, 2, chain)
 	require.NoError(t, err, "polkadot chain failed to make blocks")
 
 	// Fund user2 on both relay and parachain, check that user1 was funded properly
-	users2 := interchaintest.GetAndFundTestUsers(t, ctx, "user2", fundAmount.Int64(), polkadotChain)
+	users2 := interchaintest.GetAndFundTestUsers(t, ctx, "user2", fundAmount, polkadotChain)
 	user2 := users2[0]
 	polkadotUser1Amount, err := polkadotChain.GetBalance(ctx, user1.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)

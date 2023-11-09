@@ -866,13 +866,23 @@ type ValidatorWithIntPower struct {
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
+	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
+
 	genesisAmount := types.Coin{
+<<<<<<< HEAD
 		Amount: types.NewInt(10_000_000_000_000),
+=======
+		Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow),
+>>>>>>> a033ba4 (feat: support other coin decimals, e.g. Ethermint (#866))
 		Denom:  chainCfg.Denom,
 	}
 
 	genesisSelfDelegation := types.Coin{
+<<<<<<< HEAD
 		Amount: types.NewInt(5_000_000_000_000),
+=======
+		Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow),
+>>>>>>> a033ba4 (feat: support other coin decimals, e.g. Ethermint (#866))
 		Denom:  chainCfg.Denom,
 	}
 
