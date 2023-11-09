@@ -286,8 +286,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for MsgRecvPacket on cosmos chain
-	// finalStakeBal := math.NewInt(fundAmount - amountToSend + amountToReflect)
-	finalStakeBal := fundAmount
+	finalStakeBal := fundAmount.Sub(amountToSend).Add(amountToReflect)
 	err = cosmos.PollForBalance(ctx, cosmosChain, 20, ibc.WalletAmount{
 		Address: cosmosUser.FormattedAddress(),
 		Denom:   cosmosChain.Config().Denom,
