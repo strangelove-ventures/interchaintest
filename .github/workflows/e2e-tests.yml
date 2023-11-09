@@ -71,10 +71,6 @@ jobs:
         run: |-
           rm -rf ~/.interchaintest
 
-      - name: Load Docker Image
-        run: |
-          docker image load -i examples/cosmos/builds/dymension.tar.xz
-
       # run tests
       - name: run example cosmos tests
         run: go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
