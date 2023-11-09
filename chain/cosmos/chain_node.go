@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -893,7 +892,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote, "--gas", "100000",
+		proposalID, vote, "--gas", "250000",
 	)
 	return err
 }
