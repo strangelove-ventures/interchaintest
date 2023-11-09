@@ -1003,11 +1003,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
-		privVal, err := val.privValFileContent(ctx)
+		privVal, err := val.PrivValFileContent(ctx)
 		if err != nil {
 			return err
 		}
-		if err := c.Validators[i].overwritePrivValFile(ctx, privVal); err != nil {
+		if err := c.Validators[i].OverwritePrivValFile(ctx, privVal); err != nil {
 			return err
 		}
 	}

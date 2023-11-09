@@ -195,7 +195,7 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 	return nil
 }
 
-func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
 	if err != nil {
@@ -205,7 +205,7 @@ func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwritePrivValFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
 		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
@@ -893,7 +893,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote, "--gas", "auto",
+		proposalID, vote, "--gas", "100000",
 	)
 	return err
 }
