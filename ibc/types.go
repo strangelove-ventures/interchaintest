@@ -196,8 +196,7 @@ func (c ChainConfig) IsFullyConfigured() bool {
 		c.Bech32Prefix != "" &&
 		c.Denom != "" &&
 		c.GasPrices != "" &&
-		c.TrustingPeriod != "" &&
-		c.CoinDecimals != nil
+		c.TrustingPeriod != ""
 }
 
 // SidecarConfig describes the configuration options for instantiating a new sidecar process.
