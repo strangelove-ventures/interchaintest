@@ -79,7 +79,7 @@ func TestLearn(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := math.NewInt(10_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), gaia, osmosis)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 

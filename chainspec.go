@@ -152,6 +152,23 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
+	if cfg.CoinDecimals == nil {
+		evm := int64(18)
+		cosmos := int64(6)
+
+		switch cfg.CoinType {
+		case "60":
+			cfg.CoinDecimals = &evm
+		case "118":
+			cfg.CoinDecimals = &cosmos
+		case "330":
+			cfg.CoinDecimals = &cosmos
+		case "529":
+			cfg.CoinDecimals = &cosmos
+
+		}
+	}
+
 	// Set the version depending on the chain type.
 	switch cfg.Type {
 	case "cosmos":
