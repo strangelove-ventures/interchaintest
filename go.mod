@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	cosmossdk.io/math v1.1.3-rc.1
+	cosmossdk.io/math v1.2.0
 	cosmossdk.io/store v1.0.0
 	cosmossdk.io/x/upgrade v0.0.0-20230915171831-2196edacb99d
 	github.com/99designs/keyring v1.2.2
