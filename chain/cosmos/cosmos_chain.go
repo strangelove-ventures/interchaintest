@@ -3,9 +3,13 @@ package cosmos
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,6 +30,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v4/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v4/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v4/testutil"
+	"github.com/tendermint/tmlibs/bech32"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -661,7 +666,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
-	eg := new(errgroup.Group)
+	var eg errgroup.Group
 	// Initialize config and sign gentx for each validator.
 	for _, v := range c.Validators {
 		v := v
@@ -783,6 +788,176 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		}
 	}
 
+	return c.startWithFinalGenesis(ctx, genbz)
+}
+
+// Bootstraps the chain and starts it from genesis
+func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, client *client.Client, networkID string, genesisFilePath string) error {
+	genBz, err := os.ReadFile(genesisFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read genesis file: %w", err)
+	}
+
+	chainCfg := c.Config()
+
+	var genesisFile GenesisFile
+	if err := json.Unmarshal(genBz, &genesisFile); err != nil {
+		return err
+	}
+
+	genesisValidators := genesisFile.Validators
+	totalPower := int64(0)
+
+	validatorsWithPower := make([]ValidatorWithIntPower, 0)
+
+	for _, genesisValidator := range genesisValidators {
+		power, err := strconv.ParseInt(genesisValidator.Power, 10, 64)
+		if err != nil {
+			return err
+		}
+		totalPower += power
+		validatorsWithPower = append(validatorsWithPower, ValidatorWithIntPower{
+			Address:      genesisValidator.Address,
+			Power:        power,
+			PubKeyBase64: genesisValidator.PubKey.Value,
+		})
+	}
+
+	sort.Slice(validatorsWithPower, func(i, j int) bool {
+		return validatorsWithPower[i].Power > validatorsWithPower[j].Power
+	})
+
+	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
+	totalConsensus := int64(0)
+
+	c.Validators = make(ChainNodes, 0)
+
+	configFileOverrides := chainCfg.ConfigFileOverrides
+
+	var eg errgroup.Group
+	var mu sync.Mutex
+	genBzReplace := func(find, replace []byte) {
+		mu.Lock()
+		defer mu.Unlock()
+		genBz = bytes.ReplaceAll(genBz, find, replace)
+	}
+
+	for i, validator := range validatorsWithPower {
+		v := NewChainNode(c.log, true, c, client, networkID, testName, chainCfg.Images[0], i)
+
+		eg.Go(func() error {
+			if err := v.InitFullNodeFiles(ctx); err != nil {
+				return fmt.Errorf("failed to init full node files: %w", err)
+			}
+
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					ctx,
+					v.logger(),
+					v.DockerClient,
+					v.TestName,
+					v.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+
+			c.Validators = append(c.Validators, v)
+
+			testNodePubKeyJsonBytes, err := v.ReadFile(ctx, "config/priv_validator_key.json")
+			if err != nil {
+				return fmt.Errorf("failed to read priv_validator_key.json: %w", err)
+			}
+
+			var testNodePrivValFile PrivValidatorKeyFile
+			if err := json.Unmarshal(testNodePubKeyJsonBytes, &testNodePrivValFile); err != nil {
+				return fmt.Errorf("failed to unmarshal priv_validator_key.json: %w", err)
+			}
+
+			// modify genesis file overwriting validators address with the one generated for this test node
+			genBzReplace([]byte(validator.Address), []byte(testNodePrivValFile.Address))
+
+			// modify genesis file overwriting validators base64 pub_key.value with the one generated for this test node
+			genBzReplace([]byte(validator.PubKeyBase64), []byte(testNodePrivValFile.PubKey.Value))
+
+			existingValAddressBytes, err := hex.DecodeString(validator.Address)
+			if err != nil {
+				return err
+			}
+
+			testNodeAddressBytes, err := hex.DecodeString(testNodePrivValFile.Address)
+			if err != nil {
+				return err
+			}
+
+			valConsPrefix := fmt.Sprintf("%svalcons", chainCfg.Bech32Prefix)
+
+			existingValBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, existingValAddressBytes)
+			if err != nil {
+				return err
+			}
+
+			testNodeBech32ValConsAddress, err := bech32.ConvertAndEncode(valConsPrefix, testNodeAddressBytes)
+			if err != nil {
+				return err
+			}
+
+			genBzReplace([]byte(existingValBech32ValConsAddress), []byte(testNodeBech32ValConsAddress))
+
+			return nil
+		})
+
+		totalConsensus += validator.Power
+
+		if totalConsensus > twoThirdsConsensus {
+			break
+		}
+	}
+
+	// Initialize config for each full node.
+	for _, n := range c.FullNodes {
+		n := n
+		n.Validator = false
+		eg.Go(func() error {
+			if err := n.InitFullNodeFiles(ctx); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					ctx,
+					n.logger(),
+					n.DockerClient,
+					n.TestName,
+					n.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+
+	// wait for this to finish
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	return c.startWithFinalGenesis(ctx, genBz)
+}
+
+func (c *CosmosChain) startWithFinalGenesis(ctx context.Context, genbz []byte) error {
 	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
 	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
