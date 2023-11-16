@@ -644,6 +644,76 @@ type ValidatorWithIntPower struct {
 	PubKeyBase64 string
 }
 
+func (c *CosmosChain) prepNodes(ctx context.Context, skipGenTx bool, genesisAmounts types.Coins, genesisSelfDelegation types.Coin) error {
+	chainCfg := c.Config()
+	configFileOverrides := chainCfg.ConfigFileOverrides
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	// Initialize config and sign gentx for each validator.
+	for _, v := range c.Validators {
+		v := v
+		v.Validator = true
+		eg.Go(func() error {
+			if err := v.InitFullNodeFiles(egCtx); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					egCtx,
+					v.logger(),
+					v.DockerClient,
+					v.TestName,
+					v.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			if !skipGenTx {
+				return v.InitValidatorGenTx(egCtx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+			}
+			return nil
+		})
+	}
+
+	// Initialize config for each full node.
+	for _, n := range c.FullNodes {
+		n := n
+		n.Validator = false
+		eg.Go(func() error {
+			if err := n.InitFullNodeFiles(egCtx); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					egCtx,
+					n.logger(),
+					n.DockerClient,
+					n.TestName,
+					n.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+
+	// wait for this to finish
+	return eg.Wait()
+}
+
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
@@ -664,72 +734,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	genesisAmounts := []types.Coin{genesisAmount}
 
-	configFileOverrides := chainCfg.ConfigFileOverrides
-
-	var eg errgroup.Group
-	// Initialize config and sign gentx for each validator.
-	for _, v := range c.Validators {
-		v := v
-		v.Validator = true
-		eg.Go(func() error {
-			if err := v.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					v.logger(),
-					v.DockerClient,
-					v.TestName,
-					v.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
-			}
-			return nil
-		})
-	}
-
-	// Initialize config for each full node.
-	for _, n := range c.FullNodes {
-		n := n
-		n.Validator = false
-		eg.Go(func() error {
-			if err := n.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					n.logger(),
-					n.DockerClient,
-					n.TestName,
-					n.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	}
-
-	// wait for this to finish
-	if err := eg.Wait(); err != nil {
+	if err := c.prepNodes(ctx, c.cfg.SkipGenTx, genesisAmounts, genesisSelfDelegation); err != nil {
 		return err
 	}
 
@@ -833,13 +838,6 @@ func (c *CosmosChain) StartWithGenesisFile(
 		return validatorsWithPower[i].Power > validatorsWithPower[j].Power
 	})
 
-	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
-	totalConsensus := int64(0)
-
-	c.Validators = make(ChainNodes, 0)
-
-	configFileOverrides := chainCfg.ConfigFileOverrides
-
 	var eg errgroup.Group
 	var mu sync.Mutex
 	genBzReplace := func(find, replace []byte) {
@@ -848,34 +846,33 @@ func (c *CosmosChain) StartWithGenesisFile(
 		genBz = bytes.ReplaceAll(genBz, find, replace)
 	}
 
-	for i, validator := range validatorsWithPower {
-		v := NewChainNode(c.log, true, c, client, network, testName, chainCfg.Images[0], i)
+	twoThirdsConsensus := int64(math.Ceil(float64(totalPower) * 2 / 3))
+	totalConsensus := int64(0)
 
+	var activeVals []ValidatorWithIntPower
+	for _, validator := range validatorsWithPower {
+		activeVals = append(activeVals, validator)
+
+		totalConsensus += validator.Power
+
+		if totalConsensus > twoThirdsConsensus {
+			break
+		}
+	}
+
+	c.numValidators = len(activeVals)
+
+	if err := c.initializeChainNodes(ctx, testName, client, network); err != nil {
+		return err
+	}
+
+	if err := c.prepNodes(ctx, true, nil, types.Coin{}); err != nil {
+		return err
+	}
+
+	for i, validator := range activeVals {
+		v := c.Validators[i]
 		eg.Go(func() error {
-			if err := v.InitFullNodeFiles(ctx); err != nil {
-				return fmt.Errorf("failed to init full node files: %w", err)
-			}
-
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					v.logger(),
-					v.DockerClient,
-					v.TestName,
-					v.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-
-			c.Validators = append(c.Validators, v)
-
 			testNodePubKeyJsonBytes, err := v.ReadFile(ctx, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("failed to read priv_validator_key.json: %w", err)
@@ -918,46 +915,6 @@ func (c *CosmosChain) StartWithGenesisFile(
 
 			return nil
 		})
-
-		totalConsensus += validator.Power
-
-		if totalConsensus > twoThirdsConsensus {
-			break
-		}
-	}
-
-	// Initialize config for each full node.
-	for _, n := range c.FullNodes {
-		n := n
-		n.Validator = false
-		eg.Go(func() error {
-			if err := n.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					n.logger(),
-					n.DockerClient,
-					n.TestName,
-					n.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	}
-
-	// wait for this to finish
-	if err := eg.Wait(); err != nil {
-		return err
 	}
 
 	return c.startWithFinalGenesis(ctx, genBz)
