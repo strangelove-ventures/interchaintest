@@ -786,13 +786,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
 
-	if c.cfg.ModifyGenesis != nil {
-		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
-		if err != nil {
-			return err
-		}
-	}
-
 	return c.startWithFinalGenesis(ctx, genbz)
 }
 
@@ -870,6 +863,13 @@ func (c *CosmosChain) StartWithGenesisFile(
 		return err
 	}
 
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	for i, validator := range activeVals {
 		v := c.Validators[i]
 		eg.Go(func() error {
@@ -921,6 +921,14 @@ func (c *CosmosChain) StartWithGenesisFile(
 }
 
 func (c *CosmosChain) startWithFinalGenesis(ctx context.Context, genbz []byte) error {
+	if c.cfg.ModifyGenesis != nil {
+		var err error
+		genbz, err = c.cfg.ModifyGenesis(c.Config(), genbz)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
 	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
