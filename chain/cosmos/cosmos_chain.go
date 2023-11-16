@@ -792,7 +792,13 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 }
 
 // Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context, home string, client *client.Client, networkID string, genesisFilePath string) error {
+func (c *CosmosChain) StartWithGenesisFile(
+	ctx context.Context,
+	testName string,
+	client *client.Client,
+	network string,
+	genesisFilePath string,
+) error {
 	genBz, err := os.ReadFile(genesisFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read genesis file: %w", err)
@@ -843,7 +849,7 @@ func (c *CosmosChain) StartWithGenesisFile(testName string, ctx context.Context,
 	}
 
 	for i, validator := range validatorsWithPower {
-		v := NewChainNode(c.log, true, c, client, networkID, testName, chainCfg.Images[0], i)
+		v := NewChainNode(c.log, true, c, client, network, testName, chainCfg.Images[0], i)
 
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
