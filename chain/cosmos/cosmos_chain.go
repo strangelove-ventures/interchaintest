@@ -872,6 +872,7 @@ func (c *CosmosChain) StartWithGenesisFile(
 
 	for i, validator := range activeVals {
 		v := c.Validators[i]
+		validator := validator
 		eg.Go(func() error {
 			testNodePubKeyJsonBytes, err := v.ReadFile(ctx, "config/priv_validator_key.json")
 			if err != nil {
@@ -917,6 +918,10 @@ func (c *CosmosChain) StartWithGenesisFile(
 		})
 	}
 
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	return c.startWithFinalGenesis(ctx, genBz)
 }
 
@@ -928,6 +933,8 @@ func (c *CosmosChain) startWithFinalGenesis(ctx context.Context, genbz []byte) e
 			return err
 		}
 	}
+
+	c.log.Info("Writing genesis and starting chain", zap.String("name", c.cfg.Name))
 
 	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
