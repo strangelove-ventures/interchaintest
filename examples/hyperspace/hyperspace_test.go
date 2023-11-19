@@ -305,19 +305,7 @@ func TestHyperspace(t *testing.T) {
 	// Verify parachain user's final "stake" balance
 	parachainUserStake, err = polkadotChain.GetIbcBalance(ctx, string(polkadotUser.Address()), 2)
 	require.NoError(t, err)
-<<<<<<< HEAD
-	require.True(t, parachainUserStake.Equal(math.NewInt(amountToSend-amountToReflect)), "parachain user's final stake amount not expected")
-=======
-	require.True(t, parachainUserStake.Amount.Equal(amountToSend.Sub(amountToReflect)), "parachain user's final stake amount not expected")
-
-	r.StopRelayer(ctx, eRep) //  Stop relayer to export data
-	err = cosmosChain.StopAllNodes(ctx)
-	require.NoError(t, err)
-	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
-	require.NoError(t, err)
-	err = os.WriteFile("exported_state.json", []byte(exportedState), 0644)
-	require.NoError(t, err)
->>>>>>> a033ba4 (feat: support other coin decimals, e.g. Ethermint (#866))
+	require.True(t, parachainUserStake.Equal(amountToSend.Sub(amountToReflect)), "parachain user's final stake amount not expected")
 }
 
 type GetCodeQueryMsgResponse struct {

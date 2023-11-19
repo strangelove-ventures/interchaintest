@@ -2,7 +2,11 @@ package penumbra_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
+
+	"cosmossdk.io/math"
 
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -45,11 +49,6 @@ func TestPenumbraChainStart(t *testing.T) {
 	err = chain.Start(t.Name(), ctx)
 	require.NoError(t, err, "failed to start penumbra chain")
 
-<<<<<<< HEAD
-	err = testutil.WaitForBlocks(ctx, 10, chain)
-
-	require.NoError(t, err, "penumbra chain failed to make blocks")
-=======
 	initBalance := math.NewInt(1_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
 	require.Equal(t, 1, len(users))
@@ -107,5 +106,4 @@ func TestPenumbraChainStart(t *testing.T) {
 
 	require.True(t, aliceNewBal.Equal(aliceExpected), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceNewBal, aliceExpected))
 	require.True(t, bobNewBal.Equal(bobExpected), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobNewBal, bobExpected))
->>>>>>> a033ba4 (feat: support other coin decimals, e.g. Ethermint (#866))
 }
