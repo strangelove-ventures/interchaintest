@@ -52,6 +52,10 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// Additional start command arguments
+	AdditionalStartArgs []string
+	// Environment variables for chain nodes
+	Env []string
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -162,6 +166,14 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
 	}
 
+	if other.AdditionalStartArgs != nil {
+		c.AdditionalStartArgs = append(c.AdditionalStartArgs, other.AdditionalStartArgs...)
+	}
+
+	if other.Env != nil {
+		c.Env = append(c.Env, other.Env...)
+	}
+
 	return c
 }
 
@@ -187,6 +199,7 @@ type SidecarConfig struct {
 	HomeDir          string
 	Ports            []string
 	StartCmd         []string
+	Env              []string
 	PreStart         bool
 	ValidatorProcess bool
 }
