@@ -123,7 +123,7 @@ func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.R
 	}
 	switch chainType {
 	case "cosmos":
-		config.(*HyperspaceRelayerCosmosChainConfig).WasmCodeId = hash
+		config.(*HyperspaceRelayerCosmosChainConfig).WasmChecksum = hash
 	}
 
 	return r.SetRelayerChainConfig(ctx, chainConfigFile, config)
