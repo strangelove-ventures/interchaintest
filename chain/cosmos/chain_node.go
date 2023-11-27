@@ -521,17 +521,30 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err != nil {
 		return "", err
 	}
+
 	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
+	err = json.Unmarshal(stdout, &output)
+	if err != nil {
+		return "", err
+	}
+
+	if err := testutil.WaitForBlocks(ctx, 1, tn); err != nil {
+		return "", err
+	}
+
+	stdout, _, err = tn.Exec(ctx, tn.QueryCommand("tx", output.TxHash), nil)
+	if err != nil {
+		return "", err
+	}
+
+	err = json.Unmarshal(stdout, &output)
 	if err != nil {
 		return "", err
 	}
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
-		return "", err
-	}
+
 	return output.TxHash, nil
 }
 
