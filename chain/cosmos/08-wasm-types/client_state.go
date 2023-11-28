@@ -118,7 +118,7 @@ func (c ClientState) VerifyUpgradeAndUpdateState(
 func NewClientState(latestSequence uint64, consensusState *ConsensusState) *ClientState {
 	return &ClientState{
 		Data:         []byte{0},
-		CodeHash:       []byte{},
+		Checksum:     []byte{},
 		LatestHeight: clienttypes.Height{},
 	}
 }
