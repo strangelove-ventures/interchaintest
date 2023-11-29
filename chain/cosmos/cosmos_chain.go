@@ -45,12 +45,13 @@ import (
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
 // Implements the ibc.Chain interface.
 type CosmosChain struct {
-	testName      string
-	cfg           ibc.ChainConfig
-	numValidators int
-	numFullNodes  int
-	Validators    ChainNodes
-	FullNodes     ChainNodes
+	testName          string
+	cfg               ibc.ChainConfig
+	numValidators     int
+	numFullNodes      int
+	Validators        ChainNodes
+	FullNodes         ChainNodes
+	ValidatorMnemonic string
 
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
@@ -58,6 +59,13 @@ type CosmosChain struct {
 	log      *zap.Logger
 	keyring  keyring.Keyring
 	findTxMu sync.Mutex
+}
+
+// Setting this to a non-empty value will cause the validator node to use this value for the validator key.
+// Otherwise, the default behavior will be followed, which is to generate a new validator key.
+// This must be set prior to the node creation (before Build is called) or it will have no effect.
+func (c *CosmosChain) SetValidatorMnemonic(mnemonic string) {
+	c.ValidatorMnemonic = mnemonic
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
