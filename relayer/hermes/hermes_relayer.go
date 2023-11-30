@@ -18,9 +18,9 @@ import (
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.6.0"
+	DefaultContainerVersion = "v1.7.1"
 
-	hermesDefaultUidGid = "1001:1001"
+	hermesDefaultUidGid = "1000:1000"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )
@@ -137,7 +137,7 @@ func (r *Relayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecRepo
 		return res.Err
 	}
 
-	chainAConnectionID, chainBConnectionID, err := getConnectionIDsFromStdout(res.Stdout)
+	chainAConnectionID, chainBConnectionID, err := GetConnectionIDsFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 		return res.Err
 	}
 
-	chainAClientId, err := getClientIdFromStdout(res.Stdout)
+	chainAClientId, err := GetClientIdFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 		return res.Err
 	}
 
-	chainBClientId, err := getClientIdFromStdout(res.Stdout)
+	chainBClientId, err := GetClientIdFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
@@ -289,8 +289,8 @@ func extractJsonResult(stdout []byte) []byte {
 	return []byte(jsonOutput)
 }
 
-// getClientIdFromStdout extracts the client ID from stdout.
-func getClientIdFromStdout(stdout []byte) (string, error) {
+// GetClientIdFromStdout extracts the client ID from stdout.
+func GetClientIdFromStdout(stdout []byte) (string, error) {
 	var clientCreationResult ClientCreationResponse
 	if err := json.Unmarshal(extractJsonResult(stdout), &clientCreationResult); err != nil {
 		return "", err
@@ -298,13 +298,22 @@ func getClientIdFromStdout(stdout []byte) (string, error) {
 	return clientCreationResult.Result.CreateClient.ClientID, nil
 }
 
-// getConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
-func getConnectionIDsFromStdout(stdout []byte) (string, string, error) {
+// GetConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
+func GetConnectionIDsFromStdout(stdout []byte) (string, string, error) {
 	var connectionResponse ConnectionResponse
 	if err := json.Unmarshal(extractJsonResult(stdout), &connectionResponse); err != nil {
 		return "", "", err
 	}
 	return connectionResponse.Result.ASide.ConnectionID, connectionResponse.Result.BSide.ConnectionID, nil
+}
+
+// GetChannelIDsFromStdout extracts the channelIDs on both ends from stdout.
+func GetChannelIDsFromStdout(stdout []byte) (string, string, error) {
+	var channelResponse ChannelCreationResponse
+	if err := json.Unmarshal(extractJsonResult(stdout), &channelResponse); err != nil {
+		return "", "", err
+	}
+	return channelResponse.Result.ASide.ChannelID, channelResponse.Result.BSide.ChannelID, nil
 }
 
 // parseRestoreKeyOutput extracts the address from the hermes output.
