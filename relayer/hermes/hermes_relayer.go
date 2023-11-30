@@ -20,7 +20,7 @@ const (
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
 	DefaultContainerVersion = "v1.7.1"
 
-	hermesDefaultUidGid = "1001:1001"
+	hermesDefaultUidGid = "1000:1000"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )
