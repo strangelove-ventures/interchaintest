@@ -19,17 +19,6 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		}
 
 		chains = append(chains, Chain{
-<<<<<<< HEAD
-			ID:       chainCfg.ChainID,
-			RPCAddr:  hermesCfg.rpcAddr,
-			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
-			EventSource: EventSource{
-				Mode:       "push",
-				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
-				BatchDelay: "500ms"},
-			RPCTimeout:    "10s",
-			TrustedNode:   true,
-=======
 			ID:               chainCfg.ChainID,
 			Type:             "CosmosSdk",
 			CCVConsumerChain: false,
@@ -42,7 +31,6 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 			},
 			RPCTimeout:    "10s",
 			TrustedNode:   false,
->>>>>>> cfbca40 (chore: improvements to `v4-ics` branch (#883))
 			AccountPrefix: chainCfg.Bech32Prefix,
 			KeyName:       hermesCfg.keyName,
 			AddressType: AddressType{
@@ -180,41 +168,12 @@ type GasPrice struct {
 	Denom string  `toml:"denom"`
 }
 
-type EventSource struct {
-	Mode       string `toml:"mode"`
-	Url        string `toml:"url"`
-	BatchDelay string `toml:"batch_delay"`
-}
-
 type TrustThreshold struct {
 	Numerator   string `toml:"numerator"`
 	Denominator string `toml:"denominator"`
 }
 
 type Chain struct {
-<<<<<<< HEAD
-	ID             string         `toml:"id"`
-	RPCAddr        string         `toml:"rpc_addr"`
-	GrpcAddr       string         `toml:"grpc_addr"`
-	EventSource    EventSource    `toml:"event_source"`
-	RPCTimeout     string         `toml:"rpc_timeout"`
-	TrustedNode    bool           `toml:"trusted_node"`
-	AccountPrefix  string         `toml:"account_prefix"`
-	KeyName        string         `toml:"key_name"`
-	AddressType    AddressType    `toml:"address_type"`
-	StorePrefix    string         `toml:"store_prefix"`
-	DefaultGas     int            `toml:"default_gas"`
-	MaxGas         int            `toml:"max_gas"`
-	GasPrice       GasPrice       `toml:"gas_price"`
-	GasMultiplier  float64        `toml:"gas_multiplier"`
-	MaxMsgNum      int            `toml:"max_msg_num"`
-	MaxTxSize      int            `toml:"max_tx_size"`
-	ClockDrift     string         `toml:"clock_drift"`
-	MaxBlockTime   string         `toml:"max_block_time"`
-	TrustingPeriod string         `toml:"trusting_period"`
-	TrustThreshold TrustThreshold `toml:"trust_threshold"`
-	MemoPrefix     string         `toml:"memo_prefix,omitempty"`
-=======
 	ID               string         `toml:"id"`
 	Type             string         `toml:"type"`
 	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
@@ -238,5 +197,4 @@ type Chain struct {
 	TrustingPeriod   string         `toml:"trusting_period"`
 	TrustThreshold   TrustThreshold `toml:"trust_threshold"`
 	MemoPrefix       string         `toml:"memo_prefix,omitempty"`
->>>>>>> cfbca40 (chore: improvements to `v4-ics` branch (#883))
 }

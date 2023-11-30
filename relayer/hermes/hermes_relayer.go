@@ -18,11 +18,7 @@ import (
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
-<<<<<<< HEAD
-	DefaultContainerVersion = "1.6.0"
-=======
 	DefaultContainerVersion = "v1.7.1"
->>>>>>> cfbca40 (chore: improvements to `v4-ics` branch (#883))
 
 	hermesDefaultUidGid = "1001:1001"
 	hermesHome          = "/home/hermes"
@@ -95,31 +91,32 @@ func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExec
 }
 
 func (r *Relayer) MarkChainAsConsumer(ctx context.Context, chainID string) error {
-	bz, err := r.ReadFileFromHomeDir(ctx, hermesConfigPath)
-	if err != nil {
-		return err
-	}
+	panic("ICS is not yet supported in this branch of Interchaintest. Please use branch v7 OR v4-ics.")
+	// bz, err := r.ReadFileFromHomeDir(ctx, hermesConfigPath)
+	// if err != nil {
+	// 	return err
+	// }
 
-	var cfg Config
-	err = toml.Unmarshal(bz, &cfg)
-	if err != nil {
-		return err
-	}
+	// var cfg Config
+	// err = toml.Unmarshal(bz, &cfg)
+	// if err != nil {
+	// 	return err
+	// }
 
-	for i, chain := range cfg.Chains {
-		if chain.ID == chainID {
-			chain.CCVConsumerChain = true
-			cfg.Chains[i] = chain
-			break
-		}
-	}
+	// for i, chain := range cfg.Chains {
+	// 	if chain.ID == chainID {
+	// 		chain.CCVConsumerChain = true
+	// 		cfg.Chains[i] = chain
+	// 		break
+	// 	}
+	// }
 
-	bz, err = toml.Marshal(cfg)
-	if err != nil {
-		return err
-	}
+	// bz, err = toml.Marshal(cfg)
+	// if err != nil {
+	// 	return err
+	// }
 
-	return r.WriteFileToHomeDir(ctx, hermesConfigPath, bz)
+	// return r.WriteFileToHomeDir(ctx, hermesConfigPath, bz)
 }
 
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
