@@ -90,35 +90,6 @@ func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExec
 	return r.validateConfig(ctx, rep)
 }
 
-func (r *Relayer) MarkChainAsConsumer(ctx context.Context, chainID string) error {
-	panic("ICS is not yet supported in this branch of Interchaintest. Please use branch v7 OR v4-ics.")
-	// bz, err := r.ReadFileFromHomeDir(ctx, hermesConfigPath)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// var cfg Config
-	// err = toml.Unmarshal(bz, &cfg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for i, chain := range cfg.Chains {
-	// 	if chain.ID == chainID {
-	// 		chain.CCVConsumerChain = true
-	// 		cfg.Chains[i] = chain
-	// 		break
-	// 	}
-	// }
-
-	// bz, err = toml.Marshal(cfg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// return r.WriteFileToHomeDir(ctx, hermesConfigPath, bz)
-}
-
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
 // and establishing a channel. This happens across multiple operations rather than a single link path cli command.
 func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
