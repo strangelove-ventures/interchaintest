@@ -78,7 +78,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 
 	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)
-	// testSendingTokens(ctx, t, chain, users) // moved to core_test
+	testSendingTokens(ctx, t, chain, users)
 	testFindTxs(ctx, t, chain, users)
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
@@ -193,21 +193,21 @@ func testWalletKeys(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain
 	require.Equal(t, a, wallet.FormattedAddress())
 }
 
-// func testSendingTokens(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-// 	_, err := chain.GetBalance(ctx, users[0].FormattedAddress(), chain.Config().Denom)
-// 	require.NoError(t, err)
-// 	b2, err := chain.GetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
-// 	require.NoError(t, err)
+func testSendingTokens(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	_, err := chain.GetBalance(ctx, users[0].FormattedAddress(), chain.Config().Denom)
+	require.NoError(t, err)
+	b2, err := chain.GetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
+	require.NoError(t, err)
 
-// 	sendAmt := int64(1)
-// 	_, err = sendTokens(ctx, chain, users[0], users[1], "", sendAmt)
-// 	require.NoError(t, err)
+	sendAmt := int64(1)
+	_, err = sendTokens(ctx, chain, users[0], users[1], "", sendAmt)
+	require.NoError(t, err)
 
-// 	b2New, err := chain.GetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
-// 	require.NoError(t, err)
+	b2New, err := chain.GetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
+	require.NoError(t, err)
 
-// 	require.Equal(t, b2.Add(math.NewInt(sendAmt)), b2New)
-// }
+	require.Equal(t, b2.Add(math.NewInt(sendAmt)), b2New)
+}
 
 func testFindTxs(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
 	height, _ := chain.Height(ctx)
