@@ -580,8 +580,6 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 	return c.getFullNode().ExportState(ctx, height)
 }
 
-
-
 func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
 	fn := c.getFullNode()
 	return fn.GetTransaction(fn.CliContext(), txhash)

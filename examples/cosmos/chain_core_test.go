@@ -15,7 +15,6 @@ import (
 )
 
 func TestCoreSDKCommands(t *testing.T) {
-	// TODO: simplify this test to the basics and convert to SDK v50
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -80,13 +79,15 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	grantee := users[1].FormattedAddress()
 
 	// Grant BankSend Authz
-	txRes, _ := cosmos.AuthzGrant(ctx, chain, users[0], grantee, "/cosmos.bank.v1beta1.MsgSend")
+	// TODO: test other types as well (send is giving a NPE)
+	txRes, _ := cosmos.AuthzGrant(ctx, chain, users[0], grantee, "generic", "--msg-type", "/cosmos.bank.v1beta1.MsgSend")
 	require.EqualValues(t, 0, txRes.Code)
 
 	grants, err := cosmos.AuthzQueryGrants(ctx, chain, granter, grantee, "")
 	require.NoError(t, err)
 	require.Len(t, grants.Grants, 1)
-	require.EqualValues(t, grants.Grants[0].Authorization.Msg, "/cosmos.bank.v1beta1.MsgSend")
+	require.EqualValues(t, grants.Grants[0].Authorization.Type, "cosmos-sdk/GenericAuthorization")
+	require.EqualValues(t, grants.Grants[0].Authorization.Value.Msg, "/cosmos.bank.v1beta1.MsgSend")
 
 	byGrantee, err := cosmos.AuthzQueryGrantsByGrantee(ctx, chain, grantee, "")
 	require.NoError(t, err)
@@ -100,6 +101,8 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	require.EqualValues(t, byGranter.Grants[0].Granter, granter)
 	require.EqualValues(t, byGranter.Grants[0].Grantee, grantee)
 
+	fmt.Printf("grants: %+v %+v %+v\n", grants, byGrantee, byGranter)
+
 	// Perform BankSend tx via authz
 
 	// before balance
@@ -110,6 +113,7 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	sendAmt := 1234
 
 	nestedCmd := []string{
+		chain.Config().Bin,
 		"tx", "bank", "send", granter, grantee, fmt.Sprintf("%d%s", sendAmt, chain.Config().Denom),
 		"--from", granter, "--generate-only",
 		"--chain-id", chain.GetNode().Chain.Config().ChainID,
@@ -122,14 +126,13 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 
 	resp, err := cosmos.AuthzExec(ctx, chain, users[1], nestedCmd)
 	require.NoError(t, err)
-	fmt.Printf("resp: %+v\n", resp)
+	require.EqualValues(t, 0, resp.Code)
 
 	// after balance
 	balanceAfter, err := chain.GetBalance(ctx, granter, chain.Config().Denom)
 	require.NoError(t, err)
 
 	fmt.Printf("balanceAfter: %+v\n", balanceAfter)
-
 	require.EqualValues(t, balanceBefore.SubRaw(int64(sendAmt)), balanceAfter)
 }
 

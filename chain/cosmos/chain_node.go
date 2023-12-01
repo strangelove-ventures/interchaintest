@@ -515,10 +515,9 @@ func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.
 	}
 
 	i := &sdk.TxResponse{}
-	if err := json.Unmarshal(stdout, &i); err != nil {
-		return i, err
-	}
 
+	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
+	json.Unmarshal(stdout, &i)
 	return i, nil
 }
 

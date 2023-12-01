@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -17,14 +16,42 @@ import (
 //   grant       Grant authorization to an address
 //   revoke      revoke authorization
 
+const ()
+
 // AuthzGrant grants a message as a permission to an account.
-func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee string, msgType string) (*sdk.TxResponse, error) {
-	if !strings.HasPrefix(msgType, "/") {
-		msgType = "/" + msgType
+func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
+
+	allowed := "send|generic|delegate|unbond|redelegate"
+	if !strings.Contains(allowed, authType) {
+		return nil, fmt.Errorf("invalid auth type: %s allowed: %s", authType, allowed)
 	}
 
+	cmd := []string{"authz", "grant", grantee, authType}
+
+	// when using the generic type, you must specify a --msg-type flag
+	if authType == "generic" {
+		msgTypeIndex := -1
+		for i, flag := range extraFlags {
+			if flag == "--msg-type" {
+				msgTypeIndex = i
+				break
+			}
+		}
+
+		if msgTypeIndex == -1 {
+			return nil, fmt.Errorf("missing --msg-type flag when granting generic authz")
+		}
+
+		msgType := extraFlags[msgTypeIndex+1]
+		if !strings.HasPrefix(msgType, "/") {
+			extraFlags[msgTypeIndex+1] = "/" + msgType
+		}
+	}
+
+	cmd = append(cmd, extraFlags...)
+
 	txHash, err := chain.GetNode().ExecTx(ctx, granter.KeyName(),
-		"authz", "grant", grantee, "generic", "--msg-type", msgType, "--output=json",
+		append(cmd, "--output", "json")...,
 	)
 	if err != nil {
 		return nil, err
@@ -71,14 +98,14 @@ func AuthzRevoke(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, gr
 type QueryAuthzGrantsResponse struct {
 	Grants []struct {
 		Authorization struct {
-			Type string `json:"@type"`
-			Msg  string `json:"msg"`
+			Type  string `json:"type"`
+			Value struct {
+				Msg string `json:"msg"`
+			} `json:"value"`
 		} `json:"authorization"`
-		Expiration any `json:"expiration"`
 	} `json:"grants"`
 	Pagination struct {
-		NextKey any    `json:"next_key"`
-		Total   string `json:"total"`
+		Total string `json:"total"`
 	} `json:"pagination"`
 }
 
@@ -88,14 +115,14 @@ type QueryAuthzGrantsByResponse struct {
 		Granter       string `json:"granter"`
 		Grantee       string `json:"grantee"`
 		Authorization struct {
-			Type string `json:"@type"`
-			Msg  string `json:"msg"`
+			Type  string `json:"type"`
+			Value struct {
+				Msg string `json:"msg"`
+			} `json:"value"`
 		} `json:"authorization"`
-		Expiration time.Time `json:"expiration"`
 	} `json:"grants"`
 	Pagination struct {
-		NextKey any    `json:"next_key"`
-		Total   string `json:"total"`
+		Total string `json:"total"`
 	} `json:"pagination"`
 }
 
