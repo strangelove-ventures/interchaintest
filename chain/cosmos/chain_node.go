@@ -26,6 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -504,6 +505,21 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	return append(command,
 		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
 	)
+}
+
+// TODO: is this the best place for this?
+func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
+	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
+	if err != nil {
+		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+	}
+
+	i := &sdk.TxResponse{}
+	if err := json.Unmarshal(stdout, &i); err != nil {
+		return i, err
+	}
+
+	return i, nil
 }
 
 // BinCommand is a helper to retrieve a full command for a chain node binary.

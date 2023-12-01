@@ -375,6 +375,24 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
+// ExecQueryToResponse is a helper to convert a query to its response.
+func (c *CosmosChain) ExecQueryToResponse(ctx context.Context, chain *CosmosChain, cmd []string, res interface{}) error {
+	rCmd := make([]string, 0)
+	for _, c := range cmd {
+		if c != "" {
+			rCmd = append(rCmd, c)
+		}
+	}
+
+	stdout, stderr, err := chain.getFullNode().ExecQuery(ctx, rCmd...)
+	if err != nil {
+		fmt.Println("HandleQuery err: ", string(stdout), string(stderr), err.Error())
+		return err
+	}
+
+	return json.Unmarshal(stdout, &res)
+}
+
 // GetGovernanceAddress performs a query to get the address of the chain's x/gov module
 func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
 	return c.GetModuleAddress(ctx, govtypes.ModuleName)
