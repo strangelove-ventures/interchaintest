@@ -22,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
@@ -38,8 +37,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -313,7 +310,7 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 
 // Implements Chain interface
 func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getFullNode().SendFunds(ctx, keyName, amount)
+	return c.getFullNode().BankSend(ctx, keyName, amount)
 }
 
 // Implements Chain interface
@@ -583,46 +580,7 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 	return c.getFullNode().ExportState(ctx, height)
 }
 
-// GetBalance fetches the current balance for a specific account address and denom.
-// Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-	defer conn.Close()
 
-	queryClient := bankTypes.NewQueryClient(conn)
-	res, err := queryClient.Balance(ctx, params)
-
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-
-	return res.Balance.Amount, nil
-}
-
-// AllBalances fetches an account address's balance for all denoms it holds
-func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
-	params := bankTypes.QueryAllBalancesRequest{Address: address}
-	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	queryClient := bankTypes.NewQueryClient(conn)
-	res, err := queryClient.AllBalances(ctx, &params)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return res.GetBalances(), nil
-}
 
 func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
 	fn := c.getFullNode()

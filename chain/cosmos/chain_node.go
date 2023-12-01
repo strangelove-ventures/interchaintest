@@ -762,14 +762,6 @@ func (tn *ChainNode) SendIBCTransfer(
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	_, err := tn.ExecTx(ctx,
-		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-	)
-	return err
-}
-
 type InstantiateContractAttribute struct {
 	Value string `json:"value"`
 }

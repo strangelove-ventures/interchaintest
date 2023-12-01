@@ -10,6 +10,13 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
+// TODO: Convert to SDK v50.
+
+// Available Commands:
+//   exec        execute tx on behalf of granter account
+//   grant       Grant authorization to an address
+//   revoke      revoke authorization
+
 // AuthzGrant grants a message as a permission to an account.
 func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee string, msgType string) (*sdk.TxResponse, error) {
 	if !strings.HasPrefix(msgType, "/") {
