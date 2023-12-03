@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -24,11 +25,34 @@ func TestCoreSDKCommands(t *testing.T) {
 
 	cosmos.SetSDKConfig("cosmos")
 
+	denomMetadata := banktypes.Metadata{
+		Description: "Denom metadata for TOK (token)",
+		DenomUnits: []*banktypes.DenomUnit{
+			{
+				Denom:    "token",
+				Exponent: 0,
+				Aliases:  []string{},
+			},
+			{
+				Denom:    "TOK",
+				Exponent: 6,
+				Aliases:  []string{},
+			},
+		},
+		Base:    "token",
+		Display: "TOK",
+		Name:    "TOK",
+		Symbol:  "TOK",
+		URI:     "",
+		URIHash: "",
+	}
+
 	sdk47Genesis := []cosmos.GenesisKV{
 		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
 		cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "10s"),
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "token"),
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
+		cosmos.NewGenesisKV("app_state.bank.denom_metadata", []banktypes.Metadata{denomMetadata}),
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -37,7 +61,7 @@ func TestCoreSDKCommands(t *testing.T) {
 			ChainName: "ibc-go-simd",
 			Version:   "v8.0.0", // SDK v50
 			ChainConfig: ibc.ChainConfig{
-				Denom:         "token",
+				Denom:         denomMetadata.Base,
 				Bech32Prefix:  "cosmos",
 				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
@@ -68,7 +92,8 @@ func TestCoreSDKCommands(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", math.NewInt(10_000_000_000), chain, chain)
+	genesisAmt := sdkmath.NewInt(10_000_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 
 	testAuthz(ctx, t, chain, users)
 	testBank(ctx, t, chain, users)
@@ -103,7 +128,7 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 
 	fmt.Printf("grants: %+v %+v %+v\n", grants, byGrantee, byGranter)
 
-	// Perform BankSend tx via authz
+	// Perform BankSend tx via authz (make sure to put this )
 
 	// before balance
 	balanceBefore, err := chain.GetBalance(ctx, granter, chain.Config().Denom)
@@ -137,23 +162,86 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 }
 
 func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-	b1, err := chain.BankGetBalance(ctx, users[0].FormattedAddress(), chain.Config().Denom)
+
+	user0 := users[0].FormattedAddress()
+	user1 := users[1].FormattedAddress()
+	user2 := users[2].FormattedAddress()
+
+	// Verify genesis amounts were set properly
+	b1, err := chain.BankGetBalance(ctx, user0, chain.Config().Denom)
 	require.NoError(t, err)
-
-	b2, err := chain.BankGetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
+	b2, err := chain.BankGetBalance(ctx, user1, chain.Config().Denom)
 	require.NoError(t, err)
+	require.EqualValues(t, b1, b2)
 
-	fmt.Printf("b1: %+v\n", b1)
-	fmt.Printf("b2: %+v\n", b2)
-
+	// send 1 token
 	sendAmt := int64(1)
 	_, err = sendTokens(ctx, chain, users[0], users[1], "", sendAmt)
 	require.NoError(t, err)
 
-	b2New, err := chain.GetBalance(ctx, users[1].FormattedAddress(), chain.Config().Denom)
+	// send multiple
+	err = chain.GetNode().BankMultiSend(ctx, users[0].KeyName(), []string{user1, user2}, sdkmath.NewInt(sendAmt), chain.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, b2.Add(math.NewInt(sendAmt)), b2New)
 
-	// other chain query functions
-	// res1, err :+ chain.BankQuery...
+	// == balances ==
+	// sendAmt*2 because of the multisend as well
+	b2New, err := chain.GetBalance(ctx, user1, chain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, b2.Add(sdkmath.NewInt(sendAmt*2)), b2New)
+
+	b2All, err := chain.BankAllBalances(ctx, user1)
+	require.NoError(t, err)
+	require.Equal(t, b2New, b2All.AmountOf(chain.Config().Denom))
+
+	// == spendable balances ==
+	spendableBal, err := chain.BankQuerySpendableBalance(ctx, user0, chain.Config().Denom)
+	require.NoError(t, err)
+
+	spendableBals, err := chain.BankQuerySpendableBalances(ctx, user0)
+	require.NoError(t, err)
+	require.Equal(t, spendableBal.Amount, spendableBals.AmountOf(chain.Config().Denom))
+
+	// == metadata ==
+	meta, err := chain.BankDenomMetadata(ctx, chain.Config().Denom)
+	require.NoError(t, err)
+
+	meta2, err := chain.BankQueryDenomMetadataByQueryString(ctx, chain.Config().Denom)
+	require.NoError(t, err)
+	require.EqualValues(t, meta, meta2)
+
+	allMeta, err := chain.BankQueryDenomsMetadata(ctx)
+	require.NoError(t, err)
+	require.Len(t, allMeta, 1)
+	require.EqualValues(t, allMeta[0].Display, meta.Display)
+
+	// == params ==
+	params, err := chain.BankQueryParams(ctx)
+	require.NoError(t, err)
+	require.True(t, params.DefaultSendEnabled)
+
+	sendEnabled, err := chain.BankQuerySendEnabled(ctx, []string{chain.Config().Denom})
+	require.NoError(t, err)
+	require.Len(t, sendEnabled, 0)
+
+	// == supply ==
+	supply, err := chain.BankQueryTotalSupply(ctx)
+	require.NoError(t, err)
+
+	supplyOf, err := chain.BankQueryTotalSupplyOf(ctx, chain.Config().Denom)
+	require.NoError(t, err)
+	require.EqualValues(t, supply.AmountOf(chain.Config().Denom), supplyOf.Amount)
+
+	// == denom owner ==
+	denomOwner, err := chain.BankQueryDenomOwners(ctx, chain.Config().Denom)
+	require.NoError(t, err)
+
+	found := false
+	for _, owner := range denomOwner {
+		if owner.Address == user0 {
+			found = true
+			break
+		}
+	}
+	require.True(t, found)
+
 }

@@ -177,7 +177,7 @@ func (c *CosmosChain) BankQuerySpendableBalances(ctx context.Context, address st
 	return &res.Balances, err
 }
 
-func (c *CosmosChain) BankQueryTotalSupply(ctx context.Context, address string) (*types.Coins, error) {
+func (c *CosmosChain) BankQueryTotalSupply(ctx context.Context) (*types.Coins, error) {
 	grpcConn, err := grpc.Dial(
 		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
