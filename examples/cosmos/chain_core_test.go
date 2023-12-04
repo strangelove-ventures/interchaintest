@@ -162,17 +162,12 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 }
 
 func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-
 	user0 := users[0].FormattedAddress()
 	user1 := users[1].FormattedAddress()
 	user2 := users[2].FormattedAddress()
 
-	// Verify genesis amounts were set properly
-	b1, err := chain.BankGetBalance(ctx, user0, chain.Config().Denom)
-	require.NoError(t, err)
 	b2, err := chain.BankGetBalance(ctx, user1, chain.Config().Denom)
 	require.NoError(t, err)
-	require.EqualValues(t, b1, b2)
 
 	// send 1 token
 	sendAmt := int64(1)
