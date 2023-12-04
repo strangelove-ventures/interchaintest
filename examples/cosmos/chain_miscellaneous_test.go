@@ -347,13 +347,15 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	user := users[0]
 	user2 := users[1]
 
+	node := chain.GetNode()
+
 	subDenom := "ictest"
-	tfDenom, _, err := cosmos.TokenFactoryCreateDenom(chain, ctx, user, subDenom, 2500000)
+	tfDenom, _, err := node.TokenFactoryCreateDenom(ctx, user, subDenom, 2500000)
 	require.NoError(t, err)
 	require.Equal(t, tfDenom, "factory/"+user.FormattedAddress()+"/"+subDenom)
 
 	// modify metadata
-	stdout, err := cosmos.TokenFactoryMetadata(chain, ctx, user.KeyName(), tfDenom, "SYMBOL", "description here", 6)
+	stdout, err := node.TokenFactoryMetadata(ctx, user.KeyName(), tfDenom, "SYMBOL", "description here", 6)
 	t.Log(stdout, err)
 	require.NoError(t, err)
 
@@ -365,41 +367,41 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	require.Equal(t, md.Metadata.DenomUnits[1].Exponent, 6)
 
 	// mint tokens
-	_, err = cosmos.TokenFactoryMintDenom(chain, ctx, user.KeyName(), tfDenom, 1)
+	_, err = node.TokenFactoryMintDenom(ctx, user.KeyName(), tfDenom, 1)
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 1)
 
 	// mint-to
-	_, err = cosmos.TokenFactoryMintDenomTo(chain, ctx, user.KeyName(), tfDenom, 3, user2.FormattedAddress())
+	_, err = node.TokenFactoryMintDenomTo(ctx, user.KeyName(), tfDenom, 3, user2.FormattedAddress())
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user2, tfDenom, 3)
 
 	// force transfer 1 from user2 (3) to user1 (1)
-	_, err = cosmos.TokenFactoryForceTransferDenom(chain, ctx, user.KeyName(), tfDenom, 1, user2.FormattedAddress(), user.FormattedAddress())
+	_, err = node.TokenFactoryForceTransferDenom(ctx, user.KeyName(), tfDenom, 1, user2.FormattedAddress(), user.FormattedAddress())
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 2)
 	validateBalance(ctx, t, chain, user2, tfDenom, 2)
 
 	// burn token from account
-	_, err = cosmos.TokenFactoryBurnDenomFrom(chain, ctx, user.KeyName(), tfDenom, 1, user.FormattedAddress())
+	_, err = node.TokenFactoryBurnDenomFrom(ctx, user.KeyName(), tfDenom, 1, user.FormattedAddress())
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 1)
 
-	prevAdmin, err := cosmos.TokenFactoryGetAdmin(chain, ctx, tfDenom)
+	prevAdmin, err := chain.TokenFactoryGetAdmin(ctx, tfDenom)
 	require.NoError(t, err)
 	require.Equal(t, prevAdmin.AuthorityMetadata.Admin, user.FormattedAddress())
 
 	// change admin, then we will burn the token-from
-	_, err = cosmos.TokenFactoryChangeAdmin(chain, ctx, user.KeyName(), tfDenom, user2.FormattedAddress())
+	_, err = node.TokenFactoryChangeAdmin(ctx, user.KeyName(), tfDenom, user2.FormattedAddress())
 	require.NoError(t, err)
 
 	// validate new admin is set
-	tfAdmin, err := cosmos.TokenFactoryGetAdmin(chain, ctx, tfDenom)
+	tfAdmin, err := chain.TokenFactoryGetAdmin(ctx, tfDenom)
 	require.NoError(t, err)
 	require.Equal(t, tfAdmin.AuthorityMetadata.Admin, user2.FormattedAddress())
 
 	// burn
-	_, err = cosmos.TokenFactoryBurnDenomFrom(chain, ctx, user2.KeyName(), tfDenom, 1, user.FormattedAddress())
+	_, err = node.TokenFactoryBurnDenomFrom(ctx, user2.KeyName(), tfDenom, 1, user.FormattedAddress())
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 0)
 
