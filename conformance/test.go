@@ -49,9 +49,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	userFaucetFund = int64(10_000_000_000)
-	testCoinAmount = int64(1_000_000)
+var (
+	userFaucetFund = math.NewInt(10_000_000_000)
+	testCoinAmount = math.NewInt(1_000_000)
 	pollHeightMax  = uint64(50)
 )
 
@@ -146,12 +146,12 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	testCoinSrcToDst := ibc.WalletAmount{
 		Address: srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(dstChainCfg.Bech32Prefix),
 		Denom:   srcChainCfg.Denom,
-		Amount:  math.NewInt(testCoinAmount),
+		Amount:  testCoinAmount,
 	}
 	testCoinDstToSrc := ibc.WalletAmount{
 		Address: dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix),
 		Denom:   dstChainCfg.Denom,
-		Amount:  math.NewInt(testCoinAmount),
+		Amount:  testCoinAmount,
 	}
 
 	var eg errgroup.Group
@@ -406,7 +406,7 @@ func testPacketRelaySuccess(
 	for i, srcTx := range testCase.TxCache.Src {
 		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := math.NewInt(userFaucetFund)
+		srcInitialBalance := userFaucetFund
 		dstInitialBalance := math.ZeroInt()
 
 		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
@@ -424,10 +424,10 @@ func testPacketRelaySuccess(
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
-		expectedDifference := testCoinAmount + totalFees
+		expectedDifference := testCoinAmount.AddRaw(totalFees)
 
-		req.True(srcFinalBalance.Equal(srcInitialBalance.SubRaw(expectedDifference)))
-		req.True(dstFinalBalance.Equal(dstInitialBalance.AddRaw(testCoinAmount)))
+		req.True(srcFinalBalance.Equal(srcInitialBalance.Sub(expectedDifference)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.Add(testCoinAmount)))
 	}
 
 	// [END] assert on source to destination transfer
@@ -439,7 +439,7 @@ func testPacketRelaySuccess(
 		dstDenom := dstChainCfg.Denom
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := math.ZeroInt()
-		dstInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := userFaucetFund
 
 		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on destination chain")
@@ -460,10 +460,10 @@ func testPacketRelaySuccess(
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
-		expectedDifference := testCoinAmount + totalFees
+		expectedDifference := testCoinAmount.AddRaw(totalFees)
 
-		req.True(srcFinalBalance.Equal(srcInitialBalance.AddRaw(testCoinAmount)))
-		req.True(dstFinalBalance.Equal(dstInitialBalance.SubRaw(expectedDifference)))
+		req.True(srcFinalBalance.Equal(srcInitialBalance.Add(testCoinAmount)))
+		req.True(dstFinalBalance.Equal(dstInitialBalance.Sub(expectedDifference)))
 	}
 	//[END] assert on destination to source transfer
 }
@@ -491,7 +491,7 @@ func testPacketRelayFail(
 	// [BEGIN] assert on source to destination transfer
 	for i, srcTx := range testCase.TxCache.Src {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := math.NewInt(userFaucetFund)
+		srcInitialBalance := userFaucetFund
 		dstInitialBalance := math.ZeroInt()
 
 		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
@@ -523,7 +523,7 @@ func testPacketRelayFail(
 	for i, dstTx := range testCase.TxCache.Dst {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := math.ZeroInt()
-		dstInitialBalance := math.NewInt(userFaucetFund)
+		dstInitialBalance := userFaucetFund
 
 		timeout, err := testutil.PollForTimeout(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
 		req.NoError(err, "failed to get timeout packet on destination chain")

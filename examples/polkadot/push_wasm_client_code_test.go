@@ -110,7 +110,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := math.NewInt(10_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), simd)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, simd)
 	simd1User := users[0]
 
 	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.FormattedAddress(), simd.Config().Denom)

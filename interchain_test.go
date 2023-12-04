@@ -222,7 +222,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, mnemonic)
 
-		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, initBal.Int64(), gaia0)
+		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, initBal, gaia0)
 		require.NoError(t, err)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.NotEmpty(t, user.Address())
@@ -235,7 +235,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
-		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, initBal.Int64(), gaia0)
+		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, initBal, gaia0)
 		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address())
@@ -301,7 +301,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 		NetworkID: network,
 	}))
 
-	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "gaia-user-1", 10_000_000, gaia0)[0]
+	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "gaia-user-1", math.NewInt(10_000_000), gaia0)[0]
 
 	sendAmount := math.NewInt(10_000)
 

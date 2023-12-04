@@ -695,7 +695,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		if i != 0 {
 			amount += ","
 		}
-		amount += fmt.Sprintf("%d%s", coin.Amount.Int64(), coin.Denom)
+		amount += fmt.Sprintf("%s%s", coin.Amount.String(), coin.Denom)
 	}
 
 	tn.lock.Lock()
@@ -732,7 +732,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 		command = append(command, "genesis")
 	}
 
-	command = append(command, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
 		"--keyring-backend", keyring.BackendTest,
 		"--chain-id", tn.Chain.Config().ChainID)
 

@@ -78,7 +78,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 		_ = ic.Close()
 	})
 
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(10_000_000_000), chain, chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", math.NewInt(10_000_000_000), chain, chain)
 
 	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)

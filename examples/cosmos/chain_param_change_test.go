@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"cosmossdk.io/math"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
@@ -43,7 +44,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	enableBlockDB := false
 	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
-	const userFunds = int64(10_000_000_000)
+	var userFunds = math.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
