@@ -448,8 +448,8 @@ func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *asse
 }
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
-// the docker filesystem. relPath describes the location of the file in the
-// docker volume relative to the home directory
+// the Docker filesystem. relPath describes the location of the file in the
+// Docker volume relative to the home directory.
 func (p *PenumbraClientNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
 	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
 	return fw.WriteFile(ctx, p.VolumeName, relPath, content)

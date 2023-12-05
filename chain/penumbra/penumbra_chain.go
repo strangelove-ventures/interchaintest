@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -555,20 +556,13 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 
 		eg.Go(func() error {
-			fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
-			ckbz, err := fr.SingleFileContent(egCtx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
-			if err != nil {
-				return fmt.Errorf("error getting validator custody key content: %w", err)
-			}
+			keyPath := filepath.Join("keys", keyName, "config.toml")
+			fileBz, err := val.PenumbraAppNode.ReadFile(ctx, keyPath)
 
-			var ck PenumbraCustodyKey
-			if err := json.Unmarshal(ckbz, &ck); err != nil {
-				return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
-			}
-
-			fvk, err := val.PenumbraAppNode.FullViewingKey(egCtx, keyName)
+			cfg := PcliConfig{}
+			err = toml.Unmarshal(fileBz, &cfg)
 			if err != nil {
-				return fmt.Errorf("error getting validator full viewing key: %w", err)
+				return err
 			}
 
 			if err := val.CreateClientNode(
@@ -580,8 +574,8 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 				c.testName,
 				i,
 				keyName,
-				ck.SpendKey,
-				fvk,
+				cfg.Custody.SpendKey,
+				cfg.FullViewingKey,
 			); err != nil {
 				return fmt.Errorf("error creating pclientd node: %w", err)
 			}
@@ -601,20 +595,13 @@ func (c *PenumbraChain) CreateClientNode(
 		return fmt.Errorf("there are no penumbra nodes configured to use when initializing a new instance of pclientd")
 	}
 
-	fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
-	ckbz, err := fr.SingleFileContent(ctx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
-	if err != nil {
-		return fmt.Errorf("error getting validator custody key content: %w", err)
-	}
+	keyPath := filepath.Join("keys", keyName, "config.toml")
+	fileBz, err := val.PenumbraAppNode.ReadFile(ctx, keyPath)
 
-	var ck PenumbraCustodyKey
-	if err := json.Unmarshal(ckbz, &ck); err != nil {
-		return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
-	}
-
-	fvk, err := val.PenumbraAppNode.FullViewingKey(ctx, keyName)
+	cfg := PcliConfig{}
+	err = toml.Unmarshal(fileBz, &cfg)
 	if err != nil {
-		return fmt.Errorf("error getting validator full viewing key: %w", err)
+		return err
 	}
 
 	// each validator has a pclientd instance so current index should be:
@@ -630,7 +617,7 @@ func (c *PenumbraChain) CreateClientNode(
 		c.testName,
 		index,
 		keyName,
-		ck.SpendKey,
-		fvk,
+		cfg.Custody.SpendKey,
+		cfg.FullViewingKey,
 	)
 }

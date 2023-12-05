@@ -131,25 +131,21 @@ type PcliConfig struct {
 	} `toml:"custody"`
 }
 
+// ReadFile attempts to read a file from the Docker filesystem at the specified path.
+// relPath describes the location of the file in the Docker volume relative to the home directory.
+func (p *PenumbraAppNode) ReadFile(ctx context.Context, relPath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
+	fileBz, err := fr.SingleFileContent(ctx, p.VolumeName, relPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileBz, nil
+}
+
 func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
-	//cmd := []string{"pcli", "--home", keyPath, "--n", pdUrl, "keys", "export", "full-viewing-key"}
-	//
-	//stdout, _, err := p.Exec(ctx, cmd, nil)
-	//if err != nil {
-	//	return "", err
-	//}
-	//
-	//split := strings.Split(string(stdout), "\n")
-	//
-	//return split[len(split)-2], nil
-
-	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
-	fileBz, err := fr.SingleFileContent(ctx, p.VolumeName, keyPath+"config.toml")
-	if err != nil {
-		return "", err
-	}
+	fileBz, err := p.ReadFile(ctx, keyPath+"config.toml")
 
 	c := PcliConfig{}
 	err = toml.Unmarshal(fileBz, &c)
