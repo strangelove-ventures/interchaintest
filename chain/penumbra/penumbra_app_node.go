@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
@@ -111,28 +112,52 @@ func (p *PenumbraAppNode) HomeDir() string {
 
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	cmd := []string{"pcli", "--home", keyPath, "keys", "generate"}
+	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "--home", keyPath, "init", "--grpc-url", pdUrl, "soft-kms", "generate"}
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 	// already exists error is okay
-	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
+	if err != nil && !strings.Contains(string(stderr), "not empty;, refusing to initialize") {
 		return err
 	}
 	return nil
 }
 
+type PcliConfig struct {
+	GrpcURL        string `toml:"grpc_url"`
+	FullViewingKey string `toml:"full_viewing_key"`
+	Custody        struct {
+		Backend  string `toml:"backend"`
+		SpendKey string `toml:"spend_key"`
+	} `toml:"custody"`
+}
+
 func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
-	cmd := []string{"pcli", "--home", keyPath, "-n", pdUrl, "keys", "export", "full-viewing-key"}
+	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	//cmd := []string{"pcli", "--home", keyPath, "--n", pdUrl, "keys", "export", "full-viewing-key"}
+	//
+	//stdout, _, err := p.Exec(ctx, cmd, nil)
+	//if err != nil {
+	//	return "", err
+	//}
+	//
+	//split := strings.Split(string(stdout), "\n")
+	//
+	//return split[len(split)-2], nil
 
-	stdout, _, err := p.Exec(ctx, cmd, nil)
+	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
+	fileBz, err := fr.SingleFileContent(ctx, p.VolumeName, keyPath+"config.toml")
 	if err != nil {
 		return "", err
 	}
 
-	split := strings.Split(string(stdout), "\n")
+	c := PcliConfig{}
+	err = toml.Unmarshal(fileBz, &c)
+	if err != nil {
+		return "", err
+	}
 
-	return split[len(split)-2], nil
+	return c.FullViewingKey, nil
 }
 
 // RecoverKey restores a key from a given mnemonic.
@@ -233,8 +258,8 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
-	cmd := []string{"pcli", "--home", keyPath, "-n", pdUrl, "view", "address"}
+	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "--home", keyPath, "view", "address"}
 
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
@@ -252,8 +277,8 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 // TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
-	cmd := []string{"pcli", "--home", keyPath, "-n", pdUrl, "view", "balance"}
+	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "--home", keyPath, "view", "balance"}
 
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
@@ -335,12 +360,12 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 
 func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, opts ibc.TransferOptions) (ibc.Tx, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
+	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 
 	parts := strings.Split(channelID, "-")
 	chanNum := parts[1]
 
-	cmd := []string{"pcli", "--home", keyPath, "-n", pdUrl, "tx", "withdraw",
+	cmd := []string{"pcli", "--home", keyPath, "tx", "withdraw",
 		"--to", amount.Address,
 		"--channel", chanNum,
 		"--timeout-height", fmt.Sprintf("0-%d", opts.Timeout.Height),
