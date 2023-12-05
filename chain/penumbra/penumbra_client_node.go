@@ -144,7 +144,6 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 		AddressIndex: &keysv1alpha1.AddressIndex{
 			Account: 0,
 		},
-		// DisplayConfirm: true,
 	}
 
 	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
@@ -192,7 +191,6 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
-		WalletId:          &keysv1alpha1.WalletId{Inner: make([]byte, 32)},
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
@@ -287,7 +285,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
-		WalletId:          &keysv1alpha1.WalletId{Inner: make([]byte, 32)},
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
 	}
 
