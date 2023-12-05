@@ -227,7 +227,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, int64(10000), actualBalance)
+		require.EqualValues(t, int64(10000), actualBalance.Int64())
 
 	})
 
@@ -241,7 +241,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
 		require.NoError(t, err)
-		require.Equal(t, int64(10000), actualBalance)
+		require.EqualValues(t, int64(10000), actualBalance.Int64())
 	})
 }
 
@@ -334,7 +334,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
-		require.Equal(t, sendAmount, dstFinalBalance)
+		require.Equal(t, sendAmount, dstFinalBalance.Int64())
 	})
 }
 
