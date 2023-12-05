@@ -1,19 +1,5 @@
 package cosmos
 
-// poad tx authz (fix to SDK v50)
-
-// poad tx circuit
-// Available Commands:
-//   authorize   Authorize an account to trip the circuit breaker.
-//   disable     disable a message from being executed
-
-//   poad tx crisis [command]
-// Available Commands:
-//   invariant-broken
-
-// poad tx decode
-//   poad tx decode [protobuf-byte-string]
-
 // poad tx distribution [command]
 //   fund-community-pool         Funds the community pool with the specified amount
 //   fund-validator-rewards-pool Fund the validator rewards pool with the specified amount
@@ -21,6 +7,27 @@ package cosmos
 //   withdraw-all-rewards        withdraw all delegations rewards for a delegator
 //   withdraw-rewards
 
+// poad tx slashing [command]
+//   unjail
+
+// poad tx staking
+// cancel-unbond    Cancel unbonding delegation and delegate back to the validator
+// create-validator create new validator initialized with a self-delegation to it
+// delegate         Delegate liquid tokens to a validator
+// edit-validator   edit an existing validator account
+// redelegate       Redelegate illiquid tokens from one validator to another
+// unbond           Unbond shares from a validator
+
+// ---
+// TODO:
+
+// poad tx circuit
+// Available Commands:
+//   authorize   Authorize an account to trip the circuit breaker.
+//   disable     disable a message from being executed
+
+// poad tx decode
+//   poad tx decode [protobuf-byte-string]
 // poad tx encode [file]
 
 // poad tx feegrant [command]
@@ -35,17 +42,6 @@ package cosmos
 //   submit-proposal        Submit a proposal along with some messages, metadata and deposit
 //   vote                   Vote for an active proposal, options: yes/no/no_with_veto/abstain
 //   weighted-vote
-
-// poad tx slashing [command]
-//   unjail
-
-// poad tx staking
-// cancel-unbond    Cancel unbonding delegation and delegate back to the validator
-// create-validator create new validator initialized with a self-delegation to it
-// delegate         Delegate liquid tokens to a validator
-// edit-validator   edit an existing validator account
-// redelegate       Redelegate illiquid tokens from one validator to another
-// unbond           Unbond shares from a validator
 
 // poad tx upgrade [command]
 //   cancel-software-upgrade Cancel the current software upgrade proposal
