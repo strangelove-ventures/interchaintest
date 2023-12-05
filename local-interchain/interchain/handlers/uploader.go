@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
 )
 

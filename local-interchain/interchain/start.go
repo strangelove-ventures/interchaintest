@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v7/relayer"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v6/relayer"
+	"github.com/strangelove-ventures/interchaintest/v6/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 	"github.com/strangelove-ventures/localinterchain/interchain/router"
 	"go.uber.org/zap"
 )

@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
@@ -48,9 +49,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	userFaucetFund = int64(10_000_000_000)
-	testCoinAmount = int64(1_000_000)
+var (
+	userFaucetFund = math.NewInt(10_000_000_000)
+	testCoinAmount = math.NewInt(1_000_000)
 	pollHeightMax  = uint64(50)
 )
 
@@ -406,7 +407,7 @@ func testPacketRelaySuccess(
 		t.Logf("Asserting %s to %s transfer", srcChainCfg.ChainID, dstChainCfg.ChainID)
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		dstInitialBalance := math.ZeroInt()
 
 		srcAck, err := testutil.PollForAck(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get acknowledgement on source chain")
@@ -423,10 +424,10 @@ func testPacketRelaySuccess(
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
-		expectedDifference := testCoinAmount + totalFees
+		expectedDifference := testCoinAmount.AddRaw(totalFees)
 
-		req.Equal(srcInitialBalance-expectedDifference, srcFinalBalance)
-		req.Equal(dstInitialBalance+testCoinAmount, dstFinalBalance)
+		req.EqualValues(srcInitialBalance.Sub(expectedDifference), srcFinalBalance)
+		req.Equal(dstInitialBalance.Add(testCoinAmount), dstFinalBalance)
 	}
 
 	// [END] assert on source to destination transfer
@@ -437,7 +438,7 @@ func testPacketRelaySuccess(
 		dstUser := testCase.Users[1]
 		dstDenom := dstChainCfg.Denom
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
-		srcInitialBalance := int64(0)
+		srcInitialBalance := math.ZeroInt()
 		dstInitialBalance := userFaucetFund
 
 		dstAck, err := testutil.PollForAck(ctx, dstChain, dstTx.Height, dstTx.Height+pollHeightMax, dstTx.Packet)
@@ -455,10 +456,10 @@ func testPacketRelaySuccess(
 		req.NoError(err, "failed to get balance from dest chain")
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
-		expectedDifference := testCoinAmount + totalFees
+		expectedDifference := testCoinAmount.AddRaw(totalFees)
 
-		req.Equal(srcInitialBalance+testCoinAmount, srcFinalBalance)
-		req.Equal(dstInitialBalance-expectedDifference, dstFinalBalance)
+		req.EqualValues(srcInitialBalance.Add(testCoinAmount), srcFinalBalance)
+		req.EqualValues(dstInitialBalance.Sub(expectedDifference), dstFinalBalance)
 	}
 	//[END] assert on destination to source transfer
 }
@@ -487,7 +488,7 @@ func testPacketRelayFail(
 	for i, srcTx := range testCase.TxCache.Src {
 		// Assuming these values since the ibc transfers were sent in PreRelayerStart, so balances may have already changed by now
 		srcInitialBalance := userFaucetFund
-		dstInitialBalance := int64(0)
+		dstInitialBalance := math.ZeroInt()
 
 		timeout, err := testutil.PollForTimeout(ctx, srcChain, srcTx.Height, srcTx.Height+pollHeightMax, srcTx.Packet)
 		req.NoError(err, "failed to get timeout packet on source chain")
@@ -509,8 +510,8 @@ func testPacketRelayFail(
 
 		totalFees := srcChain.GetGasFeesInNativeDenom(srcTx.GasSpent)
 
-		req.Equal(srcInitialBalance-totalFees, srcFinalBalance)
-		req.Equal(dstInitialBalance, dstFinalBalance)
+		req.EqualValues(srcInitialBalance.SubRaw(totalFees), srcFinalBalance)
+		req.EqualValues(dstInitialBalance, dstFinalBalance)
 	}
 	// [END] assert on source to destination transfer
 
@@ -536,8 +537,8 @@ func testPacketRelayFail(
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
-		req.Equal(srcInitialBalance, srcFinalBalance)
-		req.Equal(dstInitialBalance-totalFees, dstFinalBalance)
+		req.EqualValues(srcInitialBalance, srcFinalBalance)
+		req.EqualValues(dstInitialBalance.SubRaw(totalFees), dstFinalBalance)
 	}
 	// [END] assert on destination to source transfer
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
@@ -73,7 +74,7 @@ func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.Ch
 	beforeTransferHeight, err := c0.Height(ctx)
 	req.NoError(err)
 
-	const txAmount = 112233 // Arbitrary amount that is easy to find in logs.
+	var txAmount = math.NewInt(112233) // Arbitrary amount that is easy to find in logs.
 	tx, err := c0.SendIBCTransfer(ctx, c0ChannelID, interchaintest.FaucetAccountKeyName, ibc.WalletAmount{
 		Address: c1FaucetAddr,
 		Denom:   c0.Config().Denom,

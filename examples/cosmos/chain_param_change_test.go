@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
@@ -78,7 +79,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 		_ = ic.Close()
 	})
 
-	const userFunds = int64(10_000_000_000)
+	var userFunds = sdkmath.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 

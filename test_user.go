@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	"github.com/strangelove-ventures/interchaintest/v6/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v6/testutil"
@@ -18,7 +19,7 @@ import (
 func GetAndFundTestUserWithMnemonic(
 	ctx context.Context,
 	keyNamePrefix, mnemonic string,
-	amount int64,
+	amount math.Int,
 	chain ibc.Chain,
 ) (ibc.Wallet, error) {
 	chainCfg := chain.Config()
@@ -45,7 +46,7 @@ func GetAndFundTestUsers(
 	t *testing.T,
 	ctx context.Context,
 	keyNamePrefix string,
-	amount int64,
+	amount math.Int,
 	chains ...ibc.Chain,
 ) []ibc.Wallet {
 	users := make([]ibc.Wallet, len(chains))

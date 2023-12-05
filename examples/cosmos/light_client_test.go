@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	clienttypes "github.com/cosmos/ibc-go/v6/modules/core/02-client/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
@@ -66,7 +67,7 @@ func TestUpdateLightClients(t *testing.T) {
 	})
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
+	fundAmount := sdkmath.NewInt(10_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser, osmoUser := users[0], users[1]
 
@@ -78,7 +79,7 @@ func TestUpdateLightClients(t *testing.T) {
 	height, err := osmosis.Height(ctx)
 	require.NoError(t, err)
 
-	amountToSend := int64(553255) // Unique amount to make log searching easier.
+	amountToSend := sdkmath.NewInt(553255) // Unique amount to make log searching easier.
 	dstAddress := osmoUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(osmosis.Config().Bech32Prefix)
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,

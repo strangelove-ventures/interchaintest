@@ -11,10 +11,10 @@ import (
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
 
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6/testutil"
 )
 
 func loadConfig(config *types.Config, filepath string) (*types.Config, error) {
