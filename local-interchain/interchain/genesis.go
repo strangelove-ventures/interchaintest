@@ -54,7 +54,7 @@ func SetupGenesisWallets(config *types.Config, chains []ibc.Chain) map[ibc.Chain
 		chainObj := chains[idx].(*cosmos.CosmosChain)
 
 		for _, acc := range chain.Genesis.Accounts {
-			amount, err := sdk.ParseCoinsNormalized(acc.Amount)
+			amount, err := sdk.ParseCoinsNormalized(acc.Amount.String())
 			if err != nil {
 				panic(err)
 			}

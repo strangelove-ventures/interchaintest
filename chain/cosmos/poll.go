@@ -71,8 +71,8 @@ func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64,
 		if err != nil {
 			return nil, err
 		}
-		if bal != balance.Amount {
-			return nil, fmt.Errorf("balance (%d) does not match expected: (%d)", bal, balance.Amount)
+		if !bal.Equal(balance.Amount) {
+			return nil, fmt.Errorf("balance (%s) does not match expected: (%s)", bal.String(), balance.Amount.String())
 		}
 		return nil, nil
 	}
