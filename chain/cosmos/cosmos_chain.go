@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -32,6 +34,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+var _ ibc.Chain = (*CosmosChain)(nil)
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
 // Implements the ibc.Chain interface.
@@ -182,6 +186,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 		return c.FullNodes[0]
 	}
 	// use first validator
+	return c.Validators[0]
+}
+
+func (c *CosmosChain) GetNode() *ChainNode {
 	return c.Validators[0]
 }
 
@@ -428,12 +436,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return 0, err
+		return sdkmath.Int{}, err
 	}
 	defer conn.Close()
 
@@ -441,10 +449,10 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	res, err := queryClient.Balance(ctx, params)
 
 	if err != nil {
-		return 0, err
+		return sdkmath.Int{}, err
 	}
 
-	return res.Balance.Amount.Int64(), nil
+	return res.Balance.Amount, nil
 }
 
 // AllBalances fetches an account address's balance for all denoms it holds
@@ -715,13 +723,15 @@ type ValidatorWithIntPower struct {
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
+	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
+
 	genesisAmount := types.Coin{
-		Amount: types.NewInt(10_000_000_000_000),
+		Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow),
 		Denom:  chainCfg.Denom,
 	}
 
 	genesisSelfDelegation := types.Coin{
-		Amount: types.NewInt(5_000_000_000_000),
+		Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow),
 		Denom:  chainCfg.Denom,
 	}
 
@@ -830,7 +840,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: types.NewInt(wallet.Amount)}}); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
 			return err
 		}
 	}

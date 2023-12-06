@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/icza/dyno"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
@@ -120,7 +121,7 @@ func TestInterchainQueries(t *testing.T) {
 	})
 
 	// Fund user accounts, so we can query balances and make assertions.
-	const userFunds = int64(10_000_000_000)
+	var userFunds = sdkmath.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain1, chain2)
 	chain1User := users[0]
 	chain2User := users[1]

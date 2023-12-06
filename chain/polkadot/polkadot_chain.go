@@ -9,6 +9,7 @@ import (
 	"io"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
@@ -340,7 +341,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	}
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount * polkadotScaling},
+			[]interface{}{wallet.Address, wallet.Amount.MulRaw(polkadotScaling)},
 		)
 	}
 
@@ -778,10 +779,11 @@ func (c *PolkadotChain) SendIBCTransfer(
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
 	if denom == c.cfg.Denom {
-		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
+		amt, err := c.RelayChainNodes[0].GetBalance(ctx, address, denom)
+		return math.NewInt(amt), err
 	}
 
 	return c.ParachainNodes[0][0].GetBalance(ctx, address, denom)

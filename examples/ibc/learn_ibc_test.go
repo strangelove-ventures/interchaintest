@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
@@ -74,7 +75,7 @@ func TestLearn(t *testing.T) {
 	)
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
+	fundAmount := sdkmath.NewInt(10_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
@@ -93,7 +94,7 @@ func TestLearn(t *testing.T) {
 	osmoChannelID := osmoChannelInfo[0].ChannelID
 
 	// Send Transaction
-	amountToSend := int64(1_000_000)
+	amountToSend := sdkmath.NewInt(1_000_000)
 	dstAddress := osmosisUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
@@ -108,7 +109,7 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
 
 	// test source wallet has decreased funds
-	expectedBal := gaiaUserBalInitial - amountToSend
+	expectedBal := gaiaUserBalInitial.Sub(amountToSend)
 	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, expectedBal, gaiaUserBalNew)

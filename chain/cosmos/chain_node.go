@@ -664,7 +664,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		if i != 0 {
 			amount += ","
 		}
-		amount += fmt.Sprintf("%d%s", coin.Amount.Int64(), coin.Denom)
+		amount += fmt.Sprintf("%s%s", coin.Amount.String(), coin.Denom)
 	}
 
 	tn.lock.Lock()
@@ -701,7 +701,7 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 		command = append(command, "genesis")
 	}
 
-	command = append(command, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
 		"--keyring-backend", keyring.BackendTest,
 		"--chain-id", tn.Chain.Config().ChainID)
 
@@ -740,7 +740,7 @@ func (tn *ChainNode) SendIBCTransfer(
 ) (string, error) {
 	command := []string{
 		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
@@ -758,7 +758,7 @@ func (tn *ChainNode) SendIBCTransfer(
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%d%s", amount.Amount, amount.Denom),
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
 }
@@ -788,6 +788,39 @@ type CodeInfo struct {
 }
 type CodeInfosResponse struct {
 	CodeInfos []CodeInfo `json:"code_infos"`
+}
+
+// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
+func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
+	_, file := filepath.Split(fileName)
+	err := tn.CopyFile(ctx, fileName, file)
+	if err != nil {
+		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
+	}
+
+	cmd := []string{"wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	if _, err := tn.ExecTx(ctx, keyName, cmd...); err != nil {
+		return "", err
+	}
+
+	err = testutil.WaitForBlocks(ctx, 5, tn.Chain)
+	if err != nil {
+		return "", fmt.Errorf("wait for blocks: %w", err)
+	}
+
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
+	if err != nil {
+		return "", err
+	}
+
+	res := CodeInfosResponse{}
+	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
+		return "", err
+	}
+
+	return res.CodeInfos[0].CodeID, nil
 }
 
 func (tn *ChainNode) getTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
@@ -1187,7 +1220,7 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 		"amount": []map[string]any{
 			{
 				"denom":  amount.Denom,
-				"amount": amount.Amount,
+				"amount": amount.Amount.String(),
 			},
 		},
 	})

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
@@ -149,7 +150,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.Equal(t, int64(PARACHAIN_DEFAULT_AMOUNT), parachainBobStashAmount, "Parachain bob stash amount not expected")
 
 	// Fund user1 on both relay and parachain, must wait a block to fund user2 due to same faucet address
-	fundAmount := int64(12_333_000_000_000)
+	fundAmount := sdkmath.NewInt(12_333_000_000_000)
 	users1 := interchaintest.GetAndFundTestUsers(t, ctx, "user1", fundAmount, polkadotChain)
 	user1 := users1[0]
 	err = testutil.WaitForBlocks(ctx, 2, chain)
@@ -180,7 +181,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	require.Equal(t, fundAmount, parachainUser2Amount, "Initial parachain user2 amount not expected")
 
 	// Transfer 1T units from user1 to user2 on both chains
-	txAmount := int64(1_000_000_000_000)
+	txAmount := sdkmath.NewInt(1_000_000_000_000)
 	polkadotTxUser1ToUser2 := ibc.WalletAmount{
 		Address: user2.FormattedAddress(),
 		Amount:  txAmount,
@@ -203,18 +204,18 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	polkadotUser1Amount, err = polkadotChain.GetBalance(ctx, user1.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
 	fmt.Println("Polkadot user1 amount: ", polkadotUser1Amount)
-	require.LessOrEqual(t, polkadotUser1Amount, fundAmount-txAmount, "Final polkadot user1 amount not expected")
+	require.LessOrEqual(t, polkadotUser1Amount, fundAmount.Sub(txAmount), "Final polkadot user1 amount not expected")
 	polkadotUser2Amount, err = polkadotChain.GetBalance(ctx, user2.FormattedAddress(), polkadotChain.Config().Denom)
 	require.NoError(t, err)
 	fmt.Println("Polkadot user2 amount: ", polkadotUser2Amount)
-	require.Equal(t, fundAmount+txAmount, polkadotUser2Amount, "Final polkadot user2 amount not expected")
+	require.Equal(t, fundAmount.Add(txAmount), polkadotUser2Amount, "Final polkadot user2 amount not expected")
 	parachainUser1Amount, err = polkadotChain.GetBalance(ctx, user1.FormattedAddress(), "")
 	require.NoError(t, err)
 	fmt.Println("Parachain user1 amount: ", parachainUser1Amount)
-	require.LessOrEqual(t, parachainUser1Amount, fundAmount-txAmount, "Final parachain user1 amount not expected")
+	require.LessOrEqual(t, parachainUser1Amount, fundAmount.Sub(txAmount), "Final parachain user1 amount not expected")
 	parachainUser2Amount, err = polkadotChain.GetBalance(ctx, user2.FormattedAddress(), "")
 	require.NoError(t, err)
 	fmt.Println("Parachain user2 amount: ", parachainUser2Amount)
-	require.Equal(t, fundAmount+txAmount, parachainUser2Amount, "Final parachain user2 amount not expected")
+	require.Equal(t, fundAmount.Add(txAmount), parachainUser2Amount, "Final parachain user2 amount not expected")
 
 }

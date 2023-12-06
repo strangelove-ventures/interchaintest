@@ -11,7 +11,7 @@ concurrency:
 jobs:
   test-unit:
     name: unit-tests
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     steps:
       # Install and setup go
       - name: Set up Go 1.19

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v6"
+	"github.com/strangelove-ventures/interchaintest/v6/ibc"
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 

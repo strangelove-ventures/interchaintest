@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"cosmossdk.io/math"
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibcexported "github.com/cosmos/ibc-go/v6/modules/core/03-connection/types"
@@ -53,6 +54,8 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// CoinDecimals for the chains base micro/nano/atto token configuration.
+	CoinDecimals *int64
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -65,6 +68,11 @@ func (c ChainConfig) Clone() ChainConfig {
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
+
+	if c.CoinDecimals != nil {
+		coinDecimals := *c.CoinDecimals
+		x.CoinDecimals = &coinDecimals
+	}
 
 	return x
 }
@@ -163,6 +171,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
 	}
 
+	if other.CoinDecimals != nil {
+		c.CoinDecimals = other.CoinDecimals
+	}
+
 	return c
 }
 
@@ -210,7 +222,7 @@ func (i DockerImage) Ref() string {
 type WalletAmount struct {
 	Address string
 	Denom   string
-	Amount  int64
+	Amount  math.Int
 }
 
 type IBCTimeout struct {

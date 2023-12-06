@@ -3,6 +3,7 @@ package ibc
 import (
 	"context"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/docker/docker/client"
 )
 
@@ -63,7 +64,7 @@ type Chain interface {
 	Height(ctx context.Context) (uint64, error)
 
 	// GetBalance fetches the current balance for a specific account address and denom.
-	GetBalance(ctx context.Context, address string, denom string) (int64, error)
+	GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error)
 
 	// GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
 	GetGasFeesInNativeDenom(gasPaid int64) int64

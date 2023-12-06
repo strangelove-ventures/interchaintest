@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v6"
 	"github.com/strangelove-ventures/interchaintest/v6/ibc"
@@ -254,7 +255,7 @@ WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 		require.NoError(t, err)
 
 		// Send the IBC transfer. Relayer isn't running, so this will just create a MsgTransfer.
-		const txAmount = 13579 // Arbitrary amount that is easy to find in logs.
+		var txAmount = sdkmath.NewInt(13579) // Arbitrary amount that is easy to find in logs.
 		transfer := ibc.WalletAmount{
 			Address: gaia1FaucetAddr,
 			Denom:   gaia0.Config().Denom,
