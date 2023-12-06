@@ -537,7 +537,7 @@ func testPacketRelayFail(
 
 		totalFees := dstChain.GetGasFeesInNativeDenom(dstTx.GasSpent)
 
-		req.EqualValues(srcInitialBalance, srcFinalBalance)
+		req.EqualValues(srcInitialBalance, srcFinalBalance.Int64())
 		req.EqualValues(dstInitialBalance.SubRaw(totalFees), dstFinalBalance)
 	}
 	// [END] assert on destination to source transfer
