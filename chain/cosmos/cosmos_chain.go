@@ -47,6 +47,8 @@ type CosmosChain struct {
 	Validators    ChainNodes
 	FullNodes     ChainNodes
 
+	RelayerCodecs []string
+
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
 
@@ -106,6 +108,11 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 // Nodes returns all nodes, including validators and fullnodes.
 func (c *CosmosChain) Nodes() ChainNodes {
 	return append(c.Validators, c.FullNodes...)
+}
+
+// GetRelayerCodecs returns the codec names that should be used for relayer
+func (c *CosmosChain) GetRelayerCodecs() []string {
+	return c.RelayerCodecs
 }
 
 // AddFullNodes adds new fullnodes to the network, peering with the existing nodes.

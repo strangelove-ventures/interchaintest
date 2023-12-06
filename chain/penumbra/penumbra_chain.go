@@ -241,6 +241,11 @@ func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom st
 }
 
 // Implements Chain interface
+func (c *PenumbraChain) GetRelayerCodecs() []string {
+	return nil
+}
+
+// Implements Chain interface
 func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
