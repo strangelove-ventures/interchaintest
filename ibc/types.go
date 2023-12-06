@@ -56,6 +56,8 @@ type ChainConfig struct {
 	SidecarConfigs []SidecarConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
+	// ExtraRelayerCodecs are extra codecs that need to be registered for the relayer to work (e.g Ethermint chains).
+	ExtraRelayerCodecs []string `yaml:"extra-codecs"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {

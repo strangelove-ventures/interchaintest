@@ -51,6 +51,7 @@ type CosmosChain struct {
 	numFullNodes  int
 	Validators    ChainNodes
 	FullNodes     ChainNodes
+	RelayerCodecs []string
 
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
@@ -228,6 +229,11 @@ func (c *CosmosChain) GetHostRPCAddress() string {
 // This will not return a valid address until the chain has been started.
 func (c *CosmosChain) GetHostAPIAddress() string {
 	return "http://" + c.getFullNode().hostAPIPort
+}
+
+// GetRelayerCodecs returns the codec names that should be used for relayer
+func (c *CosmosChain) GetRelayerCodecs() []string {
+	return c.RelayerCodecs
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.

@@ -30,7 +30,7 @@ type pathConfiguration struct {
 
 // pathChainConfig holds all values that will be required when interacting with a path.
 type pathChainConfig struct {
-	chainID      string
+	chainID string
 }
 
 func (hyperspaceCommander) Name() string {
@@ -225,7 +225,7 @@ func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
 	panic("[UpdateClients] Do not use me")
 }
 
-func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, relayerCodecs []string) ([]byte, error) {
 	fmt.Println("[hyperspace] ConfigContent", cfg, keyName, rpcAddr, grpcAddr)
 	HyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	bytes, err := toml.Marshal(HyperspaceRelayerChainConfig)

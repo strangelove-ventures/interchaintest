@@ -275,6 +275,11 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
+// Implements Chain interface
+func (c *PenumbraChain) GetRelayerCodecs() []string {
+	return nil
+}
+
 // creates the test node objects required for bootstrapping tests
 func (c *PenumbraChain) initializeChainNodes(
 	ctx context.Context,
