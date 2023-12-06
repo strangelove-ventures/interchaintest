@@ -57,90 +57,42 @@ func (tn *ChainNode) DistributionWithdrawValidatorRewards(ctx context.Context, k
 
 // DistributionCommission returns the validator's commission
 func (c *CosmosChain) DistributionCommission(ctx context.Context) (*distrtypes.ValidatorAccumulatedCommission, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorCommission(ctx, &distrtypes.QueryValidatorCommissionRequest{})
 	return &res.Commission, err
 }
 
 // DistributionCommunityPool returns the community pool
 func (c *CosmosChain) DistributionCommunityPool(ctx context.Context) (*sdk.DecCoins, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		CommunityPool(ctx, &distrtypes.QueryCommunityPoolRequest{})
 	return &res.Pool, err
 }
 
 // DistributionDelegationTotalRewards returns the delegator's total rewards
 func (c *CosmosChain) DistributionDelegationTotalRewards(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegationTotalRewardsResponse, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegationTotalRewards(ctx, &distrtypes.QueryDelegationTotalRewardsRequest{DelegatorAddress: delegatorAddr})
 	return res, err
 }
 
 // DistributionDelegatorValidators returns the delegator's validators
 func (c *CosmosChain) DistributionDelegatorValidators(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegatorValidatorsResponse, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegatorValidators(ctx, &distrtypes.QueryDelegatorValidatorsRequest{DelegatorAddress: delegatorAddr})
 	return res, err
 }
 
 // DistributionDelegatorWithdrawAddress returns the delegator's withdraw address
 func (c *CosmosChain) DistributionDelegatorWithdrawAddress(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegatorWithdrawAddressResponse, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegatorWithdrawAddress(ctx, &distrtypes.QueryDelegatorWithdrawAddressRequest{DelegatorAddress: delegatorAddr})
 	return res, err
 }
 
 // DistributionParams returns the distribution params
 func (c *CosmosChain) DistributionParams(ctx context.Context) (*distrtypes.Params, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		Params(ctx, &distrtypes.QueryParamsRequest{})
 	return &res.Params, err
 }

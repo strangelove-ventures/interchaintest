@@ -6,15 +6,9 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
-
-// TODO: Convert to SDK v50.
-
-// Available Commands:
-//   exec        execute tx on behalf of granter account
-//   grant       Grant authorization to an address
-//   revoke      revoke authorization
 
 const ()
 
@@ -94,60 +88,27 @@ func AuthzRevoke(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, gr
 	return chain.GetNode().TxHashToResponse(ctx, txHash)
 }
 
-// authz.QueryGrantsResponse
-type QueryAuthzGrantsResponse struct {
-	Grants []struct {
-		Authorization struct {
-			Type  string `json:"type"`
-			Value struct {
-				Msg string `json:"msg"`
-			} `json:"value"`
-		} `json:"authorization"`
-	} `json:"grants"`
-	Pagination struct {
-		Total string `json:"total"`
-	} `json:"pagination"`
+func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, grantee string, msgType string, extraFlags ...string) ([]*authz.Grant, error) {
+	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).Grants(ctx, &authz.QueryGrantsRequest{
+		Granter:    granter,
+		Grantee:    grantee,
+		MsgTypeUrl: msgType,
+	})
+	return res.Grants, err
 }
 
-// authz.QueryGranteeGrantsResponse & QueryGranterGrantsResponse
-type QueryAuthzGrantsByResponse struct {
-	Grants []struct {
-		Granter       string `json:"granter"`
-		Grantee       string `json:"grantee"`
-		Authorization struct {
-			Type  string `json:"type"`
-			Value struct {
-				Msg string `json:"msg"`
-			} `json:"value"`
-		} `json:"authorization"`
-	} `json:"grants"`
-	Pagination struct {
-		Total string `json:"total"`
-	} `json:"pagination"`
+func (c *CosmosChain) AuthzQueryGrantsByGrantee(ctx context.Context, grantee string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
+	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranteeGrants(ctx, &authz.QueryGranteeGrantsRequest{
+		Grantee: grantee,
+	})
+	return res.Grants, err
 }
 
-func AuthzQueryGrants(ctx context.Context, chain *CosmosChain, granter string, grantee string, msgType string, extraFlags ...string) (*QueryAuthzGrantsResponse, error) {
-	cmd := []string{"authz", "grants", granter, grantee, msgType}
-	cmd = append(cmd, extraFlags...)
-
-	var res QueryAuthzGrantsResponse
-	return &res, chain.ExecQueryToResponse(ctx, chain, cmd, &res)
-}
-
-func AuthzQueryGrantsByGrantee(ctx context.Context, chain *CosmosChain, grantee string, extraFlags ...string) (*QueryAuthzGrantsByResponse, error) {
-	cmd := []string{"authz", "grants-by-grantee", grantee}
-	cmd = append(cmd, extraFlags...)
-
-	var res QueryAuthzGrantsByResponse
-	return &res, chain.ExecQueryToResponse(ctx, chain, cmd, &res)
-}
-
-func AuthzQueryGrantsByGranter(ctx context.Context, chain *CosmosChain, granter string, extraFlags ...string) (*QueryAuthzGrantsByResponse, error) {
-	cmd := []string{"authz", "grants-by-granter", granter}
-	cmd = append(cmd, extraFlags...)
-
-	var res QueryAuthzGrantsByResponse
-	return &res, chain.ExecQueryToResponse(ctx, chain, cmd, &res)
+func (c *CosmosChain) AuthzQueryGrantsByGranter(ctx context.Context, granter string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
+	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranterGrants(ctx, &authz.QueryGranterGrantsRequest{
+		Granter: granter,
+	})
+	return res.Grants, err
 }
 
 // createAuthzJSON creates a JSON file with a single generated message.

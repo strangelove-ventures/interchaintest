@@ -35,6 +35,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
@@ -51,6 +53,7 @@ type ChainNode struct {
 	NetworkID    string
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
+	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -124,6 +127,15 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.Client = rpcClient
+
+	grpcConn, err := grpc.Dial(
+		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("grpc dial: %w", err)
+	}
+	tn.GrpcConn = grpcConn
+
 	return nil
 }
 
@@ -174,6 +186,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
 		Client:            tn.Client,
+		GRPCClient:        tn.GrpcConn,
 		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
