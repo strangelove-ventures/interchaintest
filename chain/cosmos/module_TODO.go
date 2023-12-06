@@ -18,21 +18,21 @@ package cosmos
 // redelegate       Redelegate illiquid tokens from one validator to another
 // unbond           Unbond shares from a validator
 
-// ---
-// TODO:
-
 // poad tx circuit
 // Available Commands:
 //   authorize   Authorize an account to trip the circuit breaker.
 //   disable     disable a message from being executed
 
-// poad tx decode
-//   poad tx decode [protobuf-byte-string]
-// poad tx encode [file]
-
 // poad tx feegrant [command]
 //   grant       Grant Fee allowance to an address
 //   revoke
+
+// ---
+// TODO:
+
+// poad tx decode
+//   poad tx decode [protobuf-byte-string]
+// poad tx encode [file]
 
 // poad tx gov [command]
 //   cancel-proposal        Cancel governance proposal before the voting period ends. Must be signed by the proposal creator.
