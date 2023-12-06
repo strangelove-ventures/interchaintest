@@ -27,12 +27,15 @@ package cosmos
 //   grant       Grant Fee allowance to an address
 //   revoke
 
+// poad tx upgrade [command]
+//   cancel-software-upgrade Cancel the current software upgrade proposal
+//   software-upgrade
+
 // ---
 // TODO:
+// - move anything from chain_node to its respective module
 
-// poad tx decode
-//   poad tx decode [protobuf-byte-string]
-// poad tx encode [file]
+// Auth accounts
 
 // poad tx gov [command]
 //   cancel-proposal        Cancel governance proposal before the voting period ends. Must be signed by the proposal creator.
@@ -42,10 +45,6 @@ package cosmos
 //   submit-proposal        Submit a proposal along with some messages, metadata and deposit
 //   vote                   Vote for an active proposal, options: yes/no/no_with_veto/abstain
 //   weighted-vote
-
-// poad tx upgrade [command]
-//   cancel-software-upgrade Cancel the current software upgrade proposal
-//   software-upgrade
 
 // poad tx vesting [command]
 //   create-periodic-vesting-account Create a new vesting account funded with an allocation of tokens.
