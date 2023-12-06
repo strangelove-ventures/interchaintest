@@ -84,9 +84,6 @@ type Chain interface {
 	// be restored in the relayer node using the mnemonic. After it is built, that address is included in
 	// genesis with some funds.
 	BuildRelayerWallet(ctx context.Context, keyName string) (Wallet, error)
-
-	// GetRelayerCodecs returns the relayer codecs for the chain to operate for Ethermint based networks.
-	GetRelayerCodecs() []string
 }
 
 // TransferOptions defines the options for an IBC packet transfer.

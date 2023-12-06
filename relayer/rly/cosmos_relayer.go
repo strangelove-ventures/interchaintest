@@ -45,19 +45,18 @@ func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 }
 
 type CosmosRelayerChainConfigValue struct {
-	AccountPrefix  string   `json:"account-prefix"`
-	ChainID        string   `json:"chain-id"`
-	Debug          bool     `json:"debug"`
-	GRPCAddr       string   `json:"grpc-addr"`
-	GasAdjustment  float64  `json:"gas-adjustment"`
-	GasPrices      string   `json:"gas-prices"`
-	Key            string   `json:"key"`
-	KeyringBackend string   `json:"keyring-backend"`
-	OutputFormat   string   `json:"output-format"`
-	RPCAddr        string   `json:"rpc-addr"`
-	SignMode       string   `json:"sign-mode"`
-	Timeout        string   `json:"timeout"`
-	ExtraCodecs    []string `json:"extra-codecs"`
+	AccountPrefix  string  `json:"account-prefix"`
+	ChainID        string  `json:"chain-id"`
+	Debug          bool    `json:"debug"`
+	GRPCAddr       string  `json:"grpc-addr"`
+	GasAdjustment  float64 `json:"gas-adjustment"`
+	GasPrices      string  `json:"gas-prices"`
+	Key            string  `json:"key"`
+	KeyringBackend string  `json:"keyring-backend"`
+	OutputFormat   string  `json:"output-format"`
+	RPCAddr        string  `json:"rpc-addr"`
+	SignMode       string  `json:"sign-mode"`
+	Timeout        string  `json:"timeout"`
 }
 
 type CosmosRelayerChainConfig struct {
@@ -79,7 +78,7 @@ func Capabilities() map[relayer.Capability]bool {
 	return relayer.FullCapabilities()
 }
 
-func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string, extraCodecs []string) CosmosRelayerChainConfig {
+func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
 	chainType := chainConfig.Type
 	return CosmosRelayerChainConfig{
 		Type: chainType,
@@ -96,7 +95,6 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 			Timeout:        "10s",
 			OutputFormat:   "json",
 			SignMode:       "direct",
-			ExtraCodecs:    extraCodecs,
 		},
 	}
 }
@@ -250,8 +248,8 @@ func (commander) UpdateClients(pathName, homeDir string) []string {
 	}
 }
 
-func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, extraCodecs []string) ([]byte, error) {
-	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr, extraCodecs)
+func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {
 		return nil, err

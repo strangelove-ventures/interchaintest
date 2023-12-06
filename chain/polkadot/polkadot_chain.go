@@ -809,11 +809,6 @@ func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	panic("[GetGasFeesInNativeDenom] not implemented yet")
 }
 
-// Implements Chain interface
-func (c *PolkadotChain) GetRelayerCodecs() []string {
-	return nil
-}
-
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
 func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {

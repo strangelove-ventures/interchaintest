@@ -414,7 +414,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 			if err := r.AddChainConfiguration(ctx,
 				rep,
 				c.Config(), chainName,
-				rpcAddr, grpcAddr, c.GetRelayerCodecs(),
+				rpcAddr, grpcAddr,
 			); err != nil {
 				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
 			}

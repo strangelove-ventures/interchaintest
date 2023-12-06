@@ -81,7 +81,7 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 
 // AddChainConfiguration is called once per chain configuration, which means that in the case of hermes, the single
 // config file is overwritten with a new entry each time this function is called.
-func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, extraCodecs []string) error {
+func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
 	configContent, err := r.configContent(chainConfig, keyName, rpcAddr, grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)
