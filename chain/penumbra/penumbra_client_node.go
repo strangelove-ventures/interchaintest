@@ -478,9 +478,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{
 		"pclientd",
 		"--home", p.HomeDir(),
-		//"--node", pdAddress,
 		"start",
-		//"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
 	}
 
 	var env []string
