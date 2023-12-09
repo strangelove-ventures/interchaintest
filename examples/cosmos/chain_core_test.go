@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -72,6 +73,7 @@ func TestCoreSDKCommands(t *testing.T) {
 				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 			},
+
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
 		},
@@ -113,6 +115,11 @@ func TestCoreSDKCommands(t *testing.T) {
 	t.Run("distribution", func(t *testing.T) {
 		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 		testDistribution(ctx, t, chain, users)
+	})
+
+	t.Run("feegrant", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain, chain)
+		testFeeGrant(ctx, t, chain, users)
 	})
 }
 
@@ -258,13 +265,6 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 }
 
 func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-	//   fund-community-pool         Funds the community pool with the specified amount
-	//   fund-validator-rewards-pool Fund the validator rewards pool with the specified amount
-	//   set-withdraw-addr           change the default withdraw address for rewards associated with an address
-	//   withdraw-all-rewards        withdraw all delegations rewards for a delegator
-	//   withdraw-rewards
-
-	// setup
 	var err error
 	node := chain.GetNode()
 	acc := authtypes.NewModuleAddress("distribution")
@@ -281,8 +281,6 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	valAddr := del[0].Delegation.ValidatorAddress
 
 	newWithdrawAddr := "cosmos1hj83l3auyqgy5qcp52l6sp2e67xwq9xx80alju"
-
-	// ----
 
 	t.Run("misc queries", func(t *testing.T) {
 		slashes, err := chain.DistributionValidatorSlashes(ctx, valAddr)
@@ -376,5 +374,96 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		require.NoError(err)
 		require.EqualValues(1, rewards.Len())
 	})
-
 }
+
+func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	var err error
+	node := chain.GetNode()
+
+	denom := chain.Config().Denom
+
+	// FeeGrant, FeeGrantRevoke
+
+	t.Run("successful grant and queries", func(t *testing.T) {
+		granter := users[0]
+		grantee := users[1]
+
+		err = node.FeeGrant(ctx, granter.KeyName(), grantee.FormattedAddress(), fmt.Sprintf("%d%s", 1000, chain.Config().Denom), []string{"/cosmos.bank.v1beta1.MsgSend"}, time.Now().Add(time.Hour*24*365))
+		require.NoError(t, err)
+
+		g, err := chain.FeeGrantGetAllowance(ctx, granter.FormattedAddress(), grantee.FormattedAddress())
+		require.NoError(t, err)
+		fmt.Printf("g: %+v\n", g)
+		require.EqualValues(t, granter.FormattedAddress(), g.Granter)
+		require.EqualValues(t, grantee.FormattedAddress(), g.Grantee)
+		require.EqualValues(t, "/cosmos.feegrant.v1beta1.BasicAllowance", g.Allowance.TypeUrl)
+		require.Contains(t, string(g.Allowance.Value), "/cosmos.bank.v1beta1.MsgSend")
+
+		all, err := chain.FeeGrantGetAllowances(ctx, grantee.FormattedAddress())
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		require.EqualValues(t, granter.FormattedAddress(), all[0].Granter)
+
+		all2, err := chain.FeeGrantGetAllowancesByGranter(ctx, granter.FormattedAddress())
+		require.NoError(t, err)
+		require.Len(t, all2, 1)
+		require.EqualValues(t, grantee.FormattedAddress(), all2[0].Grantee)
+	})
+
+	t.Run("successful execution and a revoke", func(t *testing.T) {
+		granter2 := users[2]
+		grantee2 := users[3]
+
+		err = node.FeeGrant(ctx, granter2.KeyName(), grantee2.FormattedAddress(), fmt.Sprintf("%d%s", 100_000, denom), nil, time.Unix(0, 0))
+		require.NoError(t, err)
+
+		bal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
+		require.NoError(t, err)
+
+		fee := 500
+		sendAmt := 501
+		sendCoin := fmt.Sprintf("%d%s", sendAmt, denom)
+		feeCoin := fmt.Sprintf("%d%s", fee, denom)
+
+		// use the feegrant and validate the granter balance decreases by fee then add the sendAmt back
+		_, err = node.ExecTx(ctx,
+			grantee2.KeyName(), "bank", "send", grantee2.KeyName(), granter2.FormattedAddress(), sendCoin,
+			"--fees", feeCoin, "--fee-granter", granter2.FormattedAddress(),
+		)
+		require.NoError(t, err)
+
+		newBal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
+		require.NoError(t, err)
+		require.EqualValues(t, bal.AddRaw(int64(sendAmt-fee)), newBal)
+
+		// revoke the grant
+		err = node.FeeGrantRevoke(ctx, granter2.KeyName(), grantee2.FormattedAddress())
+		require.NoError(t, err)
+
+		// fail; try to execute the above logic again
+		_, err = node.ExecTx(ctx,
+			grantee2.KeyName(), "bank", "send", grantee2.KeyName(), granter2.FormattedAddress(), sendCoin,
+			"--fees", feeCoin, "--fee-granter", granter2.FormattedAddress(),
+		)
+		// TODO: actually want an error here
+		require.NoError(t, err)
+
+		postRevokeBal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
+		require.NoError(t, err)
+		require.EqualValues(t, newBal, postRevokeBal)
+	})
+
+	// perform feegrant msg
+
+	// chain.FeeGrantGetAllowance()
+	// chain.FeeGrantGetAllowances()
+	// chain.FeeGrantGetAllowancesByGranter()
+}
+
+// func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+
+// func testSlashing(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+
+// func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+
+// func testUpgrade(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
