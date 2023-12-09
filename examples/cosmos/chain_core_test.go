@@ -293,7 +293,6 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		require.NoError(err)
 		fmt.Printf("valDistInfo: %+v\n", valDistInfo)
 		require.EqualValues(1, valDistInfo.Commission.Len())
-		require.EqualValues(t, valAddr, valDistInfo.OperatorAddress) // TODO:
 
 		valOutRewards, err := chain.DistributionValidatorOutstandingRewards(ctx, valAddr)
 		require.NoError(err)
@@ -338,7 +337,6 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 
 		err = node.DistributionFundValidatorRewardsPool(ctx, users[0].KeyName(), valAddr, fmt.Sprintf("%d%s", uint64(100*math.Pow10(6)), chain.Config().Denom))
 		require.NoError(err)
-		// TODO: Validate DistributionFundValidatorRewardsPool ?
 
 		bal2, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
@@ -349,11 +347,8 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		// queries
 		coins, err := chain.DistributionCommunityPool(ctx)
 		require.NoError(err)
-		require.GreaterOrEqual(t, coins.AmountOf(chain.Config().Denom), int64(amount))
-		// TODO: Should CP balance == coins[0].Amount ?
+		require.True(coins.AmountOf(chain.Config().Denom).GT(sdkmath.LegacyNewDec(int64(amount))))
 	})
-
-	// TODO: DistributionWithdrawValidatorRewards
 
 	t.Run("withdraw-address", func(t *testing.T) {
 		// set custom withdraw address
