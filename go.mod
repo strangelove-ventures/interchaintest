@@ -6,7 +6,7 @@ toolchain go1.21.0
 
 require (
 	cosmossdk.io/math v1.2.0
-	cosmossdk.io/store v1.0.0
+	cosmossdk.io/store v1.0.1
 	cosmossdk.io/x/circuit v0.1.0
 	cosmossdk.io/x/feegrant v0.1.0
 	cosmossdk.io/x/upgrade v0.1.0
@@ -16,8 +16,8 @@ require (
 	github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/avast/retry-go/v4 v4.5.0
-	github.com/cometbft/cometbft v0.38.0
+	github.com/avast/retry-go/v4 v4.5.1
+	github.com/cometbft/cometbft v0.38.2
 	github.com/cosmos/cosmos-sdk v0.50.1
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.11
@@ -44,9 +44,9 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.16.0
 	golang.org/x/sync v0.5.0
-	golang.org/x/tools v0.14.0
+	golang.org/x/tools v0.16.0
 	google.golang.org/grpc v1.59.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.27.0
@@ -228,12 +228,12 @@ require (
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/mod v0.13.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.139.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
