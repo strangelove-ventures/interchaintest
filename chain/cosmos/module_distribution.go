@@ -5,8 +5,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // DistributionFundCommunityPool funds the community pool with the specified amount of coins.
@@ -56,9 +54,11 @@ func (tn *ChainNode) DistributionWithdrawValidatorRewards(ctx context.Context, k
 }
 
 // DistributionCommission returns the validator's commission
-func (c *CosmosChain) DistributionCommission(ctx context.Context) (*distrtypes.ValidatorAccumulatedCommission, error) {
+func (c *CosmosChain) DistributionCommission(ctx context.Context, valAddr string) (*distrtypes.ValidatorAccumulatedCommission, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
-		ValidatorCommission(ctx, &distrtypes.QueryValidatorCommissionRequest{})
+		ValidatorCommission(ctx, &distrtypes.QueryValidatorCommissionRequest{
+			ValidatorAddress: valAddr,
+		})
 	return &res.Commission, err
 }
 
@@ -84,10 +84,10 @@ func (c *CosmosChain) DistributionDelegatorValidators(ctx context.Context, deleg
 }
 
 // DistributionDelegatorWithdrawAddress returns the delegator's withdraw address
-func (c *CosmosChain) DistributionDelegatorWithdrawAddress(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegatorWithdrawAddressResponse, error) {
+func (c *CosmosChain) DistributionDelegatorWithdrawAddress(ctx context.Context, delegatorAddr string) (string, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegatorWithdrawAddress(ctx, &distrtypes.QueryDelegatorWithdrawAddressRequest{DelegatorAddress: delegatorAddr})
-	return res, err
+	return res.WithdrawAddress, err
 }
 
 // DistributionParams returns the distribution params
@@ -98,65 +98,32 @@ func (c *CosmosChain) DistributionParams(ctx context.Context) (*distrtypes.Param
 }
 
 // DistributionRewards returns the delegator's rewards
-func (c *CosmosChain) DistributionRewards(ctx context.Context, delegatorAddr string) (sdk.DecCoins, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
-		DelegationRewards(ctx, &distrtypes.QueryDelegationRewardsRequest{DelegatorAddress: delegatorAddr})
+func (c *CosmosChain) DistributionRewards(ctx context.Context, delegatorAddr, valAddr string) (sdk.DecCoins, error) {
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
+		DelegationRewards(ctx, &distrtypes.QueryDelegationRewardsRequest{
+			DelegatorAddress: delegatorAddr,
+			ValidatorAddress: valAddr,
+		})
 	return res.Rewards, err
 }
 
 // DistributionValidatorSlashes returns the validator's slashes
 func (c *CosmosChain) DistributionValidatorSlashes(ctx context.Context, valAddr string) ([]distrtypes.ValidatorSlashEvent, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorSlashes(ctx, &distrtypes.QueryValidatorSlashesRequest{ValidatorAddress: valAddr})
 	return res.Slashes, err
 }
 
 // DistributionValidatorDistributionInfo returns the validator's distribution info
 func (c *CosmosChain) DistributionValidatorDistributionInfo(ctx context.Context, valAddr string) (*distrtypes.QueryValidatorDistributionInfoResponse, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorDistributionInfo(ctx, &distrtypes.QueryValidatorDistributionInfoRequest{ValidatorAddress: valAddr})
 	return res, err
 }
 
 // DistributionValidatorOutstandingRewards returns the validator's outstanding rewards
 func (c *CosmosChain) DistributionValidatorOutstandingRewards(ctx context.Context, valAddr string) (*distrtypes.ValidatorOutstandingRewards, error) {
-	grpcConn, err := grpc.Dial(
-		c.GetNode().hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConn.Close()
-
-	res, err := distrtypes.NewQueryClient(grpcConn).
+	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorOutstandingRewards(ctx, &distrtypes.QueryValidatorOutstandingRewardsRequest{ValidatorAddress: valAddr})
 	return &res.Rewards, err
 }

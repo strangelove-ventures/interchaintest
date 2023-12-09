@@ -82,15 +82,22 @@ func (c *CosmosChain) StakingGetDelegation(ctx context.Context, valAddr string, 
 // StakingGetDelegations returns all delegations for a delegator.
 func (c *CosmosChain) StakingGetDelegations(ctx context.Context, delegator string) ([]stakingtypes.DelegationResponse, error) {
 	res, err := stakingtypes.NewQueryClient(c.GetNode().GrpcConn).
-		DelegatorDelegations(ctx, &stakingtypes.QueryDelegatorDelegationsRequest{DelegatorAddr: delegator})
+		DelegatorDelegations(ctx, &stakingtypes.QueryDelegatorDelegationsRequest{DelegatorAddr: delegator, Pagination: nil})
 	return res.DelegationResponses, err
 }
 
 // StakingGetDelegationsTo returns all delegations to a validator.
-func (c *CosmosChain) StakingGetDelegationsTo(ctx context.Context, validator string) (*stakingtypes.DelegationResponses, error) {
+func (c *CosmosChain) StakingGetDelegationsTo(ctx context.Context, validator string) ([]*stakingtypes.DelegationResponse, error) {
 	res, err := stakingtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorDelegations(ctx, &stakingtypes.QueryValidatorDelegationsRequest{ValidatorAddr: validator})
-	return &res.DelegationResponses, err
+	// return &res.DelegationResponses, err
+
+	var delegations []*stakingtypes.DelegationResponse
+	for _, d := range res.DelegationResponses {
+		delegations = append(delegations, &d)
+	}
+
+	return delegations, err
 }
 
 // StakingGetDelegatorValidator returns a validator for a delegator.
@@ -164,8 +171,9 @@ func (c *CosmosChain) StakingGetValidator(ctx context.Context, validator string)
 }
 
 // StakingGetValidators returns all validators.
-func (c *CosmosChain) StakingGetValidators(ctx context.Context) ([]stakingtypes.Validator, error) {
-	res, err := stakingtypes.NewQueryClient(c.GetNode().GrpcConn).
-		Validators(ctx, &stakingtypes.QueryValidatorsRequest{})
+func (c *CosmosChain) StakingGetValidators(ctx context.Context, status string) ([]stakingtypes.Validator, error) {
+	res, err := stakingtypes.NewQueryClient(c.GetNode().GrpcConn).Validators(ctx, &stakingtypes.QueryValidatorsRequest{
+		Status: status,
+	})
 	return res.Validators, err
 }

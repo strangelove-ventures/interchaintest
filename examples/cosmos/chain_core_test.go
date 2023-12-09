@@ -3,6 +3,7 @@ package cosmos_test
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -13,12 +14,16 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 func TestCoreSDKCommands(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
+	t.Parallel()
 
 	numVals := 1
 	numFullNodes := 0
@@ -53,6 +58,7 @@ func TestCoreSDKCommands(t *testing.T) {
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "token"),
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
 		cosmos.NewGenesisKV("app_state.bank.denom_metadata", []banktypes.Metadata{denomMetadata}),
+		// high signing rate limit, easy jailing (ref POA)
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -93,10 +99,21 @@ func TestCoreSDKCommands(t *testing.T) {
 	})
 
 	genesisAmt := sdkmath.NewInt(10_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 
-	testAuthz(ctx, t, chain, users)
-	testBank(ctx, t, chain, users)
+	t.Run("authz", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		testAuthz(ctx, t, chain, users)
+	})
+
+	t.Run("bank", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		testBank(ctx, t, chain, users)
+	})
+
+	t.Run("distribution", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		testDistribution(ctx, t, chain, users)
+	})
 }
 
 func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
@@ -104,7 +121,7 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	grantee := users[1].FormattedAddress()
 
 	// Grant BankSend Authz
-	// TODO: test other types as well (send is giving a NPE)
+	// TODO: test other types as well (send is giving a NPE) (or move to only generic types)
 	txRes, _ := cosmos.AuthzGrant(ctx, chain, users[0], grantee, "generic", "--msg-type", "/cosmos.bank.v1beta1.MsgSend")
 	require.EqualValues(t, 0, txRes.Code)
 
@@ -238,5 +255,131 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 		}
 	}
 	require.True(t, found)
+}
+
+func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	//   fund-community-pool         Funds the community pool with the specified amount
+	//   fund-validator-rewards-pool Fund the validator rewards pool with the specified amount
+	//   set-withdraw-addr           change the default withdraw address for rewards associated with an address
+	//   withdraw-all-rewards        withdraw all delegations rewards for a delegator
+	//   withdraw-rewards
+
+	// setup
+	var err error
+	node := chain.GetNode()
+	acc := authtypes.NewModuleAddress("distribution")
+	require := require.New(t)
+
+	vals, err := chain.StakingGetValidators(ctx, stakingtypes.Bonded.String())
+	require.NoError(err)
+	fmt.Printf("validators: %+v\n", vals)
+
+	del, err := chain.StakingGetDelegationsTo(ctx, vals[0].OperatorAddress)
+	require.NoError(err)
+
+	delAddr := del[0].Delegation.DelegatorAddress
+	valAddr := del[0].Delegation.ValidatorAddress
+
+	newWithdrawAddr := "cosmos1hj83l3auyqgy5qcp52l6sp2e67xwq9xx80alju"
+
+	// ----
+
+	t.Run("misc queries", func(t *testing.T) {
+		slashes, err := chain.DistributionValidatorSlashes(ctx, valAddr)
+		require.NoError(err)
+		require.EqualValues(0, len(slashes))
+
+		valDistInfo, err := chain.DistributionValidatorDistributionInfo(ctx, valAddr)
+		require.NoError(err)
+		fmt.Printf("valDistInfo: %+v\n", valDistInfo)
+		require.EqualValues(1, valDistInfo.Commission.Len())
+		require.EqualValues(t, valAddr, valDistInfo.OperatorAddress) // TODO:
+
+		valOutRewards, err := chain.DistributionValidatorOutstandingRewards(ctx, valAddr)
+		require.NoError(err)
+		require.EqualValues(1, valOutRewards.Rewards.Len())
+
+		params, err := chain.DistributionParams(ctx)
+		require.NoError(err)
+		require.True(params.WithdrawAddrEnabled)
+
+		comm, err := chain.DistributionCommission(ctx, valAddr)
+		require.NoError(err)
+		require.EqualValues(chain.Config().Denom, comm.Commission[0].Denom)
+	})
+
+	t.Run("withdraw-all-rewards", func(t *testing.T) {
+		err = node.StakingDelegate(ctx, users[2].KeyName(), valAddr, fmt.Sprintf("%d%s", uint64(100*math.Pow10(6)), chain.Config().Denom))
+		require.NoError(err)
+
+		before, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		require.NoError(err)
+		fmt.Printf("before: %+v\n", before)
+
+		err = node.DistributionWithdrawAllRewards(ctx, users[2].KeyName())
+		require.NoError(err)
+
+		after, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		require.NoError(err)
+		fmt.Printf("after: %+v\n", after)
+		require.True(after.GT(before))
+	})
+
+	// fund pools
+	t.Run("fund-pools", func(t *testing.T) {
+		bal, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		require.NoError(err)
+		fmt.Printf("CP balance: %+v\n", bal)
+
+		amount := uint64(9_000 * math.Pow10(6))
+
+		err = node.DistributionFundCommunityPool(ctx, users[0].KeyName(), fmt.Sprintf("%d%s", amount, chain.Config().Denom))
+		require.NoError(err)
+
+		err = node.DistributionFundValidatorRewardsPool(ctx, users[0].KeyName(), valAddr, fmt.Sprintf("%d%s", uint64(100*math.Pow10(6)), chain.Config().Denom))
+		require.NoError(err)
+		// TODO: Validate DistributionFundValidatorRewardsPool ?
+
+		bal2, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		require.NoError(err)
+		fmt.Printf("New CP balance: %+v\n", bal2) // 9147579661
+
+		require.True(bal2.Sub(bal).GT(sdkmath.NewInt(int64(amount))))
+
+		// queries
+		coins, err := chain.DistributionCommunityPool(ctx)
+		require.NoError(err)
+		require.GreaterOrEqual(t, coins.AmountOf(chain.Config().Denom), int64(amount))
+		// TODO: Should CP balance == coins[0].Amount ?
+	})
+
+	// TODO: DistributionWithdrawValidatorRewards
+
+	t.Run("withdraw-address", func(t *testing.T) {
+		// set custom withdraw address
+		err = node.DistributionSetWithdrawAddr(ctx, users[0].KeyName(), newWithdrawAddr)
+		require.NoError(err)
+
+		withdrawAddr, err := chain.DistributionDelegatorWithdrawAddress(ctx, users[0].FormattedAddress())
+		require.NoError(err)
+		require.EqualValues(withdrawAddr, newWithdrawAddr)
+	})
+
+	t.Run("delegator", func(t *testing.T) {
+		delRewards, err := chain.DistributionDelegationTotalRewards(ctx, delAddr)
+		require.NoError(err)
+		r := delRewards.Rewards[0]
+		require.EqualValues(valAddr, r.ValidatorAddress)
+		require.EqualValues(chain.Config().Denom, r.Reward[0].Denom)
+
+		// DistributionDelegatorValidators
+		delegatorVals, err := chain.DistributionDelegatorValidators(ctx, delAddr)
+		require.NoError(err)
+		require.EqualValues(valAddr, delegatorVals.Validators[0])
+
+		rewards, err := chain.DistributionRewards(ctx, delAddr, valAddr)
+		require.NoError(err)
+		require.EqualValues(1, rewards.Len())
+	})
 
 }

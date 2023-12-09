@@ -1,5 +1,7 @@
 package cosmos
 
+// TODO: convert all to tn or c CosmosChain? (i think tn so we can chose the server to run it on)
+
 // poad tx distribution [command]
 //   fund-community-pool         Funds the community pool with the specified amount
 //   fund-validator-rewards-pool Fund the validator rewards pool with the specified amount
