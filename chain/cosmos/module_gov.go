@@ -16,10 +16,10 @@ import (
 )
 
 // VoteOnProposal submits a vote for the specified proposal.
-func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
+func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID uint64, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote, "--gas", "auto",
+		fmt.Sprintf("%d", proposalID), vote, "--gas", "auto",
 	)
 	return err
 }
@@ -31,6 +31,7 @@ func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop Tx
 	if err != nil {
 		return "", err
 	}
+
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
@@ -42,6 +43,11 @@ func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop Tx
 	}
 
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// GovSubmitProposal is an alias for SubmitProposal.
+func (tn *ChainNode) GovSubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
+	return tn.SubmitProposal(ctx, keyName, prop)
 }
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
@@ -102,8 +108,40 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-// QueryProposal returns the state and details of a v1beta1 governance proposal.
-func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID uint64) (*govv1beta1.Proposal, error) {
+// Build a gov v1 proposal type.
+//
+// The proposer field should only be set for IBC-Go v8 / SDK v50 chains.
+func (c *CosmosChain) BuildProposal(messages []ProtoMessage, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
+	var propType TxProposalv1
+	rawMsgs := make([]json.RawMessage, len(messages))
+
+	for i, msg := range messages {
+		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
+		if err != nil {
+			return propType, err
+		}
+		rawMsgs[i] = msg
+	}
+
+	propType = TxProposalv1{
+		Messages: rawMsgs,
+		Metadata: metadata,
+		Deposit:  depositStr,
+		Title:    title,
+		Summary:  summary,
+	}
+
+	// SDK v50 only
+	if proposer != "" {
+		propType.Proposer = proposer
+		propType.Expedited = expedited
+	}
+
+	return propType, nil
+}
+
+// GovQueryProposal returns the state and details of a v1beta1 governance proposal.
+func (c *CosmosChain) GovQueryProposal(ctx context.Context, proposalID uint64) (*govv1beta1.Proposal, error) {
 	res, err := govv1beta1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1beta1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
 		return nil, err
@@ -112,12 +150,61 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID uint64) (*go
 	return &res.Proposal, nil
 }
 
-// QueryProposal returns the state and details of a v1 governance proposal.
-func (c *CosmosChain) QueryProposalV1(ctx context.Context, proposalID uint64) (*govv1.Proposal, error) {
+// GovQueryProposalV1 returns the state and details of a v1 governance proposal.
+func (c *CosmosChain) GovQueryProposalV1(ctx context.Context, proposalID uint64) (*govv1.Proposal, error) {
 	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
 		return nil, err
 	}
 
 	return res.Proposal, nil
+}
+
+// GovQueryProposalsV1 returns all proposals with a given status.
+func (c *CosmosChain) GovQueryProposalsV1(ctx context.Context, status govv1.ProposalStatus) ([]*govv1.Proposal, error) {
+	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Proposals(ctx, &govv1.QueryProposalsRequest{
+		ProposalStatus: status,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Proposals, nil
+}
+
+// GovQueryVote returns the vote for a proposal from a specific voter.
+func (c *CosmosChain) GovQueryVote(ctx context.Context, proposalID uint64, voter string) (*govv1.Vote, error) {
+	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Vote(ctx, &govv1.QueryVoteRequest{
+		ProposalId: proposalID,
+		Voter:      voter,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Vote, nil
+}
+
+// GovQueryVotes returns all votes for a proposal.
+func (c *CosmosChain) GovQueryVotes(ctx context.Context, proposalID uint64) ([]*govv1.Vote, error) {
+	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Votes(ctx, &govv1.QueryVotesRequest{
+		ProposalId: proposalID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Votes, nil
+}
+
+// GovQueryParams returns the current governance parameters.
+func (c *CosmosChain) GovQueryParams(ctx context.Context, paramsType string) (*govv1.Params, error) {
+	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Params(ctx, &govv1.QueryParamsRequest{
+		ParamsType: paramsType,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Params, nil
 }

@@ -9,14 +9,17 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -72,6 +75,7 @@ func TestCoreSDKCommands(t *testing.T) {
 				Bech32Prefix:  "cosmos",
 				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
+				GasAdjustment: 1.5,
 			},
 
 			NumValidators: &numVals,
@@ -461,7 +465,55 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 	})
 }
 
-func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	node := chain.GetNode()
+
+	govModule := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
+	coin := sdk.NewCoin(chain.Config().Denom, sdkmath.NewInt(1))
+
+	bankMsg := &banktypes.MsgSend{
+		FromAddress: govModule,
+		ToAddress:   users[1].FormattedAddress(),
+		Amount:      sdk.NewCoins(coin),
+	}
+
+	// submit governance proposal
+	title := "Test Proposal"
+	prop, err := chain.BuildProposal([]cosmos.ProtoMessage{bankMsg}, title, title+" Summary", "none", "500"+chain.Config().Denom, govModule, false)
+	require.NoError(t, err)
+
+	_, err = node.GovSubmitProposal(ctx, users[0].KeyName(), prop)
+	require.NoError(t, err)
+
+	proposal, err := chain.GovQueryProposalV1(ctx, 1)
+	require.NoError(t, err)
+	require.EqualValues(t, proposal.Title, title)
+	// fmt.Printf("proposal: %+v\n", proposal)
+
+	// vote on the proposal
+	err = node.VoteOnProposal(ctx, users[0].KeyName(), 1, "yes")
+	require.NoError(t, err)
+
+	v, err := chain.GovQueryVote(ctx, 1, users[0].FormattedAddress())
+	require.NoError(t, err)
+	require.EqualValues(t, v.Options[0].Option, govv1.VoteOption_VOTE_OPTION_YES)
+
+	// pass vote with all validators
+	err = chain.VoteOnProposalAllValidators(ctx, "1", "yes")
+	require.NoError(t, err)
+
+	// GovQueryProposalsV1
+	proposals, err := chain.GovQueryProposalsV1(ctx, govv1.ProposalStatus_PROPOSAL_STATUS_VOTING_PERIOD)
+	require.NoError(t, err)
+	require.Len(t, proposals, 1)
+
+	require.NoError(t, testutil.WaitForBlocks(ctx, 10, chain))
+
+	// Proposal fails due to gov not having any funds
+	proposals, err = chain.GovQueryProposalsV1(ctx, govv1.ProposalStatus_PROPOSAL_STATUS_FAILED)
+	require.NoError(t, err)
+	require.Len(t, proposals, 1)
+}
 
 // func testSlashing(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
 

@@ -17,7 +17,7 @@ import (
 func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID uint64, status govv1.ProposalStatus) (*govv1.Proposal, error) {
 	var pr *govv1.Proposal
 	doPoll := func(ctx context.Context, height uint64) (*govv1.Proposal, error) {
-		p, err := chain.QueryProposalV1(ctx, proposalID)
+		p, err := chain.GovQueryProposalV1(ctx, proposalID)
 		if err != nil {
 			return pr, err
 		}
@@ -36,7 +36,7 @@ func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeigh
 func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID uint64, status govv1beta1.ProposalStatus) (*govv1beta1.Proposal, error) {
 	var zero *govv1beta1.Proposal
 	doPoll := func(ctx context.Context, height uint64) (*govv1beta1.Proposal, error) {
-		p, err := chain.QueryProposal(ctx, proposalID)
+		p, err := chain.GovQueryProposal(ctx, proposalID)
 		if err != nil {
 			return zero, err
 		}

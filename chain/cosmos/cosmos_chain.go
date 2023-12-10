@@ -24,7 +24,6 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -446,38 +445,6 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
 	}
 	return c.txProposal(txHash)
-}
-
-// Build a gov v1 proposal type.
-//
-// The proposer field should only be set for IBC-Go v8 / SDK v50 chains.
-func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
-	var propType TxProposalv1
-	rawMsgs := make([]json.RawMessage, len(messages))
-
-	for i, msg := range messages {
-		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
-		if err != nil {
-			return propType, err
-		}
-		rawMsgs[i] = msg
-	}
-
-	propType = TxProposalv1{
-		Messages: rawMsgs,
-		Metadata: metadata,
-		Deposit:  depositStr,
-		Title:    title,
-		Summary:  summary,
-	}
-
-	// SDK v50 only
-	if proposer != "" {
-		propType.Proposer = proposer
-		propType.Expedited = expedited
-	}
-
-	return propType, nil
 }
 
 // TextProposal submits a text governance proposal to the chain.
@@ -1222,12 +1189,17 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 }
 
 func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
+	propID, err := strconv.ParseUint(proposalID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse proposalID %s: %w", proposalID, err)
+	}
+
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {
 			n := n
 			eg.Go(func() error {
-				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
+				return n.VoteOnProposal(ctx, valKey, propID, vote)
 			})
 		}
 	}

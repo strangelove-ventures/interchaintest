@@ -472,7 +472,7 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
 	}
 	if !gasAdjustmentFound {
-		command = append(command, "--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment))
+		command = append(command, "--gas-adjustment", strconv.FormatFloat(tn.Chain.Config().GasAdjustment, 'f', -1, 64))
 	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
