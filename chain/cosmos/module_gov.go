@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 )
@@ -22,37 +24,8 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 	return err
 }
 
-// QueryProposal returns the state and details of a governance proposal.
-func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
-	if err != nil {
-		return nil, err
-	}
-	var proposal ProposalResponse
-	err = json.Unmarshal(stdout, &proposal)
-	if err != nil {
-		return nil, err
-	}
-	return &proposal, nil
-}
-
-// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
-func (tn *ChainNode) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
-	if err != nil {
-		return nil, err
-	}
-	var proposal ProposalResponseV8
-	err = json.Unmarshal(stdout, &proposal)
-	if err != nil {
-		return nil, err
-	}
-	return &proposal, nil
-}
-
 // SubmitProposal submits a gov v1 proposal to the chain.
 func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
-	// Write msg to container
 	file := "proposal.json"
 	propJson, err := json.MarshalIndent(prop, "", " ")
 	if err != nil {
@@ -127,4 +100,24 @@ func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, pr
 	}
 
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+// QueryProposal returns the state and details of a v1beta1 governance proposal.
+func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID uint64) (*govv1beta1.Proposal, error) {
+	res, err := govv1beta1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1beta1.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return nil, err
+	}
+
+	return &res.Proposal, nil
+}
+
+// QueryProposal returns the state and details of a v1 governance proposal.
+func (c *CosmosChain) QueryProposalV1(ctx context.Context, proposalID uint64) (*govv1.Proposal, error) {
+	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1.QueryProposalRequest{ProposalId: proposalID})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Proposal, nil
 }

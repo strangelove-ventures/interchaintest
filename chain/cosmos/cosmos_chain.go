@@ -400,16 +400,6 @@ func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (
 	return c.getFullNode().GetModuleAddress(ctx, moduleName)
 }
 
-// QueryProposal returns the state and details of a governance proposal.
-func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
-	return c.getFullNode().QueryProposal(ctx, proposalID)
-}
-
-// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
-func (c *CosmosChain) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
-	return c.getFullNode().QueryProposalV8(ctx, proposalID)
-}
-
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
