@@ -2,7 +2,6 @@ package cosmos
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -36,13 +35,8 @@ func (tn *ChainNode) FeeGrant(ctx context.Context, granterKey, grantee, spendLim
 }
 
 // FeeGrantRevoke revokes a fee grant.
-func (tn *ChainNode) FeeGrantRevoke(ctx context.Context, keyName, granteeAddr string) error {
-	granterAddr, err := tn.KeyBech32(ctx, keyName, "acc")
-	if err != nil {
-		return fmt.Errorf("FeeGrantRevoke failed to get granter address: %w", err)
-	}
-
-	_, err = tn.ExecTx(ctx, keyName, "feegrant", "revoke", granterAddr, granteeAddr)
+func (tn *ChainNode) FeeGrantRevoke(ctx context.Context, keyName, granterAddr, granteeAddr string) error {
+	_, err := tn.ExecTx(ctx, keyName, "feegrant", "revoke", granterAddr, granteeAddr)
 	return err
 }
 
