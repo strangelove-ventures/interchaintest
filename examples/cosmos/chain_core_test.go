@@ -17,24 +17,21 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
+	circuittypes "cosmossdk.io/x/circuit/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
-func TestCoreSDKCommands(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	t.Parallel()
+var (
+	numVals      = 1
+	numFullNodes = 0
+	genesisAmt   = sdkmath.NewInt(10_000_000_000)
 
-	numVals := 1
-	numFullNodes := 0
+	mnemonic = "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
 
-	cosmos.SetSDKConfig("cosmos")
-
-	denomMetadata := banktypes.Metadata{
+	denomMetadata = banktypes.Metadata{
 		Description: "Denom metadata for TOK (token)",
 		DenomUnits: []*banktypes.DenomUnit{
 			{
@@ -55,6 +52,24 @@ func TestCoreSDKCommands(t *testing.T) {
 		URI:     "",
 		URIHash: "",
 	}
+	circuitAcc = []circuittypes.GenesisAccountPermissions{
+		{
+			Address: "cosmos1hj5fveer5cjtn4wd6wstzugjfdxzl0xpxvjjvr",
+			Permissions: &circuittypes.Permissions{
+				Level:         circuittypes.Permissions_LEVEL_SUPER_ADMIN,
+				LimitTypeUrls: []string{"cosmos.bank.v1beta1.MsgSend,cosmos.bank.v1beta1.MsgMultiSend"},
+			},
+		},
+	}
+)
+
+func TestCoreSDKCommands(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	t.Parallel()
+
+	cosmos.SetSDKConfig("cosmos")
 
 	sdk47Genesis := []cosmos.GenesisKV{
 		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
@@ -62,6 +77,7 @@ func TestCoreSDKCommands(t *testing.T) {
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "token"),
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
 		cosmos.NewGenesisKV("app_state.bank.denom_metadata", []banktypes.Metadata{denomMetadata}),
+		cosmos.NewGenesisKV("app_state.circuit.account_permissions", circuitAcc),
 		// high signing rate limit, easy jailing (ref POA) with 4 vals
 	}
 
@@ -104,7 +120,9 @@ func TestCoreSDKCommands(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	genesisAmt := sdkmath.NewInt(10_000_000_000)
+	superAdmin, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "acc0", mnemonic, genesisAmt, chain)
+	require.NoError(t, err)
+	fmt.Printf("acc0: %+v\n", superAdmin) // use in circuit
 
 	t.Run("authz", func(t *testing.T) {
 		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
@@ -129,6 +147,11 @@ func TestCoreSDKCommands(t *testing.T) {
 	t.Run("gov", func(t *testing.T) {
 		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 		testGov(ctx, t, chain, users)
+	})
+
+	t.Run("circuit", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		testCircuit(ctx, t, chain, users, superAdmin)
 	})
 }
 
@@ -520,3 +543,19 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 // func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
 
 // func testUpgrade(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+
+func testCircuit(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet, superAdmin ibc.Wallet) {
+	node := chain.GetNode()
+
+	// get the superAdmin account
+	acc, err := chain.CircuitGetAccount(ctx, superAdmin.FormattedAddress())
+	require.NoError(t, err)
+	fmt.Printf("acc: %+v\n", acc)
+
+	err = node.CircuitAuthorize(ctx, superAdmin.KeyName(), users[0].FormattedAddress(), int(circuittypes.Permissions_LEVEL_ALL_MSGS), []string{"cosmos.bank.v1beta1.MsgSend"})
+	require.NoError(t, err) // TODO: no typeUrls provided
+
+	// CircuitGetAccounts
+	// node.CircuitDisable
+	// CircuitGetDisableList
+}
