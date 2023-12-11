@@ -190,7 +190,6 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 	if err != nil {
 		return sdk.TxResponse{}, err
 	}
-
 	cc, err := broadcaster.GetClientContext(ctx, broadcastingUser)
 	if err != nil {
 		return sdk.TxResponse{}, err

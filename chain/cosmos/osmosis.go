@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
@@ -35,7 +36,7 @@ func OsmosisCreatePool(c *CosmosChain, ctx context.Context, keyName string, para
 
 	if _, err := tn.ExecTx(ctx, keyName,
 		"gamm", "create-pool",
-		"--pool-file", filepath.Join(tn.HomeDir(), poolFile),
+		"--pool-file", filepath.Join(tn.HomeDir(), poolFile), "--gas", "700000",
 	); err != nil {
 		return "", fmt.Errorf("failed to create pool: %w", err)
 	}
@@ -54,6 +55,47 @@ func OsmosisCreatePool(c *CosmosChain, ctx context.Context, keyName string, para
 		return "", fmt.Errorf("could not find number of pools in query response: %w", err)
 	}
 	return numPools, nil
+}
+
+// OsmosisQueryPoolIds get a list of pool IDs
+// PoolType - Balancer or StableSwap
+// MinLiquidity - String of the coins in single string seperated by comma. Ex) 10uatom,100uosmo
+func OsmosisQueryPoolIds(c *CosmosChain, ctx context.Context, minLiquidity, poolType string) ([]uint64, error) {
+	tn := c.getFullNode()
+
+	stdout, _, err := tn.ExecQuery(ctx, "gamm", "pools-with-filter", minLiquidity, poolType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query pools: %w", err)
+	}
+	var res map[string]interface{}
+	if err := json.Unmarshal(stdout, &res); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal query response: %w", err)
+	}
+
+	poolsMap, ok := res["pools"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("could not parse query response: %w", err)
+	}
+
+	ids := []uint64{}
+	for _, currPool := range poolsMap {
+		iPoolsMap, ok := currPool.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("could not parse query response: %w", err)
+		}
+
+		cpm, ok := iPoolsMap["id"].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not parse query response: %w", err)
+		}
+		id, err := strconv.ParseUint(cpm, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("pool id unexpected type: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
 }
 
 func OsmosisSwapExactAmountIn(c *CosmosChain, ctx context.Context, keyName string, coinIn string, minAmountOut string, poolIDs []string, swapDenoms []string) (string, error) {
