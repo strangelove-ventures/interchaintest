@@ -146,6 +146,9 @@ func (p *PenumbraAppNode) ReadFile(ctx context.Context, relPath string) ([]byte,
 func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	fileBz, err := p.ReadFile(ctx, keyPath+"config.toml")
+	if err != nil {
+		return "", err
+	}
 
 	c := PcliConfig{}
 	err = toml.Unmarshal(fileBz, &c)

@@ -16,7 +16,6 @@ type PenumbraNode struct {
 	PenumbraAppNode     *PenumbraAppNode
 	PenumbraClientNodes map[string]*PenumbraClientNode
 	clientsMu           sync.Locker
-	address             []byte
 	addrString          string
 }
 

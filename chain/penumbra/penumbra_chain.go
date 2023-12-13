@@ -557,6 +557,9 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		eg.Go(func() error {
 			keyPath := filepath.Join("keys", keyName, "config.toml")
 			fileBz, err := val.PenumbraAppNode.ReadFile(ctx, keyPath)
+			if err != nil {
+				return err
+			}
 
 			cfg := PcliConfig{}
 			err = toml.Unmarshal(fileBz, &cfg)
@@ -596,6 +599,9 @@ func (c *PenumbraChain) CreateClientNode(
 
 	keyPath := filepath.Join("keys", keyName, "config.toml")
 	fileBz, err := val.PenumbraAppNode.ReadFile(ctx, keyPath)
+	if err != nil {
+		return err
+	}
 
 	cfg := PcliConfig{}
 	err = toml.Unmarshal(fileBz, &cfg)
