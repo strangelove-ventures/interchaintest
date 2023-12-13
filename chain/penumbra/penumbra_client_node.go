@@ -230,8 +230,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	fmt.Println("In SendIBCTransfer from client perspective.")
-
 	channel, err := grpc.Dial(
 		p.hostGRPCPort,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -248,7 +246,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 	timeoutHeight, timeoutTimestamp := ibcTransferTimeouts(options)
 
-	fmt.Println("Building Ics20Withdrawal...")
 	hi, lo := translateBigInt(amount.Amount)
 
 	withdrawal := &ibcv1alpha1.Ics20Withdrawal{
