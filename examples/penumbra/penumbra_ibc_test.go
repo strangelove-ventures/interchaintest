@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -34,7 +35,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.63.3,v0.37.2",
+			Version: "v0.64.1,v0.37.2",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -43,7 +44,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 		},
 		{
 			Name:    "penumbra",
-			Version: "v0.63.3,v0.37.2",
+			Version: "v0.64.1,v0.37.2",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraB-0",
 			},
@@ -145,7 +146,6 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	// Compose ics-20 transfer details and initialize transfer
 	bobAddr, err := chainB.GetAddress(ctx, bob.KeyName())
 	require.NoError(t, err)
-	t.Logf("Bob Addr From App: %s \n", bobAddr)
 
 	transferAmount := math.NewInt(1_000_000)
 	transfer := ibc.WalletAmount{
@@ -162,7 +162,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: 0,
+			NanoSeconds: uint64((time.Duration(30000000) * time.Minute).Nanoseconds()),
 			Height:      h + 50,
 		},
 		Memo: "",
@@ -179,12 +179,6 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
 	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
-	ibcDenomTrace := transfertypes.ParseDenomTrace(ibcDenom)
-	chainADenomOnChainB := ibcDenomTrace.IBCDenom()
-
-	t.Logf("Prefixed Denom: %s \n", ibcDenom)
-	t.Logf("Denom Trace: %s \n", ibcDenomTrace.String())
-	t.Logf("IBC Denom: %s \n", chainADenomOnChainB)
 
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
@@ -214,7 +208,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.63.3,v0.37.2",
+			Version: "v0.64.1,v0.37.2",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -348,7 +342,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: 0,
+			NanoSeconds: uint64((time.Duration(30000000) * time.Minute).Nanoseconds()),
 			Height:      h + 50,
 		},
 		Memo: "",
