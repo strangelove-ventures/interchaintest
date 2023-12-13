@@ -33,8 +33,15 @@ require (
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
 	cosmossdk.io/errors v1.0.0 // indirect
 	cosmossdk.io/log v1.2.1 // indirect
+<<<<<<< HEAD
 	cosmossdk.io/math v1.1.2 // indirect
 	cosmossdk.io/tools/rosetta v0.2.1 // indirect
+=======
+	cosmossdk.io/math v1.2.0 // indirect
+	cosmossdk.io/store v1.0.1 // indirect
+	cosmossdk.io/x/tx v0.12.0 // indirect
+	cosmossdk.io/x/upgrade v0.1.0 // indirect
+>>>>>>> eccf06d (typo: `CONTAINTERS` to `CONTAINERS` (#905))
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -46,9 +53,14 @@ require (
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Microsoft/go-winio v0.6.0 // indirect
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0 // indirect
+<<<<<<< HEAD
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/avast/retry-go/v4 v4.5.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.203 // indirect
+=======
+	github.com/avast/retry-go/v4 v4.5.1 // indirect
+	github.com/aws/aws-sdk-go v1.44.224 // indirect
+>>>>>>> eccf06d (typo: `CONTAINTERS` to `CONTAINERS` (#905))
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816 // indirect
@@ -60,8 +72,13 @@ require (
 	github.com/cockroachdb/errors v1.11.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
+<<<<<<< HEAD
 	github.com/coinbase/rosetta-sdk-go/types v1.0.0 // indirect
 	github.com/cometbft/cometbft v0.37.2 // indirect
+=======
+	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
+	github.com/cometbft/cometbft v0.38.2 // indirect
+>>>>>>> eccf06d (typo: `CONTAINTERS` to `CONTAINERS` (#905))
 	github.com/cometbft/cometbft-db v0.8.0 // indirect
 	github.com/confio/ics23/go v0.9.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
@@ -212,6 +229,7 @@ require (
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+<<<<<<< HEAD
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb // indirect
 	golang.org/x/mod v0.12.0 // indirect
@@ -222,6 +240,18 @@ require (
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
+=======
+	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/oauth2 v0.12.0 // indirect
+	golang.org/x/sync v0.5.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/tools v0.16.0 // indirect
+>>>>>>> eccf06d (typo: `CONTAINTERS` to `CONTAINERS` (#905))
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.126.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
