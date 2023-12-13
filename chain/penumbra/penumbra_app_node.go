@@ -356,7 +356,6 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 
 func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, opts ibc.TransferOptions) (ibc.Tx, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 
 	parts := strings.Split(channelID, "-")
 	chanNum := parts[1]
@@ -368,14 +367,12 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 		fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	}
 
-	stdout, stderr, err := p.Exec(ctx, cmd, nil)
+	_, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return ibc.Tx{}, err
 	}
 
-	fmt.Printf("STDOUT: %s \n", string(stdout))
-	fmt.Printf("STDERR: %s \n", string(stderr))
-
+	// TODO: fill in the rest of the Tx information for the ics_20 transfer
 	tx := ibc.Tx{
 		Height:   0,
 		TxHash:   "",
