@@ -93,7 +93,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
-		keepContainers := os.Getenv("KEEP_CONTAINTERS") != ""
+		keepContainers := os.Getenv("KEEP_CONTAINERS") != ""
 
 		ctx := context.TODO()
 		cli.NegotiateAPIVersion(ctx)
