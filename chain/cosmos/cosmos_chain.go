@@ -328,7 +328,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if err != nil {
 		return tx, fmt.Errorf("send ibc transfer: %w", err)
 	}
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -390,6 +390,11 @@ func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*Pr
 	return c.getFullNode().QueryProposal(ctx, proposalID)
 }
 
+// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
+func (c *CosmosChain) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
+	return c.getFullNode().QueryProposalV8(ctx, proposalID)
+}
+
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
@@ -439,7 +444,9 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 }
 
 // Build a gov v1 proposal type.
-func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr string) (TxProposalv1, error) {
+//
+// The proposer field should only be set for IBC-Go v8 / SDK v50 chains.
+func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
 	var propType TxProposalv1
 	rawMsgs := make([]json.RawMessage, len(messages))
 
@@ -457,6 +464,12 @@ func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summa
 		Deposit:  depositStr,
 		Title:    title,
 		Summary:  summary,
+	}
+
+	// SDK v50 only
+	if proposer != "" {
+		propType.Proposer = proposer
+		propType.Expedited = expedited
 	}
 
 	return propType, nil
@@ -492,7 +505,7 @@ func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*Ban
 }
 
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
-	txResp, err := c.getTransaction(txHash)
+	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
@@ -522,7 +535,7 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (txHash string, err error) {
+func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
 }
 
@@ -593,9 +606,9 @@ func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Co
 	return res.GetBalances(), nil
 }
 
-func (c *CosmosChain) getTransaction(txhash string) (*types.TxResponse, error) {
+func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
 	fn := c.getFullNode()
-	return fn.getTransaction(fn.CliContext(), txhash)
+	return fn.GetTransaction(fn.CliContext(), txhash)
 }
 
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
@@ -841,13 +854,15 @@ type ValidatorWithIntPower struct {
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
+	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
+
 	genesisAmount := types.Coin{
-		Amount: sdkmath.NewInt(10_000_000_000_000),
+		Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow),
 		Denom:  chainCfg.Denom,
 	}
 
 	genesisSelfDelegation := types.Coin{
-		Amount: sdkmath.NewInt(5_000_000_000_000),
+		Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow),
 		Denom:  chainCfg.Denom,
 	}
 

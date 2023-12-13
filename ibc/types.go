@@ -54,6 +54,8 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// CoinDecimals for the chains base micro/nano/atto token configuration.
+	CoinDecimals *int64
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -66,6 +68,11 @@ func (c ChainConfig) Clone() ChainConfig {
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
+
+	if c.CoinDecimals != nil {
+		coinDecimals := *c.CoinDecimals
+		x.CoinDecimals = &coinDecimals
+	}
 
 	return x
 }
@@ -162,6 +169,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if len(other.SidecarConfigs) > 0 {
 		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
+	}
+
+	if other.CoinDecimals != nil {
+		c.CoinDecimals = other.CoinDecimals
 	}
 
 	return c

@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
+from time import sleep
 
 from httpx import post
 
@@ -62,10 +63,14 @@ class ActionHandler:
 
 
 class RequestBuilder:
-    def __init__(self, api: str, chain_id: str, log_output: bool = False):
+    # sleep_sec only applies if the request cmd starts with 'tx'
+    def __init__(
+        self, api: str, chain_id: str, sleep_sec: int = 6, log_output: bool = False
+    ):
         self.api = api
         self.chain_id = chain_id
         self.log = log_output
+        self.sleep_sec = sleep_sec
 
         if self.api == "":
             raise Exception("RequestBuilder api is empty")
@@ -73,10 +78,14 @@ class RequestBuilder:
         if self.chain_id == "":
             raise Exception("RequestBuilder chain_id is empty")
 
-    def binary(self, cmd: str, log_output: bool = False) -> dict:
+    def binary(self, cmd: str, ignore_pause=False, log_output: bool = False) -> dict:
         rb = RequestBase(self.api, self.chain_id, RequestType.BIN)
         return send_request(
-            rb, cmd, log_output=(log_output if log_output else self.log)
+            rb,
+            self.sleep_sec,
+            cmd,
+            ignore_pause,
+            log_output=(log_output if log_output else self.log),
         )
 
     def query(self, cmd: str, log_output: bool = False) -> dict:
@@ -87,7 +96,7 @@ class RequestBuilder:
 
         rb = RequestBase(self.api, self.chain_id, RequestType.QUERY)
         return send_request(
-            rb, cmd, log_output=(log_output if log_output else self.log)
+            rb, 0, cmd, log_output=(log_output if log_output else self.log)
         )
 
     # What / when is response?
@@ -105,7 +114,9 @@ class RequestBuilder:
 
 def send_request(
     base: RequestBase,
+    sleep_sec: int,
     cmd: str = "",
+    ignore_pause: bool = False,
     return_text: bool = False,
     log_output: bool = False,
 ) -> dict:
@@ -125,6 +136,9 @@ def send_request(
         json=payload,
         headers={"Content-Type": "application/json"},
     )
+
+    if cmd.startswith("tx") and not ignore_pause:
+        sleep(sleep_sec)
 
     if log_output:
         if res.text != "{}":

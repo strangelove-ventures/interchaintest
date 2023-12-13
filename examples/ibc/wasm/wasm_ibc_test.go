@@ -79,7 +79,7 @@ func TestWasmIbc(t *testing.T) {
 
 	// Create and Fund User Wallets
 	initBal := math.NewInt(100_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal.Int64(), juno1, juno2)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal, juno1, juno2)
 	juno1User := users[0]
 	juno2User := users[1]
 
@@ -164,8 +164,9 @@ func TestWasmIbc(t *testing.T) {
 	require.NoError(t, err)
 	juno1ChannelID := juno1ChannelInfo[len(juno1ChannelInfo)-1].ChannelID
 
+	queryMsg := fmt.Sprintf(`{"account":{"channel_id":"%s"}}`, juno1ChannelID)
+
 	// Query ibc_reflect_send contract on Juno1 for remote address (populated via ibc)
-	queryMsg := ReflectSendQueryMsg{Account: &AccountQuery{ChannelID: juno1ChannelID}}
 	var ibcReflectSendResponse IbcReflectSendResponseData
 	err = juno1Chain.QueryContract(ctx, ibcReflectSendContractAddr, queryMsg, &ibcReflectSendResponse)
 	require.NoError(t, err)
@@ -181,16 +182,6 @@ func TestWasmIbc(t *testing.T) {
 	//    - ibc_reflect_send contract (Juno1) remote address (retrieved via ibc)
 	//    - ibc_reflect contract (Juno2) account address populated locally
 	require.Equal(t, ibcReflectSendResponse.Data.RemoteAddr, ibcReflectResponse.Data.Account)
-}
-
-type ReflectSendQueryMsg struct {
-	Admin        *struct{}     `json:"admin,omitempty"`
-	ListAccounts *struct{}     `json:"list_accounts,omitempty"`
-	Account      *AccountQuery `json:"account,omitempty"`
-}
-
-type AccountQuery struct {
-	ChannelID string `json:"channel_id"`
 }
 
 type Coin struct {

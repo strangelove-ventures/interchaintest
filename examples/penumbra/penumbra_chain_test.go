@@ -69,7 +69,7 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 	})
 
 	initBalance := math.NewInt(1_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
 	require.Equal(t, 1, len(users))
 
 	alice := users[0]
@@ -81,7 +81,7 @@ func TestPenumbraNetworkIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
 
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chain)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
 	require.Equal(t, 1, len(users))
 
 	bob := users[0]
