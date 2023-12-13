@@ -119,7 +119,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	// Fund users and check init balances
 	initBalance := math.NewInt(1_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainA)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chainA)
 	require.Equal(t, 1, len(users))
 
 	alice := users[0]
@@ -131,7 +131,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
 
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainB)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chainB)
 	require.Equal(t, 1, len(users))
 
 	bob := users[0]
@@ -302,7 +302,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	// Fund users and check init balances
 	initBalance := math.NewInt(1_000_000_000)
-	pUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainA)
+	pUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chainA)
 	require.Equal(t, 1, len(pUsers))
 
 	alice := pUsers[0]
@@ -314,7 +314,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(initBalance), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
 
-	cUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance.Int64(), chainB)
+	cUsers := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chainB)
 	require.Equal(t, 1, len(cUsers))
 
 	bob := cUsers[0]
