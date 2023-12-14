@@ -2,11 +2,11 @@
 
 This document breaks down code snippets from [learn_ibc_test.go](../examples/ibc/learn_ibc_test.go). This test:
 
-1) Spins up two chains (Gaia and Osmosis) 
+1) Spins up two chains (Gaia and Osmosis)
 2) Creates an IBC Path between them (client, connection, channel)
 3) Sends an IBC transaction between them.
 
-It validates each step and confirms that the balances of each wallet are correct. 
+It validates each step and confirms that the balances of each wallet are correct.
 
 
 ### Three basic components of `interchaintest`:
@@ -26,21 +26,21 @@ cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaint
 })
 ```
 
-The chain factory is where you configure your chain binaries. 
+The chain factory is where you configure your chain binaries.
 
-`interchaintest` needs a docker image with the chain binary(s) installed to spin up the local testnet. 
+`interchaintest` needs a docker image with the chain binary(s) installed to spin up the local testnet.
 
 `interchaintest` has several [pre-configured chains](../configuredChains.yaml). These docker images are pulled from [Heighliner](https://github.com/strangelove-ventures/heighliner) (repository of docker images of many IBC enabled chains). Note that Heighliner needs to have the `Version` you are requesting.
 
 When creating your `ChainFactory`, if the `Name` matches the name of a pre-configured chain, the pre-configured settings are used. You can override these settings by passing them into the `ibc.ChainConfig` when initializing your ChainFactory. We do this above with `GasPrices` for gaia.
 
-You can also pass in **remote images** and/or **local docker images**. 
+You can also pass in **remote images** and/or **local docker images**.
 
 See an examples below:
 
 ```go
 cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-    
+
     // -- PRE CONFIGURED CHAIN EXAMPLE --
     {Name: "gaia", Version: "v7.0.2"},
 
@@ -71,7 +71,7 @@ If you are not using a pre-configured chain, you must fill out all values of the
 
 By default, `interchaintest` will spin up a 3 docker images for each chain:
 - 2 validator nodes
-- 1 full node. 
+- 1 full node.
 
 These settings can all be configured inside the `ChainSpec`.
 
@@ -94,9 +94,9 @@ gaia, osmosis := chains[0], chains[1]
 
 ## Relayer Factory
 
-The relayer factory is where relayer docker images are configured. 
+The relayer factory is where relayer docker images are configured.
 
-Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into `interchaintest`. 
+Currently only the [Cosmos/Relayer](https://github.com/cosmos/relayer)(CosmosRly) is integrated into `interchaintest`.
 
 Here we prep an image with the Cosmos/Relayer:
 ```go
@@ -107,7 +107,7 @@ r := interchaintest.NewBuiltinRelayerFactory(ibc.CosmosRly, zaptest.NewLogger(t)
 
 ## Interchain
 
-This is where we configure our test-net/interchain. 
+This is where we configure our test-net/interchain.
 
 We prep the "interchain" by adding chains, a relayer, and specifying which chains to create IBC paths for:
 
@@ -146,20 +146,20 @@ Upon calling build, several things happen (specifically for cosmos based chains)
     - 1 trillion "stake" are staked
     - 100 billion "stake" are self delegated
 - Each chain gets a faucet address (key named "faucet") with 10 billion units of denom funded in genesis
-- The relayer wallet gets 1 billion units of each chains denom funded in genesis 
+- The relayer wallet gets 1 billion units of each chains denom funded in genesis
 - Genesis for each chain takes place
 - IBC paths are created: `client`, `connection`, `channel` for each link
 
 
-Note that this function takes a `testReporter`. This will instruct `interchaintest` to export and reports of the test(s). The `RelayerExecReporter` satisfies the reporter requirement. 
+Note that this function takes a `testReporter`. This will instruct `interchaintest` to export and reports of the test(s). The `RelayerExecReporter` satisfies the reporter requirement.
 
 Note: If report files are not needed, you can use `testreporter.NewNopReporter()` instead.
-    
+
 
 Passing in the optional `BlockDatabaseFile` will instruct `interchaintest` to create a sqlite3 database with all block history. This includes raw event data.
 
 
-Unless specified, default options are used for `client`, `connection`, and `channel` creation. 
+Unless specified, default options are used for `client`, `connection`, and `channel` creation.
 
 
 Default `createChannelOptions` are:
@@ -206,7 +206,7 @@ osmosisUser := users[1]
 
 ## Interacting with the Interchain
 
-Now that the interchain is built, you can interact with each binary. 
+Now that the interchain is built, you can interact with each binary.
 
 EXAMPLE: Getting the RPC address:
 ```go
@@ -225,7 +225,7 @@ transfer := ibc.WalletAmount{
 tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName, transfer, ibc.TransferOptions{})
 ```
 
-The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary. 
+The `Exec` method allows any arbitrary command to be passed into a chain binary or relayer binary.
 
 EXAMPLE: Sending an IBC transfer with the `Exec`:
 ```go

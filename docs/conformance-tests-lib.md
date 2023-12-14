@@ -9,7 +9,7 @@ You can view all the specific conformance test by reviewing them in the [conform
 
 ## Importing Conformance Tests In Your Project
 
-`interchaintest` can be imported into your own packages to be used as a library as well as being used from the 
+`interchaintest` can be imported into your own packages to be used as a library as well as being used from the
 binary itself, see [here](conformance-tests-bin.md).
 
 A common pattern when importing `interchaintest` into your own repositories is to use a Go submodule. The reason being
@@ -21,16 +21,16 @@ to use specific versions of dependencies. To avoid this issue one will typically
 
 The main entrypoint exposed by the `conformance` package is a function named `Test`.
 
-Here is the function signature of `Test`:   
+Here is the function signature of `Test`:
 ```go
 func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, rfs []interchaintest.RelayerFactory, rep *testreporter.Reporter)
 ```
 
-It accepts a normal `testing.T` and `context.Context` from the Go standard library as well as a few types defined in `interchaintest`.  
+It accepts a normal `testing.T` and `context.Context` from the Go standard library as well as a few types defined in `interchaintest`.
 
 - `testreporter.Reporter` is used for collecting detailed test reports, you can read more about it [here](../testreporter/doc.go).
 - `interchaintest.ChainFactory` is used to define which chain pairs should be used in conformance testing.
-- `interchaintest.RelayerFactory` is used to define which relayer implementations should be used to test IBC functionality between your chain pairs.  
+- `interchaintest.RelayerFactory` is used to define which relayer implementations should be used to test IBC functionality between your chain pairs.
 
 It is important to note that the `Test` function accepts a slice of `ChainFactory`, currently the `conformance` tests only work against
 a pair of two chains at a time. This means that each `ChainFactory` should only contain definitions for two chains,

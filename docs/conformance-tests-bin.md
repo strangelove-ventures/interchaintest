@@ -2,7 +2,7 @@
 
 `interchaintest` comes with a suite of conformance tests. These tests ensure IBC and relayer compatibility. On a high-level it tests:
 - `client`, `channel`, and `connection` creation
-- messages are properly relayed and acknowledged 
+- messages are properly relayed and acknowledged
 - packets are being properly timed out
 
 You can view all the specific conformance test by reviewing them in the [conformance](../conformance/) folder.
@@ -20,7 +20,7 @@ go test -v ./cmd/interchaintest/
 ### Custom Environment
 Using the binary allows for easy custom chain pairs and custom testing environments.
 
-This is accomplished via the `-matrix` argument. 
+This is accomplished via the `-matrix` argument.
 ```shell
 interchaintest -matrix <path/to/matrix.json>
 ```
@@ -39,13 +39,13 @@ By passing in a matrix file you can customize these aspects of the environment:
 
 **Pre-Configured Chains**
 
-`interchaintest` comes with [pre-configured chains](../configuredChains.yaml). 
-In the matrix file, if `Name` matches the name of any pre-configured chain, `interchaintest` will use standard settings UNLESS overriden in the matrix file. [example_matrix_custom.json](../cmd/interchaintest/example_matrix_custom.json) is an example of overriding all options.
+`interchaintest` comes with [pre-configured chains](../configuredChains.yaml).
+In the matrix file, if `Name` matches the name of any pre-configured chain, `interchaintest` will use standard settings UNLESS overridden in the matrix file. [example_matrix_custom.json](../cmd/interchaintest/example_matrix_custom.json) is an example of overriding all options.
 
 
 **Custom Binaries**
 Chain binaries must be installed in a docker container.
-The `Image` array in the matrix json file allows you to pass in docker images with your chain binary of choice. 
+The `Image` array in the matrix json file allows you to pass in docker images with your chain binary of choice.
 If the docker image does not live in a public repository, can you **pass in a local docker image like so:**
 
 ```json
