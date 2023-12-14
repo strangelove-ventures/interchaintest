@@ -12,7 +12,7 @@ contracts_json_path = os.path.join(parent_dir, "configs", "contracts.json")
 
 # create contracts folder if not already
 if not os.path.exists(contracts_path):
-    os.mkdir(contracts_path)
+    os.makedirs(contracts_path)
 
 HOST = "127.0.0.1"
 PORT = 8080

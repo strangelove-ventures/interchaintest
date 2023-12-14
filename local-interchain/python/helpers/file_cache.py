@@ -15,6 +15,7 @@ class Cache:
     @staticmethod
     def reset_contracts_cache_json():
         if not os.path.exists(contracts_json_path):
+            os.makedirs(os.path.dirname(contracts_json_path))
             with open(contracts_json_path, "w") as f:
                 f.write(json.dumps({"start_time": 0, "file_cache": {}}))
 
@@ -33,6 +34,7 @@ class Cache:
     def get_cache_or_default(contracts: dict, ictest_chain_start: int) -> dict:
         cache_time: str | int = 0
         if os.path.exists(contracts_json_path):
+            os.makedirs(os.path.dirname(contracts_json_path))
             with open(contracts_json_path, "r") as f:
                 c = dict(json.load(f))
                 cache_time = c.get("start_time", 0)
