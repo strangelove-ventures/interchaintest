@@ -33,10 +33,10 @@ To get started, follow these steps:
    git clone https://github.com/<Username>/interchaintest.git
    ```
 
-3. Crate a new branch on your fork
+3. Create a new branch on your fork
 
     ```sh
-    git checkout -b name/broad-description-of-feature    
+    git checkout -b name/broad-description-of-feature
     ```
 
 4. Make your changes and commit them with descriptive commit messages.

@@ -1331,7 +1331,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)

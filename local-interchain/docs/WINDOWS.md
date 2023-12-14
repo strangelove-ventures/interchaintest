@@ -35,7 +35,7 @@ If your Windows system is missing Hyper-V, you can follow [this guide](https://w
 ## Environment Setup
 
 ### 1. Installing Docker
-Make sure you have wsl installed, you can check by running **Windows PowerShell** as adminstrator and running `wsl --install` which would install wsl2 if missing.
+Make sure you have wsl installed, you can check by running **Windows PowerShell** as administrator and running `wsl --install` which would install wsl2 if missing.
 
 For Win 10 and Win 11, follow [this guide](https://docs.docker.com/desktop/install/windows-install/) to setup and install Docker Desktop on your Windows system.
 
@@ -83,7 +83,7 @@ GCC does not come with Windows, and the best compatible setup I've found was usi
 ![](https://i.imgur.com/EeZUeJU.png)
 
 4. Choose installation folder and click Install.
- 
+
 ![](https://i.imgur.com/D25unIm.png)
 
 5. After installation, no need to run *Code::Blocks* and click Next then Finish.
@@ -100,7 +100,7 @@ After finishing the steps above, open a new cmd or shell, and you will be able t
 1. Start the docker daemon by running **Docker Desktop** on Win 10/11 or using [**Docker Quickstart Terminal**](https://github.com/microsoft/docker/blob/master/docs/installation/windows.md#using-the-docker-quickstart-terminal) if you have installed Docker Toolbox.
 2. Clone the Local Interchain Repo.
 ```bash
-git clone https://github.com/strangelove-ventures/interchaintest.git 
+git clone https://github.com/strangelove-ventures/interchaintest.git
 cd interchaintest/local-interchain
 ```
 3. Run `make install`

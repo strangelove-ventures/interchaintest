@@ -159,7 +159,7 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	fn := c.getFullNode()
 	if fn.PenumbraAppNode == nil {
-		return nil, fmt.Errorf("no penumbra app nodes configured to retreive an address from")
+		return nil, fmt.Errorf("no penumbra app nodes configured to retrieve an address from")
 	}
 	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }
