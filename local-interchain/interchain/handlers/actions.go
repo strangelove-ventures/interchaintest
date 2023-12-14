@@ -195,11 +195,13 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 
 func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
 	if relayer != nil {
-		relayer.StopRelayer(ctx, eRep)
+		if err := relayer.StopRelayer(ctx, eRep); err != nil {
+			panic(err)
+		}
 	}
 
 	for _, v := range vals {
-		go v.StopContainer(ctx)
+		go v.StopContainer(ctx) // nolint:errcheck
 	}
 
 	ic.Close()

@@ -3,14 +3,21 @@ package main
 import (
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/strangelove-ventures/localinterchain/interchain"
+	"github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 
 const (
 	FlagAPIAddressOverride = "api-address"
 	FlagAPIPortOverride    = "api-port"
+
+	FlagRelayerImage        = "relayer-image"
+	FlagRelayerVersion      = "relayer-version"
+	FlagRelayerUidGid       = "relayer-uidgid"
+	FlagRelayerStartupFlags = "relayer-startup-flags"
 )
 
 var startCmd = &cobra.Command{
@@ -35,9 +42,23 @@ var startCmd = &cobra.Command{
 		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
 		apiPort, _ := cmd.Flags().GetUint16(FlagAPIPortOverride)
 
+		relayerImg := cmd.Flag(FlagRelayerImage).Value.String()
+		relayerVer := cmd.Flag(FlagRelayerVersion).Value.String()
+		relayerUidGid := cmd.Flag(FlagRelayerUidGid).Value.String()
+		relayerFlags := strings.Split(cmd.Flag(FlagRelayerStartupFlags).Value.String(), " ")
+
 		interchain.StartChain(parentDir, configPath, &interchain.AppConfig{
 			Address: apiAddr,
 			Port:    apiPort,
+
+			Relayer: types.Relayer{
+				DockerImage: types.DockerImage{
+					Repository: relayerImg,
+					Version:    relayerVer,
+					UidGid:     relayerUidGid,
+				},
+				StartupFlags: relayerFlags,
+			},
 		})
 	},
 }
@@ -45,4 +66,9 @@ var startCmd = &cobra.Command{
 func init() {
 	startCmd.Flags().String(FlagAPIAddressOverride, "127.0.0.1", "override the default API address")
 	startCmd.Flags().Uint16(FlagAPIPortOverride, 8080, "override the default API port")
+
+	startCmd.Flags().String(FlagRelayerImage, "ghcr.io/cosmos/relayer", "override the docker relayer image")
+	startCmd.Flags().String(FlagRelayerVersion, "latest", "override the default relayer version")
+	startCmd.Flags().String(FlagRelayerUidGid, "100:1000", "override the default image UID:GID")
+	startCmd.Flags().String(FlagRelayerStartupFlags, "--block-history=100", "override the default relayer startup flags")
 }
