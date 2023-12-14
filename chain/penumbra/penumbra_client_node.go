@@ -11,7 +11,10 @@ import (
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
+	//nolint:staticcheck
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -562,23 +565,28 @@ func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []strin
 	return res.Stdout, res.Stderr, res.Err
 }
 
-// ibcTransferTimeouts returns a relative block height and timestamp timeout value to be used when sending an ics-20 transfer.
+// shouldUseDefaults checks if the provided timeout is nil or has both the NanoSeconds and Height fields set to zero.
+// If the timeout is nil or both fields are zeros, it returns true, indicating that the defaults should be used.
+// Otherwise, it returns false, indicating that the provided timeout should be used.
+func shouldUseDefaults(timeout *ibc.IBCTimeout) bool {
+	return timeout == nil || (timeout.NanoSeconds == 0 && timeout.Height == 0)
+}
+
+// ibcTransferTimeouts calculates the timeout height and timeout timestamp for an IBC transfer based on the provided options.
+//
+// If the options.Timeout is nil or both NanoSeconds and Height are equal to zero, it uses the defaultTransferTimeouts function to get the default timeout values.
+// Otherwise, it sets the timeoutTimestamp to options.Timeout.NanoSeconds and timeoutHeight to clienttypes.NewHeight(0, options.Timeout.Height).
+//
+// The function then returns the timeoutHeight and timeoutTimestamp.
 func ibcTransferTimeouts(options ibc.TransferOptions) (clienttypes.Height, uint64) {
 	var (
 		timeoutHeight    clienttypes.Height
 		timeoutTimestamp uint64
 	)
 
-	// timeout is nil - use ics-20 defaults
-	// timeout height and timestamp both set to 0 - use ics-20 defaults
-	// timeout height and timestamp both have values greater than 0 - pass through values
-	// timeout height or timestamp greater than 0 but other is zero - pass through values
-	switch {
-	case options.Timeout == nil:
+	if shouldUseDefaults(options.Timeout) {
 		timeoutHeight, timeoutTimestamp = defaultTransferTimeouts()
-	case options.Timeout.NanoSeconds == 0 && options.Timeout.Height == 0:
-		timeoutHeight, timeoutTimestamp = defaultTransferTimeouts()
-	default:
+	} else {
 		timeoutTimestamp = options.Timeout.NanoSeconds
 		timeoutHeight = clienttypes.NewHeight(0, options.Timeout.Height)
 	}
