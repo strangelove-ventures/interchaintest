@@ -21,6 +21,11 @@ type DockerImage struct {
 	UidGid     string `json:"uid_gid"`
 }
 
+type Relayer struct {
+	DockerImage  DockerImage `json:"docker_image"`
+	StartupFlags []string    `json:"startup_flags"`
+}
+
 type IBCChannel struct {
 	ChainID string             `json:"chain_id"`
 	Channel *ibc.ChannelOutput `json:"channel"`
