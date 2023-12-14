@@ -68,6 +68,7 @@ type PenumbraGenesisAppStateAllocation struct {
 	Address string   `json:"address"`
 }
 
+// NewPenumbraChain returns a new instance of PenumbraChain.
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
@@ -84,40 +85,44 @@ func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 	}
 }
 
+// Acknowledgements implements Chain interface.
 func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
+// Timeouts implements Chain interface.
 func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
-// Implements Chain interface
+// Config returns the Chain's ChainConfig.
 func (c *PenumbraChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
-// Implements Chain interface
+// Initialize creates the test node objects required for bootstrapping tests.
 func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	return c.initializeChainNodes(ctx, testName, cli, networkID)
 }
 
-// Exec implements chain interface.
+// Exec attempts to execute an arbitrary cmd with specified env variables and returns the output returned to
+// both stdout and stderr.
 func (c *PenumbraChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.getFullNode().PenumbraAppNode.Exec(ctx, cmd, env)
 }
 
+// getFullNode returns the first configured validator node in the network.
 func (c *PenumbraChain) getFullNode() *PenumbraNode {
 	// use first validator
 	return c.PenumbraNodes[0]
 }
 
-// Implements Chain interface
+// GetRPCAddress returns the RPC address associated with an underlying node's Tendermint host name.
 func (c *PenumbraChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().TendermintNode.HostName())
 }
 
-// Implements Chain interface
+// GetGRPCAddress returns the GRPC address associated with an underlying node's Tendermint host name.
 func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
 }
@@ -134,6 +139,7 @@ func (c *PenumbraChain) GetHostGRPCAddress() string {
 	return c.getFullNode().PenumbraAppNode.hostGRPCPort
 }
 
+// HomeDir returns the PenumbraAppNode's home directory in the Docker filesystem.
 func (c *PenumbraChain) HomeDir() string {
 	return c.getFullNode().PenumbraAppNode.HomeDir()
 }
@@ -165,9 +171,8 @@ func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte,
 	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
-// BuildWallet will return a Penumbra wallet
-// If mnemonic != "", it will restore using that mnemonic
-// If mnemonic == "", it will create a new key
+// BuildWallet will return a Penumbra wallet.
+// If mnemonic != "", it will restore using that mnemonic. If mnemonic == "", it will create a new key.
 func (c *PenumbraChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -238,6 +243,7 @@ func (c *PenumbraChain) SendIBCTransfer(
 	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
+// ExportState implements Chain interface.
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
@@ -271,7 +277,7 @@ func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(fees)
 }
 
-// creates the test node objects required for bootstrapping tests
+// initializeChainNodes creates the test node objects required for bootstrapping tests.
 func (c *PenumbraChain) initializeChainNodes(
 	ctx context.Context,
 	testName string,
@@ -298,6 +304,7 @@ func (c *PenumbraChain) initializeChainNodes(
 			_ = rc.Close()
 		}
 	}
+
 	for i := 0; i < count; i++ {
 		pn, err := NewPenumbraNode(ctx, i, c, cli, networkID, testName, chainCfg.Images[0], chainCfg.Images[1])
 		if err != nil {
@@ -305,6 +312,7 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 		penumbraNodes = append(penumbraNodes, &pn)
 	}
+
 	c.PenumbraNodes = penumbraNodes
 
 	return nil
@@ -332,6 +340,8 @@ type ValidatorWithIntPower struct {
 	PubKeyBase64 string
 }
 
+// Start sets up everything needed, (validators, gentx, fullnodes, peering, additional accounts),
+// for the chain to start from genesis.
 func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	validators := c.PenumbraNodes[:c.numValidators]
 	fullnodes := c.PenumbraNodes[c.numValidators:]
@@ -345,6 +355,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	for i, v := range validators {
 		v := v
 		i := i
+
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 		eg.Go(func() error {
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
@@ -473,7 +484,7 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	return c.start(ctx)
 }
 
-// Bootstraps the chain and starts it from genesis
+// start bootstraps the chain and starts it from genesis.
 func (c *PenumbraChain) start(ctx context.Context) error {
 	// Copy the penumbra genesis to all tendermint nodes.
 	genesisContent, err := c.PenumbraNodes[0].PenumbraAppNode.genesisFileContent(ctx)
@@ -588,6 +599,8 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	return eg.Wait()
 }
 
+// CreateClientNode initializes a new instance of pclientd, with the FullViewingKey and CustodyKey,
+// associated with the specified keyName.
 func (c *PenumbraChain) CreateClientNode(
 	ctx context.Context,
 	keyName string,

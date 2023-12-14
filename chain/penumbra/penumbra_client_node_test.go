@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestBigIntDecoding tests the decoding of big integers.
 func TestBigIntDecoding(t *testing.T) {
 	bigInt := math.NewInt(11235813)
 	hi, lo := translateBigInt(bigInt)
@@ -23,6 +24,13 @@ func TestBigIntDecoding(t *testing.T) {
 	require.True(t, converted.Equal(bInt))
 }
 
+// TestIbcTransferTimeout tests the function ibcTransferTimeouts
+// in order to verify that it behaves correctly under different scenarios.
+// Scenario 1: both timeout values equal zero - return default timeout values
+// Scenario 2: options has nil timeout value - return default timeout values
+// Scenario 3: both timeout values equal non-zero values - use specified timeout values
+// Scenario 4: only nanoseconds equals non-zero value - use specified value for timestamp and zero for height
+// Scenario 5: only height equals non-zero value - use specified value for height and zero for timestamp
 func TestIbcTransferTimeout(t *testing.T) {
 	defaultHeight, defaultTimestamp := defaultTransferTimeouts()
 	zero := uint64(0)

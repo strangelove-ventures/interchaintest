@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// PenumbraAppNode represents an instance of pcli.
 type PenumbraAppNode struct {
 	log *zap.Logger
 
@@ -36,6 +37,19 @@ type PenumbraAppNode struct {
 	hostGRPCPort string
 }
 
+// NewPenumbraAppNode creates a new instance of PenumbraAppNode with the provided parameters.
+// It initializes the PenumbraAppNode struct, sets the logger, index, chain, Docker client,
+// network ID, test name, and Docker image.
+// It also creates a container lifecycle instance with the provided logger, Docker client,
+// and node name.
+// Next, it creates a Docker volume with labels for cleanup and owner identification.
+// If volume creation fails, an error is returned.
+// The volume name is set to the PenumbraAppNode volume name.
+// The volume owner is set using the provided context, Docker client, volume name, image reference,
+// test name, and UID/GID from the Docker image.
+// If volume owner setting fails, an error is returned.
+// Finally, the created PenumbraAppNode instance is returned along with a nil error,
+// or a nil PenumbraAppNode and a non-nil error if any step in the process fails.
 func NewPenumbraAppNode(
 	ctx context.Context,
 	log *zap.Logger,
@@ -60,6 +74,7 @@ func NewPenumbraAppNode(
 	if err != nil {
 		return nil, fmt.Errorf("creating penumbra volume: %w", err)
 	}
+
 	pn.VolumeName = pv.Name
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 		Log: log,
@@ -91,37 +106,43 @@ var exposedPorts = nat.PortSet{
 	nat.Port(metricsPort): {},
 }
 
-// Name of the test node container
+// Name of the test node container.
 func (p *PenumbraAppNode) Name() string {
 	return fmt.Sprintf("pd-%d-%s-%s", p.Index, p.Chain.Config().ChainID, p.TestName)
 }
 
-// the hostname of the test node container
+// HostName returns the hostname of the test node container.
 func (p *PenumbraAppNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (p *PenumbraAppNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.HomeDir())}
 }
 
+// HomeDir returns the home directory location in the Docker filesystem.
 func (p *PenumbraAppNode) HomeDir() string {
 	return "/home/heighliner"
 }
 
+// CreateKey attempts to initialize a new pcli config file with a newly generated FullViewingKey and CustodyKey.
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 	cmd := []string{"pcli", "--home", keyPath, "init", "--grpc-url", pdUrl, "soft-kms", "generate"}
+
 	_, stderr, err := p.Exec(ctx, cmd, nil)
-	// already exists error is okay
+
+	// key already exists, error is okay
 	if err != nil && !strings.Contains(string(stderr), "not empty;, refusing to initialize") {
 		return err
 	}
+
 	return nil
 }
 
+// PcliConfig represents the config.toml file associated with an instance of pcli.
 type PcliConfig struct {
 	GrpcURL        string `toml:"grpc_url"`
 	FullViewingKey string `toml:"full_viewing_key"`
@@ -143,6 +164,7 @@ func (p *PenumbraAppNode) ReadFile(ctx context.Context, relPath string) ([]byte,
 	return fileBz, nil
 }
 
+// FullViewingKey attempts to read the FullViewingKey from the config.toml file associated with this instance of pcli.
 func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (string, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	fileBz, err := p.ReadFile(ctx, keyPath+"config.toml")
@@ -170,15 +192,15 @@ func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic stri
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 
-	// already exists error is okay
+	// key already exists, error is okay
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
 		return err
 	}
+
 	return nil
 }
 
-// initializes validator definition template file
-// wallet must be generated first
+// InitValidatorFile initializes validator definition template file, wallet must be generated first.
 func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", valKeyName)
 	cmd := []string{
@@ -187,22 +209,31 @@ func (p *PenumbraAppNode) InitValidatorFile(ctx context.Context, valKeyName stri
 		"validator", "definition", "template",
 		"--file", p.ValidatorDefinitionTemplateFilePathContainer(),
 	}
+
 	_, _, err := p.Exec(ctx, cmd, nil)
 	return err
 }
 
+// ValidatorDefinitionTemplateFilePathContainer returns the path to the validator.toml file associated with
+// this instance of pcli.
 func (p *PenumbraAppNode) ValidatorDefinitionTemplateFilePathContainer() string {
 	return filepath.Join(p.HomeDir(), "validator.toml")
 }
 
+// ValidatorsInputFileContainer returns the path to the validators.json file associated with
+// this instance of pcli.
 func (p *PenumbraAppNode) ValidatorsInputFileContainer() string {
 	return filepath.Join(p.HomeDir(), "validators.json")
 }
 
+// AllocationsInputFileContainer returns the path to the allocations.csv file that should be used
+// to generate the genesis file before spinning up the network from a fresh genesis.
 func (p *PenumbraAppNode) AllocationsInputFileContainer() string {
 	return filepath.Join(p.HomeDir(), "allocations.csv")
 }
 
+// genesisFileContent attempts to read the contents of the genesis.json file associated with the
+// network that we are attempting to initialize from genesis.
 func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(p.log, p.DockerClient, p.TestName)
 	gen, err := fr.SingleFileContent(ctx, p.VolumeName, ".penumbra/testnet_data/node0/cometbft/config/genesis.json")
@@ -213,6 +244,9 @@ func (p *PenumbraAppNode) genesisFileContent(ctx context.Context) ([]byte, error
 	return gen, nil
 }
 
+// GenerateGenesisFile attempts to create the validators.json file and the allocations.csv file, write the files to
+// the Docker filesystem, and then generate the directory structure containing necessary files to create a
+// new testnet from genesis via an instance of pd.
 func (p *PenumbraAppNode) GenerateGenesisFile(
 	ctx context.Context,
 	chainID string,
@@ -255,9 +289,9 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	return err
 }
 
+// GetAddress attempts to return a Penumbra address associated with a specified key name.
 func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 	cmd := []string{"pcli", "--home", keyPath, "view", "address"}
 
 	stdout, _, err := p.Exec(ctx, cmd, nil)
@@ -273,10 +307,10 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 	return []byte(addr), nil
 }
 
+// GetBalance attempts to query the token balances for a specified key name via an instance of pcli.
 // TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	//pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
 	cmd := []string{"pcli", "--home", keyPath, "view", "balance"}
 
 	stdout, _, err := p.Exec(ctx, cmd, nil)
@@ -288,26 +322,43 @@ func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64
 	return 0, nil
 }
 
+// GetAddressBech32m retrieves the address associated with the specified key name.
+// It executes the 'pcli' command and parses the output to find the desired address.
+// The 'pcli' command is executed with the '--home' flag and the home directory of the app node.
+// If no address is found for the key name, it returns an error indicating that the address was not found.
+// The function returns the retrieved address as a string and an error if any occurred.
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
 	cmd := []string{"pcli", "--home", p.HomeDir(), "addr", "list"}
 	stdout, _, err := p.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
 	}
+
 	addresses := strings.Split(string(stdout), "\n")
 	for _, address := range addresses {
 		fields := strings.Fields(address)
 		if len(fields) < 3 {
 			continue
 		}
+
 		if fields[1] == keyName {
 			return fields[2], nil
 		}
 	}
-	return "", errors.New("address not found")
 
+	return "", errors.New("address not found")
 }
 
+// CreateNodeContainer creates a container for the PenumbraAppNode.
+// It starts the PenumbraAppNode process with the specified tendermintAddress.
+// The container is created using the CreateContainer method of the containerLifecycle object.
+// The container is named using p.TestName.
+// It is assigned the p.NetworkID network and runs on the p.Image image.
+// The container also exposes the abciPort, grpcPort, and metricsPort.
+// The container's home directory is set to p.HomeDir().
+// The command to start the PenumbraAppNode process is constructed using the pd command and its arguments.
+// Additional environment variables can be set using the env parameter.
+// The method returns any errors encountered during the container creation process.
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAddress string) error {
 	cmd := []string{
 		"pd", "start",
@@ -318,18 +369,24 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	// TODO: remove after debugging
-	env := []string{
-		"RUST_LOG=debug",
-	}
+	// env can be used to set environment variables to do things like set RUST_LOG=debug.
+	var env []string
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, env)
 }
 
+// StopContainer stops the running container for the PenumbraAppNode.
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 	return p.containerLifecycle.StopContainer(ctx)
 }
 
+// StartContainer starts the test node container.
+// It calls the StartContainer method of the containerLifecycle field to start the container.
+// If an error occurs, it is returned.
+// It then calls the GetHostPorts method of the containerLifecycle field to retrieve the host ports for RPC and gRPC.
+// If an error occurs, it is returned.
+// The obtained host ports are assigned to the hostRPCPort and hostGRPCPort fields of the PenumbraAppNode struct.
+// Finally, nil is returned if everything is successful.
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
@@ -345,7 +402,7 @@ func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// Exec run a container for a specific job and block until the container exits
+// Exec run a container for a specific job and blocks until the container exits.
 func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.ContainerOptions{
@@ -353,10 +410,29 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		User:  p.Image.UidGid,
 	}
+
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }
 
+// SendIBCTransfer sends an IBC transfer from the current node to a specified address and channel.
+//
+// Parameters:
+//   - ctx: The context of the method call.
+//   - channelID: The ID of the channel to send the transfer.
+//   - keyName: The name of the key used for signing the transaction.
+//   - amount: The amount to transfer (including address and denomination).
+//   - opts: Additional options for the transfer.
+//
+// Returns:
+//   - tx: The transaction information for the IBC transfer (partially filled).
+//   - error: An error if the transfer fails.
+//
+// Note: The `SendIBCTransfer` method uses the `pcli` command-line tool to execute a transaction
+//
+//	to withdraw tokens from the specified channel and send them to the specified address.
+//	The `tx` object returned represents the transaction information for the IBC transfer.
+//	The function currently does not fill in all details of the `tx` object and requires further implementation.
 func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, opts ibc.TransferOptions) (ibc.Tx, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 

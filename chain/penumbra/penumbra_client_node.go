@@ -17,7 +17,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	assetv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
 	ibcv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
-	shielded_poolv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
+	shieldedpoolv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
 	keysv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1alpha1"
 	numv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1alpha1"
 	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1alpha1"
@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// PenumbraClientNode represents an instance of pclientd.
 type PenumbraClientNode struct {
 	log *zap.Logger
 
@@ -51,6 +52,8 @@ type PenumbraClientNode struct {
 	hostGRPCPort string
 }
 
+// NewClientNode attempts to initialize a new instance of pclientd.
+// It then attempts to create the Docker container lifecycle and the Docker volume before setting the volume owner.
 func NewClientNode(
 	ctx context.Context,
 	log *zap.Logger,
@@ -88,6 +91,7 @@ func NewClientNode(
 	if err != nil {
 		return nil, fmt.Errorf("creating pclientd volume: %w", err)
 	}
+
 	p.VolumeName = tv.Name
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 		Log: log,
@@ -109,25 +113,35 @@ const (
 	pclientdPort = "8081/tcp"
 )
 
+// pclientdPorts is a variable of type nat.PortSet that represents the set of ports used by the pclientd service.
+// Declaration:
+//
+//	var pclientdPorts = nat.PortSet{
+//	  nat.Port(pclientdPort): {},
+//	}
+//
+// Example usage:
+// func (p *Penumbra
 var pclientdPorts = nat.PortSet{
 	nat.Port(pclientdPort): {},
 }
 
-// Name of the test node container
+// Name of the test node container.
 func (p *PenumbraClientNode) Name() string {
 	return fmt.Sprintf("pclientd-%d-%s-%s-%s", p.Index, p.KeyName, p.Chain.Config().ChainID, p.TestName)
 }
 
-// the hostname of the test node container
+// HostName returns the hostname of the test node container.
 func (p *PenumbraClientNode) HostName() string {
 	return dockerutil.CondenseHostName(p.Name())
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (p *PenumbraClientNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", p.VolumeName, p.HomeDir())}
 }
 
+// HomeDir returns the home directory for this instance of pclientd in the Docker filesystem.
 func (p *PenumbraClientNode) HomeDir() string {
 	return "/home/pclientd"
 }
@@ -156,6 +170,13 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 	return resp.Address.Inner, nil
 }
 
+// SendFunds sends funds from the PenumbraClientNode to a specified address.
+// It generates a transaction plan, gets authorization data for the transaction,
+// builds and signs the transaction, and broadcasts it.
+// Parameters:
+// - ctx: The context of the operation.
+// - amount: The amount of funds to send, including the address and denomination.
+// Returns an error if any step of the process fails.
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
 	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -224,6 +245,10 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	return nil
 }
 
+// SendIBCTransfer sends an IBC transfer from the current PenumbraClientNode to a specified destination address on a specified channel.
+// It dials a gRPC connection to the hostGRPCPort, and if successful, closes the connection before returning. It returns an error if dialing the gRPC connection fails.
+// The function validates the address string on the current PenumbraClientNode instance. If the address string is empty, it returns an error.
+// It translates the amount to a big integer and creates an `ibcv1alpha1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
 func (p *PenumbraClientNode) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -239,7 +264,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 	defer channel.Close()
 
-	// TODO may need to be more defensive than this. additionally we may want to validate the addr string
+	// TODO may need to be more defensive than this, additionally we may want to validate the addr string.
 	if p.addrString == "" {
 		return ibc.Tx{}, fmt.Errorf("address string was not cached on pclientd instance for key with name %s", p.KeyName)
 	}
@@ -330,6 +355,22 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}, nil
 }
 
+// GetBalance retrieves the balance of a specific denom for the PenumbraClientNode.
+//
+// This method establishes a gRPC connection to the PenumbraClientNode using the hostGRPCPort information.
+// It then creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
+// A Balances stream response is obtained from the server.
+// The balances are collected in a slice until the stream is done, or an error occurs.
+// If no balances are found, an error is returned.
+// Otherwise, the first balance in the slice is used to construct a math.Int value and returned.
+//
+// Parameters:
+// - ctx: The context.Context used for the gRPC connection.
+// - denom: The denomination of the asset to get the balance for.
+//
+// Returns:
+// - math.Int: The balance of the specified denom.
+// - error: An error if any occurred during the balance retrieval.
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
 	channel, err := grpc.Dial(
 		p.hostGRPCPort,
@@ -380,7 +421,9 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 }
 
 // translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
-// they represent. Since Go does not support native uint128 we make use of the big.Int type.
+// they represent.
+//
+// Since Go does not support native uint128 we make use of the big.Int type.
 // see: https://github.com/penumbra-zone/penumbra/blob/4d175986f385e00638328c64d729091d45eb042a/crates/core/crypto/src/asset/amount.rs#L220-L240
 func translateHiAndLo(hi, lo uint64) math.Int {
 	hiBig := big.NewInt(0).SetUint64(hi)
@@ -394,7 +437,7 @@ func translateHiAndLo(hi, lo uint64) math.Int {
 	return math.NewIntFromBigInt(i)
 }
 
-// translateBigInt converts a Cosmos SDK Int, which is a wrapper around Go's big.Int, into two uint64 values
+// translateBigInt converts a Cosmos SDK Int, which is a wrapper around Go's big.Int, into two uint64 values.
 func translateBigInt(i math.Int) (uint64, uint64) {
 	bz := i.BigInt().Bytes()
 
@@ -430,8 +473,8 @@ func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *asse
 	}
 	defer channel.Close()
 
-	queryClient := shielded_poolv1alpha1.NewQueryServiceClient(channel)
-	req := &shielded_poolv1alpha1.DenomMetadataByIdRequest{
+	queryClient := shieldedpoolv1alpha1.NewQueryServiceClient(channel)
+	req := &shieldedpoolv1alpha1.DenomMetadataByIdRequest{
 		ChainId: p.Chain.Config().ChainID,
 		AssetId: assetId,
 	}
@@ -471,6 +514,7 @@ func (p *PenumbraClientNode) Initialize(ctx context.Context, pdAddress, spendKey
 	return p.WriteFile(ctx, buf.Bytes(), "config.toml")
 }
 
+// CreateNodeContainer creates a container for the Penumbra client node.
 func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{
 		"pclientd",
@@ -478,16 +522,18 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 		"start",
 	}
 
+	// env can be used to set environment variables for this instance of pclientd to do things like set RUST_LOG=debug
 	var env []string
-	env = append(env, "RUST_LOG=debug")
 
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
 }
 
+// StopContainer stops the container associated with the PenumbraClientNode.
 func (p *PenumbraClientNode) StopContainer(ctx context.Context) error {
 	return p.containerLifecycle.StopContainer(ctx)
 }
 
+// StartContainer starts the test node container.
 func (p *PenumbraClientNode) StartContainer(ctx context.Context) error {
 	if err := p.containerLifecycle.StartContainer(ctx); err != nil {
 		return err
@@ -503,7 +549,7 @@ func (p *PenumbraClientNode) StartContainer(ctx context.Context) error {
 	return nil
 }
 
-// Exec run a container for a specific job and block until the container exits
+// Exec runs a container for a specific job and blocks until the container exits.
 func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
 	job := dockerutil.NewImage(p.log, p.DockerClient, p.NetworkID, p.TestName, p.Image.Repository, p.Image.Version)
 	opts := dockerutil.ContainerOptions{
@@ -511,6 +557,7 @@ func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []strin
 		Env:   env,
 		User:  p.Image.UidGid,
 	}
+
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }

@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// PenumbraNode reporesents a node in the Penumbra network which consists of one instance of Tendermint,
+// an instance of pcli, and zero or more instances of pclientd.
 type PenumbraNode struct {
 	TendermintNode      *tendermint.TendermintNode
 	PenumbraAppNode     *PenumbraAppNode
@@ -19,10 +21,10 @@ type PenumbraNode struct {
 	addrString          string
 }
 
+// PenumbraNodes is a slice of pointers that point to instances of PenumbraNode in memory.
 type PenumbraNodes []*PenumbraNode
 
-// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
-// with docker volumes created.
+// NewPenumbraNode returns a penumbra chain node with tendermint and penumbra nodes, along with docker volumes created.
 func NewPenumbraNode(
 	ctx context.Context,
 	i int,
@@ -51,6 +53,8 @@ func NewPenumbraNode(
 	}, nil
 }
 
+// CreateClientNode initializes a new instance of pclientd, with the specified FullViewingKey and CustodyKey,
+// before attempting to create and start pclientd in a new Docker container.
 func (p *PenumbraNode) CreateClientNode(
 	ctx context.Context,
 	log *zap.Logger,
