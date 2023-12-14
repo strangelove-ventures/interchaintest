@@ -27,14 +27,14 @@ jobs:
         with:
             go-version: ${{ env.GO_VERSION }}
 
-      - name: build local-interchain        
+      - name: build local-interchain
         run: go mod tidy && make install
 
       - name: Upload localic artifact
         uses: actions/upload-artifact@v3
         with:
           name: local-ic
-          path: ~/go/bin/local-ic          
+          path: ~/go/bin/local-ic
 
 
   rust-e2e:
@@ -46,7 +46,7 @@ jobs:
         working-directory: ./local-interchain
     strategy:
       fail-fast: false
-      
+
     steps:
       - name: checkout chain
         uses: actions/checkout@v4
@@ -64,17 +64,17 @@ jobs:
         with:
           name: local-ic
           path: /tmp
-      
+
       - name: Make local-ic executable
         run: chmod +x /tmp/local-ic
 
-      - name: Start background ibc local-interchain        
+      - name: Start background ibc local-interchain
         run: /tmp/local-ic start juno_ibc --api-port 8080 &
-      
+
       - name: Run Rust Script
         run: cd rust && cargo run --package localic-bin --bin localic-bin
 
-      - name: Cleanup        
+      - name: Cleanup
         run: killall local-ic && exit 0
 
   python-e2e:
@@ -85,12 +85,12 @@ jobs:
       run:
         working-directory: ./local-interchain
     strategy:
-      matrix:        
-        test:          
+      matrix:
+        test:
           - ["api_test", 8081]
           - ["ibc_contract", 8082]
       fail-fast: false
-      
+
     steps:
       - name: checkout chain
         uses: actions/checkout@v4
@@ -100,22 +100,22 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
-      - run: pip install -r python/requirements.txt --break-system-packages  
+      - run: pip install -r python/requirements.txt --break-system-packages
 
       - name: Download Tarball Artifact
         uses: actions/download-artifact@v3
         with:
           name: local-ic
           path: /tmp
-      
+
       - name: Make local-ic executable
         run: chmod +x /tmp/local-ic
 
       - name: Start background ibc local-interchain
         run: /tmp/local-ic start juno_ibc --api-port ${{ matrix.test[1] }} &
-      
-      - name: Run Python Script        
+
+      - name: Run Python Script
         run: python3 ./python/${{ matrix.test[0] }}.py --api-port ${{ matrix.test[1] }}
 
-      - name: Cleanup        
+      - name: Cleanup
         run: killall local-ic && exit 0
