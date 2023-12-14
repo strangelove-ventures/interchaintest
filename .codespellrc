@@ -1,4 +1,4 @@
 [codespell]
-skip = *.pb.*,*.sum,go.mod,./internal
+skip = *.pb.*,*.sum,go.mod
 quiet-level = 2
 ignore-words = .github/workflows/spell-check-ignore.txt
