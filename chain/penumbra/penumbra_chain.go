@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
@@ -34,6 +35,8 @@ type PenumbraChain struct {
 	numFullNodes  int
 	PenumbraNodes PenumbraNodes
 	keyring       keyring.Keyring
+
+	mutex sync.Mutex
 }
 
 type PenumbraValidatorDefinition struct {
@@ -86,12 +89,12 @@ func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 }
 
 // Acknowledgements implements Chain interface.
-func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *PenumbraChain) Acknowledgements(context.Context, uint64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
 // Timeouts implements Chain interface.
-func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *PenumbraChain) Timeouts(context.Context, uint64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
@@ -244,7 +247,7 @@ func (c *PenumbraChain) SendIBCTransfer(
 }
 
 // ExportState implements Chain interface.
-func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
+func (c *PenumbraChain) ExportState(context.Context, int64) (string, error) {
 	panic("implement me")
 }
 
@@ -342,7 +345,7 @@ type ValidatorWithIntPower struct {
 
 // Start sets up everything needed, (validators, gentx, fullnodes, peering, additional accounts),
 // for the chain to start from genesis.
-func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	validators := c.PenumbraNodes[:c.numValidators]
 	fullnodes := c.PenumbraNodes[c.numValidators:]
 
@@ -410,6 +413,9 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorDefinitions[i] = validatorTemplateDefinition
 
 			// self delegation
+			c.mutex.Lock()
+			defer c.mutex.Unlock()
+
 			allocations = append(allocations,
 				PenumbraGenesisAppStateAllocation{
 					Amount:  math.NewInt(100_000_000_000),
@@ -432,11 +438,13 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	for _, wallet := range additionalGenesisWallets {
+		c.mutex.Lock()
 		allocations = append(allocations, PenumbraGenesisAppStateAllocation{
 			Address: wallet.Address,
 			Denom:   wallet.Denom,
 			Amount:  wallet.Amount,
 		})
+		c.mutex.Unlock()
 	}
 
 	for _, n := range fullnodes {
