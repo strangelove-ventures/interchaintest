@@ -14,8 +14,13 @@ import (
 )
 
 func WriteRunningChains(configsDir string, bz []byte) {
-	filepath := filepath.Join(configsDir, "configs", "logs.json")
-	_ = os.WriteFile(filepath, bz, 0644)
+	path := filepath.Join(configsDir, "configs")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.MkdirAll(path, os.ModePerm)
+	}
+
+	file := filepath.Join(path, "logs.json")
+	_ = os.WriteFile(file, bz, 0644)
 }
 
 func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.Chain, connections []types.IBCChannel) {
