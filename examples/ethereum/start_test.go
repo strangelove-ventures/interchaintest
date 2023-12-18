@@ -37,7 +37,7 @@ func TestEthereum(t *testing.T) {
 			ChainName: "ethereum", 
 			Name: "ethereum",
 			Version: "latest",
-			ChainConfig: ethereum.NewEthereumAnvilChainConfig("ethereum"),
+			ChainConfig: ethereum.DefaultEthereumAnvilChainConfig("ethereum"),
 		},
 	})
 
@@ -53,10 +53,24 @@ func TestEthereum(t *testing.T) {
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
 	fmt.Println("Interchain built, sleeping")
+
+	time.Sleep(5 * time.Second)
+	height, err := ethereumChain.Height(ctx)
+	require.NoError(t, err)
+	fmt.Println("Height: ", height)
+
+	balance, err := ethereumChain.GetBalance(ctx, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "")
+	require.NoError(t, err)
+	fmt.Println("Balance: ", balance)
+
+	time.Sleep(5 * time.Second)
+	height, err = ethereumChain.Height(ctx)
+	require.NoError(t, err)
+	fmt.Println("Height: ", height)
 
 	time.Sleep(240 * time.Second)
 
