@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -23,6 +24,8 @@ var _ ibc.Chain = &EthereumChain{}
 const (
 	blockTime = 2 // seconds
 	rpcPort = "8545/tcp"
+	GWEI = 1_000_000_000
+	ETHER = 1_000_000_000 * GWEI
 )
 
 var natPorts = nat.PortSet{
@@ -44,6 +47,8 @@ type EthereumChain struct {
 	hostRPCPort string
 
 	genesisWallets GenesisWallets
+
+	keystoreMap map[string]string
 }
 
 func DefaultEthereumAnvilChainConfig(
@@ -77,6 +82,7 @@ func NewEthereumChain(testName string, chainConfig ibc.ChainConfig, log *zap.Log
 		cfg: chainConfig,
 		log: log,
 		genesisWallets: NewGenesisWallet(),
+		keystoreMap: make(map[string]string),
 	}
 }
 
@@ -126,6 +132,10 @@ func (c *EthereumChain) Name() string {
 	return fmt.Sprintf("%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
+func (c *EthereumChain) Bind() []string {
+	return []string{fmt.Sprintf("%s:%s", c.VolumeName, "/home/foundry/")}
+}
+
 func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
 	for _, image := range c.Config().Images {
 		rc, err := cli.ImagePull(
@@ -157,8 +167,16 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	//   * add support for custom gas-price
 	// Maybe add code-size-limit configuration for larger contracts
 
-	cmd := []string{c.cfg.Bin, "--host", "0.0.0.0", "--block-time", "2"}
-	c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, []string{}, c.HostName(), cmd, nil)
+	// IBC support, add when necessary
+	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
+
+	cmd := []string{c.cfg.Bin, 
+		"--host", "0.0.0.0", // Anyone can call
+		"--block-time", "2", // 2 second block times
+		"--accounts", "2", // Only add 2 genesis accounts, one for faucet, second for relayer in the future
+		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
+	}
+	c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), c.HostName(), cmd, nil)
 
 	c.log.Info("Starting container", zap.String("container", c.Name()))
 
@@ -185,7 +203,7 @@ func (c *EthereumChain) Exec(ctx context.Context, cmd []string, env []string) (s
 	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
-		Binds: []string{},
+		Binds: c.Bind(),
 	}
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
@@ -205,21 +223,70 @@ func (c *EthereumChain) GetRPCAddress() string {
 func (c *EthereumChain) GetHostRPCAddress() string {
 	return "http://" + c.hostRPCPort
 }
+
+type NewWalletOutput struct {
+	Address string `json:"address"`
+	Path    string `json:"path"`
+}
+
+func (c *EthereumChain) MakeKeystoreDir(ctx context.Context) error {
+	cmd := []string{"mkdir", "-p", "/home/foundry/.foundry/keystores"}
+	_, _, err := c.Exec(ctx, cmd, nil)
+	return err
+}
+
 func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
-	PanicFunctionName()
+	err := c.MakeKeystoreDir(ctx) // Ensure keystore directory is created
+	if err != nil {
+		return err
+	}
+
+	cmd := []string{"cast", "wallet", "new", "/home/foundry/.foundry/keystores", "--unsafe-password", "", "--json"}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+
+	newWallet := []NewWalletOutput{}
+	err = json.Unmarshal(stdout, &newWallet)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("CreateKey addr: ", newWallet[0].Address)
+	c.keystoreMap[keyName] = newWallet[0].Path
+
 	return nil
 }
-func (c *EthereumChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	PanicFunctionName()
-	return nil
-}
+
+// Get address of account, cast to a string to use
 func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	PanicFunctionName()
-	return nil, nil
+
+	cmd := []string{"cast", "wallet", "address", "--keystore", c.keystoreMap[keyName], "--password", ""}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(strings.TrimSpace(string(stdout))), nil
 }
+
 func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	PanicFunctionName()
-	return nil
+	cmd := []string{"cast", "send", amount.Address, "--value", amount.Amount.String()}
+	if keyName == "faucet" {
+		cmd = append(cmd, 
+			"--private-key",  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+
+	} else {
+		cmd = append(cmd, 
+			"--keystore", c.keystoreMap[keyName], 
+			"--password", "",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+	}
+	_, _, err := c.Exec(ctx, cmd, nil)
+	return err
 }
 
 func (c *EthereumChain) Height(ctx context.Context) (uint64, error) {
@@ -244,18 +311,29 @@ func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom st
 	return balance, nil
 }
 
-func (c *EthereumChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
-	PanicFunctionName()
-	return 0
-}
-
 func (c *EthereumChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
-		// TODO Add support for a new wallet using mnemonic
-		PanicFunctionName()
+		err := c.RecoverKey(ctx, keyName, mnemonic)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		// Use a genesis account
-		return c.genesisWallets.GetUnusedWallet(keyName), nil
+		// Use the genesis account
+		if keyName == "faucet" {
+			// TODO: implement RecoverKey() so faucet can be saved to keystore
+			return c.genesisWallets.GetFaucetWallet(keyName), nil
+		} else {
+			// Create new account
+			err := c.CreateKey(ctx, keyName)
+				if err != nil {
+				return nil, err
+			}
+		}
 	}
-	return nil, nil
+
+	address, err := c.GetAddress(ctx, keyName)
+	if err != nil {
+		return nil, err
+	}
+	return NewWallet(keyName, string(address)), nil
 }

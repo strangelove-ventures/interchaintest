@@ -6,8 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+
 	//"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
@@ -56,22 +59,59 @@ func TestEthereum(t *testing.T) {
 		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
 	}))
-	fmt.Println("Interchain built, sleeping")
+	fmt.Println("Interchain built")
 
-	time.Sleep(5 * time.Second)
-	height, err := ethereumChain.Height(ctx)
-	require.NoError(t, err)
-	fmt.Println("Height: ", height)
-
+	// Check faucet balance on start
 	balance, err := ethereumChain.GetBalance(ctx, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "")
 	require.NoError(t, err)
-	fmt.Println("Balance: ", balance)
+	fmt.Println("  (0) Faucet Balance: ", balance)
 
-	time.Sleep(5 * time.Second)
-	height, err = ethereumChain.Height(ctx)
+
+	// Create and fund a user using GetAndFundTestUsers
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", math.NewInt(2 * ethereum.ETHER), ethereumChain)
+	ethUser := users[0]
+
+	// Check balances of faucet and then user1
+	balance, err = ethereumChain.GetBalance(ctx, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "")
 	require.NoError(t, err)
-	fmt.Println("Height: ", height)
+	fmt.Println("  (1) Faucet Balance: ", balance)
 
-	time.Sleep(240 * time.Second)
+	balance, err = ethereumChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("  (1) ethUser Balance: ", balance)
+
+
+	// Create user2 wallet and check balance
+	ethUser2, err := ethereumChain.BuildWallet(ctx, "ethUser2", "")
+	require.NoError(t, err)
+
+	balance, err = ethereumChain.GetBalance(ctx, ethUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("  (1) ethUser2 Balance: ", balance)
+
+	
+	// Fund user2 wallet using SendFunds() from user1 wallet
+	ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
+		Address: ethUser2.FormattedAddress(),
+		Denom: ethereumChain.Config().Denom,
+		Amount: math.NewInt(ethereum.ETHER),
+	})
+
+
+	// Final check of balances
+	balance, err = ethereumChain.GetBalance(ctx, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "")
+	require.NoError(t, err)
+	fmt.Println("  (2) Faucet Balance: ", balance)
+
+	balance, err = ethereumChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("  (2) ethUser Balance: ", balance)
+
+	balance, err = ethereumChain.GetBalance(ctx, ethUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("  (2) ethUser2 Balance: ", balance)
+
+	// Sleep for an additional testing
+	time.Sleep(10 * time.Second)
 
 }

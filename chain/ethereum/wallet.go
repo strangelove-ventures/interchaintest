@@ -9,14 +9,12 @@ var _ ibc.Wallet = &EthereumWallet{}
 
 type EthereumWallet struct {
 	address  string
-	privKey  string
 	keyName  string
 }
 
-func NewWallet(keyname string, address string, privKey string) ibc.Wallet {
+func NewWallet(keyname string, address string) ibc.Wallet {
 	return &EthereumWallet{
 		address:  address,
-		privKey:  privKey,
 		keyName:  keyname,
 	}
 }
@@ -42,16 +40,14 @@ func (w *EthereumWallet) Address() []byte {
 
 type GenesisWallets struct {
 	total uint32
-	used uint32
 }
 
 func NewGenesisWallet() GenesisWallets {
 	return GenesisWallets{
-		total: 10, // Make this configurable, but this is default
-		used: 0,
+		total: 2, // Start with 2 at genesis, one for faucet, one for relayer
 	}
 }
 
-func (w *GenesisWallets) GetUnusedWallet(keyname string) ibc.Wallet {
-	return NewWallet(keyname, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+func (w *GenesisWallets) GetFaucetWallet(keyname string) ibc.Wallet {
+	return NewWallet(keyname, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 }
