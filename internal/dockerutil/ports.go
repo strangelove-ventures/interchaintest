@@ -52,20 +52,63 @@ func nextAvailablePort() (nat.PortBinding, *net.TCPListener, error) {
 	}, l, nil
 }
 
+// openListenerOnSpecificPort opens a listener on a specific port
+func openListenerOnSpecificPort(port nat.Port) (*net.TCPListener, error) {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", port.Int()))
+	if err != nil {
+		return nil, err
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
+func specificPort(port nat.Port) (nat.PortBinding, *net.TCPListener, error) {
+	l, err := openListenerOnSpecificPort(port)
+	if err != nil {
+		l.Close()
+		return nat.PortBinding{}, nil, err
+	}
+
+	return nat.PortBinding{
+		HostIP:   "0.0.0.0",
+		HostPort: fmt.Sprint(l.Addr().(*net.TCPAddr).Port),
+	}, l, nil
+}
+
 // GeneratePortBindings will find open ports on the local
 // machine and create a PortBinding for every port in the portSet.
-func GeneratePortBindings(portSet nat.PortSet) (nat.PortMap, Listeners, error) {
+// If a port is already bound, it will use that port as an override.
+func GeneratePortBindings(pairs nat.PortMap) (nat.PortMap, Listeners, error) {
 	m := make(nat.PortMap)
-	listeners := make(Listeners, 0, len(portSet))
+	listeners := make(Listeners, 0, len(pairs))
 
-	for p := range portSet {
-		pb, l, err := nextAvailablePort()
-		if err != nil {
-			listeners.CloseAll()
-			return nat.PortMap{}, nil, err
+	for p, bind := range pairs {
+		if len(bind) == 0 {
+			pb, l, err := nextAvailablePort()
+			if err != nil {
+				listeners.CloseAll()
+				return nat.PortMap{}, nil, err
+			}
+			listeners = append(listeners, l)
+			m[p] = []nat.PortBinding{pb}
+			continue
+		} else {
+			pb, l, err := specificPort(nat.Port(bind[0].HostPort))
+			if err != nil {
+				listeners.CloseAll()
+				return nat.PortMap{}, nil, err
+			}
+
+			listeners = append(listeners, l)
+			m[p] = []nat.PortBinding{pb}
 		}
-		listeners = append(listeners, l)
-		m[p] = []nat.PortBinding{pb}
 	}
 
 	return m, listeners, nil

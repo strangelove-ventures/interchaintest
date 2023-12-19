@@ -86,17 +86,28 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
+
+	// TODO: do this in a config
+	portOverride := make(map[int]int)
+	portOverride[1317] = 1319
+	portOverride[26656] = 26656
+	portOverride[26657] = 26657
+	portOverride[9090] = 9090
+
 	chainCfg := ibc.ChainConfig{
-		Type:                cfg.ChainType,
-		Name:                cfg.Name,
-		ChainID:             cfg.ChainID,
-		Bin:                 cfg.Binary,
-		Bech32Prefix:        cfg.Bech32Prefix,
-		Denom:               cfg.Denom,
-		CoinType:            fmt.Sprintf("%d", cfg.CoinType),
-		GasPrices:           cfg.GasPrices,
-		GasAdjustment:       cfg.GasAdjustment,
-		TrustingPeriod:      cfg.TrustingPeriod,
+		Type:             cfg.ChainType,
+		Name:             cfg.Name,
+		ChainID:          cfg.ChainID,
+		Bin:              cfg.Binary,
+		Bech32Prefix:     cfg.Bech32Prefix,
+		Denom:            cfg.Denom,
+		CoinType:         fmt.Sprintf("%d", cfg.CoinType),
+		GasPrices:        cfg.GasPrices,
+		GasAdjustment:    cfg.GasAdjustment,
+		TrustingPeriod:   cfg.TrustingPeriod,
+		HostPortOverride: portOverride,
+
+		// TODO: Allow host mount in the future
 		NoHostMount:         false,
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
 		ConfigFileOverrides: FasterBlockTimesBuilder(cfg.BlockTime),

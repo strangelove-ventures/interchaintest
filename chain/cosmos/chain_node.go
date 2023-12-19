@@ -100,7 +100,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -1291,7 +1291,17 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd, nil)
+	ports := sentryPorts
+	fmt.Println("Port Overrides", chainCfg.HostPortOverride)
+	for intP, extP := range chainCfg.HostPortOverride {
+		ports[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+			{
+				HostPort: fmt.Sprintf("%d", extP),
+			},
+		}
+	}
+
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, ports, tn.Bind(), tn.HostName(), cmd, nil)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

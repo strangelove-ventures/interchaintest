@@ -63,7 +63,7 @@ var (
 	RtyErr = retry.LastErrorOnly(true)
 )
 
-var exposedPorts = map[nat.Port]struct{}{
+var exposedPorts = nat.PortMap{
 	nat.Port(wsPort):         {},
 	nat.Port(rpcPort):        {},
 	nat.Port(prometheusPort): {},

@@ -84,7 +84,7 @@ const (
 	metricsPort = "9000/tcp"
 )
 
-var exposedPorts = nat.PortSet{
+var exposedPorts = nat.PortMap{
 	nat.Port(abciPort):    {},
 	nat.Port(grpcPort):    {},
 	nat.Port(metricsPort): {},
