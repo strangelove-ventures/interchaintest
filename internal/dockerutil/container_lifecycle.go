@@ -38,7 +38,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	testName string,
 	networkID string,
 	image ibc.DockerImage,
-	ports nat.PortMap, // from PortSet
+	ports nat.PortMap,
 	volumeBinds []string,
 	hostName string,
 	cmd []string,
@@ -52,87 +52,15 @@ func (c *ContainerLifecycle) CreateContainer(
 		zap.String("command", strings.Join(cmd, " ")),
 	)
 
-	// var pb nat.PortMap
-	// var listeners Listeners
-	// var err error
-
-	// TODO: reece allow override of this for local-interchain
-	// Place these bindings in a map in the CosmosChain
-
-	// if all port values are empty, we use random generation
-	// emptyPairs := false
-	// for _, v := range ports {
-	// 	if v != interface{}(nil) {
-	// 		emptyPairs = true
-	// 		break
-	// 	}
-	// }
-
-	// if emptyPairs {
-	// 	// convert ports to portSet
-	// 	pS := nat.PortSet{}
-	// 	for k := range ports {
-	// 		pS[k] = struct{}{}
-	// 	}
-
-	// 	pb, listeners, err = GeneratePortBindings(pS)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to generate port bindings: %w", err)
-	// 	}
-	// } else {
-	// 	pb, listeners, err = GeneratePortBindingsSpecific(ports)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to generate port bindings: %w", err)
-	// 	}
-	// }
-
-	// ports: map[1234/tcp:{} 1317/tcp:{} 26656/tcp:{} 26657/tcp:{} 9090/tcp:{}]
-	// fmt.Print("ports: ", ports)
-
-	// // TODO: set via the config, if none, we use random generation
-	// v := make(map[nat.Port]nat.Port)
-	// v["1234/tcp"] = "1234/tcp"
-	// v["1317/tcp"] = "1317/tcp"
-	// v["26656/tcp"] = "26656/tcp"
-	// v["26657/tcp"] = "26657/tcp"
-	// v["9090/tcp"] = "9090/tcp"
-
-	/// ---
-
-	// if the values of ports are all empty, we use random generation
-	// emptyPairs := false
-	// for _, v := range ports {
-	// 	if v != nil {
-	// 		emptyPairs = true
-	// 		break
-	// 	}
-	// }
-
-	// TODO: this good?
 	pS := nat.PortSet{}
 	for k := range ports {
 		pS[k] = struct{}{}
 	}
 
-	// if emptyPairs {
-	// 	// convert ports to portSet
-	// 	pb, listeners, err = GeneratePortBindings(ports)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to generate port bindings: %w", err)
-	// 	}
-	// } else {
-	// 	pb, listeners, err = GeneratePortBindingsSpecific(ports)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to generate port bindings: %w", err)
-	// 	}
-	// }
-
 	pb, listeners, err := GeneratePortBindings(ports)
 	if err != nil {
 		return fmt.Errorf("failed to generate port bindings: %w", err)
 	}
-
-	/// ---
 
 	c.preStartListeners = listeners
 

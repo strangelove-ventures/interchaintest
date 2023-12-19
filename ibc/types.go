@@ -56,7 +56,7 @@ type ChainConfig struct {
 	SidecarConfigs []SidecarConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
-	//HostPortOverride exposes ports to the host // TODO: make it by string name? ex: rpc: 26657 for the host
+	//HostPortOverride exposes ports to the host
 	HostPortOverride map[int]int `yaml:"host-port-override"`
 }
 
