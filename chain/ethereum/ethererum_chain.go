@@ -184,7 +184,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	cmd := []string{c.cfg.Bin, 
 		"--host", "0.0.0.0", // Anyone can call
 		"--block-time", "2", // 2 second block times
-		"--accounts", "2", // Only add 2 genesis accounts, one for faucet, second for relayer in the future
+		"--accounts", "10", // Only add 2 genesis accounts, one for faucet, second for relayer in the future
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
 	}
 

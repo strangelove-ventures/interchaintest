@@ -248,8 +248,6 @@ github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec/go.mod h1
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Layr-Labs/eigensdk-go v0.0.8 h1:ZQF9xyKMfyftYq3RHXLKtznL6kHwZiOH5ZQZ/3ZUDXo=
 github.com/Layr-Labs/eigensdk-go v0.0.8/go.mod h1:o+n2hLtZ5zWMYwrHygkkfoNRU4ZLGMYMFaL2+cHBBVk=
-github.com/Layr-Labs/incredible-squaring-avs v0.0.0-20231121191832-9fb41ad4a7ba h1:ulqeiLjU13i54j+5tcQaA0VeOnZeE5n1jITa1Bab3PI=
-github.com/Layr-Labs/incredible-squaring-avs v0.0.0-20231121191832-9fb41ad4a7ba/go.mod h1:WS1QE+JSd/Uafixpp/SpOtKrggj+AZn6RRWzuirHjJ8=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
