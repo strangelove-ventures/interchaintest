@@ -133,7 +133,7 @@ func (c *EthereumChain) Initialize(ctx context.Context, testName string, cli *do
 }
 
 func (c *EthereumChain) Name() string {
-	return fmt.Sprintf("%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
+	return fmt.Sprintf("anvil-%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
 func (c *EthereumChain) HomeDir() string {
@@ -184,7 +184,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	cmd := []string{c.cfg.Bin, 
 		"--host", "0.0.0.0", // Anyone can call
 		"--block-time", "2", // 2 second block times
-		"--accounts", "2", // Only add 2 genesis accounts, one for faucet, second for relayer in the future
+		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
 	}
 
