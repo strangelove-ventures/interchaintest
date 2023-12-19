@@ -87,7 +87,6 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
-
 	hostPorts := make(map[int]int, len(cfg.HostPortOverride))
 	for k, v := range cfg.HostPortOverride {
 		internalPort, err := strconv.Atoi(k)

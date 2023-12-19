@@ -1292,7 +1292,11 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	}
 
 	ports := sentryPorts
-	fmt.Println("Port Overrides", chainCfg.HostPortOverride)
+
+	if chainCfg.HostPortOverride != nil {
+		fmt.Println("Port Overrides", chainCfg.HostPortOverride)
+	}
+
 	for intP, extP := range chainCfg.HostPortOverride {
 		ports[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
 			{
