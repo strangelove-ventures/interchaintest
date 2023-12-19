@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -132,8 +136,16 @@ func (c *EthereumChain) Name() string {
 	return fmt.Sprintf("%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
+func (c *EthereumChain) HomeDir() string {
+	return "/home/foundry/"
+}
+
+func (c *EthereumChain) KeystoreDir() string {
+	return c.HomeDir() + ".foundry/keystores"
+}
+
 func (c *EthereumChain) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", c.VolumeName, "/home/foundry/")}
+	return []string{fmt.Sprintf("%s:%s", c.VolumeName, c.HomeDir())}
 }
 
 func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
@@ -162,7 +174,6 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	//   * add support for modifying genesis amount config, default is 10 ether
 	//   * add support for ConfigFileOverrides
 	//		* block time
-	// 		* load state
 	//   * add support for custom chain id, must be an int?
 	//   * add support for custom gas-price
 	// Maybe add code-size-limit configuration for larger contracts
@@ -176,7 +187,26 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		"--accounts", "2", // Only add 2 genesis accounts, one for faucet, second for relayer in the future
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
 	}
-	c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), c.HostName(), cmd, nil)
+
+	var mounts []mount.Mount
+	if loadState, ok := c.cfg.ConfigFileOverrides["--load-state"].(string); ok {
+		pwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		localJsonFile := filepath.Join(pwd, loadState)
+		dockerJsonFile := c.HomeDir() + path.Base(loadState)
+		mounts = []mount.Mount{
+			{
+				Type: mount.TypeBind,
+				Source: localJsonFile,
+				Target: dockerJsonFile,
+			},
+		}
+		cmd = append(cmd, "--load-state", dockerJsonFile)
+	}
+
+	c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
 
 	c.log.Info("Starting container", zap.String("container", c.Name()))
 
@@ -220,6 +250,10 @@ func (c *EthereumChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:8545", c.HostName())
 }
 
+func (c *EthereumChain) GetWSAddress() string {
+	return fmt.Sprintf("ws://%s:8545", c.HostName())
+}
+
 func (c *EthereumChain) GetHostRPCAddress() string {
 	return "http://" + c.hostRPCPort
 }
@@ -230,7 +264,7 @@ type NewWalletOutput struct {
 }
 
 func (c *EthereumChain) MakeKeystoreDir(ctx context.Context) error {
-	cmd := []string{"mkdir", "-p", "/home/foundry/.foundry/keystores"}
+	cmd := []string{"mkdir", "-p", c.KeystoreDir()}
 	_, _, err := c.Exec(ctx, cmd, nil)
 	return err
 }
@@ -241,7 +275,7 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
-	cmd := []string{"cast", "wallet", "new", "/home/foundry/.foundry/keystores", "--unsafe-password", "", "--json"}
+	cmd := []string{"cast", "wallet", "new", c.KeystoreDir(), "--unsafe-password", "", "--json"}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return err

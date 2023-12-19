@@ -11,7 +11,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
-	//"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -35,12 +34,21 @@ func TestEthereum(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
+
+	// Get default ethereum chain config for anvil
+	anvilConfig := ethereum.DefaultEthereumAnvilChainConfig("ethereum")
+
+	// add --load-state config
+	configFileOverrides := make(map[string]any)
+	configFileOverrides["--load-state"] = "eigenlayer-deployed-anvil-state.json" // Relative path of state.json
+	anvilConfig.ConfigFileOverrides = configFileOverrides
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainName: "ethereum", 
 			Name: "ethereum",
 			Version: "latest",
-			ChainConfig: ethereum.DefaultEthereumAnvilChainConfig("ethereum"),
+			ChainConfig: anvilConfig,
 		},
 	})
 

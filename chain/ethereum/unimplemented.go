@@ -27,10 +27,6 @@ func (c *EthereumChain) GetHostGRPCAddress() string {
 	return ""
 }
 
-func (c *EthereumChain) HomeDir() string {
-	PanicFunctionName()
-	return ""
-}
 
 // cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
 func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
