@@ -133,7 +133,7 @@ func (c *EthereumChain) Initialize(ctx context.Context, testName string, cli *do
 }
 
 func (c *EthereumChain) Name() string {
-	return fmt.Sprintf("%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
+	return fmt.Sprintf("anvil-%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
 func (c *EthereumChain) HomeDir() string {
@@ -256,6 +256,10 @@ func (c *EthereumChain) GetWSAddress() string {
 
 func (c *EthereumChain) GetHostRPCAddress() string {
 	return "http://" + c.hostRPCPort
+}
+
+func (c *EthereumChain) GetHostWSAddress() string {
+	return "ws://" + c.hostRPCPort
 }
 
 type NewWalletOutput struct {
