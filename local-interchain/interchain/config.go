@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
@@ -87,12 +88,19 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
 
-	// TODO: do this in a config
-	portOverride := make(map[int]int)
-	portOverride[1317] = 1319
-	portOverride[26656] = 26656
-	portOverride[26657] = 26657
-	portOverride[9090] = 9090
+	hostPorts := make(map[int]int, len(cfg.HostPortOverride))
+	for k, v := range cfg.HostPortOverride {
+		internalPort, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		externalPort, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		hostPorts[internalPort] = externalPort
+	}
 
 	chainCfg := ibc.ChainConfig{
 		Type:             cfg.ChainType,
@@ -105,7 +113,7 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		GasPrices:        cfg.GasPrices,
 		GasAdjustment:    cfg.GasAdjustment,
 		TrustingPeriod:   cfg.TrustingPeriod,
-		HostPortOverride: portOverride,
+		HostPortOverride: hostPorts,
 
 		// TODO: Allow host mount in the future
 		NoHostMount:         false,

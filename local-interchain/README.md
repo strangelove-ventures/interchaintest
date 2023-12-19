@@ -112,6 +112,11 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "debugging": true,
     "block_time": "500ms",
     "encoding-options": ["juno"],
+    "host_port_override": {
+        "26657": "26657",
+        "1317": "1320",
+        "9090": "9090"
+    },
     "genesis": {
         "modify": [
             {

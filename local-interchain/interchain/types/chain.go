@@ -16,7 +16,7 @@ type Chain struct {
 	Debugging      bool   `json:"debugging"`
 	BlockTime      string `json:"block_time"`
 
-	HostPortOverride map[int]int `json:"host_port_override"`
+	HostPortOverride map[string]string `json:"host_port_override"`
 
 	// Required
 	Name    string `json:"name" validate:"min=1"`
