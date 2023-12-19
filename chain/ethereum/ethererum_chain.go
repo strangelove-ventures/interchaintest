@@ -261,6 +261,10 @@ func (c *EthereumChain) GetHostRPCAddress() string {
 	return "http://" + c.hostRPCPort
 }
 
+func (c *EthereumChain) GetHostWSAddress() string {
+	return "ws://" + c.hostRPCPort
+}
+
 type NewWalletOutput struct {
 	Address string `json:"address"`
 	Path    string `json:"path"`
