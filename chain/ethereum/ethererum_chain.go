@@ -206,7 +206,10 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		cmd = append(cmd, "--load-state", dockerJsonFile)
 	}
 
-	c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	if err != nil {
+		return err
+	}
 
 	c.log.Info("Starting container", zap.String("container", c.Name()))
 
