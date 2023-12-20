@@ -286,7 +286,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, nil)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, nil)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {

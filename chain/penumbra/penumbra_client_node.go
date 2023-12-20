@@ -361,7 +361,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 
 	var env []string
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, env)
 }
 
 func (p *PenumbraClientNode) StopContainer(ctx context.Context) error {
