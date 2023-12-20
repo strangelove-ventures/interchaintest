@@ -294,7 +294,6 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
-	fmt.Println("CreateKey addr: ", newWallet[0].Address)
 	c.keystoreMap[keyName] = newWallet[0].Path
 
 	return nil
