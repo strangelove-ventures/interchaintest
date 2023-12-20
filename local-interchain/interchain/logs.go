@@ -45,6 +45,7 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 			RPCAddress:  chainObj.GetHostRPCAddress(),
 			RESTAddress: chainObj.GetHostAPIAddress(),
 			GRPCAddress: chainObj.GetHostGRPCAddress(),
+			P2PAddress:  chainObj.GetHostPeerAddress(),
 			IBCPath:     ibcPaths,
 		}
 

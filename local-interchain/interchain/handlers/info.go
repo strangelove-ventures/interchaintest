@@ -107,6 +107,8 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	case "genesis_file_content":
 		v, _ := val.GenesisFileContent(i.ctx)
 		util.Write(w, v)
+	case "peer":
+		util.Write(w, getPeer(i.ctx, val))
 	default:
 		util.WriteError(w, fmt.Errorf("invalid get param: %s. does not exist", res[0]))
 	}
@@ -187,4 +189,13 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 	}
 
 	util.Write(w, jsonRes)
+}
+
+func getPeer(ctx context.Context, val *cosmos.ChainNode) []byte {
+	peer, err := val.NodeID(ctx)
+	if err != nil {
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
+	}
+
+	return []byte(peer + "@" + val.Chain.GetHostPeerAddress())
 }

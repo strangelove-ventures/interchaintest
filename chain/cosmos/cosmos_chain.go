@@ -236,6 +236,12 @@ func (c *CosmosChain) GetHostGRPCAddress() string {
 	return c.getFullNode().hostGRPCPort
 }
 
+// GetHostP2PAddress returns the address of the P2P server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostPeerAddress() string {
+	return c.getFullNode().hostP2PPort
+}
+
 // HomeDir implements ibc.Chain.
 func (c *CosmosChain) HomeDir() string {
 	return c.getFullNode().HomeDir()
