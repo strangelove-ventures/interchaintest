@@ -26,3 +26,7 @@ MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"stop"}'
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"start","cmd":"juno-ibc-1"}'
 
 MAKE_REQUEST POST '{"action":"kill-all"}'
+
+
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"}'
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"faucet","cmd":"amount=100;address=juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"}'
