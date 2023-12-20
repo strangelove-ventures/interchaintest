@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -25,7 +24,7 @@ type PenumbraAppNode struct {
 	Chain        *PenumbraChain
 	TestName     string
 	NetworkID    string
-	DockerClient *client.Client
+	DockerClient *dockerclient.Client
 	Image        ibc.DockerImage
 
 	containerLifecycle *dockerutil.ContainerLifecycle

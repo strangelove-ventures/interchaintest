@@ -117,6 +117,11 @@ func (c *PenumbraChain) GetRPCAddress() string {
 }
 
 // Implements Chain interface
+func (c *PenumbraChain) GetFallbackRPCAddress() []string {
+	return []string{} //TODO: implement fallback rpc returns correctly
+}
+
+// Implements Chain interface
 func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
 }

@@ -2,7 +2,6 @@ package polkadot
 
 import (
 	"context"
-	"crypto/rand"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -105,7 +103,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 	image ibc.DockerImage,
 ) (*RelayChainNode, error) {
 	seed := make([]byte, 32)
-	if _, err := rand.Read(seed); err != nil {
+	if _, err := crand.Read(seed); err != nil {
 		return nil, err
 	}
 
@@ -239,7 +237,7 @@ func (c *PolkadotChain) NewParachainNode(
 
 // Initialize initializes node structs so that things like initializing keys can be done before starting the chain.
 // Implements Chain interface.
-func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
+func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *dockerclient.Client, networkID string) error {
 	relayChainNodes := []*RelayChainNode{}
 	chainCfg := c.Config()
 	images := []ibc.DockerImage{}
@@ -553,6 +551,11 @@ func (c *PolkadotChain) GetRPCAddress() string {
 	//return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
 }
 
+// Implements Chain interface
+func (c *PolkadotChain) GetFallbackRPCAddress() []string {
+	return []string{} //TODO: implement proper return
+}
+
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
 // Implements Chain interface.
 func (c *PolkadotChain) GetGRPCAddress() string {
@@ -631,7 +634,7 @@ func NewMnemonic() (string, error) {
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	mnemonic, err := NewMnemonic()
@@ -661,7 +664,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)

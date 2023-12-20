@@ -248,7 +248,7 @@ func (commander) UpdateClients(pathName, homeDir string) []string {
 	}
 }
 
-func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, fallbackRpc []string) ([]byte, error) {
 	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
 	if err != nil {

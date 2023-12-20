@@ -158,14 +158,14 @@ func (r *DockerRelayer) AddWallet(chainID string, wallet ibc.Wallet) {
 	r.wallets[chainID] = wallet
 }
 
-func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
+func (r *DockerRelayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, fallbackRpc []string) error {
 	// For rly this file is json, but the file extension should not matter.
 	// Using .config to avoid implying any particular format.
 	chainConfigFile := chainConfig.ChainID + ".config"
 
 	chainConfigContainerFilePath := path.Join(r.HomeDir(), chainConfigFile)
 
-	configContent, err := r.c.ConfigContent(ctx, chainConfig, keyName, rpcAddr, grpcAddr)
+	configContent, err := r.c.ConfigContent(ctx, chainConfig, keyName, rpcAddr, grpcAddr, fallbackRpc)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)
 	}
@@ -523,7 +523,7 @@ type RelayerCommander interface {
 	DockerUser() string
 
 	// ConfigContent generates the content of the config file that will be passed to AddChainConfiguration.
-	ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error)
+	ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string, fallbackRpc []string) ([]byte, error)
 
 	// ParseAddKeyOutput processes the output of AddKey
 	// to produce the wallet that was created.
