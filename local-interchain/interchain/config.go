@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
@@ -86,17 +87,34 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
+	hostPorts := make(map[int]int, len(cfg.HostPortOverride))
+	for k, v := range cfg.HostPortOverride {
+		internalPort, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		externalPort, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		hostPorts[internalPort] = externalPort
+	}
+
 	chainCfg := ibc.ChainConfig{
-		Type:                cfg.ChainType,
-		Name:                cfg.Name,
-		ChainID:             cfg.ChainID,
-		Bin:                 cfg.Binary,
-		Bech32Prefix:        cfg.Bech32Prefix,
-		Denom:               cfg.Denom,
-		CoinType:            fmt.Sprintf("%d", cfg.CoinType),
-		GasPrices:           cfg.GasPrices,
-		GasAdjustment:       cfg.GasAdjustment,
-		TrustingPeriod:      cfg.TrustingPeriod,
+		Type:             cfg.ChainType,
+		Name:             cfg.Name,
+		ChainID:          cfg.ChainID,
+		Bin:              cfg.Binary,
+		Bech32Prefix:     cfg.Bech32Prefix,
+		Denom:            cfg.Denom,
+		CoinType:         fmt.Sprintf("%d", cfg.CoinType),
+		GasPrices:        cfg.GasPrices,
+		GasAdjustment:    cfg.GasAdjustment,
+		TrustingPeriod:   cfg.TrustingPeriod,
+		HostPortOverride: hostPorts,
+
+		// TODO: Allow host mount in the future
 		NoHostMount:         false,
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
 		ConfigFileOverrides: FasterBlockTimesBuilder(cfg.BlockTime),

@@ -16,7 +16,9 @@ import (
 func WriteRunningChains(configsDir string, bz []byte) {
 	path := filepath.Join(configsDir, "configs")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(path, os.ModePerm)
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			panic(err)
+		}
 	}
 
 	file := filepath.Join(path, "logs.json")
