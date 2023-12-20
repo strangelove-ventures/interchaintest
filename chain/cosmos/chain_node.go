@@ -1291,21 +1291,23 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
 
-	ports := sentryPorts
+	usingPorts := make(nat.PortMap)
 
-	if chainCfg.HostPortOverride != nil {
-		fmt.Println("Port Overrides", chainCfg.HostPortOverride)
-	}
-
-	for intP, extP := range chainCfg.HostPortOverride {
-		ports[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
-			{
-				HostPort: fmt.Sprintf("%d", extP),
-			},
+	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		for intP, extP := range chainCfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
 		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+	} else {
+		usingPorts = sentryPorts
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, ports, tn.Bind(), tn.HostName(), cmd, nil)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), tn.HostName(), cmd, nil)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
