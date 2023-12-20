@@ -28,13 +28,21 @@ Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for i
 - Run: `local-ic start mytest1_ignored.json [flags]`
 - Run in different directory: `ICTEST_HOME=/root/local-interchain local-ic start myother_ignored.json [flags]`
 
-Modify the relayer information on `start` with the --relayer-* flags.
-
-**NOTE** The ICTEST_HOME path must contain the directories `chains` and `configs` to be valid.
+**NOTE** The ICTEST_HOME path must contain the directories `chains` to be valid.
 
 *(Default: `make install` links to the cloned directory. `go install .` will use your home directory ~/local-interchain)*
 
 *(Ending the config file with `_ignored.json` or `_ignore.json` will ignore it from git)*
+
+### Optional Start Flags
+    --api-address string             override the default API address (default "127.0.0.1")
+    --api-port uint16                override the default API port (default 8080)
+    --auth-key string                require an auth key to use the internal API
+    --help
+    --relayer-image string           override the docker relayer image (default "ghcr.io/cosmos/relayer")
+    --relayer-startup-flags string   override the default relayer startup flags (default "--block-history=100")
+    --relayer-uidgid string          override the default image UID:GID (default "100:1000")
+    --relayer-version string         override the default relayer version (default "latest")
 
 ---
 

@@ -3,9 +3,10 @@ MAKE_REQUEST() {
     curl http://127.0.0.1:8080/ --include --header "Content-Type: application/json" -X $1 --data "$2"
 }
 
-MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank total"}'
+# Example with Auth
+# MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0","auth_key":"mySecretKeyExample"}'
 
-# MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"bin","cmd":"keys list --keyring-backend=test"}'
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank total"}'
 
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"get_channels"}'
 

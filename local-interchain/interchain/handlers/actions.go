@@ -24,15 +24,23 @@ type actions struct {
 
 	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
+
+	authKey string
 }
 
 type ActionHandler struct {
 	ChainId string `json:"chain_id"`
 	Action  string `json:"action"`
 	Cmd     string `json:"cmd"`
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
-func NewActions(ctx context.Context, ic *interchaintest.Interchain, cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
+func NewActions(
+	ctx context.Context, ic *interchaintest.Interchain,
+	cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode,
+	relayer ibc.Relayer, eRep ibc.RelayerExecReporter,
+	authKey string,
+) *actions {
 	return &actions{
 		ctx:     ctx,
 		ic:      ic,
@@ -40,6 +48,7 @@ func NewActions(ctx context.Context, ic *interchaintest.Interchain, cosmosChains
 		cc:      cosmosChains,
 		relayer: relayer,
 		eRep:    eRep,
+		authKey: authKey,
 	}
 }
 
@@ -48,6 +57,11 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&ah)
 	if err != nil {
 		util.WriteError(w, fmt.Errorf("failed to decode json: %s", err))
+		return
+	}
+
+	if a.authKey != "" && ah.AuthKey != a.authKey {
+		util.WriteError(w, fmt.Errorf("invalid `auth_key`"))
 		return
 	}
 
