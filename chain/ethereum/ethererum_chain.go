@@ -136,7 +136,7 @@ func (c *EthereumChain) Name() string {
 }
 
 func (c *EthereumChain) HomeDir() string {
-	return "/home/foundry/"
+	return "/home/foundry"
 }
 
 func (c *EthereumChain) KeystoreDir() string {
