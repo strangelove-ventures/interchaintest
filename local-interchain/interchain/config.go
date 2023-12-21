@@ -73,24 +73,33 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 }
 
 // ConfigurationOverrides creates a map of config file overrides for filenames, their keys, and values.
-func ConfigurationOverrides(cfg types.Chain) testutil.Toml {
-	var toml testutil.Toml
+func ConfigurationOverrides(cfg types.Chain) map[string]any {
+	var toml map[string]any
 
 	switch cfg.ChainType {
 	case "cosmos":
 		toml = cosmosConfigOverride(cfg)
 		fmt.Println("cosmos toml", toml)
-	case "ethereum":
-		toml = ethereumConfigOverride(cfg)
 	default:
 		toml = make(testutil.Toml, 0)
 	}
 
 	for _, o := range cfg.ConfigFileOverrides {
 		for k, v := range o.Paths {
+
+			// if o.File is empty, we only save the KV pair directly
+			if o.File == "" {
+				// "config_file_overrides": [
+				//     {"paths": {"--load-state": "state/avs-and-eigenlayer-deployed-anvil-state.json"}}
+				// ],
+
+				toml[k] = v
+				continue
+			}
+
 			// create file key if it does not exist
 			if _, ok := toml[o.File]; !ok {
-				toml[o.File] = testutil.Toml{}
+				toml[o.File] = make(testutil.Toml, 0)
 			}
 
 			// if there is no path, save the KV directly without the header
@@ -113,6 +122,7 @@ func ConfigurationOverrides(cfg types.Chain) testutil.Toml {
 		}
 	}
 
+	fmt.Println("FULL_TOML", toml)
 	return toml
 }
 
@@ -130,13 +140,6 @@ func cosmosConfigOverride(cfg types.Chain) testutil.Toml {
 	}
 
 	return testutil.Toml{"config/config.toml": tomlCfg}
-}
-
-// TODO: use ConfigurationOverrides instead?
-func ethereumConfigOverride(cfg types.Chain) testutil.Toml {
-	anvilConfigFileOverrides := make(map[string]any)
-	anvilConfigFileOverrides["--load-state"] = cfg.EVMLoadStatePath
-	return anvilConfigFileOverrides
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {

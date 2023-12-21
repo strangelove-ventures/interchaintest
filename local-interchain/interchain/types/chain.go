@@ -3,12 +3,13 @@ package types
 import (
 	"github.com/go-playground/validator"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // ConfigFileOverrides overrides app configuration files.
 type ConfigFileOverrides struct {
-	File  string         `json:"file"`
-	Paths map[string]any `json:"paths"`
+	File  string        `json:"file"`
+	Paths testutil.Toml `json:"paths"`
 }
 
 type Chain struct {
