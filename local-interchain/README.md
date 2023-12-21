@@ -125,6 +125,16 @@ Here is a base chain template with every feature the configuration accepts. Acco
         "1317": "1320",
         "9090": "9090"
     },
+    "config_file_overrides": [
+        {
+            "file": "config/config.toml",
+            "paths": {
+                "rpc.cors_allowed_origins": ["*"],
+                "rpc.mempool": ["nop"],
+                "moniker": "myNodeMoniker",
+            }
+        }
+    ],
     "genesis": {
         "modify": [
             {

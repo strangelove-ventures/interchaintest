@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
@@ -71,7 +72,52 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	return config, nil
 }
 
-func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
+// ConfigurationOverrides creates a map of config file overrides for filenames, their keys, and values.
+func ConfigurationOverrides(cfg types.Chain) testutil.Toml {
+	var toml testutil.Toml
+
+	switch cfg.ChainType {
+	case "cosmos":
+		toml = cosmosConfigOverride(cfg)
+		fmt.Println("cosmos toml", toml)
+	case "ethereum":
+		toml = ethereumConfigOverride(cfg)
+	default:
+		toml = make(testutil.Toml, 0)
+	}
+
+	for _, o := range cfg.ConfigFileOverrides {
+		for k, v := range o.Paths {
+			// create file key if it does not exist
+			if _, ok := toml[o.File]; !ok {
+				toml[o.File] = testutil.Toml{}
+			}
+
+			// if there is no path, save the KV directly without the header
+			if !strings.Contains(k, ".") {
+				toml[o.File].(testutil.Toml)[k] = v
+				continue
+			}
+
+			// separate the path and key
+			path, key := strings.Split(k, ".")[0], strings.Split(k, ".")[1]
+			fmt.Println("file", o.File, "path", path, "key", key, "v", v)
+
+			// create path key if it does not exist
+			if _, ok := toml[o.File].(testutil.Toml)[path]; !ok {
+				toml[o.File].(testutil.Toml)[path] = testutil.Toml{}
+			}
+
+			// save the new KV pair
+			toml[o.File].(testutil.Toml)[path].(testutil.Toml)[key] = v
+		}
+	}
+
+	return toml
+}
+
+func cosmosConfigOverride(cfg types.Chain) testutil.Toml {
+	blockTime := cfg.BlockTime
 	if _, err := time.ParseDuration(blockTime); err != nil {
 		panic(err)
 	}
@@ -84,6 +130,13 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 	}
 
 	return testutil.Toml{"config/config.toml": tomlCfg}
+}
+
+// TODO: use ConfigurationOverrides instead?
+func ethereumConfigOverride(cfg types.Chain) testutil.Toml {
+	anvilConfigFileOverrides := make(map[string]any)
+	anvilConfigFileOverrides["--load-state"] = cfg.EVMLoadStatePath
+	return anvilConfigFileOverrides
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
@@ -117,7 +170,7 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		// TODO: Allow host mount in the future
 		NoHostMount:         false,
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
-		ConfigFileOverrides: FasterBlockTimesBuilder(cfg.BlockTime),
+		ConfigFileOverrides: ConfigurationOverrides(cfg),
 		EncodingConfig:      nil,
 	}
 
