@@ -5,6 +5,12 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 )
 
+// ConfigFileOverrides overrides app configuration files.
+type ConfigFileOverrides struct {
+	File  string         `json:"file"`
+	Paths map[string]any `json:"paths"`
+}
+
 type Chain struct {
 	// ibc chain config (optional)
 	ChainType      string `json:"chain_type" validate:"min=1"`
@@ -30,6 +36,11 @@ type Chain struct {
 	NumberNode    int      `json:"number_node"`
 	IBCPaths      []string `json:"ibc_paths"`
 	Genesis       Genesis  `json:"genesis"`
+
+	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty"`
+
+	// EVM
+	EVMLoadStatePath string `json:"evm_load_state_path,omitempty"`
 }
 
 func (chain *Chain) Validate() error {
