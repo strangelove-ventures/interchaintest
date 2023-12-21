@@ -903,7 +903,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					configFile,
 					modifiedToml,
 				); err != nil {
-					return err
+					return fmt.Errorf("failed to modify toml config file: %w", err)
 				}
 			}
 			if !c.cfg.SkipGenTx {
