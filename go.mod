@@ -25,6 +25,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/ethereum/go-ethereum v1.12.1
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/google/go-cmp v0.6.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -109,7 +110,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/emicklei/dot v1.6.0 // indirect
-	github.com/ethereum/go-ethereum v1.12.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
