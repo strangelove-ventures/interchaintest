@@ -79,7 +79,6 @@ func ConfigurationOverrides(cfg types.Chain) map[string]any {
 	switch cfg.ChainType {
 	case "cosmos":
 		toml = cosmosConfigOverride(cfg)
-		fmt.Println("cosmos toml", toml)
 	default:
 		toml = make(testutil.Toml, 0)
 	}
@@ -110,7 +109,6 @@ func ConfigurationOverrides(cfg types.Chain) map[string]any {
 
 			// separate the path and key
 			path, key := strings.Split(k, ".")[0], strings.Split(k, ".")[1]
-			fmt.Println("file", o.File, "path", path, "key", key, "v", v)
 
 			// create path key if it does not exist
 			if _, ok := toml[o.File].(testutil.Toml)[path]; !ok {
@@ -122,7 +120,7 @@ func ConfigurationOverrides(cfg types.Chain) map[string]any {
 		}
 	}
 
-	fmt.Println("FULL_TOML", toml)
+	fmt.Println(cfg.ChainID, "Toml File", toml)
 	return toml
 }
 

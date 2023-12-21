@@ -1078,8 +1078,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+	// Wait for blocks before considering the chains "started"
+	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
 // Height implements ibc.Chain

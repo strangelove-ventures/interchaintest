@@ -552,7 +552,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		return err
 	}
 
-	if err := testutil.WaitForBlocks(ctx, 5, c.getFullNode().TendermintNode); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 2, c.getFullNode().TendermintNode); err != nil {
 		return err
 	}
 
