@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
@@ -32,24 +33,38 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 
 	// Iterate chain config & get the ibc chain's to save data to logs.
 	for idx, chain := range config.Chains {
-		chainObj := chains[idx].(*cosmos.CosmosChain)
 
-		ibcPaths := chain.IBCPaths
-		if ibcPaths == nil {
-			ibcPaths = []string{}
+		switch chains[idx].(type) {
+		case *cosmos.CosmosChain:
+			chainObj := chains[idx].(*cosmos.CosmosChain)
+
+			ibcPaths := chain.IBCPaths
+			if ibcPaths == nil {
+				ibcPaths = []string{}
+			}
+
+			log := types.LogOutput{
+				ChainID:     chainObj.Config().ChainID,
+				ChainName:   chainObj.Config().Name,
+				RPCAddress:  chainObj.GetHostRPCAddress(),
+				RESTAddress: chainObj.GetHostAPIAddress(),
+				GRPCAddress: chainObj.GetHostGRPCAddress(),
+				P2PAddress:  chainObj.GetHostPeerAddress(),
+				IBCPath:     ibcPaths,
+			}
+
+			mainLogs.Chains = append(mainLogs.Chains, log)
+		case *ethereum.EthereumChain:
+			chainObj := chains[idx].(*ethereum.EthereumChain)
+
+			log := types.LogOutput{
+				ChainID:    chainObj.Config().ChainID,
+				ChainName:  chainObj.Config().Name,
+				RPCAddress: chainObj.GetHostRPCAddress(),
+			}
+
+			mainLogs.Chains = append(mainLogs.Chains, log)
 		}
-
-		log := types.LogOutput{
-			ChainID:     chainObj.Config().ChainID,
-			ChainName:   chainObj.Config().Name,
-			RPCAddress:  chainObj.GetHostRPCAddress(),
-			RESTAddress: chainObj.GetHostAPIAddress(),
-			GRPCAddress: chainObj.GetHostGRPCAddress(),
-			P2PAddress:  chainObj.GetHostPeerAddress(),
-			IBCPath:     ibcPaths,
-		}
-
-		mainLogs.Chains = append(mainLogs.Chains, log)
 	}
 
 	bz, _ := json.MarshalIndent(mainLogs, "", "  ")
