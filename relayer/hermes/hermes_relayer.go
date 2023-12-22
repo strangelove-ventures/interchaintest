@@ -172,7 +172,6 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	if opts.MaxClockDrift != "" {
 		chainACreateClientCmd = append(chainACreateClientCmd, "--clock-drift", opts.MaxClockDrift)
 	}
-	// TODO: add other CreateClientOptions
 	res := r.Exec(ctx, rep, chainACreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
