@@ -40,7 +40,7 @@ func TestClientOptsConfigured(t *testing.T) {
 	opts := DefaultClientOpts()
 	require.NoError(t, opts.Validate())
 
-	// Test empty struct channel opts
+	// Test empty struct client opts
 	opts = CreateClientOptions{}
 	require.NoError(t, opts.Validate())
 
