@@ -140,7 +140,7 @@ func (c *EthereumChain) HomeDir() string {
 }
 
 func (c *EthereumChain) KeystoreDir() string {
-	return c.HomeDir() + ".foundry/keystores"
+	return path.Join(c.HomeDir(), ".foundry", "keystores")
 }
 
 func (c *EthereumChain) Bind() []string {
