@@ -272,7 +272,7 @@ func (o Order) Validate() error {
 // a zero value is the same as not specifying the flag and will use the relayer defauls
 type CreateClientOptions struct {
 	TrustingPeriod           string
-	TrustingPeriodPercentage int64
+	TrustingPeriodPercentage int64 // only available for Go Relayer
 	MaxClockDrift            string
 }
 
