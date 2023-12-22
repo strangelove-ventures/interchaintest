@@ -17,8 +17,10 @@ func AddGenesisKeysToKeyring(ctx context.Context, config *types.Config, chains [
 		case *cosmos.CosmosChain:
 			chainObj := chains[idx].(*cosmos.CosmosChain)
 			for _, acc := range chain.Genesis.Accounts {
-				if err := chainObj.RecoverKey(ctx, acc.Name, acc.Mnemonic); err != nil {
-					panic(err)
+				if acc.Mnemonic != "" {
+					if err := chainObj.RecoverKey(ctx, acc.Name, acc.Mnemonic); err != nil {
+						panic(err)
+					}
 				}
 			}
 		default:
