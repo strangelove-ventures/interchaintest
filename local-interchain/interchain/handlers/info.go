@@ -176,9 +176,23 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 		return
 	}
 
+	// hide mnemonics from query
+	chains := i.Config.Chains
+	for idx, chain := range chains {
+		updatedAccounts := []types.GenesisAccount{}
+
+		for _, acc := range chain.Genesis.Accounts {
+			acc.Mnemonic = "hidden"
+			updatedAccounts = append(updatedAccounts, acc)
+		}
+
+		chain.Genesis.Accounts = updatedAccounts
+		chains[idx] = chain
+	}
+
 	info := GetInfo{
 		Logs:   logs,
-		Chains: i.Config.Chains,
+		Chains: chains,
 		Relay:  i.Config.Relayer,
 	}
 
