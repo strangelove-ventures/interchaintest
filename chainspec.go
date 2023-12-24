@@ -1,6 +1,8 @@
 package interchaintest
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -223,6 +225,20 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	}
 
 	return &cfg, nil
+}
+
+// Hash returns a unique hash dependant on the chain spec configuration.
+func (s *ChainSpec) Hash() []byte {
+	cs := fmt.Sprintf("%s%s%s%v%d%d ",
+		s.Name, s.ChainName, s.Version, s.NoHostMount, s.NumValidators, s.NumFullNodes)
+
+	bz, err := json.Marshal(s.ChainConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cs+string(bz))))
+	return []byte(hash)
 }
 
 // suffix returns the automatically generated, concurrency-safe suffix for

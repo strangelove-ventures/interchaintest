@@ -21,6 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var _ ibc.Chain = &PolkadotChain{}
+
 // Increase parachain wallet amount due to their additional precision
 const parachainScaling = int64(1_000)
 

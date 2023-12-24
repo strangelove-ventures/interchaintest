@@ -25,6 +25,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var _ ibc.Chain = &PenumbraChain{}
+
 type PenumbraChain struct {
 	log           *zap.Logger
 	testName      string
@@ -637,4 +639,9 @@ func (c PenumbraChain) CreateClientNode(
 		ck.SpendKey,
 		fvk,
 	)
+}
+
+// CreateCheckpoint implements ibc.Chain.
+func (*PenumbraChain) CreateCheckpoint(ctx context.Context) error {
+	panic("unimplemented")
 }

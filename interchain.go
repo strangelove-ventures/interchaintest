@@ -227,6 +227,8 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	}
 	ic.cs = newChainSet(ic.log, chains)
 
+	// TODO: Check if we have checkpoint hashes to use instead...
+
 	// Initialize the chains (pull docker images, etc.).
 	if err := ic.cs.Initialize(ctx, opts.TestName, opts.Client, opts.NetworkID); err != nil {
 		return fmt.Errorf("failed to initialize chains: %w", err)
@@ -245,6 +247,11 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 
 	if err := ic.cs.Start(ctx, opts.TestName, walletAmounts); err != nil {
 		return fmt.Errorf("failed to start chains: %w", err)
+	}
+
+	fmt.Println("Creating checkpoints...")
+	if err := ic.cs.CreateCheckpoints(ctx); err != nil {
+		return fmt.Errorf("failed to create checkpoints: %w", err)
 	}
 
 	if err := ic.cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {

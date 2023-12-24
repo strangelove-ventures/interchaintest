@@ -42,6 +42,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var _ ibc.Chain = &CosmosChain{}
+
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
 // Implements the ibc.Chain interface.
 type CosmosChain struct {
@@ -58,6 +60,51 @@ type CosmosChain struct {
 	log      *zap.Logger
 	keyring  keyring.Keyring
 	findTxMu sync.Mutex
+}
+
+// CreateCheckpoint creates a state checkpoint if the image has already been built.
+// This is based on a hash of the ChainConfig,
+func (c *CosmosChain) CreateCheckpoint(ctx context.Context) error {
+	cli := c.GetNode().DockerClient
+
+	// we will create multiple checkpoints here? maybe too many hmm. Also, what about chain spec?
+
+	for _, node := range c.Nodes() {
+		uniqueNode := fmt.Sprintf("%v", node.Index) // is this too much? what about validator
+
+		bz, err := json.Marshal(c.Config())
+		if err != nil {
+			return err
+		}
+
+		hash := fmt.Sprintf("%x", sha256.Sum256(append([]byte(uniqueNode), bz...)))
+
+		newImgName := strings.ToLower(c.GetNode().Name() + ":" + hash)
+		res, err := cli.ContainerCommit(ctx, c.GetNode().ContainerID(), dockertypes.ContainerCommitOptions{
+			Comment:   "created a commit from container",
+			Reference: newImgName,
+		})
+		if err != nil {
+			return err
+		}
+
+		// re-tag it with the proper values (new version)
+		img := strings.Split(c.GetNode().Image.Ref(), ":")[0]
+		if err := cli.ImageTag(ctx, res.ID, img+":"+hash); err != nil {
+			return err
+		}
+
+		// delete intermediate image
+		if _, err := cli.ImageRemove(ctx, newImgName, dockertypes.ImageRemoveOptions{
+			Force: true,
+		}); err != nil {
+			return err
+		}
+
+		fmt.Printf("created checkpoint for %s; %s\n", uniqueNode, res.ID)
+	}
+
+	return nil
 }
 
 func NewCosmosHeighlinerChainConfig(name string,
@@ -853,6 +900,8 @@ type ValidatorWithIntPower struct {
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
+
+	// TODO: if hash of config == what we expect, we can skip most of this setup and just spin them up normally
 
 	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 

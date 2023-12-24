@@ -1,6 +1,7 @@
 package ibc
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -39,23 +40,23 @@ type ChainConfig struct {
 	// Do not use docker host mount.
 	NoHostMount bool `yaml:"no-host-mount"`
 	// When true, will skip validator gentx flow
-	SkipGenTx bool
+	SkipGenTx bool `yaml:"skip-gentx"`
 	// When provided, will run before performing gentx and genesis file creation steps for validators.
-	PreGenesis func(ChainConfig) error
+	PreGenesis func(ChainConfig) error `yaml:"-"`
 	// When provided, genesis file contents will be altered before sharing for genesis.
-	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
+	ModifyGenesis func(ChainConfig, []byte) ([]byte, error) `yaml:"-"`
 	// Modify genesis-amounts
-	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin)
+	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin) `yaml:"-"`
 	// Override config parameters for files at filepath.
-	ConfigFileOverrides map[string]any
+	ConfigFileOverrides map[string]any `yaml:"config-file-overrides"`
 	// Non-nil will override the encoding config, used for cosmos chains only.
-	EncodingConfig *testutil.TestEncodingConfig
+	EncodingConfig *testutil.TestEncodingConfig `yaml:"-"`
 	// Required when the chain requires the chain-id field to be populated for certain commands
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
-	SidecarConfigs []SidecarConfig
+	SidecarConfigs []SidecarConfig `yaml:"sidecars"`
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
-	CoinDecimals *int64
+	CoinDecimals *int64 `yaml:"coin-decimals"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -197,6 +198,47 @@ func (c ChainConfig) IsFullyConfigured() bool {
 		c.Denom != "" &&
 		c.GasPrices != "" &&
 		c.TrustingPeriod != ""
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c ChainConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Type                string
+		Name                string
+		ChainID             string
+		Images              []DockerImage
+		Bin                 string
+		Bech32Prefix        string
+		Denom               string
+		CoinType            string
+		GasPrices           string
+		GasAdjustment       float64
+		TrustingPeriod      string
+		NoHostMount         bool
+		SkipGenTx           bool
+		ConfigFileOverrides map[string]any
+		UsingChainIDFlagCLI bool
+		SidecarConfigs      []SidecarConfig
+		CoinDecimals        *int64
+	}{
+		Type:                c.Type,
+		Name:                c.Name,
+		ChainID:             c.ChainID,
+		Images:              c.Images,
+		Bin:                 c.Bin,
+		Bech32Prefix:        c.Bech32Prefix,
+		Denom:               c.Denom,
+		CoinType:            c.CoinType,
+		GasPrices:           c.GasPrices,
+		GasAdjustment:       c.GasAdjustment,
+		TrustingPeriod:      c.TrustingPeriod,
+		NoHostMount:         c.NoHostMount,
+		SkipGenTx:           c.SkipGenTx,
+		ConfigFileOverrides: c.ConfigFileOverrides,
+		UsingChainIDFlagCLI: c.UsingChainIDFlagCLI,
+		SidecarConfigs:      c.SidecarConfigs,
+		CoinDecimals:        c.CoinDecimals,
+	})
 }
 
 // SidecarConfig describes the configuration options for instantiating a new sidecar process.

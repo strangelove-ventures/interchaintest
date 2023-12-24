@@ -45,6 +45,19 @@ func newChainSet(log *zap.Logger, chains []ibc.Chain) *chainSet {
 	return cs
 }
 
+func (cs *chainSet) CreateCheckpoints(ctx context.Context) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	for c := range cs.chains {
+		c := c
+		eg.Go(func() error {
+			return c.CreateCheckpoint(egCtx)
+		})
+	}
+
+	return eg.Wait()
+}
+
 // Initialize concurrently calls Initialize against each chain in the set.
 // Each chain may run a docker pull command,
 // so with a cold image cache, running concurrently may save some time.

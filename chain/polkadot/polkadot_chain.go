@@ -44,6 +44,11 @@ type PolkadotChain struct {
 	keyring            keyring.Keyring
 }
 
+// CreateCheckpoint implements ibc.Chain.
+func (*PolkadotChain) CreateCheckpoint(ctx context.Context) error {
+	panic("unimplemented")
+}
+
 // PolkadotAuthority is used when constructing the validator authorities in the substrate chain spec.
 type PolkadotAuthority struct {
 	Grandpa            string `json:"grandpa"`
