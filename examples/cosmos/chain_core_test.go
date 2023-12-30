@@ -149,6 +149,11 @@ func TestCoreSDKCommands(t *testing.T) {
 	t.Run("upgrade", func(t *testing.T) {
 		testUpgrade(ctx, t, chain)
 	})
+
+	t.Run("staking", func(t *testing.T) {
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		testStaking(ctx, t, chain, users)
+	})
 }
 
 func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -219,8 +224,6 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 
 	node := chain.GetNode()
 
-	// Grant BankSend Authz
-	// TODO: test other types as well (send is giving a NPE) (or move to only generic types)
 	txRes, _ := node.AuthzGrant(ctx, users[0], grantee, "generic", "--msg-type", "/cosmos.bank.v1beta1.MsgSend")
 	require.EqualValues(t, 0, txRes.Code)
 
@@ -244,9 +247,6 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 
 	fmt.Printf("grants: %+v %+v %+v\n", grants, byGrantee, byGranter)
 
-	// Perform BankSend tx via authz (make sure to put this )
-
-	// before balance
 	balanceBefore, err := chain.GetBalance(ctx, granter, chain.Config().Denom)
 	require.NoError(t, err)
 	fmt.Printf("balanceBefore: %+v\n", balanceBefore)
@@ -269,7 +269,6 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	require.NoError(t, err)
 	require.EqualValues(t, 0, resp.Code)
 
-	// after balance
 	balanceAfter, err := chain.GetBalance(ctx, granter, chain.Config().Denom)
 	require.NoError(t, err)
 
@@ -414,7 +413,6 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		require.True(after.GT(before))
 	})
 
-	// fund pools
 	t.Run("fund-pools", func(t *testing.T) {
 		bal, err := chain.BankQueryBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
@@ -440,8 +438,7 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		require.True(coins.AmountOf(chain.Config().Denom).GT(sdkmath.LegacyNewDec(int64(amount))))
 	})
 
-	t.Run("withdraw-address", func(t *testing.T) {
-		// set custom withdraw address
+	t.Run("set-custiom-withdraw-address", func(t *testing.T) {
 		err = node.DistributionSetWithdrawAddr(ctx, users[0].KeyName(), newWithdrawAddr)
 		require.NoError(err)
 
@@ -457,7 +454,6 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		require.EqualValues(valAddr, r.ValidatorAddress)
 		require.EqualValues(chain.Config().Denom, r.Reward[0].Denom)
 
-		// DistributionDelegatorValidators
 		delegatorVals, err := chain.DistributionQueryDelegatorValidators(ctx, delAddr)
 		require.NoError(err)
 		require.EqualValues(valAddr, delegatorVals.Validators[0])
@@ -571,7 +567,6 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 	proposal, err := chain.GovQueryProposalV1(ctx, 1)
 	require.NoError(t, err)
 	require.EqualValues(t, proposal.Title, title)
-	// fmt.Printf("proposal: %+v\n", proposal)
 
 	// vote on the proposal
 	err = node.VoteOnProposal(ctx, users[0].KeyName(), 1, "yes")
@@ -600,7 +595,117 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 
 // func testSlashing(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
 
-// func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	vals, err := chain.StakingQueryValidators(ctx, stakingtypes.Bonded.String())
+	require.NoError(t, err)
+	require.NotEmpty(t, vals)
+
+	val := vals[0].OperatorAddress
+	user := users[0].FormattedAddress()
+
+	t.Run("query validators", func(t *testing.T) {
+		valInfo, err := chain.StakingQueryValidator(ctx, val)
+		require.NoError(t, err)
+		require.EqualValues(t, val, valInfo.OperatorAddress)
+		require.EqualValues(t, stakingtypes.Bonded.String(), valInfo.Status.String())
+
+		del, err := chain.StakingQueryDelegationsTo(ctx, val)
+		require.NoError(t, err)
+		require.NotEmpty(t, del)
+
+		del0 := del[0].Delegation.DelegatorAddress
+
+		allDels, err := chain.StakingQueryDelegations(ctx, del0)
+		require.NoError(t, err)
+		require.NotEmpty(t, allDels)
+
+		singleDel, err := chain.StakingQueryDelegation(ctx, val, del0)
+		require.NoError(t, err)
+		require.EqualValues(t, del0, singleDel.Delegation.DelegatorAddress)
+
+		// StakingQueryDelegatorValidator
+		delVal, err := chain.StakingQueryDelegatorValidator(ctx, del0, val)
+		require.NoError(t, err)
+		require.True(t, delVal.OperatorAddress == val)
+
+		delVals, err := chain.StakingQueryDelegatorValidators(ctx, del0)
+		require.NoError(t, err)
+		require.NotEmpty(t, delVals)
+		require.True(t, delVals[0].OperatorAddress == val)
+
+	})
+
+	t.Run("misc", func(t *testing.T) {
+		params, err := chain.StakingQueryParams(ctx)
+		require.NoError(t, err)
+		require.EqualValues(t, "token", params.BondDenom)
+
+		pool, err := chain.StakingQueryPool(ctx)
+		require.NoError(t, err)
+		require.True(t, pool.BondedTokens.GT(sdkmath.NewInt(0)))
+
+		height, err := chain.Height(ctx)
+		require.NoError(t, err)
+
+		searchHeight := int64(height - 1)
+
+		hi, err := chain.StakingQueryHistoricalInfo(ctx, searchHeight)
+		require.NoError(t, err)
+		require.EqualValues(t, searchHeight, hi.Header.Height)
+	})
+
+	t.Run("delegations", func(t *testing.T) {
+		node := chain.GetNode()
+
+		err := node.StakingDelegate(ctx, users[0].KeyName(), val, "1000"+chain.Config().Denom)
+		require.NoError(t, err)
+
+		del, err := chain.StakingQueryDelegationsTo(ctx, val)
+		require.NoError(t, err)
+		require.NotEmpty(t, del)
+		require.EqualValues(t, "1000", del[1].Balance.Amount.String())
+
+		// unbond
+		err = node.StakingUnbond(ctx, users[0].KeyName(), val, "25"+chain.Config().Denom)
+		require.NoError(t, err)
+
+		unbonding, err := chain.StakingQueryUnbondingDelegation(ctx, user, val)
+		require.NoError(t, err)
+		require.EqualValues(t, user, unbonding.DelegatorAddress)
+		require.EqualValues(t, val, unbonding.ValidatorAddress)
+
+		height := unbonding.Entries[0].CreationHeight
+
+		unbondings, err := chain.StakingQueryUnbondingDelegations(ctx, user)
+		require.NoError(t, err)
+		require.NotEmpty(t, unbondings)
+		require.EqualValues(t, user, unbondings[0].DelegatorAddress)
+
+		// StakingQueryUnbondingDelegationsFrom
+		unbondingsFrom, err := chain.StakingQueryUnbondingDelegationsFrom(ctx, val)
+		require.NoError(t, err)
+		require.NotEmpty(t, unbondingsFrom)
+		require.EqualValues(t, user, unbondingsFrom[0].DelegatorAddress)
+
+		// StakingCancelUnbond
+		err = node.StakingCancelUnbond(ctx, user, val, "25"+chain.Config().Denom, height)
+		require.NoError(t, err)
+
+		// ensure unbonding delegation is gone
+		unbondings, err = chain.StakingQueryUnbondingDelegations(ctx, user)
+		require.NoError(t, err)
+		require.Empty(t, unbondings)
+
+		// StakingRedelegate
+		// StakingQueryRedelegation
+	})
+
+	t.Run("create-validator", func(t *testing.T) {
+		// StakingCreateValidatorFile
+		// StakingCreateValidator
+		// StakingEditValidator
+	})
+}
 
 func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, admin ibc.Wallet) {
 	t.Parallel()

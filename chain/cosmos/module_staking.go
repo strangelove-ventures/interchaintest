@@ -8,9 +8,9 @@ import (
 )
 
 // StakingCancelUnbond cancels an unbonding delegation.
-func (tn *ChainNode) StakingCancelUnbond(ctx context.Context, keyName, validatorAddr, amount string, creationHeight uint64) error {
+func (tn *ChainNode) StakingCancelUnbond(ctx context.Context, keyName, validatorAddr, coinAmt string, creationHeight int64) error {
 	_, err := tn.ExecTx(ctx,
-		keyName, "staking", "cancel-unbond", validatorAddr, amount, fmt.Sprintf("%d", creationHeight),
+		keyName, "staking", "cancel-unbond", validatorAddr, coinAmt, fmt.Sprintf("%d", creationHeight),
 	)
 	return err
 }
@@ -27,6 +27,14 @@ func (tn *ChainNode) StakingCreateValidator(ctx context.Context, keyName, valFil
 func (tn *ChainNode) StakingDelegate(ctx context.Context, keyName, validatorAddr, amount string) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "staking", "delegate", validatorAddr, amount,
+	)
+	return err
+}
+
+// StakingUnbond unstakes tokens from a validator.
+func (tn *ChainNode) StakingUnbond(ctx context.Context, keyName, validatorAddr, amount string) error {
+	_, err := tn.ExecTx(ctx,
+		keyName, "staking", "unbond", validatorAddr, amount,
 	)
 	return err
 }
@@ -90,7 +98,6 @@ func (c *CosmosChain) StakingQueryDelegations(ctx context.Context, delegator str
 func (c *CosmosChain) StakingQueryDelegationsTo(ctx context.Context, validator string) ([]*stakingtypes.DelegationResponse, error) {
 	res, err := stakingtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorDelegations(ctx, &stakingtypes.QueryValidatorDelegationsRequest{ValidatorAddr: validator})
-	// return &res.DelegationResponses, err
 
 	var delegations []*stakingtypes.DelegationResponse
 	for _, d := range res.DelegationResponses {
