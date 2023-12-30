@@ -188,14 +188,7 @@ func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *clie
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
-	c.findTxMu.Lock()
-	defer c.findTxMu.Unlock()
-	if len(c.FullNodes) > 0 {
-		// use first full node
-		return c.FullNodes[0]
-	}
-	// use first validator
-	return c.Validators[0]
+	return c.GetNode()
 }
 
 func (c *CosmosChain) GetNode() *ChainNode {
