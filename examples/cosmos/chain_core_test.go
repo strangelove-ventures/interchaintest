@@ -62,6 +62,8 @@ var (
 			},
 		},
 	}
+
+	baseBech32 = "cosmos"
 )
 
 func TestCoreSDKCommands(t *testing.T) {
@@ -70,7 +72,7 @@ func TestCoreSDKCommands(t *testing.T) {
 	}
 	t.Parallel()
 
-	cosmos.SetSDKConfig("cosmos")
+	cosmos.SetSDKConfig(baseBech32)
 
 	sdk47Genesis := []cosmos.GenesisKV{
 		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
@@ -89,7 +91,7 @@ func TestCoreSDKCommands(t *testing.T) {
 			Version:   "v8.0.0", // SDK v50
 			ChainConfig: ibc.ChainConfig{
 				Denom:         denomMetadata.Base,
-				Bech32Prefix:  "cosmos",
+				Bech32Prefix:  baseBech32,
 				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 				GasAdjustment: 1.5,
@@ -155,7 +157,7 @@ func TestCoreSDKCommands(t *testing.T) {
 		testCircuit(ctx, t, chain, users, superAdmin)
 	})
 
-	t.Run("auth", func(t *testing.T) {
+	t.Run("auth-vesting", func(t *testing.T) {
 		testAuth(ctx, t, chain)
 		testVesting(ctx, t, chain, superAdmin)
 	})
@@ -166,12 +168,46 @@ func TestCoreSDKCommands(t *testing.T) {
 }
 
 func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
-	// most Auth query types are tested in vesting (since there are different account types there)
-	govAddr, err := chain.GetModuleAddress(ctx, "gov")
+	// get gov address
+	govAddr, err := chain.AuthGetModuleAddress(ctx, "gov")
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
-	_, err = chain.AccAddressFromBech32(govAddr)
+
+	// convert gov addr to bytes
+	govBz, err := chain.AccAddressFromBech32(govAddr)
 	require.NoError(t, err)
+
+	// convert gov bytes back to string address
+	strAddr, err := chain.AuthAddressBytesToString(ctx, govBz)
+	require.NoError(t, err)
+	require.EqualValues(t, govAddr, strAddr)
+
+	// convert gov string address back to bytes
+	bz, err := chain.AuthAddressStringToBytes(ctx, strAddr)
+	require.NoError(t, err)
+	require.EqualValues(t, govBz, bz)
+
+	// params
+	p, err := chain.AuthParams(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, p)
+	require.True(t, p.MaxMemoCharacters > 0)
+
+	// get all module accounts
+	accs, err := chain.AuthModuleAccounts(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, accs)
+
+	// get the global bech32 prefix
+	bech32, err := chain.AuthBech32Prefix(ctx)
+	require.NoError(t, err)
+	require.EqualValues(t, baseBech32, bech32)
+
+	// get base info about an account
+	accInfo, err := chain.AuthAccountInfo(ctx, govAddr)
+	require.NoError(t, err)
+	require.EqualValues(t, govAddr, accInfo.Address)
+
 }
 
 // testUpgrade test the queries for upgrade information. Actual upgrades take place in other test.

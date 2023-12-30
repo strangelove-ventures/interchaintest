@@ -18,14 +18,26 @@ func (c *CosmosChain) AuthGetAccount(ctx context.Context, addr string) (*cdctype
 	return res.Account, err
 }
 
-func (c *CosmosChain) AuthParams(ctx context.Context, addr string) (*authtypes.Params, error) {
+func (c *CosmosChain) AuthParams(ctx context.Context) (*authtypes.Params, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Params(ctx, &authtypes.QueryParamsRequest{})
 	return &res.Params, err
 }
 
-func (c *CosmosChain) AuthModuleAccounts(ctx context.Context, addr string) ([]*cdctypes.Any, error) {
+func (c *CosmosChain) AuthModuleAccounts(ctx context.Context) ([]authtypes.ModuleAccount, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccounts(ctx, &authtypes.QueryModuleAccountsRequest{})
-	return res.Accounts, err
+
+	maccs := make([]authtypes.ModuleAccount, len(res.Accounts))
+
+	for i, acc := range res.Accounts {
+		var macc authtypes.ModuleAccount
+		err := c.GetCodec().Unmarshal(acc.Value, &macc)
+		if err != nil {
+			return nil, err
+		}
+		maccs[i] = macc
+	}
+
+	return maccs, err
 }
 
 // AuthGetModuleAccount performs a query to get the account details of the specified chain module
@@ -37,15 +49,10 @@ func (c *CosmosChain) AuthGetModuleAccount(ctx context.Context, moduleName strin
 		return authtypes.ModuleAccount{}, err
 	}
 
-	if res.Account.TypeUrl == "/cosmos.auth.v1beta1.ModuleAccount" {
-		var modAcc authtypes.ModuleAccount
-		err := c.GetCodec().Unmarshal(res.Account.Value, &modAcc)
-		fmt.Printf("modAcc: %+v\n", modAcc)
+	var modAcc authtypes.ModuleAccount
+	err = c.GetCodec().Unmarshal(res.Account.Value, &modAcc)
 
-		return modAcc, err
-	}
-
-	return authtypes.ModuleAccount{}, fmt.Errorf("invalid module account type: %s", res.Account.TypeUrl)
+	return modAcc, err
 }
 
 // GetModuleAddress performs a query to get the address of the specified chain module

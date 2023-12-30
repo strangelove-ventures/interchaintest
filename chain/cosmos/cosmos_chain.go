@@ -372,24 +372,6 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
-// ExecQueryToResponse is a helper to convert a query to its response.
-func (c *CosmosChain) ExecQueryToResponse(ctx context.Context, chain *CosmosChain, cmd []string, res interface{}) error {
-	rCmd := make([]string, 0)
-	for _, c := range cmd {
-		if c != "" {
-			rCmd = append(rCmd, c)
-		}
-	}
-
-	stdout, stderr, err := chain.getFullNode().ExecQuery(ctx, rCmd...)
-	if err != nil {
-		fmt.Println("HandleQuery err: ", string(stdout), string(stderr), err.Error())
-		return err
-	}
-
-	return json.Unmarshal(stdout, &res)
-}
-
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
@@ -499,6 +481,24 @@ func (c *CosmosChain) TxHashToResponse(ctx context.Context, txHash string) (*sdk
 	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
 	_ = json.Unmarshal(stdout, &i)
 	return i, nil
+}
+
+// ExecQueryToResponse is a helper to convert a query to its response.
+func (c *CosmosChain) ExecQueryToResponse(ctx context.Context, chain *CosmosChain, cmd []string, res interface{}) error {
+	rCmd := make([]string, 0)
+	for _, c := range cmd {
+		if c != "" {
+			rCmd = append(rCmd, c)
+		}
+	}
+
+	stdout, stderr, err := chain.getFullNode().ExecQuery(ctx, rCmd...)
+	if err != nil {
+		fmt.Println("HandleQuery err: ", string(stdout), string(stderr), err.Error())
+		return err
+	}
+
+	return json.Unmarshal(stdout, &res)
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
