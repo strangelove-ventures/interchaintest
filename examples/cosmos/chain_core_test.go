@@ -154,6 +154,10 @@ func TestCoreSDKCommands(t *testing.T) {
 		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 		testStaking(ctx, t, chain, users)
 	})
+
+	t.Run("slashing", func(t *testing.T) {
+		testSlashing(ctx, t, chain)
+	})
 }
 
 func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -593,7 +597,19 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 	require.Len(t, proposals, 1)
 }
 
-// func testSlashing(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
+func testSlashing(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	p, err := chain.SlashingQueryParams(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, p)
+
+	infos, err := chain.SlashingQuerySigningInfos(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, infos)
+
+	si, err := chain.SlashingQuerySigningInfo(ctx, infos[0].Address)
+	require.NoError(t, err)
+	require.NotNil(t, si)
+}
 
 func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
 	vals, err := chain.StakingQueryValidators(ctx, stakingtypes.Bonded.String())
