@@ -10,8 +10,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
-const ()
-
 // AuthzGrant grants a message as a permission to an account.
 func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
 

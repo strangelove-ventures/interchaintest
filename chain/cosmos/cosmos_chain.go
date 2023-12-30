@@ -51,6 +51,7 @@ type CosmosChain struct {
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
 
+	cdc      *codec.ProtoCodec
 	log      *zap.Logger
 	keyring  keyring.Keyring
 	findTxMu sync.Mutex
@@ -100,8 +101,14 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
 		log:           log,
+		cdc:           cdc,
 		keyring:       kr,
 	}
+}
+
+// GetCodec returns the codec for the chain.
+func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
+	return c.cdc
 }
 
 // Nodes returns all nodes, including validators and fullnodes.
@@ -396,7 +403,7 @@ func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) 
 
 // GetModuleAddress performs a query to get the address of the specified chain module
 func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	return c.getFullNode().GetModuleAddress(ctx, moduleName)
+	return c.AuthGetModuleAddress(ctx, moduleName)
 }
 
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
