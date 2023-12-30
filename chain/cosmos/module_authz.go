@@ -10,8 +10,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
-// TODO: run this on a chainNOde vs a CosmosChain
-
 // AuthzGrant grants a message as a permission to an account.
 func (tn *ChainNode) AuthzGrant(ctx context.Context, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
 
@@ -87,6 +85,7 @@ func (tn *ChainNode) AuthzRevoke(ctx context.Context, granter ibc.Wallet, grante
 	return tn.TxHashToResponse(ctx, txHash)
 }
 
+// AuthzQueryGrants queries all grants for a given granter and grantee.
 func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, grantee string, msgType string, extraFlags ...string) ([]*authz.Grant, error) {
 	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).Grants(ctx, &authz.QueryGrantsRequest{
 		Granter:    granter,
@@ -96,6 +95,7 @@ func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, gran
 	return res.Grants, err
 }
 
+// AuthzQueryGrantsByGrantee queries all grants for a given grantee.
 func (c *CosmosChain) AuthzQueryGrantsByGrantee(ctx context.Context, grantee string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
 	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranteeGrants(ctx, &authz.QueryGranteeGrantsRequest{
 		Grantee: grantee,
@@ -103,6 +103,7 @@ func (c *CosmosChain) AuthzQueryGrantsByGrantee(ctx context.Context, grantee str
 	return res.Grants, err
 }
 
+// AuthzQueryGrantsByGranter returns all grants for a granter.
 func (c *CosmosChain) AuthzQueryGrantsByGranter(ctx context.Context, granter string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
 	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranterGrants(ctx, &authz.QueryGranterGrantsRequest{
 		Granter: granter,

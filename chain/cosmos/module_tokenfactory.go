@@ -99,6 +99,11 @@ func (c *CosmosChain) TokenFactoryQueryAdmin(ctx context.Context, fullDenom stri
 	return res, nil
 }
 
+// Deprecated: use TokenFactoryQueryAdmin instead
+func TokenFactoryGetAdmin(c *CosmosChain, ctx context.Context, fullDenom string) (*QueryDenomAuthorityMetadataResponse, error) {
+	return c.TokenFactoryQueryAdmin(ctx, fullDenom)
+}
+
 func convertToCoin(amount uint64, denom string) string {
 	return strconv.FormatUint(amount, 10) + denom
 }

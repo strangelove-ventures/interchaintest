@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -466,24 +465,6 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
 
 	return tx, nil
-}
-
-// ExecQueryToResponse is a helper to convert a query to its response.
-func (c *CosmosChain) ExecQueryToResponse(ctx context.Context, chain *CosmosChain, cmd []string, res interface{}) error {
-	rCmd := make([]string, 0)
-	for _, c := range cmd {
-		if c != "" {
-			rCmd = append(rCmd, c)
-		}
-	}
-
-	stdout, stderr, err := chain.getFullNode().ExecQuery(ctx, rCmd...)
-	if err != nil {
-		fmt.Println("HandleQuery err: ", string(stdout), string(stderr), err.Error())
-		return err
-	}
-
-	return json.Unmarshal(stdout, &res)
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
