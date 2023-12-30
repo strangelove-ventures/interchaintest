@@ -8,6 +8,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
@@ -40,6 +41,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	image ibc.DockerImage,
 	ports nat.PortSet,
 	volumeBinds []string,
+	mounts []mount.Mount,
 	hostName string,
 	cmd []string,
 	env []string,
@@ -80,6 +82,7 @@ func (c *ContainerLifecycle) CreateContainer(
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
+			Mounts:          mounts,
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{

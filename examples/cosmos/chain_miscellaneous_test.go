@@ -410,7 +410,7 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	govAddr, err := chain.GetGovernanceAddress(ctx)
 	require.NoError(t, err)
-	_, err = sdk.AccAddressFromBech32(govAddr)
+	_, err = chain.AccAddressFromBech32(govAddr)
 	require.NoError(t, err)
 }
 

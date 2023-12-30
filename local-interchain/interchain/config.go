@@ -43,21 +43,15 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	chainsDir := filepath.Join(installDir, "chains")
 	cfgFilePath := filepath.Join(chainsDir, configFile)
 
-	// configs Folder
-	configsDir := filepath.Join(installDir, "configs")
-	relayerFilePath := filepath.Join(configsDir, "relayer.json")
-
 	config, err := loadConfig(config, cfgFilePath)
 	if err != nil {
 		return nil, err
 	}
-	config, _ = loadConfig(config, relayerFilePath)
 
 	log.Println("Using directory:", installDir)
 	log.Println("Using chain config:", cfgFilePath)
 
 	chains := config.Chains
-	relayer := config.Relayer
 
 	for i := range chains {
 		chain := chains[i]
@@ -72,8 +66,6 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 			fmt.Printf("Loaded %v\n", config)
 		}
 	}
-
-	config.Relayer = relayer.SetRelayerDefaults()
 
 	return config, nil
 }
