@@ -474,33 +474,33 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 
 	denom := chain.Config().Denom
 
-	// t.Run("successful grant and queries", func(t *testing.T) {
-	// 	granter := users[0]
-	// 	grantee := users[1]
+	t.Run("successful grant and queries", func(t *testing.T) {
+		granter := users[0]
+		grantee := users[1]
 
-	// 	err = node.FeeGrant(ctx, granter.KeyName(), grantee.FormattedAddress(), fmt.Sprintf("%d%s", 1000, chain.Config().Denom), []string{"/cosmos.bank.v1beta1.MsgSend"}, time.Now().Add(time.Hour*24*365))
-	// 	require.NoError(t, err)
+		err = node.FeeGrant(ctx, granter.KeyName(), grantee.FormattedAddress(), fmt.Sprintf("%d%s", 1000, chain.Config().Denom), []string{"/cosmos.bank.v1beta1.MsgSend"}, time.Now().Add(time.Hour*24*365))
+		require.NoError(t, err)
 
-	// 	g, err := chain.FeeGrantGetAllowance(ctx, granter.FormattedAddress(), grantee.FormattedAddress())
-	// 	require.NoError(t, err)
-	// 	fmt.Printf("g: %+v\n", g)
-	// 	require.EqualValues(t, granter.FormattedAddress(), g.Granter)
-	// 	require.EqualValues(t, grantee.FormattedAddress(), g.Grantee)
-	// 	require.EqualValues(t, "/cosmos.feegrant.v1beta1.BasicAllowance", g.Allowance.TypeUrl)
-	// 	require.Contains(t, string(g.Allowance.Value), "/cosmos.bank.v1beta1.MsgSend")
+		g, err := chain.FeeGrantQueryAllowance(ctx, granter.FormattedAddress(), grantee.FormattedAddress())
+		require.NoError(t, err)
+		fmt.Printf("g: %+v\n", g)
+		require.EqualValues(t, granter.FormattedAddress(), g.Granter)
+		require.EqualValues(t, grantee.FormattedAddress(), g.Grantee)
+		require.EqualValues(t, "/cosmos.feegrant.v1beta1.AllowedMsgAllowance", g.Allowance.TypeUrl)
+		require.Contains(t, string(g.Allowance.Value), "/cosmos.bank.v1beta1.MsgSend")
 
-	// 	all, err := chain.FeeGrantGetAllowances(ctx, grantee.FormattedAddress())
-	// 	require.NoError(t, err)
-	// 	require.Len(t, all, 1)
-	// 	require.EqualValues(t, granter.FormattedAddress(), all[0].Granter)
+		all, err := chain.FeeGrantQueryAllowances(ctx, grantee.FormattedAddress())
+		require.NoError(t, err)
+		require.Len(t, all, 1)
+		require.EqualValues(t, granter.FormattedAddress(), all[0].Granter)
 
-	// 	all2, err := chain.FeeGrantGetAllowancesByGranter(ctx, granter.FormattedAddress())
-	// 	require.NoError(t, err)
-	// 	require.Len(t, all2, 1)
-	// 	require.EqualValues(t, grantee.FormattedAddress(), all2[0].Grantee)
-	// })
+		all2, err := chain.FeeGrantQueryAllowancesByGranter(ctx, granter.FormattedAddress())
+		require.NoError(t, err)
+		require.Len(t, all2, 1)
+		require.EqualValues(t, grantee.FormattedAddress(), all2[0].Grantee)
+	})
 
-	t.Run("successful execution and a revoke", func(t *testing.T) {
+	t.Run("successful execution", func(t *testing.T) {
 		granter2 := users[2]
 		grantee2 := users[3]
 
@@ -515,7 +515,6 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 		sendCoin := fmt.Sprintf("%d%s", sendAmt, denom)
 		feeCoin := fmt.Sprintf("%d%s", fee, denom)
 
-		// use the feegrant and validate the granter balance decreases by fee then add the sendAmt back
 		_, err = node.ExecTx(ctx,
 			grantee2.KeyName(), "bank", "send", grantee2.KeyName(), granter2.FormattedAddress(), sendCoin,
 			"--fees", feeCoin, "--fee-granter", granter2.FormattedAddress(),
@@ -525,26 +524,6 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 		newBal, err := chain.BankQueryBalance(ctx, granter2.FormattedAddress(), denom)
 		require.NoError(t, err)
 		require.EqualValues(t, bal.AddRaw(int64(sendAmt-fee)), newBal)
-
-		// TODO: FeeGrantRevoke does not work
-		//           	exit code 1:  [90m12:16AM[0m [1m[31mERR[0m[0m failure when running app [36merr=[0m"key with address cosmos1wycej8y4w7el8kghq69ah84kslgj9akjghpern not found: key not found"
-		//  Test:       	TestCoreSDKCommands/feegrant/successful_execution_and_a_revoke
-		//
-		// revoke the grant
-		// err = node.FeeGrantRevoke(ctx, granter2.KeyName(), granter2.FormattedAddress(), grantee2.FormattedAddress())
-		// require.NoError(t, err)
-
-		// // fail; try to execute the above logic again
-		// _, err = node.ExecTx(ctx,
-		// 	grantee2.KeyName(), "bank", "send", grantee2.KeyName(), granter2.FormattedAddress(), sendCoin,
-		// 	"--fees", feeCoin, "--fee-granter", granter2.FormattedAddress(),
-		// )
-		// // TODO: actually want an error here
-		// require.NoError(t, err)
-
-		// postRevokeBal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
-		// require.NoError(t, err)
-		// require.EqualValues(t, newBal, postRevokeBal)
 	})
 }
 
