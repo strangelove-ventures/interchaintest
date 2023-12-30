@@ -155,14 +155,42 @@ func TestCoreSDKCommands(t *testing.T) {
 		testCircuit(ctx, t, chain, users, superAdmin)
 	})
 
-	t.Run("vesting", func(t *testing.T) {
+	t.Run("auth", func(t *testing.T) {
+		testAuth(ctx, t, chain)
 		testVesting(ctx, t, chain, superAdmin)
 	})
 
-	t.Run("auth", func(t *testing.T) {
-		// users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
-		// testAuth(ctx, t, chain, users)
+	t.Run("upgrade", func(t *testing.T) {
+		testUpgrade(ctx, t, chain)
 	})
+}
+
+func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	// most Auth query types are tested in vesting (since there are different account types there)
+	govAddr, err := chain.GetModuleAddress(ctx, "gov")
+	require.NoError(t, err)
+	require.NotEmpty(t, govAddr)
+	_, err = chain.AccAddressFromBech32(govAddr)
+	require.NoError(t, err)
+}
+
+// testUpgrade test the queries for upgrade information. Actual upgrades take place in other test.
+func testUpgrade(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
+	v, err := chain.UpgradeGetAllModuleVersions(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, v)
+
+	// UpgradeGetModuleVersion
+	authority, err := chain.UpgradeGetAuthority(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, authority)
+
+	plan, err := chain.UpgradeGetPlan(ctx)
+	require.NoError(t, err)
+	require.Nil(t, plan)
+
+	_, err = chain.UpgradeGetAppliedPlan(ctx, "")
+	require.NoError(t, err)
 }
 
 func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {

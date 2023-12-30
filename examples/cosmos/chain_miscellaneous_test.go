@@ -88,7 +88,6 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testTokenFactory(ctx, t, chain, users)
 	testFailedCWExecute(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
-	testGetGovernanceAddress(ctx, t, chain)
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
@@ -405,13 +404,6 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 0)
 
-}
-
-func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
-	govAddr, err := chain.GetGovernanceAddress(ctx)
-	require.NoError(t, err)
-	_, err = chain.AccAddressFromBech32(govAddr)
-	require.NoError(t, err)
 }
 
 // helpers

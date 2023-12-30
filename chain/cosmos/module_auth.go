@@ -2,7 +2,6 @@ package cosmos
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -30,19 +29,23 @@ func (c *CosmosChain) AuthModuleAccounts(ctx context.Context, addr string) ([]*c
 }
 
 // AuthGetModuleAccount performs a query to get the account details of the specified chain module
-func (c *CosmosChain) AuthGetModuleAccount(ctx context.Context, moduleName string) (QueryModuleAccountResponse, error) {
-	node := c.GetNode()
-	stdout, _, err := node.ExecQuery(ctx, "auth", "module-account", moduleName)
+func (c *CosmosChain) AuthGetModuleAccount(ctx context.Context, moduleName string) (authtypes.ModuleAccount, error) {
+	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccountByName(ctx, &authtypes.QueryModuleAccountByNameRequest{
+		Name: moduleName,
+	})
 	if err != nil {
-		return QueryModuleAccountResponse{}, err
+		return authtypes.ModuleAccount{}, err
 	}
 
-	queryRes := QueryModuleAccountResponse{}
-	err = json.Unmarshal(stdout, &queryRes)
-	if err != nil {
-		return QueryModuleAccountResponse{}, err
+	if res.Account.TypeUrl == "/cosmos.auth.v1beta1.ModuleAccount" {
+		var modAcc authtypes.ModuleAccount
+		err := c.GetCodec().Unmarshal(res.Account.Value, &modAcc)
+		fmt.Printf("modAcc: %+v\n", modAcc)
+
+		return modAcc, err
 	}
-	return queryRes, nil
+
+	return authtypes.ModuleAccount{}, fmt.Errorf("invalid module account type: %s", res.Account.TypeUrl)
 }
 
 // GetModuleAddress performs a query to get the address of the specified chain module
@@ -51,7 +54,17 @@ func (c *CosmosChain) AuthGetModuleAddress(ctx context.Context, moduleName strin
 	if err != nil {
 		return "", err
 	}
-	return queryRes.Account.BaseAccount.Address, nil
+	return queryRes.BaseAccount.Address, nil
+}
+
+// GetModuleAddress is an alias for AuthGetModuleAddress
+func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	return c.AuthGetModuleAddress(ctx, moduleName)
+}
+
+// GetGovernanceAddress performs a query to get the address of the chain's x/gov module
+func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
+	return c.GetModuleAddress(ctx, "gov")
 }
 
 func (c *CosmosChain) AuthBech32Prefix(ctx context.Context) (string, error) {

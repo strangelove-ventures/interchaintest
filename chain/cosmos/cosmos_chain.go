@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
@@ -396,16 +397,6 @@ func (c *CosmosChain) ExecQueryToResponse(ctx context.Context, chain *CosmosChai
 	return json.Unmarshal(stdout, &res)
 }
 
-// GetGovernanceAddress performs a query to get the address of the chain's x/gov module
-func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
-	return c.GetModuleAddress(ctx, govtypes.ModuleName)
-}
-
-// GetModuleAddress performs a query to get the address of the specified chain module
-func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	return c.AuthGetModuleAddress(ctx, moduleName)
-}
-
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
@@ -501,6 +492,20 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
 
 	return tx, nil
+}
+
+// TxHashToResponse returns the sdk transaction response struct for a given transaction hash.
+func (c *CosmosChain) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
+	stdout, stderr, err := c.GetNode().ExecQuery(ctx, "tx", txHash)
+	if err != nil {
+		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+	}
+
+	i := &sdk.TxResponse{}
+
+	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
+	_ = json.Unmarshal(stdout, &i)
+	return i, nil
 }
 
 // StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.

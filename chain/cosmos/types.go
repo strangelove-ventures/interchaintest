@@ -205,15 +205,3 @@ type DenomAuthorityMetadata struct {
 	// Can be empty for no admin, or a valid address
 	Admin string `protobuf:"bytes,1,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
 }
-
-type QueryModuleAccountResponse struct {
-	Account struct {
-		BaseAccount struct {
-			AccountNumber string `json:"account_number"`
-			Address       string `json:"address"`
-			PubKey        string `json:"pub_key"`
-			Sequence      string `json:"sequence"`
-		} `json:"base_account"`
-		Name string `json:"name"`
-	} `json:"account"`
-}

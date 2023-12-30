@@ -517,20 +517,6 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	)
 }
 
-// TODO: is this the best place for this?
-func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
-	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
-	if err != nil {
-		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
-	}
-
-	i := &sdk.TxResponse{}
-
-	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
-	_ = json.Unmarshal(stdout, &i)
-	return i, nil
-}
-
 // BinCommand is a helper to retrieve a full command for a chain node binary.
 // For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,
 // pass ("keys", "show", "key1") for command to return the full command.

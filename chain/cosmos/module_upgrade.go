@@ -32,7 +32,7 @@ func (tn *ChainNode) UpgradeCancel(ctx context.Context, keyName string, extraFla
 }
 
 // UpgradeGetPlan queries the current upgrade plan.
-func (c *CosmosChain) UpgradeGetPlan(ctx context.Context, name string) (*upgradetypes.Plan, error) {
+func (c *CosmosChain) UpgradeGetPlan(ctx context.Context) (*upgradetypes.Plan, error) {
 	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).CurrentPlan(ctx, &upgradetypes.QueryCurrentPlanRequest{})
 	return res.Plan, err
 }
@@ -47,7 +47,7 @@ func (c *CosmosChain) UpgradeGetAppliedPlan(ctx context.Context, name string) (*
 }
 
 // UpgradeGetAuthority returns the account with authority to conduct upgrades
-func (c *CosmosChain) UpgradeGetAuthority(ctx context.Context, name string) (string, error) {
+func (c *CosmosChain) UpgradeGetAuthority(ctx context.Context) (string, error) {
 	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).Authority(ctx, &upgradetypes.QueryAuthorityRequest{})
 	return res.Address, err
 }

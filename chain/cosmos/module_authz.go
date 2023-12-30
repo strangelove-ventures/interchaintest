@@ -49,7 +49,7 @@ func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, gra
 		return nil, err
 	}
 
-	return chain.GetNode().TxHashToResponse(ctx, txHash)
+	return chain.TxHashToResponse(ctx, txHash)
 }
 
 // AuthzExec executes an authz MsgExec transaction with a single nested message.
@@ -67,7 +67,7 @@ func AuthzExec(ctx context.Context, chain *CosmosChain, grantee ibc.Wallet, nest
 		return nil, err
 	}
 
-	return chain.GetNode().TxHashToResponse(ctx, txHash)
+	return chain.TxHashToResponse(ctx, txHash)
 }
 
 // AuthzRevoke revokes a message as a permission to an account.
@@ -83,7 +83,7 @@ func AuthzRevoke(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, gr
 		return nil, err
 	}
 
-	return chain.GetNode().TxHashToResponse(ctx, txHash)
+	return chain.TxHashToResponse(ctx, txHash)
 }
 
 func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, grantee string, msgType string, extraFlags ...string) ([]*authz.Grant, error) {
