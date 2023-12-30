@@ -84,8 +84,8 @@ func (tn *ChainNode) TokenFactoryMetadata(ctx context.Context, keyName, fullDeno
 	)
 }
 
-// TokenFactoryGetAdmin returns the admin of a tokenfactory token.
-func (c *CosmosChain) TokenFactoryGetAdmin(ctx context.Context, fullDenom string) (*QueryDenomAuthorityMetadataResponse, error) {
+// TokenFactoryQueryAdmin returns the admin of a tokenfactory token.
+func (c *CosmosChain) TokenFactoryQueryAdmin(ctx context.Context, fullDenom string) (*QueryDenomAuthorityMetadataResponse, error) {
 	res := &QueryDenomAuthorityMetadataResponse{}
 	stdout, stderr, err := c.getFullNode().ExecQuery(ctx, "tokenfactory", "denom-authority-metadata", fullDenom)
 	if err != nil {

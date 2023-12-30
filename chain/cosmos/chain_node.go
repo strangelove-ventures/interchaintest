@@ -505,6 +505,20 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	return output.TxHash, nil
 }
 
+// TxHashToResponse returns the sdk transaction response struct for a given transaction hash.
+func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
+	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
+	if err != nil {
+		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+	}
+
+	i := &sdk.TxResponse{}
+
+	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
+	_ = json.Unmarshal(stdout, &i)
+	return i, nil
+}
+
 // NodeCommand is a helper to retrieve a full command for a chain node binary.
 // when interactions with the RPC endpoint are necessary.
 // For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,

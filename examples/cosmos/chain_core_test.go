@@ -169,7 +169,7 @@ func TestCoreSDKCommands(t *testing.T) {
 
 func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	// get gov address
-	govAddr, err := chain.AuthGetModuleAddress(ctx, "gov")
+	govAddr, err := chain.AuthQueryModuleAddress(ctx, "gov")
 	require.NoError(t, err)
 	require.NotEmpty(t, govAddr)
 
@@ -188,23 +188,23 @@ func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	require.EqualValues(t, govBz, bz)
 
 	// params
-	p, err := chain.AuthParams(ctx)
+	p, err := chain.AuthQueryParams(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, p)
 	require.True(t, p.MaxMemoCharacters > 0)
 
 	// get all module accounts
-	accs, err := chain.AuthModuleAccounts(ctx)
+	accs, err := chain.AuthQueryModuleAccounts(ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, accs)
 
 	// get the global bech32 prefix
-	bech32, err := chain.AuthBech32Prefix(ctx)
+	bech32, err := chain.AuthQueryBech32Prefix(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, baseBech32, bech32)
 
 	// get base info about an account
-	accInfo, err := chain.AuthAccountInfo(ctx, govAddr)
+	accInfo, err := chain.AuthQueryAccountInfo(ctx, govAddr)
 	require.NoError(t, err)
 	require.EqualValues(t, govAddr, accInfo.Address)
 
@@ -212,20 +212,20 @@ func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 
 // testUpgrade test the queries for upgrade information. Actual upgrades take place in other test.
 func testUpgrade(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
-	v, err := chain.UpgradeGetAllModuleVersions(ctx)
+	v, err := chain.UpgradeQueryAllModuleVersions(ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, v)
 
-	// UpgradeGetModuleVersion
-	authority, err := chain.UpgradeGetAuthority(ctx)
+	// UpgradeQueryModuleVersion
+	authority, err := chain.UpgradeQueryAuthority(ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, authority)
 
-	plan, err := chain.UpgradeGetPlan(ctx)
+	plan, err := chain.UpgradeQueryPlan(ctx)
 	require.NoError(t, err)
 	require.Nil(t, plan)
 
-	_, err = chain.UpgradeGetAppliedPlan(ctx, "")
+	_, err = chain.UpgradeQueryAppliedPlan(ctx, "")
 	require.NoError(t, err)
 }
 
@@ -233,9 +233,11 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 	granter := users[0].FormattedAddress()
 	grantee := users[1].FormattedAddress()
 
+	node := chain.GetNode()
+
 	// Grant BankSend Authz
 	// TODO: test other types as well (send is giving a NPE) (or move to only generic types)
-	txRes, _ := cosmos.AuthzGrant(ctx, chain, users[0], grantee, "generic", "--msg-type", "/cosmos.bank.v1beta1.MsgSend")
+	txRes, _ := node.AuthzGrant(ctx, users[0], grantee, "generic", "--msg-type", "/cosmos.bank.v1beta1.MsgSend")
 	require.EqualValues(t, 0, txRes.Code)
 
 	grants, err := chain.AuthzQueryGrants(ctx, granter, grantee, "")
@@ -279,7 +281,7 @@ func testAuthz(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, use
 		"--yes",
 	}
 
-	resp, err := cosmos.AuthzExec(ctx, chain, users[1], nestedCmd)
+	resp, err := node.AuthzExec(ctx, users[1], nestedCmd)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, resp.Code)
 
@@ -296,7 +298,7 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 	user1 := users[1].FormattedAddress()
 	user2 := users[2].FormattedAddress()
 
-	b2, err := chain.BankGetBalance(ctx, user1, chain.Config().Denom)
+	b2, err := chain.BankQueryBalance(ctx, user1, chain.Config().Denom)
 	require.NoError(t, err)
 
 	// send 1 token
@@ -314,7 +316,7 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 	require.NoError(t, err)
 	require.Equal(t, b2.Add(sdkmath.NewInt(sendAmt*2)), b2New)
 
-	b2All, err := chain.BankAllBalances(ctx, user1)
+	b2All, err := chain.BankQueryAllBalances(ctx, user1)
 	require.NoError(t, err)
 	require.Equal(t, b2New, b2All.AmountOf(chain.Config().Denom))
 
@@ -327,7 +329,7 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 	require.Equal(t, spendableBal.Amount, spendableBals.AmountOf(chain.Config().Denom))
 
 	// == metadata ==
-	meta, err := chain.BankDenomMetadata(ctx, chain.Config().Denom)
+	meta, err := chain.BankQueryDenomMetadata(ctx, chain.Config().Denom)
 	require.NoError(t, err)
 
 	meta2, err := chain.BankQueryDenomMetadataByQueryString(ctx, chain.Config().Denom)
@@ -376,11 +378,11 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	acc := authtypes.NewModuleAddress("distribution")
 	require := require.New(t)
 
-	vals, err := chain.StakingGetValidators(ctx, stakingtypes.Bonded.String())
+	vals, err := chain.StakingQueryValidators(ctx, stakingtypes.Bonded.String())
 	require.NoError(err)
 	fmt.Printf("validators: %+v\n", vals)
 
-	del, err := chain.StakingGetDelegationsTo(ctx, vals[0].OperatorAddress)
+	del, err := chain.StakingQueryDelegationsTo(ctx, vals[0].OperatorAddress)
 	require.NoError(err)
 
 	delAddr := del[0].Delegation.DelegatorAddress
@@ -389,24 +391,24 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	newWithdrawAddr := "cosmos1hj83l3auyqgy5qcp52l6sp2e67xwq9xx80alju"
 
 	t.Run("misc queries", func(t *testing.T) {
-		slashes, err := chain.DistributionValidatorSlashes(ctx, valAddr)
+		slashes, err := chain.DistributionQueryValidatorSlashes(ctx, valAddr)
 		require.NoError(err)
 		require.EqualValues(0, len(slashes))
 
-		valDistInfo, err := chain.DistributionValidatorDistributionInfo(ctx, valAddr)
+		valDistInfo, err := chain.DistributionQueryValidatorDistributionInfo(ctx, valAddr)
 		require.NoError(err)
 		fmt.Printf("valDistInfo: %+v\n", valDistInfo)
 		require.EqualValues(1, valDistInfo.Commission.Len())
 
-		valOutRewards, err := chain.DistributionValidatorOutstandingRewards(ctx, valAddr)
+		valOutRewards, err := chain.DistributionQueryValidatorOutstandingRewards(ctx, valAddr)
 		require.NoError(err)
 		require.EqualValues(1, valOutRewards.Rewards.Len())
 
-		params, err := chain.DistributionParams(ctx)
+		params, err := chain.DistributionQueryParams(ctx)
 		require.NoError(err)
 		require.True(params.WithdrawAddrEnabled)
 
-		comm, err := chain.DistributionCommission(ctx, valAddr)
+		comm, err := chain.DistributionQueryCommission(ctx, valAddr)
 		require.NoError(err)
 		require.EqualValues(chain.Config().Denom, comm.Commission[0].Denom)
 	})
@@ -415,14 +417,14 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		err = node.StakingDelegate(ctx, users[2].KeyName(), valAddr, fmt.Sprintf("%d%s", uint64(100*math.Pow10(6)), chain.Config().Denom))
 		require.NoError(err)
 
-		before, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		before, err := chain.BankQueryBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
 		fmt.Printf("before: %+v\n", before)
 
 		err = node.DistributionWithdrawAllRewards(ctx, users[2].KeyName())
 		require.NoError(err)
 
-		after, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		after, err := chain.BankQueryBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
 		fmt.Printf("after: %+v\n", after)
 		require.True(after.GT(before))
@@ -430,7 +432,7 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 
 	// fund pools
 	t.Run("fund-pools", func(t *testing.T) {
-		bal, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		bal, err := chain.BankQueryBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
 		fmt.Printf("CP balance: %+v\n", bal)
 
@@ -442,14 +444,14 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		err = node.DistributionFundValidatorRewardsPool(ctx, users[0].KeyName(), valAddr, fmt.Sprintf("%d%s", uint64(100*math.Pow10(6)), chain.Config().Denom))
 		require.NoError(err)
 
-		bal2, err := chain.BankGetBalance(ctx, acc.String(), chain.Config().Denom)
+		bal2, err := chain.BankQueryBalance(ctx, acc.String(), chain.Config().Denom)
 		require.NoError(err)
 		fmt.Printf("New CP balance: %+v\n", bal2) // 9147579661
 
 		require.True(bal2.Sub(bal).GT(sdkmath.NewInt(int64(amount))))
 
 		// queries
-		coins, err := chain.DistributionCommunityPool(ctx)
+		coins, err := chain.DistributionQueryCommunityPool(ctx)
 		require.NoError(err)
 		require.True(coins.AmountOf(chain.Config().Denom).GT(sdkmath.LegacyNewDec(int64(amount))))
 	})
@@ -459,24 +461,24 @@ func testDistribution(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 		err = node.DistributionSetWithdrawAddr(ctx, users[0].KeyName(), newWithdrawAddr)
 		require.NoError(err)
 
-		withdrawAddr, err := chain.DistributionDelegatorWithdrawAddress(ctx, users[0].FormattedAddress())
+		withdrawAddr, err := chain.DistributionQueryDelegatorWithdrawAddress(ctx, users[0].FormattedAddress())
 		require.NoError(err)
 		require.EqualValues(withdrawAddr, newWithdrawAddr)
 	})
 
 	t.Run("delegator", func(t *testing.T) {
-		delRewards, err := chain.DistributionDelegationTotalRewards(ctx, delAddr)
+		delRewards, err := chain.DistributionQueryDelegationTotalRewards(ctx, delAddr)
 		require.NoError(err)
 		r := delRewards.Rewards[0]
 		require.EqualValues(valAddr, r.ValidatorAddress)
 		require.EqualValues(chain.Config().Denom, r.Reward[0].Denom)
 
 		// DistributionDelegatorValidators
-		delegatorVals, err := chain.DistributionDelegatorValidators(ctx, delAddr)
+		delegatorVals, err := chain.DistributionQueryDelegatorValidators(ctx, delAddr)
 		require.NoError(err)
 		require.EqualValues(valAddr, delegatorVals.Validators[0])
 
-		rewards, err := chain.DistributionRewards(ctx, delAddr, valAddr)
+		rewards, err := chain.DistributionQueryRewards(ctx, delAddr, valAddr)
 		require.NoError(err)
 		require.EqualValues(1, rewards.Len())
 	})
@@ -521,7 +523,7 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 		err = node.FeeGrant(ctx, granter2.KeyName(), grantee2.FormattedAddress(), fmt.Sprintf("%d%s", 100_000, denom), nil, time.Unix(0, 0))
 		require.NoError(t, err)
 
-		bal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
+		bal, err := chain.BankQueryBalance(ctx, granter2.FormattedAddress(), denom)
 		require.NoError(t, err)
 
 		fee := 500
@@ -536,7 +538,7 @@ func testFeeGrant(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, 
 		)
 		require.NoError(t, err)
 
-		newBal, err := chain.BankGetBalance(ctx, granter2.FormattedAddress(), denom)
+		newBal, err := chain.BankQueryBalance(ctx, granter2.FormattedAddress(), denom)
 		require.NoError(t, err)
 		require.EqualValues(t, bal.AddRaw(int64(sendAmt-fee)), newBal)
 
@@ -620,7 +622,7 @@ func testCircuit(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, u
 	node := chain.GetNode()
 
 	// get the superAdmin account
-	acc, err := chain.CircuitGetAccount(ctx, superAdmin.FormattedAddress())
+	acc, err := chain.CircuitQueryAccount(ctx, superAdmin.FormattedAddress())
 	require.NoError(t, err)
 	fmt.Printf("acc: %+v\n", acc)
 
@@ -648,7 +650,7 @@ func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, a
 		err = node.VestingCreateAccount(ctx, admin.KeyName(), acc, "111token", endTime)
 		require.NoError(t, err)
 
-		res, err := chain.AuthGetAccount(ctx, acc)
+		res, err := chain.AuthQueryAccount(ctx, acc)
 		require.NoError(t, err)
 		require.EqualValues(t, "/cosmos.vesting.v1beta1.ContinuousVestingAccount", res.TypeUrl)
 		chain.AuthPrintAccountInfo(chain, res)
@@ -660,7 +662,7 @@ func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, a
 		err = node.VestingCreatePermanentLockedAccount(ctx, admin.KeyName(), acc, "112token")
 		require.NoError(t, err)
 
-		res, err := chain.AuthGetAccount(ctx, acc)
+		res, err := chain.AuthQueryAccount(ctx, acc)
 		require.NoError(t, err)
 		require.EqualValues(t, "/cosmos.vesting.v1beta1.PermanentLockedAccount", res.TypeUrl)
 		chain.AuthPrintAccountInfo(chain, res)
@@ -688,14 +690,14 @@ func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, a
 		})
 		require.NoError(t, err)
 
-		res, err := chain.AuthGetAccount(ctx, acc)
+		res, err := chain.AuthQueryAccount(ctx, acc)
 		require.NoError(t, err)
 		require.EqualValues(t, "/cosmos.vesting.v1beta1.PeriodicVestingAccount", res.TypeUrl)
 		chain.AuthPrintAccountInfo(chain, res)
 	})
 
 	t.Run("Base Account", func(t *testing.T) {
-		res, err := chain.AuthGetAccount(ctx, admin.FormattedAddress())
+		res, err := chain.AuthQueryAccount(ctx, admin.FormattedAddress())
 		require.NoError(t, err)
 		require.EqualValues(t, "/cosmos.auth.v1beta1.BaseAccount", res.TypeUrl)
 		chain.AuthPrintAccountInfo(chain, res)

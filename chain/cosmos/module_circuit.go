@@ -41,7 +41,7 @@ func minimizeTypeUrl(typeUrls []string) string {
 }
 
 // CircuitGetAccount returns a specific account's permissions.
-func (c *CosmosChain) CircuitGetAccount(ctx context.Context, addr string) (*circuittypes.AccountResponse, error) {
+func (c *CosmosChain) CircuitQueryAccount(ctx context.Context, addr string) (*circuittypes.AccountResponse, error) {
 	res, err := circuittypes.NewQueryClient(c.GetNode().GrpcConn).Account(ctx, &circuittypes.QueryAccountRequest{
 		Address: addr,
 	})
@@ -49,13 +49,13 @@ func (c *CosmosChain) CircuitGetAccount(ctx context.Context, addr string) (*circ
 }
 
 // CircuitGetAccounts returns a list of all accounts with permissions.
-func (c *CosmosChain) CircuitGetAccounts(ctx context.Context, addr string) ([]*circuittypes.GenesisAccountPermissions, error) {
+func (c *CosmosChain) CircuitQueryAccounts(ctx context.Context, addr string) ([]*circuittypes.GenesisAccountPermissions, error) {
 	res, err := circuittypes.NewQueryClient(c.GetNode().GrpcConn).Accounts(ctx, &circuittypes.QueryAccountsRequest{})
 	return res.Accounts, err
 }
 
 // CircuitGetDisableList returns a list of all disabled message types.
-func (c *CosmosChain) CircuitGetDisableList(ctx context.Context) (*circuittypes.DisabledListResponse, error) {
+func (c *CosmosChain) CircuitQueryDisableList(ctx context.Context) (*circuittypes.DisabledListResponse, error) {
 	res, err := circuittypes.NewQueryClient(c.GetNode().GrpcConn).DisabledList(ctx, &circuittypes.QueryDisabledListRequest{})
 	return res, err
 }

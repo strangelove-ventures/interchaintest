@@ -10,8 +10,10 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
+// TODO: run this on a chainNOde vs a CosmosChain
+
 // AuthzGrant grants a message as a permission to an account.
-func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
+func (tn *ChainNode) AuthzGrant(ctx context.Context, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
 
 	allowed := "send|generic|delegate|unbond|redelegate"
 	if !strings.Contains(allowed, authType) {
@@ -42,48 +44,47 @@ func AuthzGrant(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, gra
 
 	cmd = append(cmd, extraFlags...)
 
-	txHash, err := chain.GetNode().ExecTx(ctx, granter.KeyName(),
+	txHash, err := tn.ExecTx(ctx, granter.KeyName(),
 		append(cmd, "--output", "json")...,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return chain.TxHashToResponse(ctx, txHash)
+	return tn.TxHashToResponse(ctx, txHash)
 }
 
 // AuthzExec executes an authz MsgExec transaction with a single nested message.
-func AuthzExec(ctx context.Context, chain *CosmosChain, grantee ibc.Wallet, nestedMsgCmd []string) (*sdk.TxResponse, error) {
+func (tn *ChainNode) AuthzExec(ctx context.Context, grantee ibc.Wallet, nestedMsgCmd []string) (*sdk.TxResponse, error) {
 	fileName := "authz.json"
-	node := chain.GetNode()
-	if err := createAuthzJSON(ctx, node, fileName, nestedMsgCmd); err != nil {
+	if err := createAuthzJSON(ctx, tn, fileName, nestedMsgCmd); err != nil {
 		return nil, err
 	}
 
-	txHash, err := chain.getFullNode().ExecTx(ctx, grantee.KeyName(),
-		"authz", "exec", node.HomeDir()+"/"+fileName,
+	txHash, err := tn.ExecTx(ctx, grantee.KeyName(),
+		"authz", "exec", tn.HomeDir()+"/"+fileName,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return chain.TxHashToResponse(ctx, txHash)
+	return tn.TxHashToResponse(ctx, txHash)
 }
 
 // AuthzRevoke revokes a message as a permission to an account.
-func AuthzRevoke(ctx context.Context, chain *CosmosChain, granter ibc.Wallet, grantee string, msgType string) (*sdk.TxResponse, error) {
+func (tn *ChainNode) AuthzRevoke(ctx context.Context, granter ibc.Wallet, grantee string, msgType string) (*sdk.TxResponse, error) {
 	if !strings.HasPrefix(msgType, "/") {
 		msgType = "/" + msgType
 	}
 
-	txHash, err := chain.getFullNode().ExecTx(ctx, granter.KeyName(),
+	txHash, err := tn.ExecTx(ctx, granter.KeyName(),
 		"authz", "revoke", grantee, msgType,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return chain.TxHashToResponse(ctx, txHash)
+	return tn.TxHashToResponse(ctx, txHash)
 }
 
 func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, grantee string, msgType string, extraFlags ...string) ([]*authz.Grant, error) {

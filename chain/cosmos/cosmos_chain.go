@@ -21,7 +21,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
@@ -467,20 +466,6 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	tx.ProposalType, _ = tendermint.AttributeValue(events, evtSubmitProp, "proposal_type")
 
 	return tx, nil
-}
-
-// TxHashToResponse returns the sdk transaction response struct for a given transaction hash.
-func (c *CosmosChain) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
-	stdout, stderr, err := c.GetNode().ExecQuery(ctx, "tx", txHash)
-	if err != nil {
-		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
-	}
-
-	i := &sdk.TxResponse{}
-
-	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
-	_ = json.Unmarshal(stdout, &i)
-	return i, nil
 }
 
 // ExecQueryToResponse is a helper to convert a query to its response.

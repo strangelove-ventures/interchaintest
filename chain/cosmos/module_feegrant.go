@@ -41,7 +41,7 @@ func (tn *ChainNode) FeeGrantRevoke(ctx context.Context, keyName, granterAddr, g
 }
 
 // FeeGrantGetAllowance returns the allowance of a granter and grantee pair.
-func (c *CosmosChain) FeeGrantGetAllowance(ctx context.Context, granter, grantee string) (*feegrant.Grant, error) {
+func (c *CosmosChain) FeeGrantQueryAllowance(ctx context.Context, granter, grantee string) (*feegrant.Grant, error) {
 	res, err := feegrant.NewQueryClient(c.GetNode().GrpcConn).Allowance(ctx, &feegrant.QueryAllowanceRequest{
 		Granter: granter,
 		Grantee: grantee,
@@ -50,7 +50,7 @@ func (c *CosmosChain) FeeGrantGetAllowance(ctx context.Context, granter, grantee
 }
 
 // FeeGrantGetAllowances returns all allowances of a grantee.
-func (c *CosmosChain) FeeGrantGetAllowances(ctx context.Context, grantee string) ([]*feegrant.Grant, error) {
+func (c *CosmosChain) FeeGrantQueryAllowances(ctx context.Context, grantee string) ([]*feegrant.Grant, error) {
 	res, err := feegrant.NewQueryClient(c.GetNode().GrpcConn).Allowances(ctx, &feegrant.QueryAllowancesRequest{
 		Grantee: grantee,
 	})
@@ -58,7 +58,7 @@ func (c *CosmosChain) FeeGrantGetAllowances(ctx context.Context, grantee string)
 }
 
 // FeeGrantGetAllowancesByGranter returns all allowances of a granter.
-func (c *CosmosChain) FeeGrantGetAllowancesByGranter(ctx context.Context, granter string) ([]*feegrant.Grant, error) {
+func (c *CosmosChain) FeeGrantQueryAllowancesByGranter(ctx context.Context, granter string) ([]*feegrant.Grant, error) {
 	res, err := feegrant.NewQueryClient(c.GetNode().GrpcConn).AllowancesByGranter(ctx, &feegrant.QueryAllowancesByGranterRequest{
 		Granter: granter,
 	})

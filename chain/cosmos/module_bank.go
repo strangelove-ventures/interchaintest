@@ -33,23 +33,23 @@ func (tn *ChainNode) BankMultiSend(ctx context.Context, keyName string, addresse
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
 func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
+	return c.BankQueryBalance(ctx, address, denom)
+}
+
+// BankGetBalance is an alias for GetBalance
+func (c *CosmosChain) BankQueryBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	res, err := banktypes.NewQueryClient(c.GetNode().GrpcConn).Balance(ctx, &banktypes.QueryBalanceRequest{Address: address, Denom: denom})
 	return res.Balance.Amount, err
 }
 
-// BankGetBalance is an alias for GetBalance
-func (c *CosmosChain) BankGetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	return c.GetBalance(ctx, address, denom)
-}
-
 // AllBalances fetches an account address's balance for all denoms it holds
-func (c *CosmosChain) BankAllBalances(ctx context.Context, address string) (types.Coins, error) {
+func (c *CosmosChain) BankQueryAllBalances(ctx context.Context, address string) (types.Coins, error) {
 	res, err := banktypes.NewQueryClient(c.GetNode().GrpcConn).AllBalances(ctx, &banktypes.QueryAllBalancesRequest{Address: address})
 	return res.GetBalances(), err
 }
 
 // BankDenomMetadata fetches the metadata of a specific coin denomination
-func (c *CosmosChain) BankDenomMetadata(ctx context.Context, denom string) (*banktypes.Metadata, error) {
+func (c *CosmosChain) BankQueryDenomMetadata(ctx context.Context, denom string) (*banktypes.Metadata, error) {
 	res, err := banktypes.NewQueryClient(c.GetNode().GrpcConn).DenomMetadata(ctx, &banktypes.QueryDenomMetadataRequest{Denom: denom})
 	return &res.Metadata, err
 }

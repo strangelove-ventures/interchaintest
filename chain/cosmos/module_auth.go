@@ -11,19 +11,19 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 )
 
-func (c *CosmosChain) AuthGetAccount(ctx context.Context, addr string) (*cdctypes.Any, error) {
+func (c *CosmosChain) AuthQueryAccount(ctx context.Context, addr string) (*cdctypes.Any, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Account(ctx, &authtypes.QueryAccountRequest{
 		Address: addr,
 	})
 	return res.Account, err
 }
 
-func (c *CosmosChain) AuthParams(ctx context.Context) (*authtypes.Params, error) {
+func (c *CosmosChain) AuthQueryParams(ctx context.Context) (*authtypes.Params, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Params(ctx, &authtypes.QueryParamsRequest{})
 	return &res.Params, err
 }
 
-func (c *CosmosChain) AuthModuleAccounts(ctx context.Context) ([]authtypes.ModuleAccount, error) {
+func (c *CosmosChain) AuthQueryModuleAccounts(ctx context.Context) ([]authtypes.ModuleAccount, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccounts(ctx, &authtypes.QueryModuleAccountsRequest{})
 
 	maccs := make([]authtypes.ModuleAccount, len(res.Accounts))
@@ -41,7 +41,7 @@ func (c *CosmosChain) AuthModuleAccounts(ctx context.Context) ([]authtypes.Modul
 }
 
 // AuthGetModuleAccount performs a query to get the account details of the specified chain module
-func (c *CosmosChain) AuthGetModuleAccount(ctx context.Context, moduleName string) (authtypes.ModuleAccount, error) {
+func (c *CosmosChain) AuthQueryModuleAccount(ctx context.Context, moduleName string) (authtypes.ModuleAccount, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccountByName(ctx, &authtypes.QueryModuleAccountByNameRequest{
 		Name: moduleName,
 	})
@@ -56,8 +56,8 @@ func (c *CosmosChain) AuthGetModuleAccount(ctx context.Context, moduleName strin
 }
 
 // GetModuleAddress performs a query to get the address of the specified chain module
-func (c *CosmosChain) AuthGetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	queryRes, err := c.AuthGetModuleAccount(ctx, moduleName)
+func (c *CosmosChain) AuthQueryModuleAddress(ctx context.Context, moduleName string) (string, error) {
+	queryRes, err := c.AuthQueryModuleAccount(ctx, moduleName)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func (c *CosmosChain) AuthGetModuleAddress(ctx context.Context, moduleName strin
 
 // GetModuleAddress is an alias for AuthGetModuleAddress
 func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	return c.AuthGetModuleAddress(ctx, moduleName)
+	return c.AuthQueryModuleAddress(ctx, moduleName)
 }
 
 // GetGovernanceAddress performs a query to get the address of the chain's x/gov module
@@ -74,7 +74,7 @@ func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) 
 	return c.GetModuleAddress(ctx, "gov")
 }
 
-func (c *CosmosChain) AuthBech32Prefix(ctx context.Context) (string, error) {
+func (c *CosmosChain) AuthQueryBech32Prefix(ctx context.Context) (string, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Bech32Prefix(ctx, &authtypes.Bech32PrefixRequest{})
 	return res.Bech32Prefix, err
 }
@@ -96,7 +96,7 @@ func (c *CosmosChain) AuthAddressStringToBytes(ctx context.Context, addr string)
 }
 
 // AccountInfo
-func (c *CosmosChain) AuthAccountInfo(ctx context.Context, addr string) (*authtypes.BaseAccount, error) {
+func (c *CosmosChain) AuthQueryAccountInfo(ctx context.Context, addr string) (*authtypes.BaseAccount, error) {
 	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).AccountInfo(ctx, &authtypes.QueryAccountInfoRequest{
 		Address: addr,
 	})

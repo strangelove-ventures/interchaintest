@@ -386,7 +386,7 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 1)
 
-	prevAdmin, err := chain.TokenFactoryGetAdmin(ctx, tfDenom)
+	prevAdmin, err := chain.TokenFactoryQueryAdmin(ctx, tfDenom)
 	require.NoError(t, err)
 	require.Equal(t, prevAdmin.AuthorityMetadata.Admin, user.FormattedAddress())
 
@@ -395,7 +395,7 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	require.NoError(t, err)
 
 	// validate new admin is set
-	tfAdmin, err := chain.TokenFactoryGetAdmin(ctx, tfDenom)
+	tfAdmin, err := chain.TokenFactoryQueryAdmin(ctx, tfDenom)
 	require.NoError(t, err)
 	require.Equal(t, tfAdmin.AuthorityMetadata.Admin, user2.FormattedAddress())
 
