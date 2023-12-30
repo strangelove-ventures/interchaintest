@@ -21,6 +21,11 @@ func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.Wa
 	return err
 }
 
+// Deprecated: use BankSend instead
+func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	return tn.BankSend(ctx, keyName, amount)
+}
+
 // BankMultiSend sends an amount of token from one account to multiple accounts.
 func (tn *ChainNode) BankMultiSend(ctx context.Context, keyName string, addresses []string, amount sdkmath.Int, denom string) error {
 	cmd := append([]string{"bank", "multi-send", keyName}, addresses...)

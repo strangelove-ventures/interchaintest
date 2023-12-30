@@ -16,7 +16,10 @@ func (tn *ChainNode) UpgradeSoftware(ctx context.Context, keyName, name, info st
 	if info != "" {
 		cmd = append(cmd, "--upgrade-info", info)
 	}
-	cmd = append(cmd, extraFlags...)
+
+	if len(extraFlags) > 0 {
+		cmd = append(cmd, extraFlags...)
+	}
 
 	_, err := tn.ExecTx(ctx, keyName, cmd...)
 	return err
@@ -25,7 +28,10 @@ func (tn *ChainNode) UpgradeSoftware(ctx context.Context, keyName, name, info st
 // UpgradeCancel executes the upgrade cancel command.
 func (tn *ChainNode) UpgradeCancel(ctx context.Context, keyName string, extraFlags ...string) error {
 	cmd := []string{"upgrade", "cancel-software-upgrade"}
-	cmd = append(cmd, extraFlags...)
+
+	if len(extraFlags) > 0 {
+		cmd = append(cmd, extraFlags...)
+	}
 
 	_, err := tn.ExecTx(ctx, keyName, cmd...)
 	return err

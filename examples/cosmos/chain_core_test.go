@@ -70,7 +70,6 @@ func TestCoreSDKCommands(t *testing.T) {
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "token"),
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
 		cosmos.NewGenesisKV("app_state.bank.denom_metadata", []banktypes.Metadata{denomMetadata}),
-		// high signing rate limit, easy jailing (ref POA) with 4 vals
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -690,15 +689,6 @@ func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, u
 		unbondings, err = chain.StakingQueryUnbondingDelegations(ctx, user)
 		require.NoError(t, err)
 		require.Empty(t, unbondings)
-
-		// StakingRedelegate
-		// StakingQueryRedelegation
-	})
-
-	t.Run("create-validator", func(t *testing.T) {
-		// StakingCreateValidatorFile
-		// StakingCreateValidator
-		// StakingEditValidator
 	})
 }
 
