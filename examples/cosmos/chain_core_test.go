@@ -19,6 +19,7 @@ import (
 
 	circuittypes "cosmossdk.io/x/circuit/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -152,6 +153,15 @@ func TestCoreSDKCommands(t *testing.T) {
 	t.Run("circuit", func(t *testing.T) {
 		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
 		testCircuit(ctx, t, chain, users, superAdmin)
+	})
+
+	t.Run("vesting", func(t *testing.T) {
+		testVesting(ctx, t, chain, superAdmin)
+	})
+
+	t.Run("auth", func(t *testing.T) {
+		// users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain, chain)
+		// testAuth(ctx, t, chain, users)
 	})
 }
 
@@ -542,8 +552,6 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 
 // func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
 
-// func testUpgrade(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {}
-
 func testCircuit(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet, superAdmin ibc.Wallet) {
 	node := chain.GetNode()
 
@@ -558,4 +566,74 @@ func testCircuit(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, u
 	// CircuitGetAccounts
 	// node.CircuitDisable
 	// CircuitGetDisableList
+}
+
+func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, admin ibc.Wallet) {
+	t.Parallel()
+
+	var err error
+	var acc string
+	node := chain.GetNode()
+
+	currentUnixSeconds := time.Now().Unix()
+	endTime := currentUnixSeconds + 60
+
+	t.Run("normal vesting account", func(t *testing.T) {
+		acc = "cosmos1w8arfu23uygwse72ym3krk2nhntlgdfv7zzuxz"
+
+		err = node.VestingCreateAccount(ctx, admin.KeyName(), acc, "111token", endTime)
+		require.NoError(t, err)
+
+		res, err := chain.AuthGetAccount(ctx, acc)
+		require.NoError(t, err)
+		require.EqualValues(t, "/cosmos.vesting.v1beta1.ContinuousVestingAccount", res.TypeUrl)
+		chain.AuthPrintAccountInfo(chain, res)
+	})
+
+	t.Run("perm locked account", func(t *testing.T) {
+		acc = "cosmos135e3r3l5333094zd37kw8s7htn7087pruvx7ke"
+
+		err = node.VestingCreatePermanentLockedAccount(ctx, admin.KeyName(), acc, "112token")
+		require.NoError(t, err)
+
+		res, err := chain.AuthGetAccount(ctx, acc)
+		require.NoError(t, err)
+		require.EqualValues(t, "/cosmos.vesting.v1beta1.PermanentLockedAccount", res.TypeUrl)
+		chain.AuthPrintAccountInfo(chain, res)
+	})
+
+	t.Run("periodic account", func(t *testing.T) {
+		acc = "cosmos1hkar47a0ysml3fhw2jgyrnrvwq9z8tk7zpw3jz"
+
+		err = node.VestingCreatePeriodicAccount(ctx, admin.KeyName(), acc, vestingcli.VestingData{
+			StartTime: currentUnixSeconds,
+			Periods: []vestingcli.InputPeriod{
+				{
+					Coins:  "100token",
+					Length: 30, // 30 seconds
+				},
+				{
+					Coins:  "101token",
+					Length: 30, // 30 seconds
+				},
+				{
+					Coins:  "102token",
+					Length: 30, // 30 seconds
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		res, err := chain.AuthGetAccount(ctx, acc)
+		require.NoError(t, err)
+		require.EqualValues(t, "/cosmos.vesting.v1beta1.PeriodicVestingAccount", res.TypeUrl)
+		chain.AuthPrintAccountInfo(chain, res)
+	})
+
+	t.Run("Base Account", func(t *testing.T) {
+		res, err := chain.AuthGetAccount(ctx, admin.FormattedAddress())
+		require.NoError(t, err)
+		require.EqualValues(t, "/cosmos.auth.v1beta1.BaseAccount", res.TypeUrl)
+		chain.AuthPrintAccountInfo(chain, res)
+	})
 }
