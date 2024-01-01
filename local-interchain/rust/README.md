@@ -131,7 +131,7 @@ jobs:
             # ref: 'reece/rust' # branch, commit, tag
 
       - name: Setup go ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
             go-version: ${{ env.GO_VERSION }}
 
