@@ -3,12 +3,12 @@ package ethereum
 import (
 	"context"
 	"runtime"
-	
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 func PanicFunctionName() {
-	pc, _, _, _ := runtime. Caller(1)
+	pc, _, _, _ := runtime.Caller(1)
 	panic(runtime.FuncForPC(pc).Name() + " not implemented")
 }
 
@@ -26,7 +26,6 @@ func (c *EthereumChain) GetHostGRPCAddress() string {
 	PanicFunctionName()
 	return ""
 }
-
 
 // cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
 func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
