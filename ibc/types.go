@@ -56,6 +56,8 @@ type ChainConfig struct {
 	SidecarConfigs []SidecarConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
+	//HostPortOverride exposes ports to the host
+	HostPortOverride map[int]int `yaml:"host-port-override"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {

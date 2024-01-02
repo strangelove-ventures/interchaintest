@@ -562,6 +562,11 @@ func (c *PolkadotChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(wsPort, "/")[0])
 }
 
+// Implements Chain interface
+func (c *PolkadotChain) GetHostPeerAddress() string {
+	panic("NOT IMPLEMENTED")
+}
+
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 // Implements Chain interface.

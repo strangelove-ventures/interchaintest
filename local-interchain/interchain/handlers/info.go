@@ -107,6 +107,8 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	case "genesis_file_content":
 		v, _ := val.GenesisFileContent(i.ctx)
 		util.Write(w, v)
+	case "peer":
+		util.Write(w, getPeer(i.ctx, val))
 	default:
 		util.WriteError(w, fmt.Errorf("invalid get param: %s. does not exist", res[0]))
 	}
@@ -174,9 +176,23 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 		return
 	}
 
+	// hide mnemonics from query
+	chains := i.Config.Chains
+	for idx, chain := range chains {
+		updatedAccounts := []types.GenesisAccount{}
+
+		for _, acc := range chain.Genesis.Accounts {
+			acc.Mnemonic = "hidden"
+			updatedAccounts = append(updatedAccounts, acc)
+		}
+
+		chain.Genesis.Accounts = updatedAccounts
+		chains[idx] = chain
+	}
+
 	info := GetInfo{
 		Logs:   logs,
-		Chains: i.Config.Chains,
+		Chains: chains,
 		Relay:  i.Config.Relayer,
 	}
 
@@ -187,4 +203,13 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 	}
 
 	util.Write(w, jsonRes)
+}
+
+func getPeer(ctx context.Context, val *cosmos.ChainNode) []byte {
+	peer, err := val.NodeID(ctx)
+	if err != nil {
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
+	}
+
+	return []byte(peer + "@" + val.Chain.GetHostPeerAddress())
 }

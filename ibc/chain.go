@@ -37,6 +37,10 @@ type Chain interface {
 	// Note that this will not return a valid value until after Start returns.
 	GetHostRPCAddress() string
 
+	// GetHostPeerAddress returns the p2p address that can be reached by processes on the host machine.
+	// Note that this will not return a valid value until after Start returns.
+	GetHostPeerAddress() string
+
 	// GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
 	// Note that this will not return a valid value until after Start returns.
 	GetHostGRPCAddress() string
