@@ -10,10 +10,12 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 )
 
+// cli options for the `forge script` command
+// see: https://book.getfoundry.sh/reference/forge/forge-script
 type ForgeScriptOpts struct {
 	ContractRootDir  string   // required, root directory of the contract with all local dependencies
 	SolidityContract string   // required, contract script to run
-	Signature        string   // optional, signature function to run, empty string uses default run()
+	SignatureFn      string   // optional, signature function to run, empty string uses default run()
 	ConfigFile       string   // optional, json config file used for sol contract
 	RawOptions       []string // optional, appends additional options to command
 }
@@ -75,6 +77,7 @@ func WriteConfigFile(configFile string, localContractRootDir string, solidityCon
 }
 
 // Run "forge script"
+// see: https://book.getfoundry.sh/reference/forge/forge-script
 func (c *EthereumChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -86,7 +89,7 @@ func (c *EthereumChain) ForgeScript(ctx context.Context, keyName string, opts Fo
 	// Assemble cmd
 	cmd := []string{"forge", "script", opts.SolidityContract, "--rpc-url", c.GetRPCAddress(), "--broadcast"}
 	cmd = c.AddKey(cmd, keyName)
-	cmd = AddSignature(cmd, opts.Signature)
+	cmd = AddSignature(cmd, opts.SignatureFn)
 	cmd = append(cmd, opts.RawOptions...)
 	cmd, configFileBz, err := ReadAndAppendConfigFile(cmd, opts.ConfigFile, localContractRootDir, path.Dir(opts.SolidityContract))
 	if err != nil {
