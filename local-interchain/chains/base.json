@@ -21,9 +21,7 @@
             "block_time": "5000ms",
             "encoding-options": ["juno"],
             "host_port_override": {
-                "26657": "26657",
-                "1317": "1317",
-                "9090": "9090"
+                "26657": "26657"
             },
             "config_file_overrides": [
                 {

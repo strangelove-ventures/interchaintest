@@ -121,8 +121,9 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "block_time": "500ms",
     "encoding-options": ["juno"],
     "host_port_override": {
+        "26656": "26656",
         "26657": "26657",
-        "1317": "1320",
+        "1317": "1317",
         "9090": "9090"
     },
     "config_file_overrides": [
@@ -161,3 +162,5 @@ Here is a base chain template with every feature the configuration accepts. Acco
     }
 },
 ```
+
+**NOTE** The `host_port_override` section maps internal ports to the external host. If no ports are overridden, random host ports are assigned as usual.
