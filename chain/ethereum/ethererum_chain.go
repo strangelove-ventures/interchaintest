@@ -194,7 +194,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 			return err
 		}
 		localJsonFile := filepath.Join(pwd, loadState)
-		dockerJsonFile := c.HomeDir() + path.Base(loadState)
+		dockerJsonFile := path.Join(c.HomeDir(), path.Base(loadState))
 		mounts = []mount.Mount{
 			{
 				Type:   mount.TypeBind,
