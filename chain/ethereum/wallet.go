@@ -8,14 +8,14 @@ import (
 var _ ibc.Wallet = &EthereumWallet{}
 
 type EthereumWallet struct {
-	address  string
-	keyName  string
+	address string
+	keyName string
 }
 
 func NewWallet(keyname string, address string) ibc.Wallet {
 	return &EthereumWallet{
-		address:  address,
-		keyName:  keyname,
+		address: address,
+		keyName: keyname,
 	}
 }
 
