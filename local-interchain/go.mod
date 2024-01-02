@@ -14,6 +14,7 @@ replace (
 )
 
 require (
+	cosmossdk.io/math v1.2.0
 	github.com/cosmos/cosmos-sdk v0.50.1
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/gorilla/mux v1.8.1
@@ -36,7 +37,6 @@ require (
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
 	cosmossdk.io/errors v1.0.0 // indirect
 	cosmossdk.io/log v1.2.1 // indirect
-	cosmossdk.io/math v1.2.0 // indirect
 	cosmossdk.io/store v1.0.1 // indirect
 	cosmossdk.io/x/tx v0.12.0 // indirect
 	cosmossdk.io/x/upgrade v0.1.0 // indirect

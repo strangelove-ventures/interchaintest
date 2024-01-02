@@ -32,7 +32,7 @@ const (
 	ETHER     = 1_000_000_000 * GWEI
 )
 
-var natPorts = nat.PortSet{
+var natPorts = nat.PortMap{
 	nat.Port(rpcPort): {},
 }
 
@@ -136,11 +136,11 @@ func (c *EthereumChain) Name() string {
 }
 
 func (c *EthereumChain) HomeDir() string {
-	return "/home/foundry/"
+	return "/home/foundry"
 }
 
 func (c *EthereumChain) KeystoreDir() string {
-	return c.HomeDir() + ".foundry/keystores"
+	return path.Join(c.HomeDir(), ".foundry", "keystores")
 }
 
 func (c *EthereumChain) Bind() []string {
@@ -194,7 +194,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 			return err
 		}
 		localJsonFile := filepath.Join(pwd, loadState)
-		dockerJsonFile := c.HomeDir() + path.Base(loadState)
+		dockerJsonFile := path.Join(c.HomeDir(), path.Base(loadState))
 		mounts = []mount.Mount{
 			{
 				Type:   mount.TypeBind,
@@ -205,7 +205,21 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		cmd = append(cmd, "--load-state", dockerJsonFile)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], natPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	usingPorts := natPorts
+
+	if c.cfg.HostPortOverride != nil {
+		for intP, extP := range c.cfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
+		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
+	}
+
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
 	if err != nil {
 		return err
 	}
