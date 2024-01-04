@@ -1,0 +1,31 @@
+[flake8]
+
+plugins =
+    flake8-simplify
+    flake8-bandit
+    flake8-bugbear
+    flake8-builtins
+    flake8-comprehensions    
+    flake8-eradicate
+    flake8-isort
+    flake8-pytest-style    
+    flakehell
+    pep8-naming
+
+spellcheck-targets=comments
+
+extend-ignore = 
+    E501
+    ; docstrings
+    D
+    ; try pass
+    S110
+    ; dict(k=v)
+    C408
+
+exclude =
+    .git,
+    __pycache__,        
+    .mypy_cache
+
+max-complexity = 10

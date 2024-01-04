@@ -6,10 +6,14 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
+	"cosmossdk.io/math"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -64,24 +68,24 @@ func TestLearn(t *testing.T) {
 
 	// Build interchain
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),
 	)
 
 	// Create and Fund User Wallets
-	fundAmount := int64(10_000_000)
+	fundAmount := math.NewInt(10_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, gaia, osmosis)
 	gaiaUser := users[0]
 	osmosisUser := users[1]
 
 	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, fundAmount, gaiaUserBalInitial)
+	require.True(t, gaiaUserBalInitial.Equal(fundAmount))
 
 	// Get Channel ID
 	gaiaChannelInfo, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
@@ -92,8 +96,11 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, err)
 	osmoChannelID := osmoChannelInfo[0].ChannelID
 
+	height, err := osmosis.Height(ctx)
+	require.NoError(t, err)
+
 	// Send Transaction
-	amountToSend := int64(1_000_000)
+	amountToSend := math.NewInt(1_000_000)
 	dstAddress := osmosisUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
 		Address: dstAddress,
@@ -108,10 +115,10 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
 
 	// test source wallet has decreased funds
-	expectedBal := gaiaUserBalInitial - amountToSend
+	expectedBal := gaiaUserBalInitial.Sub(amountToSend)
 	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.Equal(t, expectedBal, gaiaUserBalNew)
+	require.True(t, gaiaUserBalNew.Equal(expectedBal))
 
 	// Trace IBC Denom
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, gaia.Config().Denom))
@@ -120,5 +127,14 @@ func TestLearn(t *testing.T) {
 	// Test destination wallet has increased funds
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
-	require.Equal(t, amountToSend, osmosUserBalNew)
+	require.True(t, osmosUserBalNew.Equal(amountToSend))
+
+	// Validate light client
+	chain := osmosis.(*cosmos.CosmosChain)
+	reg := chain.Config().EncodingConfig.InterfaceRegistry
+	msg, err := cosmos.PollForMessage[*clienttypes.MsgUpdateClient](ctx, chain, reg, height, height+10, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, "07-tendermint-0", msg.ClientId)
+	require.NotEmpty(t, msg.Signer)
 }

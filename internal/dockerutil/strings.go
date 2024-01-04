@@ -25,11 +25,7 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 		return ""
 	}
 
-	ip := m[0].HostIP
-	if ip == "0.0.0.0" {
-		ip = "localhost"
-	}
-	return net.JoinHostPort(ip, m[0].HostPort)
+	return net.JoinHostPort(m[0].HostIP, m[0].HostPort)
 }
 
 // Ensure that the global RNG is seeded when this package is imported.

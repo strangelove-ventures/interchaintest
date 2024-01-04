@@ -1,3 +1,8 @@
+DOCKER := $(shell which docker)
+protoVer=0.13.2
+protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
+protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
+
 default: help
 
 .PHONY: help
@@ -6,7 +11,7 @@ help: ## Print this help message
 
 .PHONY: interchaintest
 interchaintest: gen ## Build interchaintest binary into ./bin
-	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v7/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
+	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v8/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
 
 .PHONY: test
 test: ## Run unit tests
@@ -24,3 +29,8 @@ docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docke
 .PHONY: gen
 gen: ## Run code generators
 	go generate ./...
+
+.PHONY: proto-gen
+proto-gen: ## Generate code from protos
+	@echo "Generating Protobuf files"
+	@$(protoImage) sh ./scripts/protocgen.sh

@@ -1,18 +1,45 @@
 package cosmos
 
+import (
+	"encoding/json"
+	"time"
+)
+
 const (
 	ProposalVoteYes        = "yes"
 	ProposalVoteNo         = "no"
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
 
+	// IBC-Go <= v7 / SDK <= v0.47
 	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
 	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
 	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
 	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
 	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
 	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
+
+	// IBC-Go v8 / SDK v50
+	ProposalStatusUnspecifiedV8   = 0
+	ProposalStatusDepositPeriodV8 = 1
+	ProposalStatusVotingPeriodV8  = 2
+	ProposalStatusPassedV8        = 3
+	ProposalStatusRejectedV8      = 4
+	ProposalStatusFailedV8        = 5
 )
+
+// TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)
+type TxProposalv1 struct {
+	Messages []json.RawMessage `json:"messages"`
+	Metadata string            `json:"metadata"`
+	Deposit  string            `json:"deposit"`
+	Title    string            `json:"title"`
+	Summary  string            `json:"summary"`
+
+	// SDK v50 only
+	Proposer  string `json:"proposer,omitempty"`
+	Expedited bool   `json:"expedited,omitempty"`
+}
 
 // TxProposal contains chain proposal transaction details.
 type TxProposal struct {
@@ -62,6 +89,35 @@ type ProposalResponse struct {
 	VotingEndTime    string                   `json:"voting_end_time"`
 }
 
+// ProposalResponse is the proposal query response for IBC-Go v8 / SDK v50.
+type ProposalResponseV8 struct {
+	Proposal struct {
+		ID               string                     `json:"id"`
+		Messages         []ProposalMessageV8        `json:"messages"`
+		Status           int                        `json:"status"`
+		FinalTallyResult ProposalFinalTallyResultV8 `json:"final_tally_result"`
+		SubmitTime       time.Time                  `json:"submit_time"`
+		DepositEndTime   time.Time                  `json:"deposit_end_time"`
+		TotalDeposit     []ProposalDeposit          `json:"total_deposit"`
+		VotingStartTime  time.Time                  `json:"voting_start_time"`
+		VotingEndTime    time.Time                  `json:"voting_end_time"`
+		Metadata         string                     `json:"metadata"`
+		Title            string                     `json:"title"`
+		Summary          string                     `json:"summary"`
+		Proposer         string                     `json:"proposer"`
+	} `json:"proposal"`
+}
+
+type ProposalMessage struct {
+	Type  string `json:"type"`
+	Value struct {
+		Sender           string `json:"sender"`
+		ValidatorAddress string `json:"validator_address"`
+		Power            string `json:"power"`
+		Unsafe           bool   `json:"unsafe"`
+	} `json:"value"`
+}
+
 type ProposalContent struct {
 	Type        string `json:"@type"`
 	Title       string `json:"title"`
@@ -69,15 +125,38 @@ type ProposalContent struct {
 }
 
 type ProposalFinalTallyResult struct {
-	Yes        string `json:"yes"`
-	Abstain    string `json:"abstain"`
-	No         string `json:"no"`
-	NoWithVeto string `json:"no_with_veto"`
+	Yes        string `json:"yes_count"`
+	Abstain    string `json:"abstain_count"`
+	No         string `json:"no_count"`
+	NoWithVeto string `json:"no_with_veto_count"`
+}
+
+type ProposalFinalTallyResultV8 struct {
+	Yes        string `json:"yes_count"`
+	Abstain    string `json:"abstain_count"`
+	No         string `json:"no_count"`
+	NoWithVeto string `json:"no_with_veto_count"`
+}
+
+type ProposalMessageV8 struct {
+	Type  string `json:"type"`
+	Value struct {
+		Sender           string `json:"sender"`
+		ValidatorAddress string `json:"validator_address"`
+		Power            string `json:"power"`
+		Unsafe           bool   `json:"unsafe"`
+	} `json:"value"`
 }
 
 type ProposalDeposit struct {
 	Denom  string `json:"denom"`
 	Amount string `json:"amount"`
+}
+
+type ParamChange struct {
+	Subspace string `json:"subspace"`
+	Key      string `json:"key"`
+	Value    any    `json:"value"`
 }
 
 type DumpContractStateResponse struct {
@@ -87,4 +166,62 @@ type DumpContractStateResponse struct {
 type ContractStateModels struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+}
+
+type BuildDependency struct {
+	Parent  string `json:"parent"`
+	Version string `json:"version"`
+
+	IsReplacement      bool   `json:"is_replacement"`
+	Replacement        string `json:"replacement"`
+	ReplacementVersion string `json:"replacement_version"`
+}
+
+type BinaryBuildInformation struct {
+	Name             string            `json:"name"`
+	ServerName       string            `json:"server_name"`
+	Version          string            `json:"version"`
+	Commit           string            `json:"commit"`
+	BuildTags        string            `json:"build_tags"`
+	Go               string            `json:"go"`
+	BuildDeps        []BuildDependency `json:"build_deps"`
+	CosmosSdkVersion string            `json:"cosmos_sdk_version"`
+}
+
+type BankMetaData struct {
+	Metadata struct {
+		Description string `json:"description"`
+		DenomUnits  []struct {
+			Denom    string   `json:"denom"`
+			Exponent int      `json:"exponent"`
+			Aliases  []string `json:"aliases"`
+		} `json:"denom_units"`
+		Base    string `json:"base"`
+		Display string `json:"display"`
+		Name    string `json:"name"`
+		Symbol  string `json:"symbol"`
+		URI     string `json:"uri"`
+		URIHash string `json:"uri_hash"`
+	} `json:"metadata"`
+}
+
+type QueryDenomAuthorityMetadataResponse struct {
+	AuthorityMetadata DenomAuthorityMetadata `protobuf:"bytes,1,opt,name=authority_metadata,json=authorityMetadata,proto3" json:"authority_metadata" yaml:"authority_metadata"`
+}
+
+type DenomAuthorityMetadata struct {
+	// Can be empty for no admin, or a valid address
+	Admin string `protobuf:"bytes,1,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
+}
+
+type QueryModuleAccountResponse struct {
+	Account struct {
+		BaseAccount struct {
+			AccountNumber string `json:"account_number"`
+			Address       string `json:"address"`
+			PubKey        string `json:"pub_key"`
+			Sequence      string `json:"sequence"`
+		} `json:"base_account"`
+		Name string `json:"name"`
+	} `json:"account"`
 }

@@ -9,7 +9,7 @@ import (
 
 	schnorrkel "github.com/ChainSafe/go-schnorrkel/1"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	p2pCrypto "github.com/libp2p/go-libp2p-core/crypto"
+	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"golang.org/x/crypto/blake2b"
 )
 

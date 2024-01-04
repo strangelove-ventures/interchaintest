@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
@@ -89,6 +90,12 @@ type ContainerOptions struct {
 
 	// If non-zero, will limit the amount of log lines returned.
 	LogTail uint64
+
+	// mounts directories
+	Mounts []mount.Mount
+
+	// working directory to launch cmd from
+	WorkingDir string
 }
 
 // ContainerExecResult is a wrapper type that wraps an exit code and associated output from stderr & stdout, along with
@@ -162,6 +169,7 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 			Image: image.imageRef(),
 
 			Entrypoint: []string{},
+			WorkingDir: opts.WorkingDir,
 			Cmd:        cmd,
 
 			Env: opts.Env,
@@ -175,6 +183,7 @@ func (image *Image) createContainer(ctx context.Context, containerName, hostName
 			Binds:           opts.Binds,
 			PublishAllPorts: true, // Because we publish all ports, no need to expose specific ports.
 			AutoRemove:      false,
+			Mounts:          opts.Mounts,
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
@@ -345,7 +354,10 @@ func (c *Container) Stop(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*2)
 	defer cancel()
 
-	err := c.image.client.ContainerStop(ctx, c.containerID, &timeout)
+	var stopOptions container.StopOptions
+	timeoutRound := int(timeout.Round(time.Second))
+	stopOptions.Timeout = &timeoutRound
+	err := c.image.client.ContainerStop(ctx, c.containerID, stopOptions)
 	if err != nil {
 		// Only return the error if it didn't match an already stopped, or a missing container.
 		if !(errdefs.IsNotModified(err) || errdefs.IsNotFound(err)) {

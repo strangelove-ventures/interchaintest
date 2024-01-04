@@ -8,8 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 )
 
@@ -28,10 +27,9 @@ type ChainSpec struct {
 	// Must be set.
 	Version string
 
-	// GasAdjustment and NoHostMount are pointers in ChainSpec
+	// NoHostMount is a pointers in ChainSpec
 	// so zero-overrides can be detected from omitted overrides.
-	GasAdjustment *float64
-	NoHostMount   *bool
+	NoHostMount *bool
 
 	// Embedded ChainConfig to allow for simple JSON definition of a ChainSpec.
 	ibc.ChainConfig
@@ -53,6 +51,14 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		// Version must be set at top-level if not set in inlined config.
 		if len(s.ChainConfig.Images) == 0 || s.ChainConfig.Images[0].Version == "" {
 			return nil, errors.New("ChainSpec.Version must not be empty")
+		}
+	}
+
+	if len(s.ChainConfig.Images) > 0 {
+		for i, image := range s.ChainConfig.Images {
+			if err := image.Validate(); err != nil {
+				return nil, fmt.Errorf("ChainConfig.Images[%d] is invalid: %s", i, err)
+			}
 		}
 	}
 
@@ -94,10 +100,6 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 
 			return nil, fmt.Errorf("no chain configuration for %s (available chains are: %s)", s.Name, strings.Join(availableChains, ", "))
 		}
-		chainLabel := label.Chain(s.Name)
-		if !chainLabel.IsKnown() {
-			label.RegisterChainLabel(chainLabel)
-		}
 		cfg = ibc.ChainConfig{}
 	}
 
@@ -132,16 +134,43 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.ChainID = prefix + s.suffix()
 	}
 
-	if s.GasAdjustment != nil {
-		cfg.GasAdjustment = *s.GasAdjustment
-	}
 	if s.NoHostMount != nil {
 		cfg.NoHostMount = *s.NoHostMount
+	}
+	if s.SkipGenTx {
+		cfg.SkipGenTx = true
 	}
 	if s.ModifyGenesis != nil {
 		cfg.ModifyGenesis = s.ModifyGenesis
 	}
-	cfg.UsingNewGenesisCommand = s.UsingNewGenesisCommand
+	if s.PreGenesis != nil {
+		cfg.PreGenesis = s.PreGenesis
+	}
+	if s.ModifyGenesisAmounts != nil {
+		cfg.ModifyGenesisAmounts = s.ModifyGenesisAmounts
+	}
+	if s.HostPortOverride != nil {
+		cfg.HostPortOverride = s.HostPortOverride
+	}
+
+	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
+
+	if cfg.CoinDecimals == nil {
+		evm := int64(18)
+		cosmos := int64(6)
+
+		switch cfg.CoinType {
+		case "60":
+			cfg.CoinDecimals = &evm
+		case "118":
+			cfg.CoinDecimals = &cosmos
+		case "330":
+			cfg.CoinDecimals = &cosmos
+		case "529":
+			cfg.CoinDecimals = &cosmos
+
+		}
+	}
 
 	// Set the version depending on the chain type.
 	switch cfg.Type {

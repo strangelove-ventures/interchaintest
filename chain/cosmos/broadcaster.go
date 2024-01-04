@@ -14,10 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -79,17 +79,17 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
+	sdkAdd, err := b.chain.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return tx.Factory{}, err
 	}
 
-	accNumber, err := clientContext.AccountRetriever.GetAccount(clientContext, sdkAdd)
+	account, err := clientContext.AccountRetriever.GetAccount(clientContext, sdkAdd)
 	if err != nil {
 		return tx.Factory{}, err
 	}
 
-	f := b.defaultTxFactory(clientContext, accNumber.GetAccountNumber())
+	f := b.defaultTxFactory(clientContext, account)
 	for _, opt := range b.factoryOptions {
 		f = opt(f)
 	}
@@ -114,7 +114,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
+	sdkAdd, err := b.chain.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return client.Context{}, err
 	}
@@ -166,10 +166,11 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 }
 
 // defaultTxFactory creates a new Factory with default configuration.
-func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, accountNumber uint64) tx.Factory {
+func (b *Broadcaster) defaultTxFactory(clientCtx client.Context, account client.Account) tx.Factory {
 	chainConfig := b.chain.Config()
 	return tx.Factory{}.
-		WithAccountNumber(accountNumber).
+		WithAccountNumber(account.GetAccountNumber()).
+		WithSequence(account.GetSequence()).
 		WithSignMode(signing.SignMode_SIGN_MODE_DIRECT).
 		WithGasAdjustment(chainConfig.GasAdjustment).
 		WithGas(flags.DefaultGasLimit).
@@ -223,16 +224,22 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
-	resp, err := authTx.QueryTx(cc, respWithTxHash.TxHash)
-	if err != nil {
-		// if we fail to query the tx, it means an error occurred with the original message broadcast.
-		// we should return this instead.
-		originalResp, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
-		if err != nil {
-			return sdk.TxResponse{}, err
-		}
-		return originalResp, nil
-	}
+	return getFullyPopulatedResponse(cc, respWithTxHash.TxHash)
+}
 
-	return *resp, nil
+// getFullyPopulatedResponse returns a fully populated sdk.TxResponse.
+// the QueryTx function is periodically called until a tx with the given hash
+// has been included in a block.
+func getFullyPopulatedResponse(cc client.Context, txHash string) (sdk.TxResponse, error) {
+	var resp sdk.TxResponse
+	err := testutil.WaitForCondition(time.Second*60, time.Second*5, func() (bool, error) {
+		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
+		if err != nil {
+			return false, nil
+		}
+
+		resp = *fullyPopulatedTxResp
+		return true, nil
+	})
+	return resp, err
 }

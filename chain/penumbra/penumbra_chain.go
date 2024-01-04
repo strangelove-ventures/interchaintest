@@ -3,12 +3,12 @@ package penumbra
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -16,23 +16,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
-	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	dockerclient "github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
-
-type PenumbraNode struct {
-	TendermintNode  *tendermint.TendermintNode
-	PenumbraAppNode *PenumbraAppNode
-}
-
-type PenumbraNodes []PenumbraNode
 
 type PenumbraChain struct {
 	log           *zap.Logger
@@ -61,15 +52,19 @@ type PenumbraConsensusKey struct {
 	Value string `json:"value" toml:"value"`
 }
 
+type PenumbraCustodyKey struct {
+	SpendKey string `json:"spend_key"`
+}
+
 type PenumbraValidatorFundingStream struct {
-	Address string `json:"address" toml:"address"`
-	RateBPS int64  `json:"rate_bps" toml:"rate_bps"`
+	Recipient string `json:"address" toml:"recipient"`
+	RateBPS   int64  `json:"rate_bps" toml:"rate_bps"`
 }
 
 type PenumbraGenesisAppStateAllocation struct {
-	Amount  int64  `json:"amount"`
-	Denom   string `json:"denom"`
-	Address string `json:"address"`
+	Amount  math.Int `json:"amount"`
+	Denom   string   `json:"denom"`
+	Address string   `json:"address"`
 }
 
 func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) *PenumbraChain {
@@ -108,56 +103,70 @@ func (c *PenumbraChain) Initialize(ctx context.Context, testName string, cli *cl
 
 // Exec implements chain interface.
 func (c *PenumbraChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.getRelayerNode().PenumbraAppNode.Exec(ctx, cmd, env)
+	return c.getFullNode().PenumbraAppNode.Exec(ctx, cmd, env)
 }
 
-func (c *PenumbraChain) getRelayerNode() PenumbraNode {
-	if len(c.PenumbraNodes) > c.numValidators {
-		// use first full node
-		return c.PenumbraNodes[c.numValidators]
-	}
+func (c *PenumbraChain) getFullNode() *PenumbraNode {
 	// use first validator
 	return c.PenumbraNodes[0]
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.getRelayerNode().TendermintNode.HostName())
+	return fmt.Sprintf("http://%s:26657", c.getFullNode().TendermintNode.HostName())
 }
 
 // Implements Chain interface
 func (c *PenumbraChain) GetGRPCAddress() string {
-	return fmt.Sprintf("%s:9090", c.getRelayerNode().TendermintNode.HostName())
+	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
+}
+
+// Implements Chain interface
+func (c *PenumbraChain) GetHostPeerAddress() string {
+	panic("NOT IMPLEMENTED")
 }
 
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *PenumbraChain) GetHostRPCAddress() string {
-	return "http://" + c.getRelayerNode().PenumbraAppNode.hostRPCPort
+	return "http://" + c.getFullNode().PenumbraAppNode.hostRPCPort
 }
 
 // GetHostGRPCAddress returns the address of the gRPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *PenumbraChain) GetHostGRPCAddress() string {
-	return c.getRelayerNode().PenumbraAppNode.hostGRPCPort
+	return c.getFullNode().PenumbraAppNode.hostGRPCPort
 }
 
 func (c *PenumbraChain) HomeDir() string {
-	panic(errors.New("HomeDir not implemented yet"))
+	return c.getFullNode().PenumbraAppNode.HomeDir()
 }
 
-// Implements Chain interface
+// CreateKey derives a new key with the given keyName.
 func (c *PenumbraChain) CreateKey(ctx context.Context, keyName string) error {
-	return c.getRelayerNode().PenumbraAppNode.CreateKey(ctx, keyName)
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return fmt.Errorf("no penumbra app nodes configured for key creation")
+	}
+	return fn.PenumbraAppNode.CreateKey(ctx, keyName)
 }
 
+// RecoverKey restores an existing key with the given mnemonic and associates it with the specified key name in the keyring.
 func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return c.getRelayerNode().PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return fmt.Errorf("no penumbra app nodes configured for key recovery")
+	}
+	return fn.PenumbraAppNode.RecoverKey(ctx, name, mnemonic)
 }
 
-// Implements Chain interface
+// GetAddress returns the byte representation of an address for the specified keyName.
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return c.getRelayerNode().PenumbraAppNode.GetAddress(ctx, keyName)
+	fn := c.getFullNode()
+	if fn.PenumbraAppNode == nil {
+		return nil, fmt.Errorf("no penumbra app nodes configured to retreive an address from")
+	}
+	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }
 
 // BuildWallet will return a Penumbra wallet
@@ -210,12 +219,20 @@ func (c *PenumbraChain) BuildRelayerWallet(ctx context.Context, keyName string) 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-// Implements Chain interface
+// SendFunds will initiate a local transfer from the account associated with the specified keyName,
+// amount, token denom, and recipient are specified in the amount.
 func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getRelayerNode().PenumbraAppNode.SendFunds(ctx, keyName, amount)
+	fn := c.getFullNode()
+
+	if len(fn.PenumbraClientNodes) == 0 {
+		return fmt.Errorf("no pclientd instances on the node to use when sending funds")
+	}
+
+	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
 }
 
-// Implements Chain interface
+// SendIBCTransfer attempts to send a fungible token transfer via IBC from the specified account on the source chain
+// to the specified account on the counterparty chain.
 func (c *PenumbraChain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -223,100 +240,44 @@ func (c *PenumbraChain) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	return c.getRelayerNode().PenumbraAppNode.SendIBCTransfer(ctx, channelID, keyName, amount, options)
+	fn := c.getFullNode()
+	if len(fn.PenumbraClientNodes) == 0 {
+		return ibc.Tx{}, fmt.Errorf("no pclientd instances on the node for ibc transfers")
+	}
+	return fn.PenumbraClientNodes[keyName].SendIBCTransfer(ctx, channelID, amount, options)
 }
 
-// Implements Chain interface
 func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
 
+// Height returns the current chain block height.
 func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
-	return c.getRelayerNode().TendermintNode.Height(ctx)
+	return c.getFullNode().TendermintNode.Height(ctx)
 }
 
-// Implements Chain interface
-func (c *PenumbraChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
-	panic("implement me")
+// GetBalance attempts to make a balance request for the specified denom and the account associated with the
+// specified keyName.
+func (c *PenumbraChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
+	fn := c.getFullNode()
+	if len(fn.PenumbraClientNodes) == 0 {
+		return math.Int{}, fmt.Errorf("no pclientd instances on the node for balance requests")
+	}
+
+	bal, err := fn.PenumbraClientNodes[keyName].GetBalance(ctx, denom)
+	if err != nil {
+		return math.Int{}, err
+	}
+
+	return bal, nil
 }
 
-// Implements Chain interface
+// GetGasFeesInNativeDenom returns the fees used to pay for some compute with the local token denom,
+// where fees = gasPaid * gasPrice.
 func (c *PenumbraChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
 	return int64(fees)
-}
-
-// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
-// with docker volumes created.
-func (c *PenumbraChain) NewChainNode(
-	ctx context.Context,
-	i int,
-	dockerClient *dockerclient.Client,
-	networkID string,
-	testName string,
-	tendermintImage ibc.DockerImage,
-	penumbraImage ibc.DockerImage,
-) (PenumbraNode, error) {
-	tn := tendermint.NewTendermintNode(c.log, i, c, dockerClient, networkID, testName, tendermintImage)
-
-	tv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
-			dockerutil.NodeOwnerLabel: tn.Name(),
-		},
-	})
-	if err != nil {
-		return PenumbraNode{}, fmt.Errorf("creating tendermint volume: %w", err)
-	}
-	tn.VolumeName = tv.Name
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
-
-		Client: dockerClient,
-
-		VolumeName: tn.VolumeName,
-		ImageRef:   tn.Image.Ref(),
-		TestName:   tn.TestName,
-		UidGid:     tn.Image.UidGid,
-	}); err != nil {
-		return PenumbraNode{}, fmt.Errorf("set tendermint volume owner: %w", err)
-	}
-
-	pn := &PenumbraAppNode{log: c.log, Index: i, Chain: c,
-		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: penumbraImage}
-
-	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
-
-	pv, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
-		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
-
-			dockerutil.NodeOwnerLabel: pn.Name(),
-		},
-	})
-	if err != nil {
-		return PenumbraNode{}, fmt.Errorf("creating penumbra volume: %w", err)
-	}
-	pn.VolumeName = pv.Name
-	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
-		Log: c.log,
-
-		Client: dockerClient,
-
-		VolumeName: pn.VolumeName,
-		ImageRef:   pn.Image.Ref(),
-		TestName:   pn.TestName,
-		UidGid:     tn.Image.UidGid,
-	}); err != nil {
-		return PenumbraNode{}, fmt.Errorf("set penumbra volume owner: %w", err)
-	}
-
-	return PenumbraNode{
-		TendermintNode:  tn,
-		PenumbraAppNode: pn,
-	}, nil
 }
 
 // creates the test node objects required for bootstrapping tests
@@ -326,7 +287,7 @@ func (c *PenumbraChain) initializeChainNodes(
 	cli *client.Client,
 	networkID string,
 ) error {
-	penumbraNodes := []PenumbraNode{}
+	var penumbraNodes []*PenumbraNode
 	count := c.numValidators + c.numFullNodes
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
@@ -347,11 +308,11 @@ func (c *PenumbraChain) initializeChainNodes(
 		}
 	}
 	for i := 0; i < count; i++ {
-		pn, err := c.NewChainNode(ctx, i, cli, networkID, testName, chainCfg.Images[0], chainCfg.Images[1])
+		pn, err := NewPenumbraNode(ctx, i, c, cli, networkID, testName, chainCfg.Images[0], chainCfg.Images[1])
 		if err != nil {
 			return err
 		}
-		penumbraNodes = append(penumbraNodes, pn)
+		penumbraNodes = append(penumbraNodes, &pn)
 	}
 	c.PenumbraNodes = penumbraNodes
 
@@ -362,12 +323,14 @@ type GenesisValidatorPubKey struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
+
 type GenesisValidators struct {
 	Address string                 `json:"address"`
 	Name    string                 `json:"name"`
 	Power   string                 `json:"power"`
 	PubKey  GenesisValidatorPubKey `json:"pub_key"`
 }
+
 type GenesisFile struct {
 	Validators []GenesisValidators `json:"validators"`
 }
@@ -385,29 +348,34 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 	chainCfg := c.Config()
 
 	validatorDefinitions := make([]PenumbraValidatorDefinition, len(validators))
-	allocations := make([]PenumbraGenesisAppStateAllocation, len(validators)*2)
+	var allocations []PenumbraGenesisAppStateAllocation
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
 		v := v
 		i := i
+		keyName := fmt.Sprintf("%s-%d", valKey, i)
 		eg.Go(func() error {
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
 				return fmt.Errorf("error initializing validator files: %v", err)
 			}
+
 			fr := dockerutil.NewFileRetriever(c.log, v.TendermintNode.DockerClient, v.TendermintNode.TestName)
 			privValKeyBytes, err := fr.SingleFileContent(egCtx, v.TendermintNode.VolumeName, "config/priv_validator_key.json")
 			if err != nil {
 				return fmt.Errorf("error reading tendermint privval key file: %v", err)
 			}
+
 			privValKey := tendermint.PrivValidatorKeyFile{}
 			if err := json.Unmarshal(privValKeyBytes, &privValKey); err != nil {
 				return fmt.Errorf("error unmarshaling tendermint privval key: %v", err)
 			}
-			if err := v.PenumbraAppNode.CreateKey(egCtx, valKey); err != nil {
+
+			if err := v.PenumbraAppNode.CreateKey(egCtx, keyName); err != nil {
 				return fmt.Errorf("error generating wallet on penumbra node: %v", err)
 			}
-			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, valKey); err != nil {
+
+			if err := v.PenumbraAppNode.InitValidatorFile(egCtx, keyName); err != nil {
 				return fmt.Errorf("error initializing validator template on penumbra node: %v", err)
 			}
 
@@ -418,10 +386,12 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			if err != nil {
 				return fmt.Errorf("error reading validator definition template file: %v", err)
 			}
+
 			validatorTemplateDefinition := PenumbraValidatorDefinition{}
 			if err := toml.Unmarshal(validatorTemplateDefinitionFileBytes, &validatorTemplateDefinition); err != nil {
 				return fmt.Errorf("error unmarshaling validator definition template key: %v", err)
 			}
+
 			validatorTemplateDefinition.SequenceNumber = i
 			validatorTemplateDefinition.Enabled = true
 			validatorTemplateDefinition.ConsensusKey.Value = privValKey.PubKey.Value
@@ -429,21 +399,31 @@ func (c *PenumbraChain) Start(testName string, ctx context.Context, additionalGe
 			validatorTemplateDefinition.Description = fmt.Sprintf("validator-%d description", i)
 			validatorTemplateDefinition.Website = fmt.Sprintf("https://validator-%d", i)
 
+			fundingStream := validatorTemplateDefinition.FundingStreams[0]
+			validatorTemplateDefinition.FundingStreams = []PenumbraValidatorFundingStream{fundingStream}
+
+			v.addrString = fundingStream.Recipient
+
 			// Assign validatorDefinitions and allocations at fixed indices to avoid data races across the error group's goroutines.
 			validatorDefinitions[i] = validatorTemplateDefinition
 
 			// self delegation
-			allocations[2*i] = PenumbraGenesisAppStateAllocation{
-				Amount:  100_000_000_000,
-				Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
-				Address: validatorTemplateDefinition.FundingStreams[0].Address,
-			}
+			allocations = append(allocations,
+				PenumbraGenesisAppStateAllocation{
+					Amount:  math.NewInt(100_000_000_000),
+					Denom:   fmt.Sprintf("udelegation_%s", validatorTemplateDefinition.IdentityKey),
+					Address: fundingStream.Recipient,
+				},
+			)
+
 			// liquid
-			allocations[2*i+1] = PenumbraGenesisAppStateAllocation{
-				Amount:  1_000_000_000_000,
-				Denom:   chainCfg.Denom,
-				Address: validatorTemplateDefinition.FundingStreams[0].Address,
-			}
+			allocations = append(allocations,
+				PenumbraGenesisAppStateAllocation{
+					Amount:  math.NewInt(1_000_000_000_000),
+					Denom:   chainCfg.Denom,
+					Address: fundingStream.Recipient,
+				},
+			)
 
 			return nil
 		})
@@ -527,19 +507,23 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+
 		sep, err := n.TendermintNode.GetConfigSeparator()
 		if err != nil {
 			return err
 		}
+
+		tmPort := strings.Split(rpcPort, "/")[0]
 		eg.Go(func() error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
-				fmt.Sprintf("--proxy%sapp=tcp://%s:26658", sep, n.PenumbraAppNode.HostName()),
-				"--rpc.laddr=tcp://0.0.0.0:26657",
+				fmt.Sprintf("--proxy%sapp=tcp://%s:%s", sep, n.PenumbraAppNode.HostName(), strings.Split(abciPort, "/")[0]),
+				"--rpc.laddr=tcp://0.0.0.0:"+tmPort,
 			)
 		})
+
 		eg.Go(func() error {
-			return n.PenumbraAppNode.CreateNodeContainer(egCtx)
+			return n.PenumbraAppNode.CreateNodeContainer(egCtx, n.TendermintNode.HostName()+":"+tmPort)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -549,6 +533,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
 		n := n
+
 		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(egCtx, n.TendermintNode)
@@ -557,6 +542,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 			}
 			return n.TendermintNode.StartContainer(egCtx)
 		})
+
 		c.log.Info("Starting penumbra container", zap.String("container", n.PenumbraAppNode.Name()))
 		eg.Go(func() error {
 			return n.PenumbraAppNode.StartContainer(egCtx)
@@ -566,6 +552,94 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		return err
 	}
 
-	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getRelayerNode().TendermintNode)
+	if err := testutil.WaitForBlocks(ctx, 2, c.getFullNode().TendermintNode); err != nil {
+		return err
+	}
+
+	eg, egCtx = errgroup.WithContext(ctx)
+	for i, val := range c.PenumbraNodes[:c.numValidators] {
+		val := val
+		i := i
+
+		keyName := fmt.Sprintf("%s-%d", valKey, i)
+
+		eg.Go(func() error {
+			fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+			ckbz, err := fr.SingleFileContent(egCtx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
+			if err != nil {
+				return fmt.Errorf("error getting validator custody key content: %w", err)
+			}
+
+			var ck PenumbraCustodyKey
+			if err := json.Unmarshal(ckbz, &ck); err != nil {
+				return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
+			}
+
+			fvk, err := val.PenumbraAppNode.FullViewingKey(egCtx, keyName)
+			if err != nil {
+				return fmt.Errorf("error getting validator full viewing key: %w", err)
+			}
+
+			if err := val.CreateClientNode(
+				egCtx,
+				c.log,
+				val.PenumbraAppNode.DockerClient,
+				val.PenumbraAppNode.NetworkID,
+				val.PenumbraAppNode.Image,
+				c.testName,
+				i,
+				keyName,
+				ck.SpendKey,
+				fvk,
+			); err != nil {
+				return fmt.Errorf("error creating pclientd node: %w", err)
+			}
+
+			return nil
+		})
+	}
+	return eg.Wait()
+}
+
+func (c PenumbraChain) CreateClientNode(
+	ctx context.Context,
+	keyName string,
+) error {
+	val := c.getFullNode()
+	if val == nil {
+		return fmt.Errorf("there are no penumbra nodes configured to create a client on")
+	}
+
+	fr := dockerutil.NewFileRetriever(c.log, val.PenumbraAppNode.DockerClient, val.PenumbraAppNode.TestName)
+	ckbz, err := fr.SingleFileContent(ctx, val.PenumbraAppNode.VolumeName, fmt.Sprintf("keys/%s/custody.json", keyName))
+	if err != nil {
+		return fmt.Errorf("error getting validator custody key content: %w", err)
+	}
+
+	var ck PenumbraCustodyKey
+	if err := json.Unmarshal(ckbz, &ck); err != nil {
+		return fmt.Errorf("error unmarshaling validator custody key file: %w", err)
+	}
+
+	fvk, err := val.PenumbraAppNode.FullViewingKey(ctx, keyName)
+	if err != nil {
+		return fmt.Errorf("error getting validator full viewing key: %w", err)
+	}
+
+	// each validator has a pclientd instance so current index should be:
+	// # of validator related pclientd instances + # of user configured pclientd instances - 1
+	index := len(c.PenumbraNodes[:c.numValidators]) + len(c.getFullNode().PenumbraClientNodes) - 1
+
+	return val.CreateClientNode(
+		ctx,
+		c.log,
+		val.PenumbraAppNode.DockerClient,
+		val.PenumbraAppNode.NetworkID,
+		val.PenumbraAppNode.Image,
+		c.testName,
+		index,
+		keyName,
+		ck.SpendKey,
+		fvk,
+	)
 }

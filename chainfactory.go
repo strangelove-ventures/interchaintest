@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/penumbra"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/label"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -31,11 +31,6 @@ type ChainFactory interface {
 	// Depending on how the factory was configured,
 	// this may report more than two chains.
 	Name() string
-
-	// Labels are reported to allow simple filtering of tests depending on these Chains.
-	// While the Name should be fully descriptive,
-	// the Labels are intended to be short and fixed.
-	Labels() []label.Chain
 }
 
 // BuiltinChainFactory implements ChainFactory to return a fixed set of chains.
@@ -159,6 +154,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		default:
 			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
 		}
+	case "ethereum":
+		return ethereum.NewEthereumChain(testName, cfg, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}
@@ -179,18 +176,4 @@ func (f *BuiltinChainFactory) Name() string {
 		parts[i] = cfg.Name + "@" + v
 	}
 	return strings.Join(parts, "+")
-}
-
-func (f *BuiltinChainFactory) Labels() []label.Chain {
-	labels := make([]label.Chain, len(f.specs))
-	for i, s := range f.specs {
-		label := label.Chain(s.Name)
-		if !label.IsKnown() {
-			// The label must be known (i.e. registered),
-			// otherwise filtering from the command line will be broken.
-			panic(fmt.Errorf("chain name %s is not a known label", s.Name))
-		}
-		labels[i] = label
-	}
-	return labels
 }

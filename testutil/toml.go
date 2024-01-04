@@ -8,7 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +28,8 @@ func recursiveModifyToml(c map[string]any, modifications Toml) error {
 			// Retrieve existing config to apply overrides to.
 			cVM, ok := cV.(map[string]any)
 			if !ok {
-				return fmt.Errorf("failed to convert section to (map[string]any), found (%T)", cV)
+				// if the config does not exist, we should create a blank one to allow creation
+				cVM = make(Toml)
 			}
 			if err := recursiveModifyToml(cVM, value.(Toml)); err != nil {
 				return err
@@ -64,12 +65,12 @@ func ModifyTomlConfigFile(
 	}
 
 	if err := recursiveModifyToml(c, modifications); err != nil {
-		return err
+		return fmt.Errorf("failed to modify %s: %w", filePath, err)
 	}
 
 	buf := new(bytes.Buffer)
 	if err := toml.NewEncoder(buf).Encode(c); err != nil {
-		return err
+		return fmt.Errorf("failed to encode %s: %w", filePath, err)
 	}
 
 	fw := dockerutil.NewFileWriter(logger, dockerClient, testName)

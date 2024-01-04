@@ -1,0 +1,13 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/strangelove-ventures/interchaintest/v8/chain
+    except:
+      - buf.build/cosmos/ibc
+      - github.com/cometbft/cometbft
+      - buf.build/cosmos/cosmos-sdk
+plugins:
+  - name: gocosmos
+    out: .
+    opt: plugins=grpc,Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types,Mgoogle/protobuf/timestamp.proto=github.com/cosmos/gogoproto/types

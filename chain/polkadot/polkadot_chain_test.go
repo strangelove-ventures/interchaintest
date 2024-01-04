@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -31,7 +31,7 @@ func TestWalletMethods(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						//UidGid: "1025:1025",
+						UidGid:     "1025:1025",
 					},
 				},
 				Bin:            "polkadot",

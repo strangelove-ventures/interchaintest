@@ -9,22 +9,28 @@ import (
 	"io"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
-	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/misko9/go-substrate-rpc-client/v4/signature"
+	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
+
+// Increase polkadot wallet amount due to their additional precision
+const polkadotScaling = int64(1_000)
 
 // PolkadotChain implements the ibc.Chain interface for substrate chains.
 type PolkadotChain struct {
@@ -150,7 +156,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -205,7 +211,7 @@ func (c *PolkadotChain) NewParachainNode(
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, dockerClient, pn.Name())
 
-	v, err := dockerClient.VolumeCreate(ctx, volumetypes.VolumeCreateBody{
+	v, err := dockerClient.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
 
@@ -335,7 +341,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	}
 	for _, wallet := range additionalGenesisWallets {
 		balances = append(balances,
-			[]interface{}{wallet.Address, wallet.Amount},
+			[]interface{}{wallet.Address, wallet.Amount.MulRaw(polkadotScaling).Uint64()},
 		)
 	}
 
@@ -395,7 +401,7 @@ func (c *PolkadotChain) modifyRelayChainGenesis(ctx context.Context, chainSpec i
 	if err := dyno.Set(chainSpec, parachains, runtimeGenesisPath("paras", "paras")...); err != nil {
 		return fmt.Errorf("error setting parachains: %w", err)
 	}
-	if err := dyno.Set(chainSpec, 10, "genesis", "runtime", "session_length_in_blocks"); err != nil {
+	if err := dyno.Set(chainSpec, 20, "genesis", "runtime", "session_length_in_blocks"); err != nil {
 		return fmt.Errorf("error setting session_length_in_blocks: %w", err)
 	}
 	return nil
@@ -556,6 +562,11 @@ func (c *PolkadotChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(wsPort, "/")[0])
 }
 
+// Implements Chain interface
+func (c *PolkadotChain) GetHostPeerAddress() string {
+	panic("NOT IMPLEMENTED")
+}
+
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 // Implements Chain interface.
@@ -633,7 +644,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
-	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)
 	if err != nil {
 		return fmt.Errorf("failed to create keypair: %w", err)
 	}
@@ -658,7 +669,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 		return fmt.Errorf("Key already exists: %s", keyName)
 	}
 
-	kp, err := signature.KeyringPairFromSecret(mnemonic, ss58Format)
+	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)
 	if err != nil {
 		return fmt.Errorf("failed to create keypair: %w", err)
 	}
@@ -675,7 +686,7 @@ func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 	return err
 }
 
-// GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
+// GetAddress fetches the address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 // Implements Chain interface.
 func (c *PolkadotChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	krItem, err := c.keyring.Get(keyName)
@@ -768,12 +779,12 @@ func (c *PolkadotChain) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	panic("[SendIBCTransfer] not implemented yet")
+	return ibc.Tx{}, c.ParachainNodes[0][0].SendIbcFunds(ctx, channelID, keyName, amount, options)
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface.
-func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
 	// If denom == polkadot denom, it is a relay chain query, else parachain query
 	if denom == c.cfg.Denom {
 		return c.RelayChainNodes[0].GetBalance(ctx, address, denom)
@@ -828,4 +839,19 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 	}
 
 	return kp, nil
+}
+
+// FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
+func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+	return []blockdb.Tx{}, nil
+}
+
+// GetIbcBalance returns the Coins type of ibc coins in account
+func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string, denom uint64) (sdktypes.Coin, error) {
+	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address, denom)
+}
+
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
+	return c.ParachainNodes[0][0].MintFunds(keyName, amount)
 }
