@@ -27,7 +27,7 @@ Read more at the [Announcing `interchaintest` blog post](https://strange.love/bl
 🌌🌌 Who benefits from `interchaintest`?
 =============================
 
-`interchaintest` is for developers who expect top-shelf testing tools when working in IBC.
+`interchaintest` is for developers who expect top-shelf testing tools when working on blockchain protocols such as Cosmos or Ethereum.
 
 
 🌌🌌🌌 What does `interchaintest` do?
@@ -35,8 +35,7 @@ Read more at the [Announcing `interchaintest` blog post](https://strange.love/bl
 
 `interchaintest` is a framework for testing blockchain functionality and interoperability between chains, primarily with the Inter-Blockchain Communication (IBC) protocol.
 
-Want to quickly spin up custom testnets and dev environments to test IBC, chain infrastructures, smart contracts, etc.? `interchaintest` orchestrates Go tests that utilize Docker containers for multiple
-[IBC](https://docs.cosmos.network/master/ibc/overview.html)-compatible blockchains.
+Want to quickly spin up custom testnets and dev environments to test IBC, [Relayer](https://github.com/cosmos/relayer) setup, chain infrastructure, smart contracts, etc.? `interchaintest` orchestrates Go tests that utilize Docker containers for multiple [IBC](https://www.ibcprotocol.dev/)-compatible blockchains.
 
 
 
@@ -44,10 +43,6 @@ Want to quickly spin up custom testnets and dev environments to test IBC, chain 
 =============================
 
 ## As a Module
-
-<!-- Most people choose to import `interchaintest` as a module.
-- Ofter, teams will [integrate interchaintest with a github CI/CD pipeline](./docs/ciTests.md).
-- You can also [utilize our suite of Conformance Tests](./docs/conformance-tests-lib.md) to confirm that the basics of IBC work with your chain. -->
 
 Most people choose to import `interchaintest` as a module.
 - Often, teams will [integrate `interchaintest` with a github CI/CD pipeline](./docs/ciTests.md).
@@ -98,7 +93,7 @@ We strive to keep `interchaintest` inline with the latest from the ibc-go and co
 
 **Recommendation:** Even if your chain uses an older version of ibc-go, try importing from `main`. This should work unless you are decoding transactions that require a specific ibc-go version.
 
-If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you. 
+If there is a feature you would like backported to an older branch, make an issue! We are happy to work with you.
 
 
 ## Contributing
