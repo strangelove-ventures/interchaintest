@@ -27,7 +27,7 @@ type Relayer interface {
 	RestoreKey(ctx context.Context, rep RelayerExecReporter, cfg ChainConfig, keyName, mnemonic string) error
 
 	// generate a new key
-	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType string) (Wallet, error)
+	AddKey(ctx context.Context, rep RelayerExecReporter, chainID, keyName, coinType, signingAlgorithm string) (Wallet, error)
 
 	// GetWallet returns a Wallet for that relayer on the given chain and a boolean indicating if it was found.
 	GetWallet(chainID string) (Wallet, bool)
