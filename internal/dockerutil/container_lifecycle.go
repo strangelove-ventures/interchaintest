@@ -72,8 +72,8 @@ func (c *ContainerLifecycle) CreateContainer(
 			Image: imageRef,
 
 			Entrypoint: []string{},
-			Env:        env,
 			Cmd:        cmd,
+			Env:        env,
 
 			Hostname: hostName,
 
