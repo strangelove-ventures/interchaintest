@@ -79,7 +79,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 		return tx.Factory{}, err
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
+	sdkAdd, err := b.chain.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return tx.Factory{}, err
 	}
@@ -114,7 +114,7 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 		b.keyrings[user] = kr
 	}
 
-	sdkAdd, err := sdk.AccAddressFromBech32(user.FormattedAddress())
+	sdkAdd, err := b.chain.AccAddressFromBech32(user.FormattedAddress())
 	if err != nil {
 		return client.Context{}, err
 	}

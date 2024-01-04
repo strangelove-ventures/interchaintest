@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/strangelove-ventures/localinterchain/interchain/util"
+	sdkmath "cosmossdk.io/math"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/localinterchain/interchain/util"
 )
 
 type actions struct {
@@ -23,15 +24,23 @@ type actions struct {
 
 	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
+
+	authKey string
 }
 
 type ActionHandler struct {
 	ChainId string `json:"chain_id"`
 	Action  string `json:"action"`
 	Cmd     string `json:"cmd"`
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
-func NewActions(ctx context.Context, ic *interchaintest.Interchain, cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) *actions {
+func NewActions(
+	ctx context.Context, ic *interchaintest.Interchain,
+	cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode,
+	relayer ibc.Relayer, eRep ibc.RelayerExecReporter,
+	authKey string,
+) *actions {
 	return &actions{
 		ctx:     ctx,
 		ic:      ic,
@@ -39,6 +48,7 @@ func NewActions(ctx context.Context, ic *interchaintest.Interchain, cosmosChains
 		cc:      cosmosChains,
 		relayer: relayer,
 		eRep:    eRep,
+		authKey: authKey,
 	}
 }
 
@@ -47,6 +57,11 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&ah)
 	if err != nil {
 		util.WriteError(w, fmt.Errorf("failed to decode json: %s", err))
+		return
+	}
+
+	if a.authKey != "" && ah.AuthKey != a.authKey {
+		util.WriteError(w, fmt.Errorf("invalid `auth_key`"))
 		return
 	}
 
@@ -122,7 +137,9 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 		stdout = []byte(fmt.Sprintf(`{"added_full_node":"%s"}`, cmdMap["amount"]))
 	case "dump-contract-state":
-		dumpContractState(w, r, cmdMap, a, val)
+		stdout = dumpContractState(r, cmdMap, a, val)
+	case "faucet":
+		stdout = faucet(r, cmdMap, a.ctx, a, val)
 	}
 
 	// Relayer Actions if the above is not used.
@@ -195,42 +212,64 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 
 func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
 	if relayer != nil {
-		relayer.StopRelayer(ctx, eRep)
+		if err := relayer.StopRelayer(ctx, eRep); err != nil {
+			panic(err)
+		}
 	}
 
 	for _, v := range vals {
-		go v.StopContainer(ctx)
+		go v.StopContainer(ctx) // nolint:errcheck
 	}
 
 	ic.Close()
 	<-ctx.Done()
 }
 
-func dumpContractState(w http.ResponseWriter, r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) {
+func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {
 	contract, ok1 := cmdMap["contract"]
 	height, ok2 := cmdMap["height"]
 	if !ok1 || !ok2 {
-		util.WriteError(w, fmt.Errorf("contract or height not found in commands"))
-		return
+		return []byte(`{"error":"'contract' or 'height' not found in commands"}`)
 	}
 
 	heightInt, err := strconv.ParseInt(height, 10, 64)
 	if err != nil {
-		util.WriteError(w, err)
-		return
+		return []byte(fmt.Sprintf(`{"error":"failed to convert height to int: %s"}`, height))
 	}
 
 	state, err := val.DumpContractState(a.ctx, contract, heightInt)
 	if err != nil {
-		util.WriteError(w, err)
-		return
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
 	}
 
 	jsonRes, err := json.Marshal(state.Models)
 	if err != nil {
-		util.WriteError(w, err)
-		return
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
 	}
 
-	util.Write(w, jsonRes)
+	return jsonRes
+}
+
+func faucet(r *http.Request, cmdMap map[string]string, ctx context.Context, a *actions, val *cosmos.ChainNode) []byte {
+	amount, ok1 := cmdMap["amount"]
+	toAddr, ok2 := cmdMap["address"]
+
+	if !ok1 || !ok2 {
+		return []byte(`{"error":"'amount' or 'address' not found in commands"}`)
+	}
+
+	amt, ok := sdkmath.NewIntFromString(amount)
+	if !ok {
+		return []byte(fmt.Sprintf(`{"error":"failed to convert amount to int: %s"}`, amount))
+	}
+
+	if err := val.SendFunds(ctx, "faucet", ibc.WalletAmount{
+		Address: toAddr,
+		Amount:  amt,
+		Denom:   val.Chain.Config().Denom,
+	}); err != nil {
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
+	}
+
+	return []byte(fmt.Sprintf(`{"sent_funds":"%s"}`, amount))
 }

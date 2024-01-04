@@ -30,6 +30,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // MsgStoreCode defines the request type for the StoreCode rpc.
 type MsgStoreCode struct {
+	// signer address
 	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
 	// wasm byte code of light client contract. It can be raw or gzip compressed
 	WasmByteCode []byte `protobuf:"bytes,2,opt,name=wasm_byte_code,json=wasmByteCode,proto3" json:"wasm_byte_code,omitempty"`
@@ -84,7 +85,7 @@ func (m *MsgStoreCode) GetWasmByteCode() []byte {
 
 // MsgStoreCodeResponse defines the response type for the StoreCode rpc
 type MsgStoreCodeResponse struct {
-	// the sha256 hash of the stored code
+	// checksum is the sha256 hash of the stored code
 	Checksum []byte `protobuf:"bytes,1,opt,name=checksum,proto3" json:"checksum,omitempty"`
 }
 
@@ -128,35 +129,249 @@ func (m *MsgStoreCodeResponse) GetChecksum() []byte {
 	return nil
 }
 
+// MsgRemoveChecksum defines the request type for the MsgRemoveChecksum rpc.
+type MsgRemoveChecksum struct {
+	// signer address
+	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
+	// checksum is the sha256 hash to be removed from the store
+	Checksum []byte `protobuf:"bytes,2,opt,name=checksum,proto3" json:"checksum,omitempty"`
+}
+
+func (m *MsgRemoveChecksum) Reset()         { *m = MsgRemoveChecksum{} }
+func (m *MsgRemoveChecksum) String() string { return proto.CompactTextString(m) }
+func (*MsgRemoveChecksum) ProtoMessage()    {}
+func (*MsgRemoveChecksum) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1d9737363bf1e38d, []int{2}
+}
+func (m *MsgRemoveChecksum) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgRemoveChecksum) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgRemoveChecksum.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgRemoveChecksum) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRemoveChecksum.Merge(m, src)
+}
+func (m *MsgRemoveChecksum) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgRemoveChecksum) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRemoveChecksum.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgRemoveChecksum proto.InternalMessageInfo
+
+func (m *MsgRemoveChecksum) GetSigner() string {
+	if m != nil {
+		return m.Signer
+	}
+	return ""
+}
+
+func (m *MsgRemoveChecksum) GetChecksum() []byte {
+	if m != nil {
+		return m.Checksum
+	}
+	return nil
+}
+
+// MsgStoreChecksumResponse defines the response type for the StoreCode rpc
+type MsgRemoveChecksumResponse struct {
+}
+
+func (m *MsgRemoveChecksumResponse) Reset()         { *m = MsgRemoveChecksumResponse{} }
+func (m *MsgRemoveChecksumResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgRemoveChecksumResponse) ProtoMessage()    {}
+func (*MsgRemoveChecksumResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1d9737363bf1e38d, []int{3}
+}
+func (m *MsgRemoveChecksumResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgRemoveChecksumResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgRemoveChecksumResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgRemoveChecksumResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRemoveChecksumResponse.Merge(m, src)
+}
+func (m *MsgRemoveChecksumResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgRemoveChecksumResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRemoveChecksumResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgRemoveChecksumResponse proto.InternalMessageInfo
+
+// MsgMigrateContract defines the request type for the MigrateContract rpc.
+type MsgMigrateContract struct {
+	// signer address
+	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
+	// the client id of the contract
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// checksum is the sha256 hash of the new wasm byte code for the contract
+	Checksum []byte `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	// the json encoded message to be passed to the contract on migration
+	Msg []byte `protobuf:"bytes,4,opt,name=msg,proto3" json:"msg,omitempty"`
+}
+
+func (m *MsgMigrateContract) Reset()         { *m = MsgMigrateContract{} }
+func (m *MsgMigrateContract) String() string { return proto.CompactTextString(m) }
+func (*MsgMigrateContract) ProtoMessage()    {}
+func (*MsgMigrateContract) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1d9737363bf1e38d, []int{4}
+}
+func (m *MsgMigrateContract) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgMigrateContract) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgMigrateContract.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgMigrateContract) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgMigrateContract.Merge(m, src)
+}
+func (m *MsgMigrateContract) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgMigrateContract) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgMigrateContract.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgMigrateContract proto.InternalMessageInfo
+
+func (m *MsgMigrateContract) GetSigner() string {
+	if m != nil {
+		return m.Signer
+	}
+	return ""
+}
+
+func (m *MsgMigrateContract) GetClientId() string {
+	if m != nil {
+		return m.ClientId
+	}
+	return ""
+}
+
+func (m *MsgMigrateContract) GetChecksum() []byte {
+	if m != nil {
+		return m.Checksum
+	}
+	return nil
+}
+
+func (m *MsgMigrateContract) GetMsg() []byte {
+	if m != nil {
+		return m.Msg
+	}
+	return nil
+}
+
+// MsgMigrateContractResponse defines the response type for the MigrateContract rpc
+type MsgMigrateContractResponse struct {
+}
+
+func (m *MsgMigrateContractResponse) Reset()         { *m = MsgMigrateContractResponse{} }
+func (m *MsgMigrateContractResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgMigrateContractResponse) ProtoMessage()    {}
+func (*MsgMigrateContractResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_1d9737363bf1e38d, []int{5}
+}
+func (m *MsgMigrateContractResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgMigrateContractResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgMigrateContractResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgMigrateContractResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgMigrateContractResponse.Merge(m, src)
+}
+func (m *MsgMigrateContractResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgMigrateContractResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgMigrateContractResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgMigrateContractResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*MsgStoreCode)(nil), "ibc.lightclients.wasm.v1.MsgStoreCode")
 	proto.RegisterType((*MsgStoreCodeResponse)(nil), "ibc.lightclients.wasm.v1.MsgStoreCodeResponse")
+	proto.RegisterType((*MsgRemoveChecksum)(nil), "ibc.lightclients.wasm.v1.MsgRemoveChecksum")
+	proto.RegisterType((*MsgRemoveChecksumResponse)(nil), "ibc.lightclients.wasm.v1.MsgRemoveChecksumResponse")
+	proto.RegisterType((*MsgMigrateContract)(nil), "ibc.lightclients.wasm.v1.MsgMigrateContract")
+	proto.RegisterType((*MsgMigrateContractResponse)(nil), "ibc.lightclients.wasm.v1.MsgMigrateContractResponse")
 }
 
 func init() { proto.RegisterFile("ibc/lightclients/wasm/v1/tx.proto", fileDescriptor_1d9737363bf1e38d) }
 
 var fileDescriptor_1d9737363bf1e38d = []byte{
-	// 312 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0xcc, 0x4c, 0x4a, 0xd6,
-	0xcf, 0xc9, 0x4c, 0xcf, 0x28, 0x49, 0xce, 0xc9, 0x4c, 0xcd, 0x2b, 0x29, 0xd6, 0x2f, 0x4f, 0x2c,
-	0xce, 0xd5, 0x2f, 0x33, 0xd4, 0x2f, 0xa9, 0xd0, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x92, 0xc8,
-	0x4c, 0x4a, 0xd6, 0x43, 0x56, 0xa2, 0x07, 0x52, 0xa2, 0x57, 0x66, 0x28, 0x25, 0x9e, 0x9c, 0x5f,
-	0x9c, 0x9b, 0x5f, 0xac, 0x9f, 0x5b, 0x9c, 0x0e, 0xd2, 0x91, 0x5b, 0x9c, 0x0e, 0xd1, 0xa2, 0x14,
-	0xc9, 0xc5, 0xe3, 0x5b, 0x9c, 0x1e, 0x5c, 0x92, 0x5f, 0x94, 0xea, 0x9c, 0x9f, 0x92, 0x2a, 0x24,
-	0xc6, 0xc5, 0x56, 0x9c, 0x99, 0x9e, 0x97, 0x5a, 0x24, 0xc1, 0xa8, 0xc0, 0xa8, 0xc1, 0x19, 0x04,
-	0xe5, 0x09, 0xa9, 0x70, 0xf1, 0x81, 0xcc, 0x8a, 0x4f, 0xaa, 0x2c, 0x49, 0x8d, 0x4f, 0xce, 0x4f,
-	0x49, 0x95, 0x60, 0x52, 0x60, 0xd4, 0xe0, 0x09, 0xe2, 0x01, 0x89, 0x3a, 0x55, 0x96, 0x80, 0x75,
-	0x5b, 0x71, 0x37, 0x3d, 0xdf, 0xa0, 0x05, 0xd5, 0xa2, 0x64, 0xc4, 0x25, 0x82, 0x6c, 0x74, 0x50,
-	0x6a, 0x71, 0x41, 0x7e, 0x5e, 0x71, 0xaa, 0x90, 0x14, 0x17, 0x47, 0x72, 0x46, 0x6a, 0x72, 0x76,
-	0x71, 0x69, 0x2e, 0xd8, 0x12, 0x9e, 0x20, 0x38, 0xdf, 0xa8, 0x90, 0x8b, 0xd9, 0xb7, 0x38, 0x5d,
-	0x28, 0x99, 0x8b, 0x13, 0xe1, 0x24, 0x35, 0x3d, 0x5c, 0xde, 0xd2, 0x43, 0x36, 0x5f, 0x4a, 0x8f,
-	0x38, 0x75, 0x30, 0x77, 0x48, 0xb1, 0x36, 0x3c, 0xdf, 0xa0, 0xc5, 0xe8, 0x14, 0x76, 0xe2, 0x91,
-	0x1c, 0xe3, 0x85, 0x47, 0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x70, 0xe1,
-	0xb1, 0x1c, 0xc3, 0x8d, 0xc7, 0x72, 0x0c, 0x51, 0x36, 0xe9, 0x99, 0x25, 0x19, 0xa5, 0x49, 0x7a,
-	0xc9, 0xf9, 0xb9, 0xfa, 0xd0, 0xf0, 0xcb, 0x4c, 0x4a, 0xd6, 0x4d, 0xcf, 0xd7, 0xcf, 0xcd, 0x4f,
-	0x29, 0xcd, 0x49, 0x2d, 0x86, 0x44, 0x87, 0x2e, 0x2c, 0x3e, 0x0c, 0x2c, 0x74, 0xc1, 0x51, 0x52,
-	0x52, 0x59, 0x90, 0x5a, 0x9c, 0xc4, 0x06, 0x0e, 0x60, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0xea, 0x8d, 0x6f, 0x6d, 0xb8, 0x01, 0x00, 0x00,
+	// 445 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x53, 0x4d, 0x6f, 0xd3, 0x40,
+	0x14, 0xcc, 0x26, 0x50, 0x35, 0x8f, 0xa8, 0x80, 0x85, 0x20, 0xb8, 0xc8, 0x2a, 0x11, 0x42, 0x55,
+	0x21, 0x6b, 0xda, 0x72, 0x40, 0x88, 0x53, 0x7b, 0xe2, 0xe0, 0x8b, 0x41, 0x48, 0x70, 0x89, 0xe2,
+	0xf5, 0x6a, 0xb3, 0x22, 0xeb, 0x8d, 0xfc, 0xd6, 0x81, 0xdc, 0x10, 0xe2, 0x07, 0xf0, 0x53, 0xfa,
+	0x33, 0x38, 0xf6, 0xc8, 0x81, 0x03, 0x4a, 0x0e, 0xfd, 0x1b, 0xc8, 0x5f, 0xc1, 0x4e, 0x95, 0xaa,
+	0xb9, 0x79, 0x9f, 0xe6, 0xcd, 0x8c, 0xdf, 0x68, 0xe0, 0xb1, 0x0c, 0x98, 0x3b, 0x96, 0x62, 0x64,
+	0xd8, 0x58, 0xf2, 0xc8, 0xa0, 0xfb, 0x65, 0x88, 0xca, 0x9d, 0x1e, 0xba, 0xe6, 0x2b, 0x9d, 0xc4,
+	0xda, 0x68, 0xab, 0x2b, 0x03, 0x46, 0xab, 0x10, 0x9a, 0x42, 0xe8, 0xf4, 0xd0, 0x7e, 0xc0, 0x34,
+	0x2a, 0x8d, 0xae, 0x42, 0x91, 0x6e, 0x28, 0x14, 0xf9, 0x4a, 0xef, 0x23, 0x74, 0x3c, 0x14, 0xef,
+	0x8c, 0x8e, 0xf9, 0xa9, 0x0e, 0xb9, 0x75, 0x1f, 0xb6, 0x50, 0x8a, 0x88, 0xc7, 0x5d, 0xb2, 0x47,
+	0xf6, 0xdb, 0x7e, 0xf1, 0xb2, 0x9e, 0xc0, 0x4e, 0xca, 0x35, 0x08, 0x66, 0x86, 0x0f, 0x98, 0x0e,
+	0x79, 0xb7, 0xb9, 0x47, 0xf6, 0x3b, 0x7e, 0x27, 0x9d, 0x9e, 0xcc, 0x4c, 0xb6, 0xfd, 0xfa, 0xd6,
+	0xf7, 0x8b, 0xb3, 0x83, 0x62, 0xa5, 0x77, 0x04, 0xf7, 0xaa, 0xd4, 0x3e, 0xc7, 0x89, 0x8e, 0x90,
+	0x5b, 0x36, 0x6c, 0xb3, 0x11, 0x67, 0x9f, 0x31, 0x51, 0x99, 0x48, 0xc7, 0x5f, 0xbe, 0x7b, 0xef,
+	0xe1, 0xae, 0x87, 0xc2, 0xe7, 0x4a, 0x4f, 0xf9, 0x69, 0x31, 0x5c, 0xeb, 0xa9, 0x4a, 0xd4, 0xac,
+	0x13, 0xd5, 0x9d, 0xec, 0xc2, 0xc3, 0x4b, 0xac, 0xa5, 0x9d, 0xde, 0x0f, 0x02, 0x96, 0x87, 0xc2,
+	0x93, 0x22, 0x1e, 0xa6, 0xbf, 0x11, 0x99, 0x78, 0xc8, 0xcc, 0x5a, 0xd1, 0x5d, 0x68, 0xe7, 0xc7,
+	0x1d, 0xc8, 0x30, 0x53, 0x6d, 0xfb, 0xdb, 0xf9, 0xe0, 0x6d, 0x58, 0x73, 0xd4, 0xaa, 0x3b, 0xb2,
+	0xee, 0x40, 0x4b, 0xa1, 0xe8, 0xde, 0xc8, 0xc6, 0xe9, 0x67, 0xdd, 0xe3, 0x23, 0xb0, 0x2f, 0xbb,
+	0x28, 0x4d, 0x1e, 0xfd, 0x69, 0x42, 0xcb, 0x43, 0x61, 0x31, 0x68, 0xff, 0xcf, 0xea, 0x29, 0x5d,
+	0x97, 0x37, 0xad, 0x1e, 0xde, 0xa6, 0xd7, 0xc3, 0x2d, 0x03, 0x8a, 0x61, 0x67, 0x25, 0x81, 0x67,
+	0x57, 0x32, 0xd4, 0xc1, 0xf6, 0xf1, 0x06, 0xe0, 0xa5, 0x66, 0x02, 0xb7, 0x57, 0x13, 0x78, 0x7e,
+	0x25, 0xcf, 0x0a, 0xda, 0x7e, 0xb9, 0x09, 0xba, 0x94, 0xb5, 0x6f, 0x7e, 0xbb, 0x38, 0x3b, 0x20,
+	0x27, 0x1f, 0x7e, 0xcd, 0x1d, 0x72, 0x3e, 0x77, 0xc8, 0xdf, 0xb9, 0x43, 0x7e, 0x2e, 0x9c, 0xc6,
+	0xf9, 0xc2, 0x69, 0xfc, 0x5e, 0x38, 0x8d, 0x4f, 0x6f, 0x84, 0x34, 0xa3, 0x24, 0xa0, 0x4c, 0x2b,
+	0xb7, 0xe8, 0x90, 0x0c, 0x58, 0x5f, 0x68, 0x57, 0xe9, 0x30, 0x19, 0x73, 0xcc, 0x2b, 0xd9, 0x2f,
+	0x3b, 0xf9, 0xe2, 0x55, 0x3f, 0xab, 0xa5, 0x99, 0x4d, 0x38, 0x06, 0x5b, 0x59, 0xc9, 0x8e, 0xff,
+	0x05, 0x00, 0x00, 0xff, 0xff, 0x5f, 0xb7, 0xbc, 0xcb, 0xbc, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -173,6 +388,10 @@ const _ = grpc.SupportPackageIsVersion4
 type MsgClient interface {
 	// StoreCode defines a rpc handler method for MsgStoreCode.
 	StoreCode(ctx context.Context, in *MsgStoreCode, opts ...grpc.CallOption) (*MsgStoreCodeResponse, error)
+	// RemoveChecksum defines a rpc handler method for MsgRemoveChecksum.
+	RemoveChecksum(ctx context.Context, in *MsgRemoveChecksum, opts ...grpc.CallOption) (*MsgRemoveChecksumResponse, error)
+	// MigrateContract defines a rpc handler method for MsgMigrateContract.
+	MigrateContract(ctx context.Context, in *MsgMigrateContract, opts ...grpc.CallOption) (*MsgMigrateContractResponse, error)
 }
 
 type msgClient struct {
@@ -192,10 +411,32 @@ func (c *msgClient) StoreCode(ctx context.Context, in *MsgStoreCode, opts ...grp
 	return out, nil
 }
 
+func (c *msgClient) RemoveChecksum(ctx context.Context, in *MsgRemoveChecksum, opts ...grpc.CallOption) (*MsgRemoveChecksumResponse, error) {
+	out := new(MsgRemoveChecksumResponse)
+	err := c.cc.Invoke(ctx, "/ibc.lightclients.wasm.v1.Msg/RemoveChecksum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) MigrateContract(ctx context.Context, in *MsgMigrateContract, opts ...grpc.CallOption) (*MsgMigrateContractResponse, error) {
+	out := new(MsgMigrateContractResponse)
+	err := c.cc.Invoke(ctx, "/ibc.lightclients.wasm.v1.Msg/MigrateContract", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
 	// StoreCode defines a rpc handler method for MsgStoreCode.
 	StoreCode(context.Context, *MsgStoreCode) (*MsgStoreCodeResponse, error)
+	// RemoveChecksum defines a rpc handler method for MsgRemoveChecksum.
+	RemoveChecksum(context.Context, *MsgRemoveChecksum) (*MsgRemoveChecksumResponse, error)
+	// MigrateContract defines a rpc handler method for MsgMigrateContract.
+	MigrateContract(context.Context, *MsgMigrateContract) (*MsgMigrateContractResponse, error)
 }
 
 // UnimplementedMsgServer can be embedded to have forward compatible implementations.
@@ -204,6 +445,12 @@ type UnimplementedMsgServer struct {
 
 func (*UnimplementedMsgServer) StoreCode(ctx context.Context, req *MsgStoreCode) (*MsgStoreCodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StoreCode not implemented")
+}
+func (*UnimplementedMsgServer) RemoveChecksum(ctx context.Context, req *MsgRemoveChecksum) (*MsgRemoveChecksumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveChecksum not implemented")
+}
+func (*UnimplementedMsgServer) MigrateContract(ctx context.Context, req *MsgMigrateContract) (*MsgMigrateContractResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateContract not implemented")
 }
 
 func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
@@ -228,6 +475,42 @@ func _Msg_StoreCode_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_RemoveChecksum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRemoveChecksum)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RemoveChecksum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ibc.lightclients.wasm.v1.Msg/RemoveChecksum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RemoveChecksum(ctx, req.(*MsgRemoveChecksum))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_MigrateContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgMigrateContract)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).MigrateContract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ibc.lightclients.wasm.v1.Msg/MigrateContract",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).MigrateContract(ctx, req.(*MsgMigrateContract))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Msg_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ibc.lightclients.wasm.v1.Msg",
 	HandlerType: (*MsgServer)(nil),
@@ -235,6 +518,14 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StoreCode",
 			Handler:    _Msg_StoreCode_Handler,
+		},
+		{
+			MethodName: "RemoveChecksum",
+			Handler:    _Msg_RemoveChecksum_Handler,
+		},
+		{
+			MethodName: "MigrateContract",
+			Handler:    _Msg_MigrateContract_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -308,6 +599,140 @@ func (m *MsgStoreCodeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *MsgRemoveChecksum) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgRemoveChecksum) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgRemoveChecksum) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Checksum) > 0 {
+		i -= len(m.Checksum)
+		copy(dAtA[i:], m.Checksum)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Checksum)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Signer) > 0 {
+		i -= len(m.Signer)
+		copy(dAtA[i:], m.Signer)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Signer)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgRemoveChecksumResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgRemoveChecksumResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgRemoveChecksumResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgMigrateContract) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgMigrateContract) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgMigrateContract) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Msg) > 0 {
+		i -= len(m.Msg)
+		copy(dAtA[i:], m.Msg)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Msg)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Checksum) > 0 {
+		i -= len(m.Checksum)
+		copy(dAtA[i:], m.Checksum)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Checksum)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.ClientId) > 0 {
+		i -= len(m.ClientId)
+		copy(dAtA[i:], m.ClientId)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.ClientId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Signer) > 0 {
+		i -= len(m.Signer)
+		copy(dAtA[i:], m.Signer)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Signer)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgMigrateContractResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgMigrateContractResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgMigrateContractResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	offset -= sovTx(v)
 	base := offset
@@ -346,6 +771,66 @@ func (m *MsgStoreCodeResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovTx(uint64(l))
 	}
+	return n
+}
+
+func (m *MsgRemoveChecksum) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Signer)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Checksum)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgRemoveChecksumResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgMigrateContract) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Signer)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.ClientId)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Checksum)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Msg)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgMigrateContractResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	return n
 }
 
@@ -534,6 +1019,404 @@ func (m *MsgStoreCodeResponse) Unmarshal(dAtA []byte) error {
 				m.Checksum = []byte{}
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgRemoveChecksum) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgRemoveChecksum: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgRemoveChecksum: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signer", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signer = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Checksum", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Checksum = append(m.Checksum[:0], dAtA[iNdEx:postIndex]...)
+			if m.Checksum == nil {
+				m.Checksum = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgRemoveChecksumResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgRemoveChecksumResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgRemoveChecksumResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgMigrateContract) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgMigrateContract: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgMigrateContract: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signer", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signer = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClientId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ClientId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Checksum", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Checksum = append(m.Checksum[:0], dAtA[iNdEx:postIndex]...)
+			if m.Checksum == nil {
+				m.Checksum = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Msg", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Msg = append(m.Msg[:0], dAtA[iNdEx:postIndex]...)
+			if m.Msg == nil {
+				m.Msg = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgMigrateContractResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgMigrateContractResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgMigrateContractResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])

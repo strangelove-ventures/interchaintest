@@ -28,6 +28,20 @@ type ConnectionSide struct {
 	ConnectionID string `json:"connection_id"`
 }
 
+// ChannelCreationResponse contains the minimum required values to extract the channel ids from a hermes response.
+type ChannelCreationResponse struct {
+	Result CreateChannelResult `json:"result"`
+}
+
+type CreateChannelResult struct {
+	ASide ChannelSide `json:"a_side"`
+	BSide ChannelSide `json:"b_side"`
+}
+
+type ChannelSide struct {
+	ChannelID string `json:"channel_id"`
+}
+
 // ChannelOutputResult contains the minimum required channel values.
 type ChannelOutputResult struct {
 	Result []ChannelResult `json:"result"`

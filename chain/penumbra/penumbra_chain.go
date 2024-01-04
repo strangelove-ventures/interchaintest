@@ -121,6 +121,11 @@ func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
 }
 
+// Implements Chain interface
+func (c *PenumbraChain) GetHostPeerAddress() string {
+	panic("NOT IMPLEMENTED")
+}
+
 // GetHostRPCAddress returns the address of the RPC server accessible by the host.
 // This will not return a valid address until the chain has been started.
 func (c *PenumbraChain) GetHostRPCAddress() string {
@@ -547,7 +552,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 		return err
 	}
 
-	if err := testutil.WaitForBlocks(ctx, 5, c.getFullNode().TendermintNode); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 2, c.getFullNode().TendermintNode); err != nil {
 		return err
 	}
 

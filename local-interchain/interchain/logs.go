@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
@@ -14,8 +15,15 @@ import (
 )
 
 func WriteRunningChains(configsDir string, bz []byte) {
-	filepath := filepath.Join(configsDir, "configs", "logs.json")
-	_ = os.WriteFile(filepath, bz, 0644)
+	path := filepath.Join(configsDir, "configs")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			panic(err)
+		}
+	}
+
+	file := filepath.Join(path, "logs.json")
+	_ = os.WriteFile(file, bz, 0644)
 }
 
 func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.Chain, connections []types.IBCChannel) {
@@ -27,23 +35,38 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 
 	// Iterate chain config & get the ibc chain's to save data to logs.
 	for idx, chain := range config.Chains {
-		chainObj := chains[idx].(*cosmos.CosmosChain)
 
-		ibcPaths := chain.IBCPaths
-		if ibcPaths == nil {
-			ibcPaths = []string{}
+		switch chains[idx].(type) {
+		case *cosmos.CosmosChain:
+			chainObj := chains[idx].(*cosmos.CosmosChain)
+
+			ibcPaths := chain.IBCPaths
+			if ibcPaths == nil {
+				ibcPaths = []string{}
+			}
+
+			log := types.LogOutput{
+				ChainID:     chainObj.Config().ChainID,
+				ChainName:   chainObj.Config().Name,
+				RPCAddress:  chainObj.GetHostRPCAddress(),
+				RESTAddress: chainObj.GetHostAPIAddress(),
+				GRPCAddress: chainObj.GetHostGRPCAddress(),
+				P2PAddress:  chainObj.GetHostPeerAddress(),
+				IBCPath:     ibcPaths,
+			}
+
+			mainLogs.Chains = append(mainLogs.Chains, log)
+		case *ethereum.EthereumChain:
+			chainObj := chains[idx].(*ethereum.EthereumChain)
+
+			log := types.LogOutput{
+				ChainID:    chainObj.Config().ChainID,
+				ChainName:  chainObj.Config().Name,
+				RPCAddress: chainObj.GetHostRPCAddress(),
+			}
+
+			mainLogs.Chains = append(mainLogs.Chains, log)
 		}
-
-		log := types.LogOutput{
-			ChainID:     chainObj.Config().ChainID,
-			ChainName:   chainObj.Config().Name,
-			RPCAddress:  chainObj.GetHostRPCAddress(),
-			RESTAddress: chainObj.GetHostAPIAddress(),
-			GRPCAddress: chainObj.GetHostGRPCAddress(),
-			IBCPath:     ibcPaths,
-		}
-
-		mainLogs.Chains = append(mainLogs.Chains, log)
 	}
 
 	bz, _ := json.MarshalIndent(mainLogs, "", "  ")
