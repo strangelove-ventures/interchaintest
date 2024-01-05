@@ -155,7 +155,35 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		hostPorts[internalPort] = externalPort
 	}
 
-	chainCfg := ibc.ChainConfig{
+	// hostMounts := make([]*mount.Mount, len(cfg.HostMounts))
+	// for i, m := range cfg.HostMounts {
+	// 	hostMounts[i] = &mount.Mount{
+	// 		Type:     mount.Type(m.Type),
+	// 		Source:   m.Source,
+	// 		Target:   m.Target,
+	// 		ReadOnly: m.ReadOnly,
+	// 	}
+	// }
+
+	// dm := []ibc.DockerMount{
+	// 	{
+	// 		Type:   "bind",
+	// 		Source: "/home/reece/Desktop/Programming/Go/interchaintest/local-interchain/juno-mount",
+	// 		Target: "/var/cosmos-chain/localjuno-1",
+	// 	},
+	// }
+
+	hostMounts := make([]ibc.DockerMount, len(cfg.HostMounts))
+	for i, m := range cfg.HostMounts {
+		hostMounts[i] = ibc.DockerMount{
+			Type:     m.Type,
+			Source:   m.Source,
+			Target:   m.Target,
+			ReadOnly: m.ReadOnly,
+		}
+	}
+
+	chainCfg := &ibc.ChainConfig{
 		Type:             cfg.ChainType,
 		Name:             cfg.Name,
 		ChainID:          cfg.ChainID,
@@ -168,8 +196,9 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		TrustingPeriod:   cfg.TrustingPeriod,
 		HostPortOverride: hostPorts,
 
-		// TODO: Allow host mount in the future
-		NoHostMount:         false,
+		NoHostMount: false,
+		HostMounts:  hostMounts, // TODO: why can't I just use mount.Mount ?
+
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
 		ConfigFileOverrides: ConfigurationOverrides(cfg),
 		EncodingConfig:      nil,
@@ -193,10 +222,10 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		Name:          cfg.Name,
 		Version:       cfg.DockerImage.Version,
 		ChainName:     cfg.ChainID,
-		ChainConfig:   chainCfg,
+		ChainConfig:   *chainCfg,
 		NumValidators: &cfg.NumberVals,
 		NumFullNodes:  &cfg.NumberNode,
 	}
 
-	return chainCfg, chainSpecs
+	return *chainCfg, chainSpecs
 }

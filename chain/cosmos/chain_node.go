@@ -29,6 +29,7 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/docker/docker/api/types/mount"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -1306,7 +1307,28 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, nil)
+	// TODO: the value is not being set properly... pointers or not. Also, we need to load from this not just save to disk.
+	fmt.Printf("Host Mounts: %+v\n", chainCfg.HostMounts)
+
+	mounts := make([]mount.Mount, len(chainCfg.HostMounts))
+	for i, hm := range chainCfg.HostMounts {
+		mounts[i] = mount.Mount{
+			Type:     mount.Type(hm.Type),
+			Source:   hm.Source,
+			Target:   hm.Target,
+			ReadOnly: hm.ReadOnly,
+		}
+	}
+
+	// forced := []mount.Mount{
+	// 	{
+	// 		Type:   "volume",
+	// 		Source: "/home/reece/Desktop/Programming/Go/interchaintest/local-interchain/juno-mount",
+	// 		Target: "/var/cosmos-chain/localjuno-1/config", // tn.HomeDir()
+	// 	},
+	// }
+
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), mounts, tn.HostName(), cmd, nil)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

@@ -12,6 +12,17 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 )
 
+// getting pointer errors
+// ref: github.com/docker/docker/api/types/mount
+type DockerMount struct {
+	// bind, volume
+	Type string `json:"type" default:"bind"`
+
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	ReadOnly bool   `json:"read_only" default:"false"`
+}
+
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
@@ -40,6 +51,8 @@ type ChainConfig struct {
 	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
 	NoHostMount bool `yaml:"no-host-mount"`
+	// HostMounts mounts container directories to the host.
+	HostMounts []DockerMount `yaml:"mounts"`
 	// When true, will skip validator gentx flow
 	SkipGenTx bool
 	// When provided, will run before performing gentx and genesis file creation steps for validators.

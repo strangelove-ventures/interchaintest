@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/go-playground/validator"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
@@ -31,12 +32,13 @@ type Chain struct {
 
 	DockerImage DockerImage `json:"docker_image" validate:"url"`
 
-	GasPrices     string   `json:"gas_prices"`
-	GasAdjustment float64  `json:"gas_adjustment"`
-	NumberVals    int      `json:"number_vals" validate:"gte=1"`
-	NumberNode    int      `json:"number_node"`
-	IBCPaths      []string `json:"ibc_paths"`
-	Genesis       Genesis  `json:"genesis"`
+	GasPrices     string            `json:"gas_prices"`
+	GasAdjustment float64           `json:"gas_adjustment"`
+	NumberVals    int               `json:"number_vals" validate:"gte=1"`
+	NumberNode    int               `json:"number_node"`
+	IBCPaths      []string          `json:"ibc_paths"`
+	Genesis       Genesis           `json:"genesis"`
+	HostMounts    []ibc.DockerMount `json:"mounts"`
 
 	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty"`
 

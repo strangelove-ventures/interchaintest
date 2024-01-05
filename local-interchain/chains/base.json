@@ -25,6 +25,14 @@
                 "1317": "1317",
                 "9090": "9090"
             },
+            "mounts": [
+                {
+                    "type": "bind",
+                    "read_only": false,
+                    "source": "/home/reece/Desktop/Programming/Go/interchaintest/local-interchain/juno-mount",
+                    "target": "/var/cosmos-chain/localjuno-1/config"
+                }
+            ],
             "config_file_overrides": [
                 {
                     "file": "config/config.toml",
