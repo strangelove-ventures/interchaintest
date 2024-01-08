@@ -30,6 +30,8 @@ type ChainConfig struct {
 	Denom string `yaml:"denom"`
 	// Coin type
 	CoinType string `default:"118" yaml:"coin-type"`
+	// Key signature algorithm
+	SigningAlgorithm string `default:"secp256k1" yaml:"signing-algorithm"`
 	// Minimum gas prices for sending transactions, in native currency denom.
 	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
