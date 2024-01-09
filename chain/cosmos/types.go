@@ -10,22 +10,6 @@ const (
 	ProposalVoteNo         = "no"
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
-
-	// IBC-Go <= v7 / SDK <= v0.47
-	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
-	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
-	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
-	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
-	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
-	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
-
-	// IBC-Go v8 / SDK v50
-	ProposalStatusUnspecifiedV8   = 0
-	ProposalStatusDepositPeriodV8 = 1
-	ProposalStatusVotingPeriodV8  = 2
-	ProposalStatusPassedV8        = 3
-	ProposalStatusRejectedV8      = 4
-	ProposalStatusFailedV8        = 5
 )
 
 // TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)
@@ -39,6 +23,14 @@ type TxProposalv1 struct {
 	// SDK v50 only
 	Proposer  string `json:"proposer,omitempty"`
 	Expedited bool   `json:"expedited,omitempty"`
+}
+
+// ProtoMessage is implemented by generated protocol buffer messages.
+// Pulled from github.com/cosmos/gogoproto/proto.
+type ProtoMessage interface {
+	Reset()
+	String() string
+	ProtoMessage()
 }
 
 // TxProposal contains chain proposal transaction details.
@@ -212,16 +204,4 @@ type QueryDenomAuthorityMetadataResponse struct {
 type DenomAuthorityMetadata struct {
 	// Can be empty for no admin, or a valid address
 	Admin string `protobuf:"bytes,1,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
-}
-
-type QueryModuleAccountResponse struct {
-	Account struct {
-		BaseAccount struct {
-			AccountNumber string `json:"account_number"`
-			Address       string `json:"address"`
-			PubKey        string `json:"pub_key"`
-			Sequence      string `json:"sequence"`
-		} `json:"base_account"`
-		Name string `json:"name"`
-	} `json:"account"`
 }
