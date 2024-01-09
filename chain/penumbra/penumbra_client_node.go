@@ -46,6 +46,8 @@ type PenumbraClientNode struct {
 	DockerClient *client.Client
 	Image        ibc.DockerImage
 
+	GRPCConn *grpc.ClientConn
+
 	address    []byte
 	addrString string
 
@@ -142,19 +144,13 @@ func (p *PenumbraClientNode) HomeDir() string {
 
 // GetAddress returns the Bech32m encoded string of the inner bytes as a slice of bytes.
 func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
-	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer channel.Close()
-
 	addrReq := &viewv1alpha1.AddressByIndexRequest{
 		AddressIndex: &keysv1alpha1.AddressIndex{
 			Account: 0,
 		},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.AddressByIndex(ctx, addrReq)
 	if err != nil {
@@ -166,18 +162,8 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 
 // SendFunds sends funds from the PenumbraClientNode to a specified address.
 // It generates a transaction plan, gets authorization data for the transaction,
-// builds and signs the transaction, and broadcasts it.
-// Parameters:
-// - ctx: The context of the operation.
-// - amount: The amount of funds to send, including the address and denomination.
-// Returns an error if any step of the process fails.
+// builds and signs the transaction, and broadcasts it. Returns an error if any step of the process fails.
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
-	channel, err := grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	defer channel.Close()
-
 	hi, lo := translateBigInt(amount.Amount)
 
 	// Generate a transaction plan sending funds to an address.
@@ -195,7 +181,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 		}},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
@@ -203,7 +189,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 
 	// Get authorization data for the transaction from pclientd (signing).
-	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(p.GRPCConn)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
@@ -240,7 +226,6 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 }
 
 // SendIBCTransfer sends an IBC transfer from the current PenumbraClientNode to a specified destination address on a specified channel.
-// It dials a gRPC connection to the hostGRPCPort, and if successful, closes the connection before returning. It returns an error if dialing the gRPC connection fails.
 // The function validates the address string on the current PenumbraClientNode instance. If the address string is empty, it returns an error.
 // It translates the amount to a big integer and creates an `ibcv1alpha1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
 func (p *PenumbraClientNode) SendIBCTransfer(
@@ -249,16 +234,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
-	channel, err := grpc.Dial(
-		p.hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return ibc.Tx{}, err
-	}
-	defer channel.Close()
-
-	// TODO may need to be more defensive than this, additionally we may want to validate the addr string.
 	if p.addrString == "" {
 		return ibc.Tx{}, fmt.Errorf("address string was not cached on pclientd instance for key with name %s", p.KeyName)
 	}
@@ -290,7 +265,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		Ics20Withdrawals: []*ibcv1alpha1.Ics20Withdrawal{withdrawal},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
@@ -298,7 +273,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	// Get authorization data for the transaction from pclientd (signing).
-	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(channel)
+	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(p.GRPCConn)
 	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
 		Plan:              resp.Plan,
 		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
@@ -351,31 +326,16 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 // GetBalance retrieves the balance of a specific denom for the PenumbraClientNode.
 //
-// This method establishes a gRPC connection to the PenumbraClientNode using the hostGRPCPort information.
-// It then creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
+// It creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
 // A Balances stream response is obtained from the server.
 // The balances are collected in a slice until the stream is done, or an error occurs.
 // If no balances are found, an error is returned.
 // Otherwise, the first balance in the slice is used to construct a math.Int value and returned.
-//
-// Parameters:
-// - ctx: The context.Context used for the gRPC connection.
-// - denom: The denomination of the asset to get the balance for.
-//
 // Returns:
 // - math.Int: The balance of the specified denom.
 // - error: An error if any occurred during the balance retrieval.
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
-	channel, err := grpc.Dial(
-		p.hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return math.Int{}, err
-	}
-	defer channel.Close()
-
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(channel)
+	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
 
 	balanceRequest := &viewv1alpha1.BalancesRequest{
 		AccountFilter: &keysv1alpha1.AddressIndex{
@@ -458,16 +418,7 @@ func translateBigInt(i math.Int) (uint64, uint64) {
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
 func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *assetv1alpha1.AssetId) (*assetv1alpha1.DenomMetadata, error) {
-	channel, err := grpc.Dial(
-		p.hostGRPCPort,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer channel.Close()
-
-	queryClient := shieldedpoolv1alpha1.NewQueryServiceClient(channel)
+	queryClient := shieldedpoolv1alpha1.NewQueryServiceClient(p.GRPCConn)
 	req := &shieldedpoolv1alpha1.DenomMetadataByIdRequest{
 		ChainId: p.Chain.Config().ChainID,
 		AssetId: assetId,
@@ -516,10 +467,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 		"start",
 	}
 
-	// env can be used to set environment variables for this instance of pclientd to do things like set RUST_LOG=debug
-	var env []string
-
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, nil)
 }
 
 // StopContainer stops the container associated with the PenumbraClientNode.
@@ -539,6 +487,11 @@ func (p *PenumbraClientNode) StartContainer(ctx context.Context) error {
 	}
 
 	p.hostGRPCPort = hostPorts[0]
+
+	p.GRPCConn, err = grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
