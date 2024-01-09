@@ -657,7 +657,7 @@ func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, u
 		del, err := chain.StakingQueryDelegationsTo(ctx, val)
 		require.NoError(t, err)
 		require.NotEmpty(t, del)
-		require.EqualValues(t, "1000", del[1].Balance.Amount.String())
+		require.EqualValues(t, "1000", del[0].Balance.Amount.String())
 
 		// unbond
 		err = node.StakingUnbond(ctx, users[0].KeyName(), val, "25"+chain.Config().Denom)
