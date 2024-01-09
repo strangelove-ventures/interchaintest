@@ -141,6 +141,16 @@ func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte
 	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
+
+	// persist nested errors such as ValidateBasic checks.
+	code := resp.Code
+	rawLog := resp.RawLog
+
+	// rawLog can be empty or just an empty array "[]"
+	if code != 0 || len(rawLog) > 2 {
+		return resp, fmt.Errorf("error in transaction (code: %d): %s", code, rawLog)
+	}
+
 	return resp, nil
 }
 
@@ -222,14 +232,6 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
 	if err != nil {
 		return sdk.TxResponse{}, err
-	}
-
-	code := respWithTxHash.Code
-	rawLog := respWithTxHash.RawLog
-
-	// rawLog can be empty or just an empty array "[]"
-	if code != 0 || len(rawLog) > 2 {
-		return respWithTxHash, fmt.Errorf("error in transaction (code: %d): %s", code, rawLog)
 	}
 
 	return getFullyPopulatedResponse(cc, respWithTxHash.TxHash)
