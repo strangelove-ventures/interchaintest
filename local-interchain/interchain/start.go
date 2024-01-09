@@ -19,12 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type AppConfig struct {
-	Address string
-	Port    uint16
-}
-
-func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
+func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -62,6 +57,8 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			panic(err)
 		}
 	}
+
+	config.Relayer = ac.Relayer
 
 	WriteRunningChains(installDir, []byte("{}"))
 
@@ -151,9 +148,14 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			paths = append(paths, k)
 		}
 
-		relayer.StartRelayer(ctx, eRep, paths...)
+		if err := relayer.StartRelayer(ctx, eRep, paths...); err != nil {
+			log.Fatal("relayer.StartRelayer", err)
+		}
+
 		defer func() {
-			relayer.StopRelayer(ctx, eRep)
+			if err := relayer.StopRelayer(ctx, eRep); err != nil {
+				log.Fatal("relayer.StopRelayer", err)
+			}
 		}()
 	}
 
@@ -173,7 +175,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			}
 		}
 
-		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
+		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, ac.AuthKey, eRep, installDir)
 
 		config.Server = types.RestServer{
 			Host: ac.Address,

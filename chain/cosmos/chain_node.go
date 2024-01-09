@@ -65,6 +65,7 @@ type ChainNode struct {
 	hostRPCPort  string
 	hostAPIPort  string
 	hostGRPCPort string
+	hostP2PPort  string
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -100,7 +101,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -1291,7 +1292,21 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd, nil)
+	usingPorts := sentryPorts
+
+	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		for intP, extP := range chainCfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
+		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+	}
+
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, nil)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
@@ -1314,11 +1329,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort, p2pPort)
 	if err != nil {
 		return err
 	}
-	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort = hostPorts[0], hostPorts[1], hostPorts[2]
+	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort, tn.hostP2PPort = hostPorts[0], hostPorts[1], hostPorts[2], hostPorts[3]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {

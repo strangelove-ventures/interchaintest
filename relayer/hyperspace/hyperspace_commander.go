@@ -51,7 +51,7 @@ func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir s
 }
 
 // Hyperspace doesn't not have this functionality
-func (hyperspaceCommander) AddKey(chainID, keyName, coinType, homeDir string) []string {
+func (hyperspaceCommander) AddKey(chainID, keyName, coinType, signingAlgorithm, homeDir string) []string {
 	panic("[AddKey] Do not call me")
 }
 
@@ -193,7 +193,7 @@ func (hyperspaceCommander) LinkPath(pathName, homeDir string, channelOpts ibc.Cr
 
 // There is no hyperspace call to restore the key, so this can't return an executable.
 // HyperspaceRelayer's RestoreKey will restore the key in the chain's config file
-func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, mnemonic, homeDir string) []string {
+func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, signingAlgorithm, mnemonic, homeDir string) []string {
 	panic("[RestoreKey] Do not use me")
 }
 

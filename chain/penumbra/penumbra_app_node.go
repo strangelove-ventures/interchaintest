@@ -100,7 +100,7 @@ const (
 	metricsPort = "9000/tcp"
 )
 
-var exposedPorts = nat.PortSet{
+var exposedPorts = nat.PortMap{
 	nat.Port(abciPort):    {},
 	nat.Port(grpcPort):    {},
 	nat.Port(metricsPort): {},
@@ -369,10 +369,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	// env can be used to set environment variables to do things like set RUST_LOG=debug.
-	var env []string
-
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, nil)
 }
 
 // StopContainer stops the running container for the PenumbraAppNode.

@@ -116,16 +116,7 @@ const (
 	pclientdPort = "8081/tcp"
 )
 
-// pclientdPorts is a variable of type nat.PortSet that represents the set of ports used by the pclientd service.
-// Declaration:
-//
-//	var pclientdPorts = nat.PortSet{
-//	  nat.Port(pclientdPort): {},
-//	}
-//
-// Example usage:
-// func (p *Penumbra
-var pclientdPorts = nat.PortSet{
+var pclientdPorts = nat.PortMap{
 	nat.Port(pclientdPort): {},
 }
 
@@ -528,7 +519,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 	// env can be used to set environment variables for this instance of pclientd to do things like set RUST_LOG=debug
 	var env []string
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), p.HostName(), cmd, env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, env)
 }
 
 // StopContainer stops the container associated with the PenumbraClientNode.
