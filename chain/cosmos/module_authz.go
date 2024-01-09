@@ -3,6 +3,7 @@ package cosmos
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -60,7 +61,7 @@ func (tn *ChainNode) AuthzExec(ctx context.Context, grantee ibc.Wallet, nestedMs
 	}
 
 	txHash, err := tn.ExecTx(ctx, grantee.KeyName(),
-		"authz", "exec", tn.HomeDir()+"/"+fileName,
+		"authz", "exec", path.Join(tn.HomeDir(), fileName),
 	)
 	if err != nil {
 		return nil, err
