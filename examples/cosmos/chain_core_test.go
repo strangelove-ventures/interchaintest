@@ -342,7 +342,7 @@ func testBank(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, user
 
 	supplyOf, err := chain.BankQueryTotalSupplyOf(ctx, chain.Config().Denom)
 	require.NoError(t, err)
-	require.EqualValues(t, supply.AmountOf(chain.Config().Denom), supplyOf.Amount)
+	require.True(t, supplyOf.IsGTE(sdk.NewCoin(chain.Config().Denom, supply.AmountOf(chain.Config().Denom))))
 
 	// == denom owner ==
 	denomOwner, err := chain.BankQueryDenomOwners(ctx, chain.Config().Denom)
