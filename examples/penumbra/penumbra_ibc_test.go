@@ -60,9 +60,9 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chainB := chains[1].(*penumbra.PenumbraChain)
 
 	i := ibc.DockerImage{
-		Repository: "relayer",
-		Version:    "local",
-		UidGid:     "100:1000",
+		Repository: "ghcr.io/cosmos/relayer",
+		Version:    "main",
+		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
@@ -243,9 +243,9 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chainB := chains[1]
 
 	i := ibc.DockerImage{
-		Repository: "relayer",
-		Version:    "local",
-		UidGid:     "100:1000",
+		Repository: "ghcr.io/cosmos/relayer",
+		Version:    "main",
+		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
