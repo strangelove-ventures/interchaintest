@@ -231,6 +231,12 @@ func (c *CosmosChain) GetHostGRPCAddress() string {
 	return c.getFullNode().hostGRPCPort
 }
 
+// GetHostP2PAddress returns the address of the P2P server accessible by the host.
+// This will not return a valid address until the chain has been started.
+func (c *CosmosChain) GetHostPeerAddress() string {
+	return c.getFullNode().hostP2PPort
+}
+
 // HomeDir implements ibc.Chain.
 func (c *CosmosChain) HomeDir() string {
 	return c.getFullNode().HomeDir()
@@ -799,7 +805,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 					configFile,
 					modifiedToml,
 				); err != nil {
-					return err
+					return fmt.Errorf("failed to modify toml config file: %w", err)
 				}
 			}
 			if !c.cfg.SkipGenTx {
@@ -974,8 +980,8 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+	// Wait for blocks before considering the chains "started"
+	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
 // Height implements ibc.Chain

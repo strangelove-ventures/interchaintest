@@ -18,6 +18,7 @@ const (
 	FlagRelayerVersion      = "relayer-version"
 	FlagRelayerUidGid       = "relayer-uidgid"
 	FlagRelayerStartupFlags = "relayer-startup-flags"
+	FlagAuthKey             = "auth-key"
 )
 
 var startCmd = &cobra.Command{
@@ -47,7 +48,7 @@ var startCmd = &cobra.Command{
 		relayerUidGid := cmd.Flag(FlagRelayerUidGid).Value.String()
 		relayerFlags := strings.Split(cmd.Flag(FlagRelayerStartupFlags).Value.String(), " ")
 
-		interchain.StartChain(parentDir, configPath, &interchain.AppConfig{
+		interchain.StartChain(parentDir, configPath, &types.AppStartConfig{
 			Address: apiAddr,
 			Port:    apiPort,
 
@@ -59,6 +60,8 @@ var startCmd = &cobra.Command{
 				},
 				StartupFlags: relayerFlags,
 			},
+
+			AuthKey: cmd.Flag(FlagAuthKey).Value.String(),
 		})
 	},
 }
@@ -71,4 +74,6 @@ func init() {
 	startCmd.Flags().String(FlagRelayerVersion, "latest", "override the default relayer version")
 	startCmd.Flags().String(FlagRelayerUidGid, "100:1000", "override the default image UID:GID")
 	startCmd.Flags().String(FlagRelayerStartupFlags, "--block-history=100", "override the default relayer startup flags")
+
+	startCmd.Flags().String(FlagAuthKey, "", "require an auth key to use the internal API")
 }

@@ -15,6 +15,8 @@ import (
 type upload struct {
 	ctx  context.Context
 	vals map[string]*cosmos.ChainNode
+
+	authKey string
 }
 
 type Uploader struct {
@@ -23,12 +25,14 @@ type Uploader struct {
 
 	// Upload-Type: cosmwasm only
 	KeyName string `json:"key_name,omitempty"`
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
-func NewUploader(ctx context.Context, vals map[string]*cosmos.ChainNode) *upload {
+func NewUploader(ctx context.Context, vals map[string]*cosmos.ChainNode, authKey string) *upload {
 	return &upload{
-		ctx:  ctx,
-		vals: vals,
+		ctx:     ctx,
+		vals:    vals,
+		authKey: authKey,
 	}
 }
 
@@ -37,6 +41,11 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&upload)
 	if err != nil {
 		util.WriteError(w, err)
+		return
+	}
+
+	if u.authKey != "" && u.authKey != upload.AuthKey {
+		util.WriteError(w, fmt.Errorf("invalid `auth_key`"))
 		return
 	}
 

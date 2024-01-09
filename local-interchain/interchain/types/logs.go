@@ -12,5 +12,6 @@ type LogOutput struct {
 	RPCAddress  string   `json:"rpc_address"`
 	RESTAddress string   `json:"rest_address"`
 	GRPCAddress string   `json:"grpc_address"`
+	P2PAddress  string   `json:"p2p_address"`
 	IBCPath     []string `json:"ibc_paths"`
 }

@@ -27,6 +27,7 @@ func NewRouter(
 	cosmosChains map[string]*cosmos.CosmosChain,
 	vals map[string]*cosmos.ChainNode,
 	relayer ibc.Relayer,
+	authKey string,
 	eRep ibc.RelayerExecReporter,
 	installDir string,
 ) *mux.Router {
@@ -35,10 +36,10 @@ func NewRouter(
 	infoH := handlers.NewInfo(config, installDir, ctx, ic, cosmosChains, vals, relayer, eRep)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
 
-	actionsH := handlers.NewActions(ctx, ic, cosmosChains, vals, relayer, eRep)
+	actionsH := handlers.NewActions(ctx, ic, cosmosChains, vals, relayer, eRep, authKey)
 	r.HandleFunc("/", actionsH.PostActions).Methods(http.MethodPost)
 
-	uploaderH := handlers.NewUploader(ctx, vals)
+	uploaderH := handlers.NewUploader(ctx, vals, authKey)
 	r.HandleFunc("/upload", uploaderH.PostUpload).Methods(http.MethodPost)
 
 	availableRoutes := getAllMethods(*r)

@@ -7,7 +7,6 @@ toolchain go1.21.0
 require (
 	cosmossdk.io/math v1.2.0
 	cosmossdk.io/store v1.0.1
-	cosmossdk.io/x/circuit v0.1.0
 	cosmossdk.io/x/feegrant v0.1.0
 	cosmossdk.io/x/upgrade v0.1.0
 	github.com/99designs/keyring v1.2.2

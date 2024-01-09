@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
@@ -70,7 +72,60 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	return config, nil
 }
 
-func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
+// ConfigurationOverrides creates a map of config file overrides for filenames, their keys, and values.
+func ConfigurationOverrides(cfg types.Chain) map[string]any {
+	var toml map[string]any
+
+	switch cfg.ChainType {
+	case "cosmos":
+		toml = cosmosConfigOverride(cfg)
+	default:
+		toml = make(testutil.Toml, 0)
+	}
+
+	for _, o := range cfg.ConfigFileOverrides {
+		for k, v := range o.Paths {
+
+			// if o.File is empty, we only save the KV pair directly
+			if o.File == "" {
+				// "config_file_overrides": [
+				//     {"paths": {"--load-state": "state/avs-and-eigenlayer-deployed-anvil-state.json"}}
+				// ],
+
+				toml[k] = v
+				continue
+			}
+
+			// create file key if it does not exist
+			if _, ok := toml[o.File]; !ok {
+				toml[o.File] = make(testutil.Toml, 0)
+			}
+
+			// if there is no path, save the KV directly without the header
+			if !strings.Contains(k, ".") {
+				toml[o.File].(testutil.Toml)[k] = v
+				continue
+			}
+
+			// separate the path and key
+			path, key := strings.Split(k, ".")[0], strings.Split(k, ".")[1]
+
+			// create path key if it does not exist
+			if _, ok := toml[o.File].(testutil.Toml)[path]; !ok {
+				toml[o.File].(testutil.Toml)[path] = testutil.Toml{}
+			}
+
+			// save the new KV pair
+			toml[o.File].(testutil.Toml)[path].(testutil.Toml)[key] = v
+		}
+	}
+
+	fmt.Println(cfg.ChainID, "Toml File", toml)
+	return toml
+}
+
+func cosmosConfigOverride(cfg types.Chain) testutil.Toml {
+	blockTime := cfg.BlockTime
 	if _, err := time.ParseDuration(blockTime); err != nil {
 		panic(err)
 	}
@@ -86,20 +141,37 @@ func FasterBlockTimesBuilder(blockTime string) testutil.Toml {
 }
 
 func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.ChainSpec) {
+	hostPorts := make(map[int]int, len(cfg.HostPortOverride))
+	for k, v := range cfg.HostPortOverride {
+		internalPort, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		externalPort, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		hostPorts[internalPort] = externalPort
+	}
+
 	chainCfg := ibc.ChainConfig{
-		Type:                cfg.ChainType,
-		Name:                cfg.Name,
-		ChainID:             cfg.ChainID,
-		Bin:                 cfg.Binary,
-		Bech32Prefix:        cfg.Bech32Prefix,
-		Denom:               cfg.Denom,
-		CoinType:            fmt.Sprintf("%d", cfg.CoinType),
-		GasPrices:           cfg.GasPrices,
-		GasAdjustment:       cfg.GasAdjustment,
-		TrustingPeriod:      cfg.TrustingPeriod,
+		Type:             cfg.ChainType,
+		Name:             cfg.Name,
+		ChainID:          cfg.ChainID,
+		Bin:              cfg.Binary,
+		Bech32Prefix:     cfg.Bech32Prefix,
+		Denom:            cfg.Denom,
+		CoinType:         fmt.Sprintf("%d", cfg.CoinType),
+		GasPrices:        cfg.GasPrices,
+		GasAdjustment:    cfg.GasAdjustment,
+		TrustingPeriod:   cfg.TrustingPeriod,
+		HostPortOverride: hostPorts,
+
+		// TODO: Allow host mount in the future
 		NoHostMount:         false,
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
-		ConfigFileOverrides: FasterBlockTimesBuilder(cfg.BlockTime),
+		ConfigFileOverrides: ConfigurationOverrides(cfg),
 		EncodingConfig:      nil,
 	}
 

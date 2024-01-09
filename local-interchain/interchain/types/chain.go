@@ -3,7 +3,14 @@ package types
 import (
 	"github.com/go-playground/validator"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
+
+// ConfigFileOverrides overrides app configuration files.
+type ConfigFileOverrides struct {
+	File  string        `json:"file"`
+	Paths testutil.Toml `json:"paths"`
+}
 
 type Chain struct {
 	// ibc chain config (optional)
@@ -15,6 +22,8 @@ type Chain struct {
 	TrustingPeriod string `json:"trusting_period"`
 	Debugging      bool   `json:"debugging"`
 	BlockTime      string `json:"block_time"`
+
+	HostPortOverride map[string]string `json:"host_port_override"`
 
 	// Required
 	Name    string `json:"name" validate:"min=1"`
@@ -28,6 +37,11 @@ type Chain struct {
 	NumberNode    int      `json:"number_node"`
 	IBCPaths      []string `json:"ibc_paths"`
 	Genesis       Genesis  `json:"genesis"`
+
+	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty"`
+
+	// EVM
+	EVMLoadStatePath string `json:"evm_load_state_path,omitempty"`
 }
 
 func (chain *Chain) Validate() error {

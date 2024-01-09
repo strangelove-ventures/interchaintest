@@ -104,7 +104,7 @@ const (
 	pclientdPort = "8081/tcp"
 )
 
-var pclientdPorts = nat.PortSet{
+var pclientdPorts = nat.PortMap{
 	nat.Port(pclientdPort): {},
 }
 
