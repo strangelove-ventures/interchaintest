@@ -224,6 +224,14 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
+	code := respWithTxHash.Code
+	rawLog := respWithTxHash.RawLog
+
+	// rawLog can be empty or just an empty array "[]"
+	if code != 0 || len(rawLog) > 2 {
+		return respWithTxHash, fmt.Errorf("error in transaction (code: %d): %s", code, rawLog)
+	}
+
 	return getFullyPopulatedResponse(cc, respWithTxHash.TxHash)
 }
 
