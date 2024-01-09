@@ -110,44 +110,58 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 	switch res.TypeUrl {
 	case "/cosmos.auth.v1beta1.ModuleAccount":
 		var modAcc authtypes.ModuleAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &modAcc)
-		fmt.Printf("modAcc: %+v\n", modAcc)
-		return err
+		if err := chain.GetCodec().Unmarshal(res.Value, &modAcc); err != nil {
+			return err
+		}
+		fmt.Printf("ModuleAccount: %+v\n", modAcc)
+		return nil
 
 	case "/cosmos.vesting.v1beta1.VestingAccount":
 		var vestingAcc vestingtypes.BaseVestingAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc)
+		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
+			return err
+		}
 		fmt.Printf("BaseVestingAccount: %+v\n", vestingAcc)
-		return err
+		return nil
 
 	case "/cosmos.vesting.v1beta1.PeriodicVestingAccount":
 		var vestingAcc vestingtypes.PeriodicVestingAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc)
+		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
+			return err
+		}
 		fmt.Printf("PeriodicVestingAccount: %+v\n", vestingAcc)
-		return err
+		return nil
 
 	case "/cosmos.vesting.v1beta1.ContinuousVestingAccount":
 		var vestingAcc vestingtypes.ContinuousVestingAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc)
+		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
+			return err
+		}
 		fmt.Printf("ContinuousVestingAccount: %+v\n", vestingAcc)
-		return err
+		return nil
 
 	case "/cosmos.vesting.v1beta1.DelayedVestingAccount":
 		var vestingAcc vestingtypes.DelayedVestingAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc)
+		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
+			return err
+		}
 		fmt.Printf("DelayedVestingAccount: %+v\n", vestingAcc)
-		return err
+		return nil
 
 	case "/cosmos.vesting.v1beta1.PermanentLockedAccount":
 		var vestingAcc vestingtypes.PermanentLockedAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc)
+		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
+			return err
+		}
 		fmt.Printf("PermanentLockedAccount: %+v\n", vestingAcc)
-		return err
+		return nil
 
 	default:
 		var baseAcc authtypes.BaseAccount
-		err := chain.GetCodec().Unmarshal(res.Value, &baseAcc)
-		fmt.Printf("baseAcc: %+v\n", baseAcc)
-		return err
+		if err := chain.GetCodec().Unmarshal(res.Value, &baseAcc); err != nil {
+			return err
+		}
+		fmt.Printf("BaseAccount: %+v\n", baseAcc)
+		return nil
 	}
 }
