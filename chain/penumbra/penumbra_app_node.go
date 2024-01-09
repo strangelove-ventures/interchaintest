@@ -39,16 +39,9 @@ type PenumbraAppNode struct {
 
 // NewPenumbraAppNode creates a new instance of PenumbraAppNode with the provided parameters.
 // It initializes the PenumbraAppNode struct, sets the logger, index, chain, Docker client,
-// network ID, test name, and Docker image.
-// It also creates a container lifecycle instance with the provided logger, Docker client,
-// and node name.
-// Next, it creates a Docker volume with labels for cleanup and owner identification.
-// If volume creation fails, an error is returned.
-// The volume name is set to the PenumbraAppNode volume name.
-// The volume owner is set using the provided context, Docker client, volume name, image reference,
-// test name, and UID/GID from the Docker image.
-// If volume owner setting fails, an error is returned.
-// Finally, the created PenumbraAppNode instance is returned along with a nil error,
+// network ID, test name, and Docker image. It also creates a container lifecycle instance with the provided logger, Docker client,
+// and node name before creating a Docker volume with labels for cleanup and owner identification. Finally,
+// the created PenumbraAppNode instance is returned along with a nil error,
 // or a nil PenumbraAppNode and a non-nil error if any step in the process fails.
 func NewPenumbraAppNode(
 	ctx context.Context,
@@ -134,7 +127,7 @@ func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 
-	// key already exists, error is okay
+	// key already exists
 	if err != nil && !strings.Contains(string(stderr), "not empty;, refusing to initialize") {
 		return err
 	}
@@ -192,7 +185,7 @@ func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic stri
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 
-	// key already exists, error is okay
+	// key already exists
 	if err != nil && !strings.Contains(string(stderr), "already exists, refusing to overwrite it") {
 		return err
 	}
@@ -324,8 +317,6 @@ func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64
 
 // GetAddressBech32m retrieves the address associated with the specified key name.
 // It executes the 'pcli' command and parses the output to find the desired address.
-// The 'pcli' command is executed with the '--home' flag and the home directory of the app node.
-// If no address is found for the key name, it returns an error indicating that the address was not found.
 // The function returns the retrieved address as a string and an error if any occurred.
 func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string) (string, error) {
 	cmd := []string{"pcli", "--home", p.HomeDir(), "addr", "list"}
@@ -349,15 +340,7 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 	return "", errors.New("address not found")
 }
 
-// CreateNodeContainer creates a container for the PenumbraAppNode.
-// It starts the PenumbraAppNode process with the specified tendermintAddress.
-// The container is created using the CreateContainer method of the containerLifecycle object.
-// The container is named using p.TestName.
-// It is assigned the p.NetworkID network and runs on the p.Image image.
-// The container also exposes the abciPort, grpcPort, and metricsPort.
-// The container's home directory is set to p.HomeDir().
-// The command to start the PenumbraAppNode process is constructed using the pd command and its arguments.
-// Additional environment variables can be set using the env parameter.
+// CreateNodeContainer creates a container for the PenumbraAppNode. It starts the PenumbraAppNode process with the specified tendermintAddress.
 // The method returns any errors encountered during the container creation process.
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAddress string) error {
 	cmd := []string{
@@ -377,11 +360,7 @@ func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 	return p.containerLifecycle.StopContainer(ctx)
 }
 
-// StartContainer starts the test node container.
-// It calls the StartContainer method of the containerLifecycle field to start the container.
-// If an error occurs, it is returned.
-// It then calls the GetHostPorts method of the containerLifecycle field to retrieve the host ports for RPC and gRPC.
-// If an error occurs, it is returned.
+// StartContainer starts the test node container, if an error occurs it is returned.
 // The obtained host ports are assigned to the hostRPCPort and hostGRPCPort fields of the PenumbraAppNode struct.
 // Finally, nil is returned if everything is successful.
 func (p *PenumbraAppNode) StartContainer(ctx context.Context) error {
@@ -412,24 +391,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	return res.Stdout, res.Stderr, res.Err
 }
 
-// SendIBCTransfer sends an IBC transfer from the current node to a specified address and channel.
-//
-// Parameters:
-//   - ctx: The context of the method call.
-//   - channelID: The ID of the channel to send the transfer.
-//   - keyName: The name of the key used for signing the transaction.
-//   - amount: The amount to transfer (including address and denomination).
-//   - opts: Additional options for the transfer.
-//
-// Returns:
-//   - tx: The transaction information for the IBC transfer (partially filled).
-//   - error: An error if the transfer fails.
-//
-// Note: The `SendIBCTransfer` method uses the `pcli` command-line tool to execute a transaction
-//
-//	to withdraw tokens from the specified channel and send them to the specified address.
-//	The `tx` object returned represents the transaction information for the IBC transfer.
-//	The function currently does not fill in all details of the `tx` object and requires further implementation.
+// SendIBCTransfer sends an IBC transfer from the specified address to some destination address on a specified channel.
 func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, opts ibc.TransferOptions) (ibc.Tx, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 
