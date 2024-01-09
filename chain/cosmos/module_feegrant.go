@@ -15,9 +15,7 @@ func (tn *ChainNode) FeeGrant(ctx context.Context, granterKey, grantee, spendLim
 	if len(allowedMsgs) > 0 {
 		msgs := make([]string, len(allowedMsgs))
 		for i, msg := range allowedMsgs {
-			if !strings.HasPrefix(msg, "/") {
-				msg = "/" + msg
-			}
+			msg = PrefixMsgTypeIfRequired(msg)
 			msgs[i] = msg
 		}
 

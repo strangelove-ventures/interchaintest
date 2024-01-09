@@ -35,10 +35,7 @@ func (tn *ChainNode) AuthzGrant(ctx context.Context, granter ibc.Wallet, grantee
 			return nil, fmt.Errorf("missing --msg-type flag when granting generic authz")
 		}
 
-		msgType := extraFlags[msgTypeIndex+1]
-		if !strings.HasPrefix(msgType, "/") {
-			extraFlags[msgTypeIndex+1] = "/" + msgType
-		}
+		extraFlags[msgTypeIndex+1] = PrefixMsgTypeIfRequired(extraFlags[msgTypeIndex+1])
 	}
 
 	cmd = append(cmd, extraFlags...)
@@ -72,9 +69,7 @@ func (tn *ChainNode) AuthzExec(ctx context.Context, grantee ibc.Wallet, nestedMs
 
 // AuthzRevoke revokes a message as a permission to an account.
 func (tn *ChainNode) AuthzRevoke(ctx context.Context, granter ibc.Wallet, grantee string, msgType string) (*sdk.TxResponse, error) {
-	if !strings.HasPrefix(msgType, "/") {
-		msgType = "/" + msgType
-	}
+	msgType = PrefixMsgTypeIfRequired(msgType)
 
 	txHash, err := tn.ExecTx(ctx, granter.KeyName(),
 		"authz", "revoke", grantee, msgType,
@@ -127,4 +122,11 @@ func createAuthzJSON(ctx context.Context, node *ChainNode, filePath string, genM
 	}
 
 	return node.WriteFile(ctx, res, filePath)
+}
+
+func PrefixMsgTypeIfRequired(msgType string) string {
+	if !strings.HasPrefix(msgType, "/") {
+		msgType = "/" + msgType
+	}
+	return msgType
 }
