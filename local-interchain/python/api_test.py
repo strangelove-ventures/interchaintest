@@ -19,7 +19,7 @@ rb = RequestBuilder(API_URL, chain_id, sleep_seconds, log_output=True)
 
 
 def main():
-    poll_for_start(API_URL, waitSeconds=120)
+    poll_for_start(API_URL, waitSeconds=300)
 
     bin_test()
     tx_test()
