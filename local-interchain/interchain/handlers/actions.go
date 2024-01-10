@@ -271,7 +271,7 @@ func faucet(r *http.Request, cmdMap map[string]string, ctx context.Context, a *a
 		return []byte(fmt.Sprintf(`{"error":"failed to convert amount to int: %s"}`, amount))
 	}
 
-	if err := val.SendFunds(ctx, "faucet", ibc.WalletAmount{
+	if err := val.BankSend(ctx, "faucet", ibc.WalletAmount{
 		Address: toAddr,
 		Amount:  amt,
 		Denom:   val.Chain.Config().Denom,
