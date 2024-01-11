@@ -3,7 +3,7 @@ import time
 import httpx
 
 
-def poll_for_start(API_URL: str, waitSeconds=120):
+def poll_for_start(API_URL: str, waitSeconds=300):
     for i in range(waitSeconds + 1):
         try:
             httpx.get(API_URL)

@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -22,10 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	cosmosproto "github.com/cosmos/gogoproto/proto"
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
@@ -38,8 +35,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -55,6 +50,7 @@ type CosmosChain struct {
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
 
+	cdc      *codec.ProtoCodec
 	log      *zap.Logger
 	keyring  keyring.Keyring
 	findTxMu sync.Mutex
@@ -104,8 +100,14 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		numValidators: numValidators,
 		numFullNodes:  numFullNodes,
 		log:           log,
+		cdc:           cdc,
 		keyring:       kr,
 	}
+}
+
+// GetCodec returns the codec for the chain.
+func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
+	return c.cdc
 }
 
 // Nodes returns all nodes, including validators and fullnodes.
@@ -184,14 +186,7 @@ func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *clie
 }
 
 func (c *CosmosChain) getFullNode() *ChainNode {
-	c.findTxMu.Lock()
-	defer c.findTxMu.Unlock()
-	if len(c.FullNodes) > 0 {
-		// use first full node
-		return c.FullNodes[0]
-	}
-	// use first validator
-	return c.Validators[0]
+	return c.GetNode()
 }
 
 func (c *CosmosChain) GetNode() *ChainNode {
@@ -319,7 +314,7 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 
 // Implements Chain interface
 func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getFullNode().SendFunds(ctx, keyName, amount)
+	return c.getFullNode().BankSend(ctx, keyName, amount)
 }
 
 // Implements Chain interface
@@ -381,26 +376,6 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
-// GetGovernanceAddress performs a query to get the address of the chain's x/gov module
-func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
-	return c.GetModuleAddress(ctx, govtypes.ModuleName)
-}
-
-// GetModuleAddress performs a query to get the address of the specified chain module
-func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	return c.getFullNode().GetModuleAddress(ctx, moduleName)
-}
-
-// QueryProposal returns the state and details of a governance proposal.
-func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
-	return c.getFullNode().QueryProposal(ctx, proposalID)
-}
-
-// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
-func (c *CosmosChain) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
-	return c.getFullNode().QueryProposalV8(ctx, proposalID)
-}
-
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
 func (c *CosmosChain) PushNewWasmClientProposal(ctx context.Context, keyName string, fileName string, prop TxProposalv1) (TxProposal, string, error) {
 	tx := TxProposal{}
@@ -447,38 +422,6 @@ func (c *CosmosChain) SubmitProposal(ctx context.Context, keyName string, prop T
 		return tx, fmt.Errorf("failed to submit gov v1 proposal: %w", err)
 	}
 	return c.txProposal(txHash)
-}
-
-// Build a gov v1 proposal type.
-//
-// The proposer field should only be set for IBC-Go v8 / SDK v50 chains.
-func (c *CosmosChain) BuildProposal(messages []cosmosproto.Message, title, summary, metadata, depositStr, proposer string, expedited bool) (TxProposalv1, error) {
-	var propType TxProposalv1
-	rawMsgs := make([]json.RawMessage, len(messages))
-
-	for i, msg := range messages {
-		msg, err := c.Config().EncodingConfig.Codec.MarshalInterfaceJSON(msg)
-		if err != nil {
-			return propType, err
-		}
-		rawMsgs[i] = msg
-	}
-
-	propType = TxProposalv1{
-		Messages: rawMsgs,
-		Metadata: metadata,
-		Deposit:  depositStr,
-		Title:    title,
-		Summary:  summary,
-	}
-
-	// SDK v50 only
-	if proposer != "" {
-		propType.Proposer = proposer
-		propType.Expedited = expedited
-	}
-
-	return propType, nil
 }
 
 // TextProposal submits a text governance proposal to the chain.
@@ -569,47 +512,6 @@ func (c *CosmosChain) QueryClientContractCode(ctx context.Context, codeHash stri
 // Implements Chain interface
 func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, error) {
 	return c.getFullNode().ExportState(ctx, height)
-}
-
-// GetBalance fetches the current balance for a specific account address and denom.
-// Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-	defer conn.Close()
-
-	queryClient := bankTypes.NewQueryClient(conn)
-	res, err := queryClient.Balance(ctx, params)
-
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-
-	return res.Balance.Amount, nil
-}
-
-// AllBalances fetches an account address's balance for all denoms it holds
-func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
-	params := bankTypes.QueryAllBalancesRequest{Address: address}
-	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	queryClient := bankTypes.NewQueryClient(conn)
-	res, err := queryClient.AllBalances(ctx, &params)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return res.GetBalances(), nil
 }
 
 func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
@@ -1265,12 +1167,17 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 }
 
 func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
+	propID, err := strconv.ParseUint(proposalID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse proposalID %s: %w", proposalID, err)
+	}
+
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {
 			n := n
 			eg.Go(func() error {
-				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
+				return n.VoteOnProposal(ctx, valKey, propID, vote)
 			})
 		}
 	}
