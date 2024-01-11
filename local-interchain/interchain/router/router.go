@@ -25,7 +25,7 @@ func NewRouter(
 	ic *interchaintest.Interchain,
 	config *ictypes.Config,
 	cosmosChains map[string]*cosmos.CosmosChain,
-	vals map[string]*cosmos.ChainNode,
+	vals map[string][]*cosmos.ChainNode,
 	relayer ibc.Relayer,
 	authKey string,
 	eRep ibc.RelayerExecReporter,
