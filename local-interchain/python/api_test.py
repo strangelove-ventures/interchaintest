@@ -25,6 +25,10 @@ def main():
     tx_test()
 
 
+#
+#
+
+
 # Test to ensure the base layer works and returns data properly
 def bin_test():
     res = rb.binary("keys list --keyring-backend=test --output=json")
