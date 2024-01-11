@@ -19,21 +19,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type AppConfig struct {
-	Address string
-	Port    uint16
-
-	Relayer types.Relayer
-}
-
-func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
+func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var relayer ibc.Relayer
 	var eRep *testreporter.RelayerExecReporter
 
-	vals := make(map[string]*cosmos.ChainNode)
+	vals := make(map[string][]*cosmos.ChainNode)
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
@@ -169,7 +162,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	for _, chain := range chains {
 		if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
 			chainID := cosmosChain.Config().ChainID
-			vals[chainID] = cosmosChain.Validators[0]
+			vals[chainID] = cosmosChain.Validators
 		}
 	}
 
@@ -182,7 +175,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			}
 		}
 
-		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, eRep, installDir)
+		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, ac.AuthKey, eRep, installDir)
 
 		config.Server = types.RestServer{
 			Host: ac.Address,

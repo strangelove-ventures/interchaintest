@@ -19,3 +19,4 @@ type Genesis struct {
 	// May need to move out of genesis into its own section? Seems silly though.
 	StartupCommands []string `json:"startup_commands"`
 }
+

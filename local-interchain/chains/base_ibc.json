@@ -1,4 +1,4 @@
-{    
+{
     "chains": [
         {
             "name": "gaia",
@@ -6,7 +6,7 @@
             "denom": "uatom",
             "binary": "gaiad",
             "bech32_prefix": "cosmos",
-            "docker_image": {                
+            "docker_image": {
                 "version": "v9.1.0"
             },
             "block_time": "6s",
@@ -22,7 +22,7 @@
                         "mnemonic": "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
                     }
                 ]
-            }            
+            }
         },
         {
             "name": "juno",
@@ -38,7 +38,7 @@
             "encoding-options": ["juno"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
-            "ibc_paths": ["atom-juno", "juno-terra"]        
+            "ibc_paths": ["atom-juno", "juno-terra"]
         },
         {
             "name": "terra",
@@ -46,14 +46,14 @@
             "binary": "terrad",
             "bech32_prefix": "terra",
             "denom": "uluna",
-            "docker_image": {                
+            "docker_image": {
                 "version": "v2.3.4"
             },
             "block_time": "6s",
             "encoding-options": ["wasm"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
-            "ibc_paths": ["atom-terra", "juno-terra"]        
+            "ibc_paths": ["atom-terra", "juno-terra"]
         }
     ]
 }

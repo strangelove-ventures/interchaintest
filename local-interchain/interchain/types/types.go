@@ -10,6 +10,14 @@ type Config struct {
 	Server  RestServer `json:"server"`
 }
 
+type AppStartConfig struct {
+	Address string
+	Port    uint16
+
+	Relayer Relayer
+	AuthKey string // optional password for API interaction
+}
+
 type RestServer struct {
 	Host string `json:"host"`
 	Port string `json:"port"`

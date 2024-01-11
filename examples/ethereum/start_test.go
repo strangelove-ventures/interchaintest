@@ -45,9 +45,9 @@ func TestEthereum(t *testing.T) {
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			ChainName: "ethereum", 
-			Name: "ethereum",
-			Version: "latest",
+			ChainName:   "ethereum",
+			Name:        "ethereum",
+			Version:     "latest",
 			ChainConfig: anvilConfig,
 		},
 	})
@@ -61,11 +61,11 @@ func TestEthereum(t *testing.T) {
 		AddChain(ethereumChain)
 
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
 		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  true, // Skip path creation, so we can have granular control over the process
+		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
 	}))
 	fmt.Println("Interchain built")
 
@@ -99,15 +99,13 @@ func TestEthereum(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, math.ZeroInt().Equal(balance))
 
-	
 	// Fund user2 wallet using SendFunds() from user1 wallet
 	ethUser2InitialAmount := math.NewInt(ethereum.ETHER)
 	ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
 		Address: ethUser2.FormattedAddress(),
-		Denom: ethereumChain.Config().Denom,
-		Amount: ethUser2InitialAmount,
+		Denom:   ethereumChain.Config().Denom,
+		Amount:  ethUser2InitialAmount,
 	})
-
 
 	// Final check of balances
 	balance, err = ethereumChain.GetBalance(ctx, faucetAddr, "")

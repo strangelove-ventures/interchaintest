@@ -1,13 +1,13 @@
 name: golangci-lint
 on:
   pull_request:
-  
+
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache: false
@@ -23,7 +23,7 @@ jobs:
     defaults:
       run:
         working-directory: local-interchain/rust/localic-std
-    runs-on:  ubuntu-latest    
+    runs-on:  ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Install stable with clippy and rustfmt
@@ -38,4 +38,4 @@ jobs:
       run: cargo update
     - name: Run clippy
       run: make lint
-        
+

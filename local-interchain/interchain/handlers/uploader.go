@@ -14,21 +14,26 @@ import (
 
 type upload struct {
 	ctx  context.Context
-	vals map[string]*cosmos.ChainNode
+	vals map[string][]*cosmos.ChainNode
+
+	authKey string
 }
 
 type Uploader struct {
-	ChainId  string `json:"chain_id"`
-	FilePath string `json:"file_path"`
+	ChainId   string `json:"chain_id"`
+	NodeIndex int    `json:"node_index"`
+	FilePath  string `json:"file_path"`
 
 	// Upload-Type: cosmwasm only
 	KeyName string `json:"key_name,omitempty"`
+	AuthKey string `json:"auth_key,omitempty"`
 }
 
-func NewUploader(ctx context.Context, vals map[string]*cosmos.ChainNode) *upload {
+func NewUploader(ctx context.Context, vals map[string][]*cosmos.ChainNode, authKey string) *upload {
 	return &upload{
-		ctx:  ctx,
-		vals: vals,
+		ctx:     ctx,
+		vals:    vals,
+		authKey: authKey,
 	}
 }
 
@@ -37,6 +42,11 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&upload)
 	if err != nil {
 		util.WriteError(w, err)
+		return
+	}
+
+	if u.authKey != "" && u.authKey != upload.AuthKey {
+		util.WriteError(w, fmt.Errorf("invalid `auth_key`"))
 		return
 	}
 
@@ -52,11 +62,19 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	nodeIdx := upload.NodeIndex
+	if len(u.vals[chainId]) <= nodeIdx {
+		util.Write(w, []byte(fmt.Sprintf(`{"error":"node_index %d not found"}`, nodeIdx)))
+		return
+	}
+
+	val := u.vals[chainId][nodeIdx]
+
 	headerType := r.Header.Get("Upload-Type")
 	switch headerType {
 	case "cosmwasm":
 		// Upload & Store the contract on chain.
-		codeId, err := u.vals[chainId].StoreContract(u.ctx, upload.KeyName, srcPath)
+		codeId, err := val.StoreContract(u.ctx, upload.KeyName, srcPath)
 		if err != nil {
 			util.WriteError(w, err)
 			return
@@ -67,12 +85,12 @@ func (u *upload) PostUpload(w http.ResponseWriter, r *http.Request) {
 	default:
 		// Upload the file to the docker volume (val[0]).
 		_, file := filepath.Split(srcPath)
-		if err := u.vals[chainId].CopyFile(u.ctx, srcPath, file); err != nil {
+		if err := val.CopyFile(u.ctx, srcPath, file); err != nil {
 			util.WriteError(w, fmt.Errorf(`{"error":"writing contract file to docker volume: %w"}`, err))
 			return
 		}
 
-		home := u.vals[chainId].HomeDir()
+		home := val.HomeDir()
 		fileLoc := filepath.Join(home, file)
 		util.Write(w, []byte(fmt.Sprintf(`{"success":"file uploaded to %s","location":"%s"}`, chainId, fileLoc)))
 	}

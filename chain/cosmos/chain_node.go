@@ -10,7 +10,6 @@ import (
 	"hash/fnv"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,15 +24,16 @@ import (
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
@@ -50,6 +50,7 @@ type ChainNode struct {
 	NetworkID    string
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
+	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -65,6 +66,7 @@ type ChainNode struct {
 	hostRPCPort  string
 	hostAPIPort  string
 	hostGRPCPort string
+	hostP2PPort  string
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -100,7 +102,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -123,6 +125,15 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.Client = rpcClient
+
+	grpcConn, err := grpc.Dial(
+		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("grpc dial: %w", err)
+	}
+	tn.GrpcConn = grpcConn
+
 	return nil
 }
 
@@ -136,8 +147,9 @@ func (tn *ChainNode) NewSidecarProcess(
 	homeDir string,
 	ports []string,
 	startCmd []string,
+	env []string,
 ) error {
-	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd, env)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
@@ -173,6 +185,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
 		Client:            tn.Client,
+		GRPCClient:        tn.GrpcConn,
 		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
@@ -460,7 +473,7 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 		command = append(command, "--gas-prices", tn.Chain.Config().GasPrices)
 	}
 	if !gasAdjustmentFound {
-		command = append(command, "--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment))
+		command = append(command, "--gas-adjustment", strconv.FormatFloat(tn.Chain.Config().GasAdjustment, 'f', -1, 64))
 	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
@@ -492,6 +505,20 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 		return "", err
 	}
 	return output.TxHash, nil
+}
+
+// TxHashToResponse returns the sdk transaction response struct for a given transaction hash.
+func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
+	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
+	if err != nil {
+		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+	}
+
+	i := &sdk.TxResponse{}
+
+	// ignore the error since some types do not unmarshal (ex: height of int64 vs string)
+	_ = json.Unmarshal(stdout, &i)
+	return i, nil
 }
 
 // NodeCommand is a helper to retrieve a full command for a chain node binary.
@@ -648,7 +675,7 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 }
 
 // AddGenesisAccount adds a genesis account for each key
-func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []types.Coin) error {
+func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []sdk.Coin) error {
 	amount := ""
 	for i, coin := range genesisAmount {
 		if i != 0 {
@@ -682,7 +709,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 }
 
 // Gentx generates the gentx for a given node
-func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation types.Coin) error {
+func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
@@ -746,77 +773,9 @@ func (tn *ChainNode) SendIBCTransfer(
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	_, err := tn.ExecTx(ctx,
-		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-	)
-	return err
-}
-
-type InstantiateContractAttribute struct {
-	Value string `json:"value"`
-}
-
-type InstantiateContractEvent struct {
-	Attributes []InstantiateContractAttribute `json:"attributes"`
-}
-
-type InstantiateContractLog struct {
-	Events []InstantiateContractEvent `json:"event"`
-}
-
-type InstantiateContractResponse struct {
-	Logs []InstantiateContractLog `json:"log"`
-}
-
-type QueryContractResponse struct {
-	Contracts []string `json:"contracts"`
-}
-
-type CodeInfo struct {
-	CodeID string `json:"code_id"`
-}
-type CodeInfosResponse struct {
-	CodeInfos []CodeInfo `json:"code_infos"`
-}
-
-// StoreContract takes a file path to smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
-	_, file := filepath.Split(fileName)
-	err := tn.CopyFile(ctx, fileName, file)
-	if err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	cmd := []string{"wasm", "store", path.Join(tn.HomeDir(), file), "--gas", "auto"}
-	cmd = append(cmd, extraExecTxArgs...)
-
-	if _, err := tn.ExecTx(ctx, keyName, cmd...); err != nil {
-		return "", err
-	}
-
-	err = testutil.WaitForBlocks(ctx, 5, tn.Chain)
-	if err != nil {
-		return "", fmt.Errorf("wait for blocks: %w", err)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-code", "--reverse")
-	if err != nil {
-		return "", err
-	}
-
-	res := CodeInfosResponse{}
-	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
-		return "", err
-	}
-
-	return res.CodeInfos[0].CodeID, nil
-}
-
-func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*types.TxResponse, error) {
+func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
-	var txResp *types.TxResponse
+	var txResp *sdk.TxResponse
 	err := retry.Do(func() error {
 		var err error
 		txResp, err = authTx.QueryTx(clientCtx, txHash)
@@ -926,119 +885,6 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 	}
 }
 
-// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
-func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
-	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
-	command = append(command, extraExecTxArgs...)
-	if needsNoAdminFlag {
-		command = append(command, "--no-admin")
-	}
-	txHash, err := tn.ExecTx(ctx, keyName, command...)
-	if err != nil {
-		return "", err
-	}
-
-	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
-	if err != nil {
-		return "", fmt.Errorf("failed to get transaction %s: %w", txHash, err)
-	}
-	if txResp.Code != 0 {
-		return "", fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "list-contract-by-code", codeID)
-	if err != nil {
-		return "", err
-	}
-
-	contactsRes := QueryContractResponse{}
-	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
-		return "", err
-	}
-
-	contractAddress := contactsRes.Contracts[len(contactsRes.Contracts)-1]
-	return contractAddress, nil
-}
-
-// ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
-	cmd := []string{"wasm", "execute", contractAddress, message}
-	cmd = append(cmd, extraExecTxArgs...)
-
-	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
-	if err != nil {
-		return &types.TxResponse{}, err
-	}
-
-	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
-	if err != nil {
-		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
-	}
-
-	if txResp.Code != 0 {
-		return txResp, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
-	}
-
-	return txResp, nil
-}
-
-// QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
-func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
-	var query []byte
-	var err error
-
-	if q, ok := queryMsg.(string); ok {
-		var jsonMap map[string]interface{}
-		if err := json.Unmarshal([]byte(q), &jsonMap); err != nil {
-			return err
-		}
-
-		query, err = json.Marshal(jsonMap)
-		if err != nil {
-			return err
-		}
-	} else {
-		query, err = json.Marshal(queryMsg)
-		if err != nil {
-			return err
-		}
-	}
-
-	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal([]byte(stdout), response)
-	return err
-}
-
-// StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
-func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return "", err
-	}
-	_, file := filepath.Split(fileName)
-	err = tn.WriteFile(ctx, content, file)
-	if err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	cmd := []string{"ibc-wasm", "store-code", path.Join(tn.HomeDir(), file), "--gas", "auto"}
-	cmd = append(cmd, extraExecTxArgs...)
-
-	_, err = tn.ExecTx(ctx, keyName, cmd...)
-	if err != nil {
-		return "", err
-	}
-
-	codeHashByte32 := sha256.Sum256(content)
-	codeHash := hex.EncodeToString(codeHashByte32[:])
-
-	//return stdout, nil
-	return codeHash, nil
-}
-
 // QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
 func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
 	stdout, _, err := tn.ExecQuery(ctx, "ibc-wasm", "code", codeHash)
@@ -1047,146 +893,6 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 	}
 	err = json.Unmarshal([]byte(stdout), response)
 	return err
-}
-
-// GetModuleAddress performs a query to get the address of the specified chain module
-func (tn *ChainNode) GetModuleAddress(ctx context.Context, moduleName string) (string, error) {
-	queryRes, err := tn.GetModuleAccount(ctx, moduleName)
-	if err != nil {
-		return "", err
-	}
-	return queryRes.Account.BaseAccount.Address, nil
-}
-
-// GetModuleAccount performs a query to get the account details of the specified chain module
-func (tn *ChainNode) GetModuleAccount(ctx context.Context, moduleName string) (QueryModuleAccountResponse, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "auth", "module-account", moduleName)
-	if err != nil {
-		return QueryModuleAccountResponse{}, err
-	}
-
-	queryRes := QueryModuleAccountResponse{}
-	err = json.Unmarshal(stdout, &queryRes)
-	if err != nil {
-		return QueryModuleAccountResponse{}, err
-	}
-	return queryRes, nil
-}
-
-// VoteOnProposal submits a vote for the specified proposal.
-func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
-	_, err := tn.ExecTx(ctx, keyName,
-		"gov", "vote",
-		proposalID, vote, "--gas", "auto",
-	)
-	return err
-}
-
-// QueryProposal returns the state and details of a governance proposal.
-func (tn *ChainNode) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
-	if err != nil {
-		return nil, err
-	}
-	var proposal ProposalResponse
-	err = json.Unmarshal(stdout, &proposal)
-	if err != nil {
-		return nil, err
-	}
-	return &proposal, nil
-}
-
-// QueryProposal returns the state and details of an IBC-Go v8 / SDK v50 governance proposal.
-func (tn *ChainNode) QueryProposalV8(ctx context.Context, proposalID string) (*ProposalResponseV8, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "gov", "proposal", proposalID)
-	if err != nil {
-		return nil, err
-	}
-	var proposal ProposalResponseV8
-	err = json.Unmarshal(stdout, &proposal)
-	if err != nil {
-		return nil, err
-	}
-	return &proposal, nil
-}
-
-// SubmitProposal submits a gov v1 proposal to the chain.
-func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
-	// Write msg to container
-	file := "proposal.json"
-	propJson, err := json.MarshalIndent(prop, "", " ")
-	if err != nil {
-		return "", err
-	}
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
-		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
-	}
-
-	command := []string{
-		"gov", "submit-proposal",
-		path.Join(tn.HomeDir(), file), "--gas", "auto",
-	}
-
-	return tn.ExecTx(ctx, keyName, command...)
-}
-
-// UpgradeProposal submits a software-upgrade governance proposal to the chain.
-func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
-	command := []string{
-		"gov", "submit-proposal",
-		"software-upgrade", prop.Name,
-		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
-		"--title", prop.Title,
-		"--description", prop.Description,
-		"--deposit", prop.Deposit,
-	}
-
-	if prop.Info != "" {
-		command = append(command, "--upgrade-info", prop.Info)
-	}
-
-	return tn.ExecTx(ctx, keyName, command...)
-}
-
-// TextProposal submits a text governance proposal to the chain.
-func (tn *ChainNode) TextProposal(ctx context.Context, keyName string, prop TextProposal) (string, error) {
-	command := []string{
-		"gov", "submit-proposal",
-		"--type", "text",
-		"--title", prop.Title,
-		"--description", prop.Description,
-		"--deposit", prop.Deposit,
-	}
-	if prop.Expedited {
-		command = append(command, "--is-expedited=true")
-	}
-	return tn.ExecTx(ctx, keyName, command...)
-}
-
-// ParamChangeProposal submits a param change proposal to the chain, signed by keyName.
-func (tn *ChainNode) ParamChangeProposal(ctx context.Context, keyName string, prop *paramsutils.ParamChangeProposalJSON) (string, error) {
-	content, err := json.Marshal(prop)
-	if err != nil {
-		return "", err
-	}
-
-	hash := sha256.Sum256(content)
-	proposalFilename := fmt.Sprintf("%x.json", hash)
-	err = tn.WriteFile(ctx, content, proposalFilename)
-	if err != nil {
-		return "", fmt.Errorf("writing param change proposal: %w", err)
-	}
-
-	proposalPath := filepath.Join(tn.HomeDir(), proposalFilename)
-
-	command := []string{
-		"gov", "submit-proposal",
-		"param-change",
-		proposalPath,
-	}
-
-	return tn.ExecTx(ctx, keyName, command...)
 }
 
 // QueryParam returns the state and details of a subspace param.
@@ -1215,23 +921,6 @@ func (tn *ChainNode) QueryBankMetadata(ctx context.Context, denom string) (*Bank
 		return nil, err
 	}
 	return &meta, nil
-}
-
-// DumpContractState dumps the state of a contract at a block height.
-func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress string, height int64) (*DumpContractStateResponse, error) {
-	stdout, _, err := tn.ExecQuery(ctx,
-		"wasm", "contract-state", "all", contractAddress,
-		"--height", fmt.Sprint(height),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	res := new(DumpContractStateResponse)
-	if err := json.Unmarshal([]byte(stdout), res); err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
 func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {
@@ -1286,12 +975,33 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	var cmd []string
 	if chainCfg.NoHostMount {
-		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
+		if len(chainCfg.AdditionalStartArgs) > 0 {
+			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
+		}
+		cmd = []string{"sh", "-c", startCmd}
 	} else {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+		if len(chainCfg.AdditionalStartArgs) > 0 {
+			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
+		}
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), nil, tn.HostName(), cmd, nil)
+	usingPorts := sentryPorts
+
+	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		for intP, extP := range chainCfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
+		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+	}
+
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
@@ -1314,11 +1024,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort)
+	hostPorts, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort, grpcPort, apiPort, p2pPort)
 	if err != nil {
 		return err
 	}
-	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort = hostPorts[0], hostPorts[1], hostPorts[2]
+	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort, tn.hostP2PPort = hostPorts[0], hostPorts[1], hostPorts[2], hostPorts[3]
 
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
@@ -1380,8 +1090,8 @@ func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
 func (tn *ChainNode) InitValidatorGenTx(
 	ctx context.Context,
 	chainType *ibc.ChainConfig,
-	genesisAmounts []types.Coin,
-	genesisSelfDelegation types.Coin,
+	genesisAmounts []sdk.Coin,
+	genesisSelfDelegation sdk.Coin,
 ) error {
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err

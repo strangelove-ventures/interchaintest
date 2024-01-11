@@ -50,7 +50,7 @@ def main():
 
     relayer = Relayer(API_URL, chain_id)
 
-    poll_for_start(API_URL, waitSeconds=120)
+    poll_for_start(API_URL, waitSeconds=300)
 
     if True:
         print("⚙️ Setting env configuration")

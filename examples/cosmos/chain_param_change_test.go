@@ -2,6 +2,7 @@ package cosmos_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -10,6 +11,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
+
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
 func TestJunoParamChange(t *testing.T) {
@@ -75,7 +78,11 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	require.NoError(t, err, "failed to submit votes")
 
 	height, _ := chain.Height(ctx)
-	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, paramTx.ProposalID, cosmos.ProposalStatusPassed)
+
+	propId, err := strconv.ParseUint(paramTx.ProposalID, 10, 64)
+	require.NoError(t, err, "failed to convert proposal ID to uint64")
+
+	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	param, _ = chain.QueryParam(ctx, "staking", "MaxValidators")

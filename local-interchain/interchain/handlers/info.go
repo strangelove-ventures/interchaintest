@@ -24,7 +24,7 @@ type info struct {
 	// used to get information about state of the container
 	ctx     context.Context
 	ic      *interchaintest.Interchain
-	vals    map[string]*cosmos.ChainNode
+	vals    map[string][]*cosmos.ChainNode
 	relayer ibc.Relayer
 	eRep    ibc.RelayerExecReporter
 
@@ -39,7 +39,7 @@ func NewInfo(
 	ctx context.Context,
 	ic *interchaintest.Interchain,
 	cosmosChains map[string]*cosmos.CosmosChain,
-	vals map[string]*cosmos.ChainNode,
+	vals map[string][]*cosmos.ChainNode,
 	relayer ibc.Relayer,
 	eRep ibc.RelayerExecReporter,
 ) *info {
@@ -78,7 +78,23 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	i.chainId = chainId[0]
 
-	val := i.vals[i.chainId]
+	nodeIdx, ok := form["node_index"]
+	if !ok {
+		nodeIdx = []string{"0"}
+	}
+
+	idx, err := strconv.Atoi(nodeIdx[0])
+	if err != nil {
+		util.WriteError(w, fmt.Errorf("failed to convert node_index to int: %w", err))
+		return
+	}
+
+	if len(i.vals[i.chainId]) <= idx {
+		util.WriteError(w, fmt.Errorf("node_index '%d' not found. nodes: %v", idx, len(i.vals[i.chainId])))
+		return
+	}
+
+	val := i.vals[i.chainId][idx]
 
 	switch res[0] {
 	case "logs":
@@ -107,6 +123,8 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	case "genesis_file_content":
 		v, _ := val.GenesisFileContent(i.ctx)
 		util.Write(w, v)
+	case "peer":
+		util.Write(w, getPeer(i.ctx, val))
 	default:
 		util.WriteError(w, fmt.Errorf("invalid get param: %s. does not exist", res[0]))
 	}
@@ -174,9 +192,23 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 		return
 	}
 
+	// hide mnemonics from query
+	chains := i.Config.Chains
+	for idx, chain := range chains {
+		updatedAccounts := []types.GenesisAccount{}
+
+		for _, acc := range chain.Genesis.Accounts {
+			acc.Mnemonic = "hidden"
+			updatedAccounts = append(updatedAccounts, acc)
+		}
+
+		chain.Genesis.Accounts = updatedAccounts
+		chains[idx] = chain
+	}
+
 	info := GetInfo{
 		Logs:   logs,
-		Chains: i.Config.Chains,
+		Chains: chains,
 		Relay:  i.Config.Relayer,
 	}
 
@@ -187,4 +219,13 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 	}
 
 	util.Write(w, jsonRes)
+}
+
+func getPeer(ctx context.Context, val *cosmos.ChainNode) []byte {
+	peer, err := val.NodeID(ctx)
+	if err != nil {
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err))
+	}
+
+	return []byte(peer + "@" + val.Chain.GetHostPeerAddress())
 }

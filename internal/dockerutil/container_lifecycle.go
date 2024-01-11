@@ -39,7 +39,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	testName string,
 	networkID string,
 	image ibc.DockerImage,
-	ports nat.PortSet,
+	ports nat.PortMap,
 	volumeBinds []string,
 	mounts []mount.Mount,
 	hostName string,
@@ -54,6 +54,11 @@ func (c *ContainerLifecycle) CreateContainer(
 		zap.String("command", strings.Join(cmd, " ")),
 	)
 
+	pS := nat.PortSet{}
+	for k := range ports {
+		pS[k] = struct{}{}
+	}
+
 	pb, listeners, err := GeneratePortBindings(ports)
 	if err != nil {
 		return fmt.Errorf("failed to generate port bindings: %w", err)
@@ -67,14 +72,14 @@ func (c *ContainerLifecycle) CreateContainer(
 			Image: imageRef,
 
 			Entrypoint: []string{},
-			Env:        env,
 			Cmd:        cmd,
+			Env:        env,
 
 			Hostname: hostName,
 
 			Labels: map[string]string{CleanupLabel: testName},
 
-			ExposedPorts: ports,
+			ExposedPorts: pS,
 		},
 		&container.HostConfig{
 			Binds:           volumeBinds,
