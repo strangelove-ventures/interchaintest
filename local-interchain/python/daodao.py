@@ -19,7 +19,7 @@ chain_id = "localjuno-1"
 
 
 def main():
-    poll_for_start(API_URL, waitSeconds=120)
+    poll_for_start(API_URL, waitSeconds=300)
 
     rb = RequestBuilder(API_URL, chain_id)
     rb.binary("config keyring-backend test")

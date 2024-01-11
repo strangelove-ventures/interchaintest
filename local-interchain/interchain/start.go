@@ -26,7 +26,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	var relayer ibc.Relayer
 	var eRep *testreporter.RelayerExecReporter
 
-	vals := make(map[string]*cosmos.ChainNode)
+	vals := make(map[string][]*cosmos.ChainNode)
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
@@ -162,7 +162,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	for _, chain := range chains {
 		if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
 			chainID := cosmosChain.Config().ChainID
-			vals[chainID] = cosmosChain.Validators[0]
+			vals[chainID] = cosmosChain.Validators
 		}
 	}
 

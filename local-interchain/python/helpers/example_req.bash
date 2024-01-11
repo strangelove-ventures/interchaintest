@@ -12,6 +12,16 @@ MAKE_GET() {
 
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"q","cmd":"bank total"}'
 
+## ---- test interacting with multiple nodes (0 and 1) --
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","node_index":0, "action":"bin","cmd":"keys add testKey1 --keyring-backend=test"}'
+MAKE_REQUEST POST '{"chain_id":"localjuno-1", "action":"bin","cmd":"keys list --keyring-backend=test"}' # default is 0
+
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","node_index":1, "action":"bin","cmd":"keys add testKey1 --keyring-backend=test"}'
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","node_index":1, "action":"bin","cmd":"keys list --keyring-backend=test"}'
+
+MAKE_REQUEST POST '{"chain_id":"localjuno-1","node_index":999, "action":"bin","cmd":"keys list --keyring-backend=test"}' # fails
+## ----
+
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"get_channels"}'
 
 MAKE_REQUEST POST '{"chain_id":"localjuno-1","action":"relayer-exec","cmd":"rly q channels localjuno-1"}'
