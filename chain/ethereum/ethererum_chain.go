@@ -205,7 +205,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		cmd = append(cmd, "--load-state", dockerJsonFile)
 	}
 
-	usingPorts := natPorts
+	usingPorts := make(nat.PortMap)
 
 	if c.cfg.HostPortOverride != nil {
 		for intP, extP := range c.cfg.HostPortOverride {
@@ -217,6 +217,8 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		}
 
 		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
+	} else {
+		usingPorts = natPorts
 	}
 
 	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
