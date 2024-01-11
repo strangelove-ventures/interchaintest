@@ -65,6 +65,7 @@ func (c *ContainerLifecycle) CreateContainer(
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
+			Env:        env,
 
 			Hostname: hostName,
 
