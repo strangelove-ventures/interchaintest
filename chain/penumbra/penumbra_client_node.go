@@ -259,6 +259,9 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		SourceChannel: channelID,
 	}
 
+	fmt.Printf("Timeout: %+v \n", timeoutHeight)
+	fmt.Printf("Withdrawal: %+v \n", withdrawal)
+
 	// Generate a transaction plan sending ics_20 transfer
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
 		WalletId:         nil,
@@ -467,7 +470,10 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 		"start",
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, nil)
+	// TODO: remove before merge
+	env := []string{"RUST_LOG=debug"}
+
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, env)
 }
 
 // StopContainer stops the container associated with the PenumbraClientNode.

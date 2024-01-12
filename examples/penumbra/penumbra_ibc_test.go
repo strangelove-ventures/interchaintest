@@ -60,8 +60,8 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chainB := chains[1].(*penumbra.PenumbraChain)
 
 	i := ibc.DockerImage{
-		Repository: "ghcr.io/cosmos/relayer",
-		Version:    "main",
+		Repository: "relayer",
+		Version:    "local",
 		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
@@ -183,6 +183,35 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
+
+	transfer = ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: uint64((time.Duration(3) * time.Second).Nanoseconds()),
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), ibcDenom)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
 }
 
 // TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between Penumbra and Cosmos testnet networks.
@@ -196,7 +225,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 2
+	nv := 1
 	fn := 0
 
 	image := ibc.DockerImage{
@@ -243,8 +272,8 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chainB := chains[1]
 
 	i := ibc.DockerImage{
-		Repository: "ghcr.io/cosmos/relayer",
-		Version:    "main",
+		Repository: "relayer",
+		Version:    "local",
 		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
@@ -337,7 +366,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainA.Config().ChainID, chainB.Config().ChainID)
 	require.NoError(t, err)
 
-	h, err := chainA.Height(ctx)
+	h, err := chainB.Height(ctx)
 	require.NoError(t, err)
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
@@ -379,6 +408,35 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+
+	transfer = ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: uint64((time.Duration(3) * time.Second).Nanoseconds()),
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
 	require.NoError(t, err)
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
