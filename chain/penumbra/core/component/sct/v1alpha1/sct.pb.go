@@ -8,11 +8,8 @@ import (
 	fmt "fmt"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
-	v1alpha11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/chain/v1alpha1"
 	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/crypto/tct/v1alpha1"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -29,6 +26,371 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// Metadata describing the source of a commitment in the state commitment tree.
+//
+// This message allows clients to track provenance of state commitments, and to
+// decide whether or not to download block data.
+type CommitmentSource struct {
+	// Types that are valid to be assigned to Source:
+	//	*CommitmentSource_Transaction_
+	//	*CommitmentSource_Ics_20Transfer
+	//	*CommitmentSource_FundingStreamReward_
+	//	*CommitmentSource_CommunityPoolOutput_
+	//	*CommitmentSource_Genesis_
+	Source isCommitmentSource_Source `protobuf_oneof:"source"`
+}
+
+func (m *CommitmentSource) Reset()         { *m = CommitmentSource{} }
+func (m *CommitmentSource) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource) ProtoMessage()    {}
+func (*CommitmentSource) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0}
+}
+func (m *CommitmentSource) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource.Merge(m, src)
+}
+func (m *CommitmentSource) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource proto.InternalMessageInfo
+
+type isCommitmentSource_Source interface {
+	isCommitmentSource_Source()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type CommitmentSource_Transaction_ struct {
+	Transaction *CommitmentSource_Transaction `protobuf:"bytes,1,opt,name=transaction,proto3,oneof" json:"transaction,omitempty"`
+}
+type CommitmentSource_Ics_20Transfer struct {
+	Ics_20Transfer *CommitmentSource_Ics20Transfer `protobuf:"bytes,2,opt,name=ics_20_transfer,json=ics20Transfer,proto3,oneof" json:"ics_20_transfer,omitempty"`
+}
+type CommitmentSource_FundingStreamReward_ struct {
+	FundingStreamReward *CommitmentSource_FundingStreamReward `protobuf:"bytes,20,opt,name=funding_stream_reward,json=fundingStreamReward,proto3,oneof" json:"funding_stream_reward,omitempty"`
+}
+type CommitmentSource_CommunityPoolOutput_ struct {
+	CommunityPoolOutput *CommitmentSource_CommunityPoolOutput `protobuf:"bytes,30,opt,name=community_pool_output,json=communityPoolOutput,proto3,oneof" json:"community_pool_output,omitempty"`
+}
+type CommitmentSource_Genesis_ struct {
+	Genesis *CommitmentSource_Genesis `protobuf:"bytes,40,opt,name=genesis,proto3,oneof" json:"genesis,omitempty"`
+}
+
+func (*CommitmentSource_Transaction_) isCommitmentSource_Source()         {}
+func (*CommitmentSource_Ics_20Transfer) isCommitmentSource_Source()       {}
+func (*CommitmentSource_FundingStreamReward_) isCommitmentSource_Source() {}
+func (*CommitmentSource_CommunityPoolOutput_) isCommitmentSource_Source() {}
+func (*CommitmentSource_Genesis_) isCommitmentSource_Source()             {}
+
+func (m *CommitmentSource) GetSource() isCommitmentSource_Source {
+	if m != nil {
+		return m.Source
+	}
+	return nil
+}
+
+func (m *CommitmentSource) GetTransaction() *CommitmentSource_Transaction {
+	if x, ok := m.GetSource().(*CommitmentSource_Transaction_); ok {
+		return x.Transaction
+	}
+	return nil
+}
+
+func (m *CommitmentSource) GetIcs_20Transfer() *CommitmentSource_Ics20Transfer {
+	if x, ok := m.GetSource().(*CommitmentSource_Ics_20Transfer); ok {
+		return x.Ics_20Transfer
+	}
+	return nil
+}
+
+func (m *CommitmentSource) GetFundingStreamReward() *CommitmentSource_FundingStreamReward {
+	if x, ok := m.GetSource().(*CommitmentSource_FundingStreamReward_); ok {
+		return x.FundingStreamReward
+	}
+	return nil
+}
+
+func (m *CommitmentSource) GetCommunityPoolOutput() *CommitmentSource_CommunityPoolOutput {
+	if x, ok := m.GetSource().(*CommitmentSource_CommunityPoolOutput_); ok {
+		return x.CommunityPoolOutput
+	}
+	return nil
+}
+
+func (m *CommitmentSource) GetGenesis() *CommitmentSource_Genesis {
+	if x, ok := m.GetSource().(*CommitmentSource_Genesis_); ok {
+		return x.Genesis
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*CommitmentSource) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*CommitmentSource_Transaction_)(nil),
+		(*CommitmentSource_Ics_20Transfer)(nil),
+		(*CommitmentSource_FundingStreamReward_)(nil),
+		(*CommitmentSource_CommunityPoolOutput_)(nil),
+		(*CommitmentSource_Genesis_)(nil),
+	}
+}
+
+// The state commitment was included in the genesis state.
+type CommitmentSource_Genesis struct {
+}
+
+func (m *CommitmentSource_Genesis) Reset()         { *m = CommitmentSource_Genesis{} }
+func (m *CommitmentSource_Genesis) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource_Genesis) ProtoMessage()    {}
+func (*CommitmentSource_Genesis) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0, 0}
+}
+func (m *CommitmentSource_Genesis) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource_Genesis) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource_Genesis.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource_Genesis) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource_Genesis.Merge(m, src)
+}
+func (m *CommitmentSource_Genesis) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource_Genesis) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource_Genesis.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource_Genesis proto.InternalMessageInfo
+
+// The commitment was created by a transaction.
+//
+// When included in a `CompactBlock` via a `StatePayload`, the transaction source is "dehydrated"
+// by stripping the `id` field and putting empty bytes in its place.  When clients perform extended
+// transaction fetch, they should match up transaction hashes to "rehydrate" the source info.
+type CommitmentSource_Transaction struct {
+	// The transaction ID, if specified.
+	//
+	// This field may be omitted to save space, and should not be required to be present.
+	// If the bytes are missing, the message should be interpreted as "Transaction (Unknown)".
+	Id []byte `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *CommitmentSource_Transaction) Reset()         { *m = CommitmentSource_Transaction{} }
+func (m *CommitmentSource_Transaction) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource_Transaction) ProtoMessage()    {}
+func (*CommitmentSource_Transaction) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0, 1}
+}
+func (m *CommitmentSource_Transaction) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource_Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource_Transaction.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource_Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource_Transaction.Merge(m, src)
+}
+func (m *CommitmentSource_Transaction) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource_Transaction) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource_Transaction.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource_Transaction proto.InternalMessageInfo
+
+func (m *CommitmentSource_Transaction) GetId() []byte {
+	if m != nil {
+		return m.Id
+	}
+	return nil
+}
+
+// The commitment was created through a validator's funding stream.
+type CommitmentSource_FundingStreamReward struct {
+	// The epoch index the rewards were issued in.
+	EpochIndex uint64 `protobuf:"varint,1,opt,name=epoch_index,json=epochIndex,proto3" json:"epoch_index,omitempty"`
+}
+
+func (m *CommitmentSource_FundingStreamReward) Reset()         { *m = CommitmentSource_FundingStreamReward{} }
+func (m *CommitmentSource_FundingStreamReward) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource_FundingStreamReward) ProtoMessage()    {}
+func (*CommitmentSource_FundingStreamReward) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0, 2}
+}
+func (m *CommitmentSource_FundingStreamReward) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource_FundingStreamReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource_FundingStreamReward.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource_FundingStreamReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource_FundingStreamReward.Merge(m, src)
+}
+func (m *CommitmentSource_FundingStreamReward) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource_FundingStreamReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource_FundingStreamReward.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource_FundingStreamReward proto.InternalMessageInfo
+
+func (m *CommitmentSource_FundingStreamReward) GetEpochIndex() uint64 {
+	if m != nil {
+		return m.EpochIndex
+	}
+	return 0
+}
+
+// The commitment was created through a `CommunityPoolOutput` in a governance-initated transaction.
+type CommitmentSource_CommunityPoolOutput struct {
+}
+
+func (m *CommitmentSource_CommunityPoolOutput) Reset()         { *m = CommitmentSource_CommunityPoolOutput{} }
+func (m *CommitmentSource_CommunityPoolOutput) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource_CommunityPoolOutput) ProtoMessage()    {}
+func (*CommitmentSource_CommunityPoolOutput) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0, 3}
+}
+func (m *CommitmentSource_CommunityPoolOutput) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource_CommunityPoolOutput) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource_CommunityPoolOutput.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource_CommunityPoolOutput) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource_CommunityPoolOutput.Merge(m, src)
+}
+func (m *CommitmentSource_CommunityPoolOutput) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource_CommunityPoolOutput) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource_CommunityPoolOutput.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource_CommunityPoolOutput proto.InternalMessageInfo
+
+// The commitment was created by an inbound ICS20 transfer.
+type CommitmentSource_Ics20Transfer struct {
+	// The sequence number of the packet that triggered the transfer
+	PacketSeq uint64 `protobuf:"varint,1,opt,name=packet_seq,json=packetSeq,proto3" json:"packet_seq,omitempty"`
+	// The channel id the transfer happened on
+	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// The sender address on the counterparty chain
+	Sender string `protobuf:"bytes,3,opt,name=sender,proto3" json:"sender,omitempty"`
+}
+
+func (m *CommitmentSource_Ics20Transfer) Reset()         { *m = CommitmentSource_Ics20Transfer{} }
+func (m *CommitmentSource_Ics20Transfer) String() string { return proto.CompactTextString(m) }
+func (*CommitmentSource_Ics20Transfer) ProtoMessage()    {}
+func (*CommitmentSource_Ics20Transfer) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{0, 4}
+}
+func (m *CommitmentSource_Ics20Transfer) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CommitmentSource_Ics20Transfer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CommitmentSource_Ics20Transfer.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CommitmentSource_Ics20Transfer) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CommitmentSource_Ics20Transfer.Merge(m, src)
+}
+func (m *CommitmentSource_Ics20Transfer) XXX_Size() int {
+	return m.Size()
+}
+func (m *CommitmentSource_Ics20Transfer) XXX_DiscardUnknown() {
+	xxx_messageInfo_CommitmentSource_Ics20Transfer.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CommitmentSource_Ics20Transfer proto.InternalMessageInfo
+
+func (m *CommitmentSource_Ics20Transfer) GetPacketSeq() uint64 {
+	if m != nil {
+		return m.PacketSeq
+	}
+	return 0
+}
+
+func (m *CommitmentSource_Ics20Transfer) GetChannelId() string {
+	if m != nil {
+		return m.ChannelId
+	}
+	return ""
+}
+
+func (m *CommitmentSource_Ics20Transfer) GetSender() string {
+	if m != nil {
+		return m.Sender
+	}
+	return ""
+}
+
 type Nullifier struct {
 	Inner []byte `protobuf:"bytes,1,opt,name=inner,proto3" json:"inner,omitempty"`
 }
@@ -37,7 +399,7 @@ func (m *Nullifier) Reset()         { *m = Nullifier{} }
 func (m *Nullifier) String() string { return proto.CompactTextString(m) }
 func (*Nullifier) ProtoMessage()    {}
 func (*Nullifier) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e99589ee3b6c1a3a, []int{0}
+	return fileDescriptor_e99589ee3b6c1a3a, []int{1}
 }
 func (m *Nullifier) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -73,75 +435,24 @@ func (m *Nullifier) GetInner() []byte {
 	return nil
 }
 
-type TransactionByNoteRequest struct {
-	// The expected chain id (empty string if no expectation).
-	ChainId        string                    `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	NoteCommitment *v1alpha1.StateCommitment `protobuf:"bytes,2,opt,name=note_commitment,json=noteCommitment,proto3" json:"note_commitment,omitempty"`
+// Records information about what transaction spent a nullifier.
+type NullificationInfo struct {
+	Id          []byte `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SpendHeight uint64 `protobuf:"varint,2,opt,name=spend_height,json=spendHeight,proto3" json:"spend_height,omitempty"`
 }
 
-func (m *TransactionByNoteRequest) Reset()         { *m = TransactionByNoteRequest{} }
-func (m *TransactionByNoteRequest) String() string { return proto.CompactTextString(m) }
-func (*TransactionByNoteRequest) ProtoMessage()    {}
-func (*TransactionByNoteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e99589ee3b6c1a3a, []int{1}
-}
-func (m *TransactionByNoteRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *TransactionByNoteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TransactionByNoteRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *TransactionByNoteRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TransactionByNoteRequest.Merge(m, src)
-}
-func (m *TransactionByNoteRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *TransactionByNoteRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_TransactionByNoteRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TransactionByNoteRequest proto.InternalMessageInfo
-
-func (m *TransactionByNoteRequest) GetChainId() string {
-	if m != nil {
-		return m.ChainId
-	}
-	return ""
-}
-
-func (m *TransactionByNoteRequest) GetNoteCommitment() *v1alpha1.StateCommitment {
-	if m != nil {
-		return m.NoteCommitment
-	}
-	return nil
-}
-
-type TransactionByNoteResponse struct {
-	NoteSource *v1alpha11.NoteSource `protobuf:"bytes,1,opt,name=note_source,json=noteSource,proto3" json:"note_source,omitempty"`
-}
-
-func (m *TransactionByNoteResponse) Reset()         { *m = TransactionByNoteResponse{} }
-func (m *TransactionByNoteResponse) String() string { return proto.CompactTextString(m) }
-func (*TransactionByNoteResponse) ProtoMessage()    {}
-func (*TransactionByNoteResponse) Descriptor() ([]byte, []int) {
+func (m *NullificationInfo) Reset()         { *m = NullificationInfo{} }
+func (m *NullificationInfo) String() string { return proto.CompactTextString(m) }
+func (*NullificationInfo) ProtoMessage()    {}
+func (*NullificationInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e99589ee3b6c1a3a, []int{2}
 }
-func (m *TransactionByNoteResponse) XXX_Unmarshal(b []byte) error {
+func (m *NullificationInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *TransactionByNoteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *NullificationInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_TransactionByNoteResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_NullificationInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -151,29 +462,265 @@ func (m *TransactionByNoteResponse) XXX_Marshal(b []byte, deterministic bool) ([
 		return b[:n], nil
 	}
 }
-func (m *TransactionByNoteResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TransactionByNoteResponse.Merge(m, src)
+func (m *NullificationInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NullificationInfo.Merge(m, src)
 }
-func (m *TransactionByNoteResponse) XXX_Size() int {
+func (m *NullificationInfo) XXX_Size() int {
 	return m.Size()
 }
-func (m *TransactionByNoteResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_TransactionByNoteResponse.DiscardUnknown(m)
+func (m *NullificationInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_NullificationInfo.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_TransactionByNoteResponse proto.InternalMessageInfo
+var xxx_messageInfo_NullificationInfo proto.InternalMessageInfo
 
-func (m *TransactionByNoteResponse) GetNoteSource() *v1alpha11.NoteSource {
+func (m *NullificationInfo) GetId() []byte {
 	if m != nil {
-		return m.NoteSource
+		return m.Id
 	}
 	return nil
+}
+
+func (m *NullificationInfo) GetSpendHeight() uint64 {
+	if m != nil {
+		return m.SpendHeight
+	}
+	return 0
+}
+
+// Event recording a new commitment added to the SCT.
+type EventCommitment struct {
+	Commitment *v1alpha1.StateCommitment `protobuf:"bytes,1,opt,name=commitment,proto3" json:"commitment,omitempty"`
+	Position   uint64                    `protobuf:"varint,2,opt,name=position,proto3" json:"position,omitempty"`
+	Source     *CommitmentSource         `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+}
+
+func (m *EventCommitment) Reset()         { *m = EventCommitment{} }
+func (m *EventCommitment) String() string { return proto.CompactTextString(m) }
+func (*EventCommitment) ProtoMessage()    {}
+func (*EventCommitment) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{3}
+}
+func (m *EventCommitment) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventCommitment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventCommitment.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EventCommitment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventCommitment.Merge(m, src)
+}
+func (m *EventCommitment) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventCommitment) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventCommitment.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventCommitment proto.InternalMessageInfo
+
+func (m *EventCommitment) GetCommitment() *v1alpha1.StateCommitment {
+	if m != nil {
+		return m.Commitment
+	}
+	return nil
+}
+
+func (m *EventCommitment) GetPosition() uint64 {
+	if m != nil {
+		return m.Position
+	}
+	return 0
+}
+
+func (m *EventCommitment) GetSource() *CommitmentSource {
+	if m != nil {
+		return m.Source
+	}
+	return nil
+}
+
+// Event recording an SCT anchor (global root).
+type EventAnchor struct {
+	Anchor *v1alpha1.MerkleRoot `protobuf:"bytes,1,opt,name=anchor,proto3" json:"anchor,omitempty"`
+	Height uint64               `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+}
+
+func (m *EventAnchor) Reset()         { *m = EventAnchor{} }
+func (m *EventAnchor) String() string { return proto.CompactTextString(m) }
+func (*EventAnchor) ProtoMessage()    {}
+func (*EventAnchor) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{4}
+}
+func (m *EventAnchor) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventAnchor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventAnchor.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EventAnchor) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventAnchor.Merge(m, src)
+}
+func (m *EventAnchor) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventAnchor) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventAnchor.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventAnchor proto.InternalMessageInfo
+
+func (m *EventAnchor) GetAnchor() *v1alpha1.MerkleRoot {
+	if m != nil {
+		return m.Anchor
+	}
+	return nil
+}
+
+func (m *EventAnchor) GetHeight() uint64 {
+	if m != nil {
+		return m.Height
+	}
+	return 0
+}
+
+// Event recording an SCT epoch root.
+type EventEpochRoot struct {
+	Root  *v1alpha1.MerkleRoot `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty"`
+	Index uint64               `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
+}
+
+func (m *EventEpochRoot) Reset()         { *m = EventEpochRoot{} }
+func (m *EventEpochRoot) String() string { return proto.CompactTextString(m) }
+func (*EventEpochRoot) ProtoMessage()    {}
+func (*EventEpochRoot) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{5}
+}
+func (m *EventEpochRoot) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventEpochRoot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventEpochRoot.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EventEpochRoot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventEpochRoot.Merge(m, src)
+}
+func (m *EventEpochRoot) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventEpochRoot) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventEpochRoot.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventEpochRoot proto.InternalMessageInfo
+
+func (m *EventEpochRoot) GetRoot() *v1alpha1.MerkleRoot {
+	if m != nil {
+		return m.Root
+	}
+	return nil
+}
+
+func (m *EventEpochRoot) GetIndex() uint64 {
+	if m != nil {
+		return m.Index
+	}
+	return 0
+}
+
+// Event recording an SCT block root.
+type EventBlockRoot struct {
+	Root   *v1alpha1.MerkleRoot `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty"`
+	Height uint64               `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+}
+
+func (m *EventBlockRoot) Reset()         { *m = EventBlockRoot{} }
+func (m *EventBlockRoot) String() string { return proto.CompactTextString(m) }
+func (*EventBlockRoot) ProtoMessage()    {}
+func (*EventBlockRoot) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e99589ee3b6c1a3a, []int{6}
+}
+func (m *EventBlockRoot) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventBlockRoot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventBlockRoot.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *EventBlockRoot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventBlockRoot.Merge(m, src)
+}
+func (m *EventBlockRoot) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventBlockRoot) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventBlockRoot.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventBlockRoot proto.InternalMessageInfo
+
+func (m *EventBlockRoot) GetRoot() *v1alpha1.MerkleRoot {
+	if m != nil {
+		return m.Root
+	}
+	return nil
+}
+
+func (m *EventBlockRoot) GetHeight() uint64 {
+	if m != nil {
+		return m.Height
+	}
+	return 0
 }
 
 func init() {
+	proto.RegisterType((*CommitmentSource)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource")
+	proto.RegisterType((*CommitmentSource_Genesis)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource.Genesis")
+	proto.RegisterType((*CommitmentSource_Transaction)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource.Transaction")
+	proto.RegisterType((*CommitmentSource_FundingStreamReward)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource.FundingStreamReward")
+	proto.RegisterType((*CommitmentSource_CommunityPoolOutput)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource.CommunityPoolOutput")
+	proto.RegisterType((*CommitmentSource_Ics20Transfer)(nil), "penumbra.core.component.sct.v1alpha1.CommitmentSource.Ics20Transfer")
 	proto.RegisterType((*Nullifier)(nil), "penumbra.core.component.sct.v1alpha1.Nullifier")
-	proto.RegisterType((*TransactionByNoteRequest)(nil), "penumbra.core.component.sct.v1alpha1.TransactionByNoteRequest")
-	proto.RegisterType((*TransactionByNoteResponse)(nil), "penumbra.core.component.sct.v1alpha1.TransactionByNoteResponse")
+	proto.RegisterType((*NullificationInfo)(nil), "penumbra.core.component.sct.v1alpha1.NullificationInfo")
+	proto.RegisterType((*EventCommitment)(nil), "penumbra.core.component.sct.v1alpha1.EventCommitment")
+	proto.RegisterType((*EventAnchor)(nil), "penumbra.core.component.sct.v1alpha1.EventAnchor")
+	proto.RegisterType((*EventEpochRoot)(nil), "penumbra.core.component.sct.v1alpha1.EventEpochRoot")
+	proto.RegisterType((*EventBlockRoot)(nil), "penumbra.core.component.sct.v1alpha1.EventBlockRoot")
 }
 
 func init() {
@@ -181,39 +728,59 @@ func init() {
 }
 
 var fileDescriptor_e99589ee3b6c1a3a = []byte{
-	// 497 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xcf, 0x8a, 0x13, 0x41,
-	0x10, 0xc6, 0xd3, 0x83, 0x7f, 0x76, 0x3b, 0x8b, 0xe2, 0xe0, 0x21, 0x9b, 0xc3, 0xb0, 0x86, 0x45,
-	0x72, 0xd9, 0x1e, 0x37, 0x5e, 0x64, 0x04, 0x85, 0xe4, 0x20, 0x1e, 0x5c, 0x62, 0x46, 0xf6, 0x20,
-	0x81, 0xa5, 0xd3, 0x29, 0x37, 0x0d, 0x99, 0xee, 0xb1, 0xbb, 0x26, 0x90, 0x87, 0x10, 0x3c, 0xf8,
-	0x04, 0x82, 0x17, 0x9f, 0x44, 0x3c, 0xed, 0xd1, 0xa3, 0x24, 0x37, 0x7d, 0x09, 0xe9, 0x4e, 0x66,
-	0xb2, 0xa0, 0x81, 0xe0, 0x65, 0xe8, 0x82, 0xdf, 0xf7, 0xd5, 0x57, 0x35, 0xdd, 0x94, 0xe5, 0xa0,
-	0x8a, 0x6c, 0x64, 0x78, 0x2c, 0xb4, 0x81, 0x58, 0xe8, 0x2c, 0xd7, 0x0a, 0x14, 0xc6, 0x56, 0x60,
-	0x3c, 0x3b, 0xe5, 0xd3, 0x7c, 0xc2, 0x4f, 0x5d, 0xc1, 0x72, 0xa3, 0x51, 0x87, 0xc7, 0x25, 0xcf,
-	0x1c, 0xcf, 0x2a, 0x9e, 0x39, 0xa4, 0xe4, 0x9b, 0x9d, 0x6d, 0xae, 0x62, 0xc2, 0xa5, 0xda, 0xf8,
-	0xfa, 0x72, 0xe5, 0xdc, 0x7c, 0xb8, 0xd1, 0x98, 0x79, 0x8e, 0x3a, 0xc6, 0xeb, 0x09, 0xb0, 0x4c,
-	0xd0, 0x7a, 0x40, 0xf7, 0xcf, 0x8a, 0xe9, 0x54, 0xbe, 0x93, 0x60, 0xc2, 0xfb, 0xf4, 0xa6, 0x54,
-	0x0a, 0x4c, 0x83, 0x1c, 0x91, 0xf6, 0xc1, 0x60, 0x55, 0xb4, 0x3e, 0x10, 0xda, 0x78, 0x63, 0xb8,
-	0xb2, 0x5c, 0xa0, 0xd4, 0xaa, 0x3b, 0x3f, 0xd3, 0x08, 0x03, 0x78, 0x5f, 0x80, 0xc5, 0xf0, 0x90,
-	0xee, 0xf9, 0xb6, 0x17, 0x72, 0xec, 0x55, 0xfb, 0x83, 0xdb, 0xbe, 0x7e, 0x39, 0x0e, 0xcf, 0xe9,
-	0x5d, 0xa5, 0x11, 0x2e, 0x84, 0xce, 0x32, 0x89, 0x19, 0x28, 0x6c, 0x04, 0x47, 0xa4, 0x5d, 0xef,
-	0x9c, 0xb0, 0xcd, 0xd8, 0x3e, 0x1c, 0xc3, 0x6b, 0xe3, 0xb2, 0x14, 0x39, 0x42, 0xaf, 0x12, 0x0d,
-	0xee, 0x38, 0x97, 0x4d, 0xdd, 0xca, 0xe9, 0xe1, 0x3f, 0xe2, 0xd8, 0x5c, 0x2b, 0x0b, 0x61, 0x4a,
-	0xeb, 0xbe, 0xa9, 0xd5, 0x85, 0x11, 0xe0, 0x23, 0xd5, 0x3b, 0x1d, 0xb6, 0x6d, 0xcf, 0xab, 0x95,
-	0x55, 0xad, 0x9d, 0x55, 0xea, 0x95, 0x03, 0xaa, 0xaa, 0x73, 0xe7, 0x0b, 0xa1, 0x07, 0xaf, 0x0b,
-	0x30, 0xf3, 0x14, 0xcc, 0x4c, 0x0a, 0x08, 0x3f, 0x11, 0x7a, 0xef, 0xaf, 0x0c, 0xe1, 0x33, 0xb6,
-	0xcb, 0xef, 0x64, 0xdb, 0x76, 0xd9, 0x7c, 0xfe, 0xdf, 0xfa, 0xd5, 0xf0, 0xdd, 0xdf, 0xc1, 0xb7,
-	0x45, 0x44, 0xae, 0x16, 0x11, 0xf9, 0xb9, 0x88, 0xc8, 0xc7, 0x65, 0x54, 0xbb, 0x5a, 0x46, 0xb5,
-	0x1f, 0xcb, 0xa8, 0x46, 0xdb, 0x42, 0x67, 0x3b, 0xd9, 0x77, 0xf7, 0x52, 0x81, 0x7d, 0x77, 0x37,
-	0xfa, 0xe4, 0xed, 0xe4, 0x52, 0xe2, 0xa4, 0x18, 0x39, 0x34, 0xb6, 0x68, 0xb8, 0xba, 0x84, 0xa9,
-	0x9e, 0xc1, 0xc9, 0x0c, 0x14, 0x16, 0x06, 0x6c, 0x2c, 0x15, 0x82, 0xf1, 0x4b, 0x44, 0xb0, 0x18,
-	0xcf, 0x9e, 0xac, 0xef, 0xe4, 0x2e, 0xef, 0xe0, 0xa9, 0x15, 0x58, 0x9e, 0x3f, 0x07, 0x37, 0xfa,
-	0xbd, 0x5e, 0xfa, 0x35, 0x38, 0xee, 0x97, 0x19, 0x7b, 0x2e, 0x63, 0xaf, 0xca, 0x98, 0x0a, 0x64,
-	0xe7, 0x6b, 0xfa, 0xfb, 0x06, 0x1b, 0x3a, 0x6c, 0x58, 0x61, 0xc3, 0x54, 0xe0, 0xb0, 0xc4, 0x16,
-	0xc1, 0xa3, 0x5d, 0xb0, 0xe1, 0x8b, 0x7e, 0xf7, 0x15, 0x20, 0x1f, 0x73, 0xe4, 0xbf, 0x82, 0x76,
-	0x29, 0x49, 0x12, 0xa7, 0x71, 0xdf, 0xb5, 0x28, 0x49, 0x52, 0x81, 0x49, 0x52, 0xca, 0x46, 0xb7,
-	0xfc, 0x0b, 0x7a, 0xfc, 0x27, 0x00, 0x00, 0xff, 0xff, 0x01, 0xf6, 0x46, 0xb7, 0xf5, 0x03, 0x00,
-	0x00,
+	// 822 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0xcd, 0x8e, 0xdb, 0x54,
+	0x14, 0x4e, 0xc2, 0x90, 0x4e, 0x4e, 0xa6, 0x53, 0xf0, 0xb4, 0x28, 0x8a, 0xd4, 0x40, 0xa3, 0x0a,
+	0x65, 0x53, 0x7b, 0x1a, 0xa4, 0x0a, 0x05, 0x84, 0x20, 0xa1, 0x6d, 0x06, 0x69, 0x4a, 0xb0, 0x2b,
+	0x16, 0x55, 0x24, 0xcb, 0x73, 0x7d, 0x12, 0x5f, 0x8d, 0x7d, 0xaf, 0x7b, 0x7d, 0x1c, 0x98, 0x1d,
+	0x8f, 0xc0, 0x33, 0xb0, 0xe4, 0x01, 0x78, 0x06, 0x84, 0x58, 0x74, 0xc9, 0x12, 0xcd, 0xec, 0xe0,
+	0x25, 0xd0, 0xbd, 0xb1, 0x93, 0xb4, 0x1d, 0xd0, 0x10, 0xd8, 0xcc, 0xf8, 0x7c, 0xfe, 0xce, 0xf7,
+	0x9d, 0x9f, 0xeb, 0x5c, 0xb0, 0x53, 0x14, 0x79, 0x72, 0xa2, 0x02, 0x87, 0x49, 0x85, 0x0e, 0x93,
+	0x49, 0x2a, 0x05, 0x0a, 0x72, 0x32, 0x46, 0xce, 0xe2, 0x7e, 0x10, 0xa7, 0x51, 0x70, 0x5f, 0x07,
+	0x76, 0xaa, 0x24, 0x49, 0xeb, 0x6e, 0xc9, 0xb7, 0x35, 0xdf, 0x5e, 0xf1, 0x6d, 0x4d, 0x29, 0xf9,
+	0xed, 0xf7, 0xd7, 0xaa, 0xea, 0x2c, 0x25, 0xe9, 0xd0, 0xa6, 0x1a, 0x95, 0x6a, 0xdd, 0x9f, 0xea,
+	0xf0, 0xd6, 0x48, 0x26, 0x09, 0xa7, 0x04, 0x05, 0x79, 0x32, 0x57, 0x0c, 0xad, 0x19, 0x34, 0x49,
+	0x05, 0x22, 0x0b, 0x18, 0x71, 0x29, 0x5a, 0xd5, 0xf7, 0xaa, 0xbd, 0x66, 0x7f, 0x68, 0x5f, 0xc5,
+	0xd8, 0x7e, 0x55, 0xcc, 0x7e, 0xba, 0x56, 0x1a, 0x57, 0xdc, 0x4d, 0x61, 0x4b, 0xc0, 0x0d, 0xce,
+	0x32, 0xbf, 0x7f, 0xe8, 0x1b, 0x74, 0x86, 0xaa, 0x55, 0x33, 0x5e, 0x9f, 0x6f, 0xe9, 0x75, 0xc4,
+	0xb2, 0xfe, 0xe1, 0xd3, 0x42, 0x6b, 0x5c, 0x71, 0xaf, 0xf3, 0x4d, 0xc0, 0xfa, 0xae, 0x0a, 0xb7,
+	0x66, 0xb9, 0x08, 0xb9, 0x98, 0xfb, 0x19, 0x29, 0x0c, 0x12, 0x5f, 0xe1, 0x37, 0x81, 0x0a, 0x5b,
+	0x37, 0x8d, 0xed, 0x17, 0x5b, 0xda, 0x3e, 0x5a, 0x6a, 0x7a, 0x46, 0xd2, 0x35, 0x8a, 0xe3, 0x8a,
+	0x7b, 0x30, 0x7b, 0x1d, 0x36, 0x25, 0x30, 0x99, 0x24, 0xb9, 0xe0, 0x74, 0xe6, 0xa7, 0x52, 0xc6,
+	0xbe, 0xcc, 0x29, 0xcd, 0xa9, 0xd5, 0xf9, 0x4f, 0x25, 0x8c, 0x4a, 0xcd, 0x89, 0x94, 0xf1, 0x97,
+	0x46, 0x51, 0x97, 0xc0, 0x5e, 0x87, 0xad, 0x67, 0x70, 0x6d, 0x8e, 0x02, 0x33, 0x9e, 0xb5, 0x7a,
+	0xc6, 0xf3, 0x93, 0x2d, 0x3d, 0x1f, 0x2f, 0x55, 0xc6, 0x15, 0xb7, 0x14, 0x6c, 0x37, 0xe0, 0x5a,
+	0x81, 0xb6, 0x6f, 0x43, 0x73, 0x63, 0xf5, 0xd6, 0x3e, 0xd4, 0x78, 0x68, 0x8e, 0xd2, 0x9e, 0x5b,
+	0xe3, 0x61, 0xfb, 0x01, 0x1c, 0x5c, 0x32, 0x36, 0xeb, 0x5d, 0x68, 0x62, 0x2a, 0x59, 0xe4, 0x73,
+	0x11, 0xe2, 0xb7, 0x86, 0xbf, 0xe3, 0x82, 0x81, 0x8e, 0x34, 0xd2, 0xbe, 0x05, 0x07, 0x97, 0xf4,
+	0xda, 0x46, 0xb8, 0xfe, 0xd2, 0xf2, 0xad, 0xdb, 0x00, 0x69, 0xc0, 0x4e, 0x91, 0xfc, 0x0c, 0x9f,
+	0x17, 0x3a, 0x8d, 0x25, 0xe2, 0xe1, 0x73, 0xfd, 0x9a, 0x45, 0x81, 0x10, 0x18, 0xfb, 0x3c, 0x34,
+	0xa7, 0xae, 0xe1, 0x36, 0x0a, 0xe4, 0x28, 0xb4, 0xde, 0x81, 0x7a, 0x86, 0x22, 0x44, 0xd5, 0x7a,
+	0xc3, 0xbc, 0x2a, 0xa2, 0xe1, 0x2e, 0xd4, 0x33, 0xd3, 0x7c, 0xf7, 0x0e, 0x34, 0x9e, 0xe4, 0x71,
+	0xcc, 0x67, 0x1c, 0x95, 0x75, 0x13, 0xde, 0xe4, 0x42, 0xa0, 0x2a, 0xfa, 0x5b, 0x06, 0xdd, 0x47,
+	0xf0, 0x76, 0x41, 0x61, 0x81, 0x9e, 0xc1, 0x91, 0x98, 0xc9, 0x57, 0xe7, 0x60, 0xdd, 0x81, 0xbd,
+	0x2c, 0x45, 0x11, 0xfa, 0x11, 0xf2, 0x79, 0x44, 0xa6, 0x94, 0x1d, 0xb7, 0x69, 0xb0, 0xb1, 0x81,
+	0xba, 0xbf, 0x56, 0xe1, 0xc6, 0xc3, 0x05, 0x0a, 0x5a, 0x6f, 0xc0, 0x3a, 0x06, 0x60, 0xab, 0xa8,
+	0xf8, 0x42, 0xef, 0x6d, 0xec, 0xd1, 0x7c, 0xf4, 0x36, 0x6d, 0xee, 0xcf, 0xa3, 0x80, 0x70, 0x2d,
+	0xe1, 0x6e, 0x08, 0x58, 0x6d, 0xd8, 0x4d, 0x65, 0xc6, 0xcd, 0xe7, 0xbe, 0xac, 0x60, 0x15, 0x5b,
+	0x4f, 0xca, 0x9e, 0xcd, 0x2c, 0x9a, 0xfd, 0x07, 0xdb, 0x1d, 0x17, 0xb7, 0x9c, 0xdc, 0x1c, 0x9a,
+	0xa6, 0x9b, 0xcf, 0x04, 0x8b, 0xa4, 0xb2, 0x3e, 0x85, 0x7a, 0x60, 0x9e, 0x8a, 0x2e, 0x7a, 0xff,
+	0xdc, 0xc5, 0x31, 0xaa, 0xd3, 0x18, 0x5d, 0x29, 0xc9, 0x2d, 0xf2, 0xf4, 0xb2, 0x5e, 0x1a, 0x5e,
+	0x11, 0x75, 0x43, 0xd8, 0x37, 0x46, 0x0f, 0xf5, 0xe9, 0xd1, 0x19, 0xd6, 0xc7, 0xb0, 0xa3, 0xa4,
+	0xa4, 0x7f, 0xed, 0x64, 0xb2, 0x96, 0x5b, 0xd6, 0xa7, 0x72, 0x69, 0xb3, 0x0c, 0xba, 0xb3, 0xc2,
+	0x65, 0x18, 0x4b, 0x76, 0xfa, 0x3f, 0xb8, 0xfc, 0x4d, 0x37, 0xfd, 0x7d, 0xd8, 0xfb, 0x2a, 0x47,
+	0x75, 0xe6, 0xa1, 0x5a, 0x70, 0x86, 0xc3, 0x3f, 0x6b, 0x3f, 0x9f, 0x77, 0xaa, 0x2f, 0xce, 0x3b,
+	0xd5, 0xdf, 0xcf, 0x3b, 0xd5, 0xef, 0x2f, 0x3a, 0x95, 0x17, 0x17, 0x9d, 0xca, 0x6f, 0x17, 0x9d,
+	0x0a, 0xf4, 0x98, 0x4c, 0xae, 0xb4, 0xa4, 0xe1, 0xae, 0xc7, 0x68, 0xa2, 0x2f, 0x82, 0x49, 0xf5,
+	0x59, 0x34, 0xe7, 0x14, 0xe5, 0x27, 0x9a, 0xea, 0x64, 0xfa, 0x07, 0x79, 0x8e, 0xb1, 0x5c, 0xe0,
+	0x3d, 0xdd, 0x5c, 0xae, 0x30, 0x73, 0xb8, 0x20, 0x54, 0x2c, 0x0a, 0xf4, 0xff, 0x8c, 0x9c, 0xc5,
+	0x87, 0x8e, 0x09, 0x9c, 0xab, 0x5c, 0x60, 0x1f, 0x65, 0x8c, 0xca, 0xe7, 0x1f, 0x6a, 0x3b, 0x93,
+	0xd1, 0xc8, 0xfb, 0xb1, 0x76, 0x77, 0x52, 0xd6, 0x38, 0xd2, 0x35, 0x8e, 0x56, 0x35, 0x7a, 0x8c,
+	0xec, 0xaf, 0x0b, 0xf6, 0x2f, 0x6b, 0xda, 0x54, 0xd3, 0xa6, 0x2b, 0xda, 0xd4, 0x63, 0x34, 0x2d,
+	0x69, 0xe7, 0xb5, 0xc3, 0xab, 0xd0, 0xa6, 0x8f, 0x27, 0xc3, 0x63, 0xa4, 0x20, 0x0c, 0x28, 0xf8,
+	0xa3, 0xd6, 0x2b, 0x53, 0x06, 0x03, 0x9d, 0xa3, 0xff, 0x16, 0x49, 0x83, 0x81, 0xc7, 0x68, 0x30,
+	0x28, 0xd3, 0x4e, 0xea, 0xe6, 0xba, 0xfc, 0xe0, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xdd, 0xa1,
+	0xdd, 0x2c, 0xae, 0x07, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -228,8 +795,6 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryServiceClient interface {
-	// TODO: change to generic tx-by-commitment
-	TransactionByNote(ctx context.Context, in *TransactionByNoteRequest, opts ...grpc.CallOption) (*TransactionByNoteResponse, error)
 }
 
 type queryServiceClient struct {
@@ -240,62 +805,313 @@ func NewQueryServiceClient(cc grpc1.ClientConn) QueryServiceClient {
 	return &queryServiceClient{cc}
 }
 
-func (c *queryServiceClient) TransactionByNote(ctx context.Context, in *TransactionByNoteRequest, opts ...grpc.CallOption) (*TransactionByNoteResponse, error) {
-	out := new(TransactionByNoteResponse)
-	err := c.cc.Invoke(ctx, "/penumbra.core.component.sct.v1alpha1.QueryService/TransactionByNote", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // QueryServiceServer is the server API for QueryService service.
 type QueryServiceServer interface {
-	// TODO: change to generic tx-by-commitment
-	TransactionByNote(context.Context, *TransactionByNoteRequest) (*TransactionByNoteResponse, error)
 }
 
 // UnimplementedQueryServiceServer can be embedded to have forward compatible implementations.
 type UnimplementedQueryServiceServer struct {
 }
 
-func (*UnimplementedQueryServiceServer) TransactionByNote(ctx context.Context, req *TransactionByNoteRequest) (*TransactionByNoteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TransactionByNote not implemented")
-}
-
 func RegisterQueryServiceServer(s grpc1.Server, srv QueryServiceServer) {
 	s.RegisterService(&_QueryService_serviceDesc, srv)
-}
-
-func _QueryService_TransactionByNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TransactionByNoteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServiceServer).TransactionByNote(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/penumbra.core.component.sct.v1alpha1.QueryService/TransactionByNote",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServiceServer).TransactionByNote(ctx, req.(*TransactionByNoteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 var _QueryService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "penumbra.core.component.sct.v1alpha1.QueryService",
 	HandlerType: (*QueryServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams:     []grpc.StreamDesc{},
+	Metadata:    "penumbra/core/component/sct/v1alpha1/sct.proto",
+}
+
+func (m *CommitmentSource) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Source != nil {
 		{
-			MethodName: "TransactionByNote",
-			Handler:    _QueryService_TransactionByNote_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "penumbra/core/component/sct/v1alpha1/sct.proto",
+			size := m.Source.Size()
+			i -= size
+			if _, err := m.Source.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CommitmentSource_Transaction_) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Transaction_) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Transaction != nil {
+		{
+			size, err := m.Transaction.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CommitmentSource_Ics_20Transfer) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Ics_20Transfer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Ics_20Transfer != nil {
+		{
+			size, err := m.Ics_20Transfer.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CommitmentSource_FundingStreamReward_) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_FundingStreamReward_) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FundingStreamReward != nil {
+		{
+			size, err := m.FundingStreamReward.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xa2
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CommitmentSource_CommunityPoolOutput_) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_CommunityPoolOutput_) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.CommunityPoolOutput != nil {
+		{
+			size, err := m.CommunityPoolOutput.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf2
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CommitmentSource_Genesis_) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Genesis_) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Genesis != nil {
+		{
+			size, err := m.Genesis.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xc2
+	}
+	return len(dAtA) - i, nil
+}
+func (m *CommitmentSource_Genesis) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource_Genesis) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Genesis) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *CommitmentSource_Transaction) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource_Transaction) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Transaction) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintSct(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CommitmentSource_FundingStreamReward) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource_FundingStreamReward) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_FundingStreamReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.EpochIndex != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.EpochIndex))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CommitmentSource_CommunityPoolOutput) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource_CommunityPoolOutput) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_CommunityPoolOutput) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *CommitmentSource_Ics20Transfer) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CommitmentSource_Ics20Transfer) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitmentSource_Ics20Transfer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Sender) > 0 {
+		i -= len(m.Sender)
+		copy(dAtA[i:], m.Sender)
+		i = encodeVarintSct(dAtA, i, uint64(len(m.Sender)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.ChannelId) > 0 {
+		i -= len(m.ChannelId)
+		copy(dAtA[i:], m.ChannelId)
+		i = encodeVarintSct(dAtA, i, uint64(len(m.ChannelId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.PacketSeq != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.PacketSeq))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *Nullifier) Marshal() (dAtA []byte, err error) {
@@ -328,7 +1144,7 @@ func (m *Nullifier) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *TransactionByNoteRequest) Marshal() (dAtA []byte, err error) {
+func (m *NullificationInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -338,19 +1154,54 @@ func (m *TransactionByNoteRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *TransactionByNoteRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *NullificationInfo) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *TransactionByNoteRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *NullificationInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.NoteCommitment != nil {
+	if m.SpendHeight != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.SpendHeight))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintSct(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *EventCommitment) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EventCommitment) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EventCommitment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Source != nil {
 		{
-			size, err := m.NoteCommitment.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Source.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -358,19 +1209,29 @@ func (m *TransactionByNoteRequest) MarshalToSizedBuffer(dAtA []byte) (int, error
 			i = encodeVarintSct(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x1a
 	}
-	if len(m.ChainId) > 0 {
-		i -= len(m.ChainId)
-		copy(dAtA[i:], m.ChainId)
-		i = encodeVarintSct(dAtA, i, uint64(len(m.ChainId)))
+	if m.Position != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.Position))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Commitment != nil {
+		{
+			size, err := m.Commitment.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *TransactionByNoteResponse) Marshal() (dAtA []byte, err error) {
+func (m *EventAnchor) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -380,19 +1241,104 @@ func (m *TransactionByNoteResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *TransactionByNoteResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *EventAnchor) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *TransactionByNoteResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *EventAnchor) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.NoteSource != nil {
+	if m.Height != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.Height))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Anchor != nil {
 		{
-			size, err := m.NoteSource.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Anchor.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *EventEpochRoot) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EventEpochRoot) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EventEpochRoot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Index != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.Index))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Root != nil {
+		{
+			size, err := m.Root.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSct(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *EventBlockRoot) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EventBlockRoot) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EventBlockRoot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Height != 0 {
+		i = encodeVarintSct(dAtA, i, uint64(m.Height))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Root != nil {
+		{
+			size, err := m.Root.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -416,6 +1362,141 @@ func encodeVarintSct(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
+func (m *CommitmentSource) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Source != nil {
+		n += m.Source.Size()
+	}
+	return n
+}
+
+func (m *CommitmentSource_Transaction_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Transaction != nil {
+		l = m.Transaction.Size()
+		n += 1 + l + sovSct(uint64(l))
+	}
+	return n
+}
+func (m *CommitmentSource_Ics_20Transfer) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Ics_20Transfer != nil {
+		l = m.Ics_20Transfer.Size()
+		n += 1 + l + sovSct(uint64(l))
+	}
+	return n
+}
+func (m *CommitmentSource_FundingStreamReward_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FundingStreamReward != nil {
+		l = m.FundingStreamReward.Size()
+		n += 2 + l + sovSct(uint64(l))
+	}
+	return n
+}
+func (m *CommitmentSource_CommunityPoolOutput_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.CommunityPoolOutput != nil {
+		l = m.CommunityPoolOutput.Size()
+		n += 2 + l + sovSct(uint64(l))
+	}
+	return n
+}
+func (m *CommitmentSource_Genesis_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Genesis != nil {
+		l = m.Genesis.Size()
+		n += 2 + l + sovSct(uint64(l))
+	}
+	return n
+}
+func (m *CommitmentSource_Genesis) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *CommitmentSource_Transaction) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovSct(uint64(l))
+	}
+	return n
+}
+
+func (m *CommitmentSource_FundingStreamReward) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.EpochIndex != 0 {
+		n += 1 + sovSct(uint64(m.EpochIndex))
+	}
+	return n
+}
+
+func (m *CommitmentSource_CommunityPoolOutput) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *CommitmentSource_Ics20Transfer) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.PacketSeq != 0 {
+		n += 1 + sovSct(uint64(m.PacketSeq))
+	}
+	l = len(m.ChannelId)
+	if l > 0 {
+		n += 1 + l + sovSct(uint64(l))
+	}
+	l = len(m.Sender)
+	if l > 0 {
+		n += 1 + l + sovSct(uint64(l))
+	}
+	return n
+}
+
 func (m *Nullifier) Size() (n int) {
 	if m == nil {
 		return 0
@@ -429,32 +1510,86 @@ func (m *Nullifier) Size() (n int) {
 	return n
 }
 
-func (m *TransactionByNoteRequest) Size() (n int) {
+func (m *NullificationInfo) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.ChainId)
+	l = len(m.Id)
 	if l > 0 {
 		n += 1 + l + sovSct(uint64(l))
 	}
-	if m.NoteCommitment != nil {
-		l = m.NoteCommitment.Size()
+	if m.SpendHeight != 0 {
+		n += 1 + sovSct(uint64(m.SpendHeight))
+	}
+	return n
+}
+
+func (m *EventCommitment) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Commitment != nil {
+		l = m.Commitment.Size()
+		n += 1 + l + sovSct(uint64(l))
+	}
+	if m.Position != 0 {
+		n += 1 + sovSct(uint64(m.Position))
+	}
+	if m.Source != nil {
+		l = m.Source.Size()
 		n += 1 + l + sovSct(uint64(l))
 	}
 	return n
 }
 
-func (m *TransactionByNoteResponse) Size() (n int) {
+func (m *EventAnchor) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.NoteSource != nil {
-		l = m.NoteSource.Size()
+	if m.Anchor != nil {
+		l = m.Anchor.Size()
 		n += 1 + l + sovSct(uint64(l))
+	}
+	if m.Height != 0 {
+		n += 1 + sovSct(uint64(m.Height))
+	}
+	return n
+}
+
+func (m *EventEpochRoot) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Root != nil {
+		l = m.Root.Size()
+		n += 1 + l + sovSct(uint64(l))
+	}
+	if m.Index != 0 {
+		n += 1 + sovSct(uint64(m.Index))
+	}
+	return n
+}
+
+func (m *EventBlockRoot) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Root != nil {
+		l = m.Root.Size()
+		n += 1 + l + sovSct(uint64(l))
+	}
+	if m.Height != 0 {
+		n += 1 + sovSct(uint64(m.Height))
 	}
 	return n
 }
@@ -464,6 +1599,617 @@ func sovSct(x uint64) (n int) {
 }
 func sozSct(x uint64) (n int) {
 	return sovSct(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *CommitmentSource) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CommitmentSource: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CommitmentSource: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Transaction", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CommitmentSource_Transaction{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Source = &CommitmentSource_Transaction_{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ics_20Transfer", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CommitmentSource_Ics20Transfer{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Source = &CommitmentSource_Ics_20Transfer{v}
+			iNdEx = postIndex
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FundingStreamReward", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CommitmentSource_FundingStreamReward{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Source = &CommitmentSource_FundingStreamReward_{v}
+			iNdEx = postIndex
+		case 30:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CommunityPoolOutput", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CommitmentSource_CommunityPoolOutput{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Source = &CommitmentSource_CommunityPoolOutput_{v}
+			iNdEx = postIndex
+		case 40:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Genesis", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &CommitmentSource_Genesis{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Source = &CommitmentSource_Genesis_{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CommitmentSource_Genesis) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Genesis: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Genesis: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CommitmentSource_Transaction) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Transaction: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Transaction: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = append(m.Id[:0], dAtA[iNdEx:postIndex]...)
+			if m.Id == nil {
+				m.Id = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CommitmentSource_FundingStreamReward) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FundingStreamReward: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FundingStreamReward: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EpochIndex", wireType)
+			}
+			m.EpochIndex = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.EpochIndex |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CommitmentSource_CommunityPoolOutput) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CommunityPoolOutput: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CommunityPoolOutput: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CommitmentSource_Ics20Transfer) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Ics20Transfer: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Ics20Transfer: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PacketSeq", wireType)
+			}
+			m.PacketSeq = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PacketSeq |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChannelId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChannelId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sender = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *Nullifier) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -549,7 +2295,7 @@ func (m *Nullifier) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *TransactionByNoteRequest) Unmarshal(dAtA []byte) error {
+func (m *NullificationInfo) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -572,17 +2318,17 @@ func (m *TransactionByNoteRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: TransactionByNoteRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: NullificationInfo: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TransactionByNoteRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: NullificationInfo: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ChainId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowSct
@@ -592,27 +2338,98 @@ func (m *TransactionByNoteRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthSct
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthSct
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ChainId = string(dAtA[iNdEx:postIndex])
+			m.Id = append(m.Id[:0], dAtA[iNdEx:postIndex]...)
+			if m.Id == nil {
+				m.Id = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpendHeight", wireType)
+			}
+			m.SpendHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SpendHeight |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EventCommitment) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EventCommitment: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EventCommitment: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NoteCommitment", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Commitment", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -639,10 +2456,65 @@ func (m *TransactionByNoteRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.NoteCommitment == nil {
-				m.NoteCommitment = &v1alpha1.StateCommitment{}
+			if m.Commitment == nil {
+				m.Commitment = &v1alpha1.StateCommitment{}
 			}
-			if err := m.NoteCommitment.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Commitment.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Position", wireType)
+			}
+			m.Position = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Position |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Source", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Source == nil {
+				m.Source = &CommitmentSource{}
+			}
+			if err := m.Source.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -667,7 +2539,7 @@ func (m *TransactionByNoteRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *TransactionByNoteResponse) Unmarshal(dAtA []byte) error {
+func (m *EventAnchor) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -690,15 +2562,15 @@ func (m *TransactionByNoteResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: TransactionByNoteResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: EventAnchor: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TransactionByNoteResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: EventAnchor: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NoteSource", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Anchor", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -725,13 +2597,242 @@ func (m *TransactionByNoteResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.NoteSource == nil {
-				m.NoteSource = &v1alpha11.NoteSource{}
+			if m.Anchor == nil {
+				m.Anchor = &v1alpha1.MerkleRoot{}
 			}
-			if err := m.NoteSource.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Anchor.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
+			}
+			m.Height = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Height |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EventEpochRoot) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EventEpochRoot: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EventEpochRoot: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Root", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Root == nil {
+				m.Root = &v1alpha1.MerkleRoot{}
+			}
+			if err := m.Root.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
+			}
+			m.Index = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Index |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSct(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSct
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EventBlockRoot) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSct
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EventBlockRoot: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EventBlockRoot: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Root", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSct
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSct
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Root == nil {
+				m.Root = &v1alpha1.MerkleRoot{}
+			}
+			if err := m.Root.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Height", wireType)
+			}
+			m.Height = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSct
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Height |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipSct(dAtA[iNdEx:])

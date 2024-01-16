@@ -8,14 +8,15 @@ import (
 	fmt "fmt"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
-	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/chain/v1alpha1"
-	v1alpha11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/dao/v1alpha1"
-	v1alpha16 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/distributions/v1alpha1"
-	v1alpha15 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/fee/v1alpha1"
-	v1alpha12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/governance/v1alpha1"
-	v1alpha13 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
-	v1alpha17 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
-	v1alpha14 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/stake/v1alpha1"
+	v1alpha11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/chain/v1alpha1"
+	v1alpha12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/community_pool/v1alpha1"
+	v1alpha17 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/distributions/v1alpha1"
+	v1alpha16 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/fee/v1alpha1"
+	v1alpha13 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/governance/v1alpha1"
+	v1alpha14 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
+	v1alpha18 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
+	v1alpha15 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/stake/v1alpha1"
+	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1alpha1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -35,28 +36,138 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// Requests the list of all transactions that occurred within a given block.
+type TransactionsByHeightRequest struct {
+	// The expected chain id (empty string if no expectation).
+	ChainId string `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	// The block height to retrieve.
+	BlockHeight uint64 `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
+}
+
+func (m *TransactionsByHeightRequest) Reset()         { *m = TransactionsByHeightRequest{} }
+func (m *TransactionsByHeightRequest) String() string { return proto.CompactTextString(m) }
+func (*TransactionsByHeightRequest) ProtoMessage()    {}
+func (*TransactionsByHeightRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{0}
+}
+func (m *TransactionsByHeightRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TransactionsByHeightRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TransactionsByHeightRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TransactionsByHeightRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TransactionsByHeightRequest.Merge(m, src)
+}
+func (m *TransactionsByHeightRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *TransactionsByHeightRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TransactionsByHeightRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TransactionsByHeightRequest proto.InternalMessageInfo
+
+func (m *TransactionsByHeightRequest) GetChainId() string {
+	if m != nil {
+		return m.ChainId
+	}
+	return ""
+}
+
+func (m *TransactionsByHeightRequest) GetBlockHeight() uint64 {
+	if m != nil {
+		return m.BlockHeight
+	}
+	return 0
+}
+
+// A transaction that appeared within a given block.
+type TransactionsByHeightResponse struct {
+	// The transactions.
+	Transactions []*v1alpha1.Transaction `protobuf:"bytes,1,rep,name=transactions,proto3" json:"transactions,omitempty"`
+	// The block height.
+	BlockHeight uint64 `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
+}
+
+func (m *TransactionsByHeightResponse) Reset()         { *m = TransactionsByHeightResponse{} }
+func (m *TransactionsByHeightResponse) String() string { return proto.CompactTextString(m) }
+func (*TransactionsByHeightResponse) ProtoMessage()    {}
+func (*TransactionsByHeightResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e3359d6f6803c6c6, []int{1}
+}
+func (m *TransactionsByHeightResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TransactionsByHeightResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TransactionsByHeightResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TransactionsByHeightResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TransactionsByHeightResponse.Merge(m, src)
+}
+func (m *TransactionsByHeightResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *TransactionsByHeightResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TransactionsByHeightResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TransactionsByHeightResponse proto.InternalMessageInfo
+
+func (m *TransactionsByHeightResponse) GetTransactions() []*v1alpha1.Transaction {
+	if m != nil {
+		return m.Transactions
+	}
+	return nil
+}
+
+func (m *TransactionsByHeightResponse) GetBlockHeight() uint64 {
+	if m != nil {
+		return m.BlockHeight
+	}
+	return 0
+}
+
 type AppParameters struct {
 	// Chain module parameters.
-	ChainParams *v1alpha1.ChainParameters `protobuf:"bytes,1,opt,name=chain_params,json=chainParams,proto3" json:"chain_params,omitempty"`
-	// DAO module parameters.
-	DaoParams *v1alpha11.DaoParameters `protobuf:"bytes,2,opt,name=dao_params,json=daoParams,proto3" json:"dao_params,omitempty"`
+	ChainParams *v1alpha11.ChainParameters `protobuf:"bytes,1,opt,name=chain_params,json=chainParams,proto3" json:"chain_params,omitempty"`
+	// Community Pool module parameters.
+	CommunityPoolParams *v1alpha12.CommunityPoolParameters `protobuf:"bytes,2,opt,name=community_pool_params,json=communityPoolParams,proto3" json:"community_pool_params,omitempty"`
 	// Governance module parameters.
-	GovernanceParams *v1alpha12.GovernanceParameters `protobuf:"bytes,3,opt,name=governance_params,json=governanceParams,proto3" json:"governance_params,omitempty"`
+	GovernanceParams *v1alpha13.GovernanceParameters `protobuf:"bytes,3,opt,name=governance_params,json=governanceParams,proto3" json:"governance_params,omitempty"`
 	// IBC module parameters.
-	IbcParams *v1alpha13.IbcParameters `protobuf:"bytes,4,opt,name=ibc_params,json=ibcParams,proto3" json:"ibc_params,omitempty"`
+	IbcParams *v1alpha14.IbcParameters `protobuf:"bytes,4,opt,name=ibc_params,json=ibcParams,proto3" json:"ibc_params,omitempty"`
 	// Stake module parameters.
-	StakeParams *v1alpha14.StakeParameters `protobuf:"bytes,5,opt,name=stake_params,json=stakeParams,proto3" json:"stake_params,omitempty"`
+	StakeParams *v1alpha15.StakeParameters `protobuf:"bytes,5,opt,name=stake_params,json=stakeParams,proto3" json:"stake_params,omitempty"`
 	// Fee module parameters.
-	FeeParams *v1alpha15.FeeParameters `protobuf:"bytes,6,opt,name=fee_params,json=feeParams,proto3" json:"fee_params,omitempty"`
+	FeeParams *v1alpha16.FeeParameters `protobuf:"bytes,6,opt,name=fee_params,json=feeParams,proto3" json:"fee_params,omitempty"`
 	// Distributions module parameters.
-	DistributionsParams *v1alpha16.DistributionsParameters `protobuf:"bytes,7,opt,name=distributions_params,json=distributionsParams,proto3" json:"distributions_params,omitempty"`
+	DistributionsParams *v1alpha17.DistributionsParameters `protobuf:"bytes,7,opt,name=distributions_params,json=distributionsParams,proto3" json:"distributions_params,omitempty"`
 }
 
 func (m *AppParameters) Reset()         { *m = AppParameters{} }
 func (m *AppParameters) String() string { return proto.CompactTextString(m) }
 func (*AppParameters) ProtoMessage()    {}
 func (*AppParameters) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{0}
+	return fileDescriptor_e3359d6f6803c6c6, []int{2}
 }
 func (m *AppParameters) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -85,49 +196,49 @@ func (m *AppParameters) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AppParameters proto.InternalMessageInfo
 
-func (m *AppParameters) GetChainParams() *v1alpha1.ChainParameters {
+func (m *AppParameters) GetChainParams() *v1alpha11.ChainParameters {
 	if m != nil {
 		return m.ChainParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetDaoParams() *v1alpha11.DaoParameters {
+func (m *AppParameters) GetCommunityPoolParams() *v1alpha12.CommunityPoolParameters {
 	if m != nil {
-		return m.DaoParams
+		return m.CommunityPoolParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetGovernanceParams() *v1alpha12.GovernanceParameters {
+func (m *AppParameters) GetGovernanceParams() *v1alpha13.GovernanceParameters {
 	if m != nil {
 		return m.GovernanceParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetIbcParams() *v1alpha13.IbcParameters {
+func (m *AppParameters) GetIbcParams() *v1alpha14.IbcParameters {
 	if m != nil {
 		return m.IbcParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetStakeParams() *v1alpha14.StakeParameters {
+func (m *AppParameters) GetStakeParams() *v1alpha15.StakeParameters {
 	if m != nil {
 		return m.StakeParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetFeeParams() *v1alpha15.FeeParameters {
+func (m *AppParameters) GetFeeParams() *v1alpha16.FeeParameters {
 	if m != nil {
 		return m.FeeParams
 	}
 	return nil
 }
 
-func (m *AppParameters) GetDistributionsParams() *v1alpha16.DistributionsParameters {
+func (m *AppParameters) GetDistributionsParams() *v1alpha17.DistributionsParameters {
 	if m != nil {
 		return m.DistributionsParams
 	}
@@ -144,7 +255,7 @@ func (m *AppParametersRequest) Reset()         { *m = AppParametersRequest{} }
 func (m *AppParametersRequest) String() string { return proto.CompactTextString(m) }
 func (*AppParametersRequest) ProtoMessage()    {}
 func (*AppParametersRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{1}
+	return fileDescriptor_e3359d6f6803c6c6, []int{3}
 }
 func (m *AppParametersRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -188,7 +299,7 @@ func (m *AppParametersResponse) Reset()         { *m = AppParametersResponse{} }
 func (m *AppParametersResponse) String() string { return proto.CompactTextString(m) }
 func (*AppParametersResponse) ProtoMessage()    {}
 func (*AppParametersResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{2}
+	return fileDescriptor_e3359d6f6803c6c6, []int{4}
 }
 func (m *AppParametersResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -235,7 +346,7 @@ func (m *GenesisAppState) Reset()         { *m = GenesisAppState{} }
 func (m *GenesisAppState) String() string { return proto.CompactTextString(m) }
 func (*GenesisAppState) ProtoMessage()    {}
 func (*GenesisAppState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{3}
+	return fileDescriptor_e3359d6f6803c6c6, []int{5}
 }
 func (m *GenesisAppState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -311,28 +422,28 @@ func (*GenesisAppState) XXX_OneofWrappers() []interface{} {
 
 type GenesisContent struct {
 	// Stake module genesis state.
-	StakeContent *v1alpha14.GenesisContent `protobuf:"bytes,1,opt,name=stake_content,json=stakeContent,proto3" json:"stake_content,omitempty"`
+	StakeContent *v1alpha15.GenesisContent `protobuf:"bytes,1,opt,name=stake_content,json=stakeContent,proto3" json:"stake_content,omitempty"`
 	// Shielded pool module genesis state.
-	ShieldedPoolContent *v1alpha17.GenesisContent `protobuf:"bytes,2,opt,name=shielded_pool_content,json=shieldedPoolContent,proto3" json:"shielded_pool_content,omitempty"`
+	ShieldedPoolContent *v1alpha18.GenesisContent `protobuf:"bytes,2,opt,name=shielded_pool_content,json=shieldedPoolContent,proto3" json:"shielded_pool_content,omitempty"`
 	// Governance module genesis state.
-	GovernanceContent *v1alpha12.GenesisContent `protobuf:"bytes,3,opt,name=governance_content,json=governanceContent,proto3" json:"governance_content,omitempty"`
+	GovernanceContent *v1alpha13.GenesisContent `protobuf:"bytes,3,opt,name=governance_content,json=governanceContent,proto3" json:"governance_content,omitempty"`
 	// IBC module genesis state.
-	IbcContent *v1alpha13.GenesisContent `protobuf:"bytes,4,opt,name=ibc_content,json=ibcContent,proto3" json:"ibc_content,omitempty"`
+	IbcContent *v1alpha14.GenesisContent `protobuf:"bytes,4,opt,name=ibc_content,json=ibcContent,proto3" json:"ibc_content,omitempty"`
 	// Chain module genesis state.
-	ChainContent *v1alpha1.GenesisContent `protobuf:"bytes,5,opt,name=chain_content,json=chainContent,proto3" json:"chain_content,omitempty"`
-	// DAO module genesis state.
-	DaoContent *v1alpha11.GenesisContent `protobuf:"bytes,6,opt,name=dao_content,json=daoContent,proto3" json:"dao_content,omitempty"`
+	ChainContent *v1alpha11.GenesisContent `protobuf:"bytes,5,opt,name=chain_content,json=chainContent,proto3" json:"chain_content,omitempty"`
+	// Community Pool module genesis state.
+	CommunityPoolContent *v1alpha12.GenesisContent `protobuf:"bytes,6,opt,name=community_pool_content,json=communityPoolContent,proto3" json:"community_pool_content,omitempty"`
 	// Fee module genesis state.
-	FeeContent *v1alpha15.GenesisContent `protobuf:"bytes,7,opt,name=fee_content,json=feeContent,proto3" json:"fee_content,omitempty"`
+	FeeContent *v1alpha16.GenesisContent `protobuf:"bytes,7,opt,name=fee_content,json=feeContent,proto3" json:"fee_content,omitempty"`
 	// Distributions module genesis state.
-	DistributionsContent *v1alpha16.GenesisContent `protobuf:"bytes,8,opt,name=distributions_content,json=distributionsContent,proto3" json:"distributions_content,omitempty"`
+	DistributionsContent *v1alpha17.GenesisContent `protobuf:"bytes,8,opt,name=distributions_content,json=distributionsContent,proto3" json:"distributions_content,omitempty"`
 }
 
 func (m *GenesisContent) Reset()         { *m = GenesisContent{} }
 func (m *GenesisContent) String() string { return proto.CompactTextString(m) }
 func (*GenesisContent) ProtoMessage()    {}
 func (*GenesisContent) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e3359d6f6803c6c6, []int{4}
+	return fileDescriptor_e3359d6f6803c6c6, []int{6}
 }
 func (m *GenesisContent) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -361,56 +472,56 @@ func (m *GenesisContent) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenesisContent proto.InternalMessageInfo
 
-func (m *GenesisContent) GetStakeContent() *v1alpha14.GenesisContent {
+func (m *GenesisContent) GetStakeContent() *v1alpha15.GenesisContent {
 	if m != nil {
 		return m.StakeContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetShieldedPoolContent() *v1alpha17.GenesisContent {
+func (m *GenesisContent) GetShieldedPoolContent() *v1alpha18.GenesisContent {
 	if m != nil {
 		return m.ShieldedPoolContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetGovernanceContent() *v1alpha12.GenesisContent {
+func (m *GenesisContent) GetGovernanceContent() *v1alpha13.GenesisContent {
 	if m != nil {
 		return m.GovernanceContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetIbcContent() *v1alpha13.GenesisContent {
+func (m *GenesisContent) GetIbcContent() *v1alpha14.GenesisContent {
 	if m != nil {
 		return m.IbcContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetChainContent() *v1alpha1.GenesisContent {
+func (m *GenesisContent) GetChainContent() *v1alpha11.GenesisContent {
 	if m != nil {
 		return m.ChainContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetDaoContent() *v1alpha11.GenesisContent {
+func (m *GenesisContent) GetCommunityPoolContent() *v1alpha12.GenesisContent {
 	if m != nil {
-		return m.DaoContent
+		return m.CommunityPoolContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetFeeContent() *v1alpha15.GenesisContent {
+func (m *GenesisContent) GetFeeContent() *v1alpha16.GenesisContent {
 	if m != nil {
 		return m.FeeContent
 	}
 	return nil
 }
 
-func (m *GenesisContent) GetDistributionsContent() *v1alpha16.GenesisContent {
+func (m *GenesisContent) GetDistributionsContent() *v1alpha17.GenesisContent {
 	if m != nil {
 		return m.DistributionsContent
 	}
@@ -418,6 +529,8 @@ func (m *GenesisContent) GetDistributionsContent() *v1alpha16.GenesisContent {
 }
 
 func init() {
+	proto.RegisterType((*TransactionsByHeightRequest)(nil), "penumbra.core.app.v1alpha1.TransactionsByHeightRequest")
+	proto.RegisterType((*TransactionsByHeightResponse)(nil), "penumbra.core.app.v1alpha1.TransactionsByHeightResponse")
 	proto.RegisterType((*AppParameters)(nil), "penumbra.core.app.v1alpha1.AppParameters")
 	proto.RegisterType((*AppParametersRequest)(nil), "penumbra.core.app.v1alpha1.AppParametersRequest")
 	proto.RegisterType((*AppParametersResponse)(nil), "penumbra.core.app.v1alpha1.AppParametersResponse")
@@ -430,63 +543,72 @@ func init() {
 }
 
 var fileDescriptor_e3359d6f6803c6c6 = []byte{
-	// 896 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x96, 0xdd, 0x8e, 0xe3, 0x34,
-	0x14, 0xc7, 0xdb, 0x2e, 0xf3, 0xe5, 0xf9, 0x58, 0x36, 0xb3, 0x23, 0x41, 0x25, 0x2a, 0x54, 0x21,
-	0x04, 0x48, 0x24, 0xcc, 0x2c, 0x02, 0xd4, 0x45, 0x48, 0xed, 0x20, 0x66, 0xf7, 0x02, 0xa9, 0x74,
-	0xb4, 0x5c, 0x2c, 0x23, 0x46, 0x4e, 0x72, 0xda, 0x9a, 0xed, 0xd8, 0x26, 0x76, 0x2b, 0xc1, 0x35,
-	0x0f, 0xc0, 0x33, 0x20, 0xae, 0x90, 0x80, 0xd7, 0x40, 0x5c, 0xed, 0x25, 0x97, 0xa8, 0x73, 0xc7,
-	0x53, 0x20, 0xdb, 0x71, 0x62, 0x67, 0x95, 0xcd, 0xcc, 0x5d, 0x7d, 0x7c, 0xfc, 0xfb, 0x9f, 0xf8,
-	0x9c, 0xfc, 0x1b, 0xf4, 0x16, 0x07, 0xba, 0xbc, 0x8a, 0x33, 0x1c, 0x25, 0x2c, 0x83, 0x08, 0x73,
-	0x1e, 0xad, 0x8e, 0xf1, 0x82, 0xcf, 0xf1, 0xb1, 0x5a, 0x84, 0x3c, 0x63, 0x92, 0x05, 0x5d, 0x9b,
-	0x15, 0xaa, 0xac, 0x50, 0x6d, 0xd8, 0xac, 0xee, 0x89, 0x4f, 0x48, 0xd8, 0x15, 0x67, 0x14, 0xa8,
-	0x8c, 0x92, 0x39, 0x26, 0xb4, 0xa4, 0xe9, 0xa5, 0xe1, 0x75, 0xc3, 0xba, 0x33, 0x29, 0x66, 0xe5,
-	0x89, 0x14, 0xb3, 0x3c, 0x7f, 0x54, 0x9b, 0x4f, 0x84, 0xcc, 0x48, 0xbc, 0x94, 0x84, 0x51, 0xe1,
-	0x9c, 0x74, 0xc3, 0x4d, 0x9a, 0x53, 0x80, 0xf2, 0xe4, 0x14, 0x20, 0xcf, 0xff, 0xb4, 0x2e, 0x7f,
-	0xc6, 0x56, 0x90, 0x51, 0x4c, 0x13, 0xe7, 0x58, 0x19, 0x6b, 0x52, 0x23, 0x71, 0x52, 0x1e, 0x23,
-	0x71, 0xd2, 0xf4, 0x84, 0x62, 0x4e, 0x60, 0x91, 0x42, 0x7a, 0xc9, 0x19, 0x5b, 0x94, 0x27, 0xbd,
-	0x70, 0xce, 0xa8, 0xed, 0x84, 0x90, 0xf8, 0x99, 0x53, 0xac, 0x5e, 0x9a, 0x33, 0xfd, 0x3f, 0x37,
-	0xd0, 0xfe, 0x90, 0xf3, 0x31, 0xce, 0xf0, 0x15, 0x48, 0xc8, 0x44, 0xf0, 0x14, 0xed, 0xe9, 0x56,
-	0x5d, 0x72, 0x15, 0x13, 0xaf, 0xb5, 0xdf, 0x6c, 0xbf, 0xb3, 0x7b, 0xf2, 0x71, 0xe8, 0x8f, 0x40,
-	0x01, 0x0f, 0x4d, 0x5f, 0x2d, 0x3c, 0x3c, 0x55, 0xcb, 0x12, 0x37, 0xd9, 0x4d, 0x8a, 0x80, 0x08,
-	0x26, 0x08, 0xa5, 0x98, 0x59, 0x72, 0x47, 0x93, 0x1f, 0xd4, 0x92, 0x55, 0xff, 0x0b, 0xee, 0xe7,
-	0x98, 0x39, 0xd4, 0x9d, 0x34, 0x5f, 0x8a, 0x80, 0xa2, 0x7b, 0xe5, 0xed, 0x5b, 0xf4, 0x1d, 0x8d,
-	0x1e, 0xd6, 0xa2, 0x9d, 0x7e, 0x15, 0x0a, 0x67, 0x45, 0xcc, 0x11, 0x7a, 0x75, 0xe6, 0x47, 0xf5,
-	0x33, 0x90, 0x38, 0xb1, 0x42, 0xaf, 0x34, 0x3c, 0x83, 0xea, 0x70, 0xa1, 0xf0, 0x38, 0x4e, 0xdc,
-	0x67, 0x20, 0xf9, 0x52, 0xdf, 0xb9, 0x6e, 0x8a, 0xa5, 0x6e, 0x34, 0xdc, 0xb9, 0xe9, 0x60, 0xc1,
-	0x3d, 0x57, 0x4b, 0xf7, 0xce, 0x45, 0x11, 0xd0, 0xf5, 0x4e, 0xa1, 0x20, 0x6f, 0x36, 0xd4, 0xab,
-	0xe6, 0xbf, 0xe0, 0x7e, 0x01, 0x2e, 0x75, 0x67, 0x0a, 0x96, 0xf9, 0x23, 0xba, 0xef, 0xbd, 0x62,
-	0x96, 0xbe, 0xa5, 0xe9, 0x67, 0xf5, 0x1d, 0xf5, 0xde, 0xcb, 0xb2, 0xb7, 0x6e, 0xd8, 0x51, 0x3c,
-	0x4c, 0x5f, 0xd8, 0x10, 0xfd, 0x63, 0x74, 0xdf, 0x1b, 0xd8, 0x09, 0x7c, 0xbf, 0x04, 0x21, 0x83,
-	0xd7, 0xd1, 0xb6, 0x99, 0x5b, 0x92, 0xea, 0x99, 0xdd, 0x99, 0x6c, 0xe9, 0xf5, 0xe3, 0xb4, 0x4f,
-	0xd0, 0x51, 0xe5, 0x88, 0xe0, 0x8c, 0x0a, 0x08, 0xc6, 0xe8, 0x00, 0x73, 0x6e, 0xaa, 0xd7, 0x3b,
-	0xf9, 0xb4, 0xbf, 0x1b, 0xd6, 0x1b, 0x5e, 0xe8, 0xa3, 0xf6, 0xb1, 0xbb, 0xec, 0xff, 0xd1, 0x46,
-	0x77, 0xcf, 0x80, 0x82, 0x20, 0x62, 0xc8, 0xf9, 0xb9, 0xc4, 0x12, 0x82, 0x27, 0xe8, 0xee, 0xcc,
-	0x84, 0x2e, 0x13, 0x46, 0x25, 0x50, 0x99, 0xcb, 0xbc, 0xf7, 0x32, 0x99, 0x9c, 0x72, 0x6a, 0x4e,
-	0x3c, 0x6a, 0x4d, 0x0e, 0x66, 0x5e, 0x24, 0x88, 0x50, 0x50, 0x60, 0xe7, 0x90, 0x3c, 0xe3, 0x8c,
-	0x50, 0xa9, 0x5f, 0xaa, 0xbd, 0x47, 0xad, 0xc9, 0x3d, 0x9b, 0x5d, 0x6c, 0x8d, 0x0e, 0x91, 0x0d,
-	0x5e, 0xaa, 0xa7, 0x16, 0xaa, 0xb8, 0xfe, 0xaf, 0x9b, 0xe8, 0xc0, 0x97, 0x0a, 0xbe, 0x41, 0xfb,
-	0x66, 0x1a, 0xfd, 0x6a, 0x3f, 0xba, 0xe9, 0x38, 0xfa, 0xb8, 0x89, 0x19, 0x6d, 0x0b, 0xcf, 0xd0,
-	0x91, 0xe7, 0x5d, 0x85, 0x88, 0x71, 0x83, 0xcf, 0xea, 0x45, 0x3c, 0xc7, 0xab, 0x13, 0x3b, 0xb4,
-	0x69, 0x63, 0xc6, 0x16, 0x56, 0xf3, 0x3b, 0x14, 0x38, 0x16, 0x61, 0x05, 0x8d, 0x47, 0x3c, 0xbc,
-	0x9d, 0x47, 0xf8, 0x6a, 0x8e, 0xf3, 0x58, 0xad, 0x27, 0x68, 0x57, 0xd9, 0x83, 0x15, 0x31, 0xfe,
-	0xf0, 0xe1, 0xcd, 0xfc, 0xa1, 0x42, 0x57, 0x3e, 0xe3, 0xf4, 0xc4, 0x4c, 0xb7, 0x05, 0x6f, 0x34,
-	0xf4, 0xa4, 0x62, 0xcb, 0xd5, 0x9e, 0xe8, 0x6d, 0xa7, 0x66, 0x65, 0xcb, 0x16, 0xbd, 0xd9, 0x50,
-	0xb3, 0xe7, 0xcb, 0xd5, 0x9a, 0x53, 0xcc, 0x1c, 0xac, 0x72, 0x1e, 0x8b, 0xdd, 0x6a, 0xc0, 0x7a,
-	0xd6, 0x53, 0xc5, 0x4e, 0xa1, 0xb8, 0x61, 0x81, 0x8e, 0x7c, 0xf3, 0xb1, 0x02, 0xdb, 0x0d, 0x13,
-	0x54, 0xe3, 0x3e, 0x15, 0x29, 0xdf, 0xd9, 0xf2, 0xe8, 0xc9, 0x4f, 0x6d, 0xb4, 0xf7, 0xd5, 0x12,
-	0xb2, 0x1f, 0xce, 0x21, 0x5b, 0x91, 0x04, 0x02, 0x59, 0xfd, 0xdf, 0xfc, 0xe0, 0xe6, 0x9e, 0x61,
-	0x1c, 0xab, 0x7b, 0x7c, 0x8b, 0x13, 0xc6, 0xb0, 0x46, 0xbf, 0x77, 0xfe, 0x5a, 0xf7, 0xda, 0xcf,
-	0xd7, 0xbd, 0xf6, 0xbf, 0xeb, 0x5e, 0xfb, 0xe7, 0xeb, 0x5e, 0xeb, 0xf9, 0x75, 0xaf, 0xf5, 0xcf,
-	0x75, 0xaf, 0x85, 0x7a, 0x09, 0xbb, 0x7a, 0x09, 0x70, 0xb4, 0xad, 0x88, 0xea, 0x3f, 0x7f, 0xdc,
-	0x7e, 0xfa, 0xed, 0x8c, 0xc8, 0xf9, 0x32, 0x56, 0x77, 0x13, 0x09, 0x99, 0x61, 0x3a, 0x83, 0x05,
-	0x5b, 0xc1, 0xfb, 0x2b, 0xa0, 0x72, 0x99, 0x81, 0x88, 0x08, 0x95, 0x90, 0xe9, 0x19, 0x91, 0x20,
-	0x64, 0xb4, 0xfa, 0x24, 0xff, 0x9a, 0xab, 0xff, 0x5a, 0x7c, 0x88, 0x39, 0xb7, 0xbf, 0x7f, 0xe9,
-	0xdc, 0x19, 0x9f, 0x0e, 0x7f, 0xeb, 0x74, 0xc7, 0xb6, 0x9c, 0x53, 0x55, 0xce, 0x90, 0xf3, 0xf0,
-	0xeb, 0x3c, 0xe5, 0xef, 0x72, 0xf3, 0x42, 0x6d, 0x5e, 0x0c, 0x39, 0xbf, 0xb0, 0x9b, 0xeb, 0xce,
-	0xdb, 0xf5, 0x9b, 0x17, 0x67, 0xe3, 0xd1, 0x97, 0x20, 0x71, 0x8a, 0x25, 0xfe, 0xaf, 0xf3, 0x86,
-	0x4d, 0x1c, 0x0c, 0x54, 0xe6, 0x60, 0x30, 0xe4, 0x7c, 0x30, 0xb0, 0xb9, 0xf1, 0xa6, 0xfe, 0xca,
-	0x79, 0xf0, 0x7f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x34, 0x7c, 0x7a, 0xd7, 0xe7, 0x0a, 0x00, 0x00,
+	// 1031 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x57, 0x4d, 0x6f, 0x23, 0x35,
+	0x18, 0xee, 0xa4, 0xdb, 0x2f, 0x27, 0xed, 0xb2, 0xd3, 0x16, 0x95, 0x00, 0x51, 0x89, 0x10, 0x2a,
+	0x48, 0xcc, 0xd0, 0xee, 0x8a, 0x5d, 0x65, 0x11, 0x28, 0xe9, 0x8a, 0x76, 0x0f, 0x48, 0x61, 0xca,
+	0x72, 0xd8, 0xad, 0x88, 0x3c, 0x13, 0x27, 0x31, 0x4d, 0xc6, 0x66, 0xec, 0x44, 0x2a, 0xe2, 0x0f,
+	0x70, 0xdb, 0x13, 0x3f, 0x80, 0x23, 0x12, 0xfc, 0x0a, 0x0e, 0x88, 0xd3, 0x1e, 0xe1, 0x86, 0xda,
+	0x1b, 0xbf, 0x62, 0x65, 0x7b, 0x3c, 0x63, 0xcf, 0xee, 0x34, 0xed, 0x2d, 0x7e, 0x3f, 0x9e, 0xe7,
+	0xb5, 0xdf, 0xd7, 0xcf, 0x38, 0xe0, 0x7d, 0x8a, 0xe2, 0xe9, 0x24, 0x4c, 0xa0, 0x1f, 0x91, 0x04,
+	0xf9, 0x90, 0x52, 0x7f, 0xb6, 0x0f, 0xc7, 0x74, 0x04, 0xf7, 0xc5, 0xc2, 0xa3, 0x09, 0xe1, 0xc4,
+	0xad, 0xeb, 0x28, 0x4f, 0x44, 0x79, 0xc2, 0xa1, 0xa3, 0xea, 0x07, 0x36, 0x42, 0x44, 0x26, 0x94,
+	0xc4, 0x28, 0xe6, 0x7e, 0x34, 0x82, 0x38, 0xce, 0xd1, 0xe4, 0x52, 0xe1, 0xd5, 0x1f, 0x95, 0xe6,
+	0x90, 0xc9, 0x64, 0x1a, 0x63, 0x7e, 0xde, 0xa3, 0x84, 0x8c, 0x8d, 0x64, 0xcb, 0x9e, 0xa2, 0x74,
+	0xca, 0x50, 0xfa, 0x98, 0xf1, 0x04, 0x87, 0x53, 0x8e, 0x49, 0xcc, 0x72, 0x10, 0xcb, 0x9c, 0x62,
+	0x78, 0x65, 0x18, 0x03, 0x84, 0xf2, 0xcc, 0x01, 0x42, 0x69, 0xfc, 0x67, 0x65, 0xf1, 0x43, 0x32,
+	0x43, 0x49, 0x0c, 0xe3, 0xc8, 0x48, 0xcb, 0x6d, 0xf3, 0xd8, 0x70, 0x18, 0xe5, 0x69, 0x38, 0x8c,
+	0xe6, 0xed, 0x90, 0x8d, 0x30, 0x1a, 0xf7, 0x51, 0xbf, 0x70, 0x4c, 0x96, 0x39, 0xc5, 0x28, 0xed,
+	0x0f, 0xe3, 0xf0, 0xcc, 0x28, 0x56, 0x2e, 0xd3, 0x9c, 0x7b, 0x76, 0x0e, 0x4f, 0x60, 0xcc, 0x60,
+	0x24, 0xce, 0x2d, 0x8f, 0x37, 0x8c, 0x2a, 0xab, 0xf9, 0x0c, 0xbc, 0xfd, 0x4d, 0x6e, 0x64, 0x9d,
+	0xf3, 0x63, 0x84, 0x87, 0x23, 0x1e, 0xa0, 0x1f, 0xa6, 0x88, 0x71, 0xf7, 0x2d, 0xb0, 0x2a, 0x67,
+	0xa0, 0x87, 0xfb, 0x3b, 0xce, 0xae, 0xb3, 0xb7, 0x16, 0xac, 0xc8, 0xf5, 0xe3, 0xbe, 0xfb, 0x1e,
+	0xa8, 0x85, 0x63, 0x12, 0x9d, 0xf5, 0x46, 0x32, 0x63, 0xa7, 0xb2, 0xeb, 0xec, 0xdd, 0x0a, 0xaa,
+	0xd2, 0xa6, 0x40, 0x9a, 0xbf, 0x38, 0xe0, 0x9d, 0xd7, 0xa3, 0x33, 0x4a, 0x62, 0x86, 0xdc, 0x13,
+	0x50, 0x33, 0x4a, 0x62, 0x3b, 0xce, 0xee, 0xe2, 0x5e, 0xf5, 0xc0, 0xf7, 0xec, 0xd1, 0x35, 0xab,
+	0xd6, 0x5b, 0xf1, 0x0c, 0xdc, 0xc0, 0x02, 0xb9, 0x4e, 0x61, 0xff, 0x2e, 0x81, 0xf5, 0x36, 0xa5,
+	0x5d, 0x98, 0xc0, 0x09, 0xe2, 0x28, 0x61, 0xee, 0x53, 0x50, 0x53, 0x1b, 0xa5, 0xc2, 0xc6, 0xe4,
+	0x66, 0xab, 0x07, 0xf7, 0x0b, 0x95, 0x64, 0x8d, 0xf0, 0xd4, 0xcd, 0xc8, 0xaa, 0x39, 0x14, 0xcb,
+	0x1c, 0x2e, 0xa8, 0x46, 0x99, 0x81, 0xb9, 0x3f, 0x81, 0x6d, 0xfb, 0x2e, 0x68, 0x92, 0x8a, 0x24,
+	0x39, 0x2e, 0x27, 0xb1, 0x6f, 0x50, 0xce, 0xa6, 0xed, 0x5d, 0x42, 0xc6, 0x06, 0xeb, 0x66, 0xf4,
+	0x8a, 0x83, 0xb9, 0x31, 0xb8, 0x93, 0xcf, 0xb4, 0x66, 0x5e, 0x94, 0xcc, 0xed, 0x52, 0x66, 0xe3,
+	0x16, 0x64, 0xac, 0x47, 0x99, 0xcd, 0xa0, 0x7c, 0x63, 0x68, 0x5b, 0x99, 0x1b, 0x00, 0x80, 0xc3,
+	0x48, 0x13, 0xdd, 0x92, 0x44, 0x77, 0x4b, 0x89, 0xc4, 0xbd, 0xc9, 0x18, 0x1e, 0x87, 0x91, 0x01,
+	0xbd, 0x86, 0xd3, 0xa5, 0xec, 0x8e, 0x1c, 0x75, 0x8d, 0xba, 0x34, 0xa7, 0x3b, 0xea, 0x5e, 0x64,
+	0xb8, 0x27, 0x62, 0x69, 0x76, 0x87, 0x65, 0x06, 0x59, 0xef, 0x00, 0x65, 0xc8, 0xcb, 0x73, 0xea,
+	0x15, 0xaa, 0x92, 0xe1, 0x7e, 0x89, 0x4c, 0xd4, 0xb5, 0x01, 0xd2, 0x98, 0x3f, 0x82, 0x2d, 0x4b,
+	0xb8, 0x34, 0xfa, 0x8a, 0x44, 0x3f, 0x2a, 0x45, 0xb7, 0xd5, 0x2e, 0xe3, 0x79, 0x64, 0x9a, 0xcd,
+	0x7e, 0xf7, 0x5f, 0x71, 0xb0, 0xe6, 0x3e, 0xd8, 0xb2, 0x46, 0x7b, 0xfe, 0x55, 0x6e, 0x62, 0xb0,
+	0x5d, 0x48, 0x49, 0xef, 0x67, 0x17, 0x6c, 0x40, 0x4a, 0x55, 0xf5, 0xd2, 0x93, 0xde, 0x8b, 0x0f,
+	0xbd, 0xf2, 0x8f, 0x8b, 0x67, 0x43, 0xad, 0x43, 0x73, 0xd9, 0xfc, 0xc3, 0x01, 0xb7, 0x8f, 0x50,
+	0x8c, 0x18, 0x66, 0x6d, 0x4a, 0x4f, 0x38, 0xe4, 0xc8, 0x7d, 0x02, 0x6e, 0x0f, 0x95, 0xa9, 0x17,
+	0x91, 0x98, 0xa3, 0x98, 0xa7, 0x34, 0x1f, 0x5d, 0x45, 0x93, 0xa2, 0x1c, 0xaa, 0x8c, 0xe3, 0x85,
+	0x60, 0x63, 0x68, 0x59, 0x5c, 0x1f, 0xb8, 0x19, 0xec, 0x08, 0x45, 0x67, 0x94, 0xe0, 0x58, 0xa9,
+	0x41, 0xed, 0x78, 0x21, 0xb8, 0xa3, 0xa3, 0x33, 0x57, 0x67, 0x13, 0x68, 0x63, 0x4f, 0xec, 0x9a,
+	0x89, 0xe2, 0x9a, 0x7f, 0x2e, 0x83, 0x0d, 0x9b, 0xca, 0x7d, 0x06, 0xd6, 0xd5, 0x34, 0xda, 0xd5,
+	0x7e, 0x7a, 0xdd, 0x71, 0xb4, 0xe1, 0x02, 0x35, 0xda, 0x1a, 0x3c, 0x01, 0xdb, 0xd6, 0x17, 0x21,
+	0x23, 0x51, 0x62, 0xf1, 0x79, 0x39, 0x89, 0xf5, 0x1d, 0x29, 0x23, 0xdb, 0xd4, 0x61, 0x42, 0x21,
+	0x34, 0xe7, 0xf7, 0xc0, 0x35, 0x24, 0x42, 0x13, 0x2a, 0x8d, 0x78, 0x78, 0x33, 0x8d, 0xb0, 0xd9,
+	0x0c, 0xe5, 0xd1, 0x5c, 0x4f, 0x40, 0x55, 0xc8, 0x83, 0x26, 0x51, 0xfa, 0x70, 0xef, 0x7a, 0xfa,
+	0x50, 0x40, 0x17, 0x3a, 0x63, 0xf4, 0x44, 0x4d, 0xb7, 0x06, 0x5e, 0x9a, 0xd3, 0x93, 0x82, 0x80,
+	0x17, 0x7b, 0x22, 0xdd, 0x1a, 0x7c, 0x0a, 0xde, 0x2c, 0x08, 0xb8, 0x66, 0x51, 0x72, 0xf1, 0xc5,
+	0x8d, 0x15, 0xbc, 0x40, 0xb7, 0x65, 0x09, 0xb7, 0x71, 0x54, 0x42, 0x99, 0x34, 0xd7, 0xca, 0x9c,
+	0xa3, 0xb2, 0xa4, 0xa9, 0x78, 0x54, 0x03, 0x94, 0x75, 0x80, 0x81, 0x6d, 0x5b, 0x9c, 0x34, 0xc1,
+	0xea, 0x9c, 0x09, 0x2b, 0x51, 0xa7, 0xe2, 0x5e, 0xac, 0xb0, 0xd4, 0x7a, 0xf0, 0xbc, 0x02, 0x6a,
+	0x5f, 0x4f, 0x51, 0x72, 0x7e, 0x82, 0x92, 0x19, 0x8e, 0x90, 0xcb, 0x8b, 0x5f, 0xe0, 0x4f, 0xae,
+	0xaf, 0x29, 0x4a, 0xd1, 0xea, 0xfb, 0x37, 0xc8, 0x48, 0x05, 0xed, 0x67, 0x07, 0x6c, 0xbd, 0xee,
+	0x45, 0xe2, 0xde, 0xbf, 0x0a, 0xeb, 0x8a, 0x17, 0x52, 0xfd, 0xc1, 0xcd, 0x13, 0x55, 0x2d, 0x9d,
+	0xdf, 0x2b, 0x7f, 0x5d, 0x34, 0x9c, 0x17, 0x17, 0x0d, 0xe7, 0xbf, 0x8b, 0x86, 0xf3, 0xfc, 0xb2,
+	0xb1, 0xf0, 0xe2, 0xb2, 0xb1, 0xf0, 0xcf, 0x65, 0x63, 0x01, 0x34, 0x22, 0x32, 0xb9, 0x02, 0xb7,
+	0xb3, 0x2a, 0x76, 0x27, 0xde, 0x6f, 0x5d, 0xe7, 0xe9, 0x77, 0x43, 0xcc, 0x47, 0xd3, 0x50, 0xf4,
+	0xc9, 0x67, 0xe2, 0x21, 0x34, 0x44, 0x63, 0x32, 0x43, 0x1f, 0xcf, 0x50, 0xcc, 0xa7, 0x09, 0x62,
+	0x3e, 0x8e, 0x39, 0x4a, 0xe4, 0x3c, 0x73, 0xc4, 0xb8, 0x3f, 0x7b, 0x90, 0xbe, 0xf2, 0xcb, 0xff,
+	0x45, 0x3c, 0x84, 0x94, 0xea, 0xdf, 0xbf, 0x56, 0x16, 0xbb, 0x87, 0xed, 0xdf, 0x2a, 0xf5, 0xae,
+	0x2e, 0xe7, 0x50, 0x94, 0xd3, 0xa6, 0xd4, 0xfb, 0x36, 0x0d, 0xf9, 0x3b, 0x77, 0x9e, 0x0a, 0xe7,
+	0x69, 0x9b, 0xd2, 0x53, 0xed, 0xbc, 0xa8, 0x7c, 0x50, 0xee, 0x3c, 0x3d, 0xea, 0x76, 0xbe, 0x42,
+	0x1c, 0xf6, 0x21, 0x87, 0xff, 0x57, 0xde, 0xd5, 0x81, 0xad, 0x96, 0x88, 0x6c, 0xb5, 0xda, 0x94,
+	0xb6, 0x5a, 0x3a, 0x36, 0x5c, 0x96, 0x2f, 0xd6, 0xbb, 0x2f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x98,
+	0x5e, 0x8b, 0xb0, 0xff, 0x0c, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -503,6 +625,8 @@ const _ = grpc.SupportPackageIsVersion4
 type QueryServiceClient interface {
 	// Gets the app parameters.
 	AppParameters(ctx context.Context, in *AppParametersRequest, opts ...grpc.CallOption) (*AppParametersResponse, error)
+	// Returns the CometBFT transactions that occurred during a given block.
+	TransactionsByHeight(ctx context.Context, in *TransactionsByHeightRequest, opts ...grpc.CallOption) (*TransactionsByHeightResponse, error)
 }
 
 type queryServiceClient struct {
@@ -522,10 +646,21 @@ func (c *queryServiceClient) AppParameters(ctx context.Context, in *AppParameter
 	return out, nil
 }
 
+func (c *queryServiceClient) TransactionsByHeight(ctx context.Context, in *TransactionsByHeightRequest, opts ...grpc.CallOption) (*TransactionsByHeightResponse, error) {
+	out := new(TransactionsByHeightResponse)
+	err := c.cc.Invoke(ctx, "/penumbra.core.app.v1alpha1.QueryService/TransactionsByHeight", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServiceServer is the server API for QueryService service.
 type QueryServiceServer interface {
 	// Gets the app parameters.
 	AppParameters(context.Context, *AppParametersRequest) (*AppParametersResponse, error)
+	// Returns the CometBFT transactions that occurred during a given block.
+	TransactionsByHeight(context.Context, *TransactionsByHeightRequest) (*TransactionsByHeightResponse, error)
 }
 
 // UnimplementedQueryServiceServer can be embedded to have forward compatible implementations.
@@ -534,6 +669,9 @@ type UnimplementedQueryServiceServer struct {
 
 func (*UnimplementedQueryServiceServer) AppParameters(ctx context.Context, req *AppParametersRequest) (*AppParametersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppParameters not implemented")
+}
+func (*UnimplementedQueryServiceServer) TransactionsByHeight(ctx context.Context, req *TransactionsByHeightRequest) (*TransactionsByHeightResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TransactionsByHeight not implemented")
 }
 
 func RegisterQueryServiceServer(s grpc1.Server, srv QueryServiceServer) {
@@ -558,6 +696,24 @@ func _QueryService_AppParameters_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _QueryService_TransactionsByHeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransactionsByHeightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServiceServer).TransactionsByHeight(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/penumbra.core.app.v1alpha1.QueryService/TransactionsByHeight",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServiceServer).TransactionsByHeight(ctx, req.(*TransactionsByHeightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _QueryService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "penumbra.core.app.v1alpha1.QueryService",
 	HandlerType: (*QueryServiceServer)(nil),
@@ -566,9 +722,90 @@ var _QueryService_serviceDesc = grpc.ServiceDesc{
 			MethodName: "AppParameters",
 			Handler:    _QueryService_AppParameters_Handler,
 		},
+		{
+			MethodName: "TransactionsByHeight",
+			Handler:    _QueryService_TransactionsByHeight_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "penumbra/core/app/v1alpha1/app.proto",
+}
+
+func (m *TransactionsByHeightRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TransactionsByHeightRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TransactionsByHeightRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.BlockHeight != 0 {
+		i = encodeVarintApp(dAtA, i, uint64(m.BlockHeight))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.ChainId) > 0 {
+		i -= len(m.ChainId)
+		copy(dAtA[i:], m.ChainId)
+		i = encodeVarintApp(dAtA, i, uint64(len(m.ChainId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *TransactionsByHeightResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TransactionsByHeightResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TransactionsByHeightResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.BlockHeight != 0 {
+		i = encodeVarintApp(dAtA, i, uint64(m.BlockHeight))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Transactions) > 0 {
+		for iNdEx := len(m.Transactions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Transactions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintApp(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AppParameters) Marshal() (dAtA []byte, err error) {
@@ -651,9 +888,9 @@ func (m *AppParameters) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x1a
 	}
-	if m.DaoParams != nil {
+	if m.CommunityPoolParams != nil {
 		{
-			size, err := m.DaoParams.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.CommunityPoolParams.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -856,9 +1093,9 @@ func (m *GenesisContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x3a
 	}
-	if m.DaoContent != nil {
+	if m.CommunityPoolContent != nil {
 		{
-			size, err := m.DaoContent.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.CommunityPoolContent.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -942,6 +1179,40 @@ func encodeVarintApp(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
+func (m *TransactionsByHeightRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ChainId)
+	if l > 0 {
+		n += 1 + l + sovApp(uint64(l))
+	}
+	if m.BlockHeight != 0 {
+		n += 1 + sovApp(uint64(m.BlockHeight))
+	}
+	return n
+}
+
+func (m *TransactionsByHeightResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Transactions) > 0 {
+		for _, e := range m.Transactions {
+			l = e.Size()
+			n += 1 + l + sovApp(uint64(l))
+		}
+	}
+	if m.BlockHeight != 0 {
+		n += 1 + sovApp(uint64(m.BlockHeight))
+	}
+	return n
+}
+
 func (m *AppParameters) Size() (n int) {
 	if m == nil {
 		return 0
@@ -952,8 +1223,8 @@ func (m *AppParameters) Size() (n int) {
 		l = m.ChainParams.Size()
 		n += 1 + l + sovApp(uint64(l))
 	}
-	if m.DaoParams != nil {
-		l = m.DaoParams.Size()
+	if m.CommunityPoolParams != nil {
+		l = m.CommunityPoolParams.Size()
 		n += 1 + l + sovApp(uint64(l))
 	}
 	if m.GovernanceParams != nil {
@@ -1067,8 +1338,8 @@ func (m *GenesisContent) Size() (n int) {
 		l = m.ChainContent.Size()
 		n += 1 + l + sovApp(uint64(l))
 	}
-	if m.DaoContent != nil {
-		l = m.DaoContent.Size()
+	if m.CommunityPoolContent != nil {
+		l = m.CommunityPoolContent.Size()
 		n += 1 + l + sovApp(uint64(l))
 	}
 	if m.FeeContent != nil {
@@ -1087,6 +1358,210 @@ func sovApp(x uint64) (n int) {
 }
 func sozApp(x uint64) (n int) {
 	return sovApp(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *TransactionsByHeightRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApp
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TransactionsByHeightRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TransactionsByHeightRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChainId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChainId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockHeight", wireType)
+			}
+			m.BlockHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.BlockHeight |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApp(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApp
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TransactionsByHeightResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApp
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TransactionsByHeightResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TransactionsByHeightResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Transactions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthApp
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthApp
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Transactions = append(m.Transactions, &v1alpha1.Transaction{})
+			if err := m.Transactions[len(m.Transactions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockHeight", wireType)
+			}
+			m.BlockHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApp
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.BlockHeight |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApp(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApp
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *AppParameters) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -1147,7 +1622,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ChainParams == nil {
-				m.ChainParams = &v1alpha1.ChainParameters{}
+				m.ChainParams = &v1alpha11.ChainParameters{}
 			}
 			if err := m.ChainParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1155,7 +1630,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DaoParams", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CommunityPoolParams", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1182,10 +1657,10 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.DaoParams == nil {
-				m.DaoParams = &v1alpha11.DaoParameters{}
+			if m.CommunityPoolParams == nil {
+				m.CommunityPoolParams = &v1alpha12.CommunityPoolParameters{}
 			}
-			if err := m.DaoParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CommunityPoolParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -1219,7 +1694,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.GovernanceParams == nil {
-				m.GovernanceParams = &v1alpha12.GovernanceParameters{}
+				m.GovernanceParams = &v1alpha13.GovernanceParameters{}
 			}
 			if err := m.GovernanceParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1255,7 +1730,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.IbcParams == nil {
-				m.IbcParams = &v1alpha13.IbcParameters{}
+				m.IbcParams = &v1alpha14.IbcParameters{}
 			}
 			if err := m.IbcParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1291,7 +1766,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StakeParams == nil {
-				m.StakeParams = &v1alpha14.StakeParameters{}
+				m.StakeParams = &v1alpha15.StakeParameters{}
 			}
 			if err := m.StakeParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1327,7 +1802,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.FeeParams == nil {
-				m.FeeParams = &v1alpha15.FeeParameters{}
+				m.FeeParams = &v1alpha16.FeeParameters{}
 			}
 			if err := m.FeeParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1363,7 +1838,7 @@ func (m *AppParameters) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.DistributionsParams == nil {
-				m.DistributionsParams = &v1alpha16.DistributionsParameters{}
+				m.DistributionsParams = &v1alpha17.DistributionsParameters{}
 			}
 			if err := m.DistributionsParams.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1735,7 +2210,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.StakeContent == nil {
-				m.StakeContent = &v1alpha14.GenesisContent{}
+				m.StakeContent = &v1alpha15.GenesisContent{}
 			}
 			if err := m.StakeContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1771,7 +2246,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ShieldedPoolContent == nil {
-				m.ShieldedPoolContent = &v1alpha17.GenesisContent{}
+				m.ShieldedPoolContent = &v1alpha18.GenesisContent{}
 			}
 			if err := m.ShieldedPoolContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1807,7 +2282,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.GovernanceContent == nil {
-				m.GovernanceContent = &v1alpha12.GenesisContent{}
+				m.GovernanceContent = &v1alpha13.GenesisContent{}
 			}
 			if err := m.GovernanceContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1843,7 +2318,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.IbcContent == nil {
-				m.IbcContent = &v1alpha13.GenesisContent{}
+				m.IbcContent = &v1alpha14.GenesisContent{}
 			}
 			if err := m.IbcContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1879,7 +2354,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ChainContent == nil {
-				m.ChainContent = &v1alpha1.GenesisContent{}
+				m.ChainContent = &v1alpha11.GenesisContent{}
 			}
 			if err := m.ChainContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1887,7 +2362,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DaoContent", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CommunityPoolContent", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1914,10 +2389,10 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.DaoContent == nil {
-				m.DaoContent = &v1alpha11.GenesisContent{}
+			if m.CommunityPoolContent == nil {
+				m.CommunityPoolContent = &v1alpha12.GenesisContent{}
 			}
-			if err := m.DaoContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.CommunityPoolContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -1951,7 +2426,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.FeeContent == nil {
-				m.FeeContent = &v1alpha15.GenesisContent{}
+				m.FeeContent = &v1alpha16.GenesisContent{}
 			}
 			if err := m.FeeContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1987,7 +2462,7 @@ func (m *GenesisContent) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.DistributionsContent == nil {
-				m.DistributionsContent = &v1alpha16.GenesisContent{}
+				m.DistributionsContent = &v1alpha17.GenesisContent{}
 			}
 			if err := m.DistributionsContent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
