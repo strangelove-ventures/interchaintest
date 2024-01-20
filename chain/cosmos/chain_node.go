@@ -138,6 +138,22 @@ func (tn *ChainNode) NewClient(addr string) error {
 	return nil
 }
 
+func (tn *ChainNode) NewSidecarProcessFromConfig(ctx context.Context, sidecar ibc.SidecarConfig) error {
+	return tn.NewSidecarProcess(
+		ctx,
+		sidecar.PreStart,
+		sidecar.ProcessName,
+		tn.DockerClient,
+		tn.NetworkID,
+		tn.Image,
+		tn.HomeDir(),
+		sidecar.Ports,
+		sidecar.StartCmd,
+		sidecar.Env,
+	)
+
+}
+
 func (tn *ChainNode) NewSidecarProcess(
 	ctx context.Context,
 	preStart bool,

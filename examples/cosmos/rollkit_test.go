@@ -2,9 +2,11 @@ package cosmos_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -38,22 +40,6 @@ var (
 	// TODO: Set namespace and CELESTIA_CUSTOM env variable on bridge start
 	// echo 0000$(openssl rand -hex 8)
 	CELESTIA_NAMESPACE = "00007e5327f23637ed07"
-
-	startCmd = []string{
-		"celestia-da", "bridge", "init", "--node.store", NODE_PATH,
-	}
-
-	otherCmd = []string{
-		"celestia-da", "bridge", "start",
-		"--node.store", NODE_PATH,
-		"--gateway",
-		"--core.ip", "test-val-0-TestRollkitCelestia", // n.HostName()
-		"--keyring.accname", "validator",
-		"--gateway.addr", "0.0.0.0",
-		"--rpc.addr", "0.0.0.0",
-		"--da.grpc.namespace", CELESTIA_NAMESPACE,
-		"--da.grpc.listen", "0.0.0.0:26650",
-	}
 )
 
 func TestRollkitCelestia(t *testing.T) {
@@ -73,7 +59,7 @@ func TestRollkitCelestia(t *testing.T) {
 		Type:                "cosmos",
 		GasPrices:           "0utia",
 		TrustingPeriod:      "500h",
-		HostPortOverride:    map[int]int{26650: 26650, 1317: 1317, 26656: 26656, 26657: 26657, 9090: 9090},
+		HostPortOverride:    map[int]int{26650: 26650, 1317: 1317, 26656: 26656, 26657: 26657, 26658: 26658, 26659: 26659, 9090: 9090},
 		EncodingConfig:      nil,
 		SkipGenTx:           false,
 		CoinDecimals:        &coinDecimals,
@@ -98,22 +84,6 @@ func TestRollkitCelestia(t *testing.T) {
 				"indexer": "kv", // TODO: since we execute queries against the validator (unsure if this works on a celestia validator node)
 			},
 		}},
-		SidecarConfigs: []ibc.SidecarConfig{
-			{
-				ValidatorProcess: true,
-				ProcessName:      "celestia-da",
-				Image: ibc.DockerImage{
-					Repository: DockerImage,
-					Version:    DockerVersion,
-					UidGid:     "1025:1025",
-				},
-				HomeDir:  hardcodedPath,
-				Ports:    []string{"26650"},
-				StartCmd: startCmd,
-				Env:      []string{},
-				PreStart: false,
-			},
-		},
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -153,9 +123,6 @@ func TestRollkitCelestia(t *testing.T) {
 	chainUser := users[0]
 	fmt.Println("chainUser", chainUser)
 
-	fmt.Println("nodePaths", NODE_PATH)
-
-	// TODO: From the guide, after 1 block (20 seconds?)
 	n := chain.GetNode()
 
 	// valCommonAddr, err := chain.GetAddress(ctx, "validator")
@@ -176,13 +143,39 @@ func TestRollkitCelestia(t *testing.T) {
 	vals, err := chain.StakingQueryValidators(ctx, stakingtypes.BondStatusBonded)
 	require.NoError(t, err)
 
-	val := vals[0].OperatorAddress
-
-	fmt.Println("n.Sidecars", n.Sidecars[0])
+	// fmt.Println("n.Sidecars", n.Sidecars[0])
 
 	// recover the validator key (from mnemonic) to the da layer home ( https://github.com/rollkit/local-celestia-devnet/blob/main/entrypoint.sh#L57 )
 	if err := RecoverKey(ctx, n, "validator", n.ValidatorMnemonic, path.Join(NODE_PATH, "keys")); err != nil {
 		t.Fatal(err)
+	}
+
+	// wait for 100 blocks
+	// testutil.WaitForBlocks(ctx, 100, chain)
+
+	genesisHash := getGenesisBlockHash(ctx, n, 0)
+	fmt.Println("genesisHash", genesisHash)
+
+	err = n.NewSidecarProcessFromConfig(ctx, ibc.SidecarConfig{
+		ValidatorProcess: true,
+		ProcessName:      "celestia-da",
+		Image: ibc.DockerImage{
+			Repository: DockerImage,
+			Version:    DockerVersion,
+			UidGid:     "1025:1025",
+		},
+		HomeDir: hardcodedPath,
+		Ports:   []string{"26650"},
+		StartCmd: []string{
+			"celestia-da", "bridge", "init", "--node.store", NODE_PATH,
+		},
+		Env: []string{
+			"CELESTIA_CUSTOM=test:" + genesisHash, // TODO: does this fix bridge start?
+		},
+		PreStart: false,
+	})
+	if err != nil {
+		t.Fatal(fmt.Errorf("failed to start celestia-da: %w", err))
 	}
 
 	sc := n.Sidecars[0]
@@ -194,18 +187,28 @@ func TestRollkitCelestia(t *testing.T) {
 	}
 
 	// waits for 20 seconds (2s blocks * 10)
-	testutil.WaitForBlocks(ctx, 10, chain)
+	testutil.WaitForBlocks(ctx, 5, chain)
 
-	stdout, stderr, err := sc.Exec(ctx, otherCmd, nil)
+	stdout, stderr, err := sc.Exec(ctx, []string{
+		"celestia-da", "bridge", "start",
+		"--node.store", NODE_PATH,
+		"--gateway",
+		"--core.ip", n.HostName(), // "test-val-0-TestRollkitCelestia" = n.HostName()
+		"--keyring.accname", "validator",
+		"--gateway.addr", "0.0.0.0",
+		"--rpc.addr", "0.0.0.0",
+		"--da.grpc.namespace", CELESTIA_NAMESPACE,
+		"--da.grpc.listen", "0.0.0.0:26650",
+	}, nil)
 	fmt.Println("stdout", stdout)
 	fmt.Println("stderr", stderr)
 	fmt.Println("err", err)
 
-	testutil.WaitForBlocks(ctx, 10, chain)
+	testutil.WaitForBlocks(ctx, 5, chain)
 
 	// register teh EVM address
 	//  # private key: da6ed55cb2894ac2c9c10209c09de8e8b9d109b910338d5bf3d747a7e1fc9eb9
-	txHash, err := n.ExecTx(ctx, "validator", "qgb", "register", val, "0x966e6f22781EF6a6A82BBB4DB3df8E225DfD9488", "--fees", "30000utia", "-b", "block", "-y")
+	txHash, err := n.ExecTx(ctx, "validator", "qgb", "register", vals[0].OperatorAddress, "0x966e6f22781EF6a6A82BBB4DB3df8E225DfD9488", "--fees", "30000utia", "-b", "block", "-y")
 	require.NoError(t, err)
 
 	// convert txHash to response (this does not print, but works upon manually querying against the local node)
@@ -227,4 +230,40 @@ func RecoverKey(ctx context.Context, tn *cosmos.ChainNode, keyName, mnemonic, ho
 
 	_, _, err := tn.Exec(ctx, command, nil)
 	return err
+}
+
+func getGenesisBlockHash(ctx context.Context, node *cosmos.ChainNode, attempt int) string {
+	// GENESIS=$(curl -s  | jq '.result.block_id.hash' | tr -d '"')
+
+	type CelestiaBlock struct {
+		BlockID struct {
+			Hash string `json:"hash"`
+		} `json:"block_id"`
+	}
+
+	// stdout, stderr, err := node.ExecQuery(ctx, "block", "1", "--log_format=json")  // --output breaks celestia ofc....
+
+	// docker run reece/full-celestia:v0.0.1 celestia-appd q block 1 --node=http://172.17.0.1:26657
+
+	cmd := []string{"query", "block", "1", "--log_format=json", "--node=http://" + node.HostName() + ":26657"}
+	stdout, _, err := node.ExecBin(ctx, cmd...)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	fmt.Println("stdout", string(stdout))
+	fmt.Println("err", err)
+
+	// put stdout into genesis struct
+	var g CelestiaBlock
+	json.Unmarshal(stdout, &g)
+
+	if g.BlockID.Hash == "" {
+		if attempt > 15 {
+			panic("could not get genesis block hash")
+		}
+		time.Sleep(1 * time.Second)
+		return getGenesisBlockHash(ctx, node, attempt+1)
+	}
+
+	return g.BlockID.Hash
 }
