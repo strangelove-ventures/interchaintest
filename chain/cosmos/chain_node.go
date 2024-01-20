@@ -43,16 +43,17 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	VolumeName   string
-	Index        int
-	Chain        ibc.Chain
-	Validator    bool
-	NetworkID    string
-	DockerClient *dockerclient.Client
-	Client       rpcclient.Client
-	GrpcConn     *grpc.ClientConn
-	TestName     string
-	Image        ibc.DockerImage
+	VolumeName        string
+	Index             int
+	Chain             ibc.Chain
+	Validator         bool
+	ValidatorMnemonic string // if this is a validator, this will be set
+	NetworkID         string
+	DockerClient      *dockerclient.Client
+	Client            rpcclient.Client
+	GrpcConn          *grpc.ClientConn
+	TestName          string
+	Image             ibc.DockerImage
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -644,11 +645,25 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
+	_, stderr, err := tn.ExecBin(ctx,
 		"keys", "add", name,
 		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
 	)
+
+	if tn.Validator && tn.ValidatorMnemonic == "" {
+		lines := strings.Split(string(stderr), "\n")
+
+		updated := []string{}
+		for _, line := range lines {
+			if line != "" {
+				updated = append(updated, line)
+			}
+		}
+
+		tn.ValidatorMnemonic = updated[len(updated)-1]
+	}
+
 	return err
 }
 
