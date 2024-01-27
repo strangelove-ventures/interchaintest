@@ -14,9 +14,6 @@ import (
 )
 
 var (
-	// cosmos.GenesisKV sets the genesis key-value state of the cosmos chain before startup.
-	// To find the format of the genesis state, you can run `appd init <moniker>` on your local machine.
-	// On Unix based systems, this will save the genesis file to `$HOME/.appd/config/genesis.json`
 	sdk47Genesis = []cosmos.GenesisKV{
 		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
 		cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "10s"),
@@ -24,17 +21,17 @@ var (
 		cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
 	}
 
-	// The amount of token funds to send to each user when we request a faucet in the test
 	genesisFundsAmt = math.NewInt(10_000_000_000)
 )
 
 func TestCometMock(t *testing.T) {
-	// NewBuiltinChainFactory creates the base for a chain and its configuration.
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      "juno",
 			ChainName: "juno",
-			Version:   "v19.0.0-alpha.3", // note: if your SDK version is not high enough, the gRPC server will not start - https://github.com/cosmos/cosmos-sdk/issues/16277
+			// NOTE: To use CometMock you must use an SDK version with patch: https://github.com/cosmos/cosmos-sdk/issues/16277.
+			// SDK v0.46.6+
+			Version: "v19.0.0-alpha.3",
 			ChainConfig: ibc.ChainConfig{
 				Denom:          "ujuno",
 				Bech32Prefix:   "juno",
@@ -56,6 +53,7 @@ func TestCometMock(t *testing.T) {
 					1234:  1234,
 					26656: 26656,
 				},
+				GasPrices: "0ujuno",
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
@@ -84,79 +82,30 @@ func TestCometMock(t *testing.T) {
 	})
 
 	// Faucet funds to a user
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisFundsAmt, chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisFundsAmt, chain, chain)
 	user := users[0]
+	user2 := users[1]
 
 	// get the users balance
-	balance, err := chain.GetBalance(ctx, user.FormattedAddress(), "ujuno")
+	initBal, err := chain.GetBalance(ctx, user.FormattedAddress(), "ujuno")
 	require.NoError(t, err)
-	t.Logf("User balance: %s", balance)
 
-	// send a tx
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
+	// Send many transactions in a row
+	for i := 0; i < 10; i++ {
+		require.NoError(t, chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
+			Address: user2.FormattedAddress(),
+			Denom:   "ujuno",
+			Amount:  math.NewInt(1),
+		}))
+		require.NoError(t, chain.SendFunds(ctx, user2.KeyName(), ibc.WalletAmount{
+			Address: user.FormattedAddress(),
+			Denom:   "ujuno",
+			Amount:  math.NewInt(1),
+		}))
+	}
+
+	endBal, err := chain.GetBalance(ctx, user.FormattedAddress(), "ujuno")
 	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
-	err = chain.SendFunds(ctx, user.KeyName(), ibc.WalletAmount{
-		Address: user.FormattedAddress(),
-		Denom:   "ujuno",
-		Amount:  math.NewInt(1),
-	})
-	require.NoError(t, err)
+	require.EqualValues(t, initBal, endBal)
+
 }
