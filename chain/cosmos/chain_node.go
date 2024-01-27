@@ -989,21 +989,13 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	fmt.Println("chainCfg.CometMockImage: ", chainCfg.CometMockImage)
 
-	// if len chainCfg.CometMockImage > 0 {
-	fmt.Println("Using cometmock image: ", chainCfg.CometMockImage[0])
-	if !strings.Contains(strings.Join(cmd, " "), "--with-tendermint=") {
-		cmd = append(cmd, "--with-tendermint=false")
-	}
-	if !strings.Contains(strings.Join(cmd, " "), "--transport=") {
-		cmd = append(cmd, "--transport=grpc")
-	}
-
-	cmd = append(cmd, "--proxy_app="+fmt.Sprintf("tcp://%s:26658", tn.HostName())) // comet mock instance
+	cmd = append(cmd, "--with-tendermint=false", "--grpc-web.enable=false", "--transport=grpc")
+	cmd = append(cmd, "--address="+fmt.Sprintf("tcp://%s:26658", tn.HostName())) // comet mock instance
 
 	fmt.Println("Using cmd: ", cmd)
 
 	defaultCometMockPort := "22331"
-	defaultListenAddr := "tcp://0.0.0.0:22331"
+	defaultListenAddr := "tcp://0.0.0.0:22331" // tn.HostName() ?
 	genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 	connectionMode := "grpc"
 
@@ -1028,24 +1020,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		env:                chainCfg.Env,
 		containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, tn.TestName),
 	})
-
-	// tn.Sidecars = append(tn.Sidecars, NewSidecar(
-	// 	tn.log,
-	// 	true,
-	// 	true,
-	// 	tn.Chain,
-	// 	tn.DockerClient,
-	// 	tn.NetworkID,
-	// 	"cosmos",
-	// 	tn.TestName,
-	// 	chainCfg.CometMockImage[0],
-	// 	tn.HomeDir(),
-	// 	tn.Index,
-	// 	[]string{defaultCometMockPort},
-	// 	[]string{"cometmock", "--block-time=5", "--auto-tx=true", "--address=tcp://0.0.0.0:26658", genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
-	// 	chainCfg.Env,
-	// ))
-	// fmt.Printf("Sidecars: %+v\n", &tn.Sidecars)
 
 	fmt.Println("Name", tn.Sidecars[0].Name())
 
