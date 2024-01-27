@@ -63,10 +63,11 @@ type ChainNode struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
-	hostRPCPort  string
-	hostAPIPort  string
-	hostGRPCPort string
-	hostP2PPort  string
+	hostRPCPort   string
+	hostAPIPort   string
+	hostGRPCPort  string
+	hostP2PPort   string
+	cometHostname string
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -92,22 +93,24 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 type ChainNodes []*ChainNode
 
 const (
-	valKey      = "validator"
-	blockTime   = 2 // seconds
-	p2pPort     = "26656/tcp"
-	rpcPort     = "26657/tcp"
-	grpcPort    = "9090/tcp"
-	apiPort     = "1317/tcp"
-	privValPort = "1234/tcp"
+	valKey        = "validator"
+	blockTime     = 2 // seconds
+	p2pPort       = "26656/tcp"
+	rpcPort       = "26657/tcp"
+	grpcPort      = "9090/tcp"
+	apiPort       = "1317/tcp"
+	privValPort   = "1234/tcp"
+	cometMockPort = "22331"
 )
 
 var (
 	sentryPorts = nat.PortMap{
-		nat.Port(p2pPort):     {},
-		nat.Port(rpcPort):     {},
-		nat.Port(grpcPort):    {},
-		nat.Port(apiPort):     {},
-		nat.Port(privValPort): {},
+		nat.Port(p2pPort):                {},
+		nat.Port(rpcPort):                {},
+		nat.Port(grpcPort):               {},
+		nat.Port(apiPort):                {},
+		nat.Port(privValPort):            {},
+		nat.Port(cometMockPort + "/tcp"): {}, // TODO: is this supposed to go here? or only the sidecar
 	}
 )
 
@@ -216,6 +219,10 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
+func (tn *ChainNode) HostnameCometMock() string {
+	return tn.cometHostname
+}
+
 func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
 	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
@@ -302,6 +309,12 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+
+	// if cometmock is being used, we use that port instead
+	if len(tn.Chain.Config().CometMockImage) > 0 {
+		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort)
+	}
+
 	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
@@ -528,8 +541,19 @@ func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.
 // Will include additional flags for node URL, home directory, and chain ID.
 func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
+
+	endpoint := fmt.Sprintf("tcp://%s:26657", tn.HostName())
+
+	if len(tn.Chain.Config().CometMockImage) > 0 {
+		// url := strings.Replace(tn.hostRPCPort, "0.0.0.0", tn.HostName(), 1)
+		// endpoint = fmt.Sprintf("tcp://%s", url)
+		// TODO: Cometmock hostname
+		// endpoint = fmt.Sprintf("tcp://%s:%s", "0.0.0.0", cometMockPort)
+		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort) // TODO: host port
+	}
+
 	return append(command,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--node", endpoint,
 	)
 }
 
@@ -987,15 +1011,14 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
-	fmt.Println("chainCfg.CometMockImage: ", chainCfg.CometMockImage)
+	// TODO: do below only if chainCfg.CometMockImage is not len of 0
 
 	cmd = append(cmd, "--with-tendermint=false", "--grpc-web.enable=false", "--transport=grpc")
 	cmd = append(cmd, "--address="+fmt.Sprintf("tcp://%s:26658", tn.HostName())) // comet mock instance
 
 	fmt.Println("Using cmd: ", cmd)
 
-	defaultCometMockPort := "22331"
-	defaultListenAddr := "tcp://0.0.0.0:22331" // tn.HostName() ?
+	defaultListenAddr := "tcp://0.0.0.0:" + cometMockPort // todo: HostnameCometMock?
 	genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 	connectionMode := "grpc"
 
@@ -1005,9 +1028,9 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		Image:            chainCfg.CometMockImage[0],
 		preStart:         true, // ?
 		// TODO: blocktime from config override if possible here.
-		startCmd: []string{"cometmock", "--block-time=250", fmt.Sprintf("tcp://%s:26658", tn.HostName()), genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+		startCmd: []string{"cometmock", "--block-time=500", fmt.Sprintf("tcp://%s:26658", tn.HostName()), genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
 		ports: nat.PortMap{
-			nat.Port(defaultCometMockPort): {}, // does this need to be determistic? (nice to have I think, not required for internal use)
+			nat.Port(cometMockPort): {},
 		},
 		Chain:              tn.Chain,
 		TestName:           tn.TestName,
@@ -1044,6 +1067,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	rpcOverride := ""
 	for _, s := range tn.Sidecars {
 		err := s.containerLifecycle.Running(ctx)
 
@@ -1054,6 +1078,21 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 
 			if err := s.StartContainer(ctx); err != nil {
 				return err
+			}
+
+			if strings.Contains(s.Image.Repository, "cometmock") {
+				// get sidecar port
+				// s.hostRPCPort = hostPorts[4]
+
+				hostPorts, err := s.containerLifecycle.GetHostPorts(ctx, cometMockPort+"/tcp")
+				if err != nil {
+					return err
+				}
+				rpcOverride = hostPorts[0]
+				// tn.cometMockHostname = s.HostName()
+
+				tn.cometHostname = s.HostName()
+				fmt.Println("rpcOverride", rpcOverride)
 			}
 		}
 	}
@@ -1068,8 +1107,19 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort, tn.hostP2PPort = hostPorts[0], hostPorts[1], hostPorts[2], hostPorts[3]
+	fmt.Println("pre tn.hostRPCPort", tn.hostRPCPort)
 
-	err = tn.NewClient("tcp://" + tn.hostRPCPort)
+	if len(tn.Chain.Config().CometMockImage) > 0 {
+		tn.hostRPCPort = rpcOverride
+	}
+
+	fmt.Println("post tn.hostRPCPort", tn.hostRPCPort)
+
+	if tn.hostRPCPort == "" {
+		return fmt.Errorf("hostRPCPort is empty")
+	}
+
+	err = tn.NewClient("tcp://" + tn.hostRPCPort) // TODO: Replace this with the name of the sidecar
 	if err != nil {
 		return err
 	}
@@ -1078,6 +1128,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
 		if err != nil {
+			fmt.Println("retry.Do err", err)
 			return err
 		}
 		// TODO: reenable this check, having trouble with it for some reason

@@ -49,6 +49,13 @@ func TestCometMock(t *testing.T) {
 						UidGid:     "1025:1025",
 					},
 				},
+				HostPortOverride: map[int]int{ // debugging, remove
+					26657: 26657,
+					1317:  1317,
+					9090:  9090,
+					1234:  1234,
+					26656: 26656,
+				},
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
