@@ -105,12 +105,11 @@ const (
 
 var (
 	sentryPorts = nat.PortMap{
-		nat.Port(p2pPort):                {},
-		nat.Port(rpcPort):                {},
-		nat.Port(grpcPort):               {},
-		nat.Port(apiPort):                {},
-		nat.Port(privValPort):            {},
-		nat.Port(cometMockPort + "/tcp"): {}, // TODO: is this supposed to go here? or only the sidecar
+		nat.Port(p2pPort):     {},
+		nat.Port(rpcPort):     {},
+		nat.Port(grpcPort):    {},
+		nat.Port(apiPort):     {},
+		nat.Port(privValPort): {},
 	}
 )
 
@@ -219,6 +218,7 @@ func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
+// hostname of the comet mock container
 func (tn *ChainNode) HostnameCometMock() string {
 	return tn.cometHostname
 }
@@ -309,8 +309,6 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
-
-	// if cometmock is being used, we use that port instead
 	if len(tn.Chain.Config().CometMockImage) > 0 {
 		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort)
 	}
@@ -545,11 +543,7 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 	endpoint := fmt.Sprintf("tcp://%s:26657", tn.HostName())
 
 	if len(tn.Chain.Config().CometMockImage) > 0 {
-		// url := strings.Replace(tn.hostRPCPort, "0.0.0.0", tn.HostName(), 1)
-		// endpoint = fmt.Sprintf("tcp://%s", url)
-		// TODO: Cometmock hostname
-		// endpoint = fmt.Sprintf("tcp://%s:%s", "0.0.0.0", cometMockPort)
-		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort) // TODO: host port
+		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort)
 	}
 
 	return append(command,
@@ -1024,9 +1018,8 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			ProcessName:      "cometmock",
 			validatorProcess: true,
 			Image:            chainCfg.CometMockImage[0],
-			preStart:         true, // ?
-			// block-time is in milliseconds
-			startCmd: []string{"cometmock", "--block-time=200", abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+			preStart:         true,
+			startCmd:         []string{"cometmock", "--block-time=200", abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
 			ports: nat.PortMap{
 				nat.Port(cometMockPort): {},
 			},

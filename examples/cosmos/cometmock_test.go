@@ -40,7 +40,6 @@ func TestCometMock(t *testing.T) {
 				EncodingConfig: interchaintestwasm.WasmEncoding(),
 				CometMockImage: []ibc.DockerImage{
 					{
-						// docker pull ghcr.io/informalsystems/cometmock:v0.37.x needs to be done automatically from my other PR (rollkit).
 						Repository: "ghcr.io/informalsystems/cometmock",
 						Version:    "v0.37.x",
 						UidGid:     "1025:1025",

@@ -204,7 +204,6 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
 	if len(tn.Chain.Config().CometMockImage) > 0 {
-		// cometMock default port
 		rpc["laddr"] = "tcp://0.0.0.0:22331"
 	}
 
