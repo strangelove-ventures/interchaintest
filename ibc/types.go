@@ -27,7 +27,7 @@ type ChainConfig struct {
 	// Docker images required for running chain nodes.
 	Images []DockerImage `yaml:"images"`
 	// https://github.com/informalsystems/CometMock usage.
-	CometMockImage []DockerImage `yaml:"comet-mock-image"`
+	CometMock CometMockConfig `yaml:"comet-mock-image"` // TODO: ref?
 	// Binary to execute for the chain node daemon.
 	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
@@ -79,10 +79,6 @@ func (c ChainConfig) Clone() ChainConfig {
 	copy(images, c.Images)
 	x.Images = images
 
-	cometmock := make([]DockerImage, len(c.CometMockImage))
-	copy(cometmock, c.CometMockImage)
-	x.CometMockImage = cometmock
-
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
@@ -93,6 +89,11 @@ func (c ChainConfig) Clone() ChainConfig {
 	}
 
 	return x
+}
+
+func (c ChainConfig) UsesCometMock() bool {
+	img := c.CometMock.Image
+	return img.Repository != "" && img.Version != ""
 }
 
 func (c ChainConfig) VerifyCoinType() (string, error) {
@@ -135,8 +136,8 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.Images = append([]DockerImage(nil), other.Images...)
 	}
 
-	if len(other.CometMockImage) > 0 {
-		c.CometMockImage = append([]DockerImage(nil), other.CometMockImage...)
+	if other.UsesCometMock() {
+		c.CometMock = other.CometMock
 	}
 
 	if other.Bin != "" {
@@ -244,6 +245,11 @@ type DockerImage struct {
 	Repository string `yaml:"repository"`
 	Version    string `yaml:"version"`
 	UidGid     string `yaml:"uid-gid"`
+}
+
+type CometMockConfig struct {
+	Image       DockerImage `yaml:"image"`
+	BlockTimeMs int         `yaml:"block-time"`
 }
 
 func NewDockerImage(repository, version, uidGid string) DockerImage {

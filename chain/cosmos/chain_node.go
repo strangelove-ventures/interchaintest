@@ -93,14 +93,14 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 type ChainNodes []*ChainNode
 
 const (
-	valKey        = "validator"
-	blockTime     = 2 // seconds
-	p2pPort       = "26656/tcp"
-	rpcPort       = "26657/tcp"
-	grpcPort      = "9090/tcp"
-	apiPort       = "1317/tcp"
-	privValPort   = "1234/tcp"
-	cometMockPort = "22331"
+	valKey           = "validator"
+	blockTime        = 2 // seconds
+	p2pPort          = "26656/tcp"
+	rpcPort          = "26657/tcp"
+	grpcPort         = "9090/tcp"
+	apiPort          = "1317/tcp"
+	privValPort      = "1234/tcp"
+	cometMockRawPort = "22331"
 )
 
 var (
@@ -309,8 +309,8 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
-	if len(tn.Chain.Config().CometMockImage) > 0 {
-		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort)
+	if tn.Chain.Config().UsesCometMock() {
+		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
 	}
 
 	rpc["allowed_origins"] = []string{"*"}
@@ -542,8 +542,8 @@ func (tn *ChainNode) NodeCommand(command ...string) []string {
 
 	endpoint := fmt.Sprintf("tcp://%s:26657", tn.HostName())
 
-	if len(tn.Chain.Config().CometMockImage) > 0 {
-		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockPort)
+	if tn.Chain.Config().UsesCometMock() {
+		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
 	}
 
 	return append(command,
@@ -1005,23 +1005,29 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
-	// if cometmock is being used
-	if len(chainCfg.CometMockImage) > 0 {
+	if chainCfg.UsesCometMock() {
 		abciAppAddr := fmt.Sprintf("tcp://%s:26658", tn.HostName())
-		defaultListenAddr := "tcp://0.0.0.0:" + cometMockPort
-		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 		connectionMode := "grpc"
 
-		cmd = append(cmd, "--with-tendermint=false", "--transport=grpc", fmt.Sprintf("--address=%s", abciAppAddr))
+		cmd = append(cmd, "--with-tendermint=false", fmt.Sprintf("--transport=%s", connectionMode), fmt.Sprintf("--address=%s", abciAppAddr))
+
+		blockTime := chainCfg.CometMock.BlockTimeMs
+		if blockTime <= 0 {
+			blockTime = 100
+		}
+		blockTimeFlag := fmt.Sprintf("--block-time=%d", blockTime)
+
+		defaultListenAddr := fmt.Sprintf("tcp://0.0.0.0:%s", cometMockRawPort)
+		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 
 		tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
 			ProcessName:      "cometmock",
 			validatorProcess: true,
-			Image:            chainCfg.CometMockImage[0],
+			Image:            chainCfg.CometMock.Image,
 			preStart:         true,
-			startCmd:         []string{"cometmock", "--block-time=200", abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+			startCmd:         []string{"cometmock", blockTimeFlag, abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
 			ports: nat.PortMap{
-				nat.Port(cometMockPort): {},
+				nat.Port(cometMockRawPort): {},
 			},
 			Chain:              tn.Chain,
 			TestName:           tn.TestName,
@@ -1071,8 +1077,8 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				return err
 			}
 
-			if s.Image.Repository == tn.Chain.Config().CometMockImage[0].Repository {
-				hostPorts, err := s.containerLifecycle.GetHostPorts(ctx, cometMockPort+"/tcp")
+			if s.Image.Repository == tn.Chain.Config().CometMock.Image.Repository {
+				hostPorts, err := s.containerLifecycle.GetHostPorts(ctx, cometMockRawPort+"/tcp")
 				if err != nil {
 					return err
 				}

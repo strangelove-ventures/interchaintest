@@ -30,7 +30,7 @@ func TestCometMock(t *testing.T) {
 			Name:      "juno",
 			ChainName: "juno",
 			// NOTE: To use CometMock you must use an SDK version with patch: https://github.com/cosmos/cosmos-sdk/issues/16277.
-			// SDK v0.46.6+
+			// SDK v0.47.6+
 			Version: "v19.0.0-alpha.3",
 			ChainConfig: ibc.ChainConfig{
 				Denom:          "ujuno",
@@ -38,12 +38,13 @@ func TestCometMock(t *testing.T) {
 				CoinType:       "118",
 				ModifyGenesis:  cosmos.ModifyGenesis(sdk47Genesis),
 				EncodingConfig: interchaintestwasm.WasmEncoding(),
-				CometMockImage: []ibc.DockerImage{
-					{
+				CometMock: ibc.CometMockConfig{
+					Image: ibc.DockerImage{
 						Repository: "ghcr.io/informalsystems/cometmock",
 						Version:    "v0.37.x",
 						UidGid:     "1025:1025",
 					},
+					BlockTimeMs: 200,
 				},
 				GasPrices: "0ujuno",
 			},
