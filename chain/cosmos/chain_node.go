@@ -1011,40 +1011,37 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
-	// TODO: do below only if chainCfg.CometMockImage is not len of 0
+	// if cometmock is being used
+	if len(chainCfg.CometMockImage) > 0 {
+		abciAppAddr := fmt.Sprintf("tcp://%s:26658", tn.HostName())
+		defaultListenAddr := "tcp://0.0.0.0:" + cometMockPort
+		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
+		connectionMode := "grpc"
 
-	cmd = append(cmd, "--with-tendermint=false", "--grpc-web.enable=false", "--transport=grpc")
-	cmd = append(cmd, "--address="+fmt.Sprintf("tcp://%s:26658", tn.HostName())) // comet mock instance
+		cmd = append(cmd, "--with-tendermint=false", "--transport=grpc", fmt.Sprintf("--address=%s", abciAppAddr))
 
-	fmt.Println("Using cmd: ", cmd)
-
-	defaultListenAddr := "tcp://0.0.0.0:" + cometMockPort // todo: HostnameCometMock?
-	genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
-	connectionMode := "grpc"
-
-	tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
-		ProcessName:      "cometmock",
-		validatorProcess: true,
-		Image:            chainCfg.CometMockImage[0],
-		preStart:         true, // ?
-		// 5 blocks per second
-		startCmd: []string{"cometmock", "--block-time=200", fmt.Sprintf("tcp://%s:26658", tn.HostName()), genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
-		ports: nat.PortMap{
-			nat.Port(cometMockPort): {},
-		},
-		Chain:              tn.Chain,
-		TestName:           tn.TestName,
-		VolumeName:         tn.VolumeName,
-		DockerClient:       tn.DockerClient,
-		NetworkID:          tn.NetworkID,
-		Index:              tn.Index,
-		homeDir:            tn.HomeDir(),
-		log:                tn.log,
-		env:                chainCfg.Env,
-		containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, tn.TestName),
-	})
-
-	fmt.Println("Name", tn.Sidecars[0].Name())
+		tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
+			ProcessName:      "cometmock",
+			validatorProcess: true,
+			Image:            chainCfg.CometMockImage[0],
+			preStart:         true, // ?
+			// block-time is in milliseconds
+			startCmd: []string{"cometmock", "--block-time=200", abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+			ports: nat.PortMap{
+				nat.Port(cometMockPort): {},
+			},
+			Chain:              tn.Chain,
+			TestName:           tn.TestName,
+			VolumeName:         tn.VolumeName,
+			DockerClient:       tn.DockerClient,
+			NetworkID:          tn.NetworkID,
+			Index:              tn.Index,
+			homeDir:            tn.HomeDir(),
+			log:                tn.log,
+			env:                chainCfg.Env,
+			containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, tn.TestName),
+		})
+	}
 
 	usingPorts := nat.PortMap{}
 	for k, v := range sentryPorts {
