@@ -22,6 +22,8 @@ type ChainConfig struct {
 	ChainID string `yaml:"chain-id"`
 	// Docker images required for running chain nodes.
 	Images []DockerImage `yaml:"images"`
+	// CometMockImage is the docker image to use for the comet-bft mock server. https://github.com/informalsystems/CometMock
+	CometMockImage []DockerImage `yaml:"comet-mock-image"`
 	// Binary to execute for the chain node daemon.
 	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
@@ -73,6 +75,10 @@ func (c ChainConfig) Clone() ChainConfig {
 	copy(images, c.Images)
 	x.Images = images
 
+	cometmock := make([]DockerImage, len(c.CometMockImage))
+	copy(cometmock, c.CometMockImage)
+	x.CometMockImage = cometmock
+
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
@@ -123,6 +129,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if len(other.Images) > 0 {
 		c.Images = append([]DockerImage(nil), other.Images...)
+	}
+
+	if len(other.CometMockImage) > 0 {
+		c.CometMockImage = append([]DockerImage(nil), other.CometMockImage...)
 	}
 
 	if other.Bin != "" {
