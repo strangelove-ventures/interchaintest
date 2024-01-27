@@ -54,6 +54,10 @@ func (c *ContainerLifecycle) CreateContainer(
 		zap.String("command", strings.Join(cmd, " ")),
 	)
 
+	if err := image.PullImage(ctx, c.client); err != nil {
+		return err
+	}
+
 	pS := nat.PortSet{}
 	for k := range ports {
 		pS[k] = struct{}{}

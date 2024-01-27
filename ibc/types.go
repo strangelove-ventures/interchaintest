@@ -1,7 +1,9 @@
 package ibc
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -10,6 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -284,6 +288,20 @@ func (i DockerImage) Ref() string {
 	}
 
 	return i.Repository + ":" + i.Version
+}
+
+func (i DockerImage) PullImage(ctx context.Context, client *client.Client) error {
+	ref := i.Ref()
+	_, _, err := client.ImageInspectWithRaw(ctx, ref)
+	if err != nil {
+		rc, err := client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		if err != nil {
+			return fmt.Errorf("pull image %s: %w", ref, err)
+		}
+		_, _ = io.Copy(io.Discard, rc)
+		_ = rc.Close()
+	}
+	return nil
 }
 
 type WalletAmount struct {
