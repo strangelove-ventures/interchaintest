@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
@@ -200,13 +201,15 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	var nodeType string
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+}
+
+func (tn *ChainNode) NodeType() string {
+	nodeType := "fn"
 	if tn.Validator {
 		nodeType = "val"
-	} else {
-		nodeType = "fn"
 	}
-	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+	return nodeType
 }
 
 func (tn *ChainNode) ContainerID() string {
@@ -1020,8 +1023,9 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		defaultListenAddr := fmt.Sprintf("tcp://0.0.0.0:%s", cometMockRawPort)
 		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 
+		containerName := fmt.Sprintf("cometmock-%s-%d", tn.Name(), rand.Intn(50_000))
 		tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
-			ProcessName:      "cometmock",
+			ProcessName:      containerName,
 			validatorProcess: true,
 			Image:            chainCfg.CometMock.Image,
 			preStart:         true,
@@ -1038,7 +1042,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			homeDir:            tn.HomeDir(),
 			log:                tn.log,
 			env:                chainCfg.Env,
-			containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, tn.TestName),
+			containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, containerName),
 		})
 	}
 

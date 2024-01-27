@@ -89,6 +89,15 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		chainConfig.EncodingConfig = &cfg
 	}
 
+	if chainConfig.UsesCometMock() {
+		if numValidators != 1 {
+			panic(fmt.Sprintf("CometMock only supports 1 validator. Set `NumValidators` to 1 in %s's ChainSpec", chainConfig.Name))
+		}
+		if numFullNodes != 0 {
+			panic(fmt.Sprintf("CometMock only supports 1 validator. Set `NumFullNodes` to 0 in %s's ChainSpec", chainConfig.Name))
+		}
+	}
+
 	registry := codectypes.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(registry)
 	cdc := codec.NewProtoCodec(registry)

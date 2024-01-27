@@ -7,7 +7,6 @@ import (
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	interchaintestwasm "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/wasm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -33,23 +32,18 @@ func TestCometMock(t *testing.T) {
 			// SDK v0.47.6+
 			Version: "v19.0.0-alpha.3",
 			ChainConfig: ibc.ChainConfig{
-				Denom:          "ujuno",
-				Bech32Prefix:   "juno",
-				CoinType:       "118",
-				ModifyGenesis:  cosmos.ModifyGenesis(sdk47Genesis),
-				EncodingConfig: interchaintestwasm.WasmEncoding(),
+				Denom:         "ujuno",
+				Bech32Prefix:  "juno",
+				CoinType:      "118",
+				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 				CometMock: ibc.CometMockConfig{
-					Image: ibc.DockerImage{
-						Repository: "ghcr.io/informalsystems/cometmock",
-						Version:    "v0.37.x",
-						UidGid:     "1025:1025",
-					},
+					Image:       ibc.NewDockerImage("ghcr.io/informalsystems/cometmock", "v0.37.x", "1025:1025"),
 					BlockTimeMs: 200,
 				},
 				GasPrices: "0ujuno",
 			},
-			NumValidators: &numVals,
-			NumFullNodes:  &numFullNodes,
+			NumValidators: &numValsOne,
+			NumFullNodes:  &numFullNodesZero,
 		},
 	})
 
