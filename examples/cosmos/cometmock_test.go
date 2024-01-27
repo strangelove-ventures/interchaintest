@@ -34,7 +34,7 @@ func TestCometMock(t *testing.T) {
 		{
 			Name:      "juno",
 			ChainName: "juno",
-			Version:   "v16.0.0",
+			Version:   "v19.0.0-alpha.3", // note: if your SDK version is not high enough, the gRPC server will not start - https://github.com/cosmos/cosmos-sdk/issues/16277
 			ChainConfig: ibc.ChainConfig{
 				Denom:          "ujuno",
 				Bech32Prefix:   "juno",

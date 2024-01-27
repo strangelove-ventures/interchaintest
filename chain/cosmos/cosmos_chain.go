@@ -201,7 +201,7 @@ func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (std
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
 	if len(c.Config().CometMockImage) > 0 {
-		return fmt.Sprintf("http://%s:22331", "juno-1-cometmock-val-0-TestCometMock")
+		return fmt.Sprintf("http://%s:22331", c.getFullNode().HostnameCometMock())
 	}
 
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
