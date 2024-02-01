@@ -2,6 +2,7 @@
   "index": "Introduction",
   "buildBinary": "Building Binary",
   "RunTests": "Run Tests",
+  "local-interchain": "Local Interchain",
   "contact": {
     "title": "Contact ↗",
     "type": "page",
