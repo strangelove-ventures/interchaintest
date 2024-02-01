@@ -5,7 +5,7 @@ This is a step-by-step guide to setup a Windows environment and add the missing 
 **Local Interchain enables developers to :-**
 - Quickly spin up a local testnet for any wasm chain.
 - Test IBC connection compatibility on a high level between multiple local chains.
-- Execute binary commands such as `tx decode` *[see example]([../python/api_test.py)*.
+- Execute binary commands such as `tx decode` *[see example](../python/api_test.py)*.
 - Store and execute wasm smart contracts *[see example](../python/daodao.py)*.
 - Local RPC node + REST API which enables building scripts with any language.
 - Configure chains to be launched within the testing environment, adjusting parameters such as gas options, number of validators, IBC paths, governance parameters, genesis accounts, and much more.
