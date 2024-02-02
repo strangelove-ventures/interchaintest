@@ -141,6 +141,15 @@ func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte
 	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
+
+	// persist nested errors such as ValidateBasic checks.
+	code := resp.Code
+	rawLog := resp.RawLog
+
+	if code != 0 {
+		return resp, fmt.Errorf("error in transaction (code: %d): raw_log: %s", code, rawLog)
+	}
+
 	return resp, nil
 }
 
