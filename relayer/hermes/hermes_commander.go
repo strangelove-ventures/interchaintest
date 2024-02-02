@@ -185,6 +185,10 @@ func (c commander) CreateClients(pathName string, opts ibc.CreateClientOptions, 
 	panic("create clients implemented in hermes relayer not the commander")
 }
 
+func (c commander) CreateClient(srcChain, dstChainName, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	panic("create client implemented in hermes relayer not the commander")
+}
+
 func (c commander) CreateConnections(pathName string, homeDir string) []string {
 	panic("create connections implemented in hermes relayer not the commander")
 }
