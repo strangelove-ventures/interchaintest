@@ -289,6 +289,16 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, nil)
 }
 
+func (p *PenumbraAppNode) SendIBCTransfer(
+	ctx context.Context,
+	channelID string,
+	keyName string,
+	amount ibc.WalletAmount,
+	options ibc.TransferOptions,
+) (ibc.Tx, error) {
+	return ibc.Tx{}, errors.New("not yet implemented")
+}
+
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {
 	return p.containerLifecycle.StopContainer(ctx)
 }

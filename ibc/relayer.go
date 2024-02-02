@@ -268,23 +268,36 @@ func (o Order) Validate() error {
 }
 
 // CreateClientOptions contains the configuration for creating a client.
+
+// a zero value is the same as not specifying the flag and will use the relayer defauls
 type CreateClientOptions struct {
-	TrustingPeriod string
+	TrustingPeriod           string
+	TrustingPeriodPercentage int64 // only available for Go Relayer
+	MaxClockDrift            string
 }
 
 // DefaultClientOpts returns the default settings for creating clients.
-// These default options are usually determined by the relayer
+
+// empty values will use the relayer defaults
 func DefaultClientOpts() CreateClientOptions {
-	return CreateClientOptions{
-		TrustingPeriod: "0",
-	}
+	return CreateClientOptions{}
 }
 
 func (opts CreateClientOptions) Validate() error {
-	_, err := time.ParseDuration(opts.TrustingPeriod)
-	if err != nil {
-		return err
+	if opts.TrustingPeriod != "" {
+		_, err := time.ParseDuration(opts.TrustingPeriod)
+		if err != nil {
+			return err
+		}
 	}
+
+	if opts.MaxClockDrift != "" {
+		_, err := time.ParseDuration(opts.MaxClockDrift)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -205,7 +205,10 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		cmd = append(cmd, "--load-state", dockerJsonFile)
 	}
 
-	usingPorts := natPorts
+	usingPorts := nat.PortMap{}
+	for k, v := range natPorts {
+		usingPorts[k] = v
+	}
 
 	if c.cfg.HostPortOverride != nil {
 		for intP, extP := range c.cfg.HostPortOverride {

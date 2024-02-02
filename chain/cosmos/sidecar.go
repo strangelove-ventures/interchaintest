@@ -37,6 +37,7 @@ type SidecarProcess struct {
 	Image        ibc.DockerImage
 	ports        nat.PortMap
 	startCmd     []string
+	env          []string
 	homeDir      string
 
 	containerLifecycle *dockerutil.ContainerLifecycle
@@ -55,6 +56,7 @@ func NewSidecar(
 	index int,
 	ports []string,
 	startCmd []string,
+	env []string,
 ) *SidecarProcess {
 	processPorts := nat.PortMap{}
 
@@ -80,6 +82,7 @@ func NewSidecar(
 		homeDir:          homeDir,
 		ports:            processPorts,
 		startCmd:         startCmd,
+		env:              env,
 	}
 	s.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, s.Name())
 
@@ -104,7 +107,7 @@ func (s *SidecarProcess) logger() *zap.Logger {
 }
 
 func (s *SidecarProcess) CreateContainer(ctx context.Context) error {
-	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), nil, s.HostName(), s.startCmd, nil)
+	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), nil, s.HostName(), s.startCmd, s.env)
 }
 
 func (s *SidecarProcess) StartContainer(ctx context.Context) error {
