@@ -54,6 +54,12 @@ type ChainConfig struct {
 	SidecarConfigs []SidecarConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
+	//HostPortOverride exposes ports to the host
+	HostPortOverride map[int]int `yaml:"host-port-override"`
+	// Additional start command arguments
+	AdditionalStartArgs []string
+	// Environment variables for chain nodes
+	Env []string
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -172,6 +178,13 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 	if other.CoinDecimals != nil {
 		c.CoinDecimals = other.CoinDecimals
 	}
+	if other.AdditionalStartArgs != nil {
+		c.AdditionalStartArgs = append(c.AdditionalStartArgs, other.AdditionalStartArgs...)
+	}
+
+	if other.Env != nil {
+		c.Env = append(c.Env, other.Env...)
+	}
 
 	return c
 }
@@ -198,6 +211,7 @@ type SidecarConfig struct {
 	HomeDir          string
 	Ports            []string
 	StartCmd         []string
+	Env              []string
 	PreStart         bool
 	ValidatorProcess bool
 }
