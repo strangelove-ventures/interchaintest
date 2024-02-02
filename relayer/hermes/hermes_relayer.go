@@ -166,8 +166,11 @@ func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter
 func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	pathConfig := r.paths[pathName]
 	chainACreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainA.chainID, "--reference-chain", pathConfig.chainB.chainID}
-	if opts.TrustingPeriod != "0" {
+	if opts.TrustingPeriod != "" {
 		chainACreateClientCmd = append(chainACreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		chainACreateClientCmd = append(chainACreateClientCmd, "--clock-drift", opts.MaxClockDrift)
 	}
 	res := r.Exec(ctx, rep, chainACreateClientCmd, nil)
 	if res.Err != nil {
@@ -181,8 +184,11 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	pathConfig.chainA.clientID = chainAClientId
 
 	chainBCreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainB.chainID, "--reference-chain", pathConfig.chainA.chainID}
-	if opts.TrustingPeriod != "0" {
+	if opts.TrustingPeriod != "" {
 		chainBCreateClientCmd = append(chainBCreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		chainBCreateClientCmd = append(chainBCreateClientCmd, "--clock-drift", opts.MaxClockDrift)
 	}
 	res = r.Exec(ctx, rep, chainBCreateClientCmd, nil)
 	if res.Err != nil {
