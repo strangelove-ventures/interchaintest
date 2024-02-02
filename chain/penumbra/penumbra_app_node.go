@@ -40,7 +40,7 @@ const (
 	grpcPort       = "9090/tcp"
 )
 
-var exposedPorts = nat.PortSet{
+var exposedPorts = nat.PortMap{
 	nat.Port(tendermintPort): {},
 }
 
@@ -212,17 +212,7 @@ func (p *PenumbraAppNode) SendIBCTransfer(
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context) error {
 	cmd := []string{"pd", "start", "--host", "0.0.0.0", "--home", p.HomeDir()}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
-}
-
-func (p *PenumbraAppNode) SendIBCTransfer(
-	ctx context.Context,
-	channelID string,
-	keyName string,
-	amount ibc.WalletAmount,
-	options ibc.TransferOptions,
-) (ibc.Tx, error) {
-	return ibc.Tx{}, errors.New("not yet implemented")
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd, nil)
 }
 
 func (p *PenumbraAppNode) StopContainer(ctx context.Context) error {

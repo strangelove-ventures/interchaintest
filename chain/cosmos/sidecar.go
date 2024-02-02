@@ -35,7 +35,7 @@ type SidecarProcess struct {
 	DockerClient *dockerclient.Client
 	NetworkID    string
 	Image        ibc.DockerImage
-	ports        nat.PortSet
+	ports        nat.PortMap
 	startCmd     []string
 	env          []string
 	homeDir      string
@@ -58,10 +58,10 @@ func NewSidecar(
 	startCmd []string,
 	env []string,
 ) *SidecarProcess {
-	processPorts := nat.PortSet{}
+	processPorts := nat.PortMap{}
 
 	for _, port := range ports {
-		processPorts[nat.Port(port)] = struct{}{}
+		processPorts[nat.Port(port)] = []nat.PortBinding{}
 	}
 
 	if homeDir == "" {
@@ -107,11 +107,7 @@ func (s *SidecarProcess) logger() *zap.Logger {
 }
 
 func (s *SidecarProcess) CreateContainer(ctx context.Context) error {
-<<<<<<< HEAD
-	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), s.HostName(), s.startCmd)
-=======
-	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), nil, s.HostName(), s.startCmd, s.env)
->>>>>>> 0a8a8a2 (andrew's writing for additional start args and env (#933))
+	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), s.HostName(), s.startCmd, s.env)
 }
 
 func (s *SidecarProcess) StartContainer(ctx context.Context) error {

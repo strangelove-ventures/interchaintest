@@ -101,7 +101,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -1346,9 +1346,6 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
-<<<<<<< HEAD
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
-=======
 	usingPorts := sentryPorts
 
 	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
@@ -1363,8 +1360,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
->>>>>>> 0a8a8a2 (andrew's writing for additional start args and env (#933))
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), tn.HostName(), cmd, chainCfg.Env)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
