@@ -1346,7 +1346,10 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
-	usingPorts := sentryPorts
+	usingPorts := nat.PortMap{}
+	for k, v := range sentryPorts {
+		usingPorts[k] = v
+	}
 
 	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
 		for intP, extP := range chainCfg.HostPortOverride {
