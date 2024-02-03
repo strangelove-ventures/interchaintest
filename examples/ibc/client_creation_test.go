@@ -7,8 +7,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -20,9 +18,8 @@ var (
 )
 
 type relayerImp struct {
-	name           string
-	relayer        ibc.RelayerImplementation
-	relayerVersion string
+	name       string
+	relayerImp ibc.RelayerImplementation
 }
 
 func TestCreatClient(t *testing.T) {
@@ -34,17 +31,13 @@ func TestCreatClient(t *testing.T) {
 
 	var tests = []relayerImp{
 		{
-			name:           "Cosmos Relayer",
-			relayer:        ibc.CosmosRly,
-			relayerVersion: "v2.5.0",
+			name:       "Cosmos Relayer",
+			relayerImp: ibc.CosmosRly,
 		},
-		//TODO: Get hermes working and uncomment:
-
-		// {
-		// 	name:           "Hermes",
-		// 	relayer:        ibc.Hermes,
-		// 	relayerVersion: "v1.7.1",
-		// },
+		{
+			name:       "Hermes",
+			relayerImp: ibc.Hermes,
+		},
 	}
 
 	for _, tt := range tests {
@@ -81,13 +74,8 @@ func TestCreatClient(t *testing.T) {
 			chain, counterpartyChain := chains[0].(*cosmos.CosmosChain), chains[1].(*cosmos.CosmosChain)
 
 			rf := interchaintest.NewBuiltinRelayerFactory(
-				tt.relayer,
+				tt.relayerImp,
 				zaptest.NewLogger(t),
-				relayer.CustomDockerImage(
-					rly.DefaultContainerImage,
-					tt.relayerVersion,
-					rly.RlyDefaultUidGid,
-				),
 			)
 
 			r := rf.Build(t, client, network)

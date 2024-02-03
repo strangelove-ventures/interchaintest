@@ -204,9 +204,35 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 	return res.Err
 }
 
-// TODO: Implement this
 func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
-	panic("implement me")
+	pathConfig := r.paths[pathName]
+
+	createClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", srcChainID, "--reference-chain", dstChainID}
+	if opts.TrustingPeriod != "" {
+		createClientCmd = append(createClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		createClientCmd = append(createClientCmd, "--clock-drift", opts.MaxClockDrift)
+	}
+	res := r.Exec(ctx, rep, createClientCmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+
+	clientId, err := GetClientIdFromStdout(res.Stdout)
+	if err != nil {
+		return err
+	}
+
+	if pathConfig.chainA.chainID == srcChainID {
+		pathConfig.chainA.chainID = clientId
+	} else if pathConfig.chainB.chainID == srcChainID {
+		pathConfig.chainB.chainID = clientId
+	} else {
+		return fmt.Errorf("%s not found in path config", srcChainID)
+	}
+
+	return res.Err
 }
 
 // RestoreKey restores a key from a mnemonic. In hermes, you must provide a file containing the mnemonic. We need
