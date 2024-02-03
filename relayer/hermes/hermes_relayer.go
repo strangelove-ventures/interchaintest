@@ -205,7 +205,7 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 }
 
 // TODO: Implement this
-func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainName, dstChainName, pathName string, opts ibc.CreateClientOptions) error {
+func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
 	panic("implement me")
 }
 

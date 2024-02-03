@@ -165,8 +165,8 @@ func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, ho
 	return cmd
 }
 
-func (commander) CreateClient(srcChainName, dstChainName, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	cmd := []string{"rly", "tx", "client", srcChainName, dstChainName, pathName, "--home", homeDir}
+func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	cmd := []string{"rly", "tx", "client", srcChainID, dstChainID, pathName, "--home", homeDir}
 
 	clientOptions := createClientOptsHelper(opts)
 	cmd = append(cmd, clientOptions...)

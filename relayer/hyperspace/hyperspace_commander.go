@@ -102,7 +102,7 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 }
 
 // TODO: Implement if available in hyperspace relayer
-func (hyperspaceCommander) CreateClient(srcChainName, dstChainName, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+func (hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	panic("[CreateClient] Not Implemented")
 }
 

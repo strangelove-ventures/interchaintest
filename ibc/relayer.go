@@ -80,7 +80,7 @@ type Relayer interface {
 	// CreateClient performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst.
 	// Unlike CreateClients, this only creates the client on the destination chain
-	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainName, dstChainName, pathName string, opts CreateClientOptions) error
+	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, opts CreateClientOptions) error
 
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.

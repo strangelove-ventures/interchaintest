@@ -2,7 +2,6 @@ package ibc_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -120,24 +119,34 @@ func TestCreatClient(t *testing.T) {
 
 			eRep := rep.RelayerExecReporter(t)
 
-			result := r.Exec(ctx, eRep, []string{"rly", "config", "show", "--home", "/home/relayer"}, []string{})
+			// Get clients for each chain
+			srcClientInfoBefore, err := r.GetClients(ctx, eRep, chain.Config().ChainID)
+			require.NoError(t, err)
+			destClientInfoBefore, err := r.GetClients(ctx, eRep, counterpartyChain.Config().ChainID)
+			require.NoError(t, err)
 
-			fmt.Println("RESULT: ", string(result.Stdout))
+			require.NoError(t,
+				r.GeneratePath(ctx, eRep, chain.Config().ChainID, counterpartyChain.Config().ChainID, pathName))
 
-			//TODO: need a way to get chain name from relayer config!!
+			// create single client
 			require.NoError(t,
 				r.CreateClient(ctx, eRep,
-					chain.Config().Name,             // Does not work
-					counterpartyChain.Config().Name, // Does not work
+					chain.Config().ChainID,
+					counterpartyChain.Config().ChainID,
 					pathName, ibc.CreateClientOptions{},
 				),
 			)
 
-			clientInfo, err := r.GetClients(ctx, eRep, chain.Config().ChainID)
+			srcClientInfoAfter, err := r.GetClients(ctx, eRep, chain.Config().ChainID)
+			require.NoError(t, err)
+			destClientInfoAfter, err := r.GetClients(ctx, eRep, counterpartyChain.Config().ChainID)
 			require.NoError(t, err)
 
-			// TODO: ensure client exists
-			fmt.Println(clientInfo)
+			// After creating the single client on the source chain, there should be one more client than before
+			require.Equal(t, len(srcClientInfoBefore), (len(srcClientInfoAfter) - 1), "there is not exactly 1 more client on the source chain after running createClient")
+
+			// createClients should only create a client on source, NOT destination chain
+			require.Equal(t, len(destClientInfoBefore), len(destClientInfoAfter), "a client was created on the destination chain")
 
 		})
 
