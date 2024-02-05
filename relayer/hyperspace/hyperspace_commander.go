@@ -109,6 +109,11 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 	}
 }
 
+// TODO: Implement if available in hyperspace relayer
+func (hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	panic("[CreateClient] Not Implemented")
+}
+
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
 	_, ok := c.paths[pathName]

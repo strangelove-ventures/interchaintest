@@ -63,7 +63,11 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
+<<<<<<< HEAD
 	DefaultContainerVersion = "v2.4.2"
+=======
+	DefaultContainerVersion = "v2.5.0"
+>>>>>>> 23a8755 (Fixes and wires up `CreateClient` (#965))
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -147,10 +151,19 @@ func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, ho
 }
 
 func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+<<<<<<< HEAD
 	return []string{
 		"rly", "tx", "client", srcChainID, dstChainID, pathName, "--client-tp", opts.TrustingPeriod,
 		"--home", homeDir,
 	}
+=======
+	cmd := []string{"rly", "tx", "client", srcChainID, dstChainID, pathName, "--home", homeDir}
+
+	clientOptions := createClientOptsHelper(opts)
+	cmd = append(cmd, clientOptions...)
+
+	return cmd
+>>>>>>> 23a8755 (Fixes and wires up `CreateClient` (#965))
 }
 
 func (commander) CreateConnections(pathName string, homeDir string) []string {

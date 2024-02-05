@@ -234,6 +234,12 @@ func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
+func (r *DockerRelayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
+	cmd := r.c.CreateClient(srcChainID, dstChainID, pathName, opts, r.HomeDir())
+	res := r.Exec(ctx, rep, cmd, nil)
+	return res.Err
+}
+
 func (r *DockerRelayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
 	cmd := r.c.CreateConnections(pathName, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -561,6 +567,7 @@ type RelayerCommander interface {
 	CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string
 	CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string
+	CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string
 	CreateConnections(pathName, homeDir string) []string
 	Flush(pathName, channelID, homeDir string) []string
 	GeneratePath(srcChainID, dstChainID, pathName, homeDir string) []string
