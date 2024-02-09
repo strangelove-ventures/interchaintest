@@ -272,7 +272,11 @@ func (tn *ChainNode) Bind() []string {
 }
 
 func (tn *ChainNode) HomeDir() string {
-	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
+	base := "/var/cosmos-chain"
+	if tn.Chain.Config().HomeDir != "" {
+		return tn.Chain.Config().HomeDir
+	}
+	return path.Join(base, tn.Chain.Config().Name)
 }
 
 // SetTestConfig modifies the config to reasonable values for use within interchaintest.
@@ -601,7 +605,9 @@ func CondenseMoniker(m string) string {
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
-
+	if tn.Chain.Config().SkipInit {
+		return nil
+	}
 	_, _, err := tn.ExecBin(ctx,
 		"init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -980,6 +986,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
+		tn.logger().Info("Starting node without host mount", zap.String("cmd", startCmd))
 	} else {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 		if len(chainCfg.AdditionalStartArgs) > 0 {

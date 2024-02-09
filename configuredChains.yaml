@@ -5,17 +5,19 @@
 agoric:
   name: agoric
   type: cosmos
+  home-dir: /root/.agoric
   bin: agd
   bech32-prefix: agoric
-  denom: urun
-  gas-prices: 0.01urun
+  denom: uist
+  gas-prices: 0.01uist
   gas-adjustment: 1.3
   coin-type: 564
   trusting-period: 672h
   images:
-    - repository: ghcr.io/strangelove-ventures/heighliner/agoric
+    - repository: toliaqat/agoric
       uid-gid: 1025:1025
-  no-host-mount: true
+  no-host-mount: false
+  skip-init: true
 
 akash:
   name: akash

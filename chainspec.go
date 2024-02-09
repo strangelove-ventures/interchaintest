@@ -168,7 +168,8 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			cfg.CoinDecimals = &cosmos
 		case "529":
 			cfg.CoinDecimals = &cosmos
-
+		default:
+			cfg.CoinDecimals = &cosmos
 		}
 	}
 
