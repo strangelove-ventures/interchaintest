@@ -368,17 +368,17 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 	)
 }
 
-func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
+func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 	res, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	return uint64(height), nil
+	return height, nil
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	h := int64(height)
 	var eg errgroup.Group
 	var blockRes *coretypes.ResultBlockResults
@@ -402,12 +402,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 
 		sdkTx, err := decodeTX(interfaceRegistry, tx)
 		if err != nil {
-			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		b, err := encodeTxToJSON(interfaceRegistry, sdkTx)
 		if err != nil {
-			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to marshal tx to json", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		newTx.Data = b

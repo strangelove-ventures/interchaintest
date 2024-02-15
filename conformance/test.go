@@ -52,7 +52,7 @@ import (
 var (
 	userFaucetFund = math.NewInt(10_000_000_000)
 	testCoinAmount = math.NewInt(1_000_000)
-	pollHeightMax  = uint64(50)
+	pollHeightMax  = int64(50)
 )
 
 type TxCache struct {
