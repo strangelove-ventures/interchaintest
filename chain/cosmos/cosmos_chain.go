@@ -336,7 +336,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if txResp.Code != 0 {
 		return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
-	tx.Height = int64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -458,7 +458,7 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
-	tx.Height = int64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
