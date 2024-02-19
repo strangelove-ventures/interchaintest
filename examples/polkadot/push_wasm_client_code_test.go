@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	heightDelta      = uint64(20)
+	heightDelta      = 20
 	votingPeriod     = "30s"
 	maxDepositPeriod = "10s"
 )

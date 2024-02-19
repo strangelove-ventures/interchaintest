@@ -15,7 +15,7 @@ type blockClient interface {
 
 // RangeBlockMessages iterates through all a block's transactions and each transaction's messages yielding to f.
 // Return true from f to stop iteration.
-func RangeBlockMessages(ctx context.Context, interfaceRegistry codectypes.InterfaceRegistry, client blockClient, height uint64, done func(sdk.Msg) bool) error {
+func RangeBlockMessages(ctx context.Context, interfaceRegistry codectypes.InterfaceRegistry, client blockClient, height int64, done func(sdk.Msg) bool) error {
 	h := int64(height)
 	block, err := client.Block(ctx, &h)
 	if err != nil {

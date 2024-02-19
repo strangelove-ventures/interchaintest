@@ -47,7 +47,7 @@ import (
 //     arm64: docker build --platform linux/arm64 -f scripts/ci/dockerfiles/polkadot/polkadot_builder.aarch64.Dockerfile . -t polkadot-node:local
 
 const (
-	heightDelta      = uint64(20)
+	heightDelta      = 20
 	votingPeriod     = "30s"
 	maxDepositPeriod = "10s"
 	aliceAddress     = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL"
