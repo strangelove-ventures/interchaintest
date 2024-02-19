@@ -584,19 +584,19 @@ func (c *PolkadotChain) GetHostGRPCAddress() string {
 
 // Height returns the current block height or an error if unable to get current height.
 // Implements Chain interface.
-func (c *PolkadotChain) Height(ctx context.Context) (uint64, error) {
+func (c *PolkadotChain) Height(ctx context.Context) (int64, error) {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		block, err := c.ParachainNodes[0][0].api.RPC.Chain.GetBlockLatest()
 		if err != nil {
 			return 0, err
 		}
-		return uint64(block.Block.Header.Number), nil
+		return int64(block.Block.Header.Number), nil
 	}
 	block, err := c.RelayChainNodes[0].api.RPC.Chain.GetBlockLatest()
 	if err != nil {
 		return 0, err
 	}
-	return uint64(block.Block.Header.Number), nil
+	return int64(block.Block.Header.Number), nil
 }
 
 // ExportState exports the chain state at specific height.
@@ -810,13 +810,13 @@ func (c *PolkadotChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 // Acknowledgements returns all acknowledgements in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *PolkadotChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	panic("[Acknowledgements] not implemented yet")
 }
 
 // Timeouts returns all timeouts in a block at height.
 // Implements Chain interface.
-func (c *PolkadotChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *PolkadotChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	panic("[Timeouts] not implemented yet")
 }
 
@@ -837,7 +837,7 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 }
 
 // FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
-func (c *PolkadotChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (c *PolkadotChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	return []blockdb.Tx{}, nil
 }
 

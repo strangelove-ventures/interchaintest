@@ -34,6 +34,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
@@ -51,6 +53,7 @@ type ChainNode struct {
 	NetworkID    string
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
+	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -124,6 +127,15 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.Client = rpcClient
+
+	grpcConn, err := grpc.Dial(
+		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("grpc dial: %w", err)
+	}
+	tn.GrpcConn = grpcConn
+
 	return nil
 }
 
@@ -176,6 +188,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	return client.Context{
 		Client:            tn.Client,
 		ChainID:           cfg.ChainID,
+		GRPCClient:        tn.GrpcConn,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
@@ -376,17 +389,17 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 	)
 }
 
-func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
+func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 	res, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	return uint64(height), nil
+	return height, nil
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	h := int64(height)
 	var eg errgroup.Group
 	var blockRes *coretypes.ResultBlockResults
@@ -410,12 +423,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 
 		sdkTx, err := decodeTX(interfaceRegistry, tx)
 		if err != nil {
-			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		b, err := encodeTxToJSON(interfaceRegistry, sdkTx)
 		if err != nil {
-			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to marshal tx to json", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		newTx.Data = b
@@ -1115,10 +1128,10 @@ func (tn *ChainNode) GetModuleAccount(ctx context.Context, moduleName string) (Q
 }
 
 // VoteOnProposal submits a vote for the specified proposal.
-func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
+func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID int64, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote, "--gas", "auto",
+		strconv.FormatInt(proposalID, 10), vote, "--gas", "auto",
 	)
 	return err
 }
@@ -1163,7 +1176,7 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
-		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--upgrade-height", strconv.FormatInt(prop.Height, 10),
 		"--title", prop.Title,
 		"--description", prop.Description,
 		"--deposit", prop.Deposit,

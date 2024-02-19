@@ -235,7 +235,7 @@ func testPollForBalance(ctx context.Context, t *testing.T, chain *cosmos.CosmosC
 		Amount:  math.NewInt(1),
 	}
 
-	delta := uint64(3)
+	delta := int64(3)
 
 	ch := make(chan error)
 	go func() {

@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	govv1beta1 "cosmossdk.io/api/cosmos/gov/v1beta1"
 	sdkmath "cosmossdk.io/math"
 	abcitypes "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/proto/tendermint/crypto"
@@ -27,6 +28,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1beta1type "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
@@ -352,7 +354,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if txResp.Code != 0 {
 		return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -522,7 +524,7 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -1160,11 +1162,16 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		if err := c.VoteOnProposalAllValidators(ctx, propTx.ProposalID, ProposalVoteYes); err != nil {
+		propId, err := strconv.ParseInt(propTx.ProposalID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse proposal id: %w", err)
+		}
+
+		if err := c.VoteOnProposalAllValidators(ctx, propId, ProposalVoteYes); err != nil {
 			return err
 		}
 
-		_, err = PollForProposalStatus(ctx, c, height, height+10, propTx.ProposalID, ProposalStatusPassed)
+		_, err = PollForProposalStatus(ctx, c, height, height+10, propId, govv1beta1type.ProposalStatus(govv1beta1.ProposalStatus_PROPOSAL_STATUS_PASSED))
 		if err != nil {
 			return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
 		}
@@ -1288,7 +1295,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		DefaultProviderUnbondingPeriod, // Needs to match provider unbonding period
 		ccvprovidertypes.DefaultMaxClockDrift,
 		clienttypes.Height{
-			RevisionHeight: providerHeight,
+			RevisionHeight: uint64(providerHeight),
 			RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
 		},
 		commitmenttypes.GetSDKSpecs(),
@@ -1399,12 +1406,12 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 }
 
 // Height implements ibc.Chain
-func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
+func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
-func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
@@ -1437,7 +1444,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 }
 
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
-func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
@@ -1469,7 +1476,7 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (c *CosmosChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	fn := c.getFullNode()
 	c.findTxMu.Lock()
 	defer c.findTxMu.Unlock()
@@ -1579,7 +1586,7 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
+func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID int64, vote string) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {

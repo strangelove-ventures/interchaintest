@@ -239,7 +239,7 @@ type WalletAmount struct {
 
 type IBCTimeout struct {
 	NanoSeconds uint64
-	Height      uint64
+	Height      int64
 }
 
 type ChannelCounterparty struct {
