@@ -27,7 +27,7 @@ require (
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/ethereum/go-ethereum v1.13.8
-	github.com/gdamore/tcell/v2 v2.6.0
+	github.com/gdamore/tcell/v2 v2.7.1
 	github.com/google/go-cmp v0.6.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/go-version v1.6.0
@@ -174,7 +174,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
@@ -229,8 +229,8 @@ require (
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.139.0 // indirect
