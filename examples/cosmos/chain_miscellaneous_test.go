@@ -320,9 +320,11 @@ func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChai
 		ctx,
 		b,
 		users[0],
-		banktypes.NewMsgMultiSend(banktypes.Input{
-			Address: addr1,
-			Coins:   c1.Add(c2[0]),
+		banktypes.NewMsgMultiSend([]banktypes.Input{
+			{
+				Address: addr1,
+				Coins:   c1.Add(c2[0]),
+			},
 		}, out),
 	)
 	require.Error(t, err)
