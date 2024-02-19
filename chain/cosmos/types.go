@@ -9,13 +9,6 @@ const (
 	ProposalVoteNo         = "no"
 	ProposalVoteNoWithVeto = "noWithVeto"
 	ProposalVoteAbstain    = "abstain"
-
-	ProposalStatusUnspecified   = "PROPOSAL_STATUS_UNSPECIFIED"
-	ProposalStatusPassed        = "PROPOSAL_STATUS_PASSED"
-	ProposalStatusFailed        = "PROPOSAL_STATUS_FAILED"
-	ProposalStatusRejected      = "PROPOSAL_STATUS_REJECTED"
-	ProposalStatusVotingPeriod  = "PROPOSAL_STATUS_VOTING_PERIOD"
-	ProposalStatusDepositPeriod = "PROPOSAL_STATUS_DEPOSIT_PERIOD"
 )
 
 // TxProposalv1 contains chain proposal transaction detail for gov module v1 (sdk v0.46.0+)

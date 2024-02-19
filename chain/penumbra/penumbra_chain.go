@@ -232,14 +232,9 @@ func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, 
 	panic("implement me")
 }
 
-<<<<<<< HEAD
-func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
-	return c.getRelayerNode().TendermintNode.Height(ctx)
-=======
 // Height returns the current chain block height.
 func (c *PenumbraChain) Height(ctx context.Context) (int64, error) {
-	return c.getFullNode().TendermintNode.Height(ctx)
->>>>>>> 93c127e (refactor!: changing block height type from uint64 to int64 (#979))
+	return c.getRelayerNode().TendermintNode.Height(ctx)
 }
 
 // Implements Chain interface

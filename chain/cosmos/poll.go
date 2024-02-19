@@ -5,20 +5,16 @@ import (
 	"errors"
 	"fmt"
 
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 
-<<<<<<< HEAD
-// PollForProposalStatus attempts to find a proposal with matching ID and status.
-func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID string, status string) (ProposalResponse, error) {
-	var zero ProposalResponse
-	doPoll := func(ctx context.Context, height uint64) (ProposalResponse, error) {
-		p, err := chain.QueryProposal(ctx, proposalID)
-=======
 // PollForProposalStatus attempts to find a proposal with matching ID and status using gov v1.
-func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeight, maxHeight int64, proposalID uint64, status govv1.ProposalStatus) (*govv1.Proposal, error) {
+func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeight, maxHeight int64, proposalID int64, status govv1.ProposalStatus) (*govv1.Proposal, error) {
 	var pr *govv1.Proposal
 	doPoll := func(ctx context.Context, height int64) (*govv1.Proposal, error) {
 		p, err := chain.GovQueryProposalV1(ctx, proposalID)
@@ -37,20 +33,19 @@ func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeigh
 }
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
-func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight int64, proposalID uint64, status govv1beta1.ProposalStatus) (*govv1beta1.Proposal, error) {
+func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight, proposalID int64, status govv1beta1.ProposalStatus) (*govv1beta1.Proposal, error) {
 	var zero *govv1beta1.Proposal
 	doPoll := func(ctx context.Context, height int64) (*govv1beta1.Proposal, error) {
 		p, err := chain.GovQueryProposal(ctx, proposalID)
->>>>>>> 93c127e (refactor!: changing block height type from uint64 to int64 (#979))
 		if err != nil {
 			return zero, err
 		}
 		if p.Status != status {
 			return zero, fmt.Errorf("proposal status (%s) does not match expected: (%s)", p.Status, status)
 		}
-		return *p, nil
+		return p, nil
 	}
-	bp := testutil.BlockPoller[ProposalResponse]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	bp := testutil.BlockPoller[*govv1beta1.Proposal]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
