@@ -14,9 +14,9 @@ import (
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status using gov v1.
-func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID uint64, status govv1.ProposalStatus) (*govv1.Proposal, error) {
+func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeight, maxHeight int64, proposalID uint64, status govv1.ProposalStatus) (*govv1.Proposal, error) {
 	var pr *govv1.Proposal
-	doPoll := func(ctx context.Context, height uint64) (*govv1.Proposal, error) {
+	doPoll := func(ctx context.Context, height int64) (*govv1.Proposal, error) {
 		p, err := chain.GovQueryProposalV1(ctx, proposalID)
 		if err != nil {
 			return pr, err
@@ -33,9 +33,9 @@ func PollForProposalStatusV1(ctx context.Context, chain *CosmosChain, startHeigh
 }
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status.
-func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight uint64, proposalID uint64, status govv1beta1.ProposalStatus) (*govv1beta1.Proposal, error) {
+func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight, maxHeight int64, proposalID uint64, status govv1beta1.ProposalStatus) (*govv1beta1.Proposal, error) {
 	var zero *govv1beta1.Proposal
-	doPoll := func(ctx context.Context, height uint64) (*govv1beta1.Proposal, error) {
+	doPoll := func(ctx context.Context, height int64) (*govv1beta1.Proposal, error) {
 		p, err := chain.GovQueryProposal(ctx, proposalID)
 		if err != nil {
 			return zero, err
@@ -51,12 +51,12 @@ func PollForProposalStatus(ctx context.Context, chain *CosmosChain, startHeight,
 
 // PollForMessage searches every transaction for a message. Must pass a coded registry capable of decoding the cosmos transaction.
 // fn is optional. Return true from the fn to stop polling and return the found message. If fn is nil, returns the first message to match type T.
-func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry codectypes.InterfaceRegistry, startHeight, maxHeight uint64, fn func(found T) bool) (T, error) {
+func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry codectypes.InterfaceRegistry, startHeight, maxHeight int64, fn func(found T) bool) (T, error) {
 	var zero T
 	if fn == nil {
 		fn = func(T) bool { return true }
 	}
-	doPoll := func(ctx context.Context, height uint64) (T, error) {
+	doPoll := func(ctx context.Context, height int64) (T, error) {
 		h := int64(height)
 		block, err := chain.getFullNode().Client.Block(ctx, &h)
 		if err != nil {
@@ -83,12 +83,12 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 }
 
 // PollForBalance polls until the balance matches
-func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks uint64, balance ibc.WalletAmount) error {
+func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks int64, balance ibc.WalletAmount) error {
 	h, err := chain.Height(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get height: %w", err)
 	}
-	doPoll := func(ctx context.Context, height uint64) (any, error) {
+	doPoll := func(ctx context.Context, height int64) (any, error) {
 		bal, err := chain.GetBalance(ctx, balance.Address, balance.Denom)
 		if err != nil {
 			return nil, err

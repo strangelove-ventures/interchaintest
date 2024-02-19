@@ -36,7 +36,7 @@ type ProtoMessage interface {
 // TxProposal contains chain proposal transaction details.
 type TxProposal struct {
 	// The block height.
-	Height uint64
+	Height int64
 	// The transaction hash.
 	TxHash string
 	// Amount of gas charged to the account.
@@ -64,7 +64,7 @@ type SoftwareUpgradeProposal struct {
 	Title       string
 	Name        string
 	Description string
-	Height      uint64
+	Height      int64
 	Info        string // optional
 }
 

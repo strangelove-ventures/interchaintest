@@ -15,15 +15,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type mockTxFinder func(ctx context.Context, height uint64) ([]Tx, error)
+type mockTxFinder func(ctx context.Context, height int64) ([]Tx, error)
 
-func (f mockTxFinder) FindTxs(ctx context.Context, height uint64) ([]Tx, error) {
+func (f mockTxFinder) FindTxs(ctx context.Context, height int64) ([]Tx, error) {
 	return f(ctx, height)
 }
 
-type mockBlockSaver func(ctx context.Context, height uint64, txs []Tx) error
+type mockBlockSaver func(ctx context.Context, height int64, txs []Tx) error
 
-func (f mockBlockSaver) SaveBlock(ctx context.Context, height uint64, txs []Tx) error {
+func (f mockBlockSaver) SaveBlock(ctx context.Context, height int64, txs []Tx) error {
 	return f(ctx, height, txs)
 }
 
@@ -31,7 +31,7 @@ func TestCollector_Collect(t *testing.T) {
 	nopLog := zap.NewNop()
 
 	t.Run("happy path", func(t *testing.T) {
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
+		finder := mockTxFinder(func(ctx context.Context, height int64) ([]Tx, error) {
 			if height == 0 {
 				panic("zero height")
 			}
@@ -42,7 +42,7 @@ func TestCollector_Collect(t *testing.T) {
 				if height > 3 {
 					return nil, nil
 				}
-				return []Tx{{Data: []byte(strconv.FormatUint(height, 10))}}, nil
+				return []Tx{{Data: []byte(strconv.FormatInt(height, 10))}}, nil
 			}
 		})
 
@@ -51,7 +51,7 @@ func TestCollector_Collect(t *testing.T) {
 			savedHeights  []int
 			savedTxs      [][]Tx
 		)
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error {
+		saver := mockBlockSaver(func(ctx context.Context, height int64, txs []Tx) error {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -89,14 +89,14 @@ func TestCollector_Collect(t *testing.T) {
 
 	t.Run("find error", func(t *testing.T) {
 		ch := make(chan int)
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
+		finder := mockTxFinder(func(ctx context.Context, height int64) ([]Tx, error) {
 			defer func() { ch <- int(height) }()
 			if height == 1 {
 				return nil, nil
 			}
 			return nil, errors.New("boom")
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
+		saver := mockBlockSaver(func(ctx context.Context, height int64, txs []Tx) error { return nil })
 
 		collector := NewCollector(nopLog, finder, saver, time.Nanosecond)
 		defer collector.Stop()
@@ -109,11 +109,11 @@ func TestCollector_Collect(t *testing.T) {
 
 	t.Run("save error", func(t *testing.T) {
 		ch := make(chan int)
-		finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
+		finder := mockTxFinder(func(ctx context.Context, height int64) ([]Tx, error) {
 			defer func() { ch <- int(height) }()
 			return nil, nil
 		})
-		saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error {
+		saver := mockBlockSaver(func(ctx context.Context, height int64, txs []Tx) error {
 			if height == 1 {
 				return nil
 			}
@@ -139,13 +139,13 @@ func TestCollector_Stop(t *testing.T) {
 	// Ensures the finder only unlocks the mutex once.
 	var foundOnce sync.Once
 
-	finder := mockTxFinder(func(ctx context.Context, height uint64) ([]Tx, error) {
+	finder := mockTxFinder(func(ctx context.Context, height int64) ([]Tx, error) {
 		foundOnce.Do(func() {
 			foundMu.Unlock()
 		})
 		return nil, nil
 	})
-	saver := mockBlockSaver(func(ctx context.Context, height uint64, txs []Tx) error { return nil })
+	saver := mockBlockSaver(func(ctx context.Context, height int64, txs []Tx) error { return nil })
 
 	c := NewCollector(zap.NewNop(), finder, saver, time.Millisecond)
 	defer c.Stop() // Will be stopped explicitly in a few lines, but defer anyway for cleanup just in case.
