@@ -73,18 +73,14 @@ type Relayer interface {
 	// Flush flushes any outstanding packets and then returns.
 	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 
-	// CreateClients performs the client handshake steps necessary for creating a light client
+	// CreateClient performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst.
-	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID string, dstChainID string, pathName string, opts CreateClientOptions) error
+	// Unlike CreateClients, this only creates the client on the source chain
+	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, opts CreateClientOptions) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
 	CreateClients(ctx context.Context, rep RelayerExecReporter, pathName string, opts CreateClientOptions) error
-
-	// CreateClient performs the client handshake steps necessary for creating a light client
-	// on src that tracks the state of dst.
-	// Unlike CreateClients, this only creates the client on the destination chain
-	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, opts CreateClientOptions) error
 
 	// CreateConnections performs the connection handshake steps necessary for creating a connection
 	// between the src and dst chains.
