@@ -36,12 +36,12 @@ type EventAttribute struct {
 
 // TxFinder finds transactions given block at height.
 type TxFinder interface {
-	FindTxs(ctx context.Context, height uint64) ([]Tx, error)
+	FindTxs(ctx context.Context, height int64) ([]Tx, error)
 }
 
 // BlockSaver saves transactions for block at height.
 type BlockSaver interface {
-	SaveBlock(ctx context.Context, height uint64, txs []Tx) error
+	SaveBlock(ctx context.Context, height int64, txs []Tx) error
 }
 
 // Collector saves block transactions at regular intervals.
@@ -73,7 +73,7 @@ func (p *Collector) Collect(ctx context.Context) {
 
 	tick := time.NewTicker(p.rate)
 	defer tick.Stop()
-	var height uint64 = 1
+	var height int64 = 1
 	for {
 		select {
 		case <-ctx.Done():
@@ -86,7 +86,7 @@ func (p *Collector) Collect(ctx context.Context) {
 					continue
 				}
 
-				p.log.Info("Failed to save transactions", zap.Error(err), zap.Uint64("height", height))
+				p.log.Info("Failed to save transactions", zap.Error(err), zap.Int64("height", height))
 				continue
 			}
 			height++
@@ -102,7 +102,7 @@ func (p *Collector) Stop() {
 	p.cancel()
 }
 
-func (p *Collector) saveTxsForHeight(ctx context.Context, height uint64) error {
+func (p *Collector) saveTxsForHeight(ctx context.Context, height int64) error {
 	txs, err := p.finder.FindTxs(ctx, height)
 	if err != nil {
 		return fmt.Errorf("find txs: %w", err)

@@ -89,11 +89,11 @@ func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 	}
 }
 
-func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *PenumbraChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
-func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *PenumbraChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
@@ -232,7 +232,8 @@ func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, 
 	panic("implement me")
 }
 
-func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
+// Height returns the current chain block height.
+func (c *PenumbraChain) Height(ctx context.Context) (int64, error) {
 	return c.getRelayerNode().TendermintNode.Height(ctx)
 }
 

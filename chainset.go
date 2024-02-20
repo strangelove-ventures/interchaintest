@@ -194,7 +194,7 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 		id := c.Config().ChainID
 		finder, ok := c.(blockdb.TxFinder)
 		if !ok {
-			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height uint64) ([][]byte, error)"`+"\n", id)
+			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height int64) ([][]byte, error)"`+"\n", id)
 			return nil
 		}
 		j := i // Avoid closure on loop variable.

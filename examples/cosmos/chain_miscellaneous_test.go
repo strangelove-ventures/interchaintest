@@ -235,7 +235,7 @@ func testPollForBalance(ctx context.Context, t *testing.T, chain *cosmos.CosmosC
 		Amount:  math.NewInt(1),
 	}
 
-	delta := uint64(3)
+	delta := int64(3)
 
 	ch := make(chan error)
 	go func() {
@@ -315,6 +315,19 @@ func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChai
 	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, math.NewInt(2), updatedBal2)
+
+	txResp, err = cosmos.BroadcastTx(
+		ctx,
+		b,
+		users[0],
+		banktypes.NewMsgMultiSend([]banktypes.Input{
+			{
+				Address: addr1,
+				Coins:   c1.Add(c2[0]),
+			},
+		}, out),
+	)
+	require.Error(t, err)
 }
 
 func testQueryCmd(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
