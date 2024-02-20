@@ -63,7 +63,7 @@ type CosmosRelayerChainConfig struct {
 
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
-	DefaultContainerVersion = "v2.4.2"
+	DefaultContainerVersion = "v2.5.0"
 )
 
 // Capabilities returns the set of capabilities of the Cosmos relayer.
@@ -139,18 +139,37 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 	}
 }
 
-func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	return []string{
-		"rly", "tx", "clients", pathName, "--client-tp", opts.TrustingPeriod,
-		"--home", homeDir,
+func createClientOptsHelper(opts ibc.CreateClientOptions) []string {
+	var clientOptions []string
+	if opts.TrustingPeriod != "" {
+		clientOptions = append(clientOptions, "--client-tp", opts.TrustingPeriod)
 	}
+	if opts.TrustingPeriodPercentage != 0 {
+		clientOptions = append(clientOptions, "--client-tp-percentage", fmt.Sprint(opts.TrustingPeriodPercentage))
+	}
+	if opts.MaxClockDrift != "" {
+		clientOptions = append(clientOptions, "--max-clock-drift", opts.MaxClockDrift)
+	}
+
+	return clientOptions
+}
+
+func (commander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	cmd := []string{"rly", "tx", "clients", pathName, "--home", homeDir}
+
+	clientOptions := createClientOptsHelper(opts)
+	cmd = append(cmd, clientOptions...)
+
+	return cmd
 }
 
 func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	return []string{
-		"rly", "tx", "client", srcChainID, dstChainID, pathName, "--client-tp", opts.TrustingPeriod,
-		"--home", homeDir,
-	}
+	cmd := []string{"rly", "tx", "client", srcChainID, dstChainID, pathName, "--home", homeDir}
+
+	clientOptions := createClientOptsHelper(opts)
+	cmd = append(cmd, clientOptions...)
+
+	return cmd
 }
 
 func (commander) CreateConnections(pathName string, homeDir string) []string {
@@ -235,17 +254,20 @@ func (commander) GetClients(chainID, homeDir string) []string {
 }
 
 func (commander) LinkPath(pathName, homeDir string, channelOpts ibc.CreateChannelOptions, clientOpt ibc.CreateClientOptions) []string {
-	return []string{
+	cmd := []string{
 		"rly", "tx", "link", pathName,
 		"--src-port", channelOpts.SourcePortName,
 		"--dst-port", channelOpts.DestPortName,
 		"--order", channelOpts.Order.String(),
 		"--version", channelOpts.Version,
-		"--client-tp", clientOpt.TrustingPeriod,
 		"--debug",
-
 		"--home", homeDir,
 	}
+
+	clientOptions := createClientOptsHelper(clientOpt)
+	cmd = append(cmd, clientOptions...)
+
+	return cmd
 }
 
 func (commander) RestoreKey(chainID, keyName, coinType, mnemonic, homeDir string) []string {
