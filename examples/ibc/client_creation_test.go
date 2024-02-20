@@ -52,7 +52,7 @@ func TestCreatClient(t *testing.T) {
 				{
 					Name:      "ibc-go-simd",
 					ChainName: "chain1",
-					Version:   "v8.0.0",
+					Version:   "v7.2.0",
 
 					NumValidators: &numVals,
 					NumFullNodes:  &numFullNodes,
@@ -60,7 +60,7 @@ func TestCreatClient(t *testing.T) {
 				{
 					Name:      "ibc-go-simd",
 					ChainName: "chain2",
-					Version:   "v8.0.0",
+					Version:   "v7.2.0",
 
 					NumValidators: &numVals,
 					NumFullNodes:  &numFullNodes,
