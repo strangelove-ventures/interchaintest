@@ -71,6 +71,9 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 
 	// ibc-path-name -> index of []cosmos.CosmosChain
 	ibcpaths := make(map[string][]int)
+	// providerChainId -> []consumerChainIds
+	icsPair := make(map[string][]string)
+
 	chainSpecs := []*interchaintest.ChainSpec{}
 
 	for idx, cfg := range config.Chains {
@@ -81,6 +84,10 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			for _, path := range cfg.IBCPaths {
 				ibcpaths[path] = append(ibcpaths[path], idx)
 			}
+		}
+
+		if cfg.ICSConsumerLink != "" {
+			icsPair[cfg.ICSConsumerLink] = append(icsPair[cfg.ICSConsumerLink], cfg.ChainID)
 		}
 	}
 
@@ -135,6 +142,41 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 
 		// Add links between chains
 		LinkIBCPaths(ibcpaths, chains, ic, relayer)
+	}
+
+	// Add Interchain Security chain pairs together
+
+	if len(icsPair) > 0 {
+
+		// iterate icsPair
+		for provider, consumers := range icsPair {
+			fmt.Println("provider", provider)
+			fmt.Println("consumers", consumers)
+
+			var p ibc.Chain
+			var c ibc.Chain
+
+			// a provider can have multiple consumers
+			for _, consumer := range consumers {
+				for _, chain := range chains {
+					if chain.Config().ChainID == provider {
+						p = chain
+					}
+					if chain.Config().ChainID == consumer {
+						c = chain
+					}
+				}
+			}
+
+			pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
+
+			ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
+				Provider: p,
+				Consumer: c,
+				Relayer:  relayer,
+				Path:     pathName,
+			})
+		}
 	}
 
 	// Build all chains & begin.
