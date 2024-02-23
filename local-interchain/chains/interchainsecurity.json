@@ -1,7 +1,6 @@
 {
     "chains": [
         {
-            "ics_provider_name": "cosmos-provider",
             "ibc_paths": ["ics-1"],
             "name": "ics-provider",
             "binary": "interchain-security-pd",
