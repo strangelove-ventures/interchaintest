@@ -1,11 +1,10 @@
 {
     "chains": [
         {
-            "ibc_paths": ["ics-1"],
             "name": "ics-provider",
             "binary": "interchain-security-pd",
             "chain_id": "localcosmos-1",
-            "denom": "uatom",
+            "denom": "stake",
             "bech32_prefix": "cosmos",
             "docker_image": {
                 "version": "v3.1.0"
@@ -23,7 +22,7 @@
                 "modify": [
                     {
                         "key": "app_state.gov.params.voting_period",
-                        "value": "10s"
+                        "value": "3s"
                     },
                     {
                         "key": "app_state.gov.params.max_deposit_period",
@@ -31,7 +30,7 @@
                     },
                     {
                         "key": "app_state.gov.params.min_deposit.0.denom",
-                        "value": "uatom"
+                        "value": "stake"
                     }
                 ],
                 "accounts": [
@@ -46,11 +45,10 @@
         },
         {
             "ics_consumer_link": "localcosmos-1",
-            "ibc_paths": ["ics-1"],
             "name": "ics-consumer",
             "chain_id": "localconsumer-1",
             "binary": "interchain-security-cd",
-            "denom": "untrn",
+            "denom": "stake",
             "bech32_prefix": "cosmos",
             "docker_image": {
                 "version": "v3.1.0"
@@ -65,20 +63,6 @@
             "debugging": true,
             "block_time": "500ms",
             "genesis": {
-                "modify": [
-                    {
-                        "key": "app_state.gov.params.voting_period",
-                        "value": "10s"
-                    },
-                    {
-                        "key": "app_state.gov.params.max_deposit_period",
-                        "value": "15s"
-                    },
-                    {
-                        "key": "app_state.gov.params.min_deposit.0.denom",
-                        "value": "untrn"
-                    }
-                ],
                 "accounts": [
                     {
                         "name": "acc0",

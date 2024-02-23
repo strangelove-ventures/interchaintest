@@ -121,7 +121,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	client, network := interchaintest.DockerSetup(fakeT)
 
 	// setup a relayer if we have IBC paths to use.
-	if len(ibcpaths) > 0 {
+	if len(ibcpaths) > 0 || len(icsPair) > 0 {
 		rlyCfg := config.Relayer
 
 		relayerType, relayerName := ibc.CosmosRly, "relay"
@@ -150,9 +150,6 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 
 		// iterate icsPair
 		for provider, consumers := range icsPair {
-			fmt.Println("provider", provider)
-			fmt.Println("consumers", consumers)
-
 			var p ibc.Chain
 			var c ibc.Chain
 
@@ -169,6 +166,8 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			}
 
 			pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
+
+			logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
 
 			ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
 				Provider: p,
