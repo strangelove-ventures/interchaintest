@@ -379,11 +379,11 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutHeight = timeoutHeight
 	tx.Packet.Data = []byte(data)
 
-	seqNum, err := strconv.Atoi(seq)
+	seqNum, err := strconv.ParseUint(seq, 10, 64)
 	if err != nil {
 		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
 	}
-	tx.Packet.Sequence = uint64(seqNum)
+	tx.Packet.Sequence = seqNum
 
 	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
 	if err != nil {
