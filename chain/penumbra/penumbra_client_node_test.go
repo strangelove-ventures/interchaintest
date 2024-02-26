@@ -65,7 +65,7 @@ func TestIbcTransferTimeout(t *testing.T) {
 		}
 
 		height, timestamp := ibcTransferTimeouts(opts)
-		require.Equal(t, opts.Timeout.Height, height.RevisionHeight)
+		require.Equal(t, opts.Timeout.Height, int64(height.RevisionHeight))
 		require.Equal(t, zero, height.RevisionNumber)
 		require.Equal(t, opts.Timeout.NanoSeconds, timestamp)
 	})
@@ -91,7 +91,7 @@ func TestIbcTransferTimeout(t *testing.T) {
 		}
 
 		height, timestamp := ibcTransferTimeouts(opts)
-		require.Equal(t, opts.Timeout.Height, height.RevisionHeight)
+		require.Equal(t, opts.Timeout.Height, int64(height.RevisionHeight))
 		require.Equal(t, zero, height.RevisionNumber)
 		require.Equal(t, zero, timestamp)
 	})
