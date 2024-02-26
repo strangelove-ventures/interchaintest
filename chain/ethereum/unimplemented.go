@@ -55,12 +55,12 @@ func (c *EthereumChain) SendIBCTransfer(ctx context.Context, channelID, keyName 
 	return ibc.Tx{}, nil
 }
 
-func (c *EthereumChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *EthereumChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	PanicFunctionName()
 	return nil, nil
 }
 
-func (c *EthereumChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *EthereumChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	PanicFunctionName()
 	return nil, nil
 }

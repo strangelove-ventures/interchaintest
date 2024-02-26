@@ -205,7 +205,10 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		cmd = append(cmd, "--load-state", dockerJsonFile)
 	}
 
-	usingPorts := natPorts
+	usingPorts := nat.PortMap{}
+	for k, v := range natPorts {
+		usingPorts[k] = v
+	}
 
 	if c.cfg.HostPortOverride != nil {
 		for intP, extP := range c.cfg.HostPortOverride {
@@ -342,13 +345,13 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 	return err
 }
 
-func (c *EthereumChain) Height(ctx context.Context) (uint64, error) {
+func (c *EthereumChain) Height(ctx context.Context) (int64, error) {
 	cmd := []string{"cast", "block-number", "--rpc-url", c.GetRPCAddress()}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return 0, err
 	}
-	return strconv.ParseUint(strings.TrimSpace(string(stdout)), 10, 64)
+	return strconv.ParseInt(strings.TrimSpace(string(stdout)), 10, 64)
 }
 
 func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {

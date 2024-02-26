@@ -55,7 +55,7 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
-		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--upgrade-height", strconv.FormatInt(prop.Height, 10),
 		"--title", prop.Title,
 		"--description", prop.Description,
 		"--deposit", prop.Deposit,

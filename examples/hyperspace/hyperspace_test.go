@@ -54,7 +54,7 @@ import (
 //     heighliner build -c ibc-go-simd -g local --local
 
 const (
-	heightDelta      = uint64(20)
+	heightDelta      = 20
 	votingPeriod     = "30s"
 	maxDepositPeriod = "10s"
 	aliceAddress     = "5yNZjX24n2eg7W6EVamaTXNQbWCwchhThEaSWB7V3GRjtHeL"

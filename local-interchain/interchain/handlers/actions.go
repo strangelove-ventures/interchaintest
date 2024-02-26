@@ -19,7 +19,7 @@ import (
 type actions struct {
 	ctx  context.Context
 	ic   *interchaintest.Interchain
-	vals map[string]*cosmos.ChainNode
+	vals map[string][]*cosmos.ChainNode
 	cc   map[string]*cosmos.CosmosChain
 
 	relayer ibc.Relayer
@@ -29,15 +29,16 @@ type actions struct {
 }
 
 type ActionHandler struct {
-	ChainId string `json:"chain_id"`
-	Action  string `json:"action"`
-	Cmd     string `json:"cmd"`
-	AuthKey string `json:"auth_key,omitempty"`
+	ChainId   string `json:"chain_id"`
+	NodeIndex int    `json:"node_index"`
+	Action    string `json:"action"`
+	Cmd       string `json:"cmd"`
+	AuthKey   string `json:"auth_key,omitempty"`
 }
 
 func NewActions(
 	ctx context.Context, ic *interchaintest.Interchain,
-	cosmosChains map[string]*cosmos.CosmosChain, vals map[string]*cosmos.ChainNode,
+	cosmosChains map[string]*cosmos.CosmosChain, vals map[string][]*cosmos.ChainNode,
 	relayer ibc.Relayer, eRep ibc.RelayerExecReporter,
 	authKey string,
 ) *actions {
@@ -77,17 +78,22 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ah.Cmd = strings.ReplaceAll(ah.Cmd, "%RPC%", fmt.Sprintf("tcp://%s:26657", a.vals[chainId].HostName()))
+	if len(a.vals[chainId]) <= ah.NodeIndex {
+		util.Write(w, []byte(fmt.Sprintf(`{"error":"node_index '%d' not found. nodes: %v"}`, ah.NodeIndex, len(a.vals[chainId]))))
+		return
+	}
+
+	val := a.vals[chainId][ah.NodeIndex]
+
+	ah.Cmd = strings.ReplaceAll(ah.Cmd, "%RPC%", fmt.Sprintf("tcp://%s:26657", val.HostName()))
 	ah.Cmd = strings.ReplaceAll(ah.Cmd, "%CHAIN_ID%", ah.ChainId)
-	ah.Cmd = strings.ReplaceAll(ah.Cmd, "%HOME%", a.vals[chainId].HomeDir())
+	ah.Cmd = strings.ReplaceAll(ah.Cmd, "%HOME%", val.HomeDir())
 
 	cmd := strings.Split(ah.Cmd, " ")
 
 	// Output can only ever be 1 thing. So we check which is set, then se the output to the user.
 	var output []byte
 	var stdout, stderr []byte
-
-	val := a.vals[chainId]
 
 	// parse out special commands if there are any.
 	cmdMap := make(map[string]string)
@@ -210,7 +216,7 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	return err
 }
 
-func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
+func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string][]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
 	if relayer != nil {
 		if err := relayer.StopRelayer(ctx, eRep); err != nil {
 			panic(err)
@@ -218,7 +224,9 @@ func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string
 	}
 
 	for _, v := range vals {
-		go v.StopContainer(ctx) // nolint:errcheck
+		for _, c := range v {
+			go c.StopContainer(ctx) // nolint:errcheck
+		}
 	}
 
 	ic.Close()
@@ -263,7 +271,7 @@ func faucet(r *http.Request, cmdMap map[string]string, ctx context.Context, a *a
 		return []byte(fmt.Sprintf(`{"error":"failed to convert amount to int: %s"}`, amount))
 	}
 
-	if err := val.SendFunds(ctx, "faucet", ibc.WalletAmount{
+	if err := val.BankSend(ctx, "faucet", ibc.WalletAmount{
 		Address: toAddr,
 		Amount:  amt,
 		Denom:   val.Chain.Config().Denom,

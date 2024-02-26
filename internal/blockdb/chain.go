@@ -29,7 +29,7 @@ func (txs transactions) Hash() []byte {
 // SaveBlock tracks a block at height with its transactions.
 // This method is idempotent and can be safely called multiple times with the same arguments.
 // The txs should be human-readable.
-func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs []Tx) error {
+func (chain *Chain) SaveBlock(ctx context.Context, height int64, txs []Tx) error {
 	k := fmt.Sprintf("%d-%x", height, transactions(txs).Hash())
 	_, err, _ := chain.single.Do(k, func() (any, error) {
 		return nil, chain.saveBlock(ctx, height, txs)
@@ -37,7 +37,7 @@ func (chain *Chain) SaveBlock(ctx context.Context, height uint64, txs []Tx) erro
 	return err
 }
 
-func (chain *Chain) saveBlock(ctx context.Context, height uint64, txs transactions) error {
+func (chain *Chain) saveBlock(ctx context.Context, height int64, txs transactions) error {
 	dbTx, err := chain.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

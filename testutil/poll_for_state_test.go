@@ -15,7 +15,7 @@ type mockChain struct {
 	HeightCallCount int
 	CurrentHeight   int
 
-	GotHeights []uint64
+	GotHeights []int64
 
 	FoundAcks []ibc.PacketAcknowledgement
 	AckErr    error
@@ -24,16 +24,16 @@ type mockChain struct {
 	TimeoutErr    error
 }
 
-func (m *mockChain) Height(ctx context.Context) (uint64, error) {
+func (m *mockChain) Height(ctx context.Context) (int64, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
 	m.HeightCallCount++
 	defer func() { m.CurrentHeight++ }()
-	return uint64(m.CurrentHeight), m.HeightErr
+	return int64(m.CurrentHeight), m.HeightErr
 }
 
-func (m *mockChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (m *mockChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
@@ -41,7 +41,7 @@ func (m *mockChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.
 	return m.FoundAcks, m.AckErr
 }
 
-func (m *mockChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (m *mockChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
@@ -64,7 +64,7 @@ func TestPollForAck(t *testing.T) {
 		require.Equal(t, "found", got.Packet.SourceChannel)
 		require.EqualValues(t, 33, got.Packet.Sequence)
 
-		require.Equal(t, []uint64{3}, chain.GotHeights)
+		require.Equal(t, []int64{3}, chain.GotHeights)
 		require.Equal(t, 3, chain.HeightCallCount)
 	})
 
@@ -94,7 +94,7 @@ func TestPollForAck(t *testing.T) {
 		require.Error(t, err)
 		require.EqualError(t, err, "not found")
 		require.ErrorIs(t, err, ErrNotFound)
-		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
+		require.Equal(t, []int64{1, 2, 3}, chain.GotHeights)
 
 		longErr := fmt.Sprintf("%+v", err)
 		require.Contains(t, longErr, "not found")
@@ -124,7 +124,7 @@ func TestPollForTimeout(t *testing.T) {
 		require.Equal(t, "found", got.Packet.SourceChannel)
 		require.EqualValues(t, 33, got.Packet.Sequence)
 
-		require.Equal(t, []uint64{3}, chain.GotHeights)
+		require.Equal(t, []int64{3}, chain.GotHeights)
 		require.Equal(t, 3, chain.HeightCallCount)
 	})
 
@@ -151,7 +151,7 @@ func TestPollForTimeout(t *testing.T) {
 
 		require.Error(t, err)
 		require.ErrorIs(t, err, ErrNotFound)
-		require.Equal(t, []uint64{1, 2, 3}, chain.GotHeights)
+		require.Equal(t, []int64{1, 2, 3}, chain.GotHeights)
 	})
 
 	t.Run("invalid args", func(t *testing.T) {

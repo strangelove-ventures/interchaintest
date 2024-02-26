@@ -26,7 +26,7 @@ use base::{
 // local-ic start juno_ibc
 // cargo run --package localic-bin --bin localic-bin
 fn main() {
-    poll_for_start(&Client::new(), API_URL, 150);
+    poll_for_start(&Client::new(), API_URL, 300);
 
     let rb: ChainRequestBuilder =
         match ChainRequestBuilder::new(API_URL.to_string(), "localjuno-1".to_string(), true) {
