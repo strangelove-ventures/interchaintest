@@ -168,7 +168,6 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 	// Generate a transaction plan sending funds to an address.
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		WalletId: nil,
 		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
 			Value: &assetv1alpha1.Value{
 				Amount: &numv1alpha1.Amount{
@@ -264,7 +263,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 	// Generate a transaction plan sending ics_20 transfer
 	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		WalletId:         nil,
 		Ics20Withdrawals: []*ibcv1alpha1.Ics20Withdrawal{withdrawal},
 	}
 
@@ -312,7 +310,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
 		Height:   txResp.DetectionHeight,
-		TxHash:   string(txResp.Id.Hash),
+		TxHash:   string(txResp.Id.Inner),
 		GasSpent: 0,
 		Packet: ibc.Packet{
 			Sequence:         0,

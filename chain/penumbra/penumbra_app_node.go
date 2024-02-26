@@ -116,7 +116,7 @@ func (p *PenumbraAppNode) Bind() []string {
 
 // HomeDir returns the home directory location in the Docker filesystem.
 func (p *PenumbraAppNode) HomeDir() string {
-	return "/home/heighliner"
+	return "/home/penumbra"
 }
 
 // CreateKey attempts to initialize a new pcli config file with a newly generated FullViewingKey and CustodyKey.
