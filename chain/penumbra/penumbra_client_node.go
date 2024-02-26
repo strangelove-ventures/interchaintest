@@ -311,7 +311,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
-		Height:   txResp.DetectionHeight,
+		Height:   int64(txResp.DetectionHeight),
 		TxHash:   string(txResp.Id.Hash),
 		GasSpent: 0,
 		Packet: ibc.Packet{
@@ -538,7 +538,7 @@ func ibcTransferTimeouts(options ibc.TransferOptions) (clienttypes.Height, uint6
 		timeoutHeight, timeoutTimestamp = defaultTransferTimeouts()
 	} else {
 		timeoutTimestamp = options.Timeout.NanoSeconds
-		timeoutHeight = clienttypes.NewHeight(0, options.Timeout.Height)
+		timeoutHeight = clienttypes.NewHeight(0, uint64(options.Timeout.Height))
 	}
 
 	return timeoutHeight, timeoutTimestamp
