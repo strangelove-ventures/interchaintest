@@ -28,18 +28,37 @@ var rootCmd = &cobra.Command{
 }
 
 func GetDirectory() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	p := path.Join(cwd, "chains")
+
+	// if the current directory has the 'chains' folder, use that. If not, use the default location.
+	if f, _ := os.Stat(p); f != nil && f.IsDir() {
+		files, err := os.ReadDir(p)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(files) > 0 {
+			return cwd
+		}
+	}
+
 	// Config variable override for the ICTEST_HOME
 	if res := os.Getenv("ICTEST_HOME"); res != "" {
 		MakeFileInstallDirectory = res
 	}
 
 	if MakeFileInstallDirectory == "" {
-		dirname, err := os.UserHomeDir()
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		MakeFileInstallDirectory = path.Join(dirname, "local-interchain")
+		MakeFileInstallDirectory = path.Join(homeDir, "local-interchain")
 	}
 
 	if err := directoryRequirementChecks(MakeFileInstallDirectory, "chains"); err != nil {
