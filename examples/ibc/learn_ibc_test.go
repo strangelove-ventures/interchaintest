@@ -31,14 +31,22 @@ func TestLearn(t *testing.T) {
 
 	// Chain Factory
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.0", ChainConfig: ibc.ChainConfig{
-			GasPrices: "0.0uatom",
-		}},
-		{Name: "osmosis", Version: "v11.0.0"},
+		{
+			Name:    "gaia",
+			Version: "v7.0.0",
+			ChainConfig: ibc.ChainConfig{
+				GasPrices: "0.0uatom",
+			},
+		},
+		{
+			Name:    "osmosis",
+			Version: "v11.0.0",
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
+
 	gaia, osmosis := chains[0], chains[1]
 
 	// Relayer Factory
@@ -72,7 +80,6 @@ func TestLearn(t *testing.T) {
 		Client:    client,
 		NetworkID: network,
 		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-
 		SkipPathCreation: false},
 	),
 	)
