@@ -12,7 +12,9 @@ import (
 	"github.com/strangelove-ventures/localinterchain/interchain/handlers"
 )
 
-const apiEndpoint = "http://127.0.0.1:8080"
+const (
+	FlagAPIEndpoint = "api-address"
+)
 
 // old:
 //
@@ -26,9 +28,10 @@ const apiEndpoint = "http://127.0.0.1:8080"
 // local-ic interact localjuno-1 bin 'status --node=%RPC%'
 // local-ic interact localjuno-1 query bank balances juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl
 var interactCmd = &cobra.Command{
-	Use:   "interact [chain_id] [interaction] [arguments...]",
-	Short: "Interact with a node",
-	Args:  cobra.MinimumNArgs(3),
+	Use:     "interact [chain_id] [interaction] [arguments...]",
+	Short:   "Interact with a node",
+	Args:    cobra.MinimumNArgs(3),
+	Aliases: []string{"i"},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return GetFiles(), cobra.ShellCompDirectiveNoFileComp
 	},
@@ -39,12 +42,18 @@ var interactCmd = &cobra.Command{
 			Cmd:     strings.Join(args[2:], " "),
 		}
 
-		res := makeHttpReq(ah)
+		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
+
+		res := makeHttpReq(apiAddr, ah)
 		fmt.Println(res)
 	},
 }
 
-func makeHttpReq(ah handlers.ActionHandler) string {
+func init() {
+	interactCmd.Flags().String(FlagAPIAddressOverride, "http://127.0.0.1:8080", "override the default API address")
+}
+
+func makeHttpReq(apiEndpoint string, ah handlers.ActionHandler) string {
 	client := &http.Client{}
 
 	jsonData, err := json.Marshal(ah)
