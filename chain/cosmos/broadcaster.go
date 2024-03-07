@@ -14,10 +14,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+<<<<<<< HEAD
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+=======
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+>>>>>>> 1d1b837 (feat: replace broadcaster's account retriever to use chain's bech32 prefix when converting AccAddress to string (#1009))
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -165,7 +171,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
+		WithAccountRetriever(AccountRetriever{chain: b.chain}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)
