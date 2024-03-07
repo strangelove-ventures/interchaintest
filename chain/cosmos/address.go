@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"errors"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -25,4 +26,8 @@ func (c *CosmosChain) AccAddressFromBech32(address string) (addr sdk.AccAddress,
 	}
 
 	return sdk.AccAddress(bz), nil
+}
+
+func (c *CosmosChain) AccAddressToBech32(addr sdk.AccAddress) (string, error) {
+	return bech32.ConvertAndEncode(c.Config().Bech32Prefix, addr)
 }
