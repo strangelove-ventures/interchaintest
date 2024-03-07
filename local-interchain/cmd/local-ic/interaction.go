@@ -13,33 +13,35 @@ import (
 )
 
 const (
-	FlagAPIEndpoint = "api-address"
+	FlagAPIEndpoint = "api-endpoint"
 )
 
-// old:
-//
-//	curl -X POST -H "Content-Type: application/json" -d '{
-//		"chain_id": "localjuno-1",
-//		"action": "query",
-//		"cmd": "bank balances juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl"
-//	  }' http://127.0.0.1:8080/
-//
-// new:
-// local-ic interact localjuno-1 bin 'status --node=%RPC%'
-// local-ic interact localjuno-1 query bank balances juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl
+func init() {
+	interactCmd.Flags().String(FlagAPIAddressOverride, "http://127.0.0.1:8080", "override the default API address")
+}
+
 var interactCmd = &cobra.Command{
-	Use:     "interact [chain_id] [interaction] [arguments...]",
-	Short:   "Interact with a node",
-	Args:    cobra.MinimumNArgs(3),
+	Use:   "interact [chain_id] [interaction] [arguments...]",
+	Short: "Interact with a node",
+	Example: `local-ic interact localcosmos-1 bin 'status --node=%RPC%' --api-endpoint=http://127.0.0.1:8080
+local-ic interact localcosmos-1 query bank balances cosmos1hj5fveer5cjtn4wd6wstzugjfdxzl0xpxvjjvr
+local-ic interact localcosmos-1 get_channels
+local-ic interact localcosmos-1 relayer-exec rly q channels localcosmos-1
+`,
+	Args:    cobra.MinimumNArgs(2),
 	Aliases: []string{"i"},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return GetFiles(), cobra.ShellCompDirectiveNoFileComp
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+
 		ah := handlers.ActionHandler{
 			ChainId: args[0],
 			Action:  args[1],
-			Cmd:     strings.Join(args[2:], " "),
+		}
+
+		if len(args) > 2 {
+			ah.Cmd = strings.Join(args[2:], " ")
 		}
 
 		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
@@ -49,13 +51,14 @@ var interactCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	interactCmd.Flags().String(FlagAPIAddressOverride, "http://127.0.0.1:8080", "override the default API address")
-}
-
 func makeHttpReq(apiEndpoint string, ah handlers.ActionHandler) string {
 	client := &http.Client{}
 
+	//	curl -X POST -H "Content-Type: application/json" -d '{
+	//		"chain_id": "localjuno-1",
+	//		"action": "query",
+	//		"cmd": "bank balances juno1hj5fveer5cjtn4wd6wstzugjfdxzl0xps73ftl"
+	//	  }' http://127.0.0.1:8080/
 	jsonData, err := json.Marshal(ah)
 	if err != nil {
 		panic(err)
