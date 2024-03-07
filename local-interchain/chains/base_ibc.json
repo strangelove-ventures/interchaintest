@@ -9,7 +9,7 @@
             "docker_image": {
                 "version": "v9.1.0"
             },
-            "block_time": "6s",
+            "block_time": "2s",
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
             "ibc_paths": ["atom-juno", "atom-terra"],
@@ -49,7 +49,7 @@
             "docker_image": {
                 "version": "v2.3.4"
             },
-            "block_time": "6s",
+            "block_time": "2s",
             "encoding-options": ["wasm"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
