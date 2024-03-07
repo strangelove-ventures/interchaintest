@@ -164,7 +164,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
-		WithAccountRetriever(AccountRetriever{b: b}).
+		WithAccountRetriever(AccountRetriever{chain: b.chain}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)

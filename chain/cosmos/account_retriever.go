@@ -22,7 +22,7 @@ var (
 // AccountRetriever defines the properties of a type that can be used to
 // retrieve accounts.
 type AccountRetriever struct {
-	b *Broadcaster
+	chain *CosmosChain
 }
 
 // GetAccount queries for an account given an address and a block height. An
@@ -38,7 +38,7 @@ func (ar AccountRetriever) GetAccount(clientCtx client.Context, addr sdk.AccAddr
 func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr sdk.AccAddress) (client.Account, int64, error) {
 	var header metadata.MD
 
-	bech32Address, err := ar.b.chain.AccAddressToBech32(addr)
+	bech32Address, err := ar.chain.AccAddressToBech32(addr)
 	if err != nil {
 		return nil, 0, err
 	}
