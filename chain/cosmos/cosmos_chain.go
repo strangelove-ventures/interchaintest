@@ -262,6 +262,36 @@ func (c *CosmosChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	return types.GetFromBech32(b32Addr, c.Config().Bech32Prefix)
 }
 
+func (c *CosmosChain) GetLogs(lines uint64) []string {
+	logs := []string{}
+	tn := c.GetNode() // todo: configure
+
+	cid := tn.ContainerID()
+
+	i, err := tn.DockerClient.ContainerLogs(context.Background(), cid, dockertypes.ContainerLogsOptions{
+		ShowStderr: true,
+		ShowStdout: true,
+		Timestamps: false,
+		Follow:     true,
+		Tail:       fmt.Sprintf("%d", lines),
+	})
+	if err != nil {
+		tn.log.Error("failed to get logs", zap.Error(err))
+		return logs
+	}
+	defer i.Close()
+
+	// read in i (io.ReadCloser)
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(i)
+	if err != nil {
+		tn.log.Error("failed to read logs", zap.Error(err))
+		return logs
+	}
+
+	return strings.Split(buf.String(), "\n")
+}
+
 // BuildWallet will return a Cosmos wallet
 // If mnemonic != "", it will restore using that mnemonic
 // If mnemonic == "", it will create a new key

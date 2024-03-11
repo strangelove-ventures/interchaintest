@@ -73,6 +73,9 @@ type Chain interface {
 	// GetGasFeesInNativeDenom gets the fees in native denom for an amount of spent gas.
 	GetGasFeesInNativeDenom(gasPaid int64) int64
 
+	// GetLogs returns the last `lines` of logs from the chain.
+	GetLogs(lines uint64) []string
+
 	// Acknowledgements returns all acknowledgements in a block at height.
 	Acknowledgements(ctx context.Context, height int64) ([]PacketAcknowledgement, error)
 

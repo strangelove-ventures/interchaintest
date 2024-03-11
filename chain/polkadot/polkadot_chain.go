@@ -29,6 +29,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var _ ibc.Chain = &PolkadotChain{}
+
 // Increase polkadot wallet amount due to their additional precision
 const polkadotScaling = int64(1_000)
 
@@ -854,4 +856,9 @@ func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string, denom
 // MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
 func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
 	return c.ParachainNodes[0][0].MintFunds(keyName, amount)
+}
+
+// GetLogs implements ibc.Chain.
+func (c *PolkadotChain) GetLogs(lines uint64) []string {
+	panic("unimplemented")
 }

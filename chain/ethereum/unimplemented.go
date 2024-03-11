@@ -22,6 +22,12 @@ func (c *EthereumChain) GetGRPCAddress() string {
 	return ""
 }
 
+// GetLogs implements ibc.Chain.
+func (c *EthereumChain) GetLogs(lines uint64) []string {
+	PanicFunctionName()
+	return nil
+}
+
 func (c *EthereumChain) GetHostGRPCAddress() string {
 	PanicFunctionName()
 	return ""
