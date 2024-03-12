@@ -15,7 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -141,6 +140,15 @@ func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte
 	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
+
+	// persist nested errors such as ValidateBasic checks.
+	code := resp.Code
+	rawLog := resp.RawLog
+
+	if code != 0 {
+		return resp, fmt.Errorf("error in transaction (code: %d): raw_log: %s", code, rawLog)
+	}
+
 	return resp, nil
 }
 
@@ -156,7 +164,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithFromAddress(sdkAdd).
 		WithFromName(fromUser.KeyName()).
 		WithSkipConfirmation(true).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
+		WithAccountRetriever(AccountRetriever{chain: b.chain}).
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)

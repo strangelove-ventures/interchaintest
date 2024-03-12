@@ -240,12 +240,12 @@ func (tn *TendermintNode) GetConfigSeparator() (string, error) {
 	return sep, nil
 }
 
-func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
+func (tn *TendermintNode) Height(ctx context.Context) (int64, error) {
 	stat, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint client status: %w", err)
 	}
-	return uint64(stat.SyncInfo.LatestBlockHeight), nil
+	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
 // InitHomeFolder initializes a home folder for the given node

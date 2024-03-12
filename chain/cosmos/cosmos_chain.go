@@ -349,7 +349,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if txResp.Code != 0 {
 		return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -374,11 +374,11 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutHeight = timeoutHeight
 	tx.Packet.Data = []byte(data)
 
-	seqNum, err := strconv.Atoi(seq)
+	seqNum, err := strconv.ParseUint(seq, 10, 64)
 	if err != nil {
 		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
 	}
-	tx.Packet.Sequence = uint64(seqNum)
+	tx.Packet.Sequence = seqNum
 
 	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
 	if err != nil {
@@ -471,7 +471,7 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -999,12 +999,12 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 }
 
 // Height implements ibc.Chain
-func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
+func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
-func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
@@ -1037,7 +1037,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 }
 
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
-func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
@@ -1069,7 +1069,7 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (c *CosmosChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	fn := c.getFullNode()
 	c.findTxMu.Lock()
 	defer c.findTxMu.Unlock()

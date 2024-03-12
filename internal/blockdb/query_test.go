@@ -133,7 +133,7 @@ func TestQuery_CosmosMessages(t *testing.T) {
 
 	for i, tx := range txs {
 		require.NotEmpty(t, tx.Raw)
-		err = chain.SaveBlock(ctx, uint64(i+1), []Tx{{Data: []byte(tx.Raw)}})
+		err = chain.SaveBlock(ctx, int64(i+1), []Tx{{Data: []byte(tx.Raw)}})
 		require.NoError(t, err)
 	}
 
