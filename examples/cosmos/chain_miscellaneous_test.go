@@ -19,13 +19,15 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+var (
+	numVals      = 1
+	numFullNodes = 0
+)
+
 func TestICTestMiscellaneous(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-
-	numVals := 1
-	numFullNodes := 0
 
 	cosmos.SetSDKConfig("juno")
 
