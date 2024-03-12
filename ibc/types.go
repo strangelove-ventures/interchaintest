@@ -27,7 +27,7 @@ type ChainConfig struct {
 	// Docker images required for running chain nodes.
 	Images []DockerImage `yaml:"images"`
 	// https://github.com/informalsystems/CometMock usage.
-	CometMock CometMockConfig `yaml:"comet-mock-image"` // TODO: ref?
+	CometMock CometMockConfig `yaml:"comet-mock-image"`
 	// Binary to execute for the chain node daemon.
 	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.

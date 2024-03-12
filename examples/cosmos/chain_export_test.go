@@ -18,15 +18,7 @@ func TestJunoStateExport(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	// defaults to Juno
-	cfg := ibc.ChainConfig{
-		CometMock: ibc.CometMockConfig{
-			Image:       ibc.NewDockerImage("ghcr.io/informalsystems/cometmock", "v0.37.x", "1025:1025"),
-			BlockTimeMs: 200,
-		},
-	}
-
-	chains := interchaintest.CreateChainWithConfig(t, numValsOne, numFullNodesZero, "juno", "v19.0.0-alpha.3", cfg)
+	chains := interchaintest.CreateChainWithConfig(t, numValsOne, numFullNodesZero, "juno", "v19.0.0-alpha.3", ibc.ChainConfig{})
 	chain := chains[0].(*cosmos.CosmosChain)
 
 	enableBlockDB := false
