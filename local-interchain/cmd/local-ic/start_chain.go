@@ -28,6 +28,7 @@ var startCmd = &cobra.Command{
 	Example: `local-ic start base_ibc
 ICTEST_HOME=. local-ic start mychain
 local-ic start https://gist.githubusercontent.com/Reecepbcups/70bf59c82c797ead9a5430b8b9d8d852/raw/cecc7be35bcec8b976a5d92e78fd6d56de2e1aa1/cosmoshub_localic_config.json
+local-ic start https://pastebin.com/raw/Ummk4DTM
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
