@@ -49,10 +49,6 @@ func TestICTestMiscellaneous(t *testing.T) {
 				CoinType:       "118",
 				ModifyGenesis:  cosmos.ModifyGenesis(sdk47Genesis),
 				EncodingConfig: wasmEncoding(),
-				CometMock: ibc.CometMockConfig{
-					Image:       ibc.NewDockerImage("ghcr.io/informalsystems/cometmock", "v0.37.x", "1025:1025"),
-					BlockTimeMs: 200,
-				},
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
@@ -85,7 +81,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)
 	testSendingTokens(ctx, t, chain, users)
-	// testFindTxs(ctx, t, chain, users) // TODO: does not work with CometMock
+	testFindTxs(ctx, t, chain, users) // not supported with CometMock
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
 	testBroadcaster(ctx, t, chain, users)
@@ -93,7 +89,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testHasCommand(ctx, t, chain)
 	testTokenFactory(ctx, t, chain, users)
 	testFailedCWExecute(ctx, t, chain, users)
-	// testAddingNode(ctx, t, chain) // TODO: does not work with CometMock
+	testAddingNode(ctx, t, chain) // not supported with CometMock
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
