@@ -94,13 +94,14 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 type ChainNodes []*ChainNode
 
 const (
-	valKey           = "validator"
-	blockTime        = 2 // seconds
-	p2pPort          = "26656/tcp"
-	rpcPort          = "26657/tcp"
-	grpcPort         = "9090/tcp"
-	apiPort          = "1317/tcp"
-	privValPort      = "1234/tcp"
+	valKey      = "validator"
+	blockTime   = 2 // seconds
+	p2pPort     = "26656/tcp"
+	rpcPort     = "26657/tcp"
+	grpcPort    = "9090/tcp"
+	apiPort     = "1317/tcp"
+	privValPort = "1234/tcp"
+
 	cometMockRawPort = "22331"
 )
 
