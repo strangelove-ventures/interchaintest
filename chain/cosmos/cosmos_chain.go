@@ -1190,7 +1190,7 @@ func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalI
 func (c *CosmosChain) GetTimeoutHeight(ctx context.Context) clienttypes.Height {
 	height, err := c.Height(ctx)
 	if err != nil {
-		c.log.Error("failed to get chain height", zap.Error(err))
+		c.log.Error("Failed to get chain height", zap.Error(err))
 		return clienttypes.Height{}
 	}
 
