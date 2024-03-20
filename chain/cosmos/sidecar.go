@@ -107,6 +107,11 @@ func (s *SidecarProcess) logger() *zap.Logger {
 }
 
 func (s *SidecarProcess) CreateContainer(ctx context.Context) error {
+	// TODO: move into containerLifecycle.CreateContainer
+	if err := s.Image.PullImage(ctx, *s.DockerClient); err != nil {
+		return fmt.Errorf("sidecar createcontainer failed to pull image: %w", err)
+	}
+
 	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), nil, s.HostName(), s.startCmd, s.env)
 }
 
