@@ -49,14 +49,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		panic(err)
 	}
 
-	config, err := LoadConfig(installDir, chainCfgFile)
-	if err != nil {
-		// try again with .json, then if it still fails - panic
-		config, err = LoadConfig(installDir, chainCfgFile+".json")
-		if err != nil {
-			panic(err)
-		}
-	}
+	config := ac.Cfg
 
 	config.Relayer = ac.Relayer
 

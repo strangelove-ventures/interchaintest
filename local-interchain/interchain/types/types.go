@@ -14,6 +14,8 @@ type AppStartConfig struct {
 	Address string
 	Port    uint16
 
+	Cfg *Config
+
 	Relayer Relayer
 	AuthKey string // optional password for API interaction
 }
