@@ -19,7 +19,7 @@ pub struct ChainRequestBuilder {
 impl ChainRequestBuilder {
     /// # Errors
     ///
-    /// Returns `Err` if the `api` or `chain_id` is empty.    
+    /// Returns `Err` if the `api` or `chain_id` is empty.
     pub fn new(
         api: String,
         chain_id: String,
@@ -373,7 +373,7 @@ fn set_missing_required_args(cmd: &str, required: Vec<&str>) -> String {
     for arg in required {
         let parsed_args: String = match arg.split_once('=') {
             Some((a, b)) => format!("{a} {b}"),
-            None => panic!("{arg} must have an '=' sign to be valie in the `required` argument"),
+            None => panic!("{arg} must have an '=' sign to be value in the `required` argument"),
         };
 
         if !command.contains(arg) && !command.contains(parsed_args.as_str()) {
