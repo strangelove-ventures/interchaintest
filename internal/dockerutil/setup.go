@@ -30,7 +30,7 @@ type DockerSetupTestingT interface {
 
 // CleanupLabel is a docker label key targeted by DockerSetup when it cleans up docker resources.
 //
-// "interchaintest" is perhaps a better name. However, for backwards compatability we preserve the original name of "ibc-test"
+// "interchaintest" is perhaps a better name. However, for backwards compatibility we preserve the original name of "ibc-test"
 // with the hyphen. Otherwise, we run the risk of causing "container already exists" errors because DockerSetup
 // is unable to clean old resources from docker engine.
 const CleanupLabel = "ibc-test"

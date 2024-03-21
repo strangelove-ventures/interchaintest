@@ -35,7 +35,7 @@ If your Windows system is missing Hyper-V, you can follow [this guide](https://w
 ## Environment Setup
 
 ### 1. Installing Docker
-Make sure you have wsl installed, you can check by running **Windows PowerShell** as adminstrator and running `wsl --install` which would install wsl2 if missing.
+Make sure you have wsl installed, you can check by running **Windows PowerShell** as administrator and running `wsl --install` which would install wsl2 if missing.
 
 For Win 10 and Win 11, follow [this guide](https://docs.docker.com/desktop/install/windows-install/) to setup and install Docker Desktop on your Windows system.
 
