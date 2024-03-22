@@ -28,6 +28,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
@@ -1276,24 +1277,14 @@ func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
 // interchain account.
 func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	msg, err := json.Marshal(map[string]any{
-		"@type":        "/cosmos.bank.v1beta1.MsgSend",
-		"from_address": fromAddr,
-		"to_address":   amount.Address,
-		"amount": []map[string]any{
-			{
-				"denom":  amount.Denom,
-				"amount": amount.Amount.String(),
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+	fromAddress := sdk.MustAccAddressFromBech32(fromAddr)
+	toAddress := sdk.MustAccAddressFromBech32(amount.Address)
+	coin := sdk.NewCoin(amount.Denom, amount.Amount)
+	msg := banktypes.NewMsgSend(fromAddress, toAddress, sdk.NewCoins(coin))
+	msgs := []sdk.Msg{msg}
 
-	_, err = tn.ExecTx(ctx, fromAddr,
-		"intertx", "submit", string(msg),
-		"--connection-id", connectionID,
-	)
+	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
+	icaTxMemo := "ica bank transfer"
+	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
 	return err
 }
