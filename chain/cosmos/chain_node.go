@@ -1222,22 +1222,21 @@ func (tn *ChainNode) logger() *zap.Logger {
 // RegisterICA will attempt to register an interchain account on the counterparty chain.
 func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
 	return tn.ExecTx(ctx, keyName,
-		"intertx", "register",
-		"--connection-id", connectionID,
+		"interchain-accounts", "controller", "register", connectionID,
 	)
 }
 
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
-		"intertx", "interchainaccounts", connectionID, address,
+		"interchain-accounts", "controller", "interchain-account", address, connectionID,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	// at this point stdout should look like this:
-	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
+	// address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(string(stdout), ":", 2)
 	if len(parts) < 2 {
