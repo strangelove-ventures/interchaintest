@@ -1249,6 +1249,8 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	return strings.TrimSpace(parts[1]), nil
 }
 
+// SendICATx sends an interchain account transaction for a specified address and sends it to the specified
+// interchain account.
 func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
 	cdc := codec.NewProtoCodec(registry)
 	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)

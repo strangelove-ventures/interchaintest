@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
@@ -374,6 +375,25 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return tx, nil
+}
+
+// RegisterICA will attempt to register an interchain account on the given counterparty chain.
+func (c *CosmosChain) RegisterICA(ctx context.Context, keyName string, connectionID string) (string, error) {
+	return c.getFullNode().RegisterICA(ctx, keyName, connectionID)
+}
+
+// QueryICA will query for an interchain account controlled by the given address on the counterparty chain.
+func (c *CosmosChain) QueryICAAddress(ctx context.Context, connectionID, address string) (string, error) {
+	return c.getFullNode().QueryICA(ctx, connectionID, address)
+}
+
+// SendICATx sends an interchain account transaction for a specified address and sends it to the respective
+// interchain account on the counterparty chain.
+func (c *CosmosChain) SendICATx(ctx context.Context, keyName, connectionID string, msgs []sdk.Msg, icaTxMemo string) (string, error) {
+	node := c.getFullNode()
+	registry := node.Chain.Config().EncodingConfig.InterfaceRegistry
+	encoding := "proto3"
+	return node.SendICATx(ctx, keyName, connectionID, registry, msgs, icaTxMemo, encoding)
 }
 
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
