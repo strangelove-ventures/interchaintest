@@ -23,6 +23,8 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -35,6 +37,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
@@ -1243,6 +1246,31 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 		return "", fmt.Errorf("malformed stdout from command: %s", stdout)
 	}
 	return strings.TrimSpace(parts[1]), nil
+}
+
+func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
+	cdc := codec.NewProtoCodec(registry)
+	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)
+	if err != nil {
+		return "", err
+	}
+
+	icaPacketData := icatypes.InterchainAccountPacketData{
+		Type: icatypes.EXECUTE_TX,
+		Data: icaPacketDataBytes,
+		Memo: icaTxMemo,
+	}
+
+	if err := icaPacketData.ValidateBasic(); err != nil {
+		return "", err
+	}
+
+	icaPacketBytes, err := cdc.MarshalJSON(&icaPacketData)
+	if err != nil {
+		return "", err
+	}
+
+	return tn.ExecTx(ctx, keyName, "interchain-accounts", "controller", "send-tx", connectionID, string(icaPacketBytes))
 }
 
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
