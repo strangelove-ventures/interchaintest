@@ -366,6 +366,7 @@ func (tn *TendermintNode) Exec(ctx context.Context, cmd []string, env []string) 
 		Env:   env,
 		Binds: tn.Bind(),
 	}
+	tn.Log.Info("Executing command", zap.Any(strings.Join(cmd, " "), opts))
 	res := job.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }

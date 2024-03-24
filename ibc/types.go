@@ -18,6 +18,10 @@ type ChainConfig struct {
 	Type string `yaml:"type"`
 	// Chain name, e.g. cosmoshub.
 	Name string `yaml:"name"`
+	// Chain name, e.g. cosmoshub.
+	HomeDir string `yaml:"home-dir"`
+	// Chain name, e.g. cosmoshub.
+	SkipInit bool `yaml:"skip-init"`
 	// Chain ID, e.g. cosmoshub-4
 	ChainID string `yaml:"chain-id"`
 	// Docker images required for running chain nodes.
