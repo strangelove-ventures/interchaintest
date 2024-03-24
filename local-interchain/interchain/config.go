@@ -3,7 +3,9 @@ package interchain
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,22 +21,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
-func loadConfig(config *types.Config, filepath string) (*types.Config, error) {
-	bytes, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
 func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
-	var config *types.Config
+	var config types.Config
 
 	configFile := "base.json"
 	if chainCfgFile != "" {
@@ -45,7 +33,12 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	chainsDir := filepath.Join(installDir, "chains")
 	cfgFilePath := filepath.Join(chainsDir, configFile)
 
-	config, err := loadConfig(config, cfgFilePath)
+	bytes, err := os.ReadFile(cfgFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytes, &config)
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +46,31 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	log.Println("Using directory:", installDir)
 	log.Println("Using chain config:", cfgFilePath)
 
+	return setConfigDefaults(&config), nil
+}
+
+func LoadConfigFromURL(url string) (*types.Config, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var config types.Config
+	err = json.Unmarshal(body, &config)
+	if err != nil {
+		return &config, fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	return setConfigDefaults(&config), nil
+}
+
+func setConfigDefaults(config *types.Config) *types.Config {
 	chains := config.Chains
 
 	for i := range chains {
@@ -69,7 +87,7 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 		}
 	}
 
-	return config, nil
+	return config
 }
 
 // ConfigurationOverrides creates a map of config file overrides for filenames, their keys, and values.
