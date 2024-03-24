@@ -1187,12 +1187,12 @@ func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalI
 
 // GetTimeoutHeight returns a timeout height of 1000 blocks above the current block height.
 // This function should be used when the timeout is never expected to be reached
-func (c *CosmosChain) GetTimeoutHeight(ctx context.Context) clienttypes.Height {
+func (c *CosmosChain) GetTimeoutHeight(ctx context.Context) (clienttypes.Height, error) {
 	height, err := c.Height(ctx)
 	if err != nil {
 		c.log.Error("Failed to get chain height", zap.Error(err))
-		return clienttypes.Height{}
+		return clienttypes.Height{}, fmt.Errorf("failed to get chain height: %w", err)
 	}
 
-	return clienttypes.NewHeight(clienttypes.ParseChainID(c.Config().ChainID), uint64(height)+1000)
+	return clienttypes.NewHeight(clienttypes.ParseChainID(c.Config().ChainID), uint64(height)+1000), nil
 }
