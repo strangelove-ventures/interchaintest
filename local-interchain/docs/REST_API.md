@@ -19,7 +19,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
         - [Get Channels](#get-channels)
     - [Using Actions](#using-actions)
         - [Unix Curl Command](#unix-curl-command)
-        - [Python](#python)
+        - [Python](#python-client)
 
 ---
 
@@ -27,7 +27,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
 
 ## Defaults
 
-By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the binary with `--api-address` and `--api-port`.
+By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the binary with `--api-address` and `--api-port`. <!-- markdown-link-check-disable-line -->
 
 ## Environment Variables
 
@@ -128,9 +128,9 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://127.0.0.1:8080/
 ```
 
-### Python
+### Python Client
 
-A full Python client can be found in the [scripts folder](../scripts/). This is just a snippet of code for example purposes.
+A full Python client can be found in the [python folder](../python/). This is just a snippet of code for example purposes.
 
 ```python
 # local-ic start juno_ibc

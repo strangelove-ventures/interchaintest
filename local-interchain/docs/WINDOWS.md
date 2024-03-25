@@ -83,7 +83,7 @@ GCC does not come with Windows, and the best compatible setup I've found was usi
 ![](https://i.imgur.com/EeZUeJU.png)
 
 4. Choose installation folder and click Install.
- 
+
 ![](https://i.imgur.com/D25unIm.png)
 
 5. After installation, no need to run *Code::Blocks* and click Next then Finish.
@@ -100,13 +100,13 @@ After finishing the steps above, open a new cmd or shell, and you will be able t
 1. Start the docker daemon by running **Docker Desktop** on Win 10/11 or using [**Docker Quickstart Terminal**](https://github.com/microsoft/docker/blob/master/docs/installation/windows.md#using-the-docker-quickstart-terminal) if you have installed Docker Toolbox.
 2. Clone the Local Interchain Repo.
 ```bash
-git clone https://github.com/strangelove-ventures/interchaintest.git 
+git clone https://github.com/strangelove-ventures/interchaintest.git
 cd interchaintest/local-interchain
 ```
 3. Run `make install`
 4. Run `local-ic start base.json`
 
-Wait for it to set up and go to *https://127.0.0.1:8080/info*, you should see each local chain running in its own docker container `docker ps`
+Wait for it to set up and go to *https://127.0.0.1:8080/info*, you should see each local chain running in its own docker container `docker ps` <!-- markdown-link-check-disable-line -->
 
 Now you are running a complete local wasm IBC-connected environment on a Windows operating system.
 
