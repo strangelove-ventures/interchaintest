@@ -19,7 +19,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
         - [Get Channels](#get-channels)
     - [Using Actions](#using-actions)
         - [Unix Curl Command](#unix-curl-command)
-        - [Python](#python-client)
+        - [Python](#python-client) <!-- markdown-link-check-disable-line -->
 
 ---
 
