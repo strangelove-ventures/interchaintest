@@ -52,11 +52,15 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 			ChainConfig: ibc.ChainConfig{
 				ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
 			},
+			NumValidators: &numValsOne,
+			NumFullNodes:  &numFullNodesZero,
 		},
 		{
-			Name:      "gaia",
-			ChainName: "gaia",
-			Version:   "v7.0.3",
+			Name:          "gaia",
+			ChainName:     "gaia",
+			Version:       "v7.0.3",
+			NumValidators: &numValsOne,
+			NumFullNodes:  &numFullNodesZero,
 		},
 	})
 
