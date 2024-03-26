@@ -9,6 +9,7 @@ replace (
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.2 //indirect
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000 => ../
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )

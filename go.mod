@@ -4,6 +4,14 @@ go 1.21
 
 toolchain go1.21.0
 
+replace (
+	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
+	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
+	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
+)
+
 require (
 	cosmossdk.io/math v1.3.0
 	cosmossdk.io/store v1.1.0
@@ -263,12 +271,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 	pgregory.net/rapid v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-)
-
-replace (
-	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
-	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
-	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
-	github.com/prometheus/common => github.com/prometheus/common v0.47.0 // matches SDK version
 )
