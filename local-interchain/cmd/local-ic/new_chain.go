@@ -33,7 +33,7 @@ var newChainCmd = &cobra.Command{
 		name := strings.TrimSuffix(args[0], ".json")
 		filePath := path.Join(GetDirectory(), "chains", fmt.Sprintf("%s.json", name))
 
-		// while loop to allow for IBC conncetions to work as expected. Else set IBC as []string{}
+		// while loop to allow for IBC connections to work as expected. Else set IBC as []string{}
 
 		text, _ := os.ReadFile(filePath)
 		if len(text) > 0 {
@@ -55,7 +55,7 @@ var newChainCmd = &cobra.Command{
 				ChainID:       getOrDefault("chain_id", "local-1"),
 				Binary:        getOrDefault("App Binary", "junod"),
 				Bech32Prefix:  getOrDefault("Bech32 Prefix", "juno"),
-				GasPrices:     getOrDefault("gas_prices (comma seperated)", "0ujuno,0other"),
+				GasPrices:     getOrDefault("gas_prices (comma separated)", "0ujuno,0other"),
 				GasAdjustment: getOrDefault("gas_adjustment", 2.5),
 
 				// IBCPaths should be unique chain ids?

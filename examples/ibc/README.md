@@ -11,8 +11,8 @@ Interchain Queries
 
 Packet Forward Middleware Test:
 
-* [Noble](https://github.com/strangelove-ventures/noble/blob/main/interchaintest/packet_forward_test.go)
-* [Juno](https://github.com/CosmosContracts/juno/blob/main/interchaintest/module_pfm_test.go)
+* [Noble](https://github.com/noble-assets/noble/blob/v4.0.3/interchaintest/packet_forward_test.go)
+* [Juno](https://github.com/CosmosContracts/juno/blob/v21.0.0/interchaintest/module_pfm_test.go)
 
 IBC Client Update
 

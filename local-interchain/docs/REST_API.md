@@ -1,6 +1,6 @@
 # Interacting with the chains
 
-Since local-interchain exposes a REST API, you can interact with the chains using any language that supports HTTP requests. A default python client example can be found in the [scripts folder here](../scripts/).
+Since local-interchain exposes a REST API, you can interact with the chains using any language that supports HTTP requests. A default python client example can be found in the [python folder](../python/) and [rust](../rust/README.md).
 
 # Contents
 
@@ -19,7 +19,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
         - [Get Channels](#get-channels)
     - [Using Actions](#using-actions)
         - [Unix Curl Command](#unix-curl-command)
-        - [Python](#python)
+        - [Python](#python-client) <!-- markdown-link-check-disable-line -->
 
 ---
 
@@ -27,7 +27,7 @@ Since local-interchain exposes a REST API, you can interact with the chains usin
 
 ## Defaults
 
-By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the binary with `--api-address` and `--api-port`.
+By default, the API is served at <http://127.0.0.1:8080/>. You can modify this before starting the binary with `--api-address` and `--api-port`. <!-- markdown-link-check-disable-line -->
 
 ## Environment Variables
 
@@ -88,6 +88,7 @@ The following examples use the [chains/base.json](../chains/base.json) chain exa
 
 ### Unix Curl Command
 
+<!-- markdown-link-check-disable -->
 ```bash
 # Get the total supply
 curl -X POST -H "Content-Type: application/json" -d '{
@@ -107,7 +108,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://127.0.0.1:8080/
 
 
-# Execute a Tx sending funds 
+# Execute a Tx sending funds
 # The key here 'acc0' was set by name in the genesis section of the chain's config.
 curl -X POST -H "Content-Type: application/json" -d '{
   "chain_id": "localjuno-1",
@@ -117,7 +118,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
 
 
 # Querying said Tx hash returned from above.
-# NOTE: 
+# NOTE:
 # - the cmd does not require 'query' (or 'q') as it is added automatically.
 # - This Tx hash will not be available on your machine.
 curl -X POST -H "Content-Type: application/json" -d '{
@@ -127,9 +128,9 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://127.0.0.1:8080/
 ```
 
-### Python
+### Python Client
 
-A full Python client can be found in the [scripts folder](../scripts/). This is just a snippet of code for example purposes.
+A full Python client can be found in the [python folder](../python/). This is just a snippet of code for example purposes.
 
 ```python
 # local-ic start juno_ibc
@@ -165,3 +166,4 @@ print(
 # {'chain_id': 'localjuno-1', 'channel_id': 'channel-0', 'client_id': '07-tendermint-0', 'connection_hops': ['connection-0'], 'counterparty': {'chain_id': 'localjuno-2', 'channel_id': 'channel-0', 'client_id': '07-tendermint-0', 'connection_id': 'connection-0', 'port_id': 'transfer'}, 'ordering': 'ORDER_UNORDERED', 'port_id': 'transfer', 'state': 'STATE_OPEN', 'version': 'ics20-1'}
 
 ```
+<!-- markdown-link-check-enable -->
