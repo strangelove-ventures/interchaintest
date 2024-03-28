@@ -14,22 +14,11 @@ import (
 )
 
 func TestJunoStateExport(t *testing.T) {
-	// SDK v47
-	CosmosChainStateExportTest(t, "juno", "v17.0.0")
-}
-
-func CosmosChainStateExportTest(t *testing.T, name, version string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
 
-	numVals := 1
-	numFullNodes := 0
-
-	// defaults to Juno
-	cfg := ibc.ChainConfig{}
-
-	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodes, name, version, cfg)
+	chains := interchaintest.CreateChainWithConfig(t, numValsOne, numFullNodesZero, "juno", "v19.0.0-alpha.3", ibc.ChainConfig{})
 	chain := chains[0].(*cosmos.CosmosChain)
 
 	enableBlockDB := false

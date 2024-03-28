@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 )
 
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
