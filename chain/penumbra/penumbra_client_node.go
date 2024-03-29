@@ -11,6 +11,7 @@ import (
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
 
 	//nolint:staticcheck
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -18,13 +19,13 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	assetv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1alpha1"
-	ibcv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1alpha1"
-	shieldedpoolv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1alpha1"
-	keysv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1alpha1"
-	numv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1alpha1"
-	custodyv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1alpha1"
-	viewv1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1alpha1"
+	asset "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1"
+	ibcv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1"
+	pool "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1"
+	keys "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1"
+	num "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"
+	custody "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1"
+	view "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -144,13 +145,13 @@ func (p *PenumbraClientNode) HomeDir() string {
 
 // GetAddress returns the Bech32m encoded string of the inner bytes as a slice of bytes.
 func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
-	addrReq := &viewv1alpha1.AddressByIndexRequest{
-		AddressIndex: &keysv1alpha1.AddressIndex{
+	addrReq := &view.AddressByIndexRequest{
+		AddressIndex: &keys.AddressIndex{
 			Account: 0,
 		},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
+	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.AddressByIndex(ctx, addrReq)
 	if err != nil {
@@ -167,21 +168,20 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	hi, lo := translateBigInt(amount.Amount)
 
 	// Generate a transaction plan sending funds to an address.
-	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		WalletId: nil,
-		Outputs: []*viewv1alpha1.TransactionPlannerRequest_Output{{
-			Value: &assetv1alpha1.Value{
-				Amount: &numv1alpha1.Amount{
+	tpr := &view.TransactionPlannerRequest{
+		Outputs: []*view.TransactionPlannerRequest_Output{{
+			Value: &asset.Value{
+				Amount: &num.Amount{
 					Lo: lo,
 					Hi: hi,
 				},
-				AssetId: &assetv1alpha1.AssetId{AltBaseDenom: amount.Denom},
+				AssetId: &asset.AssetId{AltBaseDenom: amount.Denom},
 			},
-			Address: &keysv1alpha1.Address{AltBech32M: amount.Address},
+			Address: &keys.Address{AltBech32M: amount.Address},
 		}},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
+	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
@@ -189,10 +189,10 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 
 	// Get authorization data for the transaction from pclientd (signing).
-	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(p.GRPCConn)
-	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
+	custodyClient := custody.NewCustodyServiceClient(p.GRPCConn)
+	authorizeReq := &custody.AuthorizeRequest{
 		Plan:              resp.Plan,
-		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
+		PreAuthorizations: []*custody.PreAuthorization{},
 	}
 
 	authData, err := custodyClient.Authorize(ctx, authorizeReq)
@@ -201,19 +201,41 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 	}
 
 	// Have pclientd build and sign the planned transaction.
-	wbr := &viewv1alpha1.WitnessAndBuildRequest{
+	wbr := &view.WitnessAndBuildRequest{
 		TransactionPlan:   resp.Plan,
 		AuthorizationData: authData.Data,
 	}
 
-	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
+	buildClient, err := viewClient.WitnessAndBuild(ctx, wbr)
 	if err != nil {
 		return err
 	}
 
+	var tx *transactionv1.Transaction
+	for {
+		buildResp, err := buildClient.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return err
+			}
+		}
+
+		status := buildResp.GetBuildProgress()
+
+		// Progress is a float between 0 and 1 that is an approximation of the build progress.
+		// If the status is not complete we need to loop and wait for completion.
+		if status.Progress < 1 {
+			continue
+		}
+
+		tx = buildResp.GetComplete().Transaction
+	}
+
 	// Have pclientd broadcast and await confirmation of the built transaction.
-	btr := &viewv1alpha1.BroadcastTransactionRequest{
-		Transaction:    tx.Transaction,
+	btr := &view.BroadcastTransactionRequest{
+		Transaction:    tx,
 		AwaitDetection: true,
 	}
 
@@ -227,7 +249,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 // SendIBCTransfer sends an IBC transfer from the current PenumbraClientNode to a specified destination address on a specified channel.
 // The function validates the address string on the current PenumbraClientNode instance. If the address string is empty, it returns an error.
-// It translates the amount to a big integer and creates an `ibcv1alpha1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
+// It translates the amount to a big integer and creates an `ibcv1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
 func (p *PenumbraClientNode) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -242,16 +264,16 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 	hi, lo := translateBigInt(amount.Amount)
 
-	withdrawal := &ibcv1alpha1.Ics20Withdrawal{
-		Amount: &numv1alpha1.Amount{
+	withdrawal := &ibcv1.Ics20Withdrawal{
+		Amount: &num.Amount{
 			Lo: lo,
 			Hi: hi,
 		},
-		Denom: &assetv1alpha1.Denom{
+		Denom: &asset.Denom{
 			Denom: amount.Denom,
 		},
 		DestinationChainAddress: amount.Address,
-		ReturnAddress: &keysv1alpha1.Address{
+		ReturnAddress: &keys.Address{
 			AltBech32M: p.addrString,
 		},
 		TimeoutHeight: &timeoutHeight,
@@ -259,16 +281,16 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		SourceChannel: channelID,
 	}
 
+	// TODO: remove debug output
 	fmt.Printf("Timeout: %+v \n", timeoutHeight)
 	fmt.Printf("Withdrawal: %+v \n", withdrawal)
 
 	// Generate a transaction plan sending ics_20 transfer
-	tpr := &viewv1alpha1.TransactionPlannerRequest{
-		WalletId:         nil,
-		Ics20Withdrawals: []*ibcv1alpha1.Ics20Withdrawal{withdrawal},
+	tpr := &view.TransactionPlannerRequest{
+		Ics20Withdrawals: []*ibcv1.Ics20Withdrawal{withdrawal},
 	}
 
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
+	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
 	resp, err := viewClient.TransactionPlanner(ctx, tpr)
 	if err != nil {
@@ -276,10 +298,10 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	// Get authorization data for the transaction from pclientd (signing).
-	custodyClient := custodyv1alpha1.NewCustodyProtocolServiceClient(p.GRPCConn)
-	authorizeReq := &custodyv1alpha1.AuthorizeRequest{
+	custodyClient := custody.NewCustodyServiceClient(p.GRPCConn)
+	authorizeReq := &custody.AuthorizeRequest{
 		Plan:              resp.Plan,
-		PreAuthorizations: []*custodyv1alpha1.PreAuthorization{},
+		PreAuthorizations: []*custody.PreAuthorization{},
 	}
 
 	authData, err := custodyClient.Authorize(ctx, authorizeReq)
@@ -288,31 +310,71 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	// Have pclientd build and sign the planned transaction.
-	wbr := &viewv1alpha1.WitnessAndBuildRequest{
+	wbr := &view.WitnessAndBuildRequest{
 		TransactionPlan:   resp.Plan,
 		AuthorizationData: authData.Data,
 	}
 
-	tx, err := viewClient.WitnessAndBuild(ctx, wbr)
+	buildClient, err := viewClient.WitnessAndBuild(ctx, wbr)
 	if err != nil {
 		return ibc.Tx{}, err
+	}
+
+	var tx *transactionv1.Transaction
+	for {
+		buildResp, err := buildClient.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return ibc.Tx{}, err
+			}
+		}
+
+		status := buildResp.GetBuildProgress()
+
+		// Progress is a float between 0 and 1 that is an approximation of the build progress.
+		// If the status is not complete we need to loop and wait for completion.
+		if status.Progress < 1 {
+			continue
+		}
+
+		tx = buildResp.GetComplete().Transaction
 	}
 
 	// Have pclientd broadcast and await confirmation of the built transaction.
-	btr := &viewv1alpha1.BroadcastTransactionRequest{
-		Transaction:    tx.Transaction,
+	btr := &view.BroadcastTransactionRequest{
+		Transaction:    tx,
 		AwaitDetection: true,
 	}
 
-	txResp, err := viewClient.BroadcastTransaction(ctx, btr)
+	txClient, err := viewClient.BroadcastTransaction(ctx, btr)
 	if err != nil {
 		return ibc.Tx{}, err
+	}
+
+	var confirmed *view.BroadcastTransactionResponse_Confirmed
+	for {
+		txResp, err := txClient.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return ibc.Tx{}, err
+			}
+		}
+
+		// Wait until the tx is confirmed on-chain by the view server.
+		confirmed = txResp.GetConfirmed()
+		if confirmed == nil {
+			continue
+		}
 	}
 
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
-		Height:   int64(txResp.DetectionHeight),
-		TxHash:   string(txResp.Id.Hash),
+		Height:   int64(confirmed.DetectionHeight),
+		TxHash:   string(confirmed.Id.Inner),
 		GasSpent: 0,
 		Packet: ibc.Packet{
 			Sequence:         0,
@@ -338,13 +400,13 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 // - math.Int: The balance of the specified denom.
 // - error: An error if any occurred during the balance retrieval.
 func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
-	viewClient := viewv1alpha1.NewViewProtocolServiceClient(p.GRPCConn)
+	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
-	balanceRequest := &viewv1alpha1.BalancesRequest{
-		AccountFilter: &keysv1alpha1.AddressIndex{
+	balanceRequest := &view.BalancesRequest{
+		AccountFilter: &keys.AddressIndex{
 			Account: 0,
 		},
-		AssetIdFilter: &assetv1alpha1.AssetId{
+		AssetIdFilter: &asset.AssetId{
 			AltBaseDenom: denom,
 		},
 	}
@@ -356,7 +418,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 		return math.Int{}, err
 	}
 
-	var balances []*viewv1alpha1.BalancesResponse
+	var balances []*view.BalancesResponse
 	for {
 		balance, err := balanceStream.Recv()
 		if err != nil {
@@ -420,14 +482,13 @@ func translateBigInt(i math.Int) (uint64, uint64) {
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
-func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *assetv1alpha1.AssetId) (*assetv1alpha1.DenomMetadata, error) {
-	queryClient := shieldedpoolv1alpha1.NewQueryServiceClient(p.GRPCConn)
-	req := &shieldedpoolv1alpha1.DenomMetadataByIdRequest{
-		ChainId: p.Chain.Config().ChainID,
+func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *asset.AssetId) (*asset.Metadata, error) {
+	queryClient := pool.NewQueryServiceClient(p.GRPCConn)
+	req := &pool.AssetMetadataByIdRequest{
 		AssetId: assetId,
 	}
 
-	resp, err := queryClient.DenomMetadataById(ctx, req)
+	resp, err := queryClient.AssetMetadataById(ctx, req)
 	if err != nil {
 		return nil, err
 	}
