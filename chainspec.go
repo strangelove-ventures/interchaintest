@@ -183,8 +183,14 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		if len(versionSplit) != 2 {
 			return nil, errors.New("penumbra version should be comma separated penumbra_version,tendermint_version")
 		}
-		cfg.Images[0].Version = versionSplit[1]
-		cfg.Images[1].Version = versionSplit[0]
+
+		if cfg.Images[0].Version == "" {
+			cfg.Images[0].Version = versionSplit[1]
+		}
+
+		if cfg.Images[1].Version == "" {
+			cfg.Images[1].Version = versionSplit[0]
+		}
 	case "polkadot":
 		// Only set if ChainSpec's Version is set, if not, Version from Images must be set.
 		if s.Version != "" {
