@@ -13,10 +13,10 @@ import (
 
 	"github.com/rivo/tview"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	blockdbtui "github.com/strangelove-ventures/interchaintest/v8/blockdb/tui"
 	"github.com/strangelove-ventures/interchaintest/v8/conformance"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/interchaintest/v8/internal/blockdb/tui"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"go.uber.org/zap"
