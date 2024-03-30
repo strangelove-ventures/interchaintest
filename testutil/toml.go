@@ -15,9 +15,9 @@ import (
 // Toml is used for holding the decoded state of a toml config file.
 type Toml map[string]any
 
-// recursiveModifyToml will apply toml modifications at the current depth,
+// RecursiveModifyToml will apply toml modifications at the current depth,
 // then recurse for new depths.
-func recursiveModifyToml(c map[string]any, modifications Toml) error {
+func RecursiveModifyToml(c map[string]any, modifications Toml) error {
 	for key, value := range modifications {
 		if reflect.ValueOf(value).Kind() == reflect.Map {
 			cV, ok := c[key]
@@ -31,7 +31,7 @@ func recursiveModifyToml(c map[string]any, modifications Toml) error {
 				// if the config does not exist, we should create a blank one to allow creation
 				cVM = make(Toml)
 			}
-			if err := recursiveModifyToml(cVM, value.(Toml)); err != nil {
+			if err := RecursiveModifyToml(cVM, value.(Toml)); err != nil {
 				return err
 			}
 			c[key] = cVM
@@ -64,7 +64,7 @@ func ModifyTomlConfigFile(
 		return fmt.Errorf("failed to unmarshal %s: %w", filePath, err)
 	}
 
-	if err := recursiveModifyToml(c, modifications); err != nil {
+	if err := RecursiveModifyToml(c, modifications); err != nil {
 		return fmt.Errorf("failed to modify %s: %w", filePath, err)
 	}
 

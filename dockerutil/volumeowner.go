@@ -34,7 +34,7 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 
 	containerName := fmt.Sprintf("interchaintest-volumeowner-%d-%s", time.Now().UnixNano(), RandLowerCaseLetterString(5))
 
-	if err := ensureBusybox(ctx, opts.Client); err != nil {
+	if err := EnsureBusybox(ctx, opts.Client); err != nil {
 		return err
 	}
 

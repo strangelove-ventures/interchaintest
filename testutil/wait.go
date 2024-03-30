@@ -44,8 +44,8 @@ func WaitForBlocksUtil(maxBlocks int, fn func(i int) error) error {
 	return nil
 }
 
-// nodesInSync returns an error if the nodes are not in sync with the chain.
-func nodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter) error {
+// NodesInSync returns an error if the nodes are not in sync with the chain.
+func NodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter) error {
 	var chainHeight int64
 	nodeHeights := make([]int64, len(nodes))
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -83,7 +83,7 @@ func WaitForInSync(ctx context.Context, chain ChainHeighter, nodes ...ChainHeigh
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if err := nodesInSync(ctx, chain, nodes); err != nil {
+			if err := NodesInSync(ctx, chain, nodes); err != nil {
 				continue
 			}
 			return nil
