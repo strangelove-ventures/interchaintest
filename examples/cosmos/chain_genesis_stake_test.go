@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -35,11 +36,11 @@ func TestChainGenesisUnequalStake(t *testing.T) {
 			NumValidators: &validators,
 			ChainConfig: ibc.ChainConfig{
 				Denom: denom,
-				ModifyGenesisAmounts: func(i int) (types.Coin, types.Coin) {
+				ModifyGenesisAmounts: func(i int) (sdk.Coin, sdk.Coin) {
 					if i == 0 {
-						return types.NewCoin(denom, types.NewInt(balance)), types.NewCoin(denom, types.NewInt(val1_stake))
+						return sdk.NewCoin(denom, sdkmath.NewInt(balance)), sdk.NewCoin(denom, sdkmath.NewInt(val1_stake))
 					}
-					return types.NewCoin(denom, types.NewInt(balance)), types.NewCoin(denom, types.NewInt(val2_stake))
+					return sdk.NewCoin(denom, sdkmath.NewInt(balance)), sdk.NewCoin(denom, sdkmath.NewInt(val2_stake))
 				},
 			},
 		},
