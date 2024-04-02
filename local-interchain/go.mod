@@ -66,7 +66,7 @@ require (
 	github.com/cosmos/gogoproto v1.4.10 // indirect
 	github.com/cosmos/iavl v0.20.1 // indirect
 	github.com/cosmos/ibc-go/modules/capability v1.0.0-rc1 // indirect
-	github.com/cosmos/ibc-go/v7 v7.3.0 // indirect
+	github.com/cosmos/ibc-go/v7 v7.3.2 // indirect
 	github.com/cosmos/ics23/go v0.10.0 // indirect
 	github.com/cosmos/interchain-security/v3 v3.1.1-0.20231102122221-81650a84f989 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.13.0 // indirect
