@@ -1,6 +1,6 @@
 module github.com/strangelove-ventures/interchaintest/v6
 
-go 1.22.1
+go 1.21
 
 replace (
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0

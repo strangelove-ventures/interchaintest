@@ -1,6 +1,6 @@
 module github.com/strangelove-ventures/localinterchain
 
-go 1.22.1
+go 1.21
 
 replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
