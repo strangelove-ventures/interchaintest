@@ -20,7 +20,7 @@ import (
 
 var (
 	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0"}
-	vals            = 1
+	vals            = 2
 	fNodes          = 0
 	providerChainID = "provider-1"
 )
@@ -63,7 +63,11 @@ func icsTest(t *testing.T, version string) {
 		{
 			Name: "ics-consumer", Version: version,
 			NumValidators: &vals, NumFullNodes: &fNodes,
-			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix},
+			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix, InterchainSecurityConfig: ibc.ICSConfig{
+				ConsumerCopyProviderKey: func(i int) bool {
+					return i == 0
+				},
+			}},
 		},
 	})
 
@@ -126,6 +130,20 @@ func icsTest(t *testing.T, version string) {
 		bal, err := consumer.BankQueryBalance(ctx, consumerUser.FormattedAddress(), consumer.Config().Denom)
 		require.NoError(t, err)
 		require.EqualValues(t, amt, bal)
+	})
+
+	t.Run("validate consumer keys copied", func(t *testing.T) {
+		providerKey0, err := provider.Validators[0].PrivValFileContent(ctx)
+		require.NoError(t, err)
+		consumerKey0, err := consumer.Validators[0].PrivValFileContent(ctx)
+		require.NoError(t, err)
+		require.Equal(t, providerKey0, consumerKey0)
+
+		providerKey1, err := provider.Validators[1].PrivValFileContent(ctx)
+		require.NoError(t, err)
+		consumerKey1, err := consumer.Validators[1].PrivValFileContent(ctx)
+		require.NoError(t, err)
+		require.NotEqual(t, providerKey1, consumerKey1)
 	})
 
 	t.Run("provider -> consumer IBC transfer", func(t *testing.T) {
