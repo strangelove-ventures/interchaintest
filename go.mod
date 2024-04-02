@@ -10,7 +10,6 @@ require (
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.5.0
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.2.1
 	github.com/cometbft/cometbft v0.37.5
 	github.com/cosmos/cosmos-sdk v0.47.10
 	github.com/cosmos/go-bip39 v1.0.0
@@ -27,6 +26,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
 	github.com/libp2p/go-libp2p v0.27.8
+	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pelletier/go-toml/v2 v2.1.0
@@ -48,7 +48,6 @@ require (
 require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
@@ -256,3 +255,5 @@ require (
 )
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+
+replace github.com/misko9/go-substrate-rpc-client/v4 => github.com/faddat/go-substrate-rpc-client/v4 v4.0.1-0.20240402155230-48db8c110afe

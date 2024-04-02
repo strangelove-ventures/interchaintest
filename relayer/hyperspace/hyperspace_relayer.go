@@ -23,7 +23,7 @@ var _ ibc.Relayer = &HyperspaceRelayer{}
 // UpdateClients() - no hyperspace implementation yet
 // AddKey() - no hyperspace implementation yet
 
-// HyperspaceRelayer is the ibc.Relayer implementation for github.com/ComposableFi/hyperspace.
+// HyperspaceRelayer is the ibc.Relayer implementation for github.com/misko9/hyperspace.
 type HyperspaceRelayer struct {
 	// Embedded DockerRelayer so commands just work.
 	*relayer.DockerRelayer

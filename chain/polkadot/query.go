@@ -2,8 +2,8 @@ package polkadot
 
 import (
 	"cosmossdk.io/math"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	gstypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
 )
 
 // GetBalance fetches the current balance for a specific account address using the SubstrateAPI
