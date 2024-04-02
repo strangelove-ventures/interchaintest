@@ -10,9 +10,9 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
+	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
