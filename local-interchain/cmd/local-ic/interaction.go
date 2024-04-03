@@ -14,19 +14,22 @@ import (
 
 const (
 	FlagAPIEndpoint = "api-endpoint"
+	FlagNodeIndex   = "node-index"
 )
 
 func init() {
 	interactCmd.Flags().String(FlagAPIAddressOverride, "http://127.0.0.1:8080", "override the default API address")
+	interactCmd.Flags().String(FlagAuthKey, "a", "auth key to use")
+	interactCmd.Flags().IntP(FlagNodeIndex, "n", 0, "node index to interact with")
 }
 
 var interactCmd = &cobra.Command{
 	Use:   "interact [chain_id] [interaction] [arguments...]",
 	Short: "Interact with a node",
-	Example: `local-ic interact localcosmos-1 bin 'status --node=%RPC%' --api-endpoint=http://127.0.0.1:8080
-local-ic interact localcosmos-1 query bank balances cosmos1hj5fveer5cjtn4wd6wstzugjfdxzl0xpxvjjvr
-local-ic interact localcosmos-1 get_channels
-local-ic interact localcosmos-1 relayer-exec rly q channels localcosmos-1
+	Example: `  local-ic interact localcosmos-1 bin 'status --node=%RPC%' --api-endpoint=http://127.0.0.1:8080
+  local-ic interact localcosmos-1 query bank balances cosmos1hj5fveer5cjtn4wd6wstzugjfdxzl0xpxvjjvr
+  local-ic interact localcosmos-1 get_channels
+  local-ic interact localcosmos-1 relayer-exec rly q channels localcosmos-1
 `,
 	Args:    cobra.MinimumNArgs(2),
 	Aliases: []string{"i"},
@@ -35,7 +38,7 @@ local-ic interact localcosmos-1 relayer-exec rly q channels localcosmos-1
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		ah := handlers.ActionHandler{
+		ah := &handlers.ActionHandler{
 			ChainId: args[0],
 			Action:  args[1],
 		}
@@ -44,14 +47,30 @@ local-ic interact localcosmos-1 relayer-exec rly q channels localcosmos-1
 			ah.Cmd = strings.Join(args[2:], " ")
 		}
 
-		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
+		authKey, err := cmd.Flags().GetString(FlagAuthKey)
+		if err != nil {
+			panic(err)
+		}
+
+		nodeIdx, err := cmd.Flags().GetInt(FlagNodeIndex)
+		if err != nil {
+			panic(err)
+		}
+
+		ah.AuthKey = authKey
+		ah.NodeIndex = nodeIdx
+
+		apiAddr, err := cmd.Flags().GetString(FlagAPIAddressOverride)
+		if err != nil {
+			panic(err)
+		}
 
 		res := makeHttpReq(apiAddr, ah)
 		fmt.Println(res)
 	},
 }
 
-func makeHttpReq(apiEndpoint string, ah handlers.ActionHandler) string {
+func makeHttpReq(apiEndpoint string, ah *handlers.ActionHandler) string {
 	client := &http.Client{}
 
 	//	curl -X POST -H "Content-Type: application/json" -d '{
