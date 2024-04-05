@@ -23,7 +23,7 @@ import (
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ccvclient "github.com/cosmos/interchain-security/v2/x/ccv/provider/client"
+	ccvclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"

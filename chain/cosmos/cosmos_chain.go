@@ -23,9 +23,9 @@ import (
 	chanTypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v4/modules/core/23-commitment/types"
 	ibctmtypes "github.com/cosmos/ibc-go/v4/modules/light-clients/07-tendermint/types"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v2/x/ccv/consumer/types"
-	ccvclient "github.com/cosmos/interchain-security/v2/x/ccv/provider/client"
-	ccvprovidertypes "github.com/cosmos/interchain-security/v2/x/ccv/provider/types"
+	ccvconsumertypes "github.com/cosmos/interchain-security/x/ccv/consumer/types"
+	ccvclient "github.com/cosmos/interchain-security/x/ccv/provider/client"
+	ccvprovidertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -871,6 +871,10 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	existingFunc := c.cfg.ModifyGenesis
 	c.cfg.ModifyGenesis = func(cc ibc.ChainConfig, b []byte) ([]byte, error) {
 
+		if existingFunc != nil {
+			return existingFunc(cc, b)
+		}
+
 		shortVote := []GenesisKV{
 			{
 				Key:   "app_state.gov.voting_params.voting_period",
@@ -885,13 +889,11 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 				Value: cc.Denom,
 			},
 		}
+
 		var err error
 		b, err = ModifyGenesis(shortVote)(cc, b)
 		if err != nil {
 			return nil, err
-		}
-		if existingFunc != nil {
-			return existingFunc(cc, b)
 		}
 		return b, nil
 	}

@@ -11,7 +11,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibctypes "github.com/cosmos/ibc-go/v4/modules/core/types"
-	ccvprovidertypes "github.com/cosmos/interchain-security/v2/x/ccv/provider/types"
+	ccvprovidertypes "github.com/cosmos/interchain-security/x/ccv/provider/types"
 )
 
 func DefaultEncoding() simappparams.EncodingConfig {
