@@ -274,7 +274,7 @@ func (o Order) Validate() error {
 
 // CreateClientOptions contains the configuration for creating a client.
 
-// a zero value is the same as not specifying the flag and will use the relayer defauls
+// a zero value is the same as not specifying the flag and will use the relayer defaults
 type CreateClientOptions struct {
 	TrustingPeriod           string
 	TrustingPeriodPercentage int64 // only available for Go Relayer

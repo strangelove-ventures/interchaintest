@@ -52,8 +52,8 @@ type ChainConfig struct {
 	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
-	// Modify genesis-amounts
-	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin)
+	// Modify genesis-amounts for the validator at the given index
+	ModifyGenesisAmounts func(int) (sdk.Coin, sdk.Coin)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.

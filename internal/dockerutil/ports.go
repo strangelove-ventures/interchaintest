@@ -37,7 +37,7 @@ func openListener(port int) (*net.TCPListener, error) {
 }
 
 // getPort generates a docker PortBinding by using the port provided.
-// If port is set to 0, the next avaliable port will be used.
+// If port is set to 0, the next available port will be used.
 // The listener will be closed in the case of an error, otherwise it will be left open.
 // This allows multiple getPort calls to find multiple available ports
 // before closing them so they are available for the PortBinding.
