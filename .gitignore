@@ -5,3 +5,5 @@ interchaintest.test
 /bin
 vendor
 examples/hyperspace/exported_state.json
+
+go.work.sum
