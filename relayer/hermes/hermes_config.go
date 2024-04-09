@@ -19,10 +19,14 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		}
 
 		chains = append(chains, Chain{
-			ID:            chainCfg.ChainID,
-			RPCAddr:       hermesCfg.rpcAddr,
-			GrpcAddr:      fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
-			WebsocketAddr: strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+			ID:       chainCfg.ChainID,
+			RPCAddr:  hermesCfg.rpcAddr,
+			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
+			EventSource: EventSource{
+				Mode:       "push",
+				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+				BatchDelay: "200ms",
+			},
 			RPCTimeout:    "10s",
 			AccountPrefix: chainCfg.Bech32Prefix,
 			KeyName:       hermesCfg.keyName,
@@ -150,11 +154,17 @@ type TrustThreshold struct {
 	Denominator string `toml:"denominator"`
 }
 
+type EventSource struct {
+	Mode       string `toml:"mode"`
+	Url        string `toml:"url"`
+	BatchDelay string `toml:"batch_delay"`
+}
+
 type Chain struct {
 	ID             string         `toml:"id"`
 	RPCAddr        string         `toml:"rpc_addr"`
 	GrpcAddr       string         `toml:"grpc_addr"`
-	WebsocketAddr  string         `toml:"websocket_addr"`
+	EventSource    EventSource    `toml:"event_source"`
 	RPCTimeout     string         `toml:"rpc_timeout"`
 	AccountPrefix  string         `toml:"account_prefix"`
 	KeyName        string         `toml:"key_name"`
