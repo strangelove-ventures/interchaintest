@@ -779,28 +779,26 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 
-	genesisAmount := types.Coin{
-		Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow),
-		Denom:  chainCfg.Denom,
-	}
+	genesisAmounts := make([][]types.Coin, len(c.Validators))
+	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
 
-	genesisSelfDelegation := types.Coin{
-		Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow),
-		Denom:  chainCfg.Denom,
+	for i := range c.Validators {
+		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}
+		if chainCfg.ModifyGenesisAmounts != nil {
+			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
+			genesisAmounts[i] = []types.Coin{amount}
+			genesisSelfDelegation[i] = selfDelegation
+		}
 	}
-
-	if chainCfg.ModifyGenesisAmounts != nil {
-		genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
-	}
-
-	genesisAmounts := []types.Coin{genesisAmount}
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
 	eg := new(errgroup.Group)
 	// Initialize config and sign gentx for each validator.
-	for _, v := range c.Validators {
+	for i, v := range c.Validators {
 		v := v
+		i := i
 		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
@@ -824,7 +822,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				}
 			}
 			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i])
 			}
 			return nil
 		})
@@ -882,7 +880,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
 			return err
 		}
 
