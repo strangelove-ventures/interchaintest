@@ -177,6 +177,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
+	t.Logf("Alice's balance after transfer: %s", aliceBal)
 
 	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
 	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
@@ -184,6 +185,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
+	t.Logf("Bob's balance after transfer: %s", bobBal)
 
 	transfer = ibc.WalletAmount{
 		Address: bob.FormattedAddress(),
@@ -212,15 +214,19 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 20, chainA)
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
 	require.NoError(t, err)
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
+	t.Logf("Alice's balance after transfer: %s", aliceBal)
+
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
 
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), ibcDenom)
 	require.NoError(t, err)
+	t.Logf("Bob's balance after transfer: %s", bobBal)
+
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 }
 
