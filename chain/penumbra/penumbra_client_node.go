@@ -224,13 +224,18 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 		status := buildResp.GetBuildProgress()
 
-		// Progress is a float between 0 and 1 that is an approximation of the build progress.
-		// If the status is not complete we need to loop and wait for completion.
-		if status.Progress < 1 {
-			continue
+		if status != nil {
+			// Progress is a float between 0 and 1 that is an approximation of the build progress.
+			// If the status is not complete we need to loop and wait for completion.
+			if status.Progress < 1 {
+				continue
+			}
 		}
 
 		tx = buildResp.GetComplete().Transaction
+		if tx == nil {
+			continue
+		}
 	}
 
 	// Have pclientd broadcast and await confirmation of the built transaction.
@@ -333,13 +338,18 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 
 		status := buildResp.GetBuildProgress()
 
-		// Progress is a float between 0 and 1 that is an approximation of the build progress.
-		// If the status is not complete we need to loop and wait for completion.
-		if status.Progress < 1 {
-			continue
+		if status != nil {
+			// Progress is a float between 0 and 1 that is an approximation of the build progress.
+			// If the status is not complete we need to loop and wait for completion.
+			if status.Progress < 1 {
+				continue
+			}
 		}
 
 		tx = buildResp.GetComplete().Transaction
+		if tx == nil {
+			continue
+		}
 	}
 
 	// Have pclientd broadcast and await confirmation of the built transaction.
@@ -436,7 +446,10 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 		return math.Int{}, fmt.Errorf("no balance was found for the denom %s", denom)
 	}
 
-	return translateHiAndLo(balances[0].Balance.Amount.Hi, balances[0].Balance.Amount.Lo), nil
+	balance := balances[0]
+	hi := balance.GetBalanceView().GetKnownAssetId().GetAmount().GetHi()
+	lo := balance.GetBalanceView().GetKnownAssetId().GetAmount().GetLo()
+	return translateHiAndLo(hi, lo), nil
 }
 
 // translateHiAndLo takes the high and low order bytes and decodes the two uint64 values into the single int128 value
