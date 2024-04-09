@@ -19,8 +19,9 @@ import (
 )
 
 // TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between two Penumbra testnet networks.
-// Two instances of Penumbra will be spun up, the go-relayer will be configured, and an ics-20 token transfer will be
-// conducted from chainA -> chainB.
+// Two instances of Penumbra will be spun up, the relayer will be configured, and an ics-20 token transfer will be
+// sent from chainA -> chainB successfully.
+// At the end another ics-20 transfer will be sent from chainA -> chainB, this transfer will time out.
 func TestPenumbraToPenumbraIBC(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -183,35 +184,44 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
-	//
-	//transfer = ibc.WalletAmount{
-	//	Address: bob.FormattedAddress(),
-	//	Denom:   chainA.Config().Denom,
-	//	Amount:  transferAmount,
-	//}
-	//
-	//h, err = chainB.Height(ctx)
-	//require.NoError(t, err)
-	//
-	//_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
-	//	Timeout: &ibc.IBCTimeout{
-	//		NanoSeconds: uint64((time.Duration(3) * time.Second).Nanoseconds()),
-	//		Height:      h + 5,
-	//	},
-	//	Memo: "",
-	//})
-	//require.NoError(t, err)
-	//
-	//err = testutil.WaitForBlocks(ctx, 7, chainA)
-	//require.NoError(t, err)
-	//
-	//aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
-	//require.NoError(t, err)
-	//require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
-	//
-	//bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), ibcDenom)
-	//require.NoError(t, err)
-	//require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+
+	transfer = ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: uint64((time.Duration(1) * time.Minute).Nanoseconds()),
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	// Wait for the packet to time out then restart the relayer.
+	time.Sleep(70 * time.Second)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 20, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), ibcDenom)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 }
 
 // TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between Penumbra and Cosmos testnet networks.
@@ -407,7 +417,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 5, chainA)
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
 	require.NoError(t, err)
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
