@@ -23,7 +23,7 @@ var (
 
 const busyboxRef = "busybox:stable"
 
-func ensureBusybox(ctx context.Context, cli *client.Client) error {
+func EnsureBusybox(ctx context.Context, cli *client.Client) error {
 	ensureBusyboxMu.Lock()
 	defer ensureBusyboxMu.Unlock()
 

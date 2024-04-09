@@ -32,7 +32,7 @@ func NewFileWriter(log *zap.Logger, cli *client.Client, testName string) *FileWr
 func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, content []byte) error {
 	const mountPath = "/mnt/dockervolume"
 
-	if err := ensureBusybox(ctx, w.cli); err != nil {
+	if err := EnsureBusybox(ctx, w.cli); err != nil {
 		return err
 	}
 
