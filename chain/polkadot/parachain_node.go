@@ -256,7 +256,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawRelayChainSpecFilePathFull()))
 	cmd = append(cmd, pn.RelayChainFlags...)
 
-	return pn.containerLifecycle.CreateContainer(ctx, pn.TestName, pn.NetworkID, pn.Image, exposedPorts, pn.Bind(), pn.HostName(), cmd, nil)
+	return pn.containerLifecycle.CreateContainer(ctx, pn.TestName, pn.NetworkID, pn.Image, exposedPorts, pn.Bind(), nil, pn.HostName(), cmd, nil)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.

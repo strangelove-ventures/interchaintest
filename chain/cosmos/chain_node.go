@@ -747,8 +747,11 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	}
 
 	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID)
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
 
 	_, _, err := tn.ExecBin(ctx, command...)
 	return err
@@ -1376,7 +1379,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), tn.HostName(), cmd, chainCfg.Env)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
