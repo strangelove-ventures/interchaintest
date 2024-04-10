@@ -93,6 +93,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	testFailedCWExecute(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
 	testGetGovernanceAddress(ctx, t, chain)
+	testTXFailsOnBlockInclusion(ctx, t, chain, users)
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
@@ -427,6 +428,16 @@ func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.C
 	require.NoError(t, err)
 	_, err = chain.AccAddressFromBech32(govAddr)
 	require.NoError(t, err)
+}
+
+func testTXFailsOnBlockInclusion(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	// this isn't a real validator, but is well formed, so it will only fail once a validator checks the staking transaction
+	fakeValoper, err := chain.GetNode().KeyBech32(ctx, users[0].KeyName(), "val")
+	require.NoError(t, err)
+
+	_, err = chain.GetNode().ExecTx(ctx, users[0].FormattedAddress(),
+		"staking", "delegate", fakeValoper, "100"+chain.Config().Denom)
+	require.Error(t, err)
 }
 
 // helpers
