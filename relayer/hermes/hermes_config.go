@@ -19,6 +19,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		}
 
 		chains = append(chains, Chain{
+<<<<<<< HEAD
 			ID:               chainCfg.ChainID,
 			Type:             "CosmosSdk",
 			CCVConsumerChain: false,
@@ -28,6 +29,15 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 				Mode:       "push",
 				URL:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
 				BatchDelay: "500ms",
+=======
+			ID:       chainCfg.ChainID,
+			RPCAddr:  hermesCfg.rpcAddr,
+			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
+			EventSource: EventSource{
+				Mode:       "push",
+				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+				BatchDelay: "200ms",
+>>>>>>> 0ea0168 (feat!: update hermes config (#1064))
 			},
 			RPCTimeout:    "10s",
 			TrustedNode:   false,
@@ -173,7 +183,14 @@ type TrustThreshold struct {
 	Denominator string `toml:"denominator"`
 }
 
+type EventSource struct {
+	Mode       string `toml:"mode"`
+	Url        string `toml:"url"`
+	BatchDelay string `toml:"batch_delay"`
+}
+
 type Chain struct {
+<<<<<<< HEAD
 	ID               string         `toml:"id"`
 	Type             string         `toml:"type"`
 	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
@@ -197,4 +214,26 @@ type Chain struct {
 	TrustingPeriod   string         `toml:"trusting_period"`
 	TrustThreshold   TrustThreshold `toml:"trust_threshold"`
 	MemoPrefix       string         `toml:"memo_prefix,omitempty"`
+=======
+	ID             string         `toml:"id"`
+	RPCAddr        string         `toml:"rpc_addr"`
+	GrpcAddr       string         `toml:"grpc_addr"`
+	EventSource    EventSource    `toml:"event_source"`
+	RPCTimeout     string         `toml:"rpc_timeout"`
+	AccountPrefix  string         `toml:"account_prefix"`
+	KeyName        string         `toml:"key_name"`
+	AddressType    AddressType    `toml:"address_type"`
+	StorePrefix    string         `toml:"store_prefix"`
+	DefaultGas     int            `toml:"default_gas"`
+	MaxGas         int            `toml:"max_gas"`
+	GasPrice       GasPrice       `toml:"gas_price"`
+	GasMultiplier  float64        `toml:"gas_multiplier"`
+	MaxMsgNum      int            `toml:"max_msg_num"`
+	MaxTxSize      int            `toml:"max_tx_size"`
+	ClockDrift     string         `toml:"clock_drift"`
+	MaxBlockTime   string         `toml:"max_block_time"`
+	TrustingPeriod string         `toml:"trusting_period"`
+	TrustThreshold TrustThreshold `toml:"trust_threshold"`
+	MemoPrefix     string         `toml:"memo_prefix,omitempty"`
+>>>>>>> 0ea0168 (feat!: update hermes config (#1064))
 }
