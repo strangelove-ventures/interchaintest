@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
@@ -39,9 +40,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
@@ -67,10 +68,11 @@ type ChainNode struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
-	hostRPCPort  string
-	hostAPIPort  string
-	hostGRPCPort string
-	hostP2PPort  string
+	hostRPCPort   string
+	hostAPIPort   string
+	hostGRPCPort  string
+	hostP2PPort   string
+	cometHostname string
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -103,6 +105,8 @@ const (
 	grpcPort    = "9090/tcp"
 	apiPort     = "1317/tcp"
 	privValPort = "1234/tcp"
+
+	cometMockRawPort = "22331"
 )
 
 var (
@@ -202,13 +206,15 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	var nodeType string
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+}
+
+func (tn *ChainNode) NodeType() string {
+	nodeType := "fn"
 	if tn.Validator {
 		nodeType = "val"
-	} else {
-		nodeType = "fn"
 	}
-	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+	return nodeType
 }
 
 func (tn *ChainNode) ContainerID() string {
@@ -218,6 +224,11 @@ func (tn *ChainNode) ContainerID() string {
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
+}
+
+// hostname of the comet mock container
+func (tn *ChainNode) HostnameCometMock() string {
+	return tn.cometHostname
 }
 
 func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
@@ -306,6 +317,10 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	if tn.Chain.Config().UsesCometMock() {
+		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
+	}
+
 	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
@@ -532,8 +547,15 @@ func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.
 // Will include additional flags for node URL, home directory, and chain ID.
 func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
+
+	endpoint := fmt.Sprintf("tcp://%s:26657", tn.HostName())
+
+	if tn.Chain.Config().UsesCometMock() {
+		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
+	}
+
 	return append(command,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--node", endpoint,
 	)
 }
 
@@ -723,8 +745,11 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	}
 
 	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID)
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
 
 	_, _, err := tn.ExecBin(ctx, command...)
 	return err
@@ -991,6 +1016,44 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
+	if chainCfg.UsesCometMock() {
+		abciAppAddr := fmt.Sprintf("tcp://%s:26658", tn.HostName())
+		connectionMode := "grpc"
+
+		cmd = append(cmd, "--with-tendermint=false", fmt.Sprintf("--transport=%s", connectionMode), fmt.Sprintf("--address=%s", abciAppAddr))
+
+		blockTime := chainCfg.CometMock.BlockTimeMs
+		if blockTime <= 0 {
+			blockTime = 100
+		}
+		blockTimeFlag := fmt.Sprintf("--block-time=%d", blockTime)
+
+		defaultListenAddr := fmt.Sprintf("tcp://0.0.0.0:%s", cometMockRawPort)
+		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
+
+		containerName := fmt.Sprintf("cometmock-%s-%d", tn.Name(), rand.Intn(50_000))
+		tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
+			ProcessName:      containerName,
+			validatorProcess: true,
+			Image:            chainCfg.CometMock.Image,
+			preStart:         true,
+			startCmd:         []string{"cometmock", blockTimeFlag, abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+			ports: nat.PortMap{
+				nat.Port(cometMockRawPort): {},
+			},
+			Chain:              tn.Chain,
+			TestName:           tn.TestName,
+			VolumeName:         tn.VolumeName,
+			DockerClient:       tn.DockerClient,
+			NetworkID:          tn.NetworkID,
+			Index:              tn.Index,
+			homeDir:            tn.HomeDir(),
+			log:                tn.log,
+			env:                chainCfg.Env,
+			containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, containerName),
+		})
+	}
+
 	usingPorts := nat.PortMap{}
 	for k, v := range sentryPorts {
 		usingPorts[k] = v
@@ -1012,6 +1075,8 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	rpcOverrideAddr := ""
+
 	for _, s := range tn.Sidecars {
 		err := s.containerLifecycle.Running(ctx)
 
@@ -1022,6 +1087,22 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 
 			if err := s.StartContainer(ctx); err != nil {
 				return err
+			}
+
+			if s.Image.Repository == tn.Chain.Config().CometMock.Image.Repository {
+				hostPorts, err := s.containerLifecycle.GetHostPorts(ctx, cometMockRawPort+"/tcp")
+				if err != nil {
+					return err
+				}
+
+				rpcOverrideAddr = hostPorts[0]
+				tn.cometHostname = s.HostName()
+
+				tn.log.Info(
+					"Using comet mock as RPC override",
+					zap.String("RPC host port override", rpcOverrideAddr),
+					zap.String("comet mock hostname", tn.cometHostname),
+				)
 			}
 		}
 	}
@@ -1037,6 +1118,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort, tn.hostP2PPort = hostPorts[0], hostPorts[1], hostPorts[2], hostPorts[3]
 
+	// Override the default RPC behavior if Comet Mock is being used.
+	if tn.cometHostname != "" {
+		tn.hostRPCPort = rpcOverrideAddr
+	}
+
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
 		return err
@@ -1048,7 +1134,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)

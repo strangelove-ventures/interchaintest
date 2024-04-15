@@ -24,15 +24,16 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -88,6 +89,15 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 	if chainConfig.EncodingConfig == nil {
 		cfg := DefaultEncoding()
 		chainConfig.EncodingConfig = &cfg
+	}
+
+	if chainConfig.UsesCometMock() {
+		if numValidators != 1 {
+			panic(fmt.Sprintf("CometMock only supports 1 validator. Set `NumValidators` to 1 in %s's ChainSpec", chainConfig.Name))
+		}
+		if numFullNodes != 0 {
+			panic(fmt.Sprintf("CometMock only supports 1 validator. Set `NumFullNodes` to 0 in %s's ChainSpec", chainConfig.Name))
+		}
 	}
 
 	registry := codectypes.NewInterfaceRegistry()
@@ -201,6 +211,10 @@ func (c *CosmosChain) Exec(ctx context.Context, cmd []string, env []string) (std
 
 // Implements Chain interface
 func (c *CosmosChain) GetRPCAddress() string {
+	if c.Config().UsesCometMock() {
+		return fmt.Sprintf("http://%s:22331", c.getFullNode().HostnameCometMock())
+	}
+
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
 }
 
@@ -785,28 +799,26 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 
-	genesisAmount := types.Coin{
-		Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow),
-		Denom:  chainCfg.Denom,
-	}
+	genesisAmounts := make([][]types.Coin, len(c.Validators))
+	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
 
-	genesisSelfDelegation := types.Coin{
-		Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow),
-		Denom:  chainCfg.Denom,
+	for i := range c.Validators {
+		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}
+		if chainCfg.ModifyGenesisAmounts != nil {
+			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
+			genesisAmounts[i] = []types.Coin{amount}
+			genesisSelfDelegation[i] = selfDelegation
+		}
 	}
-
-	if chainCfg.ModifyGenesisAmounts != nil {
-		genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
-	}
-
-	genesisAmounts := []types.Coin{genesisAmount}
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
 	eg := new(errgroup.Group)
 	// Initialize config and sign gentx for each validator.
-	for _, v := range c.Validators {
+	for i, v := range c.Validators {
 		v := v
+		i := i
 		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
@@ -830,7 +842,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				}
 			}
 			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i])
 			}
 			return nil
 		})
@@ -888,7 +900,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
 			return err
 		}
 
@@ -1202,4 +1214,16 @@ func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalI
 		}
 	}
 	return eg.Wait()
+}
+
+// GetTimeoutHeight returns a timeout height of 1000 blocks above the current block height.
+// This function should be used when the timeout is never expected to be reached
+func (c *CosmosChain) GetTimeoutHeight(ctx context.Context) (clienttypes.Height, error) {
+	height, err := c.Height(ctx)
+	if err != nil {
+		c.log.Error("Failed to get chain height", zap.Error(err))
+		return clienttypes.Height{}, fmt.Errorf("failed to get chain height: %w", err)
+	}
+
+	return clienttypes.NewHeight(clienttypes.ParseChainID(c.Config().ChainID), uint64(height)+1000), nil
 }
