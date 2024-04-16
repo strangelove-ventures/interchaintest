@@ -43,16 +43,17 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	VolumeName   string
-	Index        int
-	Chain        ibc.Chain
-	Validator    bool
-	NetworkID    string
-	DockerClient *dockerclient.Client
-	Client       rpcclient.Client
-	GrpcConn     *grpc.ClientConn
-	TestName     string
-	Image        ibc.DockerImage
+	VolumeName        string
+	Index             int
+	Chain             ibc.Chain
+	Validator         bool
+	NetworkID         string
+	DockerClient      *dockerclient.Client
+	Client            rpcclient.Client
+	GrpcConn          *grpc.ClientConn
+	TestName          string
+	ValidatorMnemonic string
+	Image             ibc.DockerImage
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -73,14 +74,14 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 	tn := &ChainNode{
 		log: log,
 
-		Validator: validator,
-
-		Chain:        chain,
-		DockerClient: dockerClient,
-		NetworkID:    networkID,
-		TestName:     testName,
-		Image:        image,
-		Index:        index,
+		Validator:         validator,
+		ValidatorMnemonic: chain.ValidatorMnemonic,
+		Chain:             chain,
+		DockerClient:      dockerClient,
+		NetworkID:         networkID,
+		TestName:          testName,
+		Image:             image,
+		Index:             index,
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -1096,7 +1097,12 @@ func (tn *ChainNode) InitValidatorGenTx(
 	genesisAmounts []sdk.Coin,
 	genesisSelfDelegation sdk.Coin,
 ) error {
-	if err := tn.CreateKey(ctx, valKey); err != nil {
+	if tn.ValidatorMnemonic != "" {
+		err := tn.RecoverKey(ctx, valKey, tn.ValidatorMnemonic)
+		if err != nil {
+			return err
+		}
+	} else if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
 	bech32, err := tn.AccountKeyBech32(ctx, valKey)
