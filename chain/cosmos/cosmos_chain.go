@@ -395,7 +395,6 @@ func (c *CosmosChain) SendIBCTransfer(
 	return tx, nil
 }
 
-<<<<<<< HEAD
 // GetGovernanceAddress performs a query to get the address of the chain's x/gov module
 func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) {
 	return c.GetModuleAddress(ctx, govtypes.ModuleName)
@@ -409,7 +408,8 @@ func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
-=======
+}
+
 // RegisterICA will attempt to register an interchain account on the given counterparty chain.
 func (c *CosmosChain) RegisterICA(ctx context.Context, keyName string, connectionID string) (string, error) {
 	return c.getFullNode().RegisterICA(ctx, keyName, connectionID)
@@ -425,9 +425,7 @@ func (c *CosmosChain) QueryICAAddress(ctx context.Context, connectionID, address
 func (c *CosmosChain) SendICATx(ctx context.Context, keyName, connectionID string, msgs []sdk.Msg, icaTxMemo string) (string, error) {
 	node := c.getFullNode()
 	registry := node.Chain.Config().EncodingConfig.InterfaceRegistry
-	encoding := "proto3"
-	return node.SendICATx(ctx, keyName, connectionID, registry, msgs, icaTxMemo, encoding)
->>>>>>> 94f966a (feat!: using ica controller instead of intertx (#1069))
+	return node.SendICATx(ctx, keyName, connectionID, registry, msgs, icaTxMemo)
 }
 
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain

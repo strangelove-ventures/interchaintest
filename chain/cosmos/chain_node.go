@@ -28,13 +28,12 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-<<<<<<< HEAD
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-=======
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
->>>>>>> 94f966a (feat!: using ica controller instead of intertx (#1069))
+	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/gogoproto/proto"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -43,19 +42,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-<<<<<<< HEAD
+	icatypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-=======
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
->>>>>>> 94f966a (feat!: using ica controller instead of intertx (#1069))
 )
 
 // ChainNode represents a node in the test network that is being created
@@ -1636,9 +1628,19 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 
 // SendICATx sends an interchain account transaction for a specified address and sends it to the specified
 // interchain account.
-func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
+func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string) (string, error) {
 	cdc := codec.NewProtoCodec(registry)
-	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)
+
+	messages := make([]proto.Message, len(msgs))
+	for _, msg := range msgs {
+		protoMsg, ok := msg.(proto.Message)
+		if !ok {
+			return "", fmt.Errorf("failed to convert sdk.Msg to proto.Message")
+		}
+		messages = append(messages, protoMsg)
+	}
+
+	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, messages)
 	if err != nil {
 		return "", err
 	}
@@ -1672,6 +1674,6 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 
 	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
 	icaTxMemo := "ica bank transfer"
-	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
+	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo)
 	return err
 }
