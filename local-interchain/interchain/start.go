@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -77,9 +78,9 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Create chain factory for all the chains
 	cf := interchaintest.NewBuiltinChainFactory(logger, chainSpecs)
 
-	// Get chains from the chain factory
-	name := strings.ReplaceAll(chainCfgFile, ".json", "") + "ic"
-	chains, err := cf.Chains(name)
+	testName := GetTestName(chainCfgFile)
+
+	chains, err := cf.Chains(testName)
 	if err != nil {
 		log.Fatal("cf.Chains", err)
 	}
@@ -90,7 +91,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ic.AdditionalGenesisWallets = SetupGenesisWallets(config, chains)
 
 	fakeT := FakeTesting{
-		FakeName: name,
+		FakeName: testName,
 	}
 
 	// Base setup
@@ -125,7 +126,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	// Build all chains & begin.
 	err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:         name,
+		TestName:         testName,
 		Client:           client,
 		NetworkID:        network,
 		SkipPathCreation: false,
@@ -196,4 +197,14 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		log.Fatal("WaitForBlocks StartChain: ", err)
 	}
+}
+
+func GetTestName(chainCfgFile string) string {
+	name := chainCfgFile
+	fExt := path.Ext(name)
+	if fExt != "" {
+		name = strings.ReplaceAll(chainCfgFile, fExt, "")
+	}
+
+	return name + "ic"
 }

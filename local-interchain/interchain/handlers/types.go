@@ -7,16 +7,16 @@ import (
 )
 
 type IbcChainConfigAlias struct {
-	Type           string  `json:"type"`
-	Name           string  `json:"name"`
-	ChainID        string  `json:"chain_id"`
-	Bin            string  `json:"bin"`
-	Bech32Prefix   string  `json:"bech32_prefix"`
-	Denom          string  `json:"denom"`
-	CoinType       string  `json:"coin_type"`
-	GasPrices      string  `json:"gas_prices"`
-	GasAdjustment  float64 `json:"gas_adjustment"`
-	TrustingPeriod string  `json:"trusting_period"`
+	Type           string  `json:"type" yaml:"type"`
+	Name           string  `json:"name" yaml:"name"`
+	ChainID        string  `json:"chain_id" yaml:"chain_id"`
+	Bin            string  `json:"bin" yaml:"bin"`
+	Bech32Prefix   string  `json:"bech32_prefix" yaml:"bech32_prefix"`
+	Denom          string  `json:"denom" yaml:"denom"`
+	CoinType       string  `json:"coin_type" yaml:"coin_type"`
+	GasPrices      string  `json:"gas_prices" yaml:"gas_prices"`
+	GasAdjustment  float64 `json:"gas_adjustment" yaml:"gas_adjustment"`
+	TrustingPeriod string  `json:"trusting_period" yaml:"trusting_period"`
 }
 
 func (c *IbcChainConfigAlias) Marshal() ([]byte, error) {
