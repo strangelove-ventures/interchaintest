@@ -127,8 +127,8 @@ func (image *Image) imageRef() string {
 	return image.repository + ":" + image.tag
 }
 
-// ensurePulled can only pull public images.
-func (image *Image) ensurePulled(ctx context.Context) error {
+// EnsurePulled can only pull public images.
+func (image *Image) EnsurePulled(ctx context.Context) error {
 	ref := image.imageRef()
 	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
@@ -142,7 +142,7 @@ func (image *Image) ensurePulled(ctx context.Context) error {
 	return nil
 }
 
-func (image *Image) createContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (string, error) {
+func (image *Image) CreateContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (string, error) {
 	// Although this shouldn't happen because the name includes randomness, in reality there seems to intermittent
 	// chances of collisions.
 
@@ -205,8 +205,8 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	if err := image.ensurePulled(ctx); err != nil {
-		return nil, image.wrapErr(err)
+	if err := image.EnsurePulled(ctx); err != nil {
+		return nil, image.WrapErr(err)
 	}
 
 	var (
@@ -219,16 +219,16 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		)
 	)
 
-	cID, err := image.createContainer(ctx, containerName, hostName, cmd, opts)
+	cID, err := image.CreateContainer(ctx, containerName, hostName, cmd, opts)
 	if err != nil {
-		return nil, image.wrapErr(fmt.Errorf("create container %s: %w", containerName, err))
+		return nil, image.WrapErr(fmt.Errorf("create container %s: %w", containerName, err))
 	}
 
 	logger.Info("About to start container")
 
 	err = StartContainer(ctx, image.client, cID)
 	if err != nil {
-		return nil, image.wrapErr(fmt.Errorf("start container %s: %w", containerName, err))
+		return nil, image.WrapErr(fmt.Errorf("start container %s: %w", containerName, err))
 	}
 
 	return &Container{
@@ -240,7 +240,7 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 	}, nil
 }
 
-func (image *Image) wrapErr(err error) error {
+func (image *Image) WrapErr(err error) error {
 	return fmt.Errorf("image %s:%s: %w", image.repository, image.tag, err)
 }
 
@@ -361,7 +361,7 @@ func (c *Container) Stop(timeout time.Duration) error {
 	if err != nil {
 		// Only return the error if it didn't match an already stopped, or a missing container.
 		if !(errdefs.IsNotModified(err) || errdefs.IsNotFound(err)) {
-			return c.image.wrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
+			return c.image.WrapErr(fmt.Errorf("stop container %s: %w", c.Name, err))
 		}
 	}
 
@@ -371,7 +371,7 @@ func (c *Container) Stop(timeout time.Duration) error {
 		RemoveVolumes: true,
 	})
 	if err != nil && !errdefs.IsNotFound(err) {
-		return c.image.wrapErr(fmt.Errorf("remove container %s: %w", c.Name, err))
+		return c.image.WrapErr(fmt.Errorf("remove container %s: %w", c.Name, err))
 	}
 
 	return nil

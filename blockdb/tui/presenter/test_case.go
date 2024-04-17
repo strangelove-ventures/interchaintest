@@ -3,7 +3,7 @@ package presenter
 import (
 	"strconv"
 
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 )
 
 // TestCase presents a blockdb.TestCaseResult.

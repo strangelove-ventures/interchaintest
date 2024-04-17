@@ -34,7 +34,7 @@ func NewFileRetriever(log *zap.Logger, cli *client.Client, testName string) *Fil
 func (r *FileRetriever) SingleFileContent(ctx context.Context, volumeName, relPath string) ([]byte, error) {
 	const mountPath = "/mnt/dockervolume"
 
-	if err := ensureBusybox(ctx, r.cli); err != nil {
+	if err := EnsureBusybox(ctx, r.cli); err != nil {
 		return nil, err
 	}
 
