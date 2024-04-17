@@ -151,12 +151,6 @@ type TracingServer struct {
 	Port    int  `toml:"port"`
 }
 
-type EventSource struct {
-	Mode       string `toml:"mode"`
-	URL        string `toml:"url"`
-	BatchDelay string `toml:"batch_delay"`
-}
-
 type AddressType struct {
 	Derivation string `toml:"derivation"`
 }
