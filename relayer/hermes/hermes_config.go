@@ -178,24 +178,26 @@ type EventSource struct {
 }
 
 type Chain struct {
-	ID             string         `toml:"id"`
-	RPCAddr        string         `toml:"rpc_addr"`
-	GrpcAddr       string         `toml:"grpc_addr"`
-	EventSource    EventSource    `toml:"event_source"`
-	RPCTimeout     string         `toml:"rpc_timeout"`
-	AccountPrefix  string         `toml:"account_prefix"`
-	KeyName        string         `toml:"key_name"`
-	AddressType    AddressType    `toml:"address_type"`
-	StorePrefix    string         `toml:"store_prefix"`
-	DefaultGas     int            `toml:"default_gas"`
-	MaxGas         int            `toml:"max_gas"`
-	GasPrice       GasPrice       `toml:"gas_price"`
-	GasMultiplier  float64        `toml:"gas_multiplier"`
-	MaxMsgNum      int            `toml:"max_msg_num"`
-	MaxTxSize      int            `toml:"max_tx_size"`
-	ClockDrift     string         `toml:"clock_drift"`
-	MaxBlockTime   string         `toml:"max_block_time"`
-	TrustingPeriod string         `toml:"trusting_period"`
-	TrustThreshold TrustThreshold `toml:"trust_threshold"`
-	MemoPrefix     string         `toml:"memo_prefix,omitempty"`
+	ID               string         `toml:"id"`
+	Type             string         `toml:"type"`
+	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
+	RPCAddr          string         `toml:"rpc_addr"`
+	GrpcAddr         string         `toml:"grpc_addr"`
+	EventSource      EventSource    `toml:"event_source"`
+	RPCTimeout       string         `toml:"rpc_timeout"`
+	AccountPrefix    string         `toml:"account_prefix"`
+	KeyName          string         `toml:"key_name"`
+	AddressType      AddressType    `toml:"address_type"`
+	StorePrefix      string         `toml:"store_prefix"`
+	DefaultGas       int            `toml:"default_gas"`
+	MaxGas           int            `toml:"max_gas"`
+	GasPrice         GasPrice       `toml:"gas_price"`
+	GasMultiplier    float64        `toml:"gas_multiplier"`
+	MaxMsgNum        int            `toml:"max_msg_num"`
+	MaxTxSize        int            `toml:"max_tx_size"`
+	ClockDrift       string         `toml:"clock_drift"`
+	MaxBlockTime     string         `toml:"max_block_time"`
+	TrustingPeriod   string         `toml:"trusting_period"`
+	TrustThreshold   TrustThreshold `toml:"trust_threshold"`
+	MemoPrefix       string         `toml:"memo_prefix,omitempty"`
 }
