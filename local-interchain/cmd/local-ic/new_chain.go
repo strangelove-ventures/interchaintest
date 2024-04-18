@@ -21,7 +21,7 @@ import (
 var reader = bufio.NewReader(os.Stdin)
 
 type Chains struct {
-	Chains []ictypes.Chain `json:"chains"`
+	Chains []ictypes.Chain `json:"chains" yaml:"chains"`
 }
 
 var newChainCmd = &cobra.Command{
