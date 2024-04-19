@@ -57,9 +57,9 @@ func NewInfo(
 }
 
 type GetInfo struct {
-	Logs   types.MainLogs `json:"logs"`
-	Chains []types.Chain  `json:"chains"`
-	Relay  types.Relayer  `json:"relayer"`
+	Logs   types.MainLogs `json:"logs" yaml:"logs"`
+	Chains []types.Chain  `json:"chains" yaml:"chains"`
+	Relay  types.Relayer  `json:"relayer" yaml:"relayer"`
 }
 
 func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {

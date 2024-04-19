@@ -16,8 +16,8 @@ import (
 )
 
 type Route struct {
-	Path    string   `json:"path"`
-	Methods []string `json:"methods"`
+	Path    string   `json:"path" yaml:"path"`
+	Methods []string `json:"methods" yaml:"methods"`
 }
 
 func NewRouter(

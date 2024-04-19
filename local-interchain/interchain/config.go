@@ -3,7 +3,7 @@ package interchain
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -14,12 +14,15 @@ import (
 
 	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 	"github.com/strangelove-ventures/localinterchain/interchain/util"
+	"gopkg.in/yaml.v3"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
+
+const ChainDir = "chains"
 
 func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 	var config types.Config
@@ -29,18 +32,23 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 		configFile = chainCfgFile
 	}
 
-	// Chains Folder
-	chainsDir := filepath.Join(installDir, "chains")
+	// A nested "chains" dir is required within the parent you specify.
+	chainsDir := filepath.Join(installDir, ChainDir)
 	cfgFilePath := filepath.Join(chainsDir, configFile)
 
-	bytes, err := os.ReadFile(cfgFilePath)
+	bz, err := os.ReadFile(cfgFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		return nil, err
+	if strings.HasSuffix(chainCfgFile, ".json") {
+		if err = json.Unmarshal(bz, &config); err != nil {
+			return nil, fmt.Errorf("error unmarshalling json config: %w", err)
+		}
+	} else {
+		if err := yaml.Unmarshal(bz, &config); err != nil {
+			return nil, fmt.Errorf("error unmarshalling yaml config: %w", err)
+		}
 	}
 
 	log.Println("Using directory:", installDir)
@@ -56,7 +64,7 @@ func LoadConfigFromURL(url string) (*types.Config, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}

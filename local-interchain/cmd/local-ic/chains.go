@@ -10,11 +10,11 @@ import (
 )
 
 type chains struct {
-	Configs []string `json:"chain_configs"`
+	Configs []string `json:"chain_configs" yaml:"chain_configs"`
 }
 
 var chainsCmd = &cobra.Command{
-	Use:   "chains [config.json]",
+	Use:   "chains [config.(json|yaml)]",
 	Short: "List all current chains or outputs a current config information",
 	Args:  cobra.RangeArgs(0, 1),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

@@ -8,40 +8,36 @@ import (
 
 // ConfigFileOverrides overrides app configuration files.
 type ConfigFileOverrides struct {
-	File  string        `json:"file"`
-	Paths testutil.Toml `json:"paths"`
+	File  string        `json:"file" yaml:"file"`
+	Paths testutil.Toml `json:"paths" yaml:"paths"`
 }
 
 type Chain struct {
 	// ibc chain config (optional)
-	ChainType      string `json:"chain_type" validate:"min=1"`
-	CoinType       int    `json:"coin_type" validate:"gt=0"`
-	Binary         string `json:"binary" validate:"min=1"`
-	Bech32Prefix   string `json:"bech32_prefix" validate:"min=1"`
-	Denom          string `json:"denom" validate:"min=1"`
-	TrustingPeriod string `json:"trusting_period"`
-	Debugging      bool   `json:"debugging"`
-	BlockTime      string `json:"block_time"`
-
-	HostPortOverride map[string]string `json:"host_port_override"`
+	ChainType        string            `json:"chain_type" yaml:"chain_type" validate:"min=1"`
+	CoinType         int               `json:"coin_type" yaml:"coin_type" validate:"gt=0"`
+	Binary           string            `json:"binary" yaml:"binary" validate:"min=1"`
+	Bech32Prefix     string            `json:"bech32_prefix" yaml:"bech32_prefix" validate:"min=1"`
+	Denom            string            `json:"denom" yaml:"denom" validate:"min=1"`
+	TrustingPeriod   string            `json:"trusting_period" yaml:"trusting_period"`
+	Debugging        bool              `json:"debugging" yaml:"debugging"`
+	BlockTime        string            `json:"block_time" yaml:"block_time"`
+	HostPortOverride map[string]string `json:"host_port_override" yaml:"host_port_override"`
 
 	// Required
-	Name    string `json:"name" validate:"min=1"`
-	ChainID string `json:"chain_id" validate:"min=3"`
-
-	DockerImage DockerImage `json:"docker_image" validate:"url"`
-
-	GasPrices     string   `json:"gas_prices"`
-	GasAdjustment float64  `json:"gas_adjustment"`
-	NumberVals    int      `json:"number_vals" validate:"gte=1"`
-	NumberNode    int      `json:"number_node"`
-	IBCPaths      []string `json:"ibc_paths"`
-	Genesis       Genesis  `json:"genesis"`
-
-	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty"`
+	Name                string                `json:"name" yaml:"name" validate:"min=1"`
+	ChainID             string                `json:"chain_id" yaml:"chain_id" validate:"min=3"`
+	DockerImage         DockerImage           `json:"docker_image" yaml:"docker_image" validate:"url"`
+	GasPrices           string                `json:"gas_prices" yaml:"gas_prices"`
+	GasAdjustment       float64               `json:"gas_adjustment" yaml:"gas_adjustment"`
+	NumberVals          int                   `json:"number_vals" yaml:"number_vals" validate:"gte=1"`
+	NumberNode          int                   `json:"number_node" yaml:"number_node"`
+	IBCPaths            []string              `json:"ibc_paths" yaml:"ibc_paths"`
+	Genesis             Genesis               `json:"genesis" yaml:"genesis"`
+	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty" yaml:"config_file_overrides,omitempty"`
 
 	// EVM
-	EVMLoadStatePath string `json:"evm_load_state_path,omitempty"`
+	EVMLoadStatePath string `json:"evm_load_state_path,omitempty" yaml:"evm_load_state_path,omitempty"`
 }
 
 func (chain *Chain) Validate() error {
