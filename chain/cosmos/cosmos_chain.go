@@ -367,14 +367,19 @@ func (c *CosmosChain) SendIBCTransfer(
 		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
 		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
 		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
-		data, _          = tendermint.AttributeValue(events, evType, "packet_data")
+		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
 	)
 	tx.Packet.SourcePort = srcPort
 	tx.Packet.SourceChannel = srcChan
 	tx.Packet.DestPort = dstPort
 	tx.Packet.DestChannel = dstChan
 	tx.Packet.TimeoutHeight = timeoutHeight
-	tx.Packet.Data = []byte(data)
+
+	data, err := hex.DecodeString(dataHex)
+	if err != nil {
+		return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
+	}
+	tx.Packet.Data = data
 
 	seqNum, err := strconv.ParseUint(seq, 10, 64)
 	if err != nil {
