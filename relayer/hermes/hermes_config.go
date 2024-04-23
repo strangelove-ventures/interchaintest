@@ -173,7 +173,6 @@ type EventSource struct {
 
 type Chain struct {
 	ID               string         `toml:"id"`
-	Type             string         `toml:"type"`
 	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
 	RPCAddr          string         `toml:"rpc_addr"`
 	GrpcAddr         string         `toml:"grpc_addr"`
