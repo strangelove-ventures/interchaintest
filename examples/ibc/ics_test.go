@@ -7,6 +7,7 @@ import (
 	"time"
 
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -24,10 +25,26 @@ func TestICS(t *testing.T) {
 
 	ctx := context.Background()
 
+	vals := 1
+	fNodes := 0
+
 	// Chain Factory
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "ics-provider", Version: "v3.1.0", ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5}},
-		{Name: "neutron", Version: "v2.0.2"}, // ics-consumer
+		{
+			Name:          "ics-provider",
+			NumValidators: &vals, NumFullNodes: &fNodes,
+			Version: "v3.1.0", ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, TrustingPeriod: "336h"},
+		},
+		{ // ics-consumer
+			Name: "neutron", Version: "v3.0.4",
+			NumValidators: &vals, NumFullNodes: &fNodes,
+			ChainConfig: ibc.ChainConfig{
+				TrustingPeriod: "336h",
+				ModifyGenesis: cosmos.ModifyGenesis([]cosmos.GenesisKV{
+					cosmos.NewGenesisKV("consensus_params.block.max_gas", "100000000"),
+				}),
+			},
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())

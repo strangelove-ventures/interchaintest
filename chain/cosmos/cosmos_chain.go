@@ -52,7 +52,7 @@ import (
 
 var (
 	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
-	DefaultProviderUnbondingPeriod = 504 * time.Hour
+	DefaultProviderUnbondingPeriod = 336 * time.Hour
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
