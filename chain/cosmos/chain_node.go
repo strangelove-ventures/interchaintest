@@ -24,9 +24,12 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
@@ -36,6 +39,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -1055,7 +1059,8 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		usingPorts[k] = v
 	}
 
-	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
+	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
 		for intP, extP := range chainCfg.HostPortOverride {
 			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
 				{
@@ -1308,22 +1313,21 @@ func (tn *ChainNode) logger() *zap.Logger {
 // RegisterICA will attempt to register an interchain account on the counterparty chain.
 func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
 	return tn.ExecTx(ctx, keyName,
-		"intertx", "register",
-		"--connection-id", connectionID,
+		"interchain-accounts", "controller", "register", connectionID,
 	)
 }
 
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
-		"intertx", "interchainaccounts", connectionID, address,
+		"interchain-accounts", "controller", "interchain-account", address, connectionID,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	// at this point stdout should look like this:
-	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
+	// address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(string(stdout), ":", 2)
 	if len(parts) < 2 {
@@ -1332,27 +1336,44 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	return strings.TrimSpace(parts[1]), nil
 }
 
+// SendICATx sends an interchain account transaction for a specified address and sends it to the specified
+// interchain account.
+func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
+	cdc := codec.NewProtoCodec(registry)
+	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)
+	if err != nil {
+		return "", err
+	}
+
+	icaPacketData := icatypes.InterchainAccountPacketData{
+		Type: icatypes.EXECUTE_TX,
+		Data: icaPacketDataBytes,
+		Memo: icaTxMemo,
+	}
+
+	if err := icaPacketData.ValidateBasic(); err != nil {
+		return "", err
+	}
+
+	icaPacketBytes, err := cdc.MarshalJSON(&icaPacketData)
+	if err != nil {
+		return "", err
+	}
+
+	return tn.ExecTx(ctx, keyName, "interchain-accounts", "controller", "send-tx", connectionID, string(icaPacketBytes))
+}
+
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
 // interchain account.
 func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	msg, err := json.Marshal(map[string]any{
-		"@type":        "/cosmos.bank.v1beta1.MsgSend",
-		"from_address": fromAddr,
-		"to_address":   amount.Address,
-		"amount": []map[string]any{
-			{
-				"denom":  amount.Denom,
-				"amount": amount.Amount.String(),
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+	fromAddress := sdk.MustAccAddressFromBech32(fromAddr)
+	toAddress := sdk.MustAccAddressFromBech32(amount.Address)
+	coin := sdk.NewCoin(amount.Denom, amount.Amount)
+	msg := banktypes.NewMsgSend(fromAddress, toAddress, sdk.NewCoins(coin))
+	msgs := []sdk.Msg{msg}
 
-	_, err = tn.ExecTx(ctx, fromAddr,
-		"intertx", "submit", string(msg),
-		"--connection-id", connectionID,
-	)
+	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
+	icaTxMemo := "ica bank transfer"
+	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
 	return err
 }
