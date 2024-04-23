@@ -19,8 +19,8 @@ func (l Listeners) CloseAll() {
 	}
 }
 
-// openListener opens a listener on a port. Set to 0 to get a random port.
-func openListener(port int) (*net.TCPListener, error) {
+// OpenListener opens a listener on a port. Set to 0 to get a random port.
+func OpenListener(port int) (*net.TCPListener, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return nil, err
@@ -36,13 +36,13 @@ func openListener(port int) (*net.TCPListener, error) {
 	return l, nil
 }
 
-// getPort generates a docker PortBinding by using the port provided.
+// GetPort generates a docker PortBinding by using the port provided.
 // If port is set to 0, the next available port will be used.
 // The listener will be closed in the case of an error, otherwise it will be left open.
-// This allows multiple getPort calls to find multiple available ports
+// This allows multiple GetPort calls to find multiple available ports
 // before closing them so they are available for the PortBinding.
-func getPort(port int) (nat.PortBinding, *net.TCPListener, error) {
-	l, err := openListener(port)
+func GetPort(port int) (nat.PortBinding, *net.TCPListener, error) {
+	l, err := OpenListener(port)
 	if err != nil {
 		l.Close()
 		return nat.PortBinding{}, nil, err
@@ -68,14 +68,14 @@ func GeneratePortBindings(pairs nat.PortMap) (nat.PortMap, Listeners, error) {
 	for p, bind := range pairs {
 		if len(bind) == 0 {
 			// random port
-			pb, l, err = getPort(0)
+			pb, l, err = GetPort(0)
 		} else {
 			var pNum int
 			if pNum, err = strconv.Atoi(bind[0].HostPort); err != nil {
 				return nat.PortMap{}, nil, err
 			}
 
-			pb, l, err = getPort(pNum)
+			pb, l, err = GetPort(pNum)
 		}
 
 		if err != nil {

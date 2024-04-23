@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -57,13 +59,14 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 			// last part of the URL to be the test name
 			configPath = configPath[strings.LastIndex(configPath, "/")+1:]
 		} else {
+			configPath, err = GetConfigWithExtension(parentDir, configPath)
+			if err != nil {
+				panic(err)
+			}
+
 			config, err = interchain.LoadConfig(parentDir, configPath)
 			if err != nil {
-				// try again with .json, then if it still fails - panic
-				config, err = interchain.LoadConfig(parentDir, configPath+".json")
-				if err != nil {
-					panic(err)
-				}
+				panic(err)
 			}
 		}
 
@@ -92,6 +95,27 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 			AuthKey: cmd.Flag(FlagAuthKey).Value.String(),
 		})
 	},
+}
+
+// GetConfigWithExtension returns the config with the file extension attached if one was not provided.
+// If "hub" is passed it, it will search for hub.yaml, hub.yml, or hub.json.
+// If an extension is already applied, it will use that.
+func GetConfigWithExtension(parentDir, config string) (string, error) {
+	if path.Ext(config) != "" {
+		return config, nil
+	}
+
+	extensions := []string{".yaml", ".yml", ".json"}
+	for _, ext := range extensions {
+		fp := path.Join(parentDir, interchain.ChainDir, config+ext)
+		if _, err := os.Stat(fp); err != nil {
+			continue
+		}
+
+		return config + ext, nil
+	}
+
+	return "", fmt.Errorf("could not find a file with an accepted extension: %s. (%+v)", config, extensions)
 }
 
 func init() {

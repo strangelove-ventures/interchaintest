@@ -69,11 +69,11 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	}
 
 	// Clean up docker resources at end of test.
-	t.Cleanup(dockerCleanup(t, cli))
+	t.Cleanup(DockerCleanup(t, cli))
 
 	// Also eagerly clean up any leftover resources from a previous test run,
 	// e.g. if the test was interrupted.
-	dockerCleanup(t, cli)()
+	DockerCleanup(t, cli)()
 
 	name := fmt.Sprintf("interchaintest-%s", RandLowerCaseLetterString(8))
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
@@ -88,8 +88,8 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	return cli, network.ID
 }
 
-// dockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
-func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
+// DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
+func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
 		containerLogTail := os.Getenv("CONTAINER_LOG_TAIL")
@@ -133,7 +133,7 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				timeoutDur := time.Duration(timeout * int(time.Second))
 				deadline := time.Now().Add(timeoutDur)
 				stopTimeout.Timeout = &timeout
-				if err := cli.ContainerStop(ctx, c.ID, stopTimeout); isLoggableStopError(err) {
+				if err := cli.ContainerStop(ctx, c.ID, stopTimeout); IsLoggableStopError(err) {
 					t.Logf("Failed to stop container %s during docker cleanup: %v", c.ID, err)
 				}
 
@@ -162,15 +162,15 @@ func dockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 		}
 
 		if !keepContainers {
-			pruneVolumesWithRetry(ctx, t, cli)
-			pruneNetworksWithRetry(ctx, t, cli)
+			PruneVolumesWithRetry(ctx, t, cli)
+			PruneNetworksWithRetry(ctx, t, cli)
 		} else {
 			t.Logf("Keeping containers - Docker cleanup skipped")
 		}
 	}
 }
 
-func pruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
+func PruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
 	if KeepVolumesOnFailure && t.Failed() {
 		return
 	}
@@ -211,7 +211,7 @@ func pruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *clie
 	}
 }
 
-func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
+func PruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *client.Client) {
 	var deleted []string
 	err := retry.Do(
 		func() error {
@@ -243,7 +243,7 @@ func pruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 	}
 }
 
-func isLoggableStopError(err error) bool {
+func IsLoggableStopError(err error) bool {
 	if err == nil {
 		return false
 	}

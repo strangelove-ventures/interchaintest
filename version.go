@@ -1,4 +1,4 @@
-package version
+package interchaintest
 
 // GitSha is the git commit that produced the executable.
 // Set via the project Makefile `make interchaintest`.

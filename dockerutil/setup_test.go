@@ -7,8 +7,8 @@ import (
 
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/errdefs"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/mocktesting"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 

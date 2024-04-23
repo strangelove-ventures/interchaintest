@@ -20,6 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
@@ -28,11 +29,11 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -366,14 +367,19 @@ func (c *CosmosChain) SendIBCTransfer(
 		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
 		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
 		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
-		data, _          = tendermint.AttributeValue(events, evType, "packet_data")
+		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
 	)
 	tx.Packet.SourcePort = srcPort
 	tx.Packet.SourceChannel = srcChan
 	tx.Packet.DestPort = dstPort
 	tx.Packet.DestChannel = dstChan
 	tx.Packet.TimeoutHeight = timeoutHeight
-	tx.Packet.Data = []byte(data)
+
+	data, err := hex.DecodeString(dataHex)
+	if err != nil {
+		return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
+	}
+	tx.Packet.Data = data
 
 	seqNum, err := strconv.ParseUint(seq, 10, 64)
 	if err != nil {
@@ -388,6 +394,25 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return tx, nil
+}
+
+// RegisterICA will attempt to register an interchain account on the given counterparty chain.
+func (c *CosmosChain) RegisterICA(ctx context.Context, keyName string, connectionID string) (string, error) {
+	return c.getFullNode().RegisterICA(ctx, keyName, connectionID)
+}
+
+// QueryICA will query for an interchain account controlled by the given address on the counterparty chain.
+func (c *CosmosChain) QueryICAAddress(ctx context.Context, connectionID, address string) (string, error) {
+	return c.getFullNode().QueryICA(ctx, connectionID, address)
+}
+
+// SendICATx sends an interchain account transaction for a specified address and sends it to the respective
+// interchain account on the counterparty chain.
+func (c *CosmosChain) SendICATx(ctx context.Context, keyName, connectionID string, msgs []sdk.Msg, icaTxMemo string) (string, error) {
+	node := c.getFullNode()
+	registry := node.Chain.Config().EncodingConfig.InterfaceRegistry
+	encoding := "proto3"
+	return node.SendICATx(ctx, keyName, connectionID, registry, msgs, icaTxMemo, encoding)
 }
 
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
