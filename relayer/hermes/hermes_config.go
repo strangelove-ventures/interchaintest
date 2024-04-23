@@ -20,17 +20,15 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 
 		chains = append(chains, Chain{
 			ID:               chainCfg.ChainID,
-			Type:             "CosmosSdk",
-			CCVConsumerChain: false,
 			RPCAddr:          hermesCfg.rpcAddr,
+			CCVConsumerChain: false,
 			GrpcAddr:         fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
 			EventSource: EventSource{
 				Mode:       "push",
 				URL:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
-				BatchDelay: "500ms",
+				BatchDelay: "200ms",
 			},
 			RPCTimeout:    "10s",
-			TrustedNode:   false,
 			AccountPrefix: chainCfg.Bech32Prefix,
 			KeyName:       hermesCfg.keyName,
 			AddressType: AddressType{
@@ -175,13 +173,11 @@ type TrustThreshold struct {
 
 type Chain struct {
 	ID               string         `toml:"id"`
-	Type             string         `toml:"type"`
-	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
 	RPCAddr          string         `toml:"rpc_addr"`
 	GrpcAddr         string         `toml:"grpc_addr"`
 	EventSource      EventSource    `toml:"event_source"`
+	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
 	RPCTimeout       string         `toml:"rpc_timeout"`
-	TrustedNode      bool           `toml:"trusted_node"`
 	AccountPrefix    string         `toml:"account_prefix"`
 	KeyName          string         `toml:"key_name"`
 	AddressType      AddressType    `toml:"address_type"`
