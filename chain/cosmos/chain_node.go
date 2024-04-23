@@ -1373,7 +1373,8 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		usingPorts[k] = v
 	}
 
-	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
+	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
 		for intP, extP := range chainCfg.HostPortOverride {
 			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
 				{
