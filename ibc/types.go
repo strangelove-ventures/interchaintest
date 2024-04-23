@@ -54,7 +54,8 @@ type ChainConfig struct {
 	SidecarConfigs []SidecarConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
-	//HostPortOverride exposes ports to the host
+	// HostPortOverride exposes ports to the host.
+	// To avoid port binding conflicts, ports are only exposed on the 0th validator.
 	HostPortOverride map[int]int `yaml:"host-port-override"`
 	// Additional start command arguments
 	AdditionalStartArgs []string
