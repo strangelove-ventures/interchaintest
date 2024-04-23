@@ -145,7 +145,7 @@ func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 	return NewWallet(keyName, address, mnemonic)
 }
 
-func (c commander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+func (c commander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
 	// TODO: figure out how to implement this.
 	panic("implement me")
 }

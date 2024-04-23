@@ -1,8 +1,6 @@
 module github.com/strangelove-ventures/localinterchain
 
-go 1.21
-
-toolchain go1.21.0
+go 1.22.2
 
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
@@ -22,6 +20,7 @@ require (
 	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/zap v1.27.0
+	gopkg.in/yaml.v3 v3.0.1
 
 )
 
@@ -71,7 +70,7 @@ require (
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/cometbft/cometbft v0.38.5 // indirect
-	github.com/cometbft/cometbft-db v0.9.1 // indirect
+	github.com/cometbft/cometbft-db v0.10.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/cosmos-db v1.0.0 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.4 // indirect
@@ -254,7 +253,7 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect

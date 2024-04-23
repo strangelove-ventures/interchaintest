@@ -1,8 +1,6 @@
 module github.com/strangelove-ventures/interchaintest/v8
 
-go 1.21
-
-toolchain go1.21.0
+go 1.22.2
 
 require (
 	cosmossdk.io/math v1.3.0
@@ -22,6 +20,7 @@ require (
 	github.com/cosmos/gogoproto v1.4.11
 	github.com/cosmos/ibc-go/modules/capability v1.0.0
 	github.com/cosmos/ibc-go/v8 v8.1.0
+	github.com/cosmos/interchain-security/v5 v5.0.0-alpha1.0.20240423100140-781f691e7f89
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.7+incompatible
@@ -64,6 +63,7 @@ require (
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
 	cosmossdk.io/errors v1.0.1 // indirect
 	cosmossdk.io/log v1.3.1 // indirect
+	cosmossdk.io/x/evidence v0.1.0 // indirect
 	cosmossdk.io/x/tx v0.13.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -85,12 +85,13 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
+	github.com/cockroachdb/datadriven v1.0.3-0.20230801171734-e384cf455877 // indirect
 	github.com/cockroachdb/errors v1.11.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v1.1.0 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
-	github.com/cometbft/cometbft-db v0.9.1 // indirect
+	github.com/cometbft/cometbft-db v0.10.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/cosmos-db v1.0.0 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.4 // indirect

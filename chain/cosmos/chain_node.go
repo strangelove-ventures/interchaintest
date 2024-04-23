@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -40,6 +41,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -244,6 +246,25 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 	err := tn.WriteFile(ctx, content, "config/genesis.json")
 	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
+}
+
+func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
+	}
+
+	return gen, nil
+}
+
+func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
+		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 	}
 
 	return nil
@@ -800,6 +821,27 @@ func (tn *ChainNode) SendIBCTransfer(
 		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	return tn.ExecTx(ctx, keyName,
+		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
+		"--gas", "auto",
+	)
 }
 
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {
