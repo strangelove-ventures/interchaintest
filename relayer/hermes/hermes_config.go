@@ -19,15 +19,13 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		}
 
 		chains = append(chains, Chain{
-			ID:               chainCfg.ChainID,
-			Type:             "CosmosSdk",
-			CCVConsumerChain: false,
-			RPCAddr:          hermesCfg.rpcAddr,
-			GrpcAddr:         fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
+			ID:       chainCfg.ChainID,
+			RPCAddr:  hermesCfg.rpcAddr,
+			GrpcAddr: fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
 			EventSource: EventSource{
 				Mode:       "push",
-				URL:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
-				BatchDelay: "500ms",
+				Url:        strings.ReplaceAll(fmt.Sprintf("%s/websocket", hermesCfg.rpcAddr), "http", "ws"),
+				BatchDelay: "200ms",
 			},
 			RPCTimeout:    "10s",
 			TrustedNode:   false,
@@ -153,12 +151,6 @@ type TracingServer struct {
 	Port    int  `toml:"port"`
 }
 
-type EventSource struct {
-	Mode       string `toml:"mode"`
-	URL        string `toml:"url"`
-	BatchDelay string `toml:"batch_delay"`
-}
-
 type AddressType struct {
 	Derivation string `toml:"derivation"`
 }
@@ -173,9 +165,14 @@ type TrustThreshold struct {
 	Denominator string `toml:"denominator"`
 }
 
+type EventSource struct {
+	Mode       string `toml:"mode"`
+	Url        string `toml:"url"`
+	BatchDelay string `toml:"batch_delay"`
+}
+
 type Chain struct {
 	ID               string         `toml:"id"`
-	Type             string         `toml:"type"`
 	CCVConsumerChain bool           `toml:"ccv_consumer_chain"`
 	RPCAddr          string         `toml:"rpc_addr"`
 	GrpcAddr         string         `toml:"grpc_addr"`
