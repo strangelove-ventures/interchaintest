@@ -62,6 +62,10 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		}
 	}
 
+	if len(s.ExposeAdditionalPorts) > 0 {
+		s.ChainConfig.ExposeAdditionalPorts = append(s.ChainConfig.ExposeAdditionalPorts, s.ExposeAdditionalPorts...)
+	}
+
 	// s.Name and chainConfig.Name are interchangeable
 	if s.Name == "" && s.ChainConfig.Name != "" {
 		s.Name = s.ChainConfig.Name
