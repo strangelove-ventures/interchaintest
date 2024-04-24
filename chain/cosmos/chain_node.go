@@ -1058,6 +1058,9 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	for k, v := range sentryPorts {
 		usingPorts[k] = v
 	}
+	for _, port := range chainCfg.ExposeAdditionalPorts {
+		usingPorts[nat.Port(port)] = []nat.PortBinding{}
+	}
 
 	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
 	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
@@ -1376,4 +1379,17 @@ func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, from
 	icaTxMemo := "ica bank transfer"
 	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
 	return err
+}
+
+// GetHostAddress returns the host-accessible url for a port in the container.
+// This is useful for finding the url & random host port for ports exposed via ChainConfig.ExposeAdditionalPorts
+func (tn *ChainNode) GetHostAddress(ctx context.Context, portID string) (string, error) {
+	ports, err := tn.containerLifecycle.GetHostPorts(ctx, portID)
+	if err != nil {
+		return "", err
+	}
+	if len(ports) == 0 || ports[0] == "" {
+		return "", fmt.Errorf("no port with id '%s' found", portID)
+	}
+	return "http://" + ports[0], nil
 }
