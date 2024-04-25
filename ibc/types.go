@@ -67,6 +67,9 @@ type ChainConfig struct {
 	// HostPortOverride exposes ports to the host.
 	// To avoid port binding conflicts, ports are only exposed on the 0th validator.
 	HostPortOverride map[int]int `yaml:"host-port-override"`
+	// ExposeAdditionalPorts exposes each port id to the host on a random port. ex: "8080/tcp"
+	// Access the address with ChainNode.GetHostAddress
+	ExposeAdditionalPorts []string
 	// Additional start command arguments
 	AdditionalStartArgs []string
 	// Environment variables for chain nodes
@@ -83,6 +86,10 @@ func (c ChainConfig) Clone() ChainConfig {
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
+
+	additionalPorts := make([]string, len(c.ExposeAdditionalPorts))
+	copy(additionalPorts, c.ExposeAdditionalPorts)
+	x.ExposeAdditionalPorts = additionalPorts
 
 	if c.CoinDecimals != nil {
 		coinDecimals := *c.CoinDecimals
@@ -204,6 +211,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.Env != nil {
 		c.Env = append(c.Env, other.Env...)
+	}
+
+	if len(other.ExposeAdditionalPorts) > 0 {
+		c.ExposeAdditionalPorts = append(c.ExposeAdditionalPorts, other.ExposeAdditionalPorts...)
 	}
 
 	return c

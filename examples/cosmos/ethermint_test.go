@@ -1,7 +1,11 @@
 package cosmos_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,6 +15,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -26,9 +31,6 @@ func TestEthermintChain(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-
-	numVals := 1
-	numFullNodes := 0
 
 	cosmos.SetSDKConfig(wallet)
 
@@ -83,6 +85,11 @@ func TestEthermintChain(t *testing.T) {
 		}),
 	}
 
+	jsonRpcOverrides := make(testutil.Toml)
+	jsonRpcOverrides["address"] = "0.0.0.0:8545"
+	appTomlOverrides := make(testutil.Toml)
+	appTomlOverrides["json-rpc"] = jsonRpcOverrides
+
 	decimals := int64(decimals)
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
@@ -100,9 +107,10 @@ func TestEthermintChain(t *testing.T) {
 				TrustingPeriod: "168h0m0s",
 				ModifyGenesis:  cosmos.ModifyGenesis(genesis),
 				CoinDecimals:   &decimals,
+				// open the port for the EVM on all nodes
+				ExposeAdditionalPorts: []string{"8545/tcp"},
+				ConfigFileOverrides:   map[string]any{"config/app.toml": appTomlOverrides},
 			},
-			NumValidators: &numVals,
-			NumFullNodes:  &numFullNodes,
 		},
 	})
 
@@ -133,6 +141,28 @@ func TestEthermintChain(t *testing.T) {
 	balance, err := chain.GetNode().Chain.GetBalance(ctx, user.FormattedAddress(), denom)
 	require.NoError(t, err)
 	require.Equal(t, "10000000000", balance.String())
+
+	// verify access to port exposed via ExposeAdditionalPorts
+	evmJsonRpcUrl, err := chain.FullNodes[0].GetHostAddress(ctx, "8545/tcp")
+	require.NoError(t, err)
+
+	data := []byte(`{"jsonrpc":"2.0","id":1,"method":"eth_getBlockByNumber","params":["0x1", null]}`)
+	resp, err := http.Post(evmJsonRpcUrl, "application/json", bytes.NewBuffer(data))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	response := struct {
+		Result struct {
+			Number string `json:"number"`
+		} `json:"result"`
+	}{}
+	err = json.Unmarshal(body, &response)
+	require.NoError(t, err)
+
+	require.Equal(t, "0x1", response.Result.Number)
 }
 
 type evmEpoch struct {
