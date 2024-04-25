@@ -36,6 +36,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -719,6 +720,24 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
 	return tn.HasCommand(ctx, "genesis")
+}
+
+// ICSVersion returns the version of interchain-security the binary was built with.
+// If it doesn't depend on interchain-security, it returns an empty string.
+func (tn *ChainNode) ICSVersion(ctx context.Context) string {
+	if strings.HasPrefix(tn.Chain.Config().Bin, "interchain-security") {
+		// This isn't super pretty, but it's the best we can do for an interchain-security binary.
+		// It doesn't depend on itself, and the version command doesn't actually output a version.
+		// Ideally if you have a binary called something like "v3.3.0-my-fix" you can use it as a version, since the v3.3.0 part is in it.
+		return semver.Canonical(tn.Image.Version)
+	}
+	info := tn.GetBuildInformation(ctx)
+	for _, dep := range info.BuildDeps {
+		if strings.HasPrefix(dep.Parent, "github.com/cosmos/interchain-security") {
+			return semver.Canonical(dep.Version)
+		}
+	}
+	return ""
 }
 
 // AddGenesisAccount adds a genesis account for each key

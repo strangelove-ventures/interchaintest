@@ -33,13 +33,17 @@ func TestICS(t *testing.T) {
 		{
 			Name:          "ics-provider",
 			NumValidators: &vals, NumFullNodes: &fNodes,
-			Version: "v3.1.0", ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, TrustingPeriod: "336h"},
+			Version: "v3.1.0",
+			ChainConfig: ibc.ChainConfig{
+				GasAdjustment: 2.0, TrustingPeriod: "336h",
+			},
 		},
 		{ // ics-consumer
-			Name: "neutron", Version: "v3.0.4",
+			Name: "neutron", Version: "v2.0.2",
 			NumValidators: &vals, NumFullNodes: &fNodes,
 			ChainConfig: ibc.ChainConfig{
 				TrustingPeriod: "336h",
+				GasAdjustment:  2.0,
 				ModifyGenesis: cosmos.ModifyGenesis([]cosmos.GenesisKV{
 					cosmos.NewGenesisKV("consensus_params.block.max_gas", "100000000"),
 				}),
@@ -57,6 +61,7 @@ func TestICS(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
+		// relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "v2.4.0", "1025:1025"),
 	).Build(t, client, network)
 
 	// Prep Interchain

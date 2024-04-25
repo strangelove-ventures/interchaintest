@@ -9,7 +9,7 @@ agoric:
   bech32-prefix: agoric
   denom: urun
   gas-prices: 0.01urun
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 564
   trusting-period: 672h
   images:
@@ -24,7 +24,7 @@ akash:
   bech32-prefix: akash
   denom: uakt
   gas-prices: 0.01uakt
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/akash
@@ -38,7 +38,7 @@ arkeo:
   bech32-prefix: arkeo
   denom: uarkeo
   gas-prices: 0.01uarkeo
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/arkeo
@@ -52,7 +52,7 @@ axelar:
   bech32-prefix: axelar
   denom: uaxl
   gas-prices: 0.01uaxl
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 168h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/axelar
@@ -66,7 +66,7 @@ bitcanna:
   bech32-prefix: bcna
   denom: ubcna
   gas-prices: 0.01ubcna
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/bitcanna
@@ -80,7 +80,7 @@ bitsong:
   bech32-prefix: bitsong
   denom: ubtsg
   gas-prices: 0.01ubtsg
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 639
   trusting-period: 504h
   images:
@@ -95,7 +95,7 @@ bostrom:
   bech32-prefix: bostrom
   denom: boot
   gas-prices: 0.01boot
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 192h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/bostrom
@@ -109,7 +109,7 @@ carbon:
   bech32-prefix: swth
   denom: swth
   gas-prices: 0.01swth
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 720h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/carbon
@@ -123,7 +123,7 @@ cerberus:
   bech32-prefix: cerberus
   denom: ucrbrus
   gas-prices: 0.01ucrbrus
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336.667h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/cerberus
@@ -137,7 +137,7 @@ cheqd:
   bech32-prefix: cheqd
   denom: ncheq
   gas-prices: 0.01ncheq
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336.111h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/cheqd
@@ -151,7 +151,7 @@ chihuahua:
   bech32-prefix: chihuahua
   denom: uhuahua
   gas-prices: 0.01uhuahua
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/chihuahua
@@ -165,7 +165,7 @@ comdex:
   bech32-prefix: comdex
   denom: ucmdx
   gas-prices: 0.01ucmdx
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/comdex
@@ -194,7 +194,7 @@ crescent:
   bech32-prefix: cre
   denom: ucre
   gas-prices: 0.01ucre
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/crescent
@@ -208,7 +208,7 @@ cronos:
   bech32-prefix: crc
   denom: stake
   gas-prices: 0.01stake
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 60
   trusting-period: 672h
   images:
@@ -223,7 +223,7 @@ cryptoorgchain:
   bech32-prefix: cro
   denom: basecro
   gas-prices: 0.01basecro
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 394
   trusting-period: 672h
   images:
@@ -238,7 +238,7 @@ decentr:
   bech32-prefix: decentr
   denom: udec
   gas-prices: 0.01udec
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/decentr
@@ -252,7 +252,7 @@ desmos:
   bech32-prefix: desmos
   denom: udsm
   gas-prices: 0.01udsm
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 852
   trusting-period: 336h
   images:
@@ -267,7 +267,7 @@ dig:
   bech32-prefix: dig
   denom: udig
   gas-prices: 0.01udig
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/dig
@@ -281,7 +281,7 @@ emoney:
   bech32-prefix: emoney
   denom: ungm
   gas-prices: 0.01ungm
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/emoney
@@ -295,7 +295,7 @@ evmos:
   bech32-prefix: evmos
   denom: aevmos
   gas-prices: 0.01aevmos
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 60
   trusting-period: 336h
   images:
@@ -310,7 +310,7 @@ fetchhub:
   bech32-prefix: fetch
   denom: afet
   gas-prices: 0.01afet
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/fetchhub
@@ -324,7 +324,7 @@ firmachain:
   bech32-prefix: firma
   denom: ufct
   gas-prices: 0.01ufct
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 7777777
   trusting-period: 504h
   images:
@@ -339,7 +339,7 @@ gaia:
   bech32-prefix: cosmos
   denom: uatom
   gas-prices: 0.01uatom
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/gaia
@@ -353,7 +353,7 @@ gravitybridge:
   bech32-prefix: gravity
   denom: ugraviton
   gas-prices: 0.01ugraviton
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/gravitybridge
@@ -423,7 +423,7 @@ impacthub:
   bech32-prefix: ixo
   denom: uixo
   gas-prices: 0.01uixo
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/impacthub
@@ -437,7 +437,7 @@ injective:
   bech32-prefix: inj
   denom: inj
   gas-prices: 0.01inj
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 60
   trusting-period: 504h
   images:
@@ -452,7 +452,7 @@ irisnet:
   bech32-prefix: iaa
   denom: uiris
   gas-prices: 0.01uiris
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/irisnet
@@ -466,7 +466,7 @@ juno:
   bech32-prefix: juno
   denom: ujuno
   gas-prices: 0.0025ujuno
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/juno
@@ -480,7 +480,7 @@ kichain:
   bech32-prefix: ki
   denom: uxki
   gas-prices: 0.01uxki
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/kichain
@@ -494,7 +494,7 @@ konstellation:
   bech32-prefix: darc
   denom: udarc
   gas-prices: 0.01udarc
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/konstellation
@@ -508,7 +508,7 @@ kujira:
   bech32-prefix: kujira
   denom: ukuji
   gas-prices: 0.01ukuji
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/kujira
@@ -522,7 +522,7 @@ likecoin:
   bech32-prefix: like
   denom: nanolike
   gas-prices: 0.01nanolike
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/likecoin
@@ -536,7 +536,7 @@ lumnetwork:
   bech32-prefix: lum
   denom: ulum
   gas-prices: 0.01ulum
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/lum
@@ -550,7 +550,7 @@ neutron:
   bech32-prefix: neutron
   denom: untrn
   gas-prices: 0.01untrn
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/neutron
@@ -564,7 +564,7 @@ omniflixhub:
   bech32-prefix: omniflix
   denom: uflix
   gas-prices: 0.01uflix
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/omniflix
@@ -578,7 +578,7 @@ osmosis:
   bech32-prefix: osmo
   denom: uosmo
   gas-prices: 0.0025uosmo
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 336h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/osmosis
@@ -592,7 +592,7 @@ panacea:
   bech32-prefix: panacea
   denom: umed
   gas-prices: 0.01umed
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 371
   trusting-period: "504h"
   images:
@@ -607,7 +607,7 @@ penumbra:
   bech32-prefix: penumbrav2t
   denom: upenumbra
   gas-prices: 0.0upenumbra
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: 672h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/tendermint
@@ -622,7 +622,7 @@ persistence:
   bech32-prefix: persistence
   denom: uxprt
   gas-prices: 0.01uxprt
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 750
   trusting-period: "504h"
   images:
@@ -637,7 +637,7 @@ provenance:
   bech32-prefix: pb
   denom: nhash
   gas-prices: 0.01nhash
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 505
   trusting-period: "504h"
   images:
@@ -652,7 +652,7 @@ regen:
   bech32-prefix: regen
   denom: uregen
   gas-prices: 0.01uregen
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/regen
@@ -666,7 +666,7 @@ rizon:
   bech32-prefix: rizon
   denom: uatolo
   gas-prices: 0.01uatolo
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/rizon
@@ -680,7 +680,7 @@ secretnetwork:
   bech32-prefix: secret
   denom: uscrt
   gas-prices: 0.01uscrt
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 529
   trusting-period: "504h"
   images:
@@ -695,7 +695,7 @@ sentinel:
   bech32-prefix: sent
   denom: udvpn
   gas-prices: 0.01udvpn
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "672h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/sentinel
@@ -709,7 +709,7 @@ shentu:
   bech32-prefix: certik
   denom: uctk
   gas-prices: 0.01uctk
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/shentu
@@ -723,7 +723,7 @@ sifchain:
   bech32-prefix: sif
   denom: rowan
   gas-prices: 0.01rowan
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/sifchain
@@ -737,7 +737,7 @@ sommelier:
   bech32-prefix: somm
   denom: usomm
   gas-prices: 0.01usomm
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "672h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/sommelier
@@ -751,7 +751,7 @@ stargaze:
   bech32-prefix: stars
   denom: ustars
   gas-prices: 0.01ustars
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "336h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/stargaze
@@ -765,7 +765,7 @@ starname:
   bech32-prefix: star
   denom: uiov
   gas-prices: 0.01uiov
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 234
   trusting-period: "504h"
   images:
@@ -780,7 +780,7 @@ stride:
   bech32-prefix: stride
   denom: ustrd
   gas-prices: 0.01ustrd
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "336h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/stride
@@ -794,7 +794,7 @@ terpnetwork:
   bech32-prefix: terp
   denom: uterp
   gas-prices: 0.01uterp
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "504h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/terpnetwork
@@ -808,7 +808,7 @@ terra:
   bech32-prefix: terra
   denom: uluna
   gas-prices: 0.01uluna
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 330
   trusting-period: "336h"
   images:
@@ -823,7 +823,7 @@ umee:
   bech32-prefix: umee
   denom: uumee
   gas-prices: 0.01uumee
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   trusting-period: "336h"
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/umee
@@ -837,7 +837,7 @@ vidulum:
   bech32-prefix: vdl
   denom: uvdl
   gas-prices: 0.01uvdl
-  gas-adjustment: 1.3
+  gas-adjustment: 2.0
   coin-type: 370
   trusting-period: "504h"
   images:
