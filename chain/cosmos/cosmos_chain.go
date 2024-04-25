@@ -47,7 +47,6 @@ import (
 )
 
 var (
-	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
 	DefaultProviderUnbondingPeriod = 336 * time.Hour
 )
 
@@ -1157,6 +1156,7 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 	} else {
 		imageVersion = consumerVersion
 	}
+
 	err := c.GetNode().WriteFile(ctx, ccvState, "ccvconsumer.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to write ccv state to file: %w", err)
