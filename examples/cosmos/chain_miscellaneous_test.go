@@ -89,13 +89,9 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testHasCommand(ctx, t, chain)
 	testTokenFactory(ctx, t, chain, users)
 	testFailedCWExecute(ctx, t, chain, users)
-<<<<<<< HEAD
-	testAddingNode(ctx, t, chain) // not supported with CometMock
-=======
 	testAddingNode(ctx, t, chain)
 	testGetGovernanceAddress(ctx, t, chain)
 	testTXFailsOnBlockInclusion(ctx, t, chain, users)
->>>>>>> a3d5c18 (Fix v7: check transactions succeed after they're included in a block (#1087))
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
@@ -419,8 +415,6 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 
 }
 
-<<<<<<< HEAD
-=======
 func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	govAddr, err := chain.GetGovernanceAddress(ctx)
 	require.NoError(t, err)
@@ -438,7 +432,6 @@ func testTXFailsOnBlockInclusion(ctx context.Context, t *testing.T, chain *cosmo
 	require.Error(t, err)
 }
 
->>>>>>> a3d5c18 (Fix v7: check transactions succeed after they're included in a block (#1087))
 // helpers
 func sendTokens(ctx context.Context, chain *cosmos.CosmosChain, from, to ibc.Wallet, token string, amount int64) (ibc.WalletAmount, error) {
 	if token == "" {
