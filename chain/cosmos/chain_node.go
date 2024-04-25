@@ -545,6 +545,19 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
 	}
+	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
+	stdout, _, err = tn.ExecQuery(ctx, "tx", output.TxHash)
+	if err != nil {
+		return "", err
+	}
+	output = CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	if output.Code != 0 {
+		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
+	}
 	return output.TxHash, nil
 }
 
