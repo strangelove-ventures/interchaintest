@@ -1085,6 +1085,11 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 		return err
 	}
 
+	trustingPeriod, err := time.ParseDuration(c.cfg.TrustingPeriod)
+	if err != nil {
+		return fmt.Errorf("failed to parse trusting period in 'StartProvider': %w", err)
+	}
+
 	for _, consumer := range c.Consumers {
 		prop := ccvclient.ConsumerAdditionProposalJSON{
 			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
@@ -1101,7 +1106,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			TransferTimeoutPeriod:             3600000000000,
 			ConsumerRedistributionFraction:    "0.75",
 			HistoricalEntries:                 10000,
-			UnbondingPeriod:                   1728000000000000,
+			UnbondingPeriod:                   trustingPeriod,
 			Deposit:                           "100000000" + c.cfg.Denom,
 		}
 
@@ -1266,6 +1271,10 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	consumerICS := c.GetNode().ICSVersion(ctx)
 	providerICS := c.Provider.GetNode().ICSVersion(ctx)
 	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS)
+	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
+	if err != nil {
+		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
+	}
 
 	// populate genesis file ccvconsumer module app_state.
 	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
@@ -1323,10 +1332,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	// ccvState.Params.Enabled = true
 
 	// ccvStateMarshaled, err := c.cfg.EncodingConfig.Codec.MarshalJSON(ccvState)
-	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
-	if err != nil {
-		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
-	}
 
 	var ccvStateUnmarshaled interface{}
 	if err := json.Unmarshal(ccvStateMarshaled, &ccvStateUnmarshaled); err != nil {
