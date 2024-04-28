@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v7/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"

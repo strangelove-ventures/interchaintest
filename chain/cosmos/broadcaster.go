@@ -15,7 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 

@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/version"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 )
 
@@ -74,7 +73,7 @@ func StartChainPair(
 		TestName:          t.Name(),
 		Client:            cli,
 		NetworkID:         networkID,
-		GitSha:            version.GitSha,
+		GitSha:            GitSha,
 		BlockDatabaseFile: blockSqlite,
 	}); err != nil {
 		return nil, err

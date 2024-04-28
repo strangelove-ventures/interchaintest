@@ -16,8 +16,8 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 )
 

@@ -45,9 +45,9 @@ import (
 
 	icatypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
+	"github.com/strangelove-ventures/interchaintest/v7/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 

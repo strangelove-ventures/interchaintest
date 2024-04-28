@@ -14,11 +14,10 @@ import (
 
 	"github.com/rivo/tview"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
+	"github.com/strangelove-ventures/interchaintest/v7/blockdb"
+	blockdbtui "github.com/strangelove-ventures/interchaintest/v7/blockdb/tui"
 	"github.com/strangelove-ventures/interchaintest/v7/conformance"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	blockdbtui "github.com/strangelove-ventures/interchaintest/v7/internal/blockdb/tui"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/version"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"go.uber.org/zap"
@@ -65,7 +64,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(0)
 	case "version":
-		fmt.Fprintln(os.Stderr, version.GitSha)
+		fmt.Fprintln(os.Stderr, interchaintest.GitSha)
 		os.Exit(0)
 	}
 
@@ -278,7 +277,7 @@ func runDebugTerminalUI(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	if err = blockdb.Migrate(db, version.GitSha); err != nil {
+	if err = blockdb.Migrate(db, interchaintest.GitSha); err != nil {
 		return fmt.Errorf("migrate database %s: %w", dbPath, err)
 	}
 

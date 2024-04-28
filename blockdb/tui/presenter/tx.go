@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v7/blockdb"
 )
 
 var bufPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"go.uber.org/zap"
 )
 
