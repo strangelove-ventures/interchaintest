@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
-	"github.com/strangelove-ventures/interchaintest/v7/mocktesting"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 
