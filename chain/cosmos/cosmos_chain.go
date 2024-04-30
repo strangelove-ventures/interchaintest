@@ -552,8 +552,8 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 }
 
 // MigrateContract performs contract migration
-func (c *CosmosChain) MigrateContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
-	return c.getFullNode().MigrateContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
+func (c *CosmosChain) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	return c.getFullNode().MigrateContract(ctx, keyName, contractAddress, codeID, message, extraExecTxArgs...)
 }
 
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
