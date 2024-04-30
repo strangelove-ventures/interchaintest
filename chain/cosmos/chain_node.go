@@ -1023,8 +1023,8 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 }
 
 // MigrateContract performs contract migration
-func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
-	cmd := []string{"wasm", "migrate", contractAddress, message}
+func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	cmd := []string{"wasm", "migrate", contractAddress, codeID, message}
 	cmd = append(cmd, extraExecTxArgs...)
 
 	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
