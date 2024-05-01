@@ -18,6 +18,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	blockdbtui "github.com/strangelove-ventures/interchaintest/v7/internal/blockdb/tui"
+	"github.com/strangelove-ventures/interchaintest/v7/internal/version"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"go.uber.org/zap"
@@ -64,7 +65,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(0)
 	case "version":
-		fmt.Fprintln(os.Stderr, interchaintest.GitSha)
+		fmt.Fprintln(os.Stderr, version.GitSha)
 		os.Exit(0)
 	}
 
@@ -277,7 +278,7 @@ func runDebugTerminalUI(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	if err = blockdb.Migrate(db, interchaintest.GitSha); err != nil {
+	if err = blockdb.Migrate(db, version.GitSha); err != nil {
 		return fmt.Errorf("migrate database %s: %w", dbPath, err)
 	}
 
