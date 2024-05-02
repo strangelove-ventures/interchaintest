@@ -170,7 +170,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasPrices = other.GasPrices
 	}
 
-	if other.GasAdjustment > 0 && c.GasAdjustment == 0 {
+	if other.GasAdjustment > 0 {
 		c.GasAdjustment = other.GasAdjustment
 	}
 
