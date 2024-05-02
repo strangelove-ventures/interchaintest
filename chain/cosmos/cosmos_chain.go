@@ -1265,6 +1265,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err != nil {
 		return fmt.Errorf("failed to query provider for ccv state: %w", err)
 	}
+	c.log.Info("BEFORE MIGRATION!", zap.String("GEN", string(ccvStateMarshaled)))
 
 	consumerICS := c.GetNode().ICSVersion(ctx)
 	providerICS := c.Provider.GetNode().ICSVersion(ctx)

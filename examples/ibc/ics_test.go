@@ -49,7 +49,6 @@ func TestICS(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
-		// relayer.CustomDockerImage("ghcr.io/cosmos/relayer", "v2.4.0", "1025:1025"),
 	).Build(t, client, network)
 
 	// Prep Interchain
