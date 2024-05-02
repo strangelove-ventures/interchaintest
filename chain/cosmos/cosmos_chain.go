@@ -1139,7 +1139,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	return nil
 }
 
-func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string) ([]byte, error) {
+func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string, icsCfg ibc.ICSConfig) ([]byte, error) {
 	// If they're both under 3.3.0, or if they're the same version, we don't need to transform the state.
 	if semver.MajorMinor(providerVersion) == semver.MajorMinor(consumerVersion) ||
 		(semver.Compare(providerVersion, "v3.3.0") < 0 && semver.Compare(consumerVersion, "v3.3.0") < 0) {
@@ -1161,6 +1161,15 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 	} else {
 		imageVersion = consumerVersion
 	}
+
+	if icsCfg.ProviderVerOverride != "" {
+		imageVersion = icsCfg.ProviderVerOverride
+	}
+	if icsCfg.ConsumerVerOverride != "" {
+		toVersion = icsCfg.ConsumerVerOverride
+	}
+
+	c.log.Info("Transforming CCV state", zap.String("provider", providerVersion), zap.String("consumer", consumerVersion), zap.String("imageVersion", imageVersion), zap.String("toVersion", toVersion))
 
 	err := c.GetNode().WriteFile(ctx, ccvState, "ccvconsumer.json")
 	if err != nil {
@@ -1247,17 +1256,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		}
 	}
 
-	// providerHeight, err := c.Provider.Height(ctx)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to query provider height")
-	// }
-	// providerHeightInt64 := int64(providerHeight)
-
-	// block, err := c.Provider.getFullNode().Client.Block(ctx, &providerHeightInt64)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to query provider block to initialize consumer client")
-	// }
-
 	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
@@ -1270,68 +1268,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	consumerICS := c.GetNode().ICSVersion(ctx)
 	providerICS := c.Provider.GetNode().ICSVersion(ctx)
-	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS)
+	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS, chainCfg.InterchainSecurityConfig)
 	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
 	if err != nil {
 		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
 	}
-
-	// populate genesis file ccvconsumer module app_state.
-	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
-	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
-	// populate initial_val_set with provider val pubkeys and power
-
-	// nextValidatorsHash := block.Block.NextValidatorsHash
-	// timestamp := block.Block.Time
-	// rootHash := block.Block.AppHash
-
-	// page := int(1)
-	// perPage := int(1000)
-	// providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get provider validators: %w", err)
-	// }
-
-	// initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
-	// for i, val := range providerVals.Validators {
-	// 	initialVals[i] = abcitypes.ValidatorUpdate{
-	// 		PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{Ed25519: val.PubKey.Bytes()}},
-	// 		Power:  val.VotingPower,
-	// 	}
-	// }
-
-	// providerCfg := c.Provider.Config()
-
-	// clientState := ibctmtypes.NewClientState(
-	// 	providerCfg.ChainID,
-	// 	ibctmtypes.DefaultTrustLevel,
-	// 	DefaultProviderUnbondingPeriod/2,
-	// 	DefaultProviderUnbondingPeriod, // Needs to match provider unbonding period
-	// 	ccvprovidertypes.DefaultMaxClockDrift,
-	// 	clienttypes.Height{
-	// 		RevisionHeight: uint64(providerHeight),
-	// 		RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
-	// 	},
-	// 	commitmenttypes.GetSDKSpecs(),
-	// 	defaultUpgradePath,
-	// )
-
-	// root := commitmenttypes.MerkleRoot{
-	// 	Hash: rootHash,
-	// }
-
-	// consensusState := ibctmtypes.NewConsensusState(timestamp, root, nextValidatorsHash)
-
-	// ccvState := ccvconsumertypes.NewInitialGenesisState(
-	// 	clientState,
-	// 	consensusState,
-	// 	initialVals,
-	// 	ccvconsumertypes.DefaultGenesisState().GetParams(),
-	// )
-
-	// ccvState.Params.Enabled = true
-
-	// ccvStateMarshaled, err := c.cfg.EncodingConfig.Codec.MarshalJSON(ccvState)
 
 	var ccvStateUnmarshaled interface{}
 	if err := json.Unmarshal(ccvStateMarshaled, &ccvStateUnmarshaled); err != nil {
