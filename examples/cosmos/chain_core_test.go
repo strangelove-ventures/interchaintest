@@ -558,7 +558,7 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 	require.EqualValues(t, v.Options[0].Option, govv1.VoteOption_VOTE_OPTION_YES)
 
 	// pass vote with all validators
-	err = chain.VoteOnProposalAllValidators(ctx, "1", "yes")
+	err = chain.VoteOnProposalAllValidators(ctx, 1, "yes")
 	require.NoError(t, err)
 
 	// GovQueryProposalsV1

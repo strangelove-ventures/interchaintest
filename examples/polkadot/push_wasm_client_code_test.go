@@ -138,11 +138,11 @@ func TestPushWasmClientCode(t *testing.T) {
 	height, err := simdChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
 
-	err = simdChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
-	require.NoError(t, err, "failed to submit votes")
-
 	propId, err := strconv.ParseUint(proposalTx.ProposalID, 10, 64)
 	require.NoError(t, err, "failed to convert proposal ID to uint64")
+
+	err = simdChain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
+	require.NoError(t, err, "failed to submit votes")
 
 	_, err = cosmos.PollForProposalStatus(ctx, simdChain, height, height+heightDelta, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
