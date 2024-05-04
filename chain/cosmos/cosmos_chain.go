@@ -1120,14 +1120,13 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		if err := c.VoteOnProposalAllValidators(ctx, propTx.ProposalID, ProposalVoteYes); err != nil {
-			return err
-		}
-
-		// propTx.ProposalID
 		propID, err := strconv.ParseUint(propTx.ProposalID, 10, 64)
 		if err != nil {
 			return fmt.Errorf("failed to parse proposal id: %w", err)
+		}
+
+		if err := c.VoteOnProposalAllValidators(ctx, propID, ProposalVoteYes); err != nil {
+			return err
 		}
 
 		_, err = PollForProposalStatus(ctx, c, height, height+10, propID, govv1beta1.StatusPassed)
@@ -1538,18 +1537,13 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
-	propID, err := strconv.ParseUint(proposalID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse proposalID %s: %w", proposalID, err)
-	}
-
+func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID uint64, vote string) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {
 			n := n
 			eg.Go(func() error {
-				return n.VoteOnProposal(ctx, valKey, propID, vote)
+				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
 			})
 		}
 	}

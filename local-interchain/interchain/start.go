@@ -134,8 +134,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Add Interchain Security chain pairs together
 	if len(icsPair) > 0 {
 		for provider, consumers := range icsPair {
-			var p ibc.Chain
-			var c ibc.Chain
+			var p, c ibc.Chain
 
 			// a provider can have multiple consumers
 			for _, consumer := range consumers {
