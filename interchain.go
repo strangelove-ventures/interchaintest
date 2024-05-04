@@ -336,6 +336,15 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to track blocks: %w", err)
 	}
 
+	// If any configured chain is an instance of Penumbra we need to initialize new pclientd instances for the
+	// newly created faucet account.
+	for c := range ic.chains {
+		err = CreatePenumbraClient(ctx, c, FaucetAccountKeyName)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := ic.configureRelayerKeys(ctx, rep); err != nil {
 		// Error already wrapped with appropriate detail.
 		return err
