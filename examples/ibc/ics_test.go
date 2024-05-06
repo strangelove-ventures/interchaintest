@@ -36,18 +36,12 @@ func TestICS(t *testing.T) {
 		{
 			Name: "ics-provider", Version: "v3.3.0",
 			NumValidators: &vals, NumFullNodes: &fNodes,
-			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID},
+			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID, TrustingPeriod: "336h"},
 		},
 		{
-			Name: "ics-consumer", Version: "v3.3.0",
+			Name: "ics-consumer", Version: "v3.1.0",
 			NumValidators: &vals, NumFullNodes: &fNodes,
-			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1"}, /*
-				InterchainSecurityConfig: ibc.ICSConfig{
-					ProviderVerOverride: "v3.3.0",
-					ConsumerVerOverride: "v3.3.0",
-				},
-			*/
-
+			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1"},
 		},
 	})
 
@@ -69,12 +63,6 @@ func TestICS(t *testing.T) {
 		AddChain(provider).
 		AddChain(consumer).
 		AddRelayer(r, "relayer").
-		// AddLink(interchaintest.InterchainLink{
-		// 	Chain1:  provider, // this should be done automatically yea?
-		// 	Chain2:  consumer,
-		// 	Relayer: r,
-		// 	Path:    "ibc-path",
-		// }).
 		AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
 			Provider: provider,
 			Consumer: consumer,

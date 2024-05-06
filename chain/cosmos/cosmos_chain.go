@@ -53,7 +53,7 @@ import (
 )
 
 var (
-	DefaultProviderUnbondingPeriod = 336 * time.Hour
+	DefaultProviderUnbondingPeriod = 504 * time.Hour
 	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
 )
 
@@ -1109,8 +1109,8 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 
 			// TODO fetch or default variables
 			BlocksPerDistributionTransmission: 1000,
-			CcvTimeoutPeriod:                  2419200000000000,
-			TransferTimeoutPeriod:             3600000000000,
+			CcvTimeoutPeriod:                  trustingPeriod * 2,
+			TransferTimeoutPeriod:             trustingPeriod,
 			ConsumerRedistributionFraction:    "0.75",
 			HistoricalEntries:                 10000,
 			UnbondingPeriod:                   trustingPeriod,
@@ -1282,17 +1282,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err != nil {
 		return err
 	}
-
-	// ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to query provider for ccv state: %w", err)
-	// }
-	// c.log.Info("BEFORE MIGRATION!", zap.String("GEN", string(ccvStateMarshaled)))
-
-	// populate genesis file ccvconsumer module app_state.
-	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
-	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
-	// populate initial_val_set with provider val pubkeys and power
 
 	nextValidatorsHash := block.Block.NextValidatorsHash
 	timestamp := block.Block.Time
