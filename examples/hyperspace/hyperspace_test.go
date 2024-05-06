@@ -360,11 +360,11 @@ func pushWasmContractViaGov(t *testing.T, ctx context.Context, cosmosChain *cosm
 	height, err := cosmosChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
 
-	err = cosmosChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
-	require.NoError(t, err, "failed to submit votes")
-
 	propId, err := strconv.ParseUint(proposalTx.ProposalID, 10, 64)
 	require.NoError(t, err, "failed to convert proposal ID to uint64")
+
+	err = cosmosChain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
+	require.NoError(t, err, "failed to submit votes")
 
 	_, err = cosmos.PollForProposalStatus(ctx, cosmosChain, height, height+heightDelta, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")

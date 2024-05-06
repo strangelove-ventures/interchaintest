@@ -62,6 +62,8 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// Configuration describing additional interchain security options.
+	InterchainSecurityConfig ICSConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
 	// HostPortOverride exposes ports to the host.
@@ -215,6 +217,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if len(other.ExposeAdditionalPorts) > 0 {
 		c.ExposeAdditionalPorts = append(c.ExposeAdditionalPorts, other.ExposeAdditionalPorts...)
+	}
+
+	if other.InterchainSecurityConfig != (ICSConfig{}) {
+		c.InterchainSecurityConfig = other.InterchainSecurityConfig
 	}
 
 	return c
@@ -391,4 +397,19 @@ const (
 type ChannelFilter struct {
 	Rule        string
 	ChannelList []string
+}
+
+type PathUpdateOptions struct {
+	ChannelFilter *ChannelFilter
+	SrcClientID   *string
+	SrcConnID     *string
+	SrcChainID    *string
+	DstClientID   *string
+	DstConnID     *string
+	DstChainID    *string
+}
+
+type ICSConfig struct {
+	ProviderVerOverride string
+	ConsumerVerOverride string
 }

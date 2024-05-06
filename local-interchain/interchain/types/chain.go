@@ -23,6 +23,7 @@ type Chain struct {
 	Debugging        bool              `json:"debugging" yaml:"debugging"`
 	BlockTime        string            `json:"block_time" yaml:"block_time"`
 	HostPortOverride map[string]string `json:"host_port_override" yaml:"host_port_override"`
+	ICSConsumerLink  string            `json:"ics_consumer_link"` // a consumer sets this to ex: "provider-chain-id" to connect to them
 
 	// Required
 	Name                string                `json:"name" yaml:"name" validate:"min=1"`

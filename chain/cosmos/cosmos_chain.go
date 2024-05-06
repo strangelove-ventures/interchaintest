@@ -5,13 +5,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -23,12 +26,15 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
@@ -36,7 +42,12 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
+)
+
+var (
+	DefaultProviderUnbondingPeriod = 336 * time.Hour
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -44,10 +55,12 @@ import (
 type CosmosChain struct {
 	testName      string
 	cfg           ibc.ChainConfig
-	numValidators int
+	NumValidators int
 	numFullNodes  int
 	Validators    ChainNodes
 	FullNodes     ChainNodes
+	Provider      *CosmosChain
+	Consumers     []*CosmosChain
 
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
@@ -108,7 +121,7 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 	return &CosmosChain{
 		testName:      testName,
 		cfg:           chainConfig,
-		numValidators: numValidators,
+		NumValidators: numValidators,
 		numFullNodes:  numFullNodes,
 		log:           log,
 		cdc:           cdc,
@@ -492,6 +505,15 @@ func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*Ban
 	return c.getFullNode().QueryBankMetadata(ctx, denom)
 }
 
+// ConsumerAdditionProposal submits a legacy governance proposal to add a consumer to the chain.
+func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().ConsumerAdditionProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
@@ -709,13 +731,13 @@ func (c *CosmosChain) initializeChainNodes(
 	c.pullImages(ctx, cli)
 	image := chainCfg.Images[0]
 
-	newVals := make(ChainNodes, c.numValidators)
+	newVals := make(ChainNodes, c.NumValidators)
 	copy(newVals, c.Validators)
 	newFullNodes := make(ChainNodes, c.numFullNodes)
 	copy(newFullNodes, c.FullNodes)
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	for i := len(c.Validators); i < c.numValidators; i++ {
+	for i := len(c.Validators); i < c.NumValidators; i++ {
 		i := i
 		eg.Go(func() error {
 			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true, i)
@@ -1022,6 +1044,323 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
+// Bootstraps the provider chain and starts it from genesis
+func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	existingFunc := c.cfg.ModifyGenesis
+	c.cfg.ModifyGenesis = func(cc ibc.ChainConfig, b []byte) ([]byte, error) {
+		var err error
+		b, err = ModifyGenesis([]GenesisKV{
+			NewGenesisKV("app_state.gov.params.voting_period", "10s"),
+			NewGenesisKV("app_state.gov.params.max_deposit_period", "10s"),
+			NewGenesisKV("app_state.gov.params.min_deposit.0.denom", c.cfg.Denom),
+		})(cc, b)
+		if err != nil {
+			return nil, err
+		}
+		if existingFunc != nil {
+			return existingFunc(cc, b)
+		}
+		return b, nil
+	}
+
+	const proposerKeyName = "proposer"
+	if err := c.CreateKey(ctx, proposerKeyName); err != nil {
+		return fmt.Errorf("failed to add proposer key: %s", err)
+	}
+
+	proposerAddr, err := c.getFullNode().AccountKeyBech32(ctx, proposerKeyName)
+	if err != nil {
+		return fmt.Errorf("failed to get proposer key: %s", err)
+	}
+
+	proposer := ibc.WalletAmount{
+		Address: proposerAddr,
+		Denom:   c.cfg.Denom,
+		Amount:  sdkmath.NewInt(10_000_000_000_000),
+	}
+
+	additionalGenesisWallets = append(additionalGenesisWallets, proposer)
+
+	if err := c.Start(testName, ctx, additionalGenesisWallets...); err != nil {
+		return err
+	}
+
+	trustingPeriod, err := time.ParseDuration(c.cfg.TrustingPeriod)
+	if err != nil {
+		return fmt.Errorf("failed to parse trusting period in 'StartProvider': %w", err)
+	}
+
+	for _, consumer := range c.Consumers {
+		prop := ccvclient.ConsumerAdditionProposalJSON{
+			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
+			Summary:       "Proposal to add new consumer chain",
+			ChainId:       consumer.cfg.ChainID,
+			InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
+			GenesisHash:   []byte("gen_hash"),
+			BinaryHash:    []byte("bin_hash"),
+			SpawnTime:     time.Now(), // Client on provider tracking consumer will be created as soon as proposal passes
+
+			// TODO fetch or default variables
+			BlocksPerDistributionTransmission: 1000,
+			CcvTimeoutPeriod:                  2419200000000000,
+			TransferTimeoutPeriod:             3600000000000,
+			ConsumerRedistributionFraction:    "0.75",
+			HistoricalEntries:                 10000,
+			UnbondingPeriod:                   trustingPeriod,
+			Deposit:                           "100000000" + c.cfg.Denom,
+		}
+
+		height, err := c.Height(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to query provider height before consumer addition proposal: %w", err)
+		}
+
+		propTx, err := c.ConsumerAdditionProposal(ctx, proposerKeyName, prop)
+		if err != nil {
+			return err
+		}
+
+		propID, err := strconv.ParseUint(propTx.ProposalID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse proposal id: %w", err)
+		}
+
+		if err := c.VoteOnProposalAllValidators(ctx, propID, ProposalVoteYes); err != nil {
+			return err
+		}
+
+		_, err = PollForProposalStatus(ctx, c, height, height+10, propID, govv1beta1.StatusPassed)
+		if err != nil {
+			return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
+		}
+	}
+
+	return nil
+}
+
+const (
+	icsVer330 = "v3.3.0"
+	icsVer400 = "v4.0.0"
+)
+
+func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string, icsCfg ibc.ICSConfig) ([]byte, error) {
+	// If they're both under 3.3.0, or if they're the same version, we don't need to transform the state.
+	if semver.MajorMinor(providerVersion) == semver.MajorMinor(consumerVersion) ||
+		(semver.Compare(providerVersion, icsVer330) < 0 && semver.Compare(consumerVersion, icsVer330) < 0) {
+		return ccvState, nil
+	}
+	var imageVersion, toVersion string
+	// The trick here is that when we convert the state to a consumer < 3.3.0, we need a converter that knows about that version; those are >= 4.0.0, and need a --to flag.
+	// Other than that, this is a question of using whichever version is newer. If it's the provider's, we need a --to flag to tell it the consumer version.
+	// If it's the consumer's, we don't need a --to flag cause it'll assume the consumer version.
+	if semver.Compare(providerVersion, icsVer330) >= 0 && semver.Compare(providerVersion, consumerVersion) > 0 {
+		imageVersion = icsVer400
+		if semver.Compare(providerVersion, icsVer400) > 0 {
+			imageVersion = providerVersion
+		}
+		toVersion = semver.Major(consumerVersion)
+		if toVersion == "v3" {
+			toVersion = semver.MajorMinor(consumerVersion)
+		}
+	} else {
+		imageVersion = consumerVersion
+	}
+
+	if icsCfg.ProviderVerOverride != "" {
+		imageVersion = icsCfg.ProviderVerOverride
+	}
+	if icsCfg.ConsumerVerOverride != "" {
+		toVersion = icsCfg.ConsumerVerOverride
+	}
+
+	c.log.Info("Transforming CCV state", zap.String("provider", providerVersion), zap.String("consumer", consumerVersion), zap.String("imageVersion", imageVersion), zap.String("toVersion", toVersion))
+
+	err := c.GetNode().WriteFile(ctx, ccvState, "ccvconsumer.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to write ccv state to file: %w", err)
+	}
+	job := dockerutil.NewImage(c.log, c.GetNode().DockerClient, c.GetNode().NetworkID,
+		c.GetNode().TestName, "ghcr.io/strangelove-ventures/heighliner/ics", imageVersion,
+	)
+	cmd := []string{"interchain-security-cd", "genesis", "transform"}
+	if toVersion != "" {
+		cmd = append(cmd, "--to", toVersion+".x")
+	}
+	cmd = append(cmd, path.Join(c.GetNode().HomeDir(), "ccvconsumer.json"))
+	res := job.Run(ctx, cmd, dockerutil.ContainerOptions{Binds: c.GetNode().Bind()})
+	if res.Err != nil {
+		return nil, fmt.Errorf("failed to transform ccv state: %w", res.Err)
+	}
+	return res.Stdout, nil
+}
+
+// Bootstraps the consumer chain and starts it from genesis
+func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	chainCfg := c.Config()
+
+	configFileOverrides := chainCfg.ConfigFileOverrides
+
+	eg := new(errgroup.Group)
+	// Initialize validators and fullnodes.
+	for _, v := range c.Nodes() {
+		v := v
+		eg.Go(func() error {
+			if err := v.InitFullNodeFiles(ctx); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					ctx,
+					v.logger(),
+					v.DockerClient,
+					v.TestName,
+					v.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+
+	// wait for this to finish
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// Copy provider priv val keys to these nodes
+	for i, val := range c.Provider.Validators {
+		privVal, err := val.PrivValFileContent(ctx)
+		if err != nil {
+			return err
+		}
+		if err := c.Validators[i].OverwritePrivValFile(ctx, privVal); err != nil {
+			return err
+		}
+	}
+
+	if c.cfg.PreGenesis != nil {
+		err := c.cfg.PreGenesis(chainCfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	validator0 := c.Validators[0]
+
+	for _, wallet := range additionalGenesisWallets {
+		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: sdkmath.NewInt(wallet.Amount.Int64())}}); err != nil {
+			return err
+		}
+	}
+
+	genbz, err := validator0.GenesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("failed to query provider for ccv state: %w", err)
+	}
+	c.log.Info("BEFORE MIGRATION!", zap.String("GEN", string(ccvStateMarshaled)))
+
+	consumerICS := c.GetNode().ICSVersion(ctx)
+	providerICS := c.Provider.GetNode().ICSVersion(ctx)
+	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS, chainCfg.InterchainSecurityConfig)
+	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
+	if err != nil {
+		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
+	}
+
+	var ccvStateUnmarshaled interface{}
+	if err := json.Unmarshal(ccvStateMarshaled, &ccvStateUnmarshaled); err != nil {
+		return fmt.Errorf("failed to unmarshal ccv state json: %w", err)
+	}
+
+	var genesisJson interface{}
+	if err := json.Unmarshal(genbz, &genesisJson); err != nil {
+		return fmt.Errorf("failed to unmarshal genesis json: %w", err)
+	}
+
+	if err := dyno.Set(genesisJson, ccvStateUnmarshaled, "app_state", "ccvconsumer"); err != nil {
+		return fmt.Errorf("failed to populate ccvconsumer genesis state: %w", err)
+	}
+
+	if genbz, err = json.Marshal(genesisJson); err != nil {
+		return fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+	}
+
+	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
+
+	if c.cfg.ModifyGenesis != nil {
+		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
+	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
+	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
+	if exportGenesis != "" && exportGenesisChain == c.cfg.Name {
+		c.log.Debug("Exporting genesis file",
+			zap.String("chain", exportGenesisChain),
+			zap.String("path", exportGenesis),
+		)
+		_ = os.WriteFile(exportGenesis, genbz, 0600)
+	}
+
+	chainNodes := c.Nodes()
+
+	for _, cn := range chainNodes {
+		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
+			return err
+		}
+	}
+
+	if err := chainNodes.LogGenesisHashes(ctx); err != nil {
+		return err
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	for _, n := range chainNodes {
+		n := n
+		eg.Go(func() error {
+			return n.CreateNodeContainer(egCtx)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	peers := chainNodes.PeerString(ctx)
+
+	eg, egCtx = errgroup.WithContext(ctx)
+	for _, n := range chainNodes {
+		n := n
+		c.log.Info("Starting container", zap.String("container", n.Name()))
+		eg.Go(func() error {
+			if err := n.SetPeers(egCtx, peers); err != nil {
+				return err
+			}
+			return n.StartContainer(egCtx)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// Wait for 5 blocks before considering the chains "started"
+	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+}
+
 // Height implements ibc.Chain
 func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
@@ -1203,18 +1542,13 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
-	propID, err := strconv.ParseUint(proposalID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse proposalID %s: %w", proposalID, err)
-	}
-
+func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID uint64, vote string) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {
 			n := n
 			eg.Go(func() error {
-				return n.VoteOnProposal(ctx, valKey, propID, vote)
+				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
 			})
 		}
 	}

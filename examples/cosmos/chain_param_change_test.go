@@ -74,13 +74,13 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	paramTx, err := chain.ParamChangeProposal(ctx, chainUser.KeyName(), &param_change)
 	require.NoError(t, err, "error submitting param change proposal tx")
 
-	err = chain.VoteOnProposalAllValidators(ctx, paramTx.ProposalID, cosmos.ProposalVoteYes)
+	propId, err := strconv.ParseUint(paramTx.ProposalID, 10, 64)
+	require.NoError(t, err, "failed to convert proposal ID to uint64")
+
+	err = chain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
 	height, _ := chain.Height(ctx)
-
-	propId, err := strconv.ParseUint(paramTx.ProposalID, 10, 64)
-	require.NoError(t, err, "failed to convert proposal ID to uint64")
 
 	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
