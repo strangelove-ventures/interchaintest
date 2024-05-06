@@ -17,6 +17,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	abcitypes "github.com/cometbft/cometbft/abci/types"
+	crypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -30,7 +32,11 @@ import (
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	ibctmtypes "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	ccvconsumertypes "github.com/cosmos/interchain-security/v5/x/ccv/consumer/types"
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	ccvprovidertypes "github.com/cosmos/interchain-security/v5/x/ccv/provider/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -48,6 +54,7 @@ import (
 
 var (
 	DefaultProviderUnbondingPeriod = 336 * time.Hour
+	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -1260,20 +1267,90 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		}
 	}
 
+	providerHeight, err := c.Provider.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query provider height")
+	}
+	providerHeightInt64 := int64(providerHeight)
+
+	block, err := c.Provider.getFullNode().Client.Block(ctx, &providerHeightInt64)
+	if err != nil {
+		return fmt.Errorf("failed to query provider block to initialize consumer client")
+	}
+
 	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
 
-	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
+	// ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to query provider for ccv state: %w", err)
+	// }
+	// c.log.Info("BEFORE MIGRATION!", zap.String("GEN", string(ccvStateMarshaled)))
+
+	// populate genesis file ccvconsumer module app_state.
+	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
+	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
+	// populate initial_val_set with provider val pubkeys and power
+
+	nextValidatorsHash := block.Block.NextValidatorsHash
+	timestamp := block.Block.Time
+	rootHash := block.Block.AppHash
+
+	page := int(1)
+	perPage := int(1000)
+	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
 	if err != nil {
-		return fmt.Errorf("failed to query provider for ccv state: %w", err)
+		return fmt.Errorf("failed to get provider validators: %w", err)
 	}
+
+	initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
+	for i, val := range providerVals.Validators {
+		initialVals[i] = abcitypes.ValidatorUpdate{
+			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{Ed25519: val.PubKey.Bytes()}},
+			Power:  val.VotingPower,
+		}
+	}
+
+	providerCfg := c.Provider.Config()
+
+	clientState := ibctmtypes.NewClientState(
+		providerCfg.ChainID,
+		ibctmtypes.DefaultTrustLevel,
+		DefaultProviderUnbondingPeriod/2,
+		DefaultProviderUnbondingPeriod, // Needs to match provider unbonding period
+		ccvprovidertypes.DefaultMaxClockDrift,
+		clienttypes.Height{
+			RevisionHeight: uint64(providerHeight),
+			RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
+		},
+		commitmenttypes.GetSDKSpecs(),
+		defaultUpgradePath,
+	)
+
+	root := commitmenttypes.MerkleRoot{
+		Hash: rootHash,
+	}
+
+	consensusState := ibctmtypes.NewConsensusState(timestamp, root, nextValidatorsHash)
+
+	ccvState := ccvconsumertypes.NewInitialGenesisState(
+		clientState,
+		consensusState,
+		initialVals,
+		ccvconsumertypes.DefaultGenesisState().GetParams(),
+	)
+
+	ccvState.Params.Enabled = true
+
+	ccvStateMarshaled, err := c.cfg.EncodingConfig.Codec.MarshalJSON(ccvState)
 	c.log.Info("BEFORE MIGRATION!", zap.String("GEN", string(ccvStateMarshaled)))
 
 	consumerICS := c.GetNode().ICSVersion(ctx)
 	providerICS := c.Provider.GetNode().ICSVersion(ctx)
 	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS, chainCfg.InterchainSecurityConfig)
+
 	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
 	if err != nil {
 		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
