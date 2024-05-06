@@ -2,10 +2,12 @@
 members = ["main", "localic-std"]
 
 [workspace.dependencies]
+# 1.17.0 of typenum breaks building
+typenum = "=1.16.0"
 reqwest = { version = "0.11.20", features = ["blocking", "json"]}
 tokio = { version = "1.32.0", features = ["full"] }
 serde_json = {version = "1.0.107"}
-cosmwasm-std = "1.4.0"
+cosmwasm-std = "2.0.2"
 thiserror = { version = "1.0.31" }
 
 localic-std = { path = "./localic-std"}
