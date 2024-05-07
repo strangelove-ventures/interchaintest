@@ -8,6 +8,7 @@ import (
 
 	"cosmossdk.io/math"
 	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -87,16 +88,14 @@ func TestICS(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to build interchain")
 
-	// get provider node
 	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
 	require.NoError(t, err)
 
 	providerVal := stakingVals[0]
 	denom := provider.Config().Denom
 
-	// Perform validator delegation
-	// The delegation must be >1,000,000 utoken as this is = 1 power in tendermint.
 	t.Run("perform provider delegation to complete channel to the consumer", func(t *testing.T) {
+		// The delegation must be >1,000,000 utoken as this is = 1 power in tendermint.
 		beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 		require.NoError(t, err)
 
@@ -108,27 +107,74 @@ func TestICS(t *testing.T) {
 		require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
 	})
 
-	// Flush pending ICS packet
-	channels, err := r.GetChannels(ctx, eRep, providerChainID)
-	require.NoError(t, err)
+	t.Run("flush pending ICS packet", func(t *testing.T) {
+		channels, err := r.GetChannels(ctx, eRep, providerChainID)
+		require.NoError(t, err)
 
-	var ICSChannel = ""
+		ICSChannel := ""
+		for _, channel := range channels {
+			if channel.PortID == "provider" {
+				ICSChannel = channel.ChannelID
+			}
+		}
+		require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
+	})
+
+	// Fund users
+	// NOTE: this has to be done after the provider delegation & IBC update to the consumer.
+	amt := math.NewInt(10_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", amt, consumer, provider)
+	consumerUser := users[0]
+	providerUser := users[1]
+
+	t.Run("validate consumer action executed", func(t *testing.T) {
+		bal, err := consumer.BankQueryBalance(ctx, consumerUser.FormattedAddress(), consumer.Config().Denom)
+		require.NoError(t, err)
+		require.EqualValues(t, amt, bal)
+	})
+
+	t.Run("provider -> consumer IBC transfer", func(t *testing.T) {
+		providerChannelInfo, err := r.GetChannels(ctx, eRep, provider.Config().ChainID)
+		require.NoError(t, err)
+
+		channelID, err := getTransferChannel(providerChannelInfo)
+		require.NoError(t, err)
+
+		consumerChannelInfo, err := r.GetChannels(ctx, eRep, consumer.Config().ChainID)
+		require.NoError(t, err)
+
+		consumerChannelID, err := getTransferChannel(consumerChannelInfo)
+		require.NoError(t, err)
+
+		dstAddress := consumerUser.FormattedAddress()
+		sendAmt := math.NewInt(7)
+		transfer := ibc.WalletAmount{
+			Address: dstAddress,
+			Denom:   provider.Config().Denom,
+			Amount:  sendAmt,
+		}
+
+		tx, err := provider.SendIBCTransfer(ctx, channelID, providerUser.KeyName(), transfer, ibc.TransferOptions{})
+		require.NoError(t, err)
+		require.NoError(t, tx.Validate())
+
+		require.NoError(t, r.Flush(ctx, eRep, ibcPath, channelID))
+
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", consumerChannelID, provider.Config().Denom))
+		dstIbcDenom := srcDenomTrace.IBCDenom()
+
+		consumerBal, err := consumer.BankQueryBalance(ctx, consumerUser.FormattedAddress(), dstIbcDenom)
+		require.NoError(t, err)
+		require.EqualValues(t, sendAmt, consumerBal)
+	})
+}
+
+func getTransferChannel(channels []ibc.ChannelOutput) (string, error) {
 	for _, channel := range channels {
-		if channel.PortID == "provider" {
-			ICSChannel = channel.ChannelID
+		if channel.PortID == "transfer" {
+			return channel.ChannelID, nil
 		}
 	}
-	require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
 
-	t.Run("validate consumer actions now execute", func(t *testing.T) {
-		t.Parallel()
-		amt := math.NewInt(1_000_000)
-		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", amt, consumer)
-
-		for _, user := range users {
-			bal, err := consumer.BankQueryBalance(ctx, user.FormattedAddress(), consumer.Config().Denom)
-			require.NoError(t, err)
-			require.EqualValues(t, amt, bal)
-		}
-	})
+	return "", fmt.Errorf("no transfer channel found")
 }
