@@ -12,7 +12,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -97,45 +96,41 @@ func TestICS(t *testing.T) {
 	valOne := stakingVals[0]
 	denom := provider.Config().Denom
 
-	// delegate from the "validator" key
-	err = provider.GetNode().StakingDelegate(ctx, "validator", valOne.OperatorAddress, fmt.Sprintf("100%s", denom))
-	require.NoError(t, err, "failed to delegate from validator")
+	// Perform validator delegation
+	// The delegation must be >1,000,000 utoken as this is = 1 power in tendermint.
+	t.Run("perform provider delegation to complete channel to the consumer", func(t *testing.T) {
+		beforeDel, err := provider.StakingQueryDelegationsTo(ctx, valOne.OperatorAddress)
+		require.NoError(t, err)
 
-	// now wait for the relayer event to be processes
+		err = provider.GetNode().StakingDelegate(ctx, "validator", valOne.OperatorAddress, fmt.Sprintf("1000000%s", denom))
+		require.NoError(t, err, "failed to delegate from validator")
 
-	// relayer flush
+		afterDel, err := provider.StakingQueryDelegationsTo(ctx, valOne.OperatorAddress)
+		require.NoError(t, err)
+		require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
+	})
+
+	// Flush pending ICS packet
 	channels, err := r.GetChannels(ctx, eRep, providerChainID)
 	require.NoError(t, err)
-	// require.Len(t, channels, 2)
 
-	// get the ics20-1 transfer channel
-	var transferChannel = ""
+	var ICSChannel = ""
 	for _, channel := range channels {
-		fmt.Printf("channel: %v\n", channel)
-		// TODO: this is stuck in TRYOPEN state? channel: {STATE_TRYOPEN ORDER_UNORDERED {transfer channel-1} [connection-0] ics20-1 transfer channel-1}
-		if channel.Version == "ics20-1" {
-			transferChannel = channel.ChannelID
+		if channel.PortID == "provider" {
+			ICSChannel = channel.ChannelID
 		}
 	}
-	require.NotEmpty(t, transferChannel)
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
 
-	require.NoError(t, r.Flush(ctx, eRep, ibcPath, transferChannel))
+	t.Run("validate consumer actions now execute", func(t *testing.T) {
+		t.Parallel()
+		amt := math.NewInt(1_000_000)
+		users := interchaintest.GetAndFundTestUsers(t, ctx, "default", amt, consumer)
 
-	err = testutil.WaitForBlocks(ctx, 15, provider, consumer)
-	require.NoError(t, err, "failed to wait for blocks")
-
-	// perform an action on the consumer
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", math.NewInt(10_000_000), consumer)
-	fmt.Printf("users: %v\n", users)
-	// get balance & print
-	for _, user := range users {
-		bal, err := consumer.BankQueryBalance(ctx, user.FormattedAddress(), consumer.Config().Denom)
-		require.NoError(t, err)
-		fmt.Printf("user: %v, balance: %v\n", user.FormattedAddress(), bal)
-	}
-
-	err = testutil.WaitForBlocks(ctx, 1000, provider, consumer)
-	require.NoError(t, err, "failed to wait for blocks")
-
-	// perform ibc transfer here from provider -> consumer
+		for _, user := range users {
+			bal, err := consumer.BankQueryBalance(ctx, user.FormattedAddress(), consumer.Config().Denom)
+			require.NoError(t, err)
+			require.EqualValues(t, amt, bal)
+		}
+	})
 }

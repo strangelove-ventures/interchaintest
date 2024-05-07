@@ -1339,6 +1339,9 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	consumerICS := c.GetNode().ICSVersion(ctx)
 	providerICS := c.Provider.GetNode().ICSVersion(ctx)
 	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS, chainCfg.InterchainSecurityConfig)
+	if err != nil {
+		return fmt.Errorf("failed to transform ccv state: %w", err)
+	}
 
 	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
 	if err != nil {
