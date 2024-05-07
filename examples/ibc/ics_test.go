@@ -26,6 +26,7 @@ var (
 )
 
 // This tests Cosmos Interchain Security, spinning up a provider and a single consumer chain.
+// go test -timeout 3000s -run ^TestICS$ github.com/strangelove-ventures/interchaintest/v8/examples/ibc -v  -test.short
 func TestICS(t *testing.T) {
 	if testing.Short() {
 		ver := icsVersions[0]
@@ -112,7 +113,8 @@ func icsTest(t *testing.T, version string) {
 	// - Restarts the relayer to connect ics20-1 transfer channel
 	// - Delegates tokens to the provider to update consensus value
 	// - Flushes the IBC state to the consumer
-	provider.FinishICSProviderSetup(t, ctx, r, eRep, ibcPath)
+	err = provider.FinishICSProviderSetup(ctx, r, eRep, ibcPath)
+	require.NoError(t, err)
 
 	// ------------------ Test Begins ------------------
 
