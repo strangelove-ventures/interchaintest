@@ -3,8 +3,8 @@ package ibc_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
-	"time"
 
 	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
@@ -18,31 +18,51 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+var (
+	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0"}
+	vals            = 1
+	fNodes          = 0
+	providerChainID = "provider-1"
+)
+
 // This tests Cosmos Interchain Security, spinning up a provider and a single consumer chain.
 func TestICS(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping in short mode")
+		ver := icsVersions[0]
+		t.Logf("Running in short mode, only testing the latest ICS version: %s", ver)
+		icsVersions = []string{ver}
 	}
 
-	t.Parallel()
+	for _, version := range icsVersions {
+		version := version
+		testName := "ics_" + strings.ReplaceAll(version, ".", "_")
 
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+			icsTest(t, version)
+		})
+	}
+
+}
+
+func icsTest(t *testing.T, version string) {
 	ctx := context.Background()
 
-	vals := 1
-	fNodes := 0
-	providerChainID := "provider-1"
+	consumerBechPrefix := "cosmos"
+	if version == "v4.0.0" {
+		consumerBechPrefix = "consumer"
+	}
 
-	// Chain Factory
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name: "ics-provider", Version: "v3.3.0",
+			Name: "ics-provider", Version: version,
 			NumValidators: &vals, NumFullNodes: &fNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID, TrustingPeriod: "336h"},
 		},
 		{
-			Name: "ics-consumer", Version: "v3.1.0",
+			Name: "ics-consumer", Version: version,
 			NumValidators: &vals, NumFullNodes: &fNodes,
-			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1"},
+			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix},
 		},
 	})
 
@@ -72,9 +92,7 @@ func TestICS(t *testing.T) {
 		})
 
 	// Reporter/logs
-	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%s_%d.json", t.Name(), time.Now().Unix()))
-	require.NoError(t, err)
-	rep := testreporter.NewReporter(f)
+	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
 	// Build interchain
