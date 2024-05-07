@@ -87,25 +87,23 @@ func TestICS(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to build interchain")
 
-	// err = testutil.WaitForBlocks(ctx, 5, provider, consumer)
-	// require.NoError(t, err, "failed to wait for blocks")
-
 	// get provider node
 	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
 	require.NoError(t, err)
-	valOne := stakingVals[0]
+
+	providerVal := stakingVals[0]
 	denom := provider.Config().Denom
 
 	// Perform validator delegation
 	// The delegation must be >1,000,000 utoken as this is = 1 power in tendermint.
 	t.Run("perform provider delegation to complete channel to the consumer", func(t *testing.T) {
-		beforeDel, err := provider.StakingQueryDelegationsTo(ctx, valOne.OperatorAddress)
+		beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 		require.NoError(t, err)
 
-		err = provider.GetNode().StakingDelegate(ctx, "validator", valOne.OperatorAddress, fmt.Sprintf("1000000%s", denom))
+		err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", denom))
 		require.NoError(t, err, "failed to delegate from validator")
 
-		afterDel, err := provider.StakingQueryDelegationsTo(ctx, valOne.OperatorAddress)
+		afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 		require.NoError(t, err)
 		require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
 	})
