@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"testing"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -18,16 +19,65 @@ import (
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
+
+	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 const (
 	icsVer330 = "v3.3.0"
 	icsVer400 = "v4.0.0"
 )
+
+// FinishICSProviderSetup sets up the base of an ICS connection with respect to the relayer, provider actions, and flushing of packets.
+// 1. Stop the relayer, then start it back up. This completes the ICS20-1 transfer channel setup.
+//   - You must set look-back block history >100 blocks in [interchaintest.NewBuiltinRelayerFactory].
+//
+// 2. Get the first provider validator, and delegate 1,000,000denom to it. This triggers a CometBFT power increase of 1.
+// 3. Flush the pending ICS packets to the consumer chain.
+func (c *CosmosChain) FinishICSProviderSetup(t *testing.T, ctx context.Context, r ibc.Relayer, eRep *testreporter.RelayerExecReporter, ibcPath string) {
+	// Restart the relayer to finish IBC transfer connection w/ ics20-1 link
+	require.NoError(t, r.StopRelayer(ctx, eRep))
+	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
+
+	// perform provider delegation to complete provider<>consumer channel connection
+	stakingVals, err := c.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
+	require.NoError(t, err)
+
+	providerVal := stakingVals[0]
+
+	beforeDel, err := c.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
+	require.NoError(t, err)
+
+	err = c.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", c.Config().Denom))
+	require.NoError(t, err, "failed to delegate to validator")
+
+	afterDel, err := c.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
+	require.NoError(t, err)
+	require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
+
+	// Flush now pending ICS update packet -> consumer
+	c.FlushPendingICSPackets(t, ctx, r, eRep, ibcPath)
+}
+
+// FlushPendingICSPackets flushes the pending ICS packets to the consumer chain from the "provider" port.
+func (c *CosmosChain) FlushPendingICSPackets(t *testing.T, ctx context.Context, r ibc.Relayer, eRep *testreporter.RelayerExecReporter, ibcPath string) {
+	channels, err := r.GetChannels(ctx, eRep, c.cfg.ChainID)
+	require.NoError(t, err)
+
+	ICSChannel := ""
+	for _, channel := range channels {
+		if channel.PortID == "provider" {
+			ICSChannel = channel.ChannelID
+		}
+	}
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
+}
 
 // Bootstraps the provider chain and starts it from genesis
 func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {

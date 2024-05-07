@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
@@ -91,29 +90,11 @@ func TestICS(t *testing.T) {
 
 	// ------------------ ICS Setup ------------------
 
-	// Restart the relayer to finish IBC transfer connection w/ ics20-1 link
-	require.NoError(t, r.StopRelayer(ctx, eRep))
-	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
-
-	// perform provider delegation to complete provider<>consumer channel connection
-	// The delegation must be >1,000,000 utoken as this is = 1 power in (tendermint|comet)BFT.
-	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
-	require.NoError(t, err)
-
-	providerVal := stakingVals[0]
-
-	beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
-	require.NoError(t, err)
-
-	err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", provider.Config().Denom))
-	require.NoError(t, err, "failed to delegate to validator")
-
-	afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
-	require.NoError(t, err)
-	require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
-
-	// Flush now pending ICS update packet -> consumer
-	flushPendingICSPackets(ctx, t, r, eRep, providerChainID, ibcPath)
+	// Finish the ICS provider chain initialization.
+	// - Restarts the relayer to connect ics20-1 transfer channel
+	// - Delegates tokens to the provider to update consensus value
+	// - Flushes the IBC state to the consumer
+	provider.FinishICSProviderSetup(t, ctx, r, eRep, ibcPath)
 
 	// ------------------ Test Begins ------------------
 
@@ -173,17 +154,4 @@ func getTransferChannel(channels []ibc.ChannelOutput) (string, error) {
 	}
 
 	return "", fmt.Errorf("no open transfer channel found")
-}
-
-func flushPendingICSPackets(ctx context.Context, t *testing.T, r ibc.Relayer, eRep *testreporter.RelayerExecReporter, providerChainID, ibcPath string) {
-	channels, err := r.GetChannels(ctx, eRep, providerChainID)
-	require.NoError(t, err)
-
-	ICSChannel := ""
-	for _, channel := range channels {
-		if channel.PortID == "provider" {
-			ICSChannel = channel.ChannelID
-		}
-	}
-	require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
 }
