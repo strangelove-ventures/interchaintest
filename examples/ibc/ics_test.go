@@ -89,8 +89,7 @@ func TestICS(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to build interchain")
 
-	// start relayer to finish IBC transfer connection w/ ICS link
-	require.NoError(t, r.StopRelayer(ctx, eRep))
+	// start relayer to finish IBC transfer connection w/ ics20-1 link
 	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
 
 	// ------------------ Test Begins ------------------
@@ -106,7 +105,7 @@ func TestICS(t *testing.T) {
 	require.NoError(t, err)
 
 	err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", denom))
-	require.NoError(t, err, "failed to delegate from validator")
+	require.NoError(t, err, "failed to delegate to validator")
 
 	afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 	require.NoError(t, err)
@@ -119,8 +118,7 @@ func TestICS(t *testing.T) {
 	// NOTE: this has to be done after the provider delegation & IBC update to the consumer.
 	amt := math.NewInt(10_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", amt, consumer, provider)
-	consumerUser := users[0]
-	providerUser := users[1]
+	consumerUser, providerUser := users[0], users[1]
 
 	t.Run("validate consumer action executed", func(t *testing.T) {
 		bal, err := consumer.BankQueryBalance(ctx, consumerUser.FormattedAddress(), consumer.Config().Denom)
