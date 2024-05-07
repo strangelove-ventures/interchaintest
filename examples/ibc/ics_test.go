@@ -9,9 +9,11 @@ import (
 	"cosmossdk.io/math"
 	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -51,10 +53,10 @@ func TestICS(t *testing.T) {
 
 	// Relayer Factory
 	client, network := interchaintest.DockerSetup(t)
-
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
 		zaptest.NewLogger(t),
+		relayer.StartupFlags("--block-history", "100"),
 	).Build(t, client, network)
 
 	// Prep Interchain
@@ -70,10 +72,9 @@ func TestICS(t *testing.T) {
 			Path:     ibcPath,
 		})
 
-	// Log location
-	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
-	require.NoError(t, err)
 	// Reporter/logs
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%s_%d.json", t.Name(), time.Now().Unix()))
+	require.NoError(t, err)
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 
@@ -88,37 +89,31 @@ func TestICS(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to build interchain")
 
+	// start relayer to finish IBC transfer connection w/ ICS link
+	require.NoError(t, r.StopRelayer(ctx, eRep))
+	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
+
+	// ------------------ Test Begins ------------------
+
 	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
 	require.NoError(t, err)
-
 	providerVal := stakingVals[0]
 	denom := provider.Config().Denom
 
-	t.Run("perform provider delegation to complete channel to the consumer", func(t *testing.T) {
-		// The delegation must be >1,000,000 utoken as this is = 1 power in tendermint.
-		beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
-		require.NoError(t, err)
+	// perform provider delegation to complete provider<>consumer channel connection
+	// The delegation must be >1,000,000 utoken as this is = 1 power in (tendermint|comet)BFT.
+	beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
+	require.NoError(t, err)
 
-		err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", denom))
-		require.NoError(t, err, "failed to delegate from validator")
+	err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", denom))
+	require.NoError(t, err, "failed to delegate from validator")
 
-		afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
-		require.NoError(t, err)
-		require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
-	})
+	afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
+	require.NoError(t, err)
+	require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
 
-	t.Run("flush pending ICS packet", func(t *testing.T) {
-		channels, err := r.GetChannels(ctx, eRep, providerChainID)
-		require.NoError(t, err)
-
-		ICSChannel := ""
-		for _, channel := range channels {
-			if channel.PortID == "provider" {
-				ICSChannel = channel.ChannelID
-			}
-		}
-		require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
-	})
+	// Flush now pending ICS packet
+	flushPendingICSPackets(ctx, t, r, eRep, providerChainID, ibcPath)
 
 	// Fund users
 	// NOTE: this has to be done after the provider delegation & IBC update to the consumer.
@@ -138,13 +133,13 @@ func TestICS(t *testing.T) {
 		require.NoError(t, err)
 
 		channelID, err := getTransferChannel(providerChannelInfo)
-		require.NoError(t, err)
+		require.NoError(t, err, providerChannelInfo)
 
 		consumerChannelInfo, err := r.GetChannels(ctx, eRep, consumer.Config().ChainID)
 		require.NoError(t, err)
 
 		consumerChannelID, err := getTransferChannel(consumerChannelInfo)
-		require.NoError(t, err)
+		require.NoError(t, err, consumerChannelInfo)
 
 		dstAddress := consumerUser.FormattedAddress()
 		sendAmt := math.NewInt(7)
@@ -171,10 +166,23 @@ func TestICS(t *testing.T) {
 
 func getTransferChannel(channels []ibc.ChannelOutput) (string, error) {
 	for _, channel := range channels {
-		if channel.PortID == "transfer" {
+		if channel.PortID == "transfer" && channel.State == ibcconntypes.OPEN.String() {
 			return channel.ChannelID, nil
 		}
 	}
 
-	return "", fmt.Errorf("no transfer channel found")
+	return "", fmt.Errorf("no open transfer channel found")
+}
+
+func flushPendingICSPackets(ctx context.Context, t *testing.T, r ibc.Relayer, eRep *testreporter.RelayerExecReporter, providerChainID, ibcPath string) {
+	channels, err := r.GetChannels(ctx, eRep, providerChainID)
+	require.NoError(t, err)
+
+	ICSChannel := ""
+	for _, channel := range channels {
+		if channel.PortID == "provider" {
+			ICSChannel = channel.ChannelID
+		}
+	}
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, ICSChannel))
 }
