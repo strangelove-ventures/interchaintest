@@ -89,30 +89,33 @@ func TestICS(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to build interchain")
 
-	// start relayer to finish IBC transfer connection w/ ics20-1 link
+	// ------------------ ICS Setup ------------------
+
+	// Restart the relayer to finish IBC transfer connection w/ ics20-1 link
+	require.NoError(t, r.StopRelayer(ctx, eRep))
 	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
-
-	// ------------------ Test Begins ------------------
-
-	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
-	require.NoError(t, err)
-	providerVal := stakingVals[0]
-	denom := provider.Config().Denom
 
 	// perform provider delegation to complete provider<>consumer channel connection
 	// The delegation must be >1,000,000 utoken as this is = 1 power in (tendermint|comet)BFT.
+	stakingVals, err := provider.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
+	require.NoError(t, err)
+
+	providerVal := stakingVals[0]
+
 	beforeDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 	require.NoError(t, err)
 
-	err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", denom))
+	err = provider.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", provider.Config().Denom))
 	require.NoError(t, err, "failed to delegate to validator")
 
 	afterDel, err := provider.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
 	require.NoError(t, err)
 	require.Greater(t, afterDel[0].Balance.Amount.Int64(), beforeDel[0].Balance.Amount.Int64())
 
-	// Flush now pending ICS packet
+	// Flush now pending ICS update packet -> consumer
 	flushPendingICSPackets(ctx, t, r, eRep, providerChainID, ibcPath)
+
+	// ------------------ Test Begins ------------------
 
 	// Fund users
 	// NOTE: this has to be done after the provider delegation & IBC update to the consumer.
