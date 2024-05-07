@@ -46,11 +46,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	DefaultProviderUnbondingPeriod = 504 * time.Hour
-	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
-)
-
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
 // Implements the ibc.Chain interface.
 type CosmosChain struct {
