@@ -98,11 +98,9 @@ func icsTest(t *testing.T, version string) {
 
 	// Build interchain
 	err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
 		SkipPathCreation: false,
 	})
 	require.NoError(t, err, "failed to build interchain")
