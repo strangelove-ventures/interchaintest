@@ -5,16 +5,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	govv1beta1 "cosmossdk.io/api/cosmos/gov/v1beta1"
 	sdkmath "cosmossdk.io/math"
@@ -28,7 +25,10 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+<<<<<<< HEAD
 	govv1beta1type "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+=======
+>>>>>>> 65cce0c (test(ics): validate consumer transactions execute (#1115))
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
@@ -37,6 +37,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+<<<<<<< HEAD
 	"github.com/icza/dyno"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
@@ -44,18 +45,28 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+=======
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+>>>>>>> 65cce0c (test(ics): validate consumer transactions execute (#1115))
 	"go.uber.org/zap"
-	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+<<<<<<< HEAD
 var (
 	defaultUpgradePath             = []string{"upgrade", "upgradedIBCState"}
 	DefaultProviderUnbondingPeriod = 504 * time.Hour
 )
 
+=======
+>>>>>>> 65cce0c (test(ics): validate consumer transactions execute (#1115))
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
 // Implements the ibc.Chain interface.
 type CosmosChain struct {
@@ -1104,6 +1115,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
+<<<<<<< HEAD
 // Bootstraps the provider chain and starts it from genesis
 func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	existingFunc := c.cfg.ModifyGenesis
@@ -1397,6 +1409,8 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
 }
 
+=======
+>>>>>>> 65cce0c (test(ics): validate consumer transactions execute (#1115))
 // Height implements ibc.Chain
 func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
