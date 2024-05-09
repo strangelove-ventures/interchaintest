@@ -928,7 +928,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	if c.cfg.PreGenesis != nil {
-		err := c.cfg.PreGenesis(chainCfg)
+		err := c.cfg.PreGenesis(c)
 		if err != nil {
 			return err
 		}

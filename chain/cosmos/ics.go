@@ -278,7 +278,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	}
 
 	if c.cfg.PreGenesis != nil {
-		err := c.cfg.PreGenesis(chainCfg)
+		err := c.cfg.PreGenesis(c)
 		if err != nil {
 			return err
 		}
