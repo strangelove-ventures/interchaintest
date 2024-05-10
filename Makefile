@@ -30,6 +30,11 @@ docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docke
 gen: ## Run code generators
 	go generate ./...
 
+.PHONY: mod-tidy
+mod-tidy: ## Run mod tidy
+	go mod tidy
+	cd local-interchain && go mod tidy
+
 .PHONY: proto-gen
 proto-gen: ## Generate code from protos
 	@echo "Generating Protobuf files"
