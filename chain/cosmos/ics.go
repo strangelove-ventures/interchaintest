@@ -313,6 +313,10 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	chainNodes := c.Nodes()
 
+	if c.preStartNodes != nil {
+		c.preStartNodes(c)
+	}
+
 	for _, cn := range chainNodes {
 		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
 			return err
