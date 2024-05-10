@@ -62,7 +62,7 @@ type ChainNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 	preStartNode func(*ChainNode)
-	
+
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
 
