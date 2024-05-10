@@ -589,27 +589,6 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 	return c.getFullNode().ExportState(ctx, height)
 }
 
-// GetBalance fetches the current balance for a specific account address and denom.
-// Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
-	grpcAddress := c.getFullNode().hostGRPCPort
-	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-	defer conn.Close()
-
-	queryClient := bankTypes.NewQueryClient(conn)
-	res, err := queryClient.Balance(ctx, params)
-
-	if err != nil {
-		return sdkmath.Int{}, err
-	}
-
-	return res.Balance.Amount, nil
-}
-
 // AllBalances fetches an account address's balance for all denoms it holds
 func (c *CosmosChain) AllBalances(ctx context.Context, address string) (types.Coins, error) {
 	params := bankTypes.QueryAllBalancesRequest{Address: address}
