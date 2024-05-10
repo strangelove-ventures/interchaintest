@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"cosmossdk.io/math"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
@@ -20,7 +22,7 @@ import (
 )
 
 const (
-	heightDelta      = uint64(20)
+	heightDelta      = 20
 	votingPeriod     = "30s"
 	maxDepositPeriod = "10s"
 )
@@ -110,7 +112,7 @@ func TestPushWasmClientCode(t *testing.T) {
 
 	// Create and Fund User Wallets
 	fundAmount := math.NewInt(10_000_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount.Int64(), simd)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, simd)
 	simd1User := users[0]
 
 	simd1UserBalInitial, err := simd.GetBalance(ctx, simd1User.FormattedAddress(), simd.Config().Denom)
@@ -136,10 +138,13 @@ func TestPushWasmClientCode(t *testing.T) {
 	height, err := simdChain.Height(ctx)
 	require.NoError(t, err, "error fetching height before submit upgrade proposal")
 
-	err = simdChain.VoteOnProposalAllValidators(ctx, proposalTx.ProposalID, cosmos.ProposalVoteYes)
+	propId, err := strconv.ParseInt(proposalTx.ProposalID, 10, 64)
+	require.NoError(t, err, "error parsing proposal id")
+
+	err = simdChain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
-	_, err = cosmos.PollForProposalStatus(ctx, simdChain, height, height+heightDelta, proposalTx.ProposalID, cosmos.ProposalStatusPassed)
+	_, err = cosmos.PollForProposalStatus(ctx, simdChain, height, height+heightDelta, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	err = testutil.WaitForBlocks(ctx, 2, simd)

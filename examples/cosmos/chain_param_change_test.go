@@ -2,8 +2,11 @@ package cosmos_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
+	"cosmossdk.io/math"
+	gov1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	"github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
@@ -43,7 +46,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	enableBlockDB := false
 	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
-	const userFunds = int64(10_000_000_000)
+	var userFunds = math.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
@@ -70,11 +73,14 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	paramTx, err := chain.ParamChangeProposal(ctx, chainUser.KeyName(), &param_change)
 	require.NoError(t, err, "error submitting param change proposal tx")
 
-	err = chain.VoteOnProposalAllValidators(ctx, paramTx.ProposalID, cosmos.ProposalVoteYes)
+	propId, err := strconv.ParseInt(paramTx.ProposalID, 10, 64)
+	require.NoError(t, err, "error parsing proposal id")
+
+	err = chain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
 	height, _ := chain.Height(ctx)
-	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, paramTx.ProposalID, cosmos.ProposalStatusPassed)
+	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, propId, gov1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	param, _ = chain.QueryParam(ctx, "staking", "MaxValidators")

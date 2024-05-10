@@ -14,8 +14,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v7"
 	cosmosChain "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/relayer"
 	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
@@ -145,8 +145,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	// Fund user accounts so we can query balances
 	chain1UserAmt := math.NewInt(10_000_000_000)
 	chain2UserAmt := math.NewInt(99_999_999_999)
-	chain1User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt.Int64(), chain1)[0]
-	chain2User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt.Int64(), chain2)[0]
+	chain1User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain1UserAmt, chain1)[0]
+	chain2User := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), chain2UserAmt, chain2)[0]
 
 	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)

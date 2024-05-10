@@ -17,8 +17,8 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 )
@@ -63,7 +63,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -204,12 +204,12 @@ func (tn *TendermintNode) GetConfigSeparator() (string, error) {
 	return sep, nil
 }
 
-func (tn *TendermintNode) Height(ctx context.Context) (uint64, error) {
+func (tn *TendermintNode) Height(ctx context.Context) (int64, error) {
 	stat, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint client status: %w", err)
 	}
-	return uint64(stat.SyncInfo.LatestBlockHeight), nil
+	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
 // InitHomeFolder initializes a home folder for the given node
@@ -226,7 +226,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), nil, tn.HostName(), cmd, nil)
 }
 
 func (tn *TendermintNode) StopContainer(ctx context.Context) error {

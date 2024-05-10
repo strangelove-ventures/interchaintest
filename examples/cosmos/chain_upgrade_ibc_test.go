@@ -2,9 +2,13 @@ package cosmos_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v7"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v7/conformance"
@@ -17,8 +21,8 @@ import (
 )
 
 const (
-	haltHeightDelta    = uint64(10) // will propose upgrade this many blocks in the future
-	blocksAfterUpgrade = uint64(10)
+	haltHeightDelta    = 10 // will propose upgrade this many blocks in the future
+	blocksAfterUpgrade = 10
 	votingPeriod       = "10s"
 	maxDepositPeriod   = "10s"
 )
@@ -101,7 +105,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 		_ = ic.Close()
 	})
 
-	const userFunds = int64(10_000_000_000)
+	var userFunds = sdkmath.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 
@@ -124,10 +128,13 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 	upgradeTx, err := chain.UpgradeProposal(ctx, chainUser.KeyName(), proposal)
 	require.NoError(t, err, "error submitting software upgrade proposal tx")
 
-	err = chain.VoteOnProposalAllValidators(ctx, upgradeTx.ProposalID, cosmos.ProposalVoteYes)
+	propId, err := strconv.ParseInt(upgradeTx.ProposalID, 10, 64)
+	require.NoError(t, err)
+
+	err = chain.VoteOnProposalAllValidators(ctx, propId, cosmos.ProposalVoteYes)
 	require.NoError(t, err, "failed to submit votes")
 
-	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+haltHeightDelta, upgradeTx.ProposalID, cosmos.ProposalStatusPassed)
+	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+haltHeightDelta, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	height, err = chain.Height(ctx)

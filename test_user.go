@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -19,7 +19,7 @@ import (
 func GetAndFundTestUserWithMnemonic(
 	ctx context.Context,
 	keyNamePrefix, mnemonic string,
-	amount int64,
+	amount math.Int,
 	chain ibc.Chain,
 ) (ibc.Wallet, error) {
 	chainCfg := chain.Config()
@@ -31,7 +31,7 @@ func GetAndFundTestUserWithMnemonic(
 
 	err = chain.SendFunds(ctx, FaucetAccountKeyName, ibc.WalletAmount{
 		Address: user.FormattedAddress(),
-		Amount:  math.NewInt(amount),
+		Amount:  amount,
 		Denom:   chainCfg.Denom,
 	})
 	if err != nil {
@@ -46,7 +46,7 @@ func GetAndFundTestUsers(
 	t *testing.T,
 	ctx context.Context,
 	keyNamePrefix string,
-	amount int64,
+	amount math.Int,
 	chains ...ibc.Chain,
 ) []ibc.Wallet {
 	users := make([]ibc.Wallet, len(chains))

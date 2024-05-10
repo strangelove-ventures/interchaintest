@@ -81,10 +81,6 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 	}
 }
 
-func (c *hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	panic("[CreateClient] do not call me")
-}
-
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
 	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
 	_, ok := c.paths[pathName]
@@ -107,6 +103,11 @@ func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClie
 		"--order",
 		"unordered",
 	}
+}
+
+// TODO: Implement if available in hyperspace relayer
+func (hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
+	panic("[CreateClient] Not Implemented")
 }
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {

@@ -78,7 +78,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 		_ = ic.Close()
 	})
 
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", int64(10_000_000_000), chain, chain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", math.NewInt(10_000_000_000), chain, chain)
 
 	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)
@@ -93,6 +93,7 @@ func CosmosChainTestMiscellaneous(t *testing.T, name, version string) {
 	testFailedCWExecute(ctx, t, chain, users)
 	testAddingNode(ctx, t, chain)
 	testGetGovernanceAddress(ctx, t, chain)
+	testTXFailsOnBlockInclusion(ctx, t, chain, users)
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
@@ -235,7 +236,7 @@ func testPollForBalance(ctx context.Context, t *testing.T, chain *cosmos.CosmosC
 		Amount:  math.NewInt(1),
 	}
 
-	delta := uint64(3)
+	delta := int64(3)
 
 	ch := make(chan error)
 	go func() {
@@ -315,6 +316,19 @@ func testBroadcaster(ctx context.Context, t *testing.T, chain *cosmos.CosmosChai
 	updatedBal2, err := chain.GetBalance(ctx, addr2, chain.Config().Denom)
 	require.NoError(t, err)
 	require.Equal(t, math.NewInt(2), updatedBal2)
+
+	txResp, err = cosmos.BroadcastTx(
+		ctx,
+		b,
+		users[0],
+		banktypes.NewMsgMultiSend([]banktypes.Input{
+			{
+				Address: addr1,
+				Coins:   c1.Add(c2[0]),
+			},
+		}, out),
+	)
+	require.Error(t, err)
 }
 
 func testQueryCmd(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
@@ -412,8 +426,18 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	govAddr, err := chain.GetGovernanceAddress(ctx)
 	require.NoError(t, err)
-	_, err = sdk.AccAddressFromBech32(govAddr)
+	_, err = chain.AccAddressFromBech32(govAddr)
 	require.NoError(t, err)
+}
+
+func testTXFailsOnBlockInclusion(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	// this isn't a real validator, but is well formed, so it will only fail once a validator checks the staking transaction
+	fakeValoper, err := chain.GetNode().KeyBech32(ctx, users[0].KeyName(), "val")
+	require.NoError(t, err)
+
+	_, err = chain.GetNode().ExecTx(ctx, users[0].FormattedAddress(),
+		"staking", "delegate", fakeValoper, "100"+chain.Config().Denom)
+	require.Error(t, err)
 }
 
 // helpers

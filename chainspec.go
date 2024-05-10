@@ -54,6 +54,10 @@ func (s *ChainSpec) Config(log *zap.Logger) (*ibc.ChainConfig, error) {
 		}
 	}
 
+	if len(s.ExposeAdditionalPorts) > 0 {
+		s.ChainConfig.ExposeAdditionalPorts = append(s.ChainConfig.ExposeAdditionalPorts, s.ExposeAdditionalPorts...)
+	}
+
 	// s.Name and chainConfig.Name are interchangeable
 	if s.Name == "" && s.ChainConfig.Name != "" {
 		s.Name = s.ChainConfig.Name
@@ -143,6 +147,23 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	}
 
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
+
+	if cfg.CoinDecimals == nil {
+		evm := int64(18)
+		cosmos := int64(6)
+
+		switch cfg.CoinType {
+		case "60":
+			cfg.CoinDecimals = &evm
+		case "118":
+			cfg.CoinDecimals = &cosmos
+		case "330":
+			cfg.CoinDecimals = &cosmos
+		case "529":
+			cfg.CoinDecimals = &cosmos
+
+		}
+	}
 
 	// Set the version depending on the chain type.
 	switch cfg.Type {

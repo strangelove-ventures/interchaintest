@@ -18,7 +18,7 @@ import (
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.4.0"
+	DefaultContainerVersion = "1.8.2"
 
 	hermesDefaultUidGid = "1000:1000"
 	hermesHome          = "/home/hermes"
@@ -90,6 +90,34 @@ func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExec
 	return r.validateConfig(ctx, rep)
 }
 
+func (r *Relayer) MarkChainAsConsumer(ctx context.Context, chainID string) error {
+	bz, err := r.ReadFileFromHomeDir(ctx, hermesConfigPath)
+	if err != nil {
+		return err
+	}
+
+	var cfg Config
+	err = toml.Unmarshal(bz, &cfg)
+	if err != nil {
+		return err
+	}
+
+	for i, chain := range cfg.Chains {
+		if chain.ID == chainID {
+			chain.CCVConsumerChain = true
+			cfg.Chains[i] = chain
+			break
+		}
+	}
+
+	bz, err = toml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	return r.WriteFileToHomeDir(ctx, hermesConfigPath, bz)
+}
+
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
 // and establishing a channel. This happens across multiple operations rather than a single link path cli command.
 func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
@@ -137,7 +165,7 @@ func (r *Relayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecRepo
 		return res.Err
 	}
 
-	chainAConnectionID, chainBConnectionID, err := getConnectionIDsFromStdout(res.Stdout)
+	chainAConnectionID, chainBConnectionID, err := GetConnectionIDsFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
@@ -166,34 +194,71 @@ func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter
 func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
 	pathConfig := r.paths[pathName]
 	chainACreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainA.chainID, "--reference-chain", pathConfig.chainB.chainID}
-	if opts.TrustingPeriod != "0" {
+	if opts.TrustingPeriod != "" {
 		chainACreateClientCmd = append(chainACreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		chainACreateClientCmd = append(chainACreateClientCmd, "--clock-drift", opts.MaxClockDrift)
 	}
 	res := r.Exec(ctx, rep, chainACreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
 
-	chainAClientId, err := getClientIdFromStdout(res.Stdout)
+	chainAClientId, err := GetClientIdFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
 	pathConfig.chainA.clientID = chainAClientId
 
 	chainBCreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainB.chainID, "--reference-chain", pathConfig.chainA.chainID}
-	if opts.TrustingPeriod != "0" {
+	if opts.TrustingPeriod != "" {
 		chainBCreateClientCmd = append(chainBCreateClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		chainBCreateClientCmd = append(chainBCreateClientCmd, "--clock-drift", opts.MaxClockDrift)
 	}
 	res = r.Exec(ctx, rep, chainBCreateClientCmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
 
-	chainBClientId, err := getClientIdFromStdout(res.Stdout)
+	chainBClientId, err := GetClientIdFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
 	pathConfig.chainB.clientID = chainBClientId
+
+	return res.Err
+}
+
+func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
+	pathConfig := r.paths[pathName]
+
+	createClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", srcChainID, "--reference-chain", dstChainID}
+	if opts.TrustingPeriod != "" {
+		createClientCmd = append(createClientCmd, "--trusting-period", opts.TrustingPeriod)
+	}
+	if opts.MaxClockDrift != "" {
+		createClientCmd = append(createClientCmd, "--clock-drift", opts.MaxClockDrift)
+	}
+	res := r.Exec(ctx, rep, createClientCmd, nil)
+	if res.Err != nil {
+		return res.Err
+	}
+
+	clientId, err := GetClientIdFromStdout(res.Stdout)
+	if err != nil {
+		return err
+	}
+
+	if pathConfig.chainA.chainID == srcChainID {
+		pathConfig.chainA.chainID = clientId
+	} else if pathConfig.chainB.chainID == srcChainID {
+		pathConfig.chainB.chainID = clientId
+	} else {
+		return fmt.Errorf("%s not found in path config", srcChainID)
+	}
 
 	return res.Err
 }
@@ -221,6 +286,33 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 
 	addrBytes := parseRestoreKeyOutput(string(res.Stdout))
 	r.AddWallet(chainID, NewWallet(chainID, addrBytes, mnemonic))
+	return nil
+}
+
+func (r *Relayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.PathUpdateOptions) error {
+	// the concept of paths doesn't exist in hermes, but update our in-memory paths so we can use them elsewhere
+	path, ok := r.paths[pathName]
+	if !ok {
+		return fmt.Errorf("path %s not found", pathName)
+	}
+	if opts.SrcChainID != nil {
+		path.chainA.chainID = *opts.SrcChainID
+	}
+	if opts.DstChainID != nil {
+		path.chainB.chainID = *opts.DstChainID
+	}
+	if opts.SrcClientID != nil {
+		path.chainA.clientID = *opts.SrcClientID
+	}
+	if opts.DstClientID != nil {
+		path.chainB.clientID = *opts.DstClientID
+	}
+	if opts.SrcConnID != nil {
+		path.chainA.connectionID = *opts.SrcConnID
+	}
+	if opts.DstConnID != nil {
+		path.chainB.connectionID = *opts.DstConnID
+	}
 	return nil
 }
 
@@ -289,8 +381,8 @@ func extractJsonResult(stdout []byte) []byte {
 	return []byte(jsonOutput)
 }
 
-// getClientIdFromStdout extracts the client ID from stdout.
-func getClientIdFromStdout(stdout []byte) (string, error) {
+// GetClientIdFromStdout extracts the client ID from stdout.
+func GetClientIdFromStdout(stdout []byte) (string, error) {
 	var clientCreationResult ClientCreationResponse
 	if err := json.Unmarshal(extractJsonResult(stdout), &clientCreationResult); err != nil {
 		return "", err
@@ -298,13 +390,22 @@ func getClientIdFromStdout(stdout []byte) (string, error) {
 	return clientCreationResult.Result.CreateClient.ClientID, nil
 }
 
-// getConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
-func getConnectionIDsFromStdout(stdout []byte) (string, string, error) {
+// GetConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
+func GetConnectionIDsFromStdout(stdout []byte) (string, string, error) {
 	var connectionResponse ConnectionResponse
 	if err := json.Unmarshal(extractJsonResult(stdout), &connectionResponse); err != nil {
 		return "", "", err
 	}
 	return connectionResponse.Result.ASide.ConnectionID, connectionResponse.Result.BSide.ConnectionID, nil
+}
+
+// GetChannelIDsFromStdout extracts the channelIDs on both ends from stdout.
+func GetChannelIDsFromStdout(stdout []byte) (string, string, error) {
+	var channelResponse ChannelCreationResponse
+	if err := json.Unmarshal(extractJsonResult(stdout), &channelResponse); err != nil {
+		return "", "", err
+	}
+	return channelResponse.Result.ASide.ChannelID, channelResponse.Result.BSide.ChannelID, nil
 }
 
 // parseRestoreKeyOutput extracts the address from the hermes output.

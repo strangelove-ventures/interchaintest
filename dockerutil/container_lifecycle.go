@@ -8,6 +8,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
@@ -38,10 +39,12 @@ func (c *ContainerLifecycle) CreateContainer(
 	testName string,
 	networkID string,
 	image ibc.DockerImage,
-	ports nat.PortSet,
+	ports nat.PortMap,
 	volumeBinds []string,
+	mounts []mount.Mount,
 	hostName string,
 	cmd []string,
+	env []string,
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(
@@ -50,6 +53,11 @@ func (c *ContainerLifecycle) CreateContainer(
 		zap.String("container", c.containerName),
 		zap.String("command", strings.Join(cmd, " ")),
 	)
+
+	pS := nat.PortSet{}
+	for k := range ports {
+		pS[k] = struct{}{}
+	}
 
 	pb, listeners, err := GeneratePortBindings(ports)
 	if err != nil {
@@ -65,12 +73,13 @@ func (c *ContainerLifecycle) CreateContainer(
 
 			Entrypoint: []string{},
 			Cmd:        cmd,
+			Env:        env,
 
 			Hostname: hostName,
 
 			Labels: map[string]string{CleanupLabel: testName},
 
-			ExposedPorts: ports,
+			ExposedPorts: pS,
 		},
 		&container.HostConfig{
 			Binds:           volumeBinds,
@@ -78,6 +87,7 @@ func (c *ContainerLifecycle) CreateContainer(
 			PublishAllPorts: true,
 			AutoRemove:      false,
 			DNS:             []string{},
+			Mounts:          mounts,
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{

@@ -22,6 +22,8 @@ import (
 type AppConfig struct {
 	Address string
 	Port    uint16
+
+	Relayer types.Relayer
 }
 
 func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
@@ -63,10 +65,15 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 		}
 	}
 
+	config.Relayer = ac.Relayer
+
 	WriteRunningChains(installDir, []byte("{}"))
 
 	// ibc-path-name -> index of []cosmos.CosmosChain
 	ibcpaths := make(map[string][]int)
+	// providerChainId -> []consumerChainIds
+	icsPair := make(map[string][]string)
+
 	chainSpecs := []*interchaintest.ChainSpec{}
 
 	for idx, cfg := range config.Chains {
@@ -77,6 +84,10 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			for _, path := range cfg.IBCPaths {
 				ibcpaths[path] = append(ibcpaths[path], idx)
 			}
+		}
+
+		if cfg.ICSConsumerLink != "" {
+			icsPair[cfg.ICSConsumerLink] = append(icsPair[cfg.ICSConsumerLink], cfg.ChainID)
 		}
 	}
 
@@ -110,7 +121,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	client, network := interchaintest.DockerSetup(fakeT)
 
 	// setup a relayer if we have IBC paths to use.
-	if len(ibcpaths) > 0 {
+	if len(ibcpaths) > 0 || len(icsPair) > 0 {
 		rlyCfg := config.Relayer
 
 		relayerType, relayerName := ibc.CosmosRly, "relay"
@@ -133,6 +144,40 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 		LinkIBCPaths(ibcpaths, chains, ic, relayer)
 	}
 
+	// Add Interchain Security chain pairs together
+
+	if len(icsPair) > 0 {
+
+		// iterate icsPair
+		for provider, consumers := range icsPair {
+			var p ibc.Chain
+			var c ibc.Chain
+
+			// a provider can have multiple consumers
+			for _, consumer := range consumers {
+				for _, chain := range chains {
+					if chain.Config().ChainID == provider {
+						p = chain
+					}
+					if chain.Config().ChainID == consumer {
+						c = chain
+					}
+				}
+			}
+
+			pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
+
+			logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
+
+			ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
+				Provider: p,
+				Consumer: c,
+				Relayer:  relayer,
+				Path:     pathName,
+			})
+		}
+	}
+
 	// Build all chains & begin.
 	err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:         name,
@@ -151,9 +196,14 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 			paths = append(paths, k)
 		}
 
-		relayer.StartRelayer(ctx, eRep, paths...)
+		if err := relayer.StartRelayer(ctx, eRep, paths...); err != nil {
+			log.Fatal("relayer.StartRelayer", err)
+		}
+
 		defer func() {
-			relayer.StopRelayer(ctx, eRep)
+			if err := relayer.StopRelayer(ctx, eRep); err != nil {
+				log.Fatal("relayer.StopRelayer", err)
+			}
 		}()
 	}
 

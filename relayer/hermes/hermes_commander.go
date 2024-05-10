@@ -146,8 +146,7 @@ func (c commander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
 }
 
 func (c commander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
-	// TODO: figure out how to implement this.
-	panic("implement me")
+	panic("update path implemented in hermes relayer not the commander")
 }
 
 // the following methods do not have a single command that cleanly maps to a single hermes command without

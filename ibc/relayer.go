@@ -73,9 +73,10 @@ type Relayer interface {
 	// Flush flushes any outstanding packets and then returns.
 	Flush(ctx context.Context, rep RelayerExecReporter, pathName string, channelID string) error
 
-	// CreateClients performs the client handshake steps necessary for creating a light client
+	// CreateClient performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst.
-	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID string, dstChainID string, pathName string, opts CreateClientOptions) error
+	// Unlike CreateClients, this only creates the client on the source chain
+	CreateClient(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string, opts CreateClientOptions) error
 
 	// CreateClients performs the client handshake steps necessary for creating a light client
 	// on src that tracks the state of dst, and a light client on dst that tracks the state of src.
@@ -272,23 +273,36 @@ func (o Order) Validate() error {
 }
 
 // CreateClientOptions contains the configuration for creating a client.
+
+// a zero value is the same as not specifying the flag and will use the relayer defauls
 type CreateClientOptions struct {
-	TrustingPeriod string
+	TrustingPeriod           string
+	TrustingPeriodPercentage int64 // only available for Go Relayer
+	MaxClockDrift            string
 }
 
 // DefaultClientOpts returns the default settings for creating clients.
-// These default options are usually determined by the relayer
+
+// empty values will use the relayer defaults
 func DefaultClientOpts() CreateClientOptions {
-	return CreateClientOptions{
-		TrustingPeriod: "0",
-	}
+	return CreateClientOptions{}
 }
 
 func (opts CreateClientOptions) Validate() error {
-	_, err := time.ParseDuration(opts.TrustingPeriod)
-	if err != nil {
-		return err
+	if opts.TrustingPeriod != "" {
+		_, err := time.ParseDuration(opts.TrustingPeriod)
+		if err != nil {
+			return err
+		}
 	}
+
+	if opts.MaxClockDrift != "" {
+		_, err := time.ParseDuration(opts.MaxClockDrift)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

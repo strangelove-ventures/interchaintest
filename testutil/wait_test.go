@@ -15,12 +15,12 @@ type mockChainHeighter struct {
 	Err       error
 }
 
-func (m *mockChainHeighter) Height(ctx context.Context) (uint64, error) {
+func (m *mockChainHeighter) Height(ctx context.Context) (int64, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
 	atomic.AddInt64(&m.CurHeight, 1)
-	return uint64(m.CurHeight), m.Err
+	return m.CurHeight, m.Err
 }
 
 type mockChainHeighterFixed struct {
@@ -28,11 +28,11 @@ type mockChainHeighterFixed struct {
 	Err       error
 }
 
-func (m *mockChainHeighterFixed) Height(ctx context.Context) (uint64, error) {
+func (m *mockChainHeighterFixed) Height(ctx context.Context) (int64, error) {
 	if ctx == nil {
 		panic("nil context")
 	}
-	return uint64(m.CurHeight), m.Err
+	return m.CurHeight, m.Err
 }
 
 func TestWaitForBlocks(t *testing.T) {

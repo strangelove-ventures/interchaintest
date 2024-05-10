@@ -42,7 +42,7 @@ func GetDirectory() string {
 		MakeFileInstallDirectory = path.Join(dirname, "local-interchain")
 	}
 
-	if err := directoryRequirementChecks(MakeFileInstallDirectory, "configs", "chains"); err != nil {
+	if err := directoryRequirementChecks(MakeFileInstallDirectory, "chains"); err != nil {
 		log.Fatal(err)
 	}
 

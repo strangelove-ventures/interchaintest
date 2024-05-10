@@ -21,8 +21,8 @@ import (
 	"github.com/docker/docker/client"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -89,11 +89,11 @@ func NewPenumbraChain(log *zap.Logger, testName string, chainConfig ibc.ChainCon
 	}
 }
 
-func (c *PenumbraChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *PenumbraChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
-func (c *PenumbraChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *PenumbraChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
@@ -232,7 +232,8 @@ func (c *PenumbraChain) ExportState(ctx context.Context, height int64) (string, 
 	panic("implement me")
 }
 
-func (c *PenumbraChain) Height(ctx context.Context) (uint64, error) {
+// Height returns the current chain block height.
+func (c *PenumbraChain) Height(ctx context.Context) (int64, error) {
 	return c.getRelayerNode().TendermintNode.Height(ctx)
 }
 

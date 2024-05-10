@@ -16,6 +16,8 @@ type Chain struct {
 	Debugging      bool   `json:"debugging"`
 	BlockTime      string `json:"block_time"`
 
+	ICSConsumerLink string `json:"ics_consumer_link"` // a consumer sets this to ex: "provider-chain-id" to connect to them
+
 	// Required
 	Name    string `json:"name" validate:"min=1"`
 	ChainID string `json:"chain_id" validate:"min=3"`

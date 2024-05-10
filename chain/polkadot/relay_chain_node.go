@@ -19,8 +19,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
@@ -63,7 +63,7 @@ var (
 	RtyErr = retry.LastErrorOnly(true)
 )
 
-var exposedPorts = map[nat.Port]struct{}{
+var exposedPorts = nat.PortMap{
 	nat.Port(wsPort):         {},
 	nat.Port(rpcPort):        {},
 	nat.Port(prometheusPort): {},
@@ -224,7 +224,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), p.HostName(), cmd)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, nil)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.

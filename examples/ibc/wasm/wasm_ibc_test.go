@@ -79,7 +79,7 @@ func TestWasmIbc(t *testing.T) {
 
 	// Create and Fund User Wallets
 	initBal := math.NewInt(100_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal.Int64(), juno1, juno2)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", initBal, juno1, juno2)
 	juno1User := users[0]
 	juno2User := users[1]
 

@@ -42,8 +42,8 @@ type ChainConfig struct {
 	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
-	// Modify genesis-amounts
-	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin)
+	// Modify genesis-amounts for the validator at the given index
+	ModifyGenesisAmounts func(int) (sdk.Coin, sdk.Coin)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
@@ -52,6 +52,18 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// CoinDecimals for the chains base micro/nano/atto token configuration.
+	CoinDecimals *int64
+	// HostPortOverride exposes ports to the host.
+	// To avoid port binding conflicts, ports are only exposed on the 0th validator.
+	HostPortOverride map[int]int `yaml:"host-port-override"`
+	// ExposeAdditionalPorts exposes each port id to the host on a random port. ex: "8080/tcp"
+	// Access the address with ChainNode.GetHostAddress
+	ExposeAdditionalPorts []string
+	// Additional start command arguments
+	AdditionalStartArgs []string
+	// Environment variables for chain nodes
+	Env []string
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -64,6 +76,15 @@ func (c ChainConfig) Clone() ChainConfig {
 	sidecars := make([]SidecarConfig, len(c.SidecarConfigs))
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
+
+	additionalPorts := make([]string, len(c.ExposeAdditionalPorts))
+	copy(additionalPorts, c.ExposeAdditionalPorts)
+	x.ExposeAdditionalPorts = additionalPorts
+
+	if c.CoinDecimals != nil {
+		coinDecimals := *c.CoinDecimals
+		x.CoinDecimals = &coinDecimals
+	}
 
 	return x
 }
@@ -128,7 +149,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasPrices = other.GasPrices
 	}
 
-	if other.GasAdjustment > 0 && c.GasAdjustment == 0 {
+	if other.GasAdjustment > 0 {
 		c.GasAdjustment = other.GasAdjustment
 	}
 
@@ -162,6 +183,21 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.SidecarConfigs = append([]SidecarConfig(nil), other.SidecarConfigs...)
 	}
 
+	if other.CoinDecimals != nil {
+		c.CoinDecimals = other.CoinDecimals
+	}
+	if other.AdditionalStartArgs != nil {
+		c.AdditionalStartArgs = append(c.AdditionalStartArgs, other.AdditionalStartArgs...)
+	}
+
+	if other.Env != nil {
+		c.Env = append(c.Env, other.Env...)
+	}
+
+	if len(other.ExposeAdditionalPorts) > 0 {
+		c.ExposeAdditionalPorts = append(c.ExposeAdditionalPorts, other.ExposeAdditionalPorts...)
+	}
+
 	return c
 }
 
@@ -187,6 +223,7 @@ type SidecarConfig struct {
 	HomeDir          string
 	Ports            []string
 	StartCmd         []string
+	Env              []string
 	PreStart         bool
 	ValidatorProcess bool
 }
@@ -214,7 +251,7 @@ type WalletAmount struct {
 
 type IBCTimeout struct {
 	NanoSeconds uint64
-	Height      uint64
+	Height      int64
 }
 
 type ChannelCounterparty struct {

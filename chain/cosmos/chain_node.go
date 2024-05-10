@@ -24,21 +24,30 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/cosmos/gogoproto/proto"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	icatypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 
@@ -51,6 +60,7 @@ type ChainNode struct {
 	NetworkID    string
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
+	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
 
@@ -101,7 +111,7 @@ const (
 )
 
 var (
-	sentryPorts = nat.PortSet{
+	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
 		nat.Port(grpcPort):    {},
@@ -124,6 +134,15 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.Client = rpcClient
+
+	grpcConn, err := grpc.Dial(
+		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("grpc dial: %w", err)
+	}
+	tn.GrpcConn = grpcConn
+
 	return nil
 }
 
@@ -137,8 +156,9 @@ func (tn *ChainNode) NewSidecarProcess(
 	homeDir string,
 	ports []string,
 	startCmd []string,
+	env []string,
 ) error {
-	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd)
+	s := NewSidecar(tn.log, true, preStart, tn.Chain, cli, networkID, processName, tn.TestName, image, homeDir, tn.Index, ports, startCmd, env)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
@@ -175,6 +195,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	return client.Context{
 		Client:            tn.Client,
 		ChainID:           cfg.ChainID,
+		GRPCClient:        tn.GrpcConn,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
 		Output:            os.Stdout,
@@ -375,17 +396,17 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 	)
 }
 
-func (tn *ChainNode) Height(ctx context.Context) (uint64, error) {
+func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 	res, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
 	}
 	height := res.SyncInfo.LatestBlockHeight
-	return uint64(height), nil
+	return height, nil
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	h := int64(height)
 	var eg errgroup.Group
 	var blockRes *coretypes.ResultBlockResults
@@ -409,12 +430,12 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, 
 
 		sdkTx, err := decodeTX(interfaceRegistry, tx)
 		if err != nil {
-			tn.logger().Info("Failed to decode tx", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		b, err := encodeTxToJSON(interfaceRegistry, sdkTx)
 		if err != nil {
-			tn.logger().Info("Failed to marshal tx to json", zap.Uint64("height", height), zap.Error(err))
+			tn.logger().Info("Failed to marshal tx to json", zap.Int64("height", height), zap.Error(err))
 			continue
 		}
 		newTx.Data = b
@@ -531,6 +552,19 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	}
 	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
+	}
+	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
+	stdout, _, err = tn.ExecQuery(ctx, "tx", output.TxHash)
+	if err != nil {
+		return "", err
+	}
+	output = CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	if output.Code != 0 {
+		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
 	return output.TxHash, nil
 }
@@ -688,6 +722,24 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	return tn.HasCommand(ctx, "genesis")
 }
 
+// ICSVersion returns the version of interchain-security the binary was built with.
+// If it doesn't depend on interchain-security, it returns an empty string.
+func (tn *ChainNode) ICSVersion(ctx context.Context) string {
+	if strings.HasPrefix(tn.Chain.Config().Bin, "interchain-security") {
+		// This isn't super pretty, but it's the best we can do for an interchain-security binary.
+		// It doesn't depend on itself, and the version command doesn't actually output a version.
+		// Ideally if you have a binary called something like "v3.3.0-my-fix" you can use it as a version, since the v3.3.0 part is in it.
+		return semver.Canonical(tn.Image.Version)
+	}
+	info := tn.GetBuildInformation(ctx)
+	for _, dep := range info.BuildDeps {
+		if strings.HasPrefix(dep.Parent, "github.com/cosmos/interchain-security") {
+			return semver.Canonical(dep.Version)
+		}
+	}
+	return ""
+}
+
 // AddGenesisAccount adds a genesis account for each key
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []types.Coin) error {
 	amount := ""
@@ -695,7 +747,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		if i != 0 {
 			amount += ","
 		}
-		amount += fmt.Sprintf("%d%s", coin.Amount.Int64(), coin.Denom)
+		amount += fmt.Sprintf("%s%s", coin.Amount.String(), coin.Denom)
 	}
 
 	tn.lock.Lock()
@@ -732,9 +784,12 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 		command = append(command, "genesis")
 	}
 
-	command = append(command, "gentx", valKey, fmt.Sprintf("%d%s", genesisSelfDelegation.Amount.Int64(), genesisSelfDelegation.Denom),
+	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID)
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
 
 	_, _, err := tn.ExecBin(ctx, command...)
 	return err
@@ -1136,10 +1191,10 @@ func (tn *ChainNode) GetModuleAccount(ctx context.Context, moduleName string) (Q
 }
 
 // VoteOnProposal submits a vote for the specified proposal.
-func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID string, vote string) error {
+func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposalID int64, vote string) error {
 	_, err := tn.ExecTx(ctx, keyName,
 		"gov", "vote",
-		proposalID, vote, "--gas", "auto",
+		strconv.FormatInt(proposalID, 10), vote, "--gas", "auto",
 	)
 	return err
 }
@@ -1184,7 +1239,7 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
-		"--upgrade-height", strconv.FormatUint(prop.Height, 10),
+		"--upgrade-height", strconv.FormatInt(prop.Height, 10),
 		"--title", prop.Title,
 		"--description", prop.Description,
 		"--deposit", prop.Deposit,
@@ -1355,12 +1410,40 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	var cmd []string
 	if chainCfg.NoHostMount {
-		cmd = []string{"sh", "-c", fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())}
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
+		if len(chainCfg.AdditionalStartArgs) > 0 {
+			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
+		}
+		cmd = []string{"sh", "-c", startCmd}
 	} else {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+		if len(chainCfg.AdditionalStartArgs) > 0 {
+			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
+		}
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), tn.HostName(), cmd)
+	usingPorts := nat.PortMap{}
+	for k, v := range sentryPorts {
+		usingPorts[k] = v
+	}
+	for _, port := range chainCfg.ExposeAdditionalPorts {
+		usingPorts[nat.Port(port)] = []nat.PortBinding{}
+	}
+
+	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
+	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		for intP, extP := range chainCfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
+		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+	}
+
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
@@ -1578,22 +1661,21 @@ func (tn *ChainNode) logger() *zap.Logger {
 // RegisterICA will attempt to register an interchain account on the counterparty chain.
 func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
 	return tn.ExecTx(ctx, keyName,
-		"intertx", "register",
-		"--connection-id", connectionID,
+		"interchain-accounts", "controller", "register", connectionID,
 	)
 }
 
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
-		"intertx", "interchainaccounts", connectionID, address,
+		"interchain-accounts", "controller", "interchain-account", address, connectionID,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	// at this point stdout should look like this:
-	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
+	// address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(string(stdout), ":", 2)
 	if len(parts) < 2 {
@@ -1602,27 +1684,67 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	return strings.TrimSpace(parts[1]), nil
 }
 
+// SendICATx sends an interchain account transaction for a specified address and sends it to the specified
+// interchain account.
+func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string) (string, error) {
+	cdc := codec.NewProtoCodec(registry)
+
+	messages := make([]proto.Message, len(msgs))
+	for _, msg := range msgs {
+		protoMsg, ok := msg.(proto.Message)
+		if !ok {
+			return "", fmt.Errorf("failed to convert sdk.Msg to proto.Message")
+		}
+		messages = append(messages, protoMsg)
+	}
+
+	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, messages)
+	if err != nil {
+		return "", err
+	}
+
+	icaPacketData := icatypes.InterchainAccountPacketData{
+		Type: icatypes.EXECUTE_TX,
+		Data: icaPacketDataBytes,
+		Memo: icaTxMemo,
+	}
+
+	if err := icaPacketData.ValidateBasic(); err != nil {
+		return "", err
+	}
+
+	icaPacketBytes, err := cdc.MarshalJSON(&icaPacketData)
+	if err != nil {
+		return "", err
+	}
+
+	return tn.ExecTx(ctx, keyName, "interchain-accounts", "controller", "send-tx", connectionID, string(icaPacketBytes))
+}
+
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
 // interchain account.
 func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	msg, err := json.Marshal(map[string]any{
-		"@type":        "/cosmos.bank.v1beta1.MsgSend",
-		"from_address": fromAddr,
-		"to_address":   amount.Address,
-		"amount": []map[string]any{
-			{
-				"denom":  amount.Denom,
-				"amount": amount.Amount.String(),
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+	fromAddress := sdk.MustAccAddressFromBech32(fromAddr)
+	toAddress := sdk.MustAccAddressFromBech32(amount.Address)
+	coin := sdk.NewCoin(amount.Denom, amount.Amount)
+	msg := banktypes.NewMsgSend(fromAddress, toAddress, sdk.NewCoins(coin))
+	msgs := []sdk.Msg{msg}
 
-	_, err = tn.ExecTx(ctx, fromAddr,
-		"intertx", "submit", string(msg),
-		"--connection-id", connectionID,
-	)
+	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
+	icaTxMemo := "ica bank transfer"
+	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo)
 	return err
+}
+
+// GetHostAddress returns the host-accessible url for a port in the container.
+// This is useful for finding the url & random host port for ports exposed via ChainConfig.ExposeAdditionalPorts
+func (tn *ChainNode) GetHostAddress(ctx context.Context, portID string) (string, error) {
+	ports, err := tn.containerLifecycle.GetHostPorts(ctx, portID)
+	if err != nil {
+		return "", err
+	}
+	if len(ports) == 0 || ports[0] == "" {
+		return "", fmt.Errorf("no port with id '%s' found", portID)
+	}
+	return "http://" + ports[0], nil
 }

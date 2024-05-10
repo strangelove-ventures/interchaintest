@@ -15,8 +15,8 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"go.uber.org/zap"
 
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 )
 
@@ -222,14 +222,14 @@ func (r *DockerRelayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecRe
 	return res.Err
 }
 
-func (r *DockerRelayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID string, dstChainID string, pathName string, opts ibc.CreateClientOptions) error {
-	cmd := r.c.CreateClient(srcChainID, dstChainID, pathName, opts, r.HomeDir())
+func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
+	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
 
-func (r *DockerRelayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
-	cmd := r.c.CreateClients(pathName, opts, r.HomeDir())
+func (r *DockerRelayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
+	cmd := r.c.CreateClient(srcChainID, dstChainID, pathName, opts, r.HomeDir())
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }
@@ -370,7 +370,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	if err := r.containerLifecycle.CreateContainer(
 		ctx, r.testName, r.networkID, containerImage, nil,
-		r.Bind(), r.HostName(joinedPaths), cmd,
+		r.Bind(), nil, r.HostName(joinedPaths), cmd, nil,
 	); err != nil {
 		return err
 	}

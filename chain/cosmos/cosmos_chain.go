@@ -8,44 +8,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"cosmossdk.io/math"
-	abcitypes "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/proto/tendermint/crypto"
+	govv1beta1 "cosmossdk.io/api/cosmos/gov/v1beta1"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1beta1type "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	cosmosproto "github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
 	chanTypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	commitmenttypes "github.com/cosmos/ibc-go/v7/modules/core/23-commitment/types"
-	ibctmtypes "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
-	ccvconsumertypes "github.com/cosmos/interchain-security/v3/x/ccv/consumer/types"
 	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
-	ccvprovidertypes "github.com/cosmos/interchain-security/v3/x/ccv/provider/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v7/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v7/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
 	"github.com/strangelove-ventures/interchaintest/v7/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -351,7 +351,7 @@ func (c *CosmosChain) SendIBCTransfer(
 	if txResp.Code != 0 {
 		return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -376,11 +376,11 @@ func (c *CosmosChain) SendIBCTransfer(
 	tx.Packet.TimeoutHeight = timeoutHeight
 	tx.Packet.Data = []byte(data)
 
-	seqNum, err := strconv.Atoi(seq)
+	seqNum, err := strconv.ParseUint(seq, 10, 64)
 	if err != nil {
 		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
 	}
-	tx.Packet.Sequence = uint64(seqNum)
+	tx.Packet.Sequence = seqNum
 
 	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
 	if err != nil {
@@ -404,6 +404,24 @@ func (c *CosmosChain) GetModuleAddress(ctx context.Context, moduleName string) (
 // QueryProposal returns the state and details of a governance proposal.
 func (c *CosmosChain) QueryProposal(ctx context.Context, proposalID string) (*ProposalResponse, error) {
 	return c.getFullNode().QueryProposal(ctx, proposalID)
+}
+
+// RegisterICA will attempt to register an interchain account on the given counterparty chain.
+func (c *CosmosChain) RegisterICA(ctx context.Context, keyName string, connectionID string) (string, error) {
+	return c.getFullNode().RegisterICA(ctx, keyName, connectionID)
+}
+
+// QueryICA will query for an interchain account controlled by the given address on the counterparty chain.
+func (c *CosmosChain) QueryICAAddress(ctx context.Context, connectionID, address string) (string, error) {
+	return c.getFullNode().QueryICA(ctx, connectionID, address)
+}
+
+// SendICATx sends an interchain account transaction for a specified address and sends it to the respective
+// interchain account on the counterparty chain.
+func (c *CosmosChain) SendICATx(ctx context.Context, keyName, connectionID string, msgs []sdk.Msg, icaTxMemo string) (string, error) {
+	node := c.getFullNode()
+	registry := node.Chain.Config().EncodingConfig.InterfaceRegistry
+	return node.SendICATx(ctx, keyName, connectionID, registry, msgs, icaTxMemo)
 }
 
 // PushNewWasmClientProposal submits a new wasm client governance proposal to the chain
@@ -521,7 +539,7 @@ func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	if err != nil {
 		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
-	tx.Height = uint64(txResp.Height)
+	tx.Height = txResp.Height
 	tx.TxHash = txHash
 	// In cosmos, user is charged for entire gas requested, not the actual gas used.
 	tx.GasSpent = txResp.GasWanted
@@ -584,12 +602,12 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 
 // GetBalance fetches the current balance for a specific account address and denom.
 // Implements Chain interface
-func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
+func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	params := &bankTypes.QueryBalanceRequest{Address: address, Denom: denom}
 	grpcAddress := c.getFullNode().hostGRPCPort
 	conn, err := grpc.Dial(grpcAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 	defer conn.Close()
 
@@ -597,7 +615,7 @@ func (c *CosmosChain) GetBalance(ctx context.Context, address string, denom stri
 	res, err := queryClient.Balance(ctx, params)
 
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 
 	return res.Balance.Amount, nil
@@ -711,7 +729,7 @@ func (c *CosmosChain) NewChainNode(
 			continue
 		}
 
-		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd)
+		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd, cfg.Env)
 		if err != nil {
 			return nil, err
 		}
@@ -733,10 +751,11 @@ func (c *CosmosChain) NewSidecarProcess(
 	index int,
 	ports []string,
 	startCmd []string,
+	env []string,
 ) error {
 	// Construct the SidecarProcess first so we can access its name.
 	// The SidecarProcess's VolumeName cannot be set until after we create the volume.
-	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, homeDir, index, ports, startCmd)
+	s := NewSidecar(c.log, false, preStart, c, cli, networkID, processName, testName, image, homeDir, index, ports, startCmd, env)
 
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
@@ -833,7 +852,7 @@ func (c *CosmosChain) initializeSidecars(
 		}
 
 		eg.Go(func() error {
-			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.HomeDir, i, cfg.Ports, cfg.StartCmd)
+			err := c.NewSidecarProcess(egCtx, cfg.PreStart, cfg.ProcessName, testName, cli, networkID, cfg.Image, cfg.HomeDir, i, cfg.Ports, cfg.StartCmd, cfg.Env)
 			if err != nil {
 				return err
 			}
@@ -871,28 +890,28 @@ type ValidatorWithIntPower struct {
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
-	genesisAmount := types.Coin{
-		Amount: types.NewInt(10_000_000_000_000),
-		Denom:  chainCfg.Denom,
-	}
+	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 
-	genesisSelfDelegation := types.Coin{
-		Amount: types.NewInt(5_000_000_000_000),
-		Denom:  chainCfg.Denom,
-	}
+	genesisAmounts := make([][]types.Coin, len(c.Validators))
+	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
 
-	if chainCfg.ModifyGenesisAmounts != nil {
-		genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
+	for i := range c.Validators {
+		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}
+		if chainCfg.ModifyGenesisAmounts != nil {
+			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
+			genesisAmounts[i] = []types.Coin{amount}
+			genesisSelfDelegation[i] = selfDelegation
+		}
 	}
-
-	genesisAmounts := []types.Coin{genesisAmount}
 
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
 	eg := new(errgroup.Group)
 	// Initialize config and sign gentx for each validator.
-	for _, v := range c.Validators {
+	for i, v := range c.Validators {
 		v := v
+		i := i
 		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
@@ -916,7 +935,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 				}
 			}
 			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts, genesisSelfDelegation)
+				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i])
 			}
 			return nil
 		})
@@ -974,7 +993,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			return err
 		}
 
-		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
+		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
 			return err
 		}
 
@@ -1122,7 +1141,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	proposer := ibc.WalletAmount{
 		Address: proposerAddr,
 		Denom:   c.cfg.Denom,
-		Amount:  math.NewInt(10_000_000_000_000),
+		Amount:  sdkmath.NewInt(10_000_000_000_000),
 	}
 
 	additionalGenesisWallets = append(additionalGenesisWallets, proposer)
@@ -1161,17 +1180,63 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		if err := c.VoteOnProposalAllValidators(ctx, propTx.ProposalID, ProposalVoteYes); err != nil {
+		propId, err := strconv.ParseInt(propTx.ProposalID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse proposal id: %w", err)
+		}
+
+		if err := c.VoteOnProposalAllValidators(ctx, propId, ProposalVoteYes); err != nil {
 			return err
 		}
 
-		_, err = PollForProposalStatus(ctx, c, height, height+10, propTx.ProposalID, ProposalStatusPassed)
+		_, err = PollForProposalStatus(ctx, c, height, height+10, propId, govv1beta1type.ProposalStatus(govv1beta1.ProposalStatus_PROPOSAL_STATUS_PASSED))
 		if err != nil {
 			return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string) ([]byte, error) {
+	// If they're both under 3.3.0, or if they're the same version, we don't need to transform the state.
+	if semver.MajorMinor(providerVersion) == semver.MajorMinor(consumerVersion) ||
+		(semver.Compare(providerVersion, "v3.3.0") < 0 && semver.Compare(consumerVersion, "v3.3.0") < 0) {
+		return ccvState, nil
+	}
+	var imageVersion, toVersion string
+	// The trick here is that when we convert the state to a consumer < 3.3.0, we need a converter that knows about that version; those are >= 4.0.0, and need a --to flag.
+	// Other than that, this is a question of using whichever version is newer. If it's the provider's, we need a --to flag to tell it the consumer version.
+	// If it's the consumer's, we don't need a --to flag cause it'll assume the consumer version.
+	if semver.Compare(providerVersion, "v3.3.0") >= 0 && semver.Compare(providerVersion, consumerVersion) > 0 {
+		imageVersion = "v4.0.0"
+		if semver.Compare(providerVersion, "v4.0.0") > 0 {
+			imageVersion = providerVersion
+		}
+		toVersion = semver.Major(consumerVersion)
+		if toVersion == "v3" {
+			toVersion = semver.MajorMinor(consumerVersion)
+		}
+	} else {
+		imageVersion = consumerVersion
+	}
+	err := c.GetNode().WriteFile(ctx, ccvState, "ccvconsumer.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to write ccv state to file: %w", err)
+	}
+	job := dockerutil.NewImage(c.log, c.GetNode().DockerClient, c.GetNode().NetworkID,
+		c.GetNode().TestName, "ghcr.io/strangelove-ventures/heighliner/ics", imageVersion,
+	)
+	cmd := []string{"interchain-security-cd", "genesis", "transform"}
+	if toVersion != "" {
+		cmd = append(cmd, "--to", toVersion+".x")
+	}
+	cmd = append(cmd, path.Join(c.GetNode().HomeDir(), "ccvconsumer.json"))
+	res := job.Run(ctx, cmd, dockerutil.ContainerOptions{Binds: c.GetNode().Bind()})
+	if res.Err != nil {
+		return nil, fmt.Errorf("failed to transform ccv state: %w", res.Err)
+	}
+	return res.Stdout, nil
 }
 
 // Bootstraps the consumer chain and starts it from genesis
@@ -1240,83 +1305,21 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		}
 	}
 
-	providerHeight, err := c.Provider.Height(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to query provider height")
-	}
-	providerHeightInt64 := int64(providerHeight)
-
-	block, err := c.Provider.getFullNode().Client.Block(ctx, &providerHeightInt64)
-	if err != nil {
-		return fmt.Errorf("failed to query provider block to initialize consumer client")
-	}
-
 	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
 		return err
 	}
 
-	// populate genesis file ccvconsumer module app_state.
-	// fetch provider latest block (timestamp, root.hash, and next_validators_hash) to populate provider_consensus_state
-	// populate provider_client_state with trusting and unbonding periods, latest_height.revision_height of height which is used for consensus state
-	// populate initial_val_set with provider val pubkeys and power
-
-	nextValidatorsHash := block.Block.NextValidatorsHash
-	timestamp := block.Block.Time
-	rootHash := block.Block.AppHash
-
-	page := int(1)
-	perPage := int(1000)
-	providerVals, err := c.Provider.getFullNode().Client.Validators(ctx, &providerHeightInt64, &page, &perPage)
+	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
 	if err != nil {
-		return fmt.Errorf("failed to get provider validators: %w", err)
+		return fmt.Errorf("failed to query provider for ccv state: %w", err)
 	}
-
-	initialVals := make([]abcitypes.ValidatorUpdate, len(providerVals.Validators))
-	for i, val := range providerVals.Validators {
-		initialVals[i] = abcitypes.ValidatorUpdate{
-			PubKey: crypto.PublicKey{Sum: &crypto.PublicKey_Ed25519{Ed25519: val.PubKey.Bytes()}},
-			Power:  val.VotingPower,
-		}
-	}
-
-	providerCfg := c.Provider.Config()
-
-	clientState := ibctmtypes.NewClientState(
-		providerCfg.ChainID,
-		ibctmtypes.DefaultTrustLevel,
-		DefaultProviderUnbondingPeriod/2,
-		DefaultProviderUnbondingPeriod, // Needs to match provider unbonding period
-		ccvprovidertypes.DefaultMaxClockDrift,
-		clienttypes.Height{
-			RevisionHeight: providerHeight,
-			RevisionNumber: clienttypes.ParseChainID(providerCfg.ChainID),
-		},
-		commitmenttypes.GetSDKSpecs(),
-		defaultUpgradePath,
-	)
-
-	root := commitmenttypes.MerkleRoot{
-		Hash: rootHash,
-	}
-
-	consensusState := ibctmtypes.NewConsensusState(timestamp, root, nextValidatorsHash)
-
-	ccvState := ccvconsumertypes.NewInitialGenesisState(
-		clientState,
-		consensusState,
-		initialVals,
-		ccvconsumertypes.DefaultGenesisState().GetParams(),
-	)
-
-	ccvState.Params.Enabled = true
-
-	ccvStateMarshaled, err := c.cfg.EncodingConfig.Codec.MarshalJSON(ccvState)
-	c.log.Info("HERE STATE!", zap.String("GEN", string(ccvStateMarshaled)))
+	consumerICS := c.GetNode().ICSVersion(ctx)
+	providerICS := c.Provider.GetNode().ICSVersion(ctx)
+	ccvStateMarshaled, err = c.transformCCVState(ctx, ccvStateMarshaled, consumerICS, providerICS)
 	if err != nil {
-		return fmt.Errorf("failed to marshal ccv state to json: %w", err)
+		return err
 	}
-
 	var ccvStateUnmarshaled interface{}
 	if err := json.Unmarshal(ccvStateMarshaled, &ccvStateUnmarshaled); err != nil {
 		return fmt.Errorf("failed to unmarshal ccv state json: %w", err)
@@ -1400,12 +1403,12 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 }
 
 // Height implements ibc.Chain
-func (c *CosmosChain) Height(ctx context.Context) (uint64, error) {
+func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
-func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ibc.PacketAcknowledgement, error) {
+func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
@@ -1438,7 +1441,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height uint64) ([]ib
 }
 
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
-func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.PacketTimeout, error) {
+func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
@@ -1470,7 +1473,7 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height uint64) ([]ibc.Packet
 }
 
 // FindTxs implements blockdb.BlockSaver.
-func (c *CosmosChain) FindTxs(ctx context.Context, height uint64) ([]blockdb.Tx, error) {
+func (c *CosmosChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	fn := c.getFullNode()
 	c.findTxMu.Lock()
 	defer c.findTxMu.Unlock()
@@ -1580,7 +1583,7 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID string, vote string) error {
+func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalID int64, vote string) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {

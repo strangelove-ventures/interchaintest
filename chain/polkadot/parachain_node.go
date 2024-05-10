@@ -16,8 +16,8 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/internal/dockerutil"
 	"go.uber.org/zap"
 )
 
@@ -256,7 +256,7 @@ func (pn *ParachainNode) CreateNodeContainer(ctx context.Context) error {
 	cmd = append(cmd, "--", fmt.Sprintf("--chain=%s", pn.RawRelayChainSpecFilePathFull()))
 	cmd = append(cmd, pn.RelayChainFlags...)
 
-	return pn.containerLifecycle.CreateContainer(ctx, pn.TestName, pn.NetworkID, pn.Image, exposedPorts, pn.Bind(), pn.HostName(), cmd)
+	return pn.containerLifecycle.CreateContainer(ctx, pn.TestName, pn.NetworkID, pn.Image, exposedPorts, pn.Bind(), nil, pn.HostName(), cmd, nil)
 }
 
 // StopContainer stops the relay chain node container, waiting at most 30 seconds.
