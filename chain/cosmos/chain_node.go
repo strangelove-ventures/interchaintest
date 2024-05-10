@@ -1077,6 +1077,28 @@ func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contra
 	return txResp, nil
 }
 
+// MigrateContract performs contract migration
+func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	cmd := []string{"wasm", "migrate", contractAddress, codeID, message}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
+	if err != nil {
+		return &types.TxResponse{}, err
+	}
+
+	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+
+	if txResp.Code != 0 {
+		return txResp, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
+	}
+
+	return txResp, nil
+}
+
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
 	var query []byte
