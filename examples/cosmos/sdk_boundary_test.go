@@ -101,10 +101,9 @@ func TestSDKBoundaries(t *testing.T) {
 			rep := testreporter.NewNopReporter()
 
 			require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
-				TestName:  t.Name(),
-				Client:    client,
-				NetworkID: network,
-				// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+				TestName:         t.Name(),
+				Client:           client,
+				NetworkID:        network,
 				SkipPathCreation: false,
 			}))
 			t.Cleanup(func() {

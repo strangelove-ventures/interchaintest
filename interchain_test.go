@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -253,6 +254,96 @@ func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) {
 
 func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) {
 	broadcastTxCosmosChainTest(t, ibc.Hermes)
+}
+
+func TestInterchain_ConcurrentRelayerOps(t *testing.T) {
+	type relayerTest struct {
+		relayer ibc.RelayerImplementation
+		name    string
+	}
+
+	const (
+		denom  = "uatom"
+		chains = 4
+	)
+
+	relayers := []relayerTest{
+		{
+			relayer: ibc.CosmosRly,
+			name:    "Cosmos Relayer",
+		},
+		{
+			relayer: ibc.Hermes,
+			name:    "Hermes",
+		},
+	}
+
+	numFullNodes := 0
+	numValidators := 1
+
+	for _, rly := range relayers {
+		rly := rly
+		t.Run(rly.name, func(t *testing.T) {
+			client, network := interchaintest.DockerSetup(t)
+			f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+			require.NoError(t, err)
+			// Reporter/logs
+			rep := testreporter.NewReporter(f)
+			eRep := rep.RelayerExecReporter(t)
+			ctx := context.Background()
+
+			chainSpecs := make([]*interchaintest.ChainSpec, chains)
+			for i := 0; i < chains; i++ {
+				chainSpecs[i] = &interchaintest.ChainSpec{
+					Name:          "gaia",
+					ChainName:     fmt.Sprintf("g%d", i+1),
+					Version:       "v7.0.1",
+					NumValidators: &numValidators,
+					NumFullNodes:  &numFullNodes,
+					ChainConfig: ibc.ChainConfig{
+						GasPrices: "0" + denom,
+						Denom:     denom,
+					},
+				}
+			}
+			r := interchaintest.NewBuiltinRelayerFactory(rly.relayer, zaptest.NewLogger(t)).Build(
+				t, client, network,
+			)
+
+			cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
+			chains, err := cf.Chains(t.Name())
+			require.NoError(t, err)
+			ic := interchaintest.NewInterchain()
+			for _, chain := range chains {
+				require.NoError(t, err)
+				ic.AddChain(chain)
+			}
+			ic.AddRelayer(r, "relayer")
+			for i, chainI := range chains {
+				for j := i + 1; j < len(chains); j++ {
+					ic.AddLink(interchaintest.InterchainLink{
+						Chain1:  chainI,
+						Chain2:  chains[j],
+						Relayer: r,
+						Path:    getIBCPath(chainI, chains[j]),
+					})
+				}
+			}
+			err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
+				TestName:  t.Name(),
+				Client:    client,
+				NetworkID: network,
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				ic.Close()
+			})
+		})
+	}
+}
+
+func getIBCPath(chainA, chainB ibc.Chain) string {
+	return chainA.Config().ChainID + "-" + chainB.Config().ChainID
 }
 
 func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
