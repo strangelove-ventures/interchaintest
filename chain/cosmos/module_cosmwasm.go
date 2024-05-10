@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -158,6 +159,28 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 	}
 	err = json.Unmarshal([]byte(stdout), response)
 	return err
+}
+
+// MigrateContract performs contract migration
+func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	cmd := []string{"wasm", "migrate", contractAddress, codeID, message}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
+	if err != nil {
+		return &types.TxResponse{}, err
+	}
+
+	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+
+	if txResp.Code != 0 {
+		return txResp, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
+	}
+
+	return txResp, nil
 }
 
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
