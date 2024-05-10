@@ -57,11 +57,11 @@ func TestChainGenesisUnequalStake(t *testing.T) {
 	rep := testreporter.NewNopReporter()
 
 	err = ic.Build(context.Background(), rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
-		TestName:          t.Name(),
-		Client:            client,
-		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
-		SkipPathCreation:  false,
+		TestName:  t.Name(),
+		Client:    client,
+		NetworkID: network,
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		SkipPathCreation: false,
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() {
