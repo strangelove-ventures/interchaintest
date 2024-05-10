@@ -243,7 +243,7 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 	return nil
 }
 
-func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
+func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
 	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
 	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
 	if err != nil {
@@ -253,7 +253,7 @@ func (tn *ChainNode) privValFileContent(ctx context.Context) ([]byte, error) {
 	return gen, nil
 }
 
-func (tn *ChainNode) overwritePrivValFile(ctx context.Context, content []byte) error {
+func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
 		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)

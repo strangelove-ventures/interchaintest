@@ -145,11 +145,7 @@ func StartChain(installDir, chainCfgFile string, ac *AppConfig) {
 	}
 
 	// Add Interchain Security chain pairs together
-<<<<<<< HEAD
-
-=======
 	icsProviderPaths := make(map[string]ibc.Chain)
->>>>>>> 65cce0c (test(ics): validate consumer transactions execute (#1115))
 	if len(icsPair) > 0 {
 
 		// iterate icsPair

@@ -13,13 +13,13 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types" // nolint:staticcheck
+	ccvclient "github.com/cosmos/interchain-security/v3/x/ccv/provider/client"
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -170,7 +170,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		propID, err := strconv.ParseUint(propTx.ProposalID, 10, 64)
+		propID, err := strconv.ParseInt(propTx.ProposalID, 10, 64)
 		if err != nil {
 			return fmt.Errorf("failed to parse proposal id: %w", err)
 		}
