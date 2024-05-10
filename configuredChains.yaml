@@ -1,5 +1,5 @@
 ## NOTICE: This file gets embedded into interchaintest binary.
-## Set the environment variable: IBCTEST_CONFIGURED_CHAINS to a path
+## Set the environment variable: ICTEST_CONFIGURED_CHAINS to a path
 ## to use custom versions of this file
 
 agoric:
