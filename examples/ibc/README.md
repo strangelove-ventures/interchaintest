@@ -4,6 +4,8 @@ Interchain Accounts
 
 * [interchain_accounts demo](https://gist.github.com/Reecepbcups/8ec46ad83f6c9c1a152c10ab25774335)
 * [ibc-go](https://github.com/cosmos/ibc-go/blob/main/e2e/tests/interchain_accounts/base_test.go)
+* [relayer](https://github.com/cosmos/relayer/blob/v2.5.2/interchaintest/interchain_accounts_test.go)
+* [ICA channel close](https://github.com/cosmos/relayer/blob/v2.5.2/interchaintest/ica_channel_close_test.go)
 
 Interchain Queries
 
@@ -21,3 +23,9 @@ IBC Client Update
 IBC Transfers (ICS-20)
 
 * [ibc-go](https://github.com/cosmos/ibc-go/blob/main/e2e/tests/transfer/base_test.go)
+
+IBC Fee Middleware (ICS-29)
+
+* [go relayer](https://github.com/cosmos/relayer/blob/v2.5.2/interchaintest/fee_middleware_test.go)
+
+

@@ -51,9 +51,9 @@ func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error)
 	var dat []byte
 	var err error
 
-	// checks if IBCTEST_CONFIGURED_CHAINS environment variable is set with a path,
+	// checks if ICTEST_CONFIGURED_CHAINS environment variable is set with a path,
 	// otherwise, ./configuredChains.yaml gets embedded and used.
-	val := os.Getenv("IBCTEST_CONFIGURED_CHAINS")
+	val := os.Getenv("ICTEST_CONFIGURED_CHAINS")
 
 	if val != "" {
 		dat, err = os.ReadFile(val)
