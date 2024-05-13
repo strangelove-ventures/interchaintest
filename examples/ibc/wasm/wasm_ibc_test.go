@@ -110,48 +110,45 @@ func TestWasmIbc(t *testing.T) {
 	juno1Chain := juno1.(*cosmos.CosmosChain)
 	juno2Chain := juno2.(*cosmos.CosmosChain)
 
-	// Store ibc_reflect_send.wasm contract
-	ibcReflectSendCodeId, err := juno1Chain.StoreContract(
-		ctx, juno1User.KeyName(), "sample_contracts/ibc_reflect_send.wasm")
+	// Store ibc_reflect_send.wasm contract on juno1
+	juno1ContractCodeId, err := juno1Chain.StoreContract(
+		ctx, juno1User.KeyName(), "sample_contracts/cw_ibc_example.wasm")
 	require.NoError(t, err)
 
-	// Instantiate ibc_reflect_send.wasm contract
-	ibcReflectSendContractAddr, err := juno1Chain.InstantiateContract(
-		ctx, juno1User.KeyName(), ibcReflectSendCodeId, "{}", true)
+	// Instantiate the contract on juno1
+	juno1ContractAddr, err := juno1Chain.InstantiateContract(
+		ctx, juno1User.KeyName(), juno1ContractCodeId, "{}", true)
 	require.NoError(t, err)
 
-	// Store reflect.wasm contract
-	reflectCodeId, err := juno2Chain.StoreContract(
-		ctx, juno2User.KeyName(), "sample_contracts/reflect.wasm")
+	// Store ibc_reflect_send.wasm on juno2
+	juno2ContractCodeId, err := juno2Chain.StoreContract(
+		ctx, juno2User.KeyName(), "sample_contracts/cw_ibc_example.wasm")
 	require.NoError(t, err)
 
-	// Instantiate reflect.wasm contract
-	_, err = juno2Chain.InstantiateContract(
-		ctx, juno2User.KeyName(), reflectCodeId, "{}", true)
+	// Instantiate contract on juno2
+	juno2ContractAddr, err := juno2Chain.InstantiateContract(
+		ctx, juno2User.KeyName(), juno2ContractCodeId, "{}", true)
 	require.NoError(t, err)
 
-	// Store ibc_reflect.wasm contract
-	ibcReflectCodeId, err := juno2Chain.StoreContract(
-		ctx, juno2User.KeyName(), "sample_contracts/ibc_reflect.wasm")
+	err = testutil.WaitForBlocks(ctx, 1, juno1, juno2)
 	require.NoError(t, err)
 
-	// Instantiate ibc_reflect_send.wasm contract
-	initMsg := "{\"reflect_code_id\":" + reflectCodeId + "}"
-	ibcReflectContractAddr, err := juno2Chain.InstantiateContract(
-		ctx, juno2User.KeyName(), ibcReflectCodeId, initMsg, true)
+	// Query the reflect sender contract on Juno1 for it's port id
+	juno1ContractInfo, err := juno1Chain.QueryContractInfo(ctx, juno1ContractAddr)
 	require.NoError(t, err)
+	juno1ContractPortId := juno1ContractInfo.ContractInfo.IbcPortID
 
-	err = testutil.WaitForBlocks(ctx, 2, juno1, juno2)
+	// Query the reflect contract on Juno2 for it's port id
+	juno2ContractInfo, err := juno2Chain.QueryContractInfo(ctx, juno2ContractAddr)
 	require.NoError(t, err)
+	juno2ContractPortId := juno2ContractInfo.ContractInfo.IbcPortID
 
-	// Set up channel
-	ibcReflectSendPortId := "wasm." + ibcReflectSendContractAddr
-	ibcReflectPortId := "wasm." + ibcReflectContractAddr
+	// Create channel between Juno1 and Juno2
 	err = r.CreateChannel(ctx, eRep, ibcPath, ibc.CreateChannelOptions{
-		SourcePortName: ibcReflectSendPortId,
-		DestPortName:   ibcReflectPortId,
-		Order:          ibc.Ordered,
-		Version:        "ibc-reflect-v1",
+		SourcePortName: juno1ContractPortId,
+		DestPortName:   juno2ContractPortId,
+		Order:          ibc.Unordered,
+		Version:        "counter-1",
 	})
 	require.NoError(t, err)
 
@@ -164,49 +161,80 @@ func TestWasmIbc(t *testing.T) {
 	require.NoError(t, err)
 	juno1ChannelID := juno1ChannelInfo[len(juno1ChannelInfo)-1].ChannelID
 
-	queryMsg := fmt.Sprintf(`{"account":{"channel_id":"%s"}}`, juno1ChannelID)
-
-	// Query ibc_reflect_send contract on Juno1 for remote address (populated via ibc)
-	var ibcReflectSendResponse IbcReflectSendResponseData
-	err = juno1Chain.QueryContract(ctx, ibcReflectSendContractAddr, queryMsg, &ibcReflectSendResponse)
+	// Get contract channel
+	juno2ChannelInfo, err := r.GetChannels(ctx, eRep, juno1.Config().ChainID)
 	require.NoError(t, err)
-	require.NotEmpty(t, ibcReflectSendResponse.Data.RemoteAddr)
+	juno2ChannelID := juno2ChannelInfo[len(juno2ChannelInfo)-1].ChannelID
 
-	// Query ibc_reflect contract on Juno2 for local account address
-	var ibcReflectResponse IbcReflectResponseData
-	err = juno2Chain.QueryContract(ctx, ibcReflectContractAddr, queryMsg, &ibcReflectResponse)
+	// Prepare the query and execute messages to interact with the contracts
+	queryJuno1CountMsg := fmt.Sprintf(`{"get_count":{"channel":"%s"}}`, juno1ChannelID)
+	queryJuno2CountMsg := fmt.Sprintf(`{"get_count":{"channel":"%s"}}`, juno2ChannelID)
+	juno1IncrementMsg := fmt.Sprintf(`{"increment": {"channel":"%s"}}`, juno1ChannelID)
+	juno2IncrementMsg := fmt.Sprintf(`{"increment": {"channel":"%s"}}`, juno2ChannelID)
+
+	_, err = juno1.Height(ctx)
 	require.NoError(t, err)
-	require.NotEmpty(t, ibcReflectResponse.Data.Account)
 
-	// Verify that these addresses match, a match is a successful test run
-	//    - ibc_reflect_send contract (Juno1) remote address (retrieved via ibc)
-	//    - ibc_reflect contract (Juno2) account address populated locally
-	require.Equal(t, ibcReflectSendResponse.Data.RemoteAddr, ibcReflectResponse.Data.Account)
+	// Query the count of the contract on juno1- should be 0 as no packets have been sent through
+	var juno1InitialCountResponse CwIbcCountResponse
+	err = juno1Chain.QueryContract(ctx, juno1ContractAddr, queryJuno1CountMsg, &juno1InitialCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 0, juno1InitialCountResponse.Data.Count)
+
+	// Query the count of the contract on juno1- should be 0 as no packets have been sent through
+	var juno2InitialCountResponse CwIbcCountResponse
+	err = juno2Chain.QueryContract(ctx, juno2ContractAddr, queryJuno2CountMsg, &juno2InitialCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 0, juno2InitialCountResponse.Data.Count)
+
+	// Send packet from juno1 to juno2 and increment the juno2 contract count
+	juno1Increment, err := juno1Chain.ExecuteContract(ctx, juno1User.KeyName(), juno1ContractAddr, juno1IncrementMsg)
+	require.NoError(t, err)
+	// Check if the transaction was successful
+	require.Equal(t, uint32(0), juno1Increment.Code)
+
+	// Wait for the ibc packet to be delivered
+	err = testutil.WaitForBlocks(ctx, 2, juno1, juno2)
+	require.NoError(t, err)
+
+	// Query the count of the contract on juno2- should be 1 as a single packet has been sent through
+	var juno2IncrementedCountResponse CwIbcCountResponse
+	err = juno2Chain.QueryContract(ctx, juno2ContractAddr, queryJuno2CountMsg, &juno2IncrementedCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 1, juno2IncrementedCountResponse.Data.Count)
+
+	// Query the count of the contract on juno1- should still be 0 as no packets have been sent through
+	var juno1PreIncrementedCountResponse CwIbcCountResponse
+	err = juno1Chain.QueryContract(ctx, juno1ContractAddr, queryJuno1CountMsg, &juno1PreIncrementedCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 0, juno1PreIncrementedCountResponse.Data.Count)
+
+	// send packet from juno2 to juno1 and increment the juno1 contract count
+	juno2Increment, err := juno2Chain.ExecuteContract(ctx, juno2User.KeyName(), juno2ContractAddr, juno2IncrementMsg)
+	require.NoError(t, err)
+	require.Equal(t, uint32(0), juno2Increment.Code)
+
+	// Wait for the ibc packet to be delivered
+	err = testutil.WaitForBlocks(ctx, 2, juno1, juno2)
+	require.NoError(t, err)
+
+	// Query the count of the contract on juno1- should still be 1 as a single packet has been sent through
+	var juno1IncrementedCountResponse CwIbcCountResponse
+	err = juno1Chain.QueryContract(ctx, juno1ContractAddr, queryJuno1CountMsg, &juno1IncrementedCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 1, juno1IncrementedCountResponse.Data.Count)
+
+	// Query the count of the contract on juno2- should be 1 as a single packet has now been sent through from juno1 to juno2
+	var juno2PreIncrementedCountResponse CwIbcCountResponse
+	err = juno2Chain.QueryContract(ctx, juno2ContractAddr, queryJuno2CountMsg, &juno2PreIncrementedCountResponse)
+	require.NoError(t, err)
+	require.Equal(t, 1, juno2PreIncrementedCountResponse.Data.Count)
+
 }
 
-type Coin struct {
-	Denom  string `json:"denom"`  // type, eg. "ATOM"
-	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
-}
-
-type Coins []Coin
-
-type IbcReflectSendAccountResponse struct {
-	LastUpdateTime uint64 `json:"last_update_time,string"`
-	RemoteAddr     string `json:"remote_addr"`
-	RemoteBalance  Coins  `json:"remote_balance"`
-}
-
-// ibc_reflect_send response data
-type IbcReflectSendResponseData struct {
-	Data IbcReflectSendAccountResponse `json:"data"`
-}
-
-type IbcReflectAccountResponse struct {
-	Account string `json:"account"`
-}
-
-// ibc_reflect response data
-type IbcReflectResponseData struct {
-	Data IbcReflectAccountResponse `json:"data"`
+// cw_ibc_example response data
+type CwIbcCountResponse struct {
+	Data struct {
+		Count int `json:"count"`
+	} `json:"data"`
 }

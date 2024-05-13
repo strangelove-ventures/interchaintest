@@ -225,3 +225,19 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	}
 	return res, nil
 }
+
+// QueryContractInfo queries the information about a contract like the admin and code_id.
+func (tn *ChainNode) QueryContractInfo(ctx context.Context, contractAddress string) (*ContractInfoResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx,
+		"wasm", "contract", contractAddress,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := new(ContractInfoResponse)
+	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
