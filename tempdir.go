@@ -28,13 +28,13 @@ type TempDirTestingT interface {
 // We export the function instead of the package-level variable
 // for a consistent API in interchaintest with the KeepDockerVolumesOnFailure function,
 // which references a variable in an internal package.
-var keepTempDirOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
+var keepTempDirOnFailure = os.Getenv("ICTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // KeepTempDirOnFailure sets whether a directory created by TempDir
 // is retained or deleted following a test failure.
 //
 // The value is false by default, but can be initialized to true by setting the
-// environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
+// environment variable ICTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the interchaintest package may set the variable to true.
 func KeepTempDirOnFailure(b bool) {
 	keepTempDirOnFailure = b
