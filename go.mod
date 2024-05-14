@@ -21,18 +21,18 @@ require (
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.5.1
-	github.com/cometbft/cometbft v0.38.6
+	github.com/cometbft/cometbft v0.38.7
 	github.com/cosmos/cosmos-sdk v0.50.6
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/gogoproto v1.4.12
 	github.com/cosmos/ibc-go/modules/capability v1.0.0
-	github.com/cosmos/ibc-go/v8 v8.2.0
+	github.com/cosmos/ibc-go/v8 v8.2.1
 	github.com/cosmos/interchain-security/v5 v5.0.0-alpha1.0.20240424193412-7cd900ad2a74
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.9+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/ethereum/go-ethereum v1.13.15
+	github.com/ethereum/go-ethereum v1.14.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/google/go-cmp v0.6.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -42,7 +42,7 @@ require (
 	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230913220906-b988ea7da0c2
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pelletier/go-toml v1.9.5
-	github.com/pelletier/go-toml/v2 v2.2.0
+	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
@@ -56,7 +56,7 @@ require (
 	golang.org/x/tools v0.20.0
 	google.golang.org/grpc v1.63.2
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.29.5
+	modernc.org/sqlite v1.29.9
 )
 
 require (
@@ -154,7 +154,7 @@ require (
 	github.com/gtank/merlin v0.1.1 // indirect
 	github.com/gtank/ristretto255 v0.1.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-getter v1.7.3 // indirect
+	github.com/hashicorp/go-getter v1.7.4 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-metrics v0.5.3 // indirect
@@ -175,7 +175,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lib/pq v1.10.7 // indirect
@@ -263,9 +263,9 @@ require (
 	gotest.tools/v3 v3.5.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
-	modernc.org/libc v1.41.0 // indirect
+	modernc.org/libc v1.49.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
-	modernc.org/memory v1.7.2 // indirect
+	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect

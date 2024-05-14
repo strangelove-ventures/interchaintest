@@ -51,11 +51,11 @@ const (
 // using DockerSetup are retained or deleted following a test failure.
 //
 // The value is false by default, but can be initialized to true by setting the
-// environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
+// environment variable ICTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the dockerutil package may set the variable to true.
 // Because dockerutil is an internal package, the public API for setting this value
 // is interchaintest.KeepDockerVolumesOnFailure(bool).
-var KeepVolumesOnFailure = os.Getenv("IBCTEST_SKIP_FAILURE_CLEANUP") != ""
+var KeepVolumesOnFailure = os.Getenv("ICTEST_SKIP_FAILURE_CLEANUP") != ""
 
 // DockerSetup returns a new Docker Client and the ID of a configured network, associated with t.
 //

@@ -23,7 +23,7 @@ const (
 // are retained or deleted following a test failure.
 //
 // The value is false by default, but can be initialized to true by setting the
-// environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
+// environment variable ICTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the interchaintest package may call KeepDockerVolumesOnFailure(true).
 func KeepDockerVolumesOnFailure(b bool) {
 	dockerutil.KeepVolumesOnFailure = b
