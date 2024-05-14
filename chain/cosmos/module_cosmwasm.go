@@ -236,7 +236,7 @@ func (tn *ChainNode) QueryContractInfo(ctx context.Context, contractAddress stri
 	}
 
 	res := new(ContractInfoResponse)
-	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+	if err := json.Unmarshal(stdout, res); err != nil {
 		return nil, err
 	}
 	return res, nil
