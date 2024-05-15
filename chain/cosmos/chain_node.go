@@ -61,6 +61,7 @@ type ChainNode struct {
 	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
+	preStartNode func(*ChainNode)
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -94,6 +95,12 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
 
+	return tn
+}
+
+// WithPreStartNode sets the preStartNode function for the ChainNode
+func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode {
+	tn.preStartNode = preStartNode
 	return tn
 }
 
@@ -1184,6 +1191,10 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				)
 			}
 		}
+	}
+
+	if tn.preStartNode != nil {
+		tn.preStartNode(tn)
 	}
 
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {

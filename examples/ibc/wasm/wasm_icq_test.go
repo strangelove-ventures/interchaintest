@@ -29,7 +29,7 @@ import (
 // the ICQ module is required to be present in order to receive interchain queries.
 func TestInterchainQueriesWASM(t *testing.T) {
 	//TODO (1): force relayer to use specific versions of the chains configured in the file.
-	//os.Setenv("IBCTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
+	//os.Setenv("ICTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
 
 	//TODO (2): use Juno as sender "ghcr.io/strangelove-ventures/heighliner/juno:v10.1.0"
 	//and Strangelove's icqd (or another chain with ICQ module present) as receiver.

@@ -52,6 +52,10 @@ type CosmosChain struct {
 	Provider      *CosmosChain
 	Consumers     []*CosmosChain
 
+	// preStartNodes is able to mutate the node containers before
+	// they are all started
+	preStartNodes func(*CosmosChain)
+
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
 
@@ -118,6 +122,12 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 		keyring:       kr,
 	}
 }
+
+// WithPreStartNodes sets the preStartNodes function.
+func (c *CosmosChain) WithPreStartNodes(preStartNodes func(*CosmosChain)) {
+	c.preStartNodes = preStartNodes
+}
+
 
 // GetCodec returns the codec for the chain.
 func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
@@ -539,6 +549,11 @@ func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contr
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
 }
 
+// MigrateContract performs contract migration
+func (c *CosmosChain) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	return c.getFullNode().MigrateContract(ctx, keyName, contractAddress, codeID, message, extraExecTxArgs...)
+}
+
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
 	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
@@ -898,6 +913,10 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// wait for this to finish
 	if err := eg.Wait(); err != nil {
 		return err
+	}
+
+	if c.preStartNodes != nil {
+		c.preStartNodes(c)
 	}
 
 	if c.cfg.PreGenesis != nil {
