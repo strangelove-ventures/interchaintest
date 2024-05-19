@@ -205,3 +205,19 @@ type DenomAuthorityMetadata struct {
 	// Can be empty for no admin, or a valid address
 	Admin string `protobuf:"bytes,1,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
 }
+
+type ContractInfoResponse struct {
+	Address      string `json:"address"`
+	ContractInfo struct {
+		CodeID  string `json:"code_id"`
+		Creator string `json:"creator"`
+		Admin   string `json:"admin"`
+		Label   string `json:"label"`
+		Created struct {
+			BlockHeight string `json:"block_height"`
+			TxIndex     string `json:"tx_index"`
+		} `json:"created"`
+		IbcPortID string `json:"ibc_port_id"`
+		Extension any    `json:"extension"`
+	} `json:"contract_info"`
+}

@@ -580,6 +580,11 @@ func (c *CosmosChain) ExportState(ctx context.Context, height int64) (string, er
 	return c.getFullNode().ExportState(ctx, height)
 }
 
+// QueryContractInfo queries the chain for the contract metadata.
+func (c *CosmosChain) QueryContractInfo(ctx context.Context, contractAddress string) (*ContractInfoResponse, error) {
+	return c.getFullNode().QueryContractInfo(ctx, contractAddress)
+}
+
 func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
 	fn := c.getFullNode()
 	return fn.GetTransaction(fn.CliContext(), txhash)
