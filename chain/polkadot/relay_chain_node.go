@@ -220,7 +220,7 @@ func (p *RelayChainNode) CreateNodeContainer(ctx context.Context) error {
 		"--rpc-methods=unsafe",
 		"--pruning=archive",
 		fmt.Sprintf("--prometheus-port=%s", strings.Split(prometheusPort, "/")[0]),
-		fmt.Sprintf("--listen-addr=/ip4/0.0.0.0/tcp/%s", strings.Split(nodePort, "/")[0]),
+		fmt.Sprintf("--listen-addr=/ip4/%s/tcp/%s", dockerutil.GetHostAddress(), strings.Split(nodePort, "/")[0]),
 		fmt.Sprintf("--public-addr=%s", multiAddress),
 		"--base-path", p.NodeHome(),
 	}

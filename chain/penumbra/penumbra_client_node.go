@@ -356,7 +356,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context, pdAddress 
 		"--home", p.HomeDir(),
 		"--node", pdAddress,
 		"start",
-		"--bind-addr", "0.0.0.0:" + strings.Split(pclientdPort, "/")[0],
+		"--bind-addr", dockerutil.GetHostAddress() + ":" + strings.Split(pclientdPort, "/")[0],
 	}
 
 	var env []string

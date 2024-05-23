@@ -181,7 +181,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
 
 	cmd := []string{c.cfg.Bin,
-		"--host", "0.0.0.0", // Anyone can call
+		"--host", dockerutil.GetHostAddress(), // Anyone can call
 		"--block-time", "2", // 2 second block times
 		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed

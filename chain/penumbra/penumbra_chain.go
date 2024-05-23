@@ -518,7 +518,7 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 			return n.TendermintNode.CreateNodeContainer(
 				egCtx,
 				fmt.Sprintf("--proxy%sapp=tcp://%s:%s", sep, n.PenumbraAppNode.HostName(), strings.Split(abciPort, "/")[0]),
-				"--rpc.laddr=tcp://0.0.0.0:"+tmPort,
+				"--rpc.laddr=tcp://"+dockerutil.GetHostAddress()+":"+tmPort,
 			)
 		})
 

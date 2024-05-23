@@ -42,6 +42,19 @@ func TestGetHostPort(t *testing.T) {
 				},
 			}, "test", "0.0.0.0:3000",
 		},
+		{
+			types.ContainerJSON{
+				NetworkSettings: &types.NetworkSettings{
+					NetworkSettingsBase: types.NetworkSettingsBase{
+						Ports: nat.PortMap{
+							nat.Port("test"): []nat.PortBinding{
+								{HostIP: GetHostAddress(), HostPort: "3000"},
+							},
+						},
+					},
+				},
+			}, "test", GetHostAddress() + ":3000",
+		},
 
 		{types.ContainerJSON{}, "", ""},
 		{types.ContainerJSON{NetworkSettings: &types.NetworkSettings{}}, "does-not-matter", ""},
