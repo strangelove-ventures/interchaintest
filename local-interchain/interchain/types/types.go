@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type Config struct {
@@ -39,4 +40,15 @@ type Relayer struct {
 type IBCChannel struct {
 	ChainID string             `json:"chain_id" yaml:"chain_id"`
 	Channel *ibc.ChannelOutput `json:"channel" yaml:"channel"`
+}
+
+// ConfigFileOverrides overrides app toml configuration files.
+type ConfigFileOverrides struct {
+	File  string        `json:"file" yaml:"file"`
+	Paths testutil.Toml `json:"paths" yaml:"paths"`
+}
+
+// ChainsConfig is the chain configuration for the file.
+type ChainsConfig struct {
+	Chains []Chain `json:"chains" yaml:"chains"`
 }

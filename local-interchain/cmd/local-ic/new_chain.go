@@ -11,14 +11,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 
 var reader = bufio.NewReader(os.Stdin)
-
-type Chains struct {
-	Chains []ictypes.Chain `json:"chains" yaml:"chains"`
-}
 
 var newChainCmd = &cobra.Command{
 	Use:     "new-chain <name>",
@@ -39,7 +36,7 @@ var newChainCmd = &cobra.Command{
 			}
 		}
 
-		var config Chains
+		var config types.ChainsConfig
 		var chains []ictypes.Chain
 
 		for i := 1; i < 1000; i++ {
