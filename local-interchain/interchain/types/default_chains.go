@@ -1,14 +1,8 @@
 package types
 
 import (
-	"os"
-
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-)
-
-var (
-	currPath, _ = os.Getwd()
 )
 
 func ChainCosmosHub() *Chain {
