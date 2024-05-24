@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -43,12 +42,12 @@ var newChainCmd = &cobra.Command{
 			name := getOrDefault("Name", "cosmos")
 			chainID := getOrDefault("Chain ID", "localchain-1")
 			binary := getOrDefault("App Binary", "gaiad")
+			bech32 := getOrDefault("Bech32 Prefix", "cosmos")
 
-			c := ictypes.NewChainBuilder(name, chainID, binary, "token")
+			c := ictypes.NewChainBuilder(name, chainID, binary, "token", bech32)
 
 			denom := getOrDefault("Denom", "utoken")
 			c.SetDenom(denom)
-			c.SetBech32Prefix(getOrDefault("Bech32 Prefix", "cosmos"))
 			c.SetGasPrices(getOrDefault("Gas Prices (comma separated)", "0.0"+denom))
 
 			c.SetIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
@@ -75,12 +74,7 @@ var newChainCmd = &cobra.Command{
 		}
 		config.Chains = chains
 
-		bz, err := json.MarshalIndent(config, "", "    ")
-		if err != nil {
-			panic(err)
-		}
-
-		if err = os.WriteFile(filePath, bz, 0777); err != nil {
+		if err := config.SaveJSON(filePath); err != nil {
 			panic(err)
 		}
 	},

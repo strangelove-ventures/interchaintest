@@ -11,7 +11,7 @@ import (
 )
 
 // NewChainBuilder creates a new Chain.
-func NewChainBuilder(name, chainID, binary, denom string) *Chain {
+func NewChainBuilder(name, chainID, binary, denom, bech32 string) *Chain {
 	coinType := 118
 
 	return &Chain{
@@ -21,7 +21,7 @@ func NewChainBuilder(name, chainID, binary, denom string) *Chain {
 		Denom:   denom,
 
 		TrustingPeriod: "336h",
-		Bech32Prefix:   "cosmos",
+		Bech32Prefix:   bech32,
 		ChainType:      "cosmos",
 		CoinType:       coinType,
 		GasAdjustment:  2.0,
