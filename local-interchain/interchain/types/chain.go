@@ -14,9 +14,11 @@ type Chain struct {
 	Denom            string            `json:"denom" yaml:"denom" validate:"min=1"`
 	TrustingPeriod   string            `json:"trusting_period" yaml:"trusting_period"`
 	Debugging        bool              `json:"debugging" yaml:"debugging"`
-	BlockTime        string            `json:"block_time" yaml:"block_time"`
+	BlockTime        string            `json:"block_time,omitempty" yaml:"block_time,omitempty"`
 	HostPortOverride map[string]string `json:"host_port_override,omitempty" yaml:"host_port_override,omitempty"`
-	ICSConsumerLink  string            `json:"ics_consumer_link"` // a consumer sets this to ex: "provider-chain-id" to connect to them
+
+	// a consumer sets this to ex: "provider-chain-id" to connect to them
+	ICSConsumerLink string `json:"ics_consumer_link,omitempty" yaml:"ics_consumer_link,omitempty"`
 
 	// Required
 	Name                string                `json:"name" yaml:"name" validate:"min=1"`
@@ -27,7 +29,7 @@ type Chain struct {
 	NumberVals          int                   `json:"number_vals" yaml:"number_vals" validate:"gte=1"`
 	NumberNode          int                   `json:"number_node" yaml:"number_node"`
 	IBCPaths            []string              `json:"ibc_paths,omitempty" yaml:"ibc_paths,omitempty"`
-	Genesis             Genesis               `json:"genesis" yaml:"genesis"`
+	Genesis             Genesis               `json:"genesis,omitempty" yaml:"genesis,omitempty"`
 	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty" yaml:"config_file_overrides,omitempty"`
 
 	// EVM
@@ -79,7 +81,6 @@ func (chain *Chain) SetChainDefaults() {
 		chain.Genesis.Modify = []cosmos.GenesisKV{}
 	}
 
-	// TODO: Error here instead?
 	if chain.Binary == "" {
 		panic("'binary' is required in your config for " + chain.ChainID)
 	}

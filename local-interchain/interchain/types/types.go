@@ -44,7 +44,7 @@ type IBCChannel struct {
 
 // ConfigFileOverrides overrides app toml configuration files.
 type ConfigFileOverrides struct {
-	File  string        `json:"file" yaml:"file"`
+	File  string        `json:"file,omitempty" yaml:"file,omitempty"`
 	Paths testutil.Toml `json:"paths" yaml:"paths"`
 }
 
