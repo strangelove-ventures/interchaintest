@@ -117,6 +117,11 @@ func (c *Chain) SetGenesis(genesis Genesis) *Chain {
 	return c
 }
 
+func (c *Chain) SetStartupCommands(cmds ...string) *Chain {
+	c.Genesis.StartupCommands = cmds
+	return c
+}
+
 func (c *Chain) SetConfigFileOverrides(configFileOverrides []ConfigFileOverrides) *Chain {
 	c.ConfigFileOverrides = configFileOverrides
 	return c
