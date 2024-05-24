@@ -26,8 +26,6 @@ var newChainCmd = &cobra.Command{
 		name := strings.TrimSuffix(args[0], ".json")
 		filePath := path.Join(GetDirectory(), "chains", fmt.Sprintf("%s.json", name))
 
-		// while loop to allow for IBC connections to work as expected. Else set IBC as []string{}
-
 		text, _ := os.ReadFile(filePath)
 		if len(text) > 0 {
 			value := getOrDefault(fmt.Sprintf("File %s already exist at this location, override?", name), "false")
@@ -39,30 +37,34 @@ var newChainCmd = &cobra.Command{
 		var config types.ChainsConfig
 		var chains []ictypes.Chain
 
-		for i := 1; i < 1000; i++ {
+		for i := 1; i < 20; i++ {
 			fmt.Printf("\n===== Creating new chain #%d =====\n", i)
 
-			name := getOrDefault("Name", "juno")
-			chainID := getOrDefault("Chain ID", "local-1")
-			binary := getOrDefault("App Binary", "junod")
+			name := getOrDefault("Name", "cosmos")
+			chainID := getOrDefault("Chain ID", "localchain-1")
+			binary := getOrDefault("App Binary", "gaiad")
 
 			c := ictypes.NewChainBuilder(name, chainID, binary, "token")
 
-			c.WithDenom(getOrDefault("Denom", "ujuno"))
-			c.WithBech32Prefix(getOrDefault("Bech32 Prefix", "juno"))
-			c.WithGasPrices(getOrDefault("Gas Prices (comma separated)", "0.025ujuno"))
+			denom := getOrDefault("Denom", "utoken")
+			c.SetDenom(denom)
+			c.SetBech32Prefix(getOrDefault("Bech32 Prefix", "cosmos"))
+			c.SetGasPrices(getOrDefault("Gas Prices (comma separated)", "0.0"+denom))
 
-			c.WithIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
+			c.SetIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
 
-			c.WithDockerImage(ictypes.DockerImage{
-				Repository: getOrDefault("Docker Repo", "ghcr.io/cosmoscontracts/juno"),
-				Version:    getOrDefault("Docker Tag / Branch Version", "v20.0.0"),
-				UidGid:     "1000:1000",
+			c.SetDockerImage(ictypes.DockerImage{
+				Repository: getOrDefault("Docker Repo", "ghcr.io/strangelove-ventures/heighliner/gaia"),
+				Version:    getOrDefault("Docker Tag / Branch Version", "v16.0.0"),
+				UidGid:     "1025:1025",
 			})
+			c.SetHostPortOverride(types.BaseHostPortOverride())
 
 			if err := c.Validate(); err != nil {
 				panic(err)
 			}
+
+			c.SetChainDefaults()
 
 			chains = append(chains, *c)
 
@@ -73,7 +75,7 @@ var newChainCmd = &cobra.Command{
 		}
 		config.Chains = chains
 
-		bz, err := json.MarshalIndent(config, "", "  ")
+		bz, err := json.MarshalIndent(config, "", "    ")
 		if err != nil {
 			panic(err)
 		}

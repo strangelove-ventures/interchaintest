@@ -30,95 +30,95 @@ func NewChainBuilder(name, chainID, binary, denom string) *Chain {
 		GasPrices:      fmt.Sprintf("0.0%s", denom),
 		Debugging:      false,
 		Genesis: Genesis{
-			Accounts:        GenerateRandomAccounts(10, "cosmos", coinType),
+			Accounts:        []GenesisAccount{},
 			Modify:          []cosmos.GenesisKV{},
 			StartupCommands: []string{},
 		},
 	}
 }
 
-func (c *Chain) WithDenom(denom string) *Chain {
+func (c *Chain) SetDenom(denom string) *Chain {
 	c.Denom = denom
 	return c
 }
 
-func (c *Chain) WithDockerImage(dockerImage DockerImage) *Chain {
+func (c *Chain) SetDockerImage(dockerImage DockerImage) *Chain {
 	c.DockerImage = dockerImage
 	return c
 }
 
-func (c *Chain) WithHostPortOverride(hostPortOverride map[string]string) *Chain {
+func (c *Chain) SetHostPortOverride(hostPortOverride map[string]string) *Chain {
 	c.HostPortOverride = hostPortOverride
 	return c
 }
 
-func (c *Chain) WithGasPrices(gasPrices string) *Chain {
+func (c *Chain) SetGasPrices(gasPrices string) *Chain {
 	c.GasPrices = gasPrices
 	return c
 }
 
-func (c *Chain) WithGasAdjustment(gasAdjustment float64) *Chain {
+func (c *Chain) SetGasAdjustment(gasAdjustment float64) *Chain {
 	c.GasAdjustment = gasAdjustment
 	return c
 }
 
-func (c *Chain) WithValidators(numberVals int) *Chain {
+func (c *Chain) SetValidators(numberVals int) *Chain {
 	c.NumberVals = numberVals
 	return c
 }
 
-func (c *Chain) WithNodes(numberNode int) *Chain {
+func (c *Chain) SetNodes(numberNode int) *Chain {
 	c.NumberNode = numberNode
 	return c
 }
 
-func (c *Chain) WithChainType(chainType string) *Chain {
+func (c *Chain) SetChainType(chainType string) *Chain {
 	c.ChainType = chainType
 	return c
 }
 
-func (c *Chain) WithDebugging(debugging bool) *Chain {
+func (c *Chain) SetDebugging(debugging bool) *Chain {
 	c.Debugging = debugging
 	return c
 }
 
-func (c *Chain) WithBlockTime(blockTime string) *Chain {
+func (c *Chain) SetBlockTime(blockTime string) *Chain {
 	c.BlockTime = blockTime
 	return c
 }
 
-func (c *Chain) WithTrustingPeriod(trustingPeriod string) *Chain {
+func (c *Chain) SetTrustingPeriod(trustingPeriod string) *Chain {
 	c.TrustingPeriod = trustingPeriod
 	return c
 }
 
-func (c *Chain) WithICSConsumerLink(icsConsumerLink string) *Chain {
+func (c *Chain) SetICSConsumerLink(icsConsumerLink string) *Chain {
 	c.ICSConsumerLink = icsConsumerLink
 	return c
 }
 
-func (c *Chain) WithIBCPaths(ibcPaths []string) *Chain {
+func (c *Chain) SetIBCPaths(ibcPaths []string) *Chain {
 	c.IBCPaths = ibcPaths
 	return c
 }
 
-func (c *Chain) WithGenesis(genesis Genesis) *Chain {
+func (c *Chain) SetGenesis(genesis Genesis) *Chain {
 	c.Genesis = genesis
 	return c
 }
 
-func (c *Chain) WithConfigFileOverrides(configFileOverrides []ConfigFileOverrides) *Chain {
+func (c *Chain) SetConfigFileOverrides(configFileOverrides []ConfigFileOverrides) *Chain {
 	c.ConfigFileOverrides = configFileOverrides
 	return c
 }
 
-func (c *Chain) WithEVMLoadStatePath(evmLoadStatePath string) *Chain {
+func (c *Chain) SetEVMLoadStatePath(evmLoadStatePath string) *Chain {
 	// TODO: check only if ethereum as chain type is used? else panic
 	c.EVMLoadStatePath = evmLoadStatePath
 	return c
 }
 
-func (c *Chain) WithBech32Prefix(bech32Prefix string) *Chain {
+func (c *Chain) SetBech32Prefix(bech32Prefix string) *Chain {
 	c.Bech32Prefix = bech32Prefix
 	c.SetRandomAccounts(10)
 	return c
@@ -161,4 +161,13 @@ func (c *Chain) SaveYAML(filePath string) error {
 	}
 
 	return os.WriteFile(filePath, bz, 0777)
+}
+
+func BaseHostPortOverride() map[string]string {
+	return map[string]string{
+		"26656": "26656",
+		"26657": "26657",
+		"1317":  "1317",
+		"9090":  "9090",
+	}
 }
