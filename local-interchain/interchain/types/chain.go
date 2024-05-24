@@ -31,9 +31,6 @@ type Chain struct {
 	IBCPaths            []string              `json:"ibc_paths,omitempty" yaml:"ibc_paths,omitempty"`
 	Genesis             Genesis               `json:"genesis,omitempty" yaml:"genesis,omitempty"`
 	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty" yaml:"config_file_overrides,omitempty"`
-
-	// EVM
-	EVMLoadStatePath string `json:"evm_load_state_path,omitempty" yaml:"evm_load_state_path,omitempty"`
 }
 
 func (chain *Chain) Validate() error {

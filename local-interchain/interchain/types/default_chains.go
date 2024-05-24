@@ -23,13 +23,13 @@ func ChainCosmosHub() *Chain {
 
 	cosmosHub.SetGenesis(Genesis{
 		Modify: []cosmos.GenesisKV{
-			cosmos.NewGenesisKV("app_state.gov.voting_params.voting_period", "15s"),
-			cosmos.NewGenesisKV("app_state.gov.deposit_params.max_deposit_period", "15s"),
-			cosmos.NewGenesisKV("app_state.gov.deposit_params.min_deposit.0.denom", cosmosHub.Denom),
+			cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
+			cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "15s"),
+			cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", cosmosHub.Denom),
 		},
 		Accounts: append(
 			[]GenesisAccount{NewGenesisAccount("acc0", bech32, "25000000000%DENOM%", cosmosHub.CoinType, "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry")},
-			GenerateRandomAccounts(10, bech32, cosmosHub.CoinType)...,
+			GenerateRandomAccounts(5, bech32, cosmosHub.CoinType)...,
 		),
 	})
 

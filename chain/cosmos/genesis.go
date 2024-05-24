@@ -42,7 +42,7 @@ func ModifyGenesis(genesisKV []GenesisKV) func(ibc.ChainConfig, []byte) ([]byte,
 			}
 
 			if err := dyno.Set(g, values.Value, path...); err != nil {
-				return nil, fmt.Errorf("failed to set value (index:%d) in genesis json: %w", idx, err)
+				return nil, fmt.Errorf("failed to set key '%s' as '%+v' (index:%d) in genesis json: %w", values.Key, values.Value, idx, err)
 			}
 		}
 

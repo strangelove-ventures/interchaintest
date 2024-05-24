@@ -7,6 +7,6 @@ import (
 )
 
 func TestChains(t *testing.T) {
-	require.NoError(t, ChainCosmosHub().SaveJSON("chains/generated-ethereum.json"))
-	require.NoError(t, ChainEthereum().SaveJSON("chains/generated-ethereum.json"))
+	require.NoError(t, ChainCosmosHub().SaveJSON("chains/gen-cosmoshub.json"))
+	require.NoError(t, ChainEthereum().SaveJSON("chains/gen-ethereum.json"))
 }

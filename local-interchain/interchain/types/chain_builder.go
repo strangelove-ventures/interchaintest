@@ -112,12 +112,6 @@ func (c *Chain) SetConfigFileOverrides(configFileOverrides []ConfigFileOverrides
 	return c
 }
 
-func (c *Chain) SetEVMLoadStatePath(evmLoadStatePath string) *Chain {
-	// TODO: check only if ethereum as chain type is used? else panic
-	c.EVMLoadStatePath = evmLoadStatePath
-	return c
-}
-
 func (c *Chain) SetBech32Prefix(bech32Prefix string) *Chain {
 	c.Bech32Prefix = bech32Prefix
 	c.SetRandomAccounts(10)
