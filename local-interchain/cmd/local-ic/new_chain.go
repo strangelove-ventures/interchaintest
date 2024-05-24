@@ -7,15 +7,11 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
-
-	"github.com/tyler-smith/go-bip39"
 )
 
 var reader = bufio.NewReader(os.Stdin)
@@ -49,47 +45,29 @@ var newChainCmd = &cobra.Command{
 		for i := 1; i < 1000; i++ {
 			fmt.Printf("\n===== Creating new chain #%d =====\n", i)
 
-			c := ictypes.Chain{
-				// Required
-				Name:          getOrDefault("Name", "juno"),
-				ChainID:       getOrDefault("chain_id", "local-1"),
-				Binary:        getOrDefault("App Binary", "junod"),
-				Bech32Prefix:  getOrDefault("Bech32 Prefix", "juno"),
-				GasPrices:     getOrDefault("gas_prices (comma separated)", "0ujuno,0other"),
-				GasAdjustment: getOrDefault("gas_adjustment", 2.5),
+			name := getOrDefault("Name", "juno")
+			chainID := getOrDefault("Chain ID", "local-1")
+			binary := getOrDefault("App Binary", "junod")
 
-				// IBCPaths should be unique chain ids?
-				IBCPaths: parseIBCPaths(getOrDefault("IBC Paths", "")),
-				DockerImage: ictypes.DockerImage{
-					Repository: getOrDefault("Docker Repo", "ghcr.io/cosmoscontracts/juno-e2e"),
-					Version:    getOrDefault("Docker Tag/Branch Version", "v15.0.0"),
-					UidGid:     "1000:1000",
-				},
+			c := ictypes.NewChainBuilder(name, chainID, binary, "token")
 
-				// genesis accounts (juno1...:100ujuno,10uatom;)
+			c.WithDenom(getOrDefault("Denom", "ujuno"))
+			c.WithBech32Prefix(getOrDefault("Bech32 Prefix", "juno"))
+			c.WithGasPrices(getOrDefault("Gas Prices (comma separated)", "0.025ujuno"))
 
-				// Spam through enter typically
-				Denom:          getOrDefault("Denom", "ujuno"),
-				TrustingPeriod: getOrDefault("Trusting Period", "112h"),
-				ChainType:      getOrDefault("Chain Type", "cosmos"),
-				CoinType:       getOrDefault("Coin Type", 118),
+			c.WithIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
 
-				// defaults
-				Debugging:  false,
-				NumberVals: 1,
-				NumberNode: 0,
-				Genesis: ictypes.Genesis{
-					Accounts:        generateRandomAccounts(),
-					Modify:          []cosmos.GenesisKV{},
-					StartupCommands: []string{},
-				},
-			}
+			c.WithDockerImage(ictypes.DockerImage{
+				Repository: getOrDefault("Docker Repo", "ghcr.io/cosmoscontracts/juno"),
+				Version:    getOrDefault("Docker Tag / Branch Version", "v20.0.0"),
+				UidGid:     "1000:1000",
+			})
 
 			if err := c.Validate(); err != nil {
 				panic(err)
 			}
 
-			chains = append(chains, c)
+			chains = append(chains, *c)
 
 			res, err := strconv.ParseBool(getOrDefault[string]("\n\n\n === Add more chains? ===", "false"))
 			if err != nil || !res {
@@ -107,34 +85,6 @@ var newChainCmd = &cobra.Command{
 			panic(err)
 		}
 	},
-}
-
-var nonNumeric = regexp.MustCompile("[^0-9]+")
-
-func generateRandomAccounts() []ictypes.GenesisAccount {
-	accounts := []ictypes.GenesisAccount{}
-
-	res := nonNumeric.ReplaceAllString(getOrDefault("Number of accounts to generate", "1"), "")
-	num, err := strconv.Atoi(res)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < num; i++ {
-		entropy, _ := bip39.NewEntropy(256)
-		mnemonic, _ := bip39.NewMnemonic(entropy)
-
-		// load mnemonic into cosmossdk and get the address
-		accounts = append(accounts, ictypes.GenesisAccount{
-			Name:     fmt.Sprintf("account%d", i),
-			Amount:   "100000%DENOM%", // allow user to alter along with keyname?
-			Address:  "",              // TODO:
-			Mnemonic: mnemonic,
-		})
-
-	}
-
-	return accounts
 }
 
 func parseIBCPaths(input string) []string {
