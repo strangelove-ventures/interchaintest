@@ -58,7 +58,9 @@ var newChainCmd = &cobra.Command{
 				Version:    getOrDefault("Docker Tag / Branch Version", "v16.0.0"),
 				UidGid:     "1025:1025",
 			})
-			c.SetHostPortOverride(types.BaseHostPortOverride())
+			if i == 0 {
+				c.SetHostPortOverride(types.BaseHostPortOverride())
+			}
 
 			if err := c.Validate(); err != nil {
 				panic(err)
