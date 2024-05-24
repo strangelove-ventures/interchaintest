@@ -50,6 +50,7 @@ func ChainJuno(chainID string) *Chain {
 		Version: "v21.0.0",
 	})
 	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	chain.SetStartupCommands("%BIN% keys add example-key-after --keyring-backend test --home %HOME%")
 	return chain
 }
 
