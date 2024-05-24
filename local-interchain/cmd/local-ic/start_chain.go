@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/localinterchain/interchain"
 	"github.com/strangelove-ventures/localinterchain/interchain/types"
 )
@@ -84,7 +85,7 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 			Cfg:     config,
 
 			Relayer: types.Relayer{
-				DockerImage: types.DockerImage{
+				DockerImage: ibc.DockerImage{
 					Repository: relayerImg,
 					Version:    relayerVer,
 					UidGid:     relayerUidGid,

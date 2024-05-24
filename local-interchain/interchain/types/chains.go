@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
@@ -9,7 +10,7 @@ func ChainCosmosHub(chainID string) *Chain {
 	chain := NewChainBuilder("gaia", chainID, "gaiad", "uatom", "cosmos").SetDebugging(true)
 	chain.SetBech32Prefix("cosmos")
 	chain.SetBlockTime("500ms")
-	chain.SetDockerImage(DockerImage{
+	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v16.0.0",
 	})
 	chain.SetGenesis(defaultSDKv47Genesis(chain))
@@ -24,7 +25,7 @@ func ChainEthereum() *Chain {
 		SetGasPrices("0").
 		SetTrustingPeriod("0").
 		SetGasAdjustment(0).
-		SetDockerImage(DockerImage{
+		SetDockerImage(ibc.DockerImage{
 			Repository: "ghcr.io/foundry-rs/foundry",
 			Version:    "latest",
 		}).
@@ -45,7 +46,7 @@ func ChainEthereum() *Chain {
 func ChainJuno(chainID string) *Chain {
 	chain := NewChainBuilder("juno", chainID, "junod", "ujuno", "juno").SetDebugging(true)
 	chain.SetBlockTime("500ms")
-	chain.SetDockerImage(DockerImage{
+	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v21.0.0",
 	})
 	chain.SetGenesis(defaultSDKv47Genesis(chain))
@@ -55,7 +56,7 @@ func ChainJuno(chainID string) *Chain {
 func ChainStargaze() *Chain {
 	chain := NewChainBuilder("stargaze", "localstars-1", "starsd", "ustars", "stars").SetDebugging(true)
 	chain.SetBlockTime("500ms")
-	chain.SetDockerImage(DockerImage{
+	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v13.0.0",
 	})
 	chain.SetGenesis(defaultSDKv47Genesis(chain))
@@ -65,7 +66,7 @@ func ChainStargaze() *Chain {
 func ChainOsmosis() *Chain {
 	chain := NewChainBuilder("osmosis", "localosmo-1", "osmosisd", "uosmo", "osmo").SetDebugging(true)
 	chain.SetBlockTime("500ms")
-	chain.SetDockerImage(DockerImage{
+	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v25.0.0",
 	})
 	chain.SetGenesis(defaultSDKv47Genesis(chain))

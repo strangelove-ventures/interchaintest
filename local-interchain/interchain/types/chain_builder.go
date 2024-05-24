@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,7 +43,7 @@ func (c *Chain) SetDenom(denom string) *Chain {
 	return c
 }
 
-func (c *Chain) SetDockerImage(dockerImage DockerImage) *Chain {
+func (c *Chain) SetDockerImage(dockerImage ibc.DockerImage) *Chain {
 	c.DockerImage = dockerImage
 	return c
 }

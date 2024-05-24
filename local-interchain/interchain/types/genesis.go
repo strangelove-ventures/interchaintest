@@ -56,7 +56,7 @@ func GenerateRandomAccounts(num int, bech32 string, coinType int) []GenesisAccou
 		mnemonic, _ := bip39.NewMnemonic(entropy)
 
 		accounts = append(accounts, GenesisAccount{
-			Name:     fmt.Sprintf("account%d", i),
+			Name:     fmt.Sprintf("user%d", i),
 			Amount:   "100000%DENOM%",
 			Address:  MnemonicToAddress(mnemonic, bech32, uint32(coinType)),
 			Mnemonic: mnemonic,

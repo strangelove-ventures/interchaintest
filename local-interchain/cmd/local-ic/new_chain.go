@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
 )
@@ -52,7 +53,7 @@ var newChainCmd = &cobra.Command{
 
 			c.SetIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
 
-			c.SetDockerImage(ictypes.DockerImage{
+			c.SetDockerImage(ibc.DockerImage{
 				Repository: getOrDefault("Docker Repo", "ghcr.io/strangelove-ventures/heighliner/gaia"),
 				Version:    getOrDefault("Docker Tag / Branch Version", "v16.0.0"),
 				UidGid:     "1025:1025",

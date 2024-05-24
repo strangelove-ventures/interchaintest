@@ -260,9 +260,9 @@ type SidecarConfig struct {
 }
 
 type DockerImage struct {
-	Repository string `yaml:"repository"`
-	Version    string `yaml:"version"`
-	UidGid     string `yaml:"uid-gid"`
+	Repository string `json:"repository" yaml:"repository"`
+	Version    string `json:"version" yaml:"version"`
+	UidGid     string `json:"uid_gid" yaml:"uid_gid"`
 }
 
 type CometMockConfig struct {

@@ -34,16 +34,9 @@ type RestServer struct {
 	Port string `json:"port" yaml:"port"`
 }
 
-// TODO: migrate to ibc.DockerImage?
-type DockerImage struct {
-	Repository string `json:"repository" yaml:"repository"`
-	Version    string `json:"version" yaml:"version"`
-	UidGid     string `json:"uid_gid" yaml:"uid_gid"`
-}
-
 type Relayer struct {
-	DockerImage  DockerImage `json:"docker_image" yaml:"docker_image"`
-	StartupFlags []string    `json:"startup_flags" yaml:"startup_flags"`
+	DockerImage  ibc.DockerImage `json:"docker_image" yaml:"docker_image"`
+	StartupFlags []string        `json:"startup_flags" yaml:"startup_flags"`
 }
 
 type IBCChannel struct {
@@ -60,7 +53,7 @@ type ConfigFileOverrides struct {
 type Chain struct {
 	Name                string                `json:"name" yaml:"name" validate:"min=1"`
 	ChainID             string                `json:"chain_id" yaml:"chain_id" validate:"min=3"`
-	DockerImage         DockerImage           `json:"docker_image" yaml:"docker_image" validate:"url"`
+	DockerImage         ibc.DockerImage       `json:"docker_image" yaml:"docker_image" validate:"url"`
 	GasPrices           string                `json:"gas_prices" yaml:"gas_prices"`
 	GasAdjustment       float64               `json:"gas_adjustment" yaml:"gas_adjustment"`
 	Genesis             Genesis               `json:"genesis,omitempty" yaml:"genesis,omitempty"`
