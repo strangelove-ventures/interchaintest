@@ -22,13 +22,31 @@ type GenesisAccount struct {
 
 type Genesis struct {
 	// Only apart of my fork for now.
-	Modify []cosmos.GenesisKV `json:"modify" yaml:"modify"` // 'key' & 'val' in the config.
+	Modify []cosmos.GenesisKV `json:"modify,omitempty" yaml:"modify,omitempty"` // 'key' & 'val' in the config.
 
-	Accounts []GenesisAccount `json:"accounts" yaml:"accounts"`
+	Accounts []GenesisAccount `json:"accounts,omitempty" yaml:"accounts,omitempty"`
 
 	// A list of commands which run after chains are good to go.
 	// May need to move out of genesis into its own section? Seems silly though.
-	StartupCommands []string `json:"startup_commands" yaml:"startup_commands"`
+	StartupCommands []string `json:"startup_commands,omitempty" yaml:"startup_commands,omitempty"`
+}
+
+func NewGenesisAccount(name, bech32, coins string, coinType int, mnemonic string) GenesisAccount {
+	if coins == "" {
+		coins = "100000%DENOM%"
+	}
+
+	if mnemonic == "" {
+		entropy, _ := bip39.NewEntropy(256)
+		mnemonic, _ = bip39.NewMnemonic(entropy)
+	}
+
+	return GenesisAccount{
+		Name:     name,
+		Amount:   coins,
+		Address:  MnemonicToAddress(mnemonic, bech32, uint32(coinType)),
+		Mnemonic: mnemonic,
+	}
 }
 
 func GenerateRandomAccounts(num int, bech32 string, coinType int) []GenesisAccount {

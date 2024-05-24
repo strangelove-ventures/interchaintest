@@ -15,7 +15,7 @@ type Chain struct {
 	TrustingPeriod   string            `json:"trusting_period" yaml:"trusting_period"`
 	Debugging        bool              `json:"debugging" yaml:"debugging"`
 	BlockTime        string            `json:"block_time" yaml:"block_time"`
-	HostPortOverride map[string]string `json:"host_port_override" yaml:"host_port_override"`
+	HostPortOverride map[string]string `json:"host_port_override,omitempty" yaml:"host_port_override,omitempty"`
 	ICSConsumerLink  string            `json:"ics_consumer_link"` // a consumer sets this to ex: "provider-chain-id" to connect to them
 
 	// Required
@@ -26,7 +26,7 @@ type Chain struct {
 	GasAdjustment       float64               `json:"gas_adjustment" yaml:"gas_adjustment"`
 	NumberVals          int                   `json:"number_vals" yaml:"number_vals" validate:"gte=1"`
 	NumberNode          int                   `json:"number_node" yaml:"number_node"`
-	IBCPaths            []string              `json:"ibc_paths" yaml:"ibc_paths"`
+	IBCPaths            []string              `json:"ibc_paths,omitempty" yaml:"ibc_paths,omitempty"`
 	Genesis             Genesis               `json:"genesis" yaml:"genesis"`
 	ConfigFileOverrides []ConfigFileOverrides `json:"config_file_overrides,omitempty" yaml:"config_file_overrides,omitempty"`
 
