@@ -13,8 +13,6 @@ import (
 
 // NewChainBuilder creates a new Chain.
 func NewChainBuilder(name, chainID, binary, denom, bech32 string) *Chain {
-	coinType := 118
-
 	return &Chain{
 		Name:    name,
 		ChainID: chainID,
@@ -24,7 +22,7 @@ func NewChainBuilder(name, chainID, binary, denom, bech32 string) *Chain {
 		TrustingPeriod: "336h",
 		Bech32Prefix:   bech32,
 		ChainType:      "cosmos",
-		CoinType:       coinType,
+		CoinType:       118,
 		GasAdjustment:  2.0,
 		NumberVals:     1,
 		NumberNode:     0,
