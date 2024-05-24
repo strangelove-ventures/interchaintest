@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/go-playground/validator"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -140,8 +141,23 @@ type ChainsConfig struct {
 	Chains []Chain `json:"chains" yaml:"chains"`
 }
 
+func NewChainsConfig(chains ...*Chain) ChainsConfig {
+	updatedChains := make([]Chain, len(chains))
+	for i, chain := range chains {
+		updatedChains[i] = *chain
+	}
+
+	return ChainsConfig{
+		Chains: updatedChains,
+	}
+}
+
 // SaveJSON saves the chains config to a file.
 func (cfg ChainsConfig) SaveJSON(file string) error {
+	if err := os.MkdirAll(filepath.Dir(file), 0777); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
 	bz, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal chains config: %w", err)

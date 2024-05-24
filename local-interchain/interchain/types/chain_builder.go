@@ -97,8 +97,17 @@ func (c *Chain) SetICSConsumerLink(icsConsumerLink string) *Chain {
 	return c
 }
 
+// SetIBCPaths hardcodes the set IBC paths array for the chain.
 func (c *Chain) SetIBCPaths(ibcPaths []string) *Chain {
 	c.IBCPaths = ibcPaths
+	return c
+}
+
+// SetChainsIBCLink appends the new IBC path to both chains
+func (c *Chain) SetAppendedIBCPathLink(counterParty *Chain) *Chain {
+	ibcPath := fmt.Sprintf("%s_%s", c.ChainID, counterParty.ChainID)
+	c.IBCPaths = append(c.IBCPaths, ibcPath)
+	counterParty.IBCPaths = append(counterParty.IBCPaths, ibcPath)
 	return c
 }
 
@@ -114,13 +123,13 @@ func (c *Chain) SetConfigFileOverrides(configFileOverrides []ConfigFileOverrides
 
 func (c *Chain) SetBech32Prefix(bech32Prefix string) *Chain {
 	c.Bech32Prefix = bech32Prefix
-	c.SetRandomAccounts(10)
+	c.SetRandomAccounts(5)
 	return c
 }
 
 func (c *Chain) SetCoinType(num int) *Chain {
 	c.CoinType = num
-	c.SetRandomAccounts(10)
+	c.SetRandomAccounts(5)
 	return c
 }
 

@@ -35,7 +35,6 @@
                 "version": "v17.0.0"
             },
             "block_time": "2s",
-            "encoding-options": ["juno"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
             "ibc_paths": ["atom-juno", "juno-terra"]
@@ -50,7 +49,6 @@
                 "version": "v2.3.4"
             },
             "block_time": "2s",
-            "encoding-options": ["wasm"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
             "ibc_paths": ["atom-terra", "juno-terra"]

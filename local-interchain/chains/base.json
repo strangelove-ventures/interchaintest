@@ -19,7 +19,6 @@
             "number_node": 0,
             "debugging": true,
             "block_time": "5000ms",
-            "encoding-options": ["juno"],
             "host_port_override": {
                 "26657": "26657",
                 "1317": "1317",

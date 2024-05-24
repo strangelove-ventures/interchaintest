@@ -20,7 +20,6 @@
             "block_time": "500ms",
             "ibc_paths": ["juno-ibc-1"],
             "debugging": true,
-            "encoding-options": ["juno"],
             "genesis": {
                 "modify": [
                     {
@@ -79,7 +78,6 @@
                 ]
             },
             "block_time": "500ms",
-            "encoding-options": ["juno"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
             "ibc_paths": ["juno-ibc-1"]

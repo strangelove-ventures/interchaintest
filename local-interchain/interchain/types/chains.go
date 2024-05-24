@@ -1,22 +1,19 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
-func ChainCosmosHub() *Chain {
-	cosmosHub := NewChainBuilder("gaia", "localcosmos-1", "gaiad", "uatom", "cosmos").SetDebugging(true)
-	cosmosHub.SetBech32Prefix("cosmos")
-	cosmosHub.SetBlockTime("500ms")
-	cosmosHub.SetDockerImage(DockerImage{
+func ChainCosmosHub(chainID string) *Chain {
+	chain := NewChainBuilder("gaia", chainID, "gaiad", "uatom", "cosmos").SetDebugging(true)
+	chain.SetBech32Prefix("cosmos")
+	chain.SetBlockTime("500ms")
+	chain.SetDockerImage(DockerImage{
 		Version: "v16.0.0",
 	})
-	cosmosHub.SetGenesis(defaultSDKv47Genesis(cosmosHub))
-
-	return cosmosHub
+	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	return chain
 }
 
 func ChainEthereum() *Chain {
@@ -42,67 +39,37 @@ func ChainEthereum() *Chain {
 				},
 			},
 		})
-
 	return eth
 }
 
 func ChainJuno(chainID string) *Chain {
-	juno := NewChainBuilder("juno", chainID, "junod", "ujuno", "juno").SetDebugging(true)
-	juno.SetBlockTime("500ms")
-	juno.SetDockerImage(DockerImage{
+	chain := NewChainBuilder("juno", chainID, "junod", "ujuno", "juno").SetDebugging(true)
+	chain.SetBlockTime("500ms")
+	chain.SetDockerImage(DockerImage{
 		Version: "v21.0.0",
 	})
-	juno.SetGenesis(defaultSDKv47Genesis(juno))
-	return juno
+	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	return chain
 }
 
 func ChainStargaze() *Chain {
-	stars := NewChainBuilder("stargaze", "localstars-1", "starsd", "ustars", "stars").SetDebugging(true)
-	stars.SetBlockTime("500ms")
-	stars.SetDockerImage(DockerImage{
+	chain := NewChainBuilder("stargaze", "localstars-1", "starsd", "ustars", "stars").SetDebugging(true)
+	chain.SetBlockTime("500ms")
+	chain.SetDockerImage(DockerImage{
 		Version: "v13.0.0",
 	})
-	stars.SetGenesis(defaultSDKv47Genesis(stars))
-	return stars
+	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	return chain
 }
 
 func ChainOsmosis() *Chain {
-	stars := NewChainBuilder("stargaze", "localstars-1", "starsd", "ustars", "stars").SetDebugging(true)
-	stars.SetBlockTime("500ms")
-	stars.SetDockerImage(DockerImage{
-		Version: "v13.0.0",
+	chain := NewChainBuilder("osmosis", "localosmo-1", "osmosisd", "uosmo", "osmo").SetDebugging(true)
+	chain.SetBlockTime("500ms")
+	chain.SetDockerImage(DockerImage{
+		Version: "v25.0.0",
 	})
-	stars.SetGenesis(defaultSDKv47Genesis(stars))
-	return stars
-}
-
-func ChainsIBC(chainA, chainB *Chain) (ChainsConfig, error) {
-	if chainA.ChainID == chainB.ChainID {
-		return ChainsConfig{}, fmt.Errorf("chainA and chainB cannot have the same ChainID for ChainsIBC")
-	}
-
-	matchingPath := false
-	for _, pathA := range chainA.IBCPaths {
-		for _, pathB := range chainB.IBCPaths {
-			if pathA == pathB {
-				matchingPath = true
-				break
-			}
-		}
-	}
-
-	if !matchingPath {
-		ibcPath := fmt.Sprintf("%s_%s", chainA.ChainID, chainB.ChainID)
-		chainA.IBCPaths = []string{ibcPath}
-		chainB.IBCPaths = []string{ibcPath}
-	}
-
-	return ChainsConfig{
-		Chains: []Chain{
-			*chainA,
-			*chainB,
-		},
-	}, nil
+	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	return chain
 }
 
 func defaultSDKv47Genesis(chain *Chain) Genesis {

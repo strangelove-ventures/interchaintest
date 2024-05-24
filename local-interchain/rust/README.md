@@ -47,7 +47,6 @@ echo '{
             "number_node": 0,
             "debugging": true,
             "block_time": "500ms",
-            "encoding-options": ["juno"],
             "genesis": {
                 "modify": [
                     {
