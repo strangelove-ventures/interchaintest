@@ -9,14 +9,14 @@ import (
 	"path"
 	"strings"
 
+	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/router"
+	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"github.com/strangelove-ventures/localinterchain/interchain/router"
-	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
 )
 

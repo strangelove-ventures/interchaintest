@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/localinterchain/interchain/util"
 )
 
 type upload struct {

@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/localinterchain
+module github.com/strangelove-ventures/interchaintest/localinterchain
 
 go 1.22.2
 
@@ -14,11 +14,12 @@ replace (
 require (
 	cosmossdk.io/math v1.3.0
 	github.com/cosmos/cosmos-sdk v0.50.6
+	github.com/cosmos/go-bip39 v1.0.0
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/gorilla/mux v1.8.1
 	github.com/spf13/cobra v1.8.0
 	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000
-	github.com/tyler-smith/go-bip39 v1.1.0
+	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 
@@ -75,7 +76,6 @@ require (
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/cosmos-db v1.0.2 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5 // indirect
-	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
 	github.com/cosmos/gogoproto v1.4.12 // indirect
 	github.com/cosmos/iavl v1.1.2 // indirect
@@ -218,12 +218,12 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0 // indirect
+	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect

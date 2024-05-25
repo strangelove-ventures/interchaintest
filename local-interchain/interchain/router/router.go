@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	ictypes "github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
-	"github.com/strangelove-ventures/localinterchain/interchain/util"
 
-	"github.com/strangelove-ventures/localinterchain/interchain/handlers"
+	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/handlers"
 )
 
 type Route struct {
