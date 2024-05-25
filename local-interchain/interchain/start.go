@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/router"
-	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/localic/interchain/router"
+	"github.com/strangelove-ventures/interchaintest/localic/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"

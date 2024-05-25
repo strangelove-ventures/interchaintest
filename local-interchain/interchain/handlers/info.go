@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	types "github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
-	util "github.com/strangelove-ventures/interchaintest/localinterchain/interchain/util"
+	types "github.com/strangelove-ventures/interchaintest/localic/interchain/types"
+	util "github.com/strangelove-ventures/interchaintest/localic/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"

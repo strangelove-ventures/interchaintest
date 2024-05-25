@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	types "github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
-	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/util"
+	types "github.com/strangelove-ventures/interchaintest/localic/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/localic/interchain/util"
 	"gopkg.in/yaml.v3"
 
 	"github.com/strangelove-ventures/interchaintest/v8"

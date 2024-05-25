@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/handlers"
+	"github.com/strangelove-ventures/interchaintest/localic/interchain/handlers"
 )
 
 const (

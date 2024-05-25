@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/strangelove-ventures/interchaintest/localinterchain/interchain/types"
+	types "github.com/strangelove-ventures/interchaintest/localic/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )

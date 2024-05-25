@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/strangelove-ventures/interchaintest/localinterchain/interchain/util"
+	"github.com/strangelove-ventures/interchaintest/localic/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 )
 
