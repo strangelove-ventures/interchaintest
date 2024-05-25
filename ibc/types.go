@@ -410,6 +410,6 @@ type PathUpdateOptions struct {
 }
 
 type ICSConfig struct {
-	ProviderVerOverride string `json:"provider,omitempty" yaml:"provider,omitempty"`
-	ConsumerVerOverride string `json:"consumer,omitempty" yaml:"consumer,omitempty"`
+	ProviderVerOverride string `yaml:"provider,omitempty" json:"provider,omitempty"`
+	ConsumerVerOverride string `yaml:"consumer,omitempty" json:"consumer,omitempty"`
 }
