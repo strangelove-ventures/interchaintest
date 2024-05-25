@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	types "github.com/strangelove-ventures/interchaintest/localic/interchain/types"
+	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/localic/interchain"
-	"github.com/strangelove-ventures/interchaintest/localic/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain"
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 

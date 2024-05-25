@@ -1,4 +1,4 @@
-module github.com/strangelove-ventures/interchaintest/localic
+module github.com/strangelove-ventures/interchaintest/local-interchain
 
 go 1.22.2
 
