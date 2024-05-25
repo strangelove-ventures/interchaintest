@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	types "github.com/strangelove-ventures/localinterchain/interchain/types"
 )
 
 func AddGenesisKeysToKeyring(ctx context.Context, config *types.Config, chains []ibc.Chain) {

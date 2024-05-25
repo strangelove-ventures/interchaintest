@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
+	util "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	types "github.com/strangelove-ventures/localinterchain/interchain/types"
-	util "github.com/strangelove-ventures/localinterchain/interchain/util"
 )
 
 type info struct {
