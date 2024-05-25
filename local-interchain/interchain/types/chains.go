@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -13,7 +12,7 @@ func ChainCosmosHub(chainID string) *Chain {
 	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v16.0.0",
 	})
-	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	chain.SetDefaultSDKv47Genesis(5)
 	return chain
 }
 
@@ -49,7 +48,7 @@ func ChainJuno(chainID string) *Chain {
 	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v21.0.0",
 	})
-	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	chain.SetDefaultSDKv47Genesis(5)
 	chain.SetStartupCommands("%BIN% keys add example-key-after --keyring-backend test --home %HOME%")
 	return chain
 }
@@ -60,7 +59,7 @@ func ChainStargaze() *Chain {
 	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v13.0.0",
 	})
-	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	chain.SetDefaultSDKv47Genesis(5)
 	return chain
 }
 
@@ -70,23 +69,6 @@ func ChainOsmosis() *Chain {
 	chain.SetDockerImage(ibc.DockerImage{
 		Version: "v25.0.0",
 	})
-	chain.SetGenesis(defaultSDKv47Genesis(chain))
+	chain.SetDefaultSDKv47Genesis(5)
 	return chain
-}
-
-func defaultSDKv47Genesis(chain *Chain) Genesis {
-	return Genesis{
-		Modify: []cosmos.GenesisKV{
-			cosmos.NewGenesisKV("app_state.gov.params.voting_period", "15s"),
-			cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "15s"),
-			cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", chain.Denom),
-		},
-		Accounts: append(
-			[]GenesisAccount{NewGenesisAccount(
-				"acc0", chain.Bech32Prefix, "25000000000%DENOM%", chain.CoinType,
-				"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry",
-			)},
-			GenerateRandomAccounts(5, chain.Bech32Prefix, chain.CoinType)...,
-		),
-	}
 }

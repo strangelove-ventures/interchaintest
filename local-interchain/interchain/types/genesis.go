@@ -3,12 +3,11 @@ package types
 import (
 	"fmt"
 
+	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/codec"
 	"github.com/cosmos/go-bip39"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 )
@@ -48,17 +47,19 @@ func NewGenesisAccount(name, bech32, coins string, coinType int, mnemonic string
 	}
 }
 
-func GenerateRandomAccounts(num int, bech32 string, coinType int) []GenesisAccount {
+func GenerateRandomAccounts(num int, prefix string, coinType int) []GenesisAccount {
 	accounts := []GenesisAccount{}
 
 	for i := 0; i < num; i++ {
 		entropy, _ := bip39.NewEntropy(256)
 		mnemonic, _ := bip39.NewMnemonic(entropy)
 
+		addr := MnemonicToAddress(mnemonic, prefix, uint32(coinType))
+
 		accounts = append(accounts, GenesisAccount{
 			Name:     fmt.Sprintf("user%d", i),
 			Amount:   "100000%DENOM%",
-			Address:  MnemonicToAddress(mnemonic, bech32, uint32(coinType)),
+			Address:  addr,
 			Mnemonic: mnemonic,
 		})
 
@@ -67,18 +68,13 @@ func GenerateRandomAccounts(num int, bech32 string, coinType int) []GenesisAccou
 	return accounts
 }
 
-func MnemonicToAddress(mnemonic, bech32 string, coinType uint32) string {
-	e := moduletestutil.MakeTestEncodingConfig(
-		auth.AppModuleBasic{},
-	)
+func MnemonicToAddress(mnemonic, prefix string, coinType uint32) string {
+	e := moduletestutil.MakeTestEncodingConfig()
 
 	kr := keyring.NewInMemory(e.Codec)
 
-	cfg := sdk.NewConfig()
-	cfg.SetCoinType(coinType)
-	cfg.SetBech32PrefixForAccount(bech32, bech32+sdk.PrefixPublic)
-
-	r, err := kr.NewAccount("tempkey", mnemonic, "", cfg.GetFullBIP44Path(), hd.Secp256k1)
+	bip44Path := fmt.Sprintf("m/%d'/%d'/0'/0/0", sdk.Purpose, coinType)
+	r, err := kr.NewAccount("tempkey", mnemonic, "", bip44Path, hd.Secp256k1)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +84,7 @@ func MnemonicToAddress(mnemonic, bech32 string, coinType uint32) string {
 		panic(err)
 	}
 
-	bech32Addr, err := codec.NewBech32Codec(bech32).BytesToString(bz)
+	bech32Addr, err := addresscodec.NewBech32Codec(prefix).BytesToString(bz)
 	if err != nil {
 		panic(err)
 	}

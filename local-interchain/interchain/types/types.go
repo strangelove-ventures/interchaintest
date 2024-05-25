@@ -71,6 +71,7 @@ type Chain struct {
 	BlockTime           string                `json:"block_time,omitempty" yaml:"block_time,omitempty"`
 	HostPortOverride    map[string]string     `json:"host_port_override,omitempty" yaml:"host_port_override,omitempty"`
 	ICSConsumerLink     string                `json:"ics_consumer_link,omitempty" yaml:"ics_consumer_link,omitempty"`
+	ICSVersionOverride  ibc.ICSConfig         `json:"ics_version_override,omitempty" yaml:"ics_version_override,omitempty"`
 }
 
 func (chain *Chain) Validate() error {

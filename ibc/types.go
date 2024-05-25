@@ -262,7 +262,7 @@ type SidecarConfig struct {
 type DockerImage struct {
 	Repository string `json:"repository" yaml:"repository"`
 	Version    string `json:"version" yaml:"version"`
-	UidGid     string `json:"uid_gid" yaml:"uid-gid"`
+	UidGid     string `json:"uid-gid" yaml:"uid-gid"`
 }
 
 type CometMockConfig struct {
@@ -410,6 +410,6 @@ type PathUpdateOptions struct {
 }
 
 type ICSConfig struct {
-	ProviderVerOverride string
-	ConsumerVerOverride string
+	ProviderVerOverride string `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ConsumerVerOverride string `json:"consumer,omitempty" yaml:"consumer,omitempty"`
 }

@@ -199,6 +199,8 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
 		ConfigFileOverrides: ConfigurationOverrides(cfg),
 		EncodingConfig:      nil,
+
+		InterchainSecurityConfig: cfg.ICSVersionOverride,
 	}
 
 	if cfg.DockerImage.Version == "" {

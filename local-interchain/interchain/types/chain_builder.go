@@ -115,6 +115,29 @@ func (c *Chain) SetGenesis(genesis Genesis) *Chain {
 	return c
 }
 
+func (c *Chain) SetDefaultSDKv47Genesis(numRandAcc int) *Chain {
+	c.Genesis = Genesis{
+		Modify: []cosmos.GenesisKV{
+			cosmos.NewGenesisKV("app_state.gov.params.voting_period", "3s"),
+			cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", "10s"),
+			cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", c.Denom),
+			cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.amount", "1"),
+		},
+		Accounts: append(
+			[]GenesisAccount{
+				NewGenesisAccount("acc0", c.Bech32Prefix, "25000000000%DENOM%", c.CoinType,
+					"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry",
+				),
+				NewGenesisAccount("acc1", c.Bech32Prefix, "24000000000%DENOM%", c.CoinType,
+					"wealth flavor believe regret funny network recall kiss grape useless pepper cram hint member few certain unveil rather brick bargain curious require crowd raise",
+				),
+			},
+			GenerateRandomAccounts(numRandAcc, c.Bech32Prefix, c.CoinType)...,
+		),
+	}
+	return c
+}
+
 func (c *Chain) SetStartupCommands(cmds ...string) *Chain {
 	c.Genesis.StartupCommands = cmds
 	return c
