@@ -119,7 +119,6 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "ibc_paths": ["juno-ibc-1"],
     "debugging": true,
     "block_time": "500ms",
-    "encoding-options": ["juno"],
     "host_port_override": {
         "26656": "26656",
         "26657": "26657",

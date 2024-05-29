@@ -365,7 +365,21 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 		(semver.Compare(providerVersion, icsVer330) < 0 && semver.Compare(consumerVersion, icsVer330) < 0) {
 		return ccvState, nil
 	}
+
 	var imageVersion, toVersion string
+
+	if icsCfg.ProviderVerOverride != "" {
+		imageVersion = icsCfg.ProviderVerOverride
+	}
+
+	if icsCfg.ConsumerVerOverride != "" {
+		toVersion = icsCfg.ConsumerVerOverride
+	}
+
+	if imageVersion == toVersion && imageVersion != "" {
+		return ccvState, nil
+	}
+
 	// The trick here is that when we convert the state to a consumer < 3.3.0, we need a converter that knows about that version; those are >= 4.0.0, and need a --to flag.
 	// Other than that, this is a question of using whichever version is newer. If it's the provider's, we need a --to flag to tell it the consumer version.
 	// If it's the consumer's, we don't need a --to flag cause it'll assume the consumer version.
@@ -380,13 +394,6 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 		}
 	} else {
 		imageVersion = consumerVersion
-	}
-
-	if icsCfg.ProviderVerOverride != "" {
-		imageVersion = icsCfg.ProviderVerOverride
-	}
-	if icsCfg.ConsumerVerOverride != "" {
-		toVersion = icsCfg.ConsumerVerOverride
 	}
 
 	c.log.Info("Transforming CCV state", zap.String("provider", providerVersion), zap.String("consumer", consumerVersion), zap.String("imageVersion", imageVersion), zap.String("toVersion", toVersion))
