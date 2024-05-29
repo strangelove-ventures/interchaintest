@@ -13,8 +13,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// === Local-IC Application ===
-
 type Config struct {
 	Chains  []Chain    `json:"chains" yaml:"chains"`
 	Relayer Relayer    `json:"relayer" yaml:"relayer"`
