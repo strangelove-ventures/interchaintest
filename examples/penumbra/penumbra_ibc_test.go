@@ -30,13 +30,13 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 2
+	nv := 1
 	fn := 0
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.71.0,v0.37.5",
+			Version: "v0.76.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -45,7 +45,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 		},
 		{
 			Name:    "penumbra",
-			Version: "v0.71.0,v0.37.5",
+			Version: "v0.76.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraB-0",
 			},
@@ -214,20 +214,20 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 
-	err = testutil.WaitForBlocks(ctx, 10, chainA)
+	err = testutil.WaitForBlocks(ctx, 30, chainA)
 	require.NoError(t, err)
+
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	require.NoError(t, err)
+	t.Logf("Bob's balance after transfer: %s", bobBal)
+
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
 	t.Logf("Alice's balance after transfer: %s", aliceBal)
 
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
-
-	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), ibcDenom)
-	require.NoError(t, err)
-	t.Logf("Bob's balance after transfer: %s", bobBal)
-
-	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 }
 
 // TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between Penumbra and Cosmos testnet networks.
@@ -253,7 +253,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.71.0,v0.37.5",
+			Version: "v0.76.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
