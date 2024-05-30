@@ -25,6 +25,7 @@ import (
 	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	ccvprovider "github.com/cosmos/interchain-security/v5/x/ccv/provider"
 	ibcwasm "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 )
 
@@ -50,6 +51,7 @@ func DefaultEncoding() testutil.TestEncodingConfig {
 		ibccore.AppModuleBasic{},
 		ibctm.AppModuleBasic{},
 		ibcwasm.AppModuleBasic{},
+		ccvprovider.AppModuleBasic{},
 	)
 }
 

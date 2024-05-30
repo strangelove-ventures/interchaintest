@@ -3,15 +3,18 @@ package interchain
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	types "github.com/strangelove-ventures/localinterchain/interchain/types"
-	"github.com/strangelove-ventures/localinterchain/interchain/util"
+	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
+	"gopkg.in/yaml.v3"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -19,40 +22,63 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
-func loadConfig(config *types.Config, filepath string) (*types.Config, error) {
-	bytes, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
+const ChainDir = "chains"
 
 func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
-	var config *types.Config
+	var config types.Config
 
 	configFile := "base.json"
 	if chainCfgFile != "" {
 		configFile = chainCfgFile
 	}
 
-	// Chains Folder
-	chainsDir := filepath.Join(installDir, "chains")
+	// A nested "chains" dir is required within the parent you specify.
+	chainsDir := filepath.Join(installDir, ChainDir)
 	cfgFilePath := filepath.Join(chainsDir, configFile)
 
-	config, err := loadConfig(config, cfgFilePath)
+	bz, err := os.ReadFile(cfgFilePath)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.HasSuffix(chainCfgFile, ".json") {
+		if err = json.Unmarshal(bz, &config); err != nil {
+			return nil, fmt.Errorf("error unmarshalling json config: %w", err)
+		}
+	} else {
+		if err := yaml.Unmarshal(bz, &config); err != nil {
+			return nil, fmt.Errorf("error unmarshalling yaml config: %w", err)
+		}
 	}
 
 	log.Println("Using directory:", installDir)
 	log.Println("Using chain config:", cfgFilePath)
 
+	return setConfigDefaults(&config), nil
+}
+
+func LoadConfigFromURL(url string) (*types.Config, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var config types.Config
+	err = json.Unmarshal(body, &config)
+	if err != nil {
+		return &config, fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	return setConfigDefaults(&config), nil
+}
+
+func setConfigDefaults(config *types.Config) *types.Config {
 	chains := config.Chains
 
 	for i := range chains {
@@ -69,7 +95,7 @@ func LoadConfig(installDir, chainCfgFile string) (*types.Config, error) {
 		}
 	}
 
-	return config, nil
+	return config
 }
 
 // ConfigurationOverrides creates a map of config file overrides for filenames, their keys, and values.
@@ -173,6 +199,8 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		ModifyGenesis:       cosmos.ModifyGenesis(cfg.Genesis.Modify),
 		ConfigFileOverrides: ConfigurationOverrides(cfg),
 		EncodingConfig:      nil,
+
+		InterchainSecurityConfig: cfg.ICSVersionOverride,
 	}
 
 	if cfg.DockerImage.Version == "" {

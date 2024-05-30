@@ -27,7 +27,7 @@ import (
 	custody "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1"
 	view "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

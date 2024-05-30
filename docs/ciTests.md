@@ -58,7 +58,7 @@ It's important to realize the image will be named using the arg from the `-c` fl
 **Goal:** When a PR is created, have a GitHub workflow that:
 
 1. Builds a Docker image with the latest code changes to the binary.
-2. Synchronously spin up runners (one for each test), load Docker image, and run tests. 
+2. Synchronously spin up runners (one for each test), load Docker image, and run tests.
 
 We recommend having this workflow run only on PR's.
 
@@ -115,7 +115,7 @@ jobs:
     strategy:
         matrix:
             # names of `make` commands to run tests
-            test: 
+            test:
               - ictest-tkn-factory
               - ictest-packet-forward
               - ictest-paramauthority
@@ -132,7 +132,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-              
+
       - name: checkout chain
         uses: actions/checkout@v3
 
@@ -224,7 +224,7 @@ The example below will spin up 9 runners, one for each test.
     strategy:
         matrix:
             # names of `make` commands to run tests
-            test: 
+            test:
               - ictest-tkn-factory
               - ictest-packet-forward
               - ictest-paramauthority
@@ -241,7 +241,7 @@ The example below will spin up 9 runners, one for each test.
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-              
+
       - name: checkout chain
         uses: actions/checkout@v3
 

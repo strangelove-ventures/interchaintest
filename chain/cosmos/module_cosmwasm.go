@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -160,6 +161,28 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 	return err
 }
 
+// MigrateContract performs contract migration
+func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
+	cmd := []string{"wasm", "migrate", contractAddress, codeID, message}
+	cmd = append(cmd, extraExecTxArgs...)
+
+	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
+	if err != nil {
+		return &types.TxResponse{}, err
+	}
+
+	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
+	if err != nil {
+		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	}
+
+	if txResp.Code != 0 {
+		return txResp, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
+	}
+
+	return txResp, nil
+}
+
 // StoreClientContract takes a file path to a client smart contract and stores it on-chain. Returns the contracts code id.
 func (tn *ChainNode) StoreClientContract(ctx context.Context, keyName string, fileName string, extraExecTxArgs ...string) (string, error) {
 	content, err := os.ReadFile(fileName)
@@ -198,6 +221,22 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 
 	res := new(DumpContractStateResponse)
 	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// QueryContractInfo queries the information about a contract like the admin and code_id.
+func (tn *ChainNode) QueryContractInfo(ctx context.Context, contractAddress string) (*ContractInfoResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx,
+		"wasm", "contract", contractAddress,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := new(ContractInfoResponse)
+	if err := json.Unmarshal(stdout, res); err != nil {
 		return nil, err
 	}
 	return res, nil

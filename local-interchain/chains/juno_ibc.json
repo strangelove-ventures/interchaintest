@@ -1,7 +1,7 @@
-{    
+{
     "chains": [
         {
-            "name": "juno",            
+            "name": "juno",
             "chain_id": "localjuno-1",
             "denom": "ujuno",
             "binary": "junod",
@@ -19,8 +19,7 @@
             "number_node": 0,
             "block_time": "500ms",
             "ibc_paths": ["juno-ibc-1"],
-            "debugging": true,            
-            "encoding-options": ["juno"],
+            "debugging": true,
             "genesis": {
                 "modify": [
                     {
@@ -35,7 +34,7 @@
                         "key": "app_state.gov.params.min_deposit.0.denom",
                         "value": "ujuno"
                     }
-                ],     
+                ],
                 "accounts": [
                     {
                         "name": "acc0",
@@ -49,7 +48,7 @@
                         "amount": "10000000%DENOM%",
                         "mnemonic": "wealth flavor believe regret funny network recall kiss grape useless pepper cram hint member few certain unveil rather brick bargain curious require crowd raise"
                     }
-                ]                
+                ]
             }
         },
         {
@@ -62,7 +61,7 @@
                 "repository": "ghcr.io/cosmoscontracts/juno",
                 "version": "v17.0.0"
             },
-            "genesis": {     
+            "genesis": {
                 "accounts": [
                     {
                         "name": "second0",
@@ -76,13 +75,12 @@
                         "amount": "10000000%DENOM%",
                         "mnemonic": "wealth flavor believe regret funny network recall kiss grape useless pepper cram hint member few certain unveil rather brick bargain curious require crowd raise"
                     }
-                ]                
+                ]
             },
             "block_time": "500ms",
-            "encoding-options": ["juno"],
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,
-            "ibc_paths": ["juno-ibc-1"]        
+            "ibc_paths": ["juno-ibc-1"]
         }
     ]
 }

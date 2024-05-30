@@ -6,16 +6,17 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"path"
 	"strings"
 
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"github.com/strangelove-ventures/localinterchain/interchain/router"
-	"github.com/strangelove-ventures/localinterchain/interchain/types"
 	"go.uber.org/zap"
 )
 
@@ -49,14 +50,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		panic(err)
 	}
 
-	config, err := LoadConfig(installDir, chainCfgFile)
-	if err != nil {
-		// try again with .json, then if it still fails - panic
-		config, err = LoadConfig(installDir, chainCfgFile+".json")
-		if err != nil {
-			panic(err)
-		}
-	}
+	config := ac.Cfg
 
 	config.Relayer = ac.Relayer
 
@@ -64,6 +58,9 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	// ibc-path-name -> index of []cosmos.CosmosChain
 	ibcpaths := make(map[string][]int)
+	// providerChainId -> []consumerChainIds
+	icsPair := make(map[string][]string)
+
 	chainSpecs := []*interchaintest.ChainSpec{}
 
 	for idx, cfg := range config.Chains {
@@ -75,6 +72,10 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 				ibcpaths[path] = append(ibcpaths[path], idx)
 			}
 		}
+
+		if cfg.ICSConsumerLink != "" {
+			icsPair[cfg.ICSConsumerLink] = append(icsPair[cfg.ICSConsumerLink], cfg.ChainID)
+		}
 	}
 
 	if err := VerifyIBCPaths(ibcpaths); err != nil {
@@ -84,9 +85,9 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Create chain factory for all the chains
 	cf := interchaintest.NewBuiltinChainFactory(logger, chainSpecs)
 
-	// Get chains from the chain factory
-	name := strings.ReplaceAll(chainCfgFile, ".json", "") + "ic"
-	chains, err := cf.Chains(name)
+	testName := GetTestName(chainCfgFile)
+
+	chains, err := cf.Chains(testName)
 	if err != nil {
 		log.Fatal("cf.Chains", err)
 	}
@@ -97,7 +98,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ic.AdditionalGenesisWallets = SetupGenesisWallets(config, chains)
 
 	fakeT := FakeTesting{
-		FakeName: name,
+		FakeName: testName,
 	}
 
 	// Base setup
@@ -107,7 +108,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	client, network := interchaintest.DockerSetup(fakeT)
 
 	// setup a relayer if we have IBC paths to use.
-	if len(ibcpaths) > 0 {
+	if len(ibcpaths) > 0 || len(icsPair) > 0 {
 		rlyCfg := config.Relayer
 
 		relayerType, relayerName := ibc.CosmosRly, "relay"
@@ -130,9 +131,42 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		LinkIBCPaths(ibcpaths, chains, ic, relayer)
 	}
 
+	// Add Interchain Security chain pairs together
+	icsProviderPaths := make(map[string]ibc.Chain)
+	if len(icsPair) > 0 {
+		for provider, consumers := range icsPair {
+			var p, c ibc.Chain
+
+			// a provider can have multiple consumers
+			for _, consumer := range consumers {
+				for _, chain := range chains {
+					if chain.Config().ChainID == provider {
+						p = chain
+					}
+					if chain.Config().ChainID == consumer {
+						c = chain
+					}
+				}
+			}
+
+			pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
+
+			logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
+
+			icsProviderPaths[pathName] = p
+
+			ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
+				Provider: p,
+				Consumer: c,
+				Relayer:  relayer,
+				Path:     pathName,
+			})
+		}
+	}
+
 	// Build all chains & begin.
 	err = ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:         name,
+		TestName:         testName,
 		Client:           client,
 		NetworkID:        network,
 		SkipPathCreation: false,
@@ -163,6 +197,19 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
 			chainID := cosmosChain.Config().ChainID
 			vals[chainID] = cosmosChain.Validators
+		}
+	}
+
+	// ICS provider setup
+	if len(icsProviderPaths) > 0 {
+		logger.Info("ICS provider setup", zap.Any("icsProviderPaths", icsProviderPaths))
+
+		for ibcPath, chain := range icsProviderPaths {
+			if provider, ok := chain.(*cosmos.CosmosChain); ok {
+				if err := provider.FinishICSProviderSetup(ctx, relayer, eRep, ibcPath); err != nil {
+					log.Fatal("FinishICSProviderSetup", err)
+				}
+			}
 		}
 	}
 
@@ -203,4 +250,14 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		log.Fatal("WaitForBlocks StartChain: ", err)
 	}
+}
+
+func GetTestName(chainCfgFile string) string {
+	name := chainCfgFile
+	fExt := path.Ext(name)
+	if fExt != "" {
+		name = strings.ReplaceAll(chainCfgFile, fExt, "")
+	}
+
+	return name + "ic"
 }

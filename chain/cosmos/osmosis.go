@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
 // OsmosisPoolParams defines parameters for creating an osmosis gamm liquidity pool

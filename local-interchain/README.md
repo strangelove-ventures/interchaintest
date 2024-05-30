@@ -24,7 +24,7 @@ Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for i
 
 ## Running
 
-- Copy: `cp ./configs/base_ibc.json ./configs/mytest1_ignored.json`
+- Copy: `cp ./chains/base_ibc.json ./chains/mytest1_ignored.json`
 - Run: `local-ic start mytest1_ignored.json [flags]`
 - Run in different directory: `ICTEST_HOME=/root/local-interchain local-ic start myother_ignored.json [flags]`
 
@@ -119,7 +119,6 @@ Here is a base chain template with every feature the configuration accepts. Acco
     "ibc_paths": ["juno-ibc-1"],
     "debugging": true,
     "block_time": "500ms",
-    "encoding-options": ["juno"],
     "host_port_override": {
         "26656": "26656",
         "26657": "26657",

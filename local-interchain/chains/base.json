@@ -8,7 +8,8 @@
             "bech32_prefix": "juno",
             "docker_image": {
                 "repository": "ghcr.io/cosmoscontracts/juno",
-                "version": "v17.0.0"
+                "version": "v17.0.0",
+                "uid-gid": "1000:1000"
             },
             "gas_prices": "0%DENOM%",
             "chain_type": "cosmos",
@@ -19,7 +20,6 @@
             "number_node": 0,
             "debugging": true,
             "block_time": "5000ms",
-            "encoding-options": ["juno"],
             "host_port_override": {
                 "26657": "26657",
                 "1317": "1317",

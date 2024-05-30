@@ -1,0 +1,28 @@
+{
+    "chains": [
+        {
+            "name": "osmosis",
+            "chain_id": "localosmo-1",
+            "denom": "uosmo",
+            "binary": "osmosisd",
+            "bech32_prefix": "osmo",
+            "docker_image": {
+                "version": "v25.0.0"
+            },
+            "ibc_paths": ["osmo-ibc-1"]
+        },
+        {
+            "name": "osmosis",
+            "chain_id": "localosmo-2",
+            "denom": "uosmo",
+            "binary": "osmosisd",
+            "bech32_prefix": "osmo",
+            "docker_image": {
+                "version": "v25.0.0"
+            },
+            "ibc_paths": ["osmo-ibc-1"]
+        }
+    ]
+}
+
+

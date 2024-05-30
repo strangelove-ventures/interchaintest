@@ -1,7 +1,9 @@
 package ibc
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -10,6 +12,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -22,6 +26,8 @@ type ChainConfig struct {
 	ChainID string `yaml:"chain-id"`
 	// Docker images required for running chain nodes.
 	Images []DockerImage `yaml:"images"`
+	// https://github.com/informalsystems/CometMock usage.
+	CometMock CometMockConfig `yaml:"comet-mock-image"`
 	// Binary to execute for the chain node daemon.
 	Bin string `yaml:"bin"`
 	// Bech32 prefix for chain addresses, e.g. cosmos.
@@ -46,8 +52,8 @@ type ChainConfig struct {
 	PreGenesis func(ChainConfig) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
-	// Modify genesis-amounts
-	ModifyGenesisAmounts func() (sdk.Coin, sdk.Coin)
+	// Modify genesis-amounts for the validator at the given index
+	ModifyGenesisAmounts func(int) (sdk.Coin, sdk.Coin)
 	// Override config parameters for files at filepath.
 	ConfigFileOverrides map[string]any
 	// Non-nil will override the encoding config, used for cosmos chains only.
@@ -56,10 +62,16 @@ type ChainConfig struct {
 	UsingChainIDFlagCLI bool `yaml:"using-chain-id-flag-cli"`
 	// Configuration describing additional sidecar processes.
 	SidecarConfigs []SidecarConfig
+	// Configuration describing additional interchain security options.
+	InterchainSecurityConfig ICSConfig
 	// CoinDecimals for the chains base micro/nano/atto token configuration.
 	CoinDecimals *int64
-	//HostPortOverride exposes ports to the host
+	// HostPortOverride exposes ports to the host.
+	// To avoid port binding conflicts, ports are only exposed on the 0th validator.
 	HostPortOverride map[int]int `yaml:"host-port-override"`
+	// ExposeAdditionalPorts exposes each port id to the host on a random port. ex: "8080/tcp"
+	// Access the address with ChainNode.GetHostAddress
+	ExposeAdditionalPorts []string
 	// Additional start command arguments
 	AdditionalStartArgs []string
 	// Environment variables for chain nodes
@@ -77,12 +89,21 @@ func (c ChainConfig) Clone() ChainConfig {
 	copy(sidecars, c.SidecarConfigs)
 	x.SidecarConfigs = sidecars
 
+	additionalPorts := make([]string, len(c.ExposeAdditionalPorts))
+	copy(additionalPorts, c.ExposeAdditionalPorts)
+	x.ExposeAdditionalPorts = additionalPorts
+
 	if c.CoinDecimals != nil {
 		coinDecimals := *c.CoinDecimals
 		x.CoinDecimals = &coinDecimals
 	}
 
 	return x
+}
+
+func (c ChainConfig) UsesCometMock() bool {
+	img := c.CometMock.Image
+	return img.Repository != "" && img.Version != ""
 }
 
 func (c ChainConfig) VerifyCoinType() (string, error) {
@@ -125,6 +146,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.Images = append([]DockerImage(nil), other.Images...)
 	}
 
+	if other.UsesCometMock() {
+		c.CometMock = other.CometMock
+	}
+
 	if other.Bin != "" {
 		c.Bin = other.Bin
 	}
@@ -145,7 +170,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasPrices = other.GasPrices
 	}
 
-	if other.GasAdjustment > 0 && c.GasAdjustment == 0 {
+	if other.GasAdjustment > 0 {
 		c.GasAdjustment = other.GasAdjustment
 	}
 
@@ -190,6 +215,14 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.Env = append(c.Env, other.Env...)
 	}
 
+	if len(other.ExposeAdditionalPorts) > 0 {
+		c.ExposeAdditionalPorts = append(c.ExposeAdditionalPorts, other.ExposeAdditionalPorts...)
+	}
+
+	if other.InterchainSecurityConfig != (ICSConfig{}) {
+		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
 	return c
 }
 
@@ -227,9 +260,14 @@ type SidecarConfig struct {
 }
 
 type DockerImage struct {
-	Repository string `yaml:"repository"`
-	Version    string `yaml:"version"`
-	UidGid     string `yaml:"uid-gid"`
+	Repository string `json:"repository" yaml:"repository"`
+	Version    string `json:"version" yaml:"version"`
+	UidGid     string `json:"uid-gid" yaml:"uid-gid"`
+}
+
+type CometMockConfig struct {
+	Image       DockerImage `yaml:"image"`
+	BlockTimeMs int         `yaml:"block-time"`
 }
 
 func NewDockerImage(repository, version, uidGid string) DockerImage {
@@ -274,6 +312,20 @@ func (i DockerImage) Ref() string {
 	}
 
 	return i.Repository + ":" + i.Version
+}
+
+func (i DockerImage) PullImage(ctx context.Context, client *client.Client) error {
+	ref := i.Ref()
+	_, _, err := client.ImageInspectWithRaw(ctx, ref)
+	if err != nil {
+		rc, err := client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		if err != nil {
+			return fmt.Errorf("pull image %s: %w", ref, err)
+		}
+		_, _ = io.Copy(io.Discard, rc)
+		_ = rc.Close()
+	}
+	return nil
 }
 
 type WalletAmount struct {
@@ -345,4 +397,19 @@ const (
 type ChannelFilter struct {
 	Rule        string
 	ChannelList []string
+}
+
+type PathUpdateOptions struct {
+	ChannelFilter *ChannelFilter
+	SrcClientID   *string
+	SrcConnID     *string
+	SrcChainID    *string
+	DstClientID   *string
+	DstConnID     *string
+	DstChainID    *string
+}
+
+type ICSConfig struct {
+	ProviderVerOverride string `yaml:"provider,omitempty" json:"provider,omitempty"`
+	ConsumerVerOverride string `yaml:"consumer,omitempty" json:"consumer,omitempty"`
 }

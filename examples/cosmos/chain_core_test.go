@@ -25,9 +25,9 @@ import (
 )
 
 var (
-	numVals      = 1
-	numFullNodes = 0
-	genesisAmt   = sdkmath.NewInt(10_000_000_000)
+	numValsOne       = 1
+	numFullNodesZero = 0
+	genesisAmt       = sdkmath.NewInt(10_000_000_000)
 
 	mnemonic = "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
 
@@ -84,9 +84,8 @@ func TestCoreSDKCommands(t *testing.T) {
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 				GasAdjustment: 1.5,
 			},
-
-			NumValidators: &numVals,
-			NumFullNodes:  &numFullNodes,
+			NumValidators: &numValsOne,
+			NumFullNodes:  &numFullNodesZero,
 		},
 	})
 
@@ -559,7 +558,7 @@ func testGov(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users
 	require.EqualValues(t, v.Options[0].Option, govv1.VoteOption_VOTE_OPTION_YES)
 
 	// pass vote with all validators
-	err = chain.VoteOnProposalAllValidators(ctx, "1", "yes")
+	err = chain.VoteOnProposalAllValidators(ctx, 1, "yes")
 	require.NoError(t, err)
 
 	// GovQueryProposalsV1

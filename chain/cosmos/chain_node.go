@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,21 +25,27 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
+	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
@@ -53,6 +61,7 @@ type ChainNode struct {
 	GrpcConn     *grpc.ClientConn
 	TestName     string
 	Image        ibc.DockerImage
+	preStartNode func(*ChainNode)
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -63,10 +72,11 @@ type ChainNode struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
-	hostRPCPort  string
-	hostAPIPort  string
-	hostGRPCPort string
-	hostP2PPort  string
+	hostRPCPort   string
+	hostAPIPort   string
+	hostGRPCPort  string
+	hostP2PPort   string
+	cometHostname string
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -88,6 +98,12 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 	return tn
 }
 
+// WithPreStartNode sets the preStartNode function for the ChainNode
+func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode {
+	tn.preStartNode = preStartNode
+	return tn
+}
+
 // ChainNodes is a collection of ChainNode
 type ChainNodes []*ChainNode
 
@@ -99,6 +115,8 @@ const (
 	grpcPort    = "9090/tcp"
 	apiPort     = "1317/tcp"
 	privValPort = "1234/tcp"
+
+	cometMockRawPort = "22331"
 )
 
 var (
@@ -198,13 +216,15 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	var nodeType string
+	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+}
+
+func (tn *ChainNode) NodeType() string {
+	nodeType := "fn"
 	if tn.Validator {
 		nodeType = "val"
-	} else {
-		nodeType = "fn"
 	}
-	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, nodeType, tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+	return nodeType
 }
 
 func (tn *ChainNode) ContainerID() string {
@@ -214,6 +234,11 @@ func (tn *ChainNode) ContainerID() string {
 // hostname of the test node container
 func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
+}
+
+// hostname of the comet mock container
+func (tn *ChainNode) HostnameCometMock() string {
+	return tn.cometHostname
 }
 
 func (tn *ChainNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
@@ -229,6 +254,25 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 	err := tn.WriteFile(ctx, content, "config/genesis.json")
 	if err != nil {
 		return fmt.Errorf("overwriting genesis.json: %w", err)
+	}
+
+	return nil
+}
+
+func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	if err != nil {
+		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
+	}
+
+	return gen, nil
+}
+
+func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) error {
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, "config/priv_validator_key.json", content); err != nil {
+		return fmt.Errorf("overwriting priv_validator_key.json: %w", err)
 	}
 
 	return nil
@@ -302,6 +346,10 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	if tn.Chain.Config().UsesCometMock() {
+		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
+	}
+
 	rpc["allowed_origins"] = []string{"*"}
 
 	c["rpc"] = rpc
@@ -504,6 +552,19 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
 		return "", err
 	}
+	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
+	stdout, _, err = tn.ExecQuery(ctx, "tx", output.TxHash)
+	if err != nil {
+		return "", err
+	}
+	output = CosmosTx{}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return "", err
+	}
+	if output.Code != 0 {
+		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
+	}
 	return output.TxHash, nil
 }
 
@@ -528,8 +589,15 @@ func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.
 // Will include additional flags for node URL, home directory, and chain ID.
 func (tn *ChainNode) NodeCommand(command ...string) []string {
 	command = tn.BinCommand(command...)
+
+	endpoint := fmt.Sprintf("tcp://%s:26657", tn.HostName())
+
+	if tn.Chain.Config().UsesCometMock() {
+		endpoint = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
+	}
+
 	return append(command,
-		"--node", fmt.Sprintf("tcp://%s:26657", tn.HostName()),
+		"--node", endpoint,
 	)
 }
 
@@ -674,6 +742,24 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	return tn.HasCommand(ctx, "genesis")
 }
 
+// ICSVersion returns the version of interchain-security the binary was built with.
+// If it doesn't depend on interchain-security, it returns an empty string.
+func (tn *ChainNode) ICSVersion(ctx context.Context) string {
+	if strings.HasPrefix(tn.Chain.Config().Bin, "interchain-security") {
+		// This isn't super pretty, but it's the best we can do for an interchain-security binary.
+		// It doesn't depend on itself, and the version command doesn't actually output a version.
+		// Ideally if you have a binary called something like "v3.3.0-my-fix" you can use it as a version, since the v3.3.0 part is in it.
+		return semver.Canonical(tn.Image.Version)
+	}
+	info := tn.GetBuildInformation(ctx)
+	for _, dep := range info.BuildDeps {
+		if strings.HasPrefix(dep.Parent, "github.com/cosmos/interchain-security") {
+			return semver.Canonical(dep.Version)
+		}
+	}
+	return ""
+}
+
 // AddGenesisAccount adds a genesis account for each key
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []sdk.Coin) error {
 	amount := ""
@@ -719,8 +805,11 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 	}
 
 	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
+		"--gas-prices", tn.Chain.Config().GasPrices,
+		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
 		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID)
+		"--chain-id", tn.Chain.Config().ChainID,
+	)
 
 	_, _, err := tn.ExecBin(ctx, command...)
 	return err
@@ -771,6 +860,27 @@ func (tn *ChainNode) SendIBCTransfer(
 		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
+}
+
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	return tn.ExecTx(ctx, keyName,
+		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
+		"--gas", "auto",
+	)
 }
 
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {
@@ -987,12 +1097,54 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 	}
 
+	if chainCfg.UsesCometMock() {
+		abciAppAddr := fmt.Sprintf("tcp://%s:26658", tn.HostName())
+		connectionMode := "grpc"
+
+		cmd = append(cmd, "--with-tendermint=false", fmt.Sprintf("--transport=%s", connectionMode), fmt.Sprintf("--address=%s", abciAppAddr))
+
+		blockTime := chainCfg.CometMock.BlockTimeMs
+		if blockTime <= 0 {
+			blockTime = 100
+		}
+		blockTimeFlag := fmt.Sprintf("--block-time=%d", blockTime)
+
+		defaultListenAddr := fmt.Sprintf("tcp://0.0.0.0:%s", cometMockRawPort)
+		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
+
+		containerName := fmt.Sprintf("cometmock-%s-%d", tn.Name(), rand.Intn(50_000))
+		tn.Sidecars = append(tn.Sidecars, &SidecarProcess{
+			ProcessName:      containerName,
+			validatorProcess: true,
+			Image:            chainCfg.CometMock.Image,
+			preStart:         true,
+			startCmd:         []string{"cometmock", blockTimeFlag, abciAppAddr, genesisFile, defaultListenAddr, tn.HomeDir(), connectionMode},
+			ports: nat.PortMap{
+				nat.Port(cometMockRawPort): {},
+			},
+			Chain:              tn.Chain,
+			TestName:           tn.TestName,
+			VolumeName:         tn.VolumeName,
+			DockerClient:       tn.DockerClient,
+			NetworkID:          tn.NetworkID,
+			Index:              tn.Index,
+			homeDir:            tn.HomeDir(),
+			log:                tn.log,
+			env:                chainCfg.Env,
+			containerLifecycle: dockerutil.NewContainerLifecycle(tn.log, tn.DockerClient, containerName),
+		})
+	}
+
 	usingPorts := nat.PortMap{}
 	for k, v := range sentryPorts {
 		usingPorts[k] = v
 	}
+	for _, port := range chainCfg.ExposeAdditionalPorts {
+		usingPorts[nat.Port(port)] = []nat.PortBinding{}
+	}
 
-	if tn.Index == 0 && chainCfg.HostPortOverride != nil {
+	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
+	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
 		for intP, extP := range chainCfg.HostPortOverride {
 			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
 				{
@@ -1008,6 +1160,8 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {
+	rpcOverrideAddr := ""
+
 	for _, s := range tn.Sidecars {
 		err := s.containerLifecycle.Running(ctx)
 
@@ -1019,7 +1173,27 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 			if err := s.StartContainer(ctx); err != nil {
 				return err
 			}
+
+			if s.Image.Repository == tn.Chain.Config().CometMock.Image.Repository {
+				hostPorts, err := s.containerLifecycle.GetHostPorts(ctx, cometMockRawPort+"/tcp")
+				if err != nil {
+					return err
+				}
+
+				rpcOverrideAddr = hostPorts[0]
+				tn.cometHostname = s.HostName()
+
+				tn.log.Info(
+					"Using comet mock as RPC override",
+					zap.String("RPC host port override", rpcOverrideAddr),
+					zap.String("comet mock hostname", tn.cometHostname),
+				)
+			}
 		}
+	}
+
+	if tn.preStartNode != nil {
+		tn.preStartNode(tn)
 	}
 
 	if err := tn.containerLifecycle.StartContainer(ctx); err != nil {
@@ -1033,6 +1207,11 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 	}
 	tn.hostRPCPort, tn.hostGRPCPort, tn.hostAPIPort, tn.hostP2PPort = hostPorts[0], hostPorts[1], hostPorts[2], hostPorts[3]
 
+	// Override the default RPC behavior if Comet Mock is being used.
+	if tn.cometHostname != "" {
+		tn.hostRPCPort = rpcOverrideAddr
+	}
+
 	err = tn.NewClient("tcp://" + tn.hostRPCPort)
 	if err != nil {
 		return err
@@ -1044,7 +1223,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
@@ -1222,22 +1401,21 @@ func (tn *ChainNode) logger() *zap.Logger {
 // RegisterICA will attempt to register an interchain account on the counterparty chain.
 func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
 	return tn.ExecTx(ctx, keyName,
-		"intertx", "register",
-		"--connection-id", connectionID,
+		"interchain-accounts", "controller", "register", connectionID,
 	)
 }
 
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
-		"intertx", "interchainaccounts", connectionID, address,
+		"interchain-accounts", "controller", "interchain-account", address, connectionID,
 	)
 	if err != nil {
 		return "", err
 	}
 
 	// at this point stdout should look like this:
-	// interchain_account_address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
+	// address: cosmos1p76n3mnanllea4d3av0v0e42tjj03cae06xq8fwn9at587rqp23qvxsv0j
 	// we split the string at the : and then just grab the address before returning.
 	parts := strings.SplitN(string(stdout), ":", 2)
 	if len(parts) < 2 {
@@ -1246,27 +1424,57 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 	return strings.TrimSpace(parts[1]), nil
 }
 
+// SendICATx sends an interchain account transaction for a specified address and sends it to the specified
+// interchain account.
+func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
+	cdc := codec.NewProtoCodec(registry)
+	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)
+	if err != nil {
+		return "", err
+	}
+
+	icaPacketData := icatypes.InterchainAccountPacketData{
+		Type: icatypes.EXECUTE_TX,
+		Data: icaPacketDataBytes,
+		Memo: icaTxMemo,
+	}
+
+	if err := icaPacketData.ValidateBasic(); err != nil {
+		return "", err
+	}
+
+	icaPacketBytes, err := cdc.MarshalJSON(&icaPacketData)
+	if err != nil {
+		return "", err
+	}
+
+	return tn.ExecTx(ctx, keyName, "interchain-accounts", "controller", "send-tx", connectionID, string(icaPacketBytes))
+}
+
 // SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
 // interchain account.
 func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	msg, err := json.Marshal(map[string]any{
-		"@type":        "/cosmos.bank.v1beta1.MsgSend",
-		"from_address": fromAddr,
-		"to_address":   amount.Address,
-		"amount": []map[string]any{
-			{
-				"denom":  amount.Denom,
-				"amount": amount.Amount.String(),
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+	fromAddress := sdk.MustAccAddressFromBech32(fromAddr)
+	toAddress := sdk.MustAccAddressFromBech32(amount.Address)
+	coin := sdk.NewCoin(amount.Denom, amount.Amount)
+	msg := banktypes.NewMsgSend(fromAddress, toAddress, sdk.NewCoins(coin))
+	msgs := []sdk.Msg{msg}
 
-	_, err = tn.ExecTx(ctx, fromAddr,
-		"intertx", "submit", string(msg),
-		"--connection-id", connectionID,
-	)
+	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
+	icaTxMemo := "ica bank transfer"
+	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
 	return err
+}
+
+// GetHostAddress returns the host-accessible url for a port in the container.
+// This is useful for finding the url & random host port for ports exposed via ChainConfig.ExposeAdditionalPorts
+func (tn *ChainNode) GetHostAddress(ctx context.Context, portID string) (string, error) {
+	ports, err := tn.containerLifecycle.GetHostPorts(ctx, portID)
+	if err != nil {
+		return "", err
+	}
+	if len(ports) == 0 || ports[0] == "" {
+		return "", fmt.Errorf("no port with id '%s' found", portID)
+	}
+	return "http://" + ports[0], nil
 }

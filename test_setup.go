@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/version"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
@@ -24,7 +23,7 @@ const (
 // are retained or deleted following a test failure.
 //
 // The value is false by default, but can be initialized to true by setting the
-// environment variable IBCTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
+// environment variable ICTEST_SKIP_FAILURE_CLEANUP to a non-empty value.
 // Alternatively, importers of the interchaintest package may call KeepDockerVolumesOnFailure(true).
 func KeepDockerVolumesOnFailure(b bool) {
 	dockerutil.KeepVolumesOnFailure = b
@@ -74,7 +73,7 @@ func StartChainPair(
 		TestName:          t.Name(),
 		Client:            cli,
 		NetworkID:         networkID,
-		GitSha:            version.GitSha,
+		GitSha:            GitSha,
 		BlockDatabaseFile: blockSqlite,
 	}); err != nil {
 		return nil, err

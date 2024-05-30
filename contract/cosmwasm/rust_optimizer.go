@@ -54,7 +54,7 @@ func (c *Contract) Compile() *Contract {
 		// Form the path to the artifacts directory, used for checksum.txt and package.wasm
 		artifactsPath := filepath.Join(repoPathFull, "artifacts")
 
-		// Parse the checksums.txt for the crate/wasm binary name
+		// Parse the checksums.txt for the create/wasm binary name
 		checksumsPath := filepath.Join(artifactsPath, "checksums.txt")
 		checksumsBz, err := os.ReadFile(checksumsPath)
 		if err != nil {

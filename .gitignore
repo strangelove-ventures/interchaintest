@@ -5,3 +5,9 @@ interchaintest.test
 /bin
 vendor
 examples/hyperspace/exported_state.json
+
+go.work.sum
+
+# testing generation
+local-interchain/interchain/types/chains
+local-interchain/interchain/types/configs

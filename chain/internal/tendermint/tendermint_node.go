@@ -18,8 +18,8 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 )
@@ -203,6 +203,9 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 	// Enable public RPC
 	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	if tn.Chain.Config().UsesCometMock() {
+		rpc["laddr"] = "tcp://0.0.0.0:22331"
+	}
 
 	c["rpc"] = rpc
 
@@ -289,7 +292,7 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 			// tn.t.Log(err)
 			return err
 		}
-		// TODO: reenable this check, having trouble with it for some reason
+		// TODO: re-enable this check, having trouble with it for some reason
 		if stat != nil && stat.SyncInfo.CatchingUp {
 			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)

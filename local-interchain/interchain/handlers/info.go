@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
+	util "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	types "github.com/strangelove-ventures/localinterchain/interchain/types"
-	util "github.com/strangelove-ventures/localinterchain/interchain/util"
 )
 
 type info struct {
@@ -57,9 +57,9 @@ func NewInfo(
 }
 
 type GetInfo struct {
-	Logs   types.MainLogs `json:"logs"`
-	Chains []types.Chain  `json:"chains"`
-	Relay  types.Relayer  `json:"relayer"`
+	Logs   types.MainLogs `json:"logs" yaml:"logs"`
+	Chains []types.Chain  `json:"chains" yaml:"chains"`
+	Relay  types.Relayer  `json:"relayer" yaml:"relayer"`
 }
 
 func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {

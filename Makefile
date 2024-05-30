@@ -11,7 +11,7 @@ help: ## Print this help message
 
 .PHONY: interchaintest
 interchaintest: gen ## Build interchaintest binary into ./bin
-	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v8/internal/version.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
+	go test -ldflags "-X github.com/strangelove-ventures/interchaintest/v8/interchaintest.GitSha=$(shell git describe --always --dirty)" -c -o ./bin/interchaintest ./cmd/interchaintest
 
 .PHONY: test
 test: ## Run unit tests
@@ -29,6 +29,11 @@ docker-mac-nuke: ## macOS only. Try docker-reset first. Kills and restarts Docke
 .PHONY: gen
 gen: ## Run code generators
 	go generate ./...
+
+.PHONY: mod-tidy
+mod-tidy: ## Run mod tidy
+	go mod tidy
+	cd local-interchain && go mod tidy
 
 .PHONY: proto-gen
 proto-gen: ## Generate code from protos

@@ -14,8 +14,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	cosmosChain "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/wasm"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -29,7 +29,7 @@ import (
 // the ICQ module is required to be present in order to receive interchain queries.
 func TestInterchainQueriesWASM(t *testing.T) {
 	//TODO (1): force relayer to use specific versions of the chains configured in the file.
-	//os.Setenv("IBCTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
+	//os.Setenv("ICTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
 
 	//TODO (2): use Juno as sender "ghcr.io/strangelove-ventures/heighliner/juno:v10.1.0"
 	//and Strangelove's icqd (or another chain with ICQ module present) as receiver.
@@ -217,7 +217,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		func() {
 			err := r.StopRelayer(ctx, eRep)
 			if err != nil {
-				t.Logf("an error occured while stopping the relayer: %s", err)
+				t.Logf("an error occurred while stopping the relayer: %s", err)
 			}
 		},
 	)

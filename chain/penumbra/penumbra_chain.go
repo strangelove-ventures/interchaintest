@@ -20,8 +20,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/internal/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -174,7 +174,7 @@ func (c *PenumbraChain) RecoverKey(ctx context.Context, name, mnemonic string) e
 func (c *PenumbraChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	fn := c.getFullNode()
 	if fn.PenumbraAppNode == nil {
-		return nil, fmt.Errorf("no penumbra app nodes configured to retreive an address from")
+		return nil, fmt.Errorf("no penumbra app nodes configured to retrieve an address from")
 	}
 	return fn.PenumbraAppNode.GetAddress(ctx, keyName)
 }

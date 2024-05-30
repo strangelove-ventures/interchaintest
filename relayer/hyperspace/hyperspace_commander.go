@@ -153,7 +153,7 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 }
 
 // Hyperspace does not have paths, just two configs
-func (hyperspaceCommander) UpdatePath(pathName, homeDir string, filter ibc.ChannelFilter) []string {
+func (hyperspaceCommander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
 	panic("[UpdatePath] Do not call me")
 
 }

@@ -2,27 +2,20 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	ictypes "github.com/strangelove-ventures/localinterchain/interchain/types"
-
-	"github.com/tyler-smith/go-bip39"
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
+	ictypes "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 var reader = bufio.NewReader(os.Stdin)
-
-type Chains struct {
-	Chains []ictypes.Chain `json:"chains"`
-}
 
 var newChainCmd = &cobra.Command{
 	Use:     "new-chain <name>",
@@ -33,8 +26,6 @@ var newChainCmd = &cobra.Command{
 		name := strings.TrimSuffix(args[0], ".json")
 		filePath := path.Join(GetDirectory(), "chains", fmt.Sprintf("%s.json", name))
 
-		// while loop to allow for IBC conncetions to work as expected. Else set IBC as []string{}
-
 		text, _ := os.ReadFile(filePath)
 		if len(text) > 0 {
 			value := getOrDefault(fmt.Sprintf("File %s already exist at this location, override?", name), "false")
@@ -43,53 +34,41 @@ var newChainCmd = &cobra.Command{
 			}
 		}
 
-		var config Chains
+		var config types.ChainsConfig
 		var chains []ictypes.Chain
 
-		for i := 1; i < 1000; i++ {
+		for i := 1; i < 20; i++ {
 			fmt.Printf("\n===== Creating new chain #%d =====\n", i)
 
-			c := ictypes.Chain{
-				// Required
-				Name:          getOrDefault("Name", "juno"),
-				ChainID:       getOrDefault("chain_id", "local-1"),
-				Binary:        getOrDefault("App Binary", "junod"),
-				Bech32Prefix:  getOrDefault("Bech32 Prefix", "juno"),
-				GasPrices:     getOrDefault("gas_prices (comma seperated)", "0ujuno,0other"),
-				GasAdjustment: getOrDefault("gas_adjustment", 2.5),
+			name := getOrDefault("Name", "cosmos")
+			chainID := getOrDefault("Chain ID", "localchain-1")
+			binary := getOrDefault("App Binary", "gaiad")
+			bech32 := getOrDefault("Bech32 Prefix", "cosmos")
 
-				// IBCPaths should be unique chain ids?
-				IBCPaths: parseIBCPaths(getOrDefault("IBC Paths", "")),
-				DockerImage: ictypes.DockerImage{
-					Repository: getOrDefault("Docker Repo", "ghcr.io/cosmoscontracts/juno-e2e"),
-					Version:    getOrDefault("Docker Tag/Branch Version", "v15.0.0"),
-					UidGid:     "1000:1000",
-				},
+			c := ictypes.NewChainBuilder(name, chainID, binary, "token", bech32)
 
-				// genesis accounts (juno1...:100ujuno,10uatom;)
+			denom := getOrDefault("Denom", "utoken")
+			c.SetDenom(denom)
+			c.SetGasPrices(getOrDefault("Gas Prices (comma separated)", "0.0"+denom))
 
-				// Spam through enter typically
-				Denom:          getOrDefault("Denom", "ujuno"),
-				TrustingPeriod: getOrDefault("Trusting Period", "112h"),
-				ChainType:      getOrDefault("Chain Type", "cosmos"),
-				CoinType:       getOrDefault("Coin Type", 118),
+			c.SetIBCPaths(parseIBCPaths(getOrDefault("IBC Paths (comma separated)", "")))
 
-				// defaults
-				Debugging:  false,
-				NumberVals: 1,
-				NumberNode: 0,
-				Genesis: ictypes.Genesis{
-					Accounts:        generateRandomAccounts(),
-					Modify:          []cosmos.GenesisKV{},
-					StartupCommands: []string{},
-				},
+			c.SetDockerImage(ibc.DockerImage{
+				Repository: getOrDefault("Docker Repo", "ghcr.io/strangelove-ventures/heighliner/gaia"),
+				Version:    getOrDefault("Docker Tag / Branch Version", "v16.0.0"),
+				UidGid:     "1025:1025",
+			})
+			if i == 0 {
+				c.SetHostPortOverride(types.BaseHostPortOverride())
 			}
 
 			if err := c.Validate(); err != nil {
 				panic(err)
 			}
 
-			chains = append(chains, c)
+			c.SetChainDefaults()
+
+			chains = append(chains, *c)
 
 			res, err := strconv.ParseBool(getOrDefault[string]("\n\n\n === Add more chains? ===", "false"))
 			if err != nil || !res {
@@ -98,43 +77,10 @@ var newChainCmd = &cobra.Command{
 		}
 		config.Chains = chains
 
-		bz, err := json.MarshalIndent(config, "", "  ")
-		if err != nil {
-			panic(err)
-		}
-
-		if err = os.WriteFile(filePath, bz, 0777); err != nil {
+		if err := config.SaveJSON(filePath); err != nil {
 			panic(err)
 		}
 	},
-}
-
-var nonNumeric = regexp.MustCompile("[^0-9]+")
-
-func generateRandomAccounts() []ictypes.GenesisAccount {
-	accounts := []ictypes.GenesisAccount{}
-
-	res := nonNumeric.ReplaceAllString(getOrDefault("Number of accounts to generate", "1"), "")
-	num, err := strconv.Atoi(res)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < num; i++ {
-		entropy, _ := bip39.NewEntropy(256)
-		mnemonic, _ := bip39.NewMnemonic(entropy)
-
-		// load mnemonic into cosmossdk and get the address
-		accounts = append(accounts, ictypes.GenesisAccount{
-			Name:     fmt.Sprintf("account%d", i),
-			Amount:   "100000%DENOM%", // allow user to alter along with keyname?
-			Address:  "",              // TODO:
-			Mnemonic: mnemonic,
-		})
-
-	}
-
-	return accounts
 }
 
 func parseIBCPaths(input string) []string {
