@@ -36,7 +36,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/google/go-cmp v0.6.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/icza/dyno v0.0.0-20220812133438-f0b6f8a18845
 	github.com/libp2p/go-libp2p v0.31.0
 	github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230913220906-b988ea7da0c2
