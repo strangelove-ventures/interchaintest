@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+#
+# docker build . -t local-interchain:local -f Dockerfile.local-interchain
+# docker run -it local-interchain:local
+
+FROM golang:1.22.2
+
+# Set destination for COPY
+WORKDIR /app
+
+COPY go.mod go.sum go.work go.work.sum ./
+RUN go mod tidy
+
+COPY ./local-interchain ./local-interchain
+RUN cd local-interchain && go mod tidy
+
+COPY . ./
+
+# Build
+RUN cd local-interchain && make build
+
+RUN mv ./bin/local-ic /go/bin
+
+EXPOSE 8080
+
+# Run
+CMD ["local-ic"]
