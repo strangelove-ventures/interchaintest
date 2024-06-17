@@ -352,7 +352,10 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, nil)
+	// TODO: remove debug logs before merge
+	env := []string{"RUST_LOG=debug"}
+
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, env)
 }
 
 // StopContainer stops the running container for the PenumbraAppNode.
