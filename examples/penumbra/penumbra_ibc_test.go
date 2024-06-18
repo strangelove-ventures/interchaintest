@@ -20,8 +20,8 @@ import (
 
 // TestPenumbraToPenumbraIBC asserts that basic IBC functionality works between two Penumbra testnet networks.
 // Two instances of Penumbra will be spun up, the relayer will be configured, and an ics-20 token transfer will be
-// sent from chainA -> chainB successfully.
-// At the end another ics-20 transfer will be sent from chainA -> chainB, this transfer will time out.
+// sent from chainA -> chainB successfully. At the end two more ics-20 transfers will be sent from chainA -> chainB,
+// these transfers will time out due to the timeout height and timeout timestamp being reached respectively.
 func TestPenumbraToPenumbraIBC(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -187,9 +187,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 	t.Logf("Bob's balance after transfer: %s", bobBal)
 
-	// TODO: these tests are failing due to an issue with timeouts on Penumbra where funds do not seem to be
-	// moved back to the sender after a timeout. This issue should be resolved before these tests are re-enabled.
-
+	// send ics-20 transfer from chainA -> chainB that will time out due to the timeout timestamp being reached
 	transfer = ibc.WalletAmount{
 		Address: bob.FormattedAddress(),
 		Denom:   chainA.Config().Denom,
@@ -205,7 +203,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
 			NanoSeconds: uint64((time.Duration(1) * time.Minute).Nanoseconds()),
-			Height:      h + 5000,
+			Height:      h + 5000, // use a large value here so only the timestamp is respected
 		},
 		Memo: "",
 	})
@@ -213,6 +211,44 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	// Wait for the packet to time out then restart the relayer.
 	time.Sleep(70 * time.Second)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
+	require.NoError(t, err)
+
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	require.NoError(t, err)
+	t.Logf("Bob's balance after transfer: %s", bobBal)
+
+	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	t.Logf("Alice's balance after transfer: %s", aliceBal)
+
+	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
+
+	// send ics-20 transfer from chainA -> chainB that will time out due to the timeout height being reached
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: uint64((time.Duration(100) * time.Minute).Nanoseconds()), // use a large value here so only height is respected
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	// Wait for the packet to time out then restart the relayer.
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
 
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
