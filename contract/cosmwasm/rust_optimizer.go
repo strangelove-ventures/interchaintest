@@ -1,26 +1,26 @@
 package cosmwasm
 
 import (
-	"path/filepath"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type Contract struct {
-	DockerImage string
-	Version string
-	RelativePath string
+	DockerImage     string
+	Version         string
+	RelativePath    string
 	wasmBinPathChan chan string
-	errChan chan error
+	errChan         chan error
 }
 
 // NewContract return a contract struct, populated with defaults and its relative path
 // relativePath is the relative path to the contract on local machine
 func NewContract(relativePath string) *Contract {
 	return &Contract{
-		DockerImage: "cosmwasm/rust-optimizer",
-		Version: "0.14.0",
+		DockerImage:  "cosmwasm/rust-optimizer",
+		Version:      "0.14.0",
 		RelativePath: relativePath,
 	}
 }
@@ -38,7 +38,8 @@ func (c *Contract) WithVersion(version string) *Contract {
 }
 
 // Compile will compile the contract
-//   cosmwasm/rust-optimizer is the expected docker image
+//
+//	cosmwasm/rust-optimizer is the expected docker image
 func (c *Contract) Compile() *Contract {
 	c.wasmBinPathChan = make(chan string)
 	c.errChan = make(chan error, 1)
