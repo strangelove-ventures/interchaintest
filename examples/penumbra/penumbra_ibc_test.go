@@ -205,7 +205,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
 			NanoSeconds: uint64((time.Duration(1) * time.Minute).Nanoseconds()),
-			Height:      h + 5,
+			Height:      h + 5000,
 		},
 		Memo: "",
 	})
