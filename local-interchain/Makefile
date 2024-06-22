@@ -7,7 +7,8 @@ COMMIT := $(shell git log -1 --format='%H')
 ifeq (,$(VERSION))
   VERSION := $(shell git describe --tags --always)
   ifeq (,$(VERSION))
-    VERSION := $(COMMIT)
+    HEAD := $(shell git rev-parse --abbrev-ref HEAD)
+    VERSION := $(HEAD)-$(COMMIT)
   endif
 endif
 
