@@ -165,7 +165,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(6) * time.Hour)),
 			Height:      h + 50,
 		},
 		Memo: "",
@@ -212,7 +212,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for the packet to time out then restart the relayer.
-	time.Sleep(70 * time.Second)
+	time.Sleep(130 * time.Second)
 
 	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
@@ -428,7 +428,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(6) * time.Hour)),
 			Height:      h + 50,
 		},
 		Memo: "",
@@ -464,10 +464,11 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 		Amount:  transferAmount,
 	}
 
+	// chain B is cosmos which uses a relative timeout instead of absolute
 	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer,
 		ibc.TransferOptions{
 			Timeout: &ibc.IBCTimeout{
-				NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
+				NanoSeconds: uint64((time.Duration(6) * time.Hour).Nanoseconds()),
 				Height:      h + 50,
 			},
 			Memo: "",
