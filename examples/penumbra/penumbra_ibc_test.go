@@ -35,8 +35,9 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name:    "penumbra",
-			Version: "v0.77.2,v0.37.5",
+			Name: "penumbra",
+			// Version: "v0.77.2,v0.37.5",
+			Version: "local,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -44,8 +45,9 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 			NumFullNodes:  &fn,
 		},
 		{
-			Name:    "penumbra",
-			Version: "v0.77.2,v0.37.5",
+			Name: "penumbra",
+			// Version: "v0.77.2,v0.37.5",
+			Version: "local,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraB-0",
 			},
@@ -163,7 +165,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: uint64((time.Duration(30000000) * time.Minute).Nanoseconds()),
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
 			Height:      h + 50,
 		},
 		Memo: "",
@@ -202,7 +204,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: uint64((time.Duration(1) * time.Minute).Nanoseconds()),
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(1) * time.Minute)),
 			Height:      h + 5000, // use a large value here so only the timestamp is respected
 		},
 		Memo: "",
@@ -239,7 +241,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: uint64((time.Duration(100) * time.Minute).Nanoseconds()), // use a large value here so only height is respected
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(100) * time.Minute)), // use a large value here so only height is respected
 			Height:      h + 5,
 		},
 		Memo: "",
@@ -292,7 +294,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "v0.76.0,v0.37.5",
+			Version: "local,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -426,7 +428,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			NanoSeconds: uint64((time.Duration(30000000) * time.Minute).Nanoseconds()),
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
 			Height:      h + 50,
 		},
 		Memo: "",
@@ -453,55 +455,67 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	// TODO: these tests are failing due to an issue with timeouts on Penumbra where funds do not seem to be
 	// moved back to the sender after a timeout. This issue should be resolved before these tests are re-enabled.
 
-	//aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
-	//require.NoError(t, err)
-	//
-	//transfer = ibc.WalletAmount{
-	//	Address: string(aliceAddr),
-	//	Denom:   ibcDenomTrace.IBCDenom(),
-	//	Amount:  transferAmount,
-	//}
-	//
-	//_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{})
-	//require.NoError(t, err)
-	//
-	//err = testutil.WaitForBlocks(ctx, 10, chainA)
-	//require.NoError(t, err)
-	//
-	//aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
-	//require.NoError(t, err)
-	//require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
-	//
-	//bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
-	//require.NoError(t, err)
-	//require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+	aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
+	require.NoError(t, err)
 
-	//transfer = ibc.WalletAmount{
-	//	Address: bob.FormattedAddress(),
-	//	Denom:   chainA.Config().Denom,
-	//	Amount:  transferAmount,
-	//}
-	//
-	//h, err = chainB.Height(ctx)
-	//require.NoError(t, err)
-	//
-	//_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
-	//	Timeout: &ibc.IBCTimeout{
-	//		NanoSeconds: uint64((time.Duration(3) * time.Second).Nanoseconds()),
-	//		Height:      h + 5,
-	//	},
-	//	Memo: "",
-	//})
-	//require.NoError(t, err)
-	//
-	//err = testutil.WaitForBlocks(ctx, 7, chainA)
-	//require.NoError(t, err)
-	//
-	//aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
-	//require.NoError(t, err)
-	//require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
-	//
-	//bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
-	//require.NoError(t, err)
-	//require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+	transfer = ibc.WalletAmount{
+		Address: string(aliceAddr),
+		Denom:   ibcDenomTrace.IBCDenom(),
+		Amount:  transferAmount,
+	}
+
+	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer,
+		ibc.TransferOptions{
+			Timeout: &ibc.IBCTimeout{
+				NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(30000000) * time.Minute)),
+				Height:      h + 50,
+			},
+			Memo: "",
+		})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+
+	transfer = ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainA.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now()),
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+}
+
+// penumbra requires rounding up timeout timestamps to the next minute
+func MinuteRoundedTimeNanos(t time.Time) uint64 {
+	return uint64(t.Add(time.Minute - time.Nanosecond).Truncate(time.Minute).UnixNano())
 }

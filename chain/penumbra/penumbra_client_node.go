@@ -287,6 +287,7 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	// TODO: remove debug output
+	fmt.Printf("Timeout timestamp: %+v \n", timeoutTimestamp)
 	fmt.Printf("Timeout: %+v \n", timeoutHeight)
 	fmt.Printf("Withdrawal: %+v \n", withdrawal)
 
