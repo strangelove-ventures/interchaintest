@@ -405,7 +405,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 // It creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
 // A Balances stream response is obtained from the server.
 // The balances are collected in a slice until the stream is done, or an error occurs.
-// If no balances are found, an error is returned.
 // Otherwise, the first balance in the slice is used to construct a math.Int value and returned.
 // Returns:
 // - math.Int: The balance of the specified denom.
@@ -444,7 +443,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 	}
 
 	if len(balances) <= 0 {
-		return math.Int{}, fmt.Errorf("no balance was found for the denom %s", denom)
+		return math.ZeroInt(), nil
 	}
 
 	balance := balances[0]

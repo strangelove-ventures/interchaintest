@@ -160,7 +160,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	abChan, err := ibc.GetTransferChannel(ctx, r, eRep, chainA.Config().ChainID, chainB.Config().ChainID)
 	require.NoError(t, err)
 
-	h, err := chainA.Height(ctx)
+	h, err := chainB.Height(ctx)
 	require.NoError(t, err)
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
@@ -287,7 +287,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	image := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/ibc-go-simd",
-		Version:    "v8.0.0",
+		Version:    "v8.3.2",
 		UidGid:     "100:1000",
 	}
 
@@ -304,7 +304,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 		{
 			Name:          "ibc-go-simd",
 			ChainName:     "simd",
-			Version:       "v8.0.0",
+			Version:       "v8.3.2",
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
 			ChainConfig: ibc.ChainConfig{
@@ -497,7 +497,44 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
+			// Time out very quickly based on time
 			NanoSeconds: MinuteRoundedTimeNanos(time.Now()),
+			Height:      h + 500000,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	// Wait for the packet to time out then restart the relayer.
+	time.Sleep(130 * time.Second)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
+	require.NoError(t, err)
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, initBalance.Equal(aliceBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, initBalance))
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
+	require.NoError(t, err)
+	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			// Time out very quickly based on blocks
+			NanoSeconds: MinuteRoundedTimeNanos(time.Now().Add(time.Duration(6) * time.Hour)),
 			Height:      h + 5,
 		},
 		Memo: "",
@@ -522,14 +559,19 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
 
 	// Timeout test in the other direction
-	h, err = chainB.Height(ctx)
+	h, err = chainA.Height(ctx)
 	require.NoError(t, err)
 
 	err = r.StopRelayer(ctx, eRep)
 	require.NoError(t, err)
 
+	// Compose IBC token denom information for Chain B's native token denom represented on Chain A
+	chainBIbcDenom := transfertypes.GetPrefixedDenom(abChan.PortID, abChan.ChannelID, chainB.Config().Denom)
+	chainBIbcDenomTrace := transfertypes.ParseDenomTrace(chainBIbcDenom)
+	chainBDenomOnChainA := chainBIbcDenomTrace.IBCDenom()
+
 	transfer = ibc.WalletAmount{
-		Address: bob.FormattedAddress(),
+		Address: string(aliceAddr),
 		Denom:   chainB.Config().Denom,
 		Amount:  transferAmount,
 	}
@@ -537,12 +579,14 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	preTransferBobBal, err := chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
 	require.NoError(t, err)
 
+	t.Logf("Bob's balance before transfer: %s", preTransferBobBal)
+
 	// chain B is cosmos which uses a relative timeout instead of absolute
 	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
-			// Time out very quickly
+			// Time out very quickly based on time
 			NanoSeconds: 100,
-			Height:      h + 5,
+			Height:      h + 100000,
 		},
 		Memo: "",
 	})
@@ -557,17 +601,56 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 10, chainB)
 	require.NoError(t, err)
 
-	// Compose IBC token denom information for Chain B's native token denom represented on Chain A
-	chainBIbcDenom := transfertypes.GetPrefixedDenom(abChan.PortID, abChan.ChannelID, chainB.Config().Denom)
-	chainBIbcDenomTrace := transfertypes.ParseDenomTrace(chainBIbcDenom)
-	chainBDenomOnChainA := chainBIbcDenomTrace.IBCDenom()
-
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
 	require.NoError(t, err)
+	t.Logf("Bob's balance after transfer: %s", bobBal)
 	require.True(t, preTransferBobBal.Equal(bobBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, preTransferBobBal))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainBDenomOnChainA)
-	require.Contains(t, err.Error(), "no balance was found")
+	require.NoError(t, err)
+	require.True(t, aliceBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, math.ZeroInt()))
+
+	h, err = chainA.Height(ctx)
+	require.NoError(t, err)
+	h2, err := chainA.Height(ctx)
+	require.NoError(t, err)
+
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	preTransferBobBal = bobBal
+
+	t.Logf("penumbra height: %d", h)
+	t.Logf("cosmos height: %d", h2)
+	t.Logf("timeout height: %d", h+5)
+	// chain B is cosmos which uses a relative timeout instead of absolute
+	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{
+		AbsoluteTimeouts: true,
+		Timeout: &ibc.IBCTimeout{
+			NanoSeconds: uint64(time.Now().Add(time.Duration(6) * time.Hour).UnixNano()),
+			// Time out very quickly based on blocks
+			Height: h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
+	require.NoError(t, err)
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
+	require.NoError(t, err)
+	t.Logf("Bob's balance after transfer: %s", bobBal)
+	require.True(t, preTransferBobBal.Equal(bobBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, preTransferBobBal))
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainBDenomOnChainA)
+	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, math.ZeroInt()))
 }
 

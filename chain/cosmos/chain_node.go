@@ -852,8 +852,16 @@ func (tn *ChainNode) SendIBCTransfer(
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
 			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
-		} else if options.Timeout.Height > 0 {
+		}
+
+		if options.Timeout.Height > 0 {
 			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
+		}
+
+		if options.AbsoluteTimeouts {
+			// ibc-go doesn't support relative heights for packet timeouts
+			// so the absolute height flag must be manually set:
+			command = append(command, "--absolute-timeouts")
 		}
 	}
 	if options.Memo != "" {
