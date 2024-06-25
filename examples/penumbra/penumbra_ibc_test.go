@@ -452,9 +452,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
-	// TODO: these tests are failing due to an issue with timeouts on Penumbra where funds do not seem to be
-	// moved back to the sender after a timeout. This issue should be resolved before these tests are re-enabled.
-
 	aliceAddr, err := chainA.GetAddress(ctx, alice.KeyName())
 	require.NoError(t, err)
 
@@ -523,6 +520,55 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, math.ZeroInt()))
+
+	// Timeout test in the other direction
+	h, err = chainB.Height(ctx)
+	require.NoError(t, err)
+
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
+	transfer = ibc.WalletAmount{
+		Address: bob.FormattedAddress(),
+		Denom:   chainB.Config().Denom,
+		Amount:  transferAmount,
+	}
+
+	preTransferBobBal, err := chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
+	require.NoError(t, err)
+
+	// chain B is cosmos which uses a relative timeout instead of absolute
+	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{
+		Timeout: &ibc.IBCTimeout{
+			// Time out very quickly
+			NanoSeconds: 100,
+			Height:      h + 5,
+		},
+		Memo: "",
+	})
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 7, chainB)
+	require.NoError(t, err)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainB)
+	require.NoError(t, err)
+
+	// Compose IBC token denom information for Chain B's native token denom represented on Chain A
+	chainBIbcDenom := transfertypes.GetPrefixedDenom(abChan.PortID, abChan.ChannelID, chainB.Config().Denom)
+	chainBIbcDenomTrace := transfertypes.ParseDenomTrace(chainBIbcDenom)
+	chainBDenomOnChainA := chainBIbcDenomTrace.IBCDenom()
+
+	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, preTransferBobBal.Equal(bobBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, preTransferBobBal))
+
+	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainBDenomOnChainA)
+	require.Contains(t, err.Error(), "no balance was found")
+	require.True(t, aliceBal.Equal(math.ZeroInt()), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, math.ZeroInt()))
 }
 
 // penumbra requires rounding up timeout timestamps to the next minute
