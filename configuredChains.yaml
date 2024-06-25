@@ -626,12 +626,8 @@ penumbra:
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/cometbft
       uid-gid: 1025:1025
-    - repository: penumbra
+    - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
       uid-gid: 1025:1025
-    # - repository: ghcr.io/strangelove-ventures/heighliner/cometbft
-    #   uid-gid: 1025:1025
-    # - repository: ghcr.io/strangelove-ventures/heighliner/penumbra
-    #   uid-gid: 1025:1025
 
 persistence:
   name: persistence
