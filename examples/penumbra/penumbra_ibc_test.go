@@ -304,7 +304,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 		{
 			Name:          "ibc-go-simd",
 			ChainName:     "simd",
-			Version:       "main",
+			Version:       "v8.0.0",
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
 			ChainConfig: ibc.ChainConfig{
@@ -495,6 +495,9 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	h, err = chainB.Height(ctx)
 	require.NoError(t, err)
 
+	err = r.StopRelayer(ctx, eRep)
+	require.NoError(t, err)
+
 	_, err = chainA.SendIBCTransfer(ctx, abChan.ChannelID, alice.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
 			NanoSeconds: MinuteRoundedTimeNanos(time.Now()),
@@ -505,6 +508,12 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 7, chainA)
+	require.NoError(t, err)
+
+	err = r.StartRelayer(ctx, eRep, pathName)
+	require.NoError(t, err)
+
+	err = testutil.WaitForBlocks(ctx, 10, chainA)
 	require.NoError(t, err)
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
