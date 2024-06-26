@@ -35,9 +35,8 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name: "penumbra",
-			// Version: "v0.77.2,v0.37.5",
-			Version: "local,v0.37.5",
+			Name:    "penumbra",
+			Version: "v0.78.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -45,9 +44,8 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 			NumFullNodes:  &fn,
 		},
 		{
-			Name: "penumbra",
-			// Version: "v0.77.2,v0.37.5",
-			Version: "local,v0.37.5",
+			Name:    "penumbra",
+			Version: "v0.78.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraB-0",
 			},
@@ -63,8 +61,8 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	chainB := chains[1].(*penumbra.PenumbraChain)
 
 	i := ibc.DockerImage{
-		Repository: "relayer",
-		Version:    "local",
+		Repository: "ghcr.io/cosmos/relayer",
+		Version:    "justin-proto-update",
 		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
@@ -179,7 +177,6 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
-	t.Logf("Alice's balance after transfer: %s", aliceBal)
 
 	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
 	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
@@ -187,7 +184,6 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
-	t.Logf("Bob's balance after transfer: %s", bobBal)
 
 	// send ics-20 transfer from chainA -> chainB that will time out due to the timeout timestamp being reached
 	transfer = ibc.WalletAmount{
@@ -222,13 +218,11 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
-	t.Logf("Bob's balance after transfer: %s", bobBal)
 
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
-	t.Logf("Alice's balance after transfer: %s", aliceBal)
 
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
 
@@ -260,13 +254,11 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
 	require.NoError(t, err)
-	t.Logf("Bob's balance after transfer: %s", bobBal)
 
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainA.Config().Denom)
 	require.NoError(t, err)
-	t.Logf("Alice's balance after transfer: %s", aliceBal)
 
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
 }
@@ -294,7 +286,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:    "penumbra",
-			Version: "local,v0.37.5",
+			Version: "v0.78.0,v0.37.5",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "penumbraA-0",
 			},
@@ -579,8 +571,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	preTransferBobBal, err := chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
 	require.NoError(t, err)
 
-	t.Logf("Bob's balance before transfer: %s", preTransferBobBal)
-
 	// chain B is cosmos which uses a relative timeout instead of absolute
 	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{
 		Timeout: &ibc.IBCTimeout{
@@ -603,7 +593,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
 	require.NoError(t, err)
-	t.Logf("Bob's balance after transfer: %s", bobBal)
 	require.True(t, preTransferBobBal.Equal(bobBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, preTransferBobBal))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainBDenomOnChainA)
@@ -612,7 +601,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	h, err = chainA.Height(ctx)
 	require.NoError(t, err)
-	h2, err := chainA.Height(ctx)
 	require.NoError(t, err)
 
 	err = r.StopRelayer(ctx, eRep)
@@ -620,9 +608,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	preTransferBobBal = bobBal
 
-	t.Logf("penumbra height: %d", h)
-	t.Logf("cosmos height: %d", h2)
-	t.Logf("timeout height: %d", h+5)
 	// chain B is cosmos which uses a relative timeout instead of absolute
 	_, err = chainB.SendIBCTransfer(ctx, abChan.Counterparty.ChannelID, bob.KeyName(), transfer, ibc.TransferOptions{
 		AbsoluteTimeouts: true,
@@ -646,7 +631,6 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainB.Config().Denom)
 	require.NoError(t, err)
-	t.Logf("Bob's balance after transfer: %s", bobBal)
 	require.True(t, preTransferBobBal.Equal(bobBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, preTransferBobBal))
 
 	aliceBal, err = chainA.GetBalance(ctx, alice.KeyName(), chainBDenomOnChainA)
