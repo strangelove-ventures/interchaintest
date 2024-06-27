@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -224,6 +225,14 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 	}
 
 	return c
+}
+
+// WithCodeCoverage enables Go Code Coverage from the chain node directory.
+func (c *ChainConfig) WithCodeCoverage(override ...string) {
+	c.Env = append(c.Env, fmt.Sprintf("GOCOVERDIR=%s", path.Join("/var/cosmos-chain", c.ChainID)))
+	if len(override) > 0 {
+		c.Env = append(c.Env, override[0])
+	}
 }
 
 // IsFullyConfigured reports whether all required fields have been set on c.
