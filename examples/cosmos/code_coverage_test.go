@@ -32,7 +32,7 @@ func TestCodeCoverage(t *testing.T) {
 		ChainID: "manifest-2",
 		Images: []ibc.DockerImage{
 			{
-				Repository: "manifest",
+				Repository: "ghcr.io/liftedinit/manifest-ledger",
 				Version:    "v0.0.1-alpha.10",
 				UidGid:     "1025:1025",
 			},
