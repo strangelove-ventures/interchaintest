@@ -387,8 +387,8 @@ github.com/cosmos/go-bip39 v1.0.0/go.mod h1:RNJv0H/pOIVgxw6KS7QeX2a0Uo0aKUlfhZ4x
 github.com/cosmos/gogogateway v1.2.0 h1:Ae/OivNhp8DqBi/sh2A8a1D0y638GpL3tkmLQAiKxTE=
 github.com/cosmos/gogogateway v1.2.0/go.mod h1:iQpLkGWxYcnCdz5iAdLcRBSw3h7NXeOkZ4GUkT+tbFI=
 github.com/cosmos/gogoproto v1.4.2/go.mod h1:cLxOsn1ljAHSV527CHOtaIP91kK6cCrZETRBrkzItWU=
-github.com/cosmos/gogoproto v1.4.12 h1:vB6Lbe/rtnYGjQuFxkPiPYiCybqFT8QvLipDZP8JpFE=
-github.com/cosmos/gogoproto v1.4.12/go.mod h1:LnZob1bXRdUoqMMtwYlcR3wjiElmlC+FkjaZRv1/eLY=
+github.com/cosmos/gogoproto v1.5.0 h1:SDVwzEqZDDBoslaeZg+dGE55hdzHfgUA40pEanMh52o=
+github.com/cosmos/gogoproto v1.5.0/go.mod h1:iUM31aofn3ymidYG6bUR5ZFrk+Om8p5s754eMUcyp8I=
 github.com/cosmos/iavl v1.1.2 h1:zL9FK7C4L/P4IF1Dm5fIwz0WXCnn7Bp1M2FxH0ayM7Y=
 github.com/cosmos/iavl v1.1.2/go.mod h1:jLeUvm6bGT1YutCaL2fIar/8vGUE8cPZvh/gXEWDaDM=
 github.com/cosmos/ibc-go/modules/capability v1.0.0 h1:r/l++byFtn7jHYa09zlAdSeevo8ci1mVZNO9+V0xsLE=
@@ -869,8 +869,6 @@ github.com/minio/highwayhash v1.0.2 h1:Aak5U0nElisjDCfPSG79Tgzkn2gl66NxOMspRrKnA
 github.com/minio/highwayhash v1.0.2/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
 github.com/minio/sha256-simd v1.0.1 h1:6kaan5IFmwTNynnKKpDHe6FWHohJOHhCPchzK49dzMM=
 github.com/minio/sha256-simd v1.0.1/go.mod h1:Pz6AKMiUdngCLpeTL/RJY1M9rUuPMYujV5xJjtbRSN8=
-github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230913220906-b988ea7da0c2 h1:G/cVeTAbB9S/6FSWWqpFV0v49hiuHLbJPu9hTZ0UR2A=
-github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20230913220906-b988ea7da0c2/go.mod h1:Q5BxOd9FxJqYp4vCiLGVdetecPcWTmUQIu0bRigYosU=
 github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20240603204351-26b456ae3afe h1:0fcCSfvBgbagEsEMkZuxgA3Ex7IN9i1Hon0fwgMLpQw=
 github.com/misko9/go-substrate-rpc-client/v4 v4.0.0-20240603204351-26b456ae3afe/go.mod h1:Q5BxOd9FxJqYp4vCiLGVdetecPcWTmUQIu0bRigYosU=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
