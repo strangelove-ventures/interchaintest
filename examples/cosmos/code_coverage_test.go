@@ -51,7 +51,7 @@ func TestCodeCoverage(t *testing.T) {
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t, zaptest.Level(zapcore.DebugLevel)), []*interchaintest.ChainSpec{
 		{
 			Name:          "manifest",
-			Version:       "local",
+			Version:       cfgA.Images[0].Version,
 			ChainName:     cfgA.ChainID,
 			NumValidators: &vals,
 			NumFullNodes:  &fullNodes,
