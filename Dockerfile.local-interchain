@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+#
+# docker build . -t local-interchain:local -f Dockerfile.local-interchain
+# docker run -it local-interchain:local
+
+FROM golang:1.22.2 as builder
+
+# Set destination for COPY
+WORKDIR /app
+
+COPY go.mod go.sum go.work go.work.sum ./
+RUN go mod tidy
+
+COPY ./local-interchain ./local-interchain
+RUN cd local-interchain && go mod tidy
+
+COPY . ./
+
+# Build
+RUN cd local-interchain && make build
+
+RUN mv ./bin/local-ic /go/bin
+
+# Reduces the size of the final image from 7GB -> 0.1GB
+FROM busybox:1.35.0 as final
+RUN mkdir -p /usr/local/bin
+COPY --from=builder /go/bin/local-ic /usr/local/bin/local-ic
+
+EXPOSE 8080
+
+# Run
+CMD ["local-ic"]
