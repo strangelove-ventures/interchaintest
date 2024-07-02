@@ -253,7 +253,7 @@ func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error
 	command := []string{tn.Chain.Config().Bin, "init", mode,
 		"--home", tn.HomeDir(),
 	}
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 

@@ -537,7 +537,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), nil)
+	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), tn.Chain.Config().Env)
 	if err != nil {
 		return "", err
 	}
@@ -617,7 +617,7 @@ func (tn *ChainNode) BinCommand(command ...string) []string {
 // pass ("keys", "show", "key1") for command to execute the command against the node.
 // Will include additional flags for home directory and chain ID.
 func (tn *ChainNode) ExecBin(ctx context.Context, command ...string) ([]byte, []byte, error) {
-	return tn.Exec(ctx, tn.BinCommand(command...), nil)
+	return tn.Exec(ctx, tn.BinCommand(command...), tn.Chain.Config().Env)
 }
 
 // QueryCommand is a helper to retrieve the full query command. For example,
@@ -636,7 +636,7 @@ func (tn *ChainNode) QueryCommand(command ...string) []string {
 // pass ("gov", "params") for command to execute the query against the node.
 // Returns response in json format.
 func (tn *ChainNode) ExecQuery(ctx context.Context, command ...string) ([]byte, []byte, error) {
-	return tn.Exec(ctx, tn.QueryCommand(command...), nil)
+	return tn.Exec(ctx, tn.QueryCommand(command...), tn.Chain.Config().Env)
 }
 
 // CondenseMoniker fits a moniker into the cosmos character limit for monikers.
@@ -731,7 +731,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -827,7 +827,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -1076,7 +1076,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 
 	command = append(command, "unsafe-reset-all", "--home", tn.HomeDir())
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -1326,7 +1326,7 @@ func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (s
 		command = append(command, "--bech", bech)
 	}
 
-	stdout, stderr, err := tn.Exec(ctx, command, nil)
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
 		return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
 	}
