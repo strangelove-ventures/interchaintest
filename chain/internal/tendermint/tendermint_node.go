@@ -132,12 +132,22 @@ func (tn *TendermintNode) HostName() string {
 }
 
 func (tn *TendermintNode) GenesisFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/genesis.json")
+	gen, err := tn.ReadFile(ctx, "config/genesis.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting genesis.json content: %w", err)
 	}
 
+	return gen, nil
+}
+
+// ReadFile reads the contents of a single file at the specified path in the docker filesystem.
+// relPath describes the location of the file in the docker volume relative to the home directory.
+func (tn *TendermintNode) ReadFile(ctx context.Context, relPath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
+	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, relPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file at %s: %w", relPath, err)
+	}
 	return gen, nil
 }
 
@@ -315,10 +325,9 @@ func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
 	// we only have to tmjson.Unmarshal the raw content.
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	j, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/node_key.json")
+	j, err := tn.ReadFile(ctx, "config/node_key.json")
 	if err != nil {
-		return "", fmt.Errorf("getting node_key.json content: %w", err)
+		return "", fmt.Errorf("getting genesis.json content: %w", err)
 	}
 
 	var nk p2p.NodeKey
