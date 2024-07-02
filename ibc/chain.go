@@ -92,6 +92,7 @@ type Chain interface {
 
 // TransferOptions defines the options for an IBC packet transfer.
 type TransferOptions struct {
-	Timeout *IBCTimeout
-	Memo    string
+	Timeout          *IBCTimeout
+	Memo             string
+	AbsoluteTimeouts bool
 }

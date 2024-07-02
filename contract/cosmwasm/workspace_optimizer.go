@@ -2,26 +2,26 @@ package cosmwasm
 
 import (
 	"bufio"
-	"path/filepath"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type Workspace struct {
-	DockerImage string
-	Version string
-	RelativePath string
+	DockerImage      string
+	Version          string
+	RelativePath     string
 	wasmBinariesChan chan map[string]string
-	errChan chan error
+	errChan          chan error
 }
 
 // NewWorkspace returns a workspace struct, populated with defaults and its relative path
 // relativePath is the relative path to the workspace on local machine
 func NewWorkspace(relativePath string) *Workspace {
 	return &Workspace{
-		DockerImage: "cosmwasm/workspace-optimizer",
-		Version: "0.14.0",
+		DockerImage:  "cosmwasm/workspace-optimizer",
+		Version:      "0.14.0",
 		RelativePath: relativePath,
 	}
 }
@@ -39,7 +39,9 @@ func (w *Workspace) WithVersion(version string) *Workspace {
 }
 
 // Compile will compile the workspace's contracts
-//   cosmwasm/workspace-optimizer is the expected docker image
+//
+//	cosmwasm/workspace-optimizer is the expected docker image
+//
 // The workspace object is returned, call WaitForCompile() to get results
 func (w *Workspace) Compile() *Workspace {
 	w.wasmBinariesChan = make(chan map[string]string)

@@ -2,11 +2,11 @@ package cosmwasm
 
 import (
 	"context"
-	"path/filepath"
 	"fmt"
-	"runtime"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -71,17 +71,17 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	}, &container.HostConfig{
 		Mounts: []mount.Mount{
 			{
-				Type: mount.TypeBind,
+				Type:   mount.TypeBind,
 				Source: repoPathFull,
 				Target: "/code",
 			},
 			{
-				Type: mount.TypeVolume,
-				Source: filepath.Base(repoPathFull)+"_cache",
+				Type:   mount.TypeVolume,
+				Source: filepath.Base(repoPathFull) + "_cache",
 				Target: cacheDir,
 			},
 			{
-				Type: mount.TypeVolume,
+				Type:   mount.TypeVolume,
 				Source: "registry_cache",
 				Target: "/usr/local/cargo/registry",
 			},
