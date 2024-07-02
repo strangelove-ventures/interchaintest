@@ -202,9 +202,9 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 	rpc := make(testutil.Toml)
 
 	// Enable public RPC
-	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	rpc["laddr"] = "tcp://" + dockerutil.GetHostAddress() + ":26657"
 	if tn.Chain.Config().UsesCometMock() {
-		rpc["laddr"] = "tcp://0.0.0.0:22331"
+		rpc["laddr"] = "tcp://" + dockerutil.GetHostAddress() + ":22331"
 	}
 
 	c["rpc"] = rpc

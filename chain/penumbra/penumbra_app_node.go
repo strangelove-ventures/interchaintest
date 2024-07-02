@@ -279,9 +279,9 @@ func (p *PenumbraAppNode) GetAddressBech32m(ctx context.Context, keyName string)
 func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAddress string) error {
 	cmd := []string{
 		"pd", "start",
-		"--abci-bind", "0.0.0.0:" + strings.Split(abciPort, "/")[0],
-		"--grpc-bind", "0.0.0.0:" + strings.Split(grpcPort, "/")[0],
-		"--metrics-bind", "0.0.0.0:" + strings.Split(metricsPort, "/")[0],
+		"--abci-bind", dockerutil.GetHostAddress() + ":" + strings.Split(abciPort, "/")[0],
+		"--grpc-bind", dockerutil.GetHostAddress() + ":" + strings.Split(grpcPort, "/")[0],
+		"--metrics-bind", dockerutil.GetHostAddress() + ":" + strings.Split(metricsPort, "/")[0],
 		"--tendermint-addr", "http://" + tendermintAddress,
 		"--home", p.HomeDir(),
 	}

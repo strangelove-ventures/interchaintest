@@ -108,18 +108,18 @@ func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode 
 type ChainNodes []*ChainNode
 
 const (
-	valKey      = "validator"
-	blockTime   = 2 // seconds
-	p2pPort     = "26656/tcp"
-	rpcPort     = "26657/tcp"
-	grpcPort    = "9090/tcp"
-	apiPort     = "1317/tcp"
-	privValPort = "1234/tcp"
-
+	valKey           = "validator"
+	blockTime        = 2 // seconds
+	p2pPort          = "26656/tcp"
+	rpcPort          = "26657/tcp"
+	grpcPort         = "9090/tcp"
+	apiPort          = "1317/tcp"
+	privValPort      = "1234/tcp"
 	cometMockRawPort = "22331"
 )
 
 var (
+	host        = dockerutil.GetHostAddress() // ICTEST_HOST=A.B.C.D
 	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
@@ -345,7 +345,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	rpc := make(testutil.Toml)
 
 	// Enable public RPC
-	rpc["laddr"] = "tcp://0.0.0.0:26657"
+	rpc["laddr"] = fmt.Sprintf("tcp://%s:26657", host)
 	if tn.Chain.Config().UsesCometMock() {
 		rpc["laddr"] = fmt.Sprintf("tcp://%s:%s", tn.HostnameCometMock(), cometMockRawPort)
 	}
@@ -372,7 +372,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	grpc := make(testutil.Toml)
 
 	// Enable public GRPC
-	grpc["address"] = "0.0.0.0:9090"
+	grpc["address"] = fmt.Sprintf("%s:9090", host)
 
 	a["grpc"] = grpc
 
@@ -381,7 +381,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	// Enable public REST API
 	api["enable"] = true
 	api["swagger"] = true
-	api["address"] = "tcp://0.0.0.0:1317"
+	api["address"] = fmt.Sprintf("tcp://%s:1317", host)
 
 	a["api"] = api
 
@@ -1109,7 +1109,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		}
 		blockTimeFlag := fmt.Sprintf("--block-time=%d", blockTime)
 
-		defaultListenAddr := fmt.Sprintf("tcp://0.0.0.0:%s", cometMockRawPort)
+		defaultListenAddr := fmt.Sprintf("tcp://%s:%s", host, cometMockRawPort)
 		genesisFile := path.Join(tn.HomeDir(), "config", "genesis.json")
 
 		containerName := fmt.Sprintf("cometmock-%s-%d", tn.Name(), rand.Intn(50_000))

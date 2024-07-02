@@ -14,6 +14,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
@@ -86,7 +87,7 @@ func TestEthermintChain(t *testing.T) {
 	}
 
 	jsonRpcOverrides := make(testutil.Toml)
-	jsonRpcOverrides["address"] = "0.0.0.0:8545"
+	jsonRpcOverrides["address"] = dockerutil.GetHostAddress() + ":8545"
 	appTomlOverrides := make(testutil.Toml)
 	appTomlOverrides["json-rpc"] = jsonRpcOverrides
 
