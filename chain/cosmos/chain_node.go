@@ -260,8 +260,7 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 }
 
 func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	gen, err := tn.ReadFile(ctx, "config/priv_validator_key.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
 	}
