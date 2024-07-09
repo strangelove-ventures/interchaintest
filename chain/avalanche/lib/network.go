@@ -40,7 +40,7 @@ func WaitPort(ctx context.Context, host, port string) error {
 	return err
 }
 
-func WaitNode(ctx context.Context, host, port string, logger *zap.Logger) error {
+func WaitNode(ctx context.Context, host, port string, logger *zap.Logger, nodeIndex int, blockchainID string) error {
 	err := WaitPort(ctx, host, port)
 	if err != nil {
 		return err
@@ -54,6 +54,8 @@ func WaitNode(ctx context.Context, host, port string, logger *zap.Logger) error 
 		case <-ctx.Done():
 			return fmt.Errorf("context closed")
 		default:
+			var subnetDone bool
+			var subnetErr error
 			xdone, xerr := client.IsBootstrapped(ctx, "X")
 			if errors.Is(xerr, io.EOF) || errors.Is(xerr, syscall.ECONNREFUSED) {
 				xerr = nil
@@ -66,15 +68,32 @@ func WaitNode(ctx context.Context, host, port string, logger *zap.Logger) error 
 			if errors.Is(cerr, io.EOF) || errors.Is(cerr, syscall.ECONNREFUSED) {
 				cerr = nil
 			}
-			logger.Info(
-				"bootstrap status",
+			if blockchainID != "" {
+				subnetDone, subnetErr = client.IsBootstrapped(ctx, blockchainID)
+				if errors.Is(subnetErr, io.EOF) || errors.Is(subnetErr, syscall.ECONNREFUSED) {
+					subnetErr = nil
+				}
+			}
+			fields := []zap.Field{
+				zap.Int("node", nodeIndex),
 				zap.Boolp("x", &xdone),
 				zap.Boolp("p", &pdone),
 				zap.Boolp("c", &cdone),
+			}
+			if blockchainID != "" {
+				fields = append(fields, zap.Boolp("subnet", &subnetDone))
+			}
+			logger.Info(
+				"bootstrap status",
+				fields...,
 			)
 
 			done = xdone && pdone && cdone
 			err = errors.Join(xerr, perr, cerr)
+			if blockchainID != "" {
+				done = done && subnetDone
+				err = errors.Join(err, subnetErr)
+			}
 			time.Sleep(5 * time.Second)
 		}
 	}

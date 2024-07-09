@@ -31,8 +31,8 @@ type AvalancheSubnetClient interface {
 type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
 
 type AvalancheSubnetConfig struct {
-	Name                string
-	VM                  []byte
+	Name string
+	//VM                  []byte
 	Genesis             []byte
 	SubnetClientFactory AvalancheSubnetClientFactory
 }
@@ -244,6 +244,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.InterchainSecurityConfig != (ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
+	if len(other.AvalancheSubnets) > 0 {
+		c.AvalancheSubnets = other.AvalancheSubnets
 	}
 
 	return c

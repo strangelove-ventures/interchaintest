@@ -179,11 +179,11 @@ func NewAvalancheNode(
 		return nil, fmt.Errorf("failed to write TLS key: %w", err)
 	}
 
-	for _, subnet := range node.options.Subnets {
-		if err := node.WriteFile(ctx, subnet.VM, fmt.Sprintf("plugins/%s", subnet.VmID)); err != nil {
-			return nil, fmt.Errorf("failed to write vm body [%s]: %w", subnet.Name, err)
-		}
-	}
+	//for _, subnet := range node.options.Subnets {
+	//	if err := node.WriteFile(ctx, subnet.VM, fmt.Sprintf("plugins/%s", subnet.VmID)); err != nil {
+	//		return nil, fmt.Errorf("failed to write vm body [%s]: %w", subnet.Name, err)
+	//	}
+	//}
 
 	return node, node.CreateContainer(ctx)
 }
@@ -420,6 +420,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 		"--genesis-file", filepath.Join(n.HomeDir(), "genesis.json"),
 		"--staking-tls-cert-file", filepath.Join(n.HomeDir(), "tls.cert"),
 		"--staking-tls-key-file", filepath.Join(n.HomeDir(), "tls.key"),
+		"--plugin-dir", "/avalanchego/build/plugins",
 	}
 	if bootstrapIps != "" && bootstrapIds != "" {
 		cmd = append(
@@ -447,9 +448,9 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 				netinfo.Name: {
 					NetworkID: netinfo.ID,
 					IPAddress: n.options.PublicIP,
-					//IPAMConfig: &network.EndpointIPAMConfig{
-					//	IPv4Address: n.options.PublicIP,
-					//},
+					IPAMConfig: &network.EndpointIPAMConfig{
+						IPv4Address: n.options.PublicIP,
+					},
 				},
 			},
 		},
@@ -539,6 +540,8 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 
 	time.Sleep(2 * time.Second)
 
+	var chainId string
+
 	for i, subnet := range n.options.Subnets {
 		createSubnetStartTime := time.Now()
 		createSubnetTx, err := pWallet.IssueCreateSubnetTx(owner, common.WithContext(ctx), common.WithAssumeDecided())
@@ -600,10 +603,12 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 			)
 			return err
 		}
+		chainId = createChainTx.ID().String()
+
 		n.logger.Info(
 			"created new chain",
 			zap.String("name", subnet.Name),
-			zap.String("chainID", createChainTx.ID().String()),
+			zap.String("chainID", chainId),
 			zap.Duration("duration", time.Since(createChainStartTime)),
 		)
 
@@ -633,7 +638,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 		return err
 	}
 
-	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger)
+	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger, n.index, chainId)
 }
 
 func (n *AvalancheNode) Start(ctx context.Context, testName string, additionalGenesisWallets []ibc.WalletAmount) error {
@@ -642,5 +647,5 @@ func (n *AvalancheNode) Start(ctx context.Context, testName string, additionalGe
 		return err
 	}
 
-	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger)
+	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger, n.index, "")
 }

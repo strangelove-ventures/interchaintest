@@ -105,7 +105,7 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
 		for i := range c.cfg.AvalancheSubnets {
 			subnetOpts[i].Name = c.cfg.AvalancheSubnets[i].Name
-			subnetOpts[i].VM = c.cfg.AvalancheSubnets[i].VM
+			//subnetOpts[i].VM = c.cfg.AvalancheSubnets[i].VM
 			subnetOpts[i].Genesis = c.cfg.AvalancheSubnets[i].Genesis
 			subnetOpts[i].SCFactory = c.cfg.AvalancheSubnets[i].SubnetClientFactory
 			vmName := make([]byte, 32)
