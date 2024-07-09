@@ -78,6 +78,8 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	name := fmt.Sprintf("interchaintest-%s", RandLowerCaseLetterString(8))
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
 		CheckDuplicate: true,
+		Internal:       false,
+		Attachable:     true,
 
 		Labels: map[string]string{CleanupLabel: t.Name()},
 	})
