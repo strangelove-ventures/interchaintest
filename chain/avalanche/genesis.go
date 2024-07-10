@@ -13,10 +13,15 @@ type (
 		InitialAmount  uint32                `json:"initialAmount"`
 		UnlockSchedule []GenesisLockedAmount `json:"unlockSchedule"`
 	}
+	StakerSigner struct {
+		PublicKey         string `json:"publicKey"`
+		ProofOfPossession string `json:"proofOfPossession"`
+	}
 	GenesisStaker struct {
-		NodeID        string `json:"nodeID"`
-		RewardAddress string `json:"rewardAddress"`
-		DelegationFee uint32 `json:"delegationFee"`
+		NodeID        string       `json:"nodeID"`
+		RewardAddress string       `json:"rewardAddress"`
+		DelegationFee uint32       `json:"delegationFee"`
+		Signer        StakerSigner `json:"signer"`
 	}
 	Genesis struct {
 		NetworkID uint32 `json:"networkID"`

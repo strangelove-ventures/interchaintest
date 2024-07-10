@@ -216,6 +216,8 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 			zap.String("command", strings.Join(cmd, " ")),
 			zap.String("hostname", hostName),
 			zap.String("container", containerName),
+			zap.String("networkID", image.networkID),
+			zap.Strings("binds", opts.Binds),
 		)
 	)
 

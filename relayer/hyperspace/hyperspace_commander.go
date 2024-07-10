@@ -10,9 +10,10 @@ import (
 	types23 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
 )
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
@@ -230,7 +231,7 @@ func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
 	panic("[UpdateClients] Do not use me")
 }
 
-func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (hyperspaceCommander) ConfigContent(ctx context.Context, chain ibc.Chain, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
 	fmt.Println("[hyperspace] ConfigContent", cfg, keyName, rpcAddr, grpcAddr)
 	HyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	bytes, err := toml.Marshal(HyperspaceRelayerChainConfig)

@@ -33,7 +33,7 @@ type Relayer interface {
 	GetWallet(chainID string) (Wallet, bool)
 
 	// add relayer configuration for a chain
-	AddChainConfiguration(ctx context.Context, rep RelayerExecReporter, chainConfig ChainConfig, keyName, rpcAddr, grpcAddr string) error
+	AddChainConfiguration(ctx context.Context, rep RelayerExecReporter, chain Chain, keyName, rpcAddr, grpcAddr string) error
 
 	// generate new path between two chains
 	GeneratePath(ctx context.Context, rep RelayerExecReporter, srcChainID, dstChainID, pathName string) error

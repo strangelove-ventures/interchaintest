@@ -31,7 +31,7 @@ func TestAvalanche(t *testing.T) {
 			Name:    "avalanche",
 			Version: "v1.10.18-ibc",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "neto-123123",
+				ChainID: "1337",
 				Images: []ibc.DockerImage{
 					{
 						Repository: "avalanchego",

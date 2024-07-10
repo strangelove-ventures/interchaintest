@@ -3,9 +3,7 @@ package lib
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
-	"strings"
 )
 
 type ChainID struct {
@@ -14,7 +12,6 @@ type ChainID struct {
 }
 
 var (
-	FormatChainID = regexp.MustCompile(`^([a-zA-Z]+)-(\d+)$`)
 	ErrBadChainID = errors.New("networkID has bad format")
 )
 
@@ -23,16 +20,12 @@ func (cid ChainID) String() string {
 }
 
 func ParseChainID(str string) (*ChainID, error) {
-	if !FormatChainID.Match([]byte(str)) {
-		return nil, ErrBadChainID
-	}
-	raw := strings.Split(str, "-")
-	num, err := strconv.ParseUint(raw[1], 10, 0)
+	num, err := strconv.ParseUint(str, 10, 0)
 	if err != nil {
 		return nil, ErrBadChainID
 	}
 	return &ChainID{
-		Name:   raw[0],
+		Name:   "neto",
 		Number: uint32(num),
 	}, nil
 }

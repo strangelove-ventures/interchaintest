@@ -31,8 +31,8 @@ type AvalancheSubnetClient interface {
 type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
 
 type AvalancheSubnetConfig struct {
-	Name string
-	//VM                  []byte
+	Name                string
+	ChainID             string
 	Genesis             []byte
 	SubnetClientFactory AvalancheSubnetClientFactory
 }

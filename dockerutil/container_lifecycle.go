@@ -145,6 +145,11 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 	c.preStartListeners.CloseAll()
 	c.preStartListeners = []net.Listener{}
 
+	c.log.Info("Starting container",
+		zap.String("container", c.containerName),
+		zap.String("id", c.id),
+	)
+
 	if err := StartContainer(ctx, c.client, c.id); err != nil {
 		return err
 	}

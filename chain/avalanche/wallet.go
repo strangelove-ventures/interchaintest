@@ -1,6 +1,8 @@
 package avalanche
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -8,12 +10,12 @@ var _ ibc.Wallet = &AvalancheWallet{}
 
 type AvalancheWallet struct {
 	mnemonic string
-	address  []byte
+	address  common.Address
 	keyName  string
 	chainCfg ibc.ChainConfig
 }
 
-func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *AvalancheWallet {
+func NewWallet(keyname string, address common.Address, mnemonic string, chainCfg ibc.ChainConfig) *AvalancheWallet {
 	return &AvalancheWallet{
 		mnemonic: mnemonic,
 		address:  address,
@@ -31,10 +33,9 @@ func (w *AvalancheWallet) Mnemonic() string {
 }
 
 func (w *AvalancheWallet) Address() []byte {
-	return w.address
+	return w.address.Bytes()
 }
 
 func (w *AvalancheWallet) FormattedAddress() string {
-	// ToDo: show formatted address
-	panic("ToDo: implement me")
+	return w.address.String()
 }

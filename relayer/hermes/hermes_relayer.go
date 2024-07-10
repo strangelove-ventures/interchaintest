@@ -10,9 +10,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 )
 
 const (
@@ -77,7 +78,8 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 
 // AddChainConfiguration is called once per chain configuration, which means that in the case of hermes, the single
 // config file is overwritten with a new entry each time this function is called.
-func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) error {
+func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExecReporter, chain ibc.Chain, keyName, rpcAddr, grpcAddr string) error {
+	chainConfig := chain.Config()
 	configContent, err := r.configContent(chainConfig, keyName, rpcAddr, grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to generate config content: %w", err)

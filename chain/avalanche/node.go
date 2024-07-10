@@ -20,6 +20,10 @@ import (
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
+	"github.com/avast/retry-go/v4"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
@@ -66,8 +70,10 @@ type (
 	AvalancheNodeCredentials struct {
 		PK      *secp256k1.PrivateKey
 		ID      ids.NodeID
+		NodeIDs []ids.NodeID
 		TLSCert []byte
 		TLSKey  []byte
+		BlsKey  []byte
 	}
 
 	AvalancheNodeSubnetOpts struct {
@@ -175,6 +181,10 @@ func NewAvalancheNode(
 		return nil, fmt.Errorf("failed to write TLS key: %w", err)
 	}
 
+	if err := node.WriteFile(ctx, options.Credentials.BlsKey, "signer.key"); err != nil {
+		return nil, fmt.Errorf("failed to write TLS key: %w", err)
+	}
+
 	if err := node.WriteFile(ctx, vmaliasesData, "configs/vms/aliases.json"); err != nil {
 		return nil, fmt.Errorf("failed to write TLS key: %w", err)
 	}
@@ -266,6 +276,14 @@ func (n *AvalancheNode) GRPCPort() string {
 	panic(errors.New("doesn't support grpc"))
 }
 
+func (n *AvalancheNode) SubnetID() string {
+	return n.options.Subnets[0].subnet.String()
+}
+
+func (n *AvalancheNode) BlockchainID() string {
+	return n.options.Subnets[0].chain.String()
+}
+
 func (n *AvalancheNode) chainClient(id string) (ibc.AvalancheSubnetClient, error) {
 	addr := fmt.Sprintf("http://127.0.0.1:%s", n.RPCPort())
 	strpk := n.options.Credentials.PK.String()
@@ -306,9 +324,7 @@ func (n *AvalancheNode) RecoverKey(ctx context.Context, name, mnemonic string) e
 }
 
 func (n *AvalancheNode) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	// ToDo: get address for keyname
-	// https://github.com/ava-labs/avalanche-docs/blob/c136e8752af23db5214ff82c2153aac55542781b/docs/quickstart/fund-a-local-test-network.md
-	panic("ToDo: implement me")
+	return ethcommon.FromHex("0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"), nil
 }
 
 func (n *AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
@@ -414,12 +430,14 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 	cmd := []string{
 		n.chain.cfg.Bin,
 		"--http-host", "0.0.0.0",
+		"--http-allowed-hosts", "*",
 		"--data-dir", n.HomeDir(),
 		"--public-ip", n.options.PublicIP,
 		"--network-id", n.options.ChainID.String(),
 		"--genesis-file", filepath.Join(n.HomeDir(), "genesis.json"),
 		"--staking-tls-cert-file", filepath.Join(n.HomeDir(), "tls.cert"),
 		"--staking-tls-key-file", filepath.Join(n.HomeDir(), "tls.key"),
+		"--staking-signer-key-file", filepath.Join(n.HomeDir(), "signer.key"),
 		"--plugin-dir", "/avalanchego/build/plugins",
 	}
 	if bootstrapIps != "" && bootstrapIds != "" {
@@ -461,9 +479,9 @@ func (n *AvalancheNode) StartContainer(ctx context.Context, testName string, add
 	return n.containerLifecycle.StartContainer(ctx)
 }
 
-func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
+func (n *AvalancheNode) createSubnetChain(ctx context.Context) (string, string, error) {
 	if len(n.options.Subnets) == 0 {
-		return nil
+		return "", "", nil
 	}
 
 	kc := secp256k1fx.NewKeychain(n.options.Credentials.PK)
@@ -475,7 +493,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 		EthKeychain:  kc,
 	})
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	// Get the P-chain and the X-chain wallets
@@ -513,7 +531,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 			"failed to issue X->P export transaction",
 			zap.Error(err),
 		)
-		return err
+		return "", "", err
 	}
 
 	n.logger.Info(
@@ -530,7 +548,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 			"failed to issue X->P import transaction",
 			zap.Error(err),
 		)
-		return err
+		return "", "", err
 	}
 	n.logger.Info(
 		"issued X->P import",
@@ -540,7 +558,8 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 
 	time.Sleep(2 * time.Second)
 
-	var chainId string
+	var chainID string
+	var subnetID string
 
 	for i, subnet := range n.options.Subnets {
 		createSubnetStartTime := time.Now()
@@ -551,7 +570,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 				zap.Error(err),
 				zap.String("name", subnet.Name),
 			)
-			return err
+			return "", "", err
 		}
 		n.logger.Info(
 			"issued create subnet transaction",
@@ -566,32 +585,37 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 		duration := 2 * 7 * 24 * time.Hour // 2 weeks
 		weight := units.Schmeckle
 		addValidatorStartTime := time.Now()
-		addValidatorTx, err := pWallet.IssueAddSubnetValidatorTx(&txs.SubnetValidator{
-			Validator: txs.Validator{
-				NodeID: n.options.Credentials.ID,
-				Start:  uint64(startTime.Unix()),
-				End:    uint64(startTime.Add(duration).Unix()),
-				Wght:   weight,
-			},
-			Subnet: createSubnetTx.ID(),
-		})
-		if err != nil {
-			n.logger.Error(
-				"failed to issue add subnet validator transaction:",
-				zap.Error(err),
-				zap.String("name", subnet.Name),
-			)
-			return err
-		}
-		n.logger.Info(
-			"added new subnet validator",
-			zap.String("nodeID", n.options.Credentials.ID.String()),
-			zap.String("subnetID", createSubnetTx.ID().String()),
-			zap.String("addValidatorTxID", addValidatorTx.ID().String()),
-			zap.Duration("duration", time.Since(addValidatorStartTime)),
-		)
 
-		time.Sleep(4 * time.Second)
+		// add all nodes as a validator
+		for _, nodeID := range n.options.Credentials.NodeIDs {
+			addValidatorTx, err := pWallet.IssueAddSubnetValidatorTx(&txs.SubnetValidator{
+				Validator: txs.Validator{
+					NodeID: nodeID,
+					Start:  uint64(startTime.Unix()),
+					End:    uint64(startTime.Add(duration).Unix()),
+					Wght:   weight,
+				},
+				Subnet: createSubnetTx.ID(),
+			})
+			if err != nil {
+				n.logger.Error(
+					"failed to issue add subnet validator transaction:",
+					zap.Error(err),
+					zap.String("name", subnet.Name),
+					zap.String("nodeID", nodeID.String()),
+				)
+				return "", "", err
+			}
+			n.logger.Info(
+				"added new subnet validator",
+				zap.String("nodeID", nodeID.String()),
+				zap.String("subnetID", createSubnetTx.ID().String()),
+				zap.String("addValidatorTxID", addValidatorTx.ID().String()),
+				zap.Duration("duration", time.Since(addValidatorStartTime)),
+			)
+
+			time.Sleep(4 * time.Second)
+		}
 
 		createChainStartTime := time.Now()
 		createChainTx, err := pWallet.IssueCreateChainTx(createSubnetTx.ID(), subnet.Genesis, subnet.VmID, nil, subnet.Name)
@@ -601,14 +625,16 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 				zap.Error(err),
 				zap.String("name", subnet.Name),
 			)
-			return err
+			return "", "", err
 		}
-		chainId = createChainTx.ID().String()
+
+		chainID = createChainTx.ID().String()
+		subnetID = createSubnetTx.ID().String()
 
 		n.logger.Info(
 			"created new chain",
 			zap.String("name", subnet.Name),
-			zap.String("chainID", chainId),
+			zap.String("chainID", chainID),
 			zap.Duration("duration", time.Since(createChainStartTime)),
 		)
 
@@ -618,34 +644,71 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context) error {
 		time.Sleep(30 * time.Second)
 	}
 
-	n.logger.Info("stopping container")
-	if err := n.containerLifecycle.StopContainer(ctx); err != nil {
-		return err
-	}
-
-	n.logger.Info("removing container")
-	if err := n.containerLifecycle.RemoveContainer(ctx); err != nil {
-		return err
-	}
-
-	n.logger.Info("creating new container")
-	if err := n.CreateContainer(ctx); err != nil {
-		return err
-	}
-
-	n.logger.Info("starting new container")
-	if err := n.containerLifecycle.StartContainer(ctx); err != nil {
-		return err
-	}
-
-	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger, n.index, chainId)
+	return subnetID, chainID, nil
 }
 
-func (n *AvalancheNode) Start(ctx context.Context, testName string, additionalGenesisWallets []ibc.WalletAmount) error {
-	err := n.StartContainer(ctx, testName, additionalGenesisWallets)
+func (n *AvalancheNode) StartSubnets(ctx context.Context, nodes AvalancheNodes) error {
+	_, chainID, err := n.createSubnetChain(ctx)
 	if err != nil {
 		return err
 	}
 
+	for _, node := range nodes {
+		// enable Warp API
+		node.WriteFile(ctx, []byte(`{"warp-api-enabled": true}`), fmt.Sprintf("configs/chains/%s/config.json", chainID))
+
+		n.logger.Info("stopping container", zap.Int("index", node.index), zap.String("NodeID", node.NodeId()))
+		if err := node.containerLifecycle.StopContainer(ctx); err != nil {
+			return err
+		}
+
+		n.logger.Info("removing container", zap.Int("index", node.index), zap.String("NodeID", node.NodeId()))
+		if err := node.containerLifecycle.RemoveContainer(ctx); err != nil {
+			return err
+		}
+
+		n.logger.Info("creating new container", zap.Int("index", node.index), zap.String("NodeID", node.NodeId()))
+		if err := node.CreateContainer(ctx); err != nil {
+			return fmt.Errorf("failed to re-create container for subnet", err)
+		}
+
+		n.logger.Info("starting new container", zap.Int("index", node.index), zap.String("NodeID", node.NodeId()))
+		if err := node.containerLifecycle.StartContainer(ctx); err != nil {
+			return fmt.Errorf("failed to start container for subnet", err)
+		}
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	for _, node := range nodes {
+		node := node
+		eg.Go(func() error {
+			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootstrapTimeout)
+			defer tCtxCancel()
+
+			return lib.WaitNode(tCtx, "127.0.0.1", node.RPCPort(), n.logger, n.index, chainID)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("failed to start avalanche nodes %w", err)
+	}
+
+	return nil
+}
+
+func (n *AvalancheNode) Start(ctx context.Context, testName string, additionalGenesisWallets []ibc.WalletAmount) error {
+	err := retry.Do(func() error {
+		return n.StartContainer(ctx, testName, additionalGenesisWallets)
+	},
+		// retry for total of 3 seconds
+		retry.Attempts(15),
+		retry.Delay(2*time.Second),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	)
+
+	return err
+}
+
+func (n *AvalancheNode) WaitNode(ctx context.Context) error {
 	return lib.WaitNode(ctx, "127.0.0.1", n.RPCPort(), n.logger, n.index, "")
 }

@@ -10,8 +10,12 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/staking"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
+	"github.com/ava-labs/avalanchego/utils/formatting"
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
+	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/docker/docker/api/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -35,6 +39,7 @@ type AvalancheChain struct {
 	numValidators int
 	numFullNodes  int
 	nodes         AvalancheNodes
+	ChainID       uint32
 }
 
 func NewAvalancheChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) (*AvalancheChain, error) {
@@ -50,7 +55,7 @@ func NewAvalancheChain(log *zap.Logger, testName string, chainConfig ibc.ChainCo
 	}, nil
 }
 
-func (c *AvalancheChain) node() *AvalancheNode {
+func (c *AvalancheChain) Node() *AvalancheNode {
 	if len(c.nodes) > c.numValidators {
 		return c.nodes[c.numValidators]
 	}
@@ -100,6 +105,8 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 		return err
 	}
 
+	c.ChainID = chainId.Number
+
 	var subnetOpts []AvalancheNodeSubnetOpts = nil
 	if len(c.cfg.AvalancheSubnets) > 0 {
 		subnetOpts = make([]AvalancheNodeSubnetOpts, len(c.cfg.AvalancheSubnets))
@@ -124,6 +131,8 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 
 	numNodes := c.numValidators + c.numFullNodes
 	credentials := make([]AvalancheNodeCredentials, numNodes)
+	nodeIds := make([]ids.NodeID, numNodes)
+
 	for i := 0; i < numNodes; i++ {
 		rawTlsCert, rawTlsKey, err := staking.NewCertAndKeyBytes()
 		if err != nil {
@@ -135,21 +144,25 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 			return err
 		}
 
-		//stakingCert, err := staking.ParseCertificate(cert.Leaf)
-		//if err != nil {
-		//	return nil, fmt.Errorf("invalid staking certificate: %w", err)
-		//}
+		blsKey, err := bls.NewSecretKey()
+		if err != nil {
+			return fmt.Errorf("couldn't generate new signing key: %w", err)
+		}
+		blsKeyBytes := bls.SecretKeyToBytes(blsKey)
 
-		//tlsCert, err := staking.NewTLSCert()
-		//require.NoError(err)
-		//cert, err := staking.ParseCertificate(tlsCert.Leaf.Raw)
-		//require.NoError(err)
-		//nodeID := ids.NodeIDFromCert(cert)
+		nodeID := ids.NodeIDFromCert(&staking.Certificate{Raw: cert.Leaf.Raw})
 
 		credentials[i].PK = key
-		credentials[i].ID = ids.NodeIDFromCert(&staking.Certificate{Raw: cert.Leaf.Raw})
+		credentials[i].ID = nodeID
 		credentials[i].TLSCert = rawTlsCert
 		credentials[i].TLSKey = rawTlsKey
+		credentials[i].BlsKey = blsKeyBytes
+
+		nodeIds[i] = nodeID
+	}
+
+	for i := 0; i < numNodes; i++ {
+		credentials[i].NodeIDs = nodeIds
 	}
 
 	avaxAddr, _ := address.Format("X", chainId.Name, key.Address().Bytes())
@@ -195,10 +208,29 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 	stakedFunds := make([]string, 0, c.numValidators)
 	stakes := make([]GenesisStaker, 0, c.numValidators)
 	for i := 0; i < c.numValidators; i++ {
+
+		blsSk, err := bls.SecretKeyFromBytes(credentials[i].BlsKey)
+		if err != nil {
+			return err
+		}
+		proofOfPossession := signer.NewProofOfPossession(blsSk)
+		pk, err := formatting.Encode(formatting.HexNC, proofOfPossession.PublicKey[:])
+		if err != nil {
+			return err
+		}
+		pop, err := formatting.Encode(formatting.HexNC, proofOfPossession.ProofOfPossession[:])
+		if err != nil {
+			return err
+		}
+
 		stakes = append(stakes, GenesisStaker{
 			NodeID:        credentials[i].ID.String(),
 			RewardAddress: avaxAddr,
 			DelegationFee: 100000000,
+			Signer: StakerSigner{
+				PublicKey:         pk,
+				ProofOfPossession: pop,
+			},
 		})
 	}
 	stakedFunds = append(stakedFunds, avaxAddr)
@@ -233,19 +265,26 @@ func (c *AvalancheChain) Initialize(ctx context.Context, testName string, cli *c
 func (c *AvalancheChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, node := range c.nodes {
+		err := node.Start(ctx, testName, additionalGenesisWallets)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, node := range c.nodes {
 		node := node
 		eg.Go(func() error {
 			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootstrapTimeout)
 			defer tCtxCancel()
 
-			return node.Start(tCtx, testName, additionalGenesisWallets)
+			return node.WaitNode(tCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return err
+		return fmt.Errorf("failed to start avalanche nodes %w", err)
 	}
 
-	return c.node().StartSubnets(ctx)
+	return c.Node().StartSubnets(ctx, c.nodes)
 }
 
 // Exec runs an arbitrary command using Chain's docker environment.
@@ -254,7 +293,7 @@ func (c *AvalancheChain) Start(testName string, ctx context.Context, additionalG
 //
 // "env" are environment variables in the format "MY_ENV_VAR=value"
 func (c *AvalancheChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.node().Exec(ctx, cmd, env)
+	return c.Node().Exec(ctx, cmd, env)
 }
 
 // ExportState exports the chain state at specific height.
@@ -264,18 +303,18 @@ func (c *AvalancheChain) ExportState(ctx context.Context, height int64) (string,
 
 // GetRPCAddress retrieves the rpc address that can be reached by other containers in the docker network.
 func (c *AvalancheChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:%s", c.node().HostName(), c.node().RPCPort())
+	return fmt.Sprintf("http://%s:9650", c.Node().HostName())
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
 func (c *AvalancheChain) GetGRPCAddress() string {
-	return fmt.Sprintf("http://%s:%s", c.node().HostName(), c.node().GRPCPort())
+	return c.GetRPCAddress()
 }
 
 // GetHostRPCAddress returns the rpc address that can be reached by processes on the host machine.
 // Note that this will not return a valid value until after Start returns.
 func (c *AvalancheChain) GetHostRPCAddress() string {
-	return fmt.Sprintf("http://127.0.0.1:%s", c.node().RPCPort())
+	return fmt.Sprintf("http://127.0.0.1:%s", c.Node().RPCPort())
 }
 
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
@@ -292,32 +331,33 @@ func (c *AvalancheChain) HomeDir() string {
 
 // CreateKey creates a test key in the "user" node (either the first fullnode or the first validator if no fullnodes).
 func (c *AvalancheChain) CreateKey(ctx context.Context, keyName string) error {
-	return c.node().CreateKey(ctx, keyName)
+	return nil
+	//return c.node().CreateKey(ctx, keyName)
 }
 
 // RecoverKey recovers an existing user from a given mnemonic.
 func (c *AvalancheChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	return c.node().RecoverKey(ctx, name, mnemonic)
+	return c.Node().RecoverKey(ctx, name, mnemonic)
 }
 
 // GetAddress fetches the bech32 address for a test key on the "user" node (either the first fullnode or the first validator if no fullnodes).
 func (c *AvalancheChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	return c.node().GetAddress(ctx, keyName)
+	return c.Node().GetAddress(ctx, keyName)
 }
 
 // SendFunds sends funds to a wallet from a user account.
 func (c *AvalancheChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.node().SendFunds(ctx, keyName, amount)
+	return c.Node().SendFunds(ctx, keyName, amount)
 }
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 func (c *AvalancheChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	return c.node().SendIBCTransfer(ctx, channelID, keyName, amount, options)
+	return c.Node().SendIBCTransfer(ctx, channelID, keyName, amount, options)
 }
 
 // Height returns the current block height or an error if unable to get current height.
 func (c *AvalancheChain) Height(ctx context.Context) (int64, error) {
-	height, err := c.node().Height(ctx)
+	height, err := c.Node().Height(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -327,7 +367,7 @@ func (c *AvalancheChain) Height(ctx context.Context) (int64, error) {
 
 // GetBalance fetches the current balance for a specific account address and denom.
 func (c *AvalancheChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	balance, err := c.node().GetBalance(ctx, address, denom)
+	balance, err := c.Node().GetBalance(ctx, address, denom)
 	if err != nil {
 		return sdkmath.ZeroInt(), err
 	}
@@ -370,15 +410,21 @@ func (c *AvalancheChain) BuildWallet(ctx context.Context, keyName string, mnemon
 		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
 	}
 
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	return NewWallet(keyName, common.BytesToAddress(addrBytes), mnemonic, c.cfg), nil
 }
 
 // BuildRelayerWallet will return a chain-specific wallet populated with the mnemonic so that the wallet can
 // be restored in the relayer node using the mnemonic. After it is built, that address is included in
 // genesis with some funds.
 func (c *AvalancheChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	// ToDo: build wallet for relayer once relayer has avalanche key management.
-	panic("ToDo: implement me")
+	pk := "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
+	pkey, err := crypto.HexToECDSA(pk)
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.PubkeyToAddress(pkey.PublicKey)
+
+	return NewWallet(keyName, addr, pk, c.cfg), nil
 }
 
 func (c *AvalancheChain) GetHostPeerAddress() string {

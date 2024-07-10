@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"syscall"
 	"time"
 
@@ -70,7 +71,10 @@ func WaitNode(ctx context.Context, host, port string, logger *zap.Logger, nodeIn
 			}
 			if blockchainID != "" {
 				subnetDone, subnetErr = client.IsBootstrapped(ctx, blockchainID)
-				if errors.Is(subnetErr, io.EOF) || errors.Is(subnetErr, syscall.ECONNREFUSED) {
+
+				if subnetErr != nil && (errors.Is(subnetErr, io.EOF) ||
+					errors.Is(subnetErr, syscall.ECONNREFUSED) ||
+					strings.Contains(subnetErr.Error(), "there is no chain with alias/ID")) {
 					subnetErr = nil
 				}
 			}
