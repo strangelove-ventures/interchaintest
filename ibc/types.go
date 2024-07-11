@@ -24,8 +24,11 @@ type AvalancheSubnetClient interface {
 	// Height returns the current block height or an error if unable to get current height.
 	Height(ctx context.Context) (uint64, error)
 
-	// GetBalance fetches the current balance for a specific account address and denom.
-	GetBalance(ctx context.Context, address string, denom string) (int64, error)
+	// GetBankBalance returns balance from Bank Smart contract
+	GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error)
+
+	// GetBalance fetches the current balance for a specific account address
+	GetBalance(ctx context.Context, address string) (int64, error)
 }
 
 type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)

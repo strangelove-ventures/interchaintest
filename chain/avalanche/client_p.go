@@ -22,6 +22,11 @@ func (pchain *PChainClient) Height(ctx context.Context) (uint64, error) {
 	panic("not implemented")
 }
 
-func (pchain *PChainClient) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (pchain *PChainClient) GetBalance(ctx context.Context, address string) (int64, error) {
 	panic("not implemented")
+}
+
+func (pchain *PChainClient) GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error) {
+	//TODO implement me
+	panic("implement me")
 }

@@ -189,12 +189,6 @@ func NewAvalancheNode(
 		return nil, fmt.Errorf("failed to write TLS key: %w", err)
 	}
 
-	//for _, subnet := range node.options.Subnets {
-	//	if err := node.WriteFile(ctx, subnet.VM, fmt.Sprintf("plugins/%s", subnet.VmID)); err != nil {
-	//		return nil, fmt.Errorf("failed to write vm body [%s]: %w", subnet.Name, err)
-	//	}
-	//}
-
 	return node, node.CreateContainer(ctx)
 }
 
@@ -385,7 +379,21 @@ func (n *AvalancheNode) GetBalance(ctx context.Context, address string, denom st
 	if err != nil {
 		return 0, fmt.Errorf("subnet client creation error: %w", err)
 	}
-	return client.GetBalance(ctx, address, denom)
+	return client.GetBalance(ctx, address)
+}
+
+func (n *AvalancheNode) GetBankBalance(ctx context.Context, bank string, address string, denom string) (int64, error) {
+	rawSubnetID, ok := ctx.Value("subnet").(string)
+	rawSubnetID = strings.ToLower(rawSubnetID)
+	if !ok {
+		return 0, fmt.Errorf("bank balance available only for subnet: %s", address)
+	}
+	client, err := n.chainClient(rawSubnetID)
+	if err != nil {
+		return 0, fmt.Errorf("subnet client creation error: %w", err)
+	}
+
+	return client.GetBankBalance(ctx, bank, address, denom)
 }
 
 func (n *AvalancheNode) IP() string {
@@ -685,7 +693,7 @@ func (n *AvalancheNode) StartSubnets(ctx context.Context, nodes AvalancheNodes) 
 			tCtx, tCtxCancel := context.WithTimeout(egCtx, ChainBootstrapTimeout)
 			defer tCtxCancel()
 
-			return lib.WaitNode(tCtx, "127.0.0.1", node.RPCPort(), n.logger, n.index, chainID)
+			return lib.WaitNode(tCtx, "127.0.0.1", node.RPCPort(), n.logger, node.index, chainID)
 		})
 	}
 	if err := eg.Wait(); err != nil {

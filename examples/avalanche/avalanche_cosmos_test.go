@@ -3,11 +3,14 @@ package avalanche_test
 import (
 	"context"
 	"testing"
+	"time"
 
+	"cosmossdk.io/math"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
 	subnetevm "github.com/strangelove-ventures/interchaintest/v8/examples/avalanche/subnet-evm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
@@ -85,7 +88,7 @@ func TestAvalancheCosmos(t *testing.T) {
 	require.NoError(t, err, "failed to get avalanche chain")
 	require.Len(t, chains, 2)
 
-	avalancheChain := chains[0]
+	avalancheChain := chains[0].(*avalanche.AvalancheChain)
 	cosmosChain := chains[1]
 
 	ctx := context.Background()
@@ -126,29 +129,40 @@ func TestAvalancheCosmos(t *testing.T) {
 		_ = ic.Close()
 	})
 
+	time.Sleep(10 * time.Second)
+
+	// Fund users
+	// NOTE: this has to be done after the provider delegation & IBC update to the consumer.
+	amt := math.NewInt(10_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", amt, cosmosChain)
+	cosmosUser := users[0]
+
 	err = r.GeneratePath(ctx, eRep, cosmosChain.Config().ChainID, subnetChainID, pathName)
 	require.NoError(t, err)
 
 	// Create new clients
 	err = r.CreateClients(ctx, eRep, pathName, ibc.DefaultClientOpts())
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, avalancheChain) // these 1 block waits seem to be needed to reduce flakiness
+
+	subnetCtx := context.WithValue(ctx, "subnet", "0")
+
+	err = testutil.WaitForBlocks(subnetCtx, 1, cosmosChain, avalancheChain) // these 1 block waits seem to be needed to reduce flakiness
 	require.NoError(t, err)
 
 	// Create a new connection
 	err = r.CreateConnections(ctx, eRep, pathName)
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, avalancheChain)
+	err = testutil.WaitForBlocks(subnetCtx, 1, cosmosChain, avalancheChain)
 	require.NoError(t, err)
 
 	// Create a new channel & get channels from each chain
 	err = r.CreateChannel(ctx, eRep, pathName, ibc.DefaultChannelOpts())
 	require.NoError(t, err)
-	err = testutil.WaitForBlocks(ctx, 1, cosmosChain, avalancheChain)
+	err = testutil.WaitForBlocks(subnetCtx, 1, cosmosChain, avalancheChain)
 	require.NoError(t, err)
 
 	// Start relayer
-	r.StartRelayer(ctx, eRep, pathName)
+	err = r.StartRelayer(ctx, eRep, pathName)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err = r.StopRelayer(ctx, eRep)
@@ -156,5 +170,29 @@ func TestAvalancheCosmos(t *testing.T) {
 			panic(err)
 		}
 	})
+
+	avalancheUser := "0x1FF8A0B6BE1A6233EF66A054DF0274C055D6D2E4"
+
+	// Send 1.77 stake from cosmosUser to parachainUser
+	amountToSend := math.NewInt(1_770_000)
+	transfer := ibc.WalletAmount{
+		Address: avalancheUser,
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  amountToSend,
+	}
+
+	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
+	t.Logf("Transfered from Cosmos to Avalanche %s token", amountToSend.String())
+	err = testutil.WaitForBlocks(ctx, 15, cosmosChain)
+	require.NoError(t, err)
+
+	// Verify tokens arrived on avalanche user
+	avalancheUserBalance, err := avalancheChain.GetBankBalance(subnetCtx, avalancheUser, "transfer/channel-0/stake")
+	require.NoError(t, err)
+	t.Logf("Received on Avalanche %s tokens", avalancheUserBalance.String())
+
+	//require.Equal(t, amountToSend, parachainUserStake.Amount, "parachain user's stake amount not expected after first tx")
 
 }

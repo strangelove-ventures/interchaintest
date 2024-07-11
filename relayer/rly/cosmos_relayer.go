@@ -109,7 +109,7 @@ func ChainConfigToAvalancheRelayerChainConfig(chain *avalanche.AvalancheChain, c
 			BlockchainID:    chain.Node().BlockchainID(),
 			ChainID:         chainConfig.AvalancheSubnets[0].ChainID,
 			NetworkID:       chain.ChainID,
-			ContractAddress: "0x0300000000000000000000000000000000000002",
+			ContractAddress: avalanche.AvalancheIBCPrecompileAddress.String(),
 			Timeout:         "10s",
 			KeyDirectory:    "",
 			Key:             "testkey",
@@ -222,7 +222,7 @@ func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.
 func (commander) CreateConnections(pathName string, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
-		"--home", homeDir,
+		"--home", homeDir, "--debug",
 	}
 }
 

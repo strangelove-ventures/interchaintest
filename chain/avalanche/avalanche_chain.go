@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	big "math/big"
 	"net"
 	"time"
 
@@ -15,31 +16,38 @@ import (
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/docker/docker/api/types"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/docker/docker/client"
 
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/ics20/ics20bank"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/ics20/ics20transferer"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/lib"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 var (
-	_                     ibc.Chain = &AvalancheChain{}
-	ChainBootstrapTimeout           = 6 * time.Minute
+	_                             ibc.Chain = &AvalancheChain{}
+	ChainBootstrapTimeout                   = 6 * time.Minute
+	AvalancheIBCPrecompileAddress           = common.HexToAddress("0x0300000000000000000000000000000000000002")
 )
 
 type AvalancheChain struct {
-	log           *zap.Logger
-	testName      string
-	cfg           ibc.ChainConfig
-	numValidators int
-	numFullNodes  int
-	nodes         AvalancheNodes
-	ChainID       uint32
+	log                 *zap.Logger
+	testName            string
+	cfg                 ibc.ChainConfig
+	numValidators       int
+	numFullNodes        int
+	nodes               AvalancheNodes
+	ChainID             uint32
+	bankContractAddress common.Address
 }
 
 func NewAvalancheChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int) (*AvalancheChain, error) {
@@ -284,7 +292,178 @@ func (c *AvalancheChain) Start(testName string, ctx context.Context, additionalG
 		return fmt.Errorf("failed to start avalanche nodes %w", err)
 	}
 
-	return c.Node().StartSubnets(ctx, c.nodes)
+	if err := c.Node().StartSubnets(ctx, c.nodes); err != nil {
+		return err
+	}
+
+	rpcUrl := fmt.Sprintf("http://127.0.0.1:%s/ext/bc/%s/rpc", c.Node().RPCPort(), c.Node().BlockchainID())
+
+	if err := c.deployBankContract(ctx, rpcUrl); err != nil {
+		return fmt.Errorf("failed to deploy ICS20 Bank smart contract on avalanche %w", err)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-time.After(10 * time.Second):
+
+				if err := c.doTx(rpcUrl); err != nil {
+					c.log.Error("tx error", zap.Error(err))
+				}
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (c *AvalancheChain) deployBankContract(ctx context.Context, rpcUrl string) error {
+	pkey, err := crypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
+	if err != nil {
+		return err
+	}
+
+	client, err := ethclient.Dial(rpcUrl)
+	if err != nil {
+		return err
+	}
+
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return err
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(pkey, chainID)
+	if err != nil {
+		return err
+	}
+
+	_, ics20bankTx, ics20bank, err := ics20bank.DeployICS20Bank(auth, client)
+	if err != nil {
+		return err
+	}
+
+	ics20bankAddr, err := bind.WaitDeployed(ctx, client, ics20bankTx)
+	if err != nil {
+		return err
+	}
+	c.log.Info("ICS20 Bank delpoyed", zap.String("address", ics20bankAddr.Hex()))
+	c.bankContractAddress = ics20bankAddr
+
+	_, ics20transfererTx, ics20transferer, err := ics20transferer.DeployICS20Transferer(auth, client, AvalancheIBCPrecompileAddress, ics20bankAddr)
+	if err != nil {
+		return err
+	}
+
+	ics20transfererAddr, err := bind.WaitDeployed(ctx, client, ics20transfererTx)
+	if err != nil {
+		return err
+	}
+	c.log.Info("ICS20 Transferer delpoyed", zap.String("address", ics20transfererAddr.Hex()))
+
+	setOperTx1, err := ics20bank.SetOperator(auth, auth.From)
+	if err != nil {
+		return err
+	}
+	setOperRe1, err := bind.WaitMined(ctx, client, setOperTx1)
+	if err != nil {
+		return err
+	}
+	c.log.Info("SetOperator key address", zap.String("hash", setOperRe1.TxHash.Hex()), zap.String("block", setOperRe1.BlockNumber.String()))
+
+	setOperTx2, err := ics20bank.SetOperator(auth, AvalancheIBCPrecompileAddress)
+	if err != nil {
+		return err
+	}
+	setOperRe2, err := bind.WaitMined(ctx, client, setOperTx2)
+	if err != nil {
+		return err
+	}
+	c.log.Info("SetOperator ibc address", zap.String("hash", setOperRe2.TxHash.Hex()), zap.String("block", setOperRe2.BlockNumber.String()))
+
+	setOperTx3, err := ics20bank.SetOperator(auth, ics20transfererAddr)
+	if err != nil {
+		return err
+	}
+	setOperRe3, err := bind.WaitMined(ctx, client, setOperTx3)
+	if err != nil {
+		return err
+	}
+	c.log.Info("SetOperator ics20 transferer address", zap.String("hash", setOperRe3.TxHash.Hex()), zap.String("block", setOperRe3.BlockNumber.String()))
+
+	setChannelEscrowAddressesTx, err := ics20transferer.SetChannelEscrowAddresses(auth, "transfer", auth.From)
+	if err != nil {
+		return err
+	}
+	setChannelEscrowAddressesRe, err := bind.WaitMined(ctx, client, setChannelEscrowAddressesTx)
+	if err != nil {
+		return err
+	}
+	c.log.Info("ics20transferer.SetChannelEscrowAddresses", zap.String("addr", auth.From.Hex()), zap.String("port", "transfer"), zap.String("block", setChannelEscrowAddressesRe.BlockNumber.String()))
+
+	bintPortTx, err := ics20transferer.BindPort(auth, AvalancheIBCPrecompileAddress, "transfer")
+	if err != nil {
+		return err
+	}
+	bintPortRe, err := bind.WaitMined(ctx, client, bintPortTx)
+	if err != nil {
+		return err
+	}
+	c.log.Info("ics20transferer.BindPort", zap.String("addr", AvalancheIBCPrecompileAddress.Hex()), zap.String("port", "transfer"), zap.String("block", bintPortRe.BlockNumber.String()))
+
+	return nil
+}
+
+func (c *AvalancheChain) doTx(url string) error {
+	pkey, err := crypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
+	if err != nil {
+		return err
+	}
+	addr := crypto.PubkeyToAddress(pkey.PublicKey)
+
+	client, err := ethclient.Dial(url)
+	if err != nil {
+		return err
+	}
+
+	chainID, err := client.ChainID(context.Background())
+	if err != nil {
+		return err
+	}
+
+	nonce, err := client.NonceAt(context.Background(), addr, nil)
+	if err != nil {
+		return err
+	}
+
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+
+	toAddress := common.HexToAddress("0xAB259A4830E2C7AA6EF3831BAC1590F855AE4C32")
+	value := big.NewInt(1000000000000000000)
+	tx := ethtypes.NewTransaction(nonce, toAddress, value, 21000, gasPrice, nil)
+
+	signedTx, err := ethtypes.SignTx(tx, ethtypes.NewEIP155Signer(chainID), pkey)
+	if err != nil {
+		return err
+	}
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return err
+	}
+	_, err = bind.WaitMined(context.Background(), client, signedTx)
+	if err != nil {
+		return err
+	}
+	//c.log.Info("transaction mined",
+	//	zap.String("hash", receipt.TxHash.Hex()),
+	//	zap.String("block", receipt.BlockNumber.String()),
+	//)
+
+	return nil
 }
 
 // Exec runs an arbitrary command using Chain's docker environment.
@@ -368,6 +547,16 @@ func (c *AvalancheChain) Height(ctx context.Context) (int64, error) {
 // GetBalance fetches the current balance for a specific account address and denom.
 func (c *AvalancheChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	balance, err := c.Node().GetBalance(ctx, address, denom)
+	if err != nil {
+		return sdkmath.ZeroInt(), err
+	}
+
+	return sdkmath.NewInt(balance), nil
+}
+
+// GetBankBalance fetches the current balance for a specific account address and denom from Bank Smart Contract
+func (c *AvalancheChain) GetBankBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
+	balance, err := c.Node().GetBankBalance(ctx, c.bankContractAddress.String(), address, denom)
 	if err != nil {
 		return sdkmath.ZeroInt(), err
 	}

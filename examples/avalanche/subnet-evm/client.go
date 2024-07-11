@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/ics20/ics20bank"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -62,7 +63,29 @@ func (sec SubnetEvmClient) Height(ctx context.Context) (uint64, error) {
 	return sec.client.BlockNumber(ctx)
 }
 
-func (sec SubnetEvmClient) GetBalance(ctx context.Context, address string, denom string) (int64, error) {
+func (sec SubnetEvmClient) GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error) {
+	if !common.IsHexAddress(bank) {
+		return 0, fmt.Errorf("bad bank address '%s'", bank)
+	}
+
+	if !common.IsHexAddress(address) {
+		return 0, fmt.Errorf("bad user address '%s'", address)
+	}
+
+	bankContract, err := ics20bank.NewICS20Bank(common.HexToAddress(bank), sec.client)
+	if err != nil {
+		return 0, err
+	}
+
+	balance, err := bankContract.BalanceOf(nil, common.HexToAddress(address), denom)
+	if err != nil {
+		return 0, err
+	}
+
+	return balance.Int64(), nil
+}
+
+func (sec SubnetEvmClient) GetBalance(ctx context.Context, address string) (int64, error) {
 	if !common.IsHexAddress(address) {
 		return 0, fmt.Errorf("bad address format")
 	}
