@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,7 +22,11 @@ import (
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
 	"github.com/avast/retry-go/v4"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/docker/docker/api/types"
@@ -345,7 +350,87 @@ func (n *AvalancheNode) SendFunds(ctx context.Context, keyName string, amount ib
 }
 
 func (n *AvalancheNode) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	return ibc.Tx{}, errors.New("not yet implemented")
+	pkey, err := crypto.HexToECDSA(keyName)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+	addr := crypto.PubkeyToAddress(pkey.PublicKey)
+
+	packetData, _ := json.Marshal(FungibleTokenPacketData{
+		Denom:    amount.Denom,
+		Amount:   amount.Amount.String(),
+		Sender:   addr.String(),
+		Receiver: amount.Address,
+	})
+
+	msg, err := packSendPacket(MsgSendPacket{
+		ChannelCapability: big.NewInt(0),
+		SourcePort:        "transfer",
+		SourceChannel:     channelID,
+		TimeoutHeight: Height{
+			RevisionHeight: big.NewInt(3000),
+			RevisionNumber: big.NewInt(3000),
+		},
+		TimeoutTimestamp: big.NewInt(0),
+		Data:             packetData,
+	})
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	rpcUrl := fmt.Sprintf("http://127.0.0.1:%s/ext/bc/%s/rpc", n.RPCPort(), n.BlockchainID())
+
+	client, err := ethclient.Dial(rpcUrl)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	chainID, err := client.ChainID(context.Background())
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+	nonce, err := client.NonceAt(context.Background(), addr, nil)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	value := big.NewInt(0)
+	tx := ethtypes.NewTransaction(nonce, AvalancheIBCPrecompileAddress, value, 2100000, gasPrice, msg)
+
+	signedTx, err := ethtypes.SignTx(tx, ethtypes.NewEIP155Signer(chainID), pkey)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
+	return ibc.Tx{
+		Height:   receipt.BlockNumber.Int64(),
+		TxHash:   signedTx.Hash().String(),
+		GasSpent: int64(receipt.GasUsed),
+		Packet: ibc.Packet{
+			Sequence:         0,
+			SourcePort:       "",
+			SourceChannel:    "",
+			DestPort:         "",
+			DestChannel:      "",
+			Data:             nil,
+			TimeoutHeight:    "",
+			TimeoutTimestamp: 0,
+		},
+	}, nil
 }
 
 func (n *AvalancheNode) Height(ctx context.Context) (uint64, error) {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	subnetevm "github.com/strangelove-ventures/interchaintest/v8/examples/avalanche/subnet-evm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
@@ -181,18 +182,38 @@ func TestAvalancheCosmos(t *testing.T) {
 		Amount:  amountToSend,
 	}
 
-	tx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
+	cosmosTx, err := cosmosChain.SendIBCTransfer(ctx, "channel-0", cosmosUser.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
-	require.NoError(t, tx.Validate()) // test source wallet has decreased funds
-	t.Logf("Transfered from Cosmos to Avalanche %s token", amountToSend.String())
+	require.NoError(t, cosmosTx.Validate()) // test source wallet has decreased funds
+	t.Logf("Transfered from Cosmos to Avalanche %s token, tx_hash %s", amountToSend.String(), cosmosTx.TxHash)
 	err = testutil.WaitForBlocks(ctx, 15, cosmosChain)
 	require.NoError(t, err)
 
 	// Verify tokens arrived on avalanche user
 	avalancheUserBalance, err := avalancheChain.GetBankBalance(subnetCtx, avalancheUser, "transfer/channel-0/stake")
 	require.NoError(t, err)
-	t.Logf("Received on Avalanche %s tokens", avalancheUserBalance.String())
+	t.Logf("Received %s tokens on Avalanche ", avalancheUserBalance.String())
+	require.Equal(t, amountToSend, avalancheUserBalance)
 
-	//require.Equal(t, amountToSend, parachainUserStake.Amount, "parachain user's stake amount not expected after first tx")
+	cosmosReceiver := "cosmos1twmc8eqycsqhrhrm77er8xcfds6566x64ydcq5"
+	avalancheTx, err := avalancheChain.SendIBCTransfer(subnetCtx, "channel-0", "750839e9dbbd2a0910efe40f50b2f3b2f2f59f5580bb4b83bd8c1201cf9a010a", ibc.WalletAmount{
+		Address: cosmosReceiver,
+		Denom:   "transfer/channel-0/stake",
+		Amount:  amountToSend,
+	}, ibc.TransferOptions{})
+	require.NoError(t, err)
+	t.Logf("Transfered from Avalanche to Cosmos %s token, tx_hash %s", amountToSend.String(), avalancheTx.TxHash)
+
+	// Wait for MsgRecvPacket on cosmos chain
+	err = cosmos.PollForBalance(ctx, cosmosChain.(*cosmos.CosmosChain), 20, ibc.WalletAmount{
+		Address: cosmosReceiver,
+		Denom:   cosmosChain.Config().Denom,
+		Amount:  amountToSend,
+	})
+	require.NoError(t, err)
+	cosmosUserBalance, err := cosmosChain.GetBalance(ctx, cosmosReceiver, cosmosChain.Config().Denom)
+	require.NoError(t, err)
+	require.Equal(t, amountToSend, cosmosUserBalance)
+	t.Logf("Received %s tokens on Cosmos", cosmosUserBalance.String())
 
 }
