@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"os"
 	"strings"
+	"time"
 
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
@@ -165,6 +167,9 @@ func (p *PenumbraClientNode) GetAddress(ctx context.Context) ([]byte, error) {
 // It generates a transaction plan, gets authorization data for the transaction,
 // builds and signs the transaction, and broadcasts it. Returns an error if any step of the process fails.
 func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmount) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	hi, lo := translateBigInt(amount.Amount)
 
 	// Generate a transaction plan sending funds to an address.
@@ -228,6 +233,10 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 			// Progress is a float between 0 and 1 that is an approximation of the build progress.
 			// If the status is not complete we need to loop and wait for completion.
 			if status.Progress < 1 {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+
 				continue
 			}
 		}
@@ -261,6 +270,9 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (ibc.Tx, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	if p.addrString == "" {
 		return ibc.Tx{}, fmt.Errorf("address string was not cached on pclientd instance for key with name %s", p.KeyName)
 	}
@@ -286,10 +298,11 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		SourceChannel: channelID,
 	}
 
-	// TODO: remove debug output
-	fmt.Printf("Timeout timestamp: %+v \n", timeoutTimestamp)
-	fmt.Printf("Timeout: %+v \n", timeoutHeight)
-	fmt.Printf("Withdrawal: %+v \n", withdrawal)
+	if os.Getenv("ICTEST_DEBUG") != "" {
+		fmt.Printf("Timeout timestamp: %+v \n", timeoutTimestamp)
+		fmt.Printf("Timeout: %+v \n", timeoutHeight)
+		fmt.Printf("Withdrawal: %+v \n", withdrawal)
+	}
 
 	// Generate a transaction plan sending ics_20 transfer
 	tpr := &view.TransactionPlannerRequest{
@@ -340,6 +353,10 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		status := buildResp.GetBuildProgress()
 
 		if status != nil {
+			if ctx.Err() != nil {
+				return ibc.Tx{}, ctx.Err()
+			}
+
 			// Progress is a float between 0 and 1 that is an approximation of the build progress.
 			// If the status is not complete we need to loop and wait for completion.
 			if status.Progress < 1 {
