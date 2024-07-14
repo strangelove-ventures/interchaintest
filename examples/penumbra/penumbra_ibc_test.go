@@ -62,7 +62,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 
 	i := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/relayer",
-		Version:    "justin-proto-update",
+		Version:    "justin-pen-0.77",
 		UidGid:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
