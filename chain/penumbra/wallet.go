@@ -6,6 +6,7 @@ import (
 
 var _ ibc.Wallet = &PenumbraWallet{}
 
+// PenumbraWallet represents a wallet for the Penumbra application.
 type PenumbraWallet struct {
 	mnemonic string
 	address  []byte
@@ -13,6 +14,7 @@ type PenumbraWallet struct {
 	chainCfg ibc.ChainConfig
 }
 
+// NewWallet creates a new instance of PenumbraWallet with the provided parameters
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *PenumbraWallet {
 	return &PenumbraWallet{
 		mnemonic: mnemonic,
@@ -22,25 +24,29 @@ func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.Cha
 	}
 }
 
+// KeyName returns the key name associated with a PenumbraWallet instance.
 func (w *PenumbraWallet) KeyName() string {
 	return w.keyName
 }
 
-// Get Address formatted with chain's prefix
+// FormattedAddress returns the formatted address associated with a PenumbraWallet instance.
 func (w *PenumbraWallet) FormattedAddress() string {
 	return string(w.address)
 }
 
-// Get mnemonic, only used for relayer wallets
+// Mnemonic returns the mnemonic associated with a PenumbraWallet instance.
 func (w *PenumbraWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address
+// Address returns the slice of bytes representing this PenumbraWallet instance's address.
 func (w *PenumbraWallet) Address() []byte {
 	return w.address
 }
 
+// FormattedAddressWithPrefix returns the formatted address string with a given prefix.
+// The prefix is a string that will be appended to the beginning of the address.
+// It takes the address stored in the PenumbraWallet instance and converts it to a string.
 func (w *PenumbraWallet) FormattedAddressWithPrefix(prefix string) string {
 	return string(w.address)
 }

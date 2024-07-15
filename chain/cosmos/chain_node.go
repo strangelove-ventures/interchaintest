@@ -260,8 +260,7 @@ func (tn *ChainNode) OverwriteGenesisFile(ctx context.Context, content []byte) e
 }
 
 func (tn *ChainNode) PrivValFileContent(ctx context.Context) ([]byte, error) {
-	fr := dockerutil.NewFileRetriever(tn.logger(), tn.DockerClient, tn.TestName)
-	gen, err := fr.SingleFileContent(ctx, tn.VolumeName, "config/priv_validator_key.json")
+	gen, err := tn.ReadFile(ctx, "config/priv_validator_key.json")
 	if err != nil {
 		return nil, fmt.Errorf("getting priv_validator_key.json content: %w", err)
 	}
@@ -537,7 +536,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), nil)
+	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), tn.Chain.Config().Env)
 	if err != nil {
 		return "", err
 	}
@@ -617,7 +616,7 @@ func (tn *ChainNode) BinCommand(command ...string) []string {
 // pass ("keys", "show", "key1") for command to execute the command against the node.
 // Will include additional flags for home directory and chain ID.
 func (tn *ChainNode) ExecBin(ctx context.Context, command ...string) ([]byte, []byte, error) {
-	return tn.Exec(ctx, tn.BinCommand(command...), nil)
+	return tn.Exec(ctx, tn.BinCommand(command...), tn.Chain.Config().Env)
 }
 
 // QueryCommand is a helper to retrieve the full query command. For example,
@@ -636,7 +635,7 @@ func (tn *ChainNode) QueryCommand(command ...string) []string {
 // pass ("gov", "params") for command to execute the query against the node.
 // Returns response in json format.
 func (tn *ChainNode) ExecQuery(ctx context.Context, command ...string) ([]byte, []byte, error) {
-	return tn.Exec(ctx, tn.QueryCommand(command...), nil)
+	return tn.Exec(ctx, tn.QueryCommand(command...), tn.Chain.Config().Env)
 }
 
 // CondenseMoniker fits a moniker into the cosmos character limit for monikers.
@@ -731,7 +730,7 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -827,7 +826,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -852,8 +851,16 @@ func (tn *ChainNode) SendIBCTransfer(
 	if options.Timeout != nil {
 		if options.Timeout.NanoSeconds > 0 {
 			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
-		} else if options.Timeout.Height > 0 {
+		}
+
+		if options.Timeout.Height > 0 {
 			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
+		}
+
+		if options.AbsoluteTimeouts {
+			// ibc-go doesn't support relative heights for packet timeouts
+			// so the absolute height flag must be manually set:
+			command = append(command, "--absolute-timeouts")
 		}
 	}
 	if options.Memo != "" {
@@ -1076,7 +1083,7 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 
 	command = append(command, "unsafe-reset-all", "--home", tn.HomeDir())
 
-	_, _, err := tn.Exec(ctx, command, nil)
+	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
 }
 
@@ -1326,7 +1333,7 @@ func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (s
 		command = append(command, "--bech", bech)
 	}
 
-	stdout, stderr, err := tn.Exec(ctx, command, nil)
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
 		return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
 	}

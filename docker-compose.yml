@@ -1,0 +1,18 @@
+# Attach the host docker socket to the container to allow for nested docker support
+#
+# docker compose up
+#
+services:
+  instance:
+    image: "local-interchain:local"
+    ports:
+      - "8080:8080"
+    environment:
+      ICTEST_HOME: "/var/.localinterchain"
+    command: ["local-ic", "start", "base"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./local-interchain:/var/.localinterchain"
+    network_mode: "host"

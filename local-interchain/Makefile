@@ -1,8 +1,18 @@
 #!/usr/bin/make -f
 
 CWD := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+COMMIT := $(shell git log -1 --format='%H')
 
-ldflags = -X main.MakeFileInstallDirectory=$(CWD)
+# don't override user values
+ifeq (,$(VERSION))
+  VERSION := $(shell git describe --tags --always)
+  ifeq (,$(VERSION))
+    HEAD := $(shell git rev-parse --abbrev-ref HEAD)
+    VERSION := $(HEAD)-$(COMMIT)
+  endif
+endif
+
+ldflags = -X main.MakeFileInstallDirectory=$(CWD) -X main.Version=$(VERSION)
 ldflags := $(strip $(ldflags))
 BUILD_FLAGS := -ldflags '$(ldflags)'
 
