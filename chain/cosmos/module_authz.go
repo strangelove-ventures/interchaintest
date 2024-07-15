@@ -113,7 +113,7 @@ func createAuthzJSON(ctx context.Context, node *ChainNode, filePath string, genM
 		genMsgCmd = append(genMsgCmd, "--generate-only")
 	}
 
-	res, resErr, err := node.Exec(ctx, genMsgCmd, nil)
+	res, resErr, err := node.Exec(ctx, genMsgCmd, node.Chain.Config().Env)
 	if resErr != nil {
 		return fmt.Errorf("failed to generate msg: %s", resErr)
 	}

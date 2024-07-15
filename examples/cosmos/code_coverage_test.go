@@ -52,7 +52,7 @@ func TestCodeCoverage(t *testing.T) {
 		{
 			Name:          "manifest",
 			Version:       cfgA.Images[0].Version,
-			ChainName:     cfgA.ChainID,
+			ChainName:     cfgA.Name,
 			NumValidators: &vals,
 			NumFullNodes:  &fullNodes,
 			ChainConfig:   cfgA,

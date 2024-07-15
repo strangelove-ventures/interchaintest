@@ -229,7 +229,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 // WithCodeCoverage enables Go Code Coverage from the chain node directory.
 func (c *ChainConfig) WithCodeCoverage(override ...string) {
-	c.Env = append(c.Env, fmt.Sprintf("GOCOVERDIR=%s", path.Join("/var/cosmos-chain", c.ChainID)))
+	c.Env = append(c.Env, fmt.Sprintf("GOCOVERDIR=%s", path.Join("/var/cosmos-chain", c.Name)))
 	if len(override) > 0 {
 		c.Env = append(c.Env, override[0])
 	}
