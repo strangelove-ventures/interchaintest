@@ -11,19 +11,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// PenumbraNode reporesents a node in the Penumbra network which consists of one instance of Tendermint,
+// an instance of pcli, and zero or more instances of pclientd.
 type PenumbraNode struct {
 	TendermintNode      *tendermint.TendermintNode
 	PenumbraAppNode     *PenumbraAppNode
 	PenumbraClientNodes map[string]*PenumbraClientNode
 	clientsMu           sync.Locker
-	address             []byte
 	addrString          string
 }
 
+// PenumbraNodes is a slice of pointers that point to instances of PenumbraNode in memory.
 type PenumbraNodes []*PenumbraNode
 
-// NewChainNode returns a penumbra chain node with tendermint and penumbra nodes
-// with docker volumes created.
+// NewPenumbraNode returns a penumbra chain node with tendermint and penumbra nodes, along with docker volumes created.
 func NewPenumbraNode(
 	ctx context.Context,
 	i int,
@@ -52,6 +53,8 @@ func NewPenumbraNode(
 	}, nil
 }
 
+// CreateClientNode initializes a new instance of pclientd, with the specified FullViewingKey and CustodyKey,
+// before attempting to create and start pclientd in a new Docker container.
 func (p *PenumbraNode) CreateClientNode(
 	ctx context.Context,
 	log *zap.Logger,
@@ -64,6 +67,11 @@ func (p *PenumbraNode) CreateClientNode(
 	spendKey string,
 	fullViewingKey string,
 ) error {
+	addr, err := p.PenumbraAppNode.GetAddress(ctx, keyName)
+	if err != nil {
+		return err
+	}
+
 	p.clientsMu.Lock()
 	clientNode, err := NewClientNode(
 		ctx,
@@ -75,8 +83,8 @@ func (p *PenumbraNode) CreateClientNode(
 		image,
 		dockerClient,
 		networkID,
-		p.address,
-		p.addrString,
+		addr,
+		string(addr),
 	)
 	if err != nil {
 		p.clientsMu.Unlock()
@@ -85,14 +93,12 @@ func (p *PenumbraNode) CreateClientNode(
 	p.PenumbraClientNodes[keyName] = clientNode
 	p.clientsMu.Unlock()
 
-	if err := clientNode.Initialize(ctx, spendKey, fullViewingKey); err != nil {
+	pdAddr := "tcp://" + p.PenumbraAppNode.HostName() + ":" + strings.Split(grpcPort, "/")[0]
+	if err := clientNode.Initialize(ctx, pdAddr, spendKey, fullViewingKey); err != nil {
 		return err
 	}
 
-	if err := clientNode.CreateNodeContainer(
-		ctx,
-		"tcp://"+p.PenumbraAppNode.HostName()+":"+strings.Split(grpcPort, "/")[0],
-	); err != nil {
+	if err := clientNode.CreateNodeContainer(ctx); err != nil {
 		return err
 	}
 
