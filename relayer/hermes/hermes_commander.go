@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
@@ -197,7 +198,7 @@ func (c commander) Flush(pathName, channelID, homeDir string) []string {
 	panic("flush implemented in hermes relayer not the commander")
 }
 
-func (c commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+func (c commander) ConfigContent(ctx context.Context, chain ibc.Chain, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
 	panic("config content implemented in hermes relayer not the commander")
 }
 

@@ -6,11 +6,12 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 // Interchain represents a full IBC network, encompassing a collection of
@@ -633,7 +634,7 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 			chainName := ic.chains[c]
 			if err := r.AddChainConfiguration(ctx,
 				rep,
-				c.Config(), chainName,
+				c, chainName,
 				rpcAddr, grpcAddr,
 			); err != nil {
 				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)

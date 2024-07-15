@@ -1,0 +1,50 @@
+[{
+  "inputs": [
+    {
+      "internalType": "uint256",
+      "name": "channelCapability",
+      "type": "uint256"
+    },
+    {
+      "internalType": "string",
+      "name": "sourcePort",
+      "type": "string"
+    },
+    {
+      "internalType": "string",
+      "name": "sourceChannel",
+      "type": "string"
+    },
+    {
+      "components": [
+        {
+          "internalType": "uint256",
+          "name": "revisionNumber",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "revisionHeight",
+          "type": "uint256"
+        }
+      ],
+      "internalType": "struct Height",
+      "name": "timeoutHeight",
+      "type": "tuple"
+    },
+    {
+      "internalType": "uint256",
+      "name": "timeoutTimestamp",
+      "type": "uint256"
+    },
+    {
+      "internalType": "bytes",
+      "name": "data",
+      "type": "bytes"
+    }
+  ],
+  "name": "sendPacket",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+}]

@@ -17,6 +17,29 @@ import (
 	"github.com/docker/docker/client"
 )
 
+type AvalancheSubnetClient interface {
+	// SendFunds sends funds to a wallet from a user account.
+	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
+
+	// Height returns the current block height or an error if unable to get current height.
+	Height(ctx context.Context) (uint64, error)
+
+	// GetBankBalance returns balance from Bank Smart contract
+	GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error)
+
+	// GetBalance fetches the current balance for a specific account address
+	GetBalance(ctx context.Context, address string) (int64, error)
+}
+
+type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
+
+type AvalancheSubnetConfig struct {
+	Name                string
+	ChainID             string
+	Genesis             []byte
+	SubnetClientFactory AvalancheSubnetClientFactory
+}
+
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
@@ -77,6 +100,8 @@ type ChainConfig struct {
 	AdditionalStartArgs []string
 	// Environment variables for chain nodes
 	Env []string
+	// Avalanche Subnet config
+	AvalancheSubnets []AvalancheSubnetConfig `yaml:"avalanche-subnet"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -222,6 +247,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.InterchainSecurityConfig != (ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
+	if len(other.AvalancheSubnets) > 0 {
+		c.AvalancheSubnets = other.AvalancheSubnets
 	}
 
 	return c

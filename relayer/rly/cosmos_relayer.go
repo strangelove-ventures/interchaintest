@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 )
 
 const (
@@ -61,6 +64,27 @@ type CosmosRelayerChainConfig struct {
 	Value CosmosRelayerChainConfigValue `json:"value"`
 }
 
+type AvalancheRelayerChainConfigValue struct {
+	RPCAddr         string        `json:"rpc-addr"`
+	BaseRPCAddr     string        `json:"base-rpc-addr"`
+	SubnetID        string        `json:"subnet-id"`
+	BlockchainID    string        `json:"blockchain-id"`
+	ChainID         string        `json:"chain-id"`
+	NetworkID       uint32        `json:"network-id"`
+	ContractAddress string        `json:"contract-address"`
+	Timeout         string        `json:"timeout"`
+	KeyDirectory    string        `json:"key-directory"`
+	Key             string        `json:"key"`
+	KeyringBackend  string        `json:"keyring-backend"`
+	ExtraCodecs     []string      `json:"extra-codecs"`
+	MinLoopDuration time.Duration `json:"min-loop-duration"`
+}
+
+type AvalancheRelayerChainConfig struct {
+	Type  string                           `json:"type"`
+	Value AvalancheRelayerChainConfigValue `json:"value"`
+}
+
 const (
 	DefaultContainerImage   = "ghcr.io/cosmos/relayer"
 	DefaultContainerVersion = "v2.5.2"
@@ -73,6 +97,27 @@ const (
 func Capabilities() map[relayer.Capability]bool {
 	// RC1 matches the full set of capabilities as of writing.
 	return relayer.FullCapabilities()
+}
+
+func ChainConfigToAvalancheRelayerChainConfig(chain *avalanche.AvalancheChain, chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) AvalancheRelayerChainConfig {
+	return AvalancheRelayerChainConfig{
+		Type: chainConfig.Type,
+		Value: AvalancheRelayerChainConfigValue{
+			RPCAddr:         fmt.Sprintf("%s/ext/bc/%s/rpc", rpcAddr, chain.Node().BlockchainID()),
+			BaseRPCAddr:     rpcAddr,
+			SubnetID:        chain.Node().SubnetID(),
+			BlockchainID:    chain.Node().BlockchainID(),
+			ChainID:         chainConfig.AvalancheSubnets[0].ChainID,
+			NetworkID:       chain.ChainID,
+			ContractAddress: avalanche.AvalancheIBCPrecompileAddress.String(),
+			Timeout:         "10s",
+			KeyDirectory:    "",
+			Key:             "testkey",
+			KeyringBackend:  keyring.BackendTest,
+			ExtraCodecs:     nil,
+			MinLoopDuration: 0,
+		},
+	}
 }
 
 func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, gprcAddr string) CosmosRelayerChainConfig {
@@ -177,7 +222,7 @@ func (commander) CreateClient(srcChainID, dstChainID, pathName string, opts ibc.
 func (commander) CreateConnections(pathName string, homeDir string) []string {
 	return []string{
 		"rly", "tx", "connection", pathName,
-		"--home", homeDir,
+		"--home", homeDir, "--debug",
 	}
 }
 
@@ -298,9 +343,15 @@ func (commander) UpdateClients(pathName, homeDir string) []string {
 	}
 }
 
-func (commander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	cosmosRelayerChainConfig := ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
-	jsonBytes, err := json.Marshal(cosmosRelayerChainConfig)
+func (commander) ConfigContent(ctx context.Context, chain ibc.Chain, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	var relayerConfig any
+	if cfg.Type == "avalanche" {
+		avalancheChain := chain.(*avalanche.AvalancheChain)
+		relayerConfig = ChainConfigToAvalancheRelayerChainConfig(avalancheChain, cfg, keyName, rpcAddr, grpcAddr)
+	} else {
+		relayerConfig = ChainConfigToCosmosRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
+	}
+	jsonBytes, err := json.Marshal(relayerConfig)
 	if err != nil {
 		return nil, err
 	}
