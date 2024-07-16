@@ -12,13 +12,19 @@ ifeq (,$(VERSION))
   endif
 endif
 
+# if env IGNORE_STATIC_LINK=true, then only set the main version in ldflags
+# required so releasing the binary does not set the main directory incorrectly
 ldflags = -X main.MakeFileInstallDirectory=$(CWD) -X main.Version=$(VERSION)
+ifeq ($(IGNORE_STATIC_LINK),true)
+  ldflags = -X main.Version=$(VERSION)
+endif
+
 ldflags := $(strip $(ldflags))
 BUILD_FLAGS := -ldflags '$(ldflags)'
 
 .PHONY: build
 build:
-	go build $(BUILD_FLAGS) -o ../bin/local-ic ./cmd/local-ic 
+	go build $(BUILD_FLAGS) -o ../bin/local-ic ./cmd/local-ic
 
 .PHONY: run
 run:
