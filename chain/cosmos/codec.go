@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/ibc-go/modules/capability"
+	poamodule "github.com/strangelove-ventures/poa/module"
 
 	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
@@ -52,6 +53,7 @@ func DefaultEncoding() testutil.TestEncodingConfig {
 		ibctm.AppModuleBasic{},
 		ibcwasm.AppModuleBasic{},
 		ccvprovider.AppModuleBasic{},
+		poamodule.AppModule{},
 	)
 }
 
