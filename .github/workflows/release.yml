@@ -20,9 +20,8 @@ jobs:
         with:
             go-version: ${{ env.GO_VERSION }}
 
-      # This must be go install vs make install as to not statically link the binary
-      # to the worker node.
-      - run: cd local-interchain && go mod tidy && go install ./...
+      # NOTE: make install must not be statically linked to the MakeFileInstallDirectory
+      - run: cd local-interchain && go mod tidy && IGNORE_STATIC_LINK=true make install
 
       - run: cp $HOME/go/bin/local-ic ./local-ic
       - run: chmod +x ./local-ic
