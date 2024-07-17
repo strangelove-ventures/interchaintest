@@ -149,6 +149,14 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 		return fmt.Errorf("failed to parse trusting period in 'StartProvider': %w", err)
 	}
 
+	spawnTimeWait := os.Getenv("ICS_SPAWN_TIME_WAIT")
+	if spawnTimeWait == "" {
+		spawnTimeWait = "45s"
+	}
+	spawnTimeWaitDuration, err := time.ParseDuration(spawnTimeWait)
+	if err != nil {
+		return fmt.Errorf("invalid ICS_SPAWN_TIME_WAIT %s: %w", spawnTimeWait, err)
+	}
 	for _, consumer := range c.Consumers {
 		prop := ccvclient.ConsumerAdditionProposalJSON{
 			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
@@ -157,7 +165,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
 			GenesisHash:   []byte("gen_hash"),
 			BinaryHash:    []byte("bin_hash"),
-			SpawnTime:     time.Now().Add(2 * time.Minute), // Needed so that there's time for consumer keys to be assigned
+			SpawnTime:     time.Now().Add(spawnTimeWaitDuration),
 
 			// TODO fetch or default variables
 			BlocksPerDistributionTransmission: 1000,
@@ -242,10 +250,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		i := i
 		val := val
 		eg.Go(func() error {
-			copy := true
-			if c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil {
-				copy = c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey(i)
-			}
+			copy := c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil && c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey(i)
 			if copy {
 				privVal, err := val.PrivValFileContent(ctx)
 				if err != nil {
