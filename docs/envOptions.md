@@ -11,3 +11,5 @@
     - Set to any non-empty value to keep testnet containers alive.
 
 - `CONTAINER_LOG_TAIL`: Specifies the number of lines to display from container logs. Defaults to 50 lines.
+
+- `ICS_SPAWN_TIME_WAIT`: A go duration (e.g. 2m) that specifies how long to wait for ICS chains to spawn

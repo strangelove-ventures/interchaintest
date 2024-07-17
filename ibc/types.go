@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
+	"github.com/google/go-cmp/cmp"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
@@ -200,7 +201,7 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.ExposeAdditionalPorts = append(c.ExposeAdditionalPorts, other.ExposeAdditionalPorts...)
 	}
 
-	if other.InterchainSecurityConfig != (ICSConfig{}) {
+	if !cmp.Equal(other.InterchainSecurityConfig, ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
 	}
 
@@ -333,4 +334,6 @@ type PathUpdateOptions struct {
 type ICSConfig struct {
 	ProviderVerOverride string
 	ConsumerVerOverride string
+	// For consumer chains only; returns true if the provider key should be copied to the consumer chain for the validator at the given index
+	ConsumerCopyProviderKey func(int) bool
 }
