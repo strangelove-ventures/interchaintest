@@ -17,18 +17,10 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/icza/dyno"
-<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-=======
-	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v7/ibc"
-	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v7/testutil"
-	"github.com/tidwall/gjson"
->>>>>>> 8d552ae (feat: allow consumers to have different keys than providers (#1175))
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
