@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -16,10 +17,18 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/icza/dyno"
+<<<<<<< HEAD
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+=======
+	"github.com/strangelove-ventures/interchaintest/v7/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v7/ibc"
+	"github.com/strangelove-ventures/interchaintest/v7/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v7/testutil"
+	"github.com/tidwall/gjson"
+>>>>>>> 8d552ae (feat: allow consumers to have different keys than providers (#1175))
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -55,23 +64,27 @@ func (c *CosmosChain) FinishICSProviderSetup(ctx context.Context, r ibc.Relayer,
 
 	providerVal := stakingVals[0]
 
-	beforeDel, err := c.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
-	if err != nil {
-		return fmt.Errorf("failed to query delegations to validator: %w", err)
-	}
-
 	err = c.GetNode().StakingDelegate(ctx, "validator", providerVal.OperatorAddress, fmt.Sprintf("1000000%s", c.Config().Denom))
 	if err != nil {
 		return fmt.Errorf("failed to delegate to validator: %w", err)
 	}
 
-	afterDel, err := c.StakingQueryDelegationsTo(ctx, providerVal.OperatorAddress)
+	stakingVals, err = c.StakingQueryValidators(ctx, stakingttypes.BondStatusBonded)
 	if err != nil {
-		return fmt.Errorf("failed to query delegations to validator: %w", err)
+		return fmt.Errorf("failed to query validators: %w", err)
 	}
-
-	if afterDel[0].Balance.Amount.LT(beforeDel[0].Balance.Amount) {
-		return fmt.Errorf("delegation failed: %w", err)
+	var providerAfter *stakingttypes.Validator
+	for _, val := range stakingVals {
+		if val.OperatorAddress == providerVal.OperatorAddress {
+			providerAfter = &val
+			break
+		}
+	}
+	if providerAfter == nil {
+		return fmt.Errorf("failed to find provider validator after delegation")
+	}
+	if providerAfter.Tokens.LT(providerVal.Tokens) {
+		return fmt.Errorf("delegation failed; before: %v, after: %v", providerVal.Tokens, providerAfter.Tokens)
 	}
 
 	return c.FlushPendingICSPackets(ctx, r, eRep, ibcPath)
@@ -96,6 +109,9 @@ func (c *CosmosChain) FlushPendingICSPackets(ctx context.Context, r ibc.Relayer,
 
 // Bootstraps the provider chain and starts it from genesis
 func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	if c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil {
+		return fmt.Errorf("don't set ConsumerCopyProviderKey in the provider chain")
+	}
 	existingFunc := c.cfg.ModifyGenesis
 	c.cfg.ModifyGenesis = func(cc ibc.ChainConfig, b []byte) ([]byte, error) {
 		var err error
@@ -140,6 +156,14 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 		return fmt.Errorf("failed to parse trusting period in 'StartProvider': %w", err)
 	}
 
+	spawnTimeWait := os.Getenv("ICS_SPAWN_TIME_WAIT")
+	if spawnTimeWait == "" {
+		spawnTimeWait = "45s"
+	}
+	spawnTimeWaitDuration, err := time.ParseDuration(spawnTimeWait)
+	if err != nil {
+		return fmt.Errorf("invalid ICS_SPAWN_TIME_WAIT %s: %w", spawnTimeWait, err)
+	}
 	for _, consumer := range c.Consumers {
 		prop := ccvclient.ConsumerAdditionProposalJSON{
 			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
@@ -148,7 +172,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
 			GenesisHash:   []byte("gen_hash"),
 			BinaryHash:    []byte("bin_hash"),
-			SpawnTime:     time.Now(), // Client on provider tracking consumer will be created as soon as proposal passes
+			SpawnTime:     time.Now().Add(spawnTimeWaitDuration),
 
 			// TODO fetch or default variables
 			BlocksPerDistributionTransmission: 1000,
@@ -230,13 +254,34 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
-		privVal, err := val.PrivValFileContent(ctx)
-		if err != nil {
-			return err
-		}
-		if err := c.Validators[i].OverwritePrivValFile(ctx, privVal); err != nil {
-			return err
-		}
+		i := i
+		val := val
+		eg.Go(func() error {
+			copy := c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil && c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey(i)
+			if copy {
+				privVal, err := val.PrivValFileContent(ctx)
+				if err != nil {
+					return err
+				}
+				if err := c.Validators[i].OverwritePrivValFile(ctx, privVal); err != nil {
+					return err
+				}
+			} else {
+				key, _, err := c.Validators[i].ExecBin(ctx, "tendermint", "show-validator")
+				if err != nil {
+					return fmt.Errorf("failed to get consumer validator pubkey: %w", err)
+				}
+				keyStr := strings.TrimSpace(string(key))
+				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", c.cfg.ChainID, keyStr)
+				if err != nil {
+					return fmt.Errorf("failed to assign consumer validator pubkey: %w", err)
+				}
+			}
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 
 	if c.cfg.PreGenesis != nil {
@@ -244,6 +289,18 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		if err != nil {
 			return err
 		}
+	}
+
+	// Wait for spawn time
+	proposals, _, err := c.Provider.GetNode().ExecQuery(ctx, "gov", "proposals", "--reverse")
+	if err != nil {
+		return fmt.Errorf("failed to query proposed chains: %w", err)
+	}
+	spawnTime := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content.spawn_time", c.cfg.ChainID)).Time()
+	c.log.Info("Waiting for chain to spawn", zap.Time("spawn_time", spawnTime), zap.String("chain_id", c.cfg.ChainID))
+	time.Sleep(time.Until(spawnTime))
+	if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {
+		return err
 	}
 
 	validator0 := c.Validators[0]
