@@ -19,3 +19,5 @@
     - Set to `"always"` to show logs for both pass and fail.
     - Set to `"never"` to never show any logs.
     - Leave unset to show logs only for failed tests.
+
+- `ICS_SPAWN_TIME_WAIT`: A go duration (e.g. 2m) that specifies how long to wait for ICS chains to spawn
