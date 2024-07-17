@@ -21,6 +21,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/tidwall/gjson"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"

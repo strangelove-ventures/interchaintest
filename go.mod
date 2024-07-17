@@ -46,6 +46,7 @@ require (
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
+	github.com/tidwall/gjson v1.17.1
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/multierr v1.11.0
@@ -234,6 +235,8 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
