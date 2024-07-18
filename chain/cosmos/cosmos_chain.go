@@ -832,6 +832,10 @@ type ValidatorWithIntPower struct {
 
 // Bootstraps the chain and starts it from genesis
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	if c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil && c.Provider == nil {
+		return fmt.Errorf("don't set ConsumerCopyProviderKey if it's not a consumer chain")
+	}
+
 	chainCfg := c.Config()
 
 	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
