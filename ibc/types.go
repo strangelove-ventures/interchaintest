@@ -51,7 +51,7 @@ type ChainConfig struct {
 	// When true, will skip validator gentx flow
 	SkipGenTx bool
 	// When provided, will run before performing gentx and genesis file creation steps for validators.
-	PreGenesis func(ChainConfig) error
+	PreGenesis func(Chain) error
 	// When provided, genesis file contents will be altered before sharing for genesis.
 	ModifyGenesis func(ChainConfig, []byte) ([]byte, error)
 	// Modify genesis-amounts for the validator at the given index
