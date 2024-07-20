@@ -1,0 +1,20 @@
+{
+    "chains": [
+        {
+            "name": "penumbra",
+            "chain_id": "penumbraA-0",
+            "denom": "um",
+            "binary": "pclientd",
+            "bech32_prefix": "penumbra",
+            "docker_image": {
+                "repository": "ghcr.io/strangelove-ventures/heighliner/penumbra",
+                "version": "v0.78.0,v0.37.5",
+                "uid-gid": "1000:1000"
+            },
+            "chain_type": "penumbra",
+            "coin_type": 118,
+            "number_vals": 1,
+            "number_node": 0
+        }
+    ]
+}

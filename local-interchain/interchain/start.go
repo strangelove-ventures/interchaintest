@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -28,6 +29,8 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	var eRep *testreporter.RelayerExecReporter
 
 	vals := make(map[string][]*cosmos.ChainNode)
+	penumbraVals := make(map[string][]*penumbra.PenumbraNode)
+
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
@@ -63,24 +66,24 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	chainSpecs := []*interchaintest.ChainSpec{}
 
-	for idx, cfg := range config.Chains {
+	for _, cfg := range config.Chains {
 		_, chainSpec := CreateChainConfigs(cfg)
 		chainSpecs = append(chainSpecs, chainSpec)
 
-		if len(cfg.IBCPaths) > 0 {
-			for _, path := range cfg.IBCPaths {
-				ibcpaths[path] = append(ibcpaths[path], idx)
-			}
-		}
+		// if len(cfg.IBCPaths) > 0 {
+		// 	for _, path := range cfg.IBCPaths {
+		// 		ibcpaths[path] = append(ibcpaths[path], idx)
+		// 	}
+		// }
 
-		if cfg.ICSConsumerLink != "" {
-			icsPair[cfg.ICSConsumerLink] = append(icsPair[cfg.ICSConsumerLink], cfg.ChainID)
-		}
+		// if cfg.ICSConsumerLink != "" {
+		// 	icsPair[cfg.ICSConsumerLink] = append(icsPair[cfg.ICSConsumerLink], cfg.ChainID)
+		// }
 	}
 
-	if err := VerifyIBCPaths(ibcpaths); err != nil {
-		log.Fatal("VerifyIBCPaths", err)
-	}
+	// if err := VerifyIBCPaths(ibcpaths); err != nil {
+	// 	log.Fatal("VerifyIBCPaths", err)
+	// }
 
 	// Create chain factory for all the chains
 	cf := interchaintest.NewBuiltinChainFactory(logger, chainSpecs)
@@ -95,7 +98,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	for _, chain := range chains {
 		ic = ic.AddChain(chain)
 	}
-	ic.AdditionalGenesisWallets = SetupGenesisWallets(config, chains)
+	// ic.AdditionalGenesisWallets = SetupGenesisWallets(config, chains)
 
 	fakeT := FakeTesting{
 		FakeName: testName,
@@ -198,6 +201,11 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			chainID := cosmosChain.Config().ChainID
 			vals[chainID] = cosmosChain.Validators
 		}
+
+		if penumbraChain, ok := chain.(*penumbra.PenumbraChain); ok {
+			chainID := penumbraChain.Config().ChainID
+			penumbraVals[chainID] = penumbraChain.PenumbraNodes
+		}
 	}
 
 	// ICS provider setup
@@ -216,12 +224,20 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Starts a non blocking REST server to take action on the chain.
 	go func() {
 		cosmosChains := map[string]*cosmos.CosmosChain{}
+		penumbraChains := map[string]*penumbra.PenumbraChain{}
+
 		for _, chain := range chains {
 			if cosmosChain, ok := chain.(*cosmos.CosmosChain); ok {
 				cosmosChains[cosmosChain.Config().ChainID] = cosmosChain
 			}
+
+			// TODO: ibc.Chain ?
+			if penumbraChain, ok := chain.(*penumbra.PenumbraChain); ok {
+				penumbraChains[penumbraChain.Config().ChainID] = penumbraChain
+			}
 		}
 
+		// TODO: penumbraVals ??
 		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, ac.AuthKey, eRep, installDir)
 
 		config.Server = types.RestServer{

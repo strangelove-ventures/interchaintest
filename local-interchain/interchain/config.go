@@ -208,12 +208,29 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 	}
 
 	if cfg.DockerImage.Repository != "" {
-		chainCfg.Images = []ibc.DockerImage{
-			{
-				Repository: cfg.DockerImage.Repository,
-				Version:    cfg.DockerImage.Version,
-				UidGid:     cfg.DockerImage.UidGid,
-			},
+		if cfg.ChainType == "penumbra" {
+			split := strings.Split(cfg.DockerImage.Version, ",")
+
+			chainCfg.Images = []ibc.DockerImage{
+				{
+					Repository: "ghcr.io/strangelove-ventures/heighliner/cometbft",
+					Version:    split[1],
+					UidGid:     cfg.DockerImage.UidGid,
+				},
+				{
+					Repository: cfg.DockerImage.Repository,
+					Version:    split[0],
+					UidGid:     cfg.DockerImage.UidGid,
+				},
+			}
+		} else {
+			chainCfg.Images = []ibc.DockerImage{
+				{
+					Repository: cfg.DockerImage.Repository,
+					Version:    cfg.DockerImage.Version,
+					UidGid:     cfg.DockerImage.UidGid,
+				},
+			}
 		}
 	}
 

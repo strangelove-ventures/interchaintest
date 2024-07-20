@@ -321,6 +321,12 @@ func (i DockerImage) Ref() string {
 		return i.Repository + ":latest"
 	}
 
+	// penumbra patch
+	updated := strings.Split(i.Version, ",")
+	if len(updated) > 1 {
+		return i.Repository + ":" + updated[0]
+	}
+
 	return i.Repository + ":" + i.Version
 }
 
