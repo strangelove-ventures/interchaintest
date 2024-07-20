@@ -190,7 +190,7 @@ func PruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *clie
 			}
 
 			if len(res.VolumesDeleted) > 0 {
-				msg = fmt.Sprintf("Pruned %d volumes, reclaiming approximately %.1f MB", len(res.VolumesDeleted), float64(res.SpaceReclaimed)/(1024*1024))
+				msg = fmt.Sprintf("Pruned %d volumes, reclaiming approximately %.1f MB\n", len(res.VolumesDeleted), float64(res.SpaceReclaimed)/(1024*1024))
 			}
 
 			return nil
@@ -239,7 +239,7 @@ func PruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 	}
 
 	if len(deleted) > 0 {
-		t.Logf("Pruned unused networks: %v", deleted)
+		t.Logf("Pruned unused networks: %v\n", deleted)
 	}
 }
 
