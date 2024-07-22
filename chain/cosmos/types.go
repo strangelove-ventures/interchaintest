@@ -66,6 +66,10 @@ type SoftwareUpgradeProposal struct {
 	Description string
 	Height      int64
 	Info        string // optional
+
+	// SDK v50 only
+	Proposer  string
+	Expedited bool
 }
 
 // ProposalResponse is the proposal query response.
