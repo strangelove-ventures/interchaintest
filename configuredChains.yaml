@@ -340,6 +340,7 @@ gaia:
   denom: uatom
   gas-prices: 0.01uatom
   gas-adjustment: 2.0
+  gas: auto
   trusting-period: 504h
   images:
     - repository: ghcr.io/strangelove-ventures/heighliner/gaia
