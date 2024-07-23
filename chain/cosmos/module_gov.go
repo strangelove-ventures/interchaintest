@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"strconv"
 
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
@@ -52,6 +54,32 @@ func (tn *ChainNode) GovSubmitProposal(ctx context.Context, keyName string, prop
 
 // UpgradeProposal submits a software-upgrade governance proposal to the chain.
 func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop SoftwareUpgradeProposal) (string, error) {
+	if tn.IsAboveSDK47(ctx) {
+		cosmosChain := tn.Chain.(*CosmosChain)
+
+		if prop.Authority == "" {
+			authority, err := cosmosChain.GetGovernanceAddress(ctx)
+			if err != nil {
+				return "", err
+			}
+			prop.Authority = authority
+		}
+
+		msg := upgradetypes.MsgSoftwareUpgrade{
+			Authority: prop.Authority,
+			Plan: upgradetypes.Plan{
+				Name:   prop.Name,
+				Height: prop.Height,
+				Info:   prop.Info,
+			},
+		}
+
+		proposal, err := cosmosChain.BuildProposal([]ProtoMessage{&msg}, prop.Title, prop.Description, "", prop.Deposit, prop.Proposer, prop.Expedited)
+		if err != nil {
+			return "", err
+		}
+		return tn.SubmitProposal(ctx, keyName, proposal)
+	}
 	command := []string{
 		"gov", "submit-proposal",
 		"software-upgrade", prop.Name,
