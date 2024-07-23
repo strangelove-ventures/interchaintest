@@ -70,6 +70,7 @@ type SoftwareUpgradeProposal struct {
 	// SDK v50 only
 	Proposer  string
 	Expedited bool
+	Authority string
 }
 
 // ProposalResponse is the proposal query response.

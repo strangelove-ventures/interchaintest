@@ -57,13 +57,16 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 	if tn.IsAboveSDK47(ctx) {
 		cosmosChain := tn.Chain.(*CosmosChain)
 
-		authority, err := cosmosChain.GetGovernanceAddress(ctx)
-		if err != nil {
-			return "", err
+		if prop.Authority == "" {
+			authority, err := cosmosChain.GetGovernanceAddress(ctx)
+			if err != nil {
+				return "", err
+			}
+			prop.Authority = authority
 		}
 
 		msg := upgradetypes.MsgSoftwareUpgrade{
-			Authority: authority,
+			Authority: prop.Authority,
 			Plan: upgradetypes.Plan{
 				Name:   prop.Name,
 				Height: prop.Height,
