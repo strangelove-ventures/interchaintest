@@ -49,6 +49,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 				CoinType:       "118",
 				ModifyGenesis:  cosmos.ModifyGenesis(sdk47Genesis),
 				EncodingConfig: wasmEncoding(),
+				Gas:            "auto",
 			},
 			NumValidators: &numVals,
 			NumFullNodes:  &numFullNodes,
@@ -92,6 +93,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testAddingNode(ctx, t, chain)
 	testGetGovernanceAddress(ctx, t, chain)
 	testTXFailsOnBlockInclusion(ctx, t, chain, users)
+	testTXEncodeDecode(ctx, t, chain, users)
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
@@ -430,6 +432,36 @@ func testTXFailsOnBlockInclusion(ctx context.Context, t *testing.T, chain *cosmo
 	_, err = chain.GetNode().ExecTx(ctx, users[0].FormattedAddress(),
 		"staking", "delegate", fakeValoper, "100"+chain.Config().Denom)
 	require.Error(t, err)
+}
+
+func testTXEncodeDecode(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
+	generate := chain.GetNode().TxCommand(users[0].KeyName(), "bank", "send", users[0].FormattedAddress(), users[1].FormattedAddress(), "1"+chain.Config().Denom, "--generate-only")
+	txJson, _, err := chain.GetNode().Exec(ctx, generate, nil)
+	require.NoError(t, err)
+
+	// encode
+	err = chain.GetNode().WriteFile(ctx, txJson, "tx.json")
+	require.NoError(t, err)
+	encode := chain.GetNode().TxCommand(users[0].KeyName(), "encode", chain.GetNode().HomeDir()+"/tx.json")
+	encoded, _, err := chain.GetNode().Exec(ctx, encode, nil)
+	require.NoError(t, err)
+
+	// decode
+	decode := chain.GetNode().TxCommand(users[0].KeyName(), "decode", string(encoded))
+	decoded, _, err := chain.GetNode().Exec(ctx, decode, nil)
+	require.NoError(t, err)
+
+	err = chain.GetNode().WriteFile(ctx, decoded, "decoded.json")
+	require.NoError(t, err)
+
+	sign := chain.GetNode().TxCommand(users[0].KeyName(), "sign", chain.GetNode().HomeDir()+"/decoded.json")
+	signed, _, err := chain.GetNode().Exec(ctx, sign, nil)
+	require.NoError(t, err)
+
+	err = chain.GetNode().WriteFile(ctx, signed, "signed.json")
+	require.NoError(t, err)
+	_, err = chain.GetNode().ExecTx(ctx, users[0].KeyName(), "broadcast", chain.GetNode().HomeDir()+"/signed.json")
+	require.NoError(t, err)
 }
 
 // helpers
