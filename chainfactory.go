@@ -11,6 +11,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -156,6 +157,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		}
 	case "ethereum":
 		return ethereum.NewEthereumChain(testName, cfg, log), nil
+	case "thorchain":
+		return thorchain.NewThorchain(testName, cfg, nv, nf, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	//"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -35,6 +36,7 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/icza/dyno"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -64,6 +66,7 @@ type ChainNode struct {
 
 	// Env
 	ValidatorMnemonic string // SIGNER_SEED_PHRASE ThorchainDiff
+	NodeAccount *NodeAccount
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -279,7 +282,7 @@ func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) e
 	return nil
 }
 
-func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
+/*func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 	nid, err := tn.NodeID(ctx)
 	if err != nil {
 		return fmt.Errorf("getting node ID: %w", err)
@@ -298,7 +301,7 @@ func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
 	}
 
 	return nil
-}
+}*/
 
 type PrivValidatorKey struct {
 	Type  string `json:"type"`
@@ -719,6 +722,10 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 		"--keyring-backend", keyring.BackendTest,
 	)
 
+	if err != nil {
+		return err
+	}
+
 	// ThorchainDiff
 	if tn.Validator && tn.ValidatorMnemonic == "" {
 		lines := strings.Split(string(stderr), "\n")
@@ -733,7 +740,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 		tn.ValidatorMnemonic = updated[len(updated)-1]
 	}
 
-	return err
+	return nil
 }
 
 // RecoverKey restores a key from a given mnemonic.
@@ -810,8 +817,194 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 	return err
 }
 
+func (tn *ChainNode) Version(ctx context.Context) (string, error) {
+	command := []string{tn.Chain.Config().Bin, "query", "thorchain", "version", "--output", "json",
+		"--home", tn.HomeDir(),
+	}
+
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to query version (stderr=%q): %w", stderr, err)
+	}
+
+	var version VersionOutput
+	if err := json.Unmarshal(stdout, &version); err != nil {
+		return "", fmt.Errorf("failed to unmarshal version: %w", err)
+	}
+
+	return version.Version, nil
+}
+
+func (tn *ChainNode) GetValidatorConsPubKey(ctx context.Context) (string, error) {
+	command := []string{tn.Chain.Config().Bin, "tendermint", "show-validator",
+		"--home", tn.HomeDir(),
+	}
+
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to show validator (stderr=%q): %w", stderr, err)
+	}
+
+	command2 := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %q | %s pubkey --bech cons`,
+			stdout, tn.Chain.Config().Bin),
+	}
+	
+	stdout, stderr, err = tn.Exec(ctx, command2, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to show validator pubkey (stderr=%q): %w", stderr, err)
+	}
+
+	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
+}
+
+func (tn *ChainNode) GetNodePubKey(ctx context.Context) (string, error) {
+	command := []string{tn.Chain.Config().Bin, "keys", "show", valKey, "-p",
+		"--home", tn.HomeDir(),
+		"--keyring-backend", keyring.BackendTest,
+	}
+
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to show node pub key json (stderr=%q): %w", stderr, err)
+	}
+
+	command2 := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %q | %s pubkey`,
+			stdout, tn.Chain.Config().Bin),
+	}
+	
+	stdout, stderr, err = tn.Exec(ctx, command2, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to show node pubkey (stderr=%q): %w", stderr, err)
+	}
+
+	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
+}
+
+func (tn *ChainNode) GenerateEd25519(ctx context.Context) (string, error) {
+	ed25519input := fmt.Sprintf("\"%s\n%s\n\"", "password", tn.ValidatorMnemonic) //TODO: get password from env
+	command := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %s | %s ed25519 --home %s`,
+			ed25519input, tn.Chain.Config().Bin, tn.HomeDir()),
+	}
+	
+	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate ed25519 (stderr=%q): %w", stderr, err)
+	}
+
+	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
+}
+
+func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
+	if tn.NodeAccount != nil {
+		return nil // Already populated
+	}
+
+	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)
+	if err != nil {
+		return  err
+	}
+
+	validator, err := tn.GetValidatorConsPubKey(ctx)
+	if err != nil {
+		return err
+	}
+
+	version, err := tn.Version(ctx)
+	if err != nil {
+		return err
+	}
+
+	nodePubKey, err := tn.GetNodePubKey(ctx)
+	if err != nil {
+		return err
+	}
+
+	nodePubKeyEd25519, err := tn.GenerateEd25519(ctx)
+	if err != nil {
+		return err
+	}
+
+	// TODO: get ip address of the docker container
+	//nodeIpAddr, err := net.LookupHost(tn.HostName())
+	//if err != nil {
+	//	return err
+	//}
+
+	tn.NodeAccount = &NodeAccount{
+		NodeAddress: bech32NodeAddr,
+		Version: version,
+		IpAddress: "192.168.0.10",
+		Status: "Active",
+		Bond: "100000000",
+		ActiveBlockHeight: "0",
+		BondAddress: bech32NodeAddr,
+		SignerMembership: []string{},
+		ValidatorConsPubKey: validator,
+		PubKeySet: NodeAccountPubKeySet{
+			Secp256k1: nodePubKey,
+			Ed25519: nodePubKeyEd25519,
+		},
+	}
+
+	fmt.Println("NodeAccount:", tn.NodeAccount) //TODO: remove
+
+	return nil
+}
+
+func (tn *ChainNode) AddNodeAccount(ctx context.Context, nodeAccount NodeAccount) error {
+	genbz, err := tn.GenesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	newNodeAccount := NewGenesisKV("app_state.thorchain.node_accounts", nodeAccount)
+
+	g := make(map[string]interface{})
+	if err := json.Unmarshal(genbz, &g); err != nil {
+		return fmt.Errorf("failed to unmarshal genesis file: %w", err)
+	}
+
+	splitPath := strings.Split(newNodeAccount.Key, ".")
+
+	path := make([]interface{}, len(splitPath))
+	for i, component := range splitPath {
+		if v, err := strconv.Atoi(component); err == nil {
+			path[i] = v
+		} else {
+			path[i] = component
+		}
+	}
+
+	if err := dyno.Append(g, newNodeAccount.Value, path...); err != nil {
+		newNodeAccount.Value = []NodeAccount{nodeAccount}
+		if err := dyno.Set(g, newNodeAccount.Value, path...); err != nil { 
+			return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newNodeAccount.Key, newNodeAccount.Value, err)
+		}
+	}
+
+	genbz, err = json.Marshal(g)
+	if err != nil {
+		return fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+	}
+
+	if err := tn.OverwriteGenesisFile(ctx, genbz); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Gentx generates the gentx for a given node
-func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
+/*func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
@@ -829,10 +1022,10 @@ func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegati
 
 	_, _, err := tn.ExecBin(ctx, command...)
 	return err
-}
+}*/
 
 // CollectGentxs runs collect gentxs on the node's home folders
-func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
+/*func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 	command := []string{tn.Chain.Config().Bin}
 	if tn.IsAboveSDK47(ctx) {
 		command = append(command, "genesis")
@@ -845,7 +1038,7 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 
 	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
-}
+}*/
 
 type CosmosTx struct {
 	TxHash string `json:"txhash"`
@@ -1017,16 +1210,6 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 		Go:               deps.Go,
 		CosmosSdkVersion: deps.CosmosSdkVersion,
 	}
-}
-
-// QueryClientContractCode performs a query with the contract codeHash as the input and code as the output
-func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash string, response any) error {
-	stdout, _, err := tn.ExecQuery(ctx, "ibc-wasm", "code", codeHash)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal([]byte(stdout), response)
-	return err
 }
 
 // QueryParam returns the state and details of a subspace param.
@@ -1308,14 +1491,15 @@ func (tn *ChainNode) InitValidatorGenTx(
 	if err := tn.CreateKey(ctx, valKey); err != nil {
 		return err
 	}
-	bech32, err := tn.AccountKeyBech32(ctx, valKey)
+	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
 		return err
 	}
-	if err := tn.AddGenesisAccount(ctx, bech32, genesisAmounts); err != nil {
+	if err := tn.AddGenesisAccount(ctx, bech32NodeAddr, genesisAmounts); err != nil {
 		return err
 	}
-	return tn.Gentx(ctx, valKey, genesisSelfDelegation)
+	return nil
+	//return tn.Gentx(ctx, valKey, genesisSelfDelegation)
 }
 
 func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {

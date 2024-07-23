@@ -162,6 +162,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 	if cfg.CoinDecimals == nil {
 		evm := int64(18)
 		cosmos := int64(6)
+		thorchain := int64(8)
 
 		switch cfg.CoinType {
 		case "60":
@@ -172,7 +173,8 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			cfg.CoinDecimals = &cosmos
 		case "529":
 			cfg.CoinDecimals = &cosmos
-
+		case "931":
+			cfg.CoinDecimals = &thorchain
 		}
 	}
 

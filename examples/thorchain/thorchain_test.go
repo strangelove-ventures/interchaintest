@@ -15,15 +15,15 @@ import (
 )
 
 var (
-	numValidators = 1
+	numValidators = 4
 	numFullNodes  = 0
 
-	Denom  = "urune"
+	Denom  = "rune"
 	Binary = "thornode"
 	Bech32 = "tthor"
 )
 
-func TestCoreSDKCommands(t *testing.T) {
+func TestThorchain(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -91,7 +91,7 @@ func ThorchainSpec(testName string, numVals int, numFn int) []*interchaintest.Ch
 			{
 				ProcessName: "bifrost",
 				Image: chainImage,
-				HomeDir: "?",
+				HomeDir: "/var/data/bifrost",
 				Ports: []string{"5040", "6040", "9000"},
 				StartCmd: []string{"bifrost", "-p"},
 				Env: bifrostDefaults,
@@ -118,7 +118,7 @@ var (
 		"NET=mocknet", 
 		"CHAIN_ID=thorchain",
 		"SIGNER_NAME=thorchain",
-		"SIGNER_PASSWD=password",
+		"SIGNER_PASSWD=password", // Must use this password, used to generate ed25519
 	}
 
 	thornodeDefaults = append(allNodeDefaults, []string{

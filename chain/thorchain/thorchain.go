@@ -697,9 +697,20 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 					return fmt.Errorf("failed to modify toml config file: %w", err)
 				}
 			}
+			
 			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i])
+				if err := v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i]); err != nil {
+					return err
+				}
+
+				if err := v.GetNodeAccount(ctx); err != nil {
+					return fmt.Errorf("failed to get node account info: %w", err)
+				}
+				if err := v.AddNodeAccount(ctx, *v.NodeAccount); err != nil {
+					return fmt.Errorf("failed to add node account: %w", err)
+				}
 			}
+			
 			return nil
 		})
 	}
@@ -763,26 +774,29 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
 			return err
 		}
-
+		
 		if !c.cfg.SkipGenTx {
-			if err := validatorN.copyGentx(ctx, validator0); err != nil {
-				return err
+			if err := validator0.AddNodeAccount(ctx, *validatorN.NodeAccount); err != nil {
+				return fmt.Errorf("failed to add node account to val0: %w", err)
 			}
+
+			//if err := validatorN.copyGentx(ctx, validator0); err != nil {
+			//	return err
+			//}
 		}
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-
 		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
 			return err
 		}
 	}
 
-	if !c.cfg.SkipGenTx {
-		if err := validator0.CollectGentxs(ctx); err != nil {
-			return err
-		}
-	}
+	// if !c.cfg.SkipGenTx {
+	// 	if err := validator0.CollectGentxs(ctx); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
@@ -797,6 +811,8 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 			return err
 		}
 	}
+
+	fmt.Println("Genesis: ", string(genbz)) //TODO: remove when working
 
 	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
