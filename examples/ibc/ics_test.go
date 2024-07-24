@@ -34,19 +34,29 @@ func TestICS(t *testing.T) {
 		icsVersions = []string{ver}
 	}
 
+	relayers := []struct {
+		rly  ibc.RelayerImplementation
+		name string
+	}{
+		{rly: ibc.Hermes, name: "hermes"},
+		{rly: ibc.CosmosRly, name: "rly"},
+	}
+
 	for _, version := range icsVersions {
 		version := version
 		testName := "ics_" + strings.ReplaceAll(version, ".", "_")
 
-		t.Run(testName, func(t *testing.T) {
-			t.Parallel()
-			icsTest(t, version)
-		})
+		for _, rly := range relayers {
+			t.Run(testName+"_"+rly.name, func(t *testing.T) {
+				t.Parallel()
+				icsTest(t, version, rly.rly)
+			})
+		}
 	}
 
 }
 
-func icsTest(t *testing.T, version string) {
+func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 	ctx := context.Background()
 
 	consumerBechPrefix := "cosmos"
@@ -78,7 +88,7 @@ func icsTest(t *testing.T, version string) {
 	// Relayer Factory
 	client, network := interchaintest.DockerSetup(t)
 	r := interchaintest.NewBuiltinRelayerFactory(
-		ibc.CosmosRly,
+		rly,
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("--block-history", "100"),
 	).Build(t, client, network)
@@ -184,7 +194,11 @@ func icsTest(t *testing.T, version string) {
 
 func getTransferChannel(channels []ibc.ChannelOutput) (string, error) {
 	for _, channel := range channels {
-		if channel.PortID == "transfer" && channel.State == ibcconntypes.OPEN.String() {
+		state := channel.State
+		if !strings.HasPrefix(state, "STATE_") {
+			state = "STATE_" + strings.ToUpper(state)
+		}
+		if channel.PortID == "transfer" && state == ibcconntypes.OPEN.String() {
 			return channel.ChannelID, nil
 		}
 	}
