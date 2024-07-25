@@ -1,8 +1,9 @@
 package thorchain_test
 
 import (
-
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -10,9 +11,18 @@ var (
 	Denom  = "rune"
 	Binary = "thornode"
 	Bech32 = "tthor"
+	CoinScale = math.NewInt(100_000_000)
+	StaticGas = math.NewInt(2_000_000)
+	InitialFaucetAmount = math.NewInt(100_000_000).Mul(CoinScale)
+
+	GenesisKVMods = []thorchain.GenesisKV{
+		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
+		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false), // disable ibc transfer sends
+		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"), // mint to reserve for mocknet (220M)
+	}
 )
 
-func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) []*interchaintest.ChainSpec {
+func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) *interchaintest.ChainSpec {
 	chainID := "thorchain"
 	name := "Thorchain"
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
@@ -39,22 +49,24 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) []*inter
 				HomeDir: "/var/data/bifrost",
 				Ports: []string{"5040", "6040", "9000"},
 				StartCmd: []string{"bifrost", "-p"},
+				//StartCmd: []string{"bifrost", "-p", "-l", "debug"},
+				//StartCmd: []string{"sleep", "200"},//, "bifrost", "-p"},
 				Env: bifrostDefaults,
 				PreStart: false,
 				ValidatorProcess: true,
 			},
 		},
+		ModifyGenesis: thorchain.ModifyGenesis(GenesisKVMods),
+		HostPortOverride: map[int]int{1317: 1317},
 	}
 
-	return []*interchaintest.ChainSpec{
-		{
-			Name:          name,
-			ChainName:     name,
-			Version:       chainImage.Version,
-			ChainConfig:   defaultChainConfig,
-			NumValidators: &numVals,
-			NumFullNodes:  &numFn,
-		},
+	return &interchaintest.ChainSpec{
+		Name:          name,
+		ChainName:     name,
+		Version:       chainImage.Version,
+		ChainConfig:   defaultChainConfig,
+		NumValidators: &numVals,
+		NumFullNodes:  &numFn,
 	}
 }
 
@@ -62,7 +74,7 @@ var (
 	allNodeDefaults = []string{
 		"NET=mocknet", 
 		"CHAIN_ID=thorchain",
-		"SIGNER_NAME=thorchain",
+		"SIGNER_NAME=thorchain", // Must be thorchain, hardcoded in thorchain module
 		"SIGNER_PASSWD=password", // Must use this password, used to generate ed25519
 	}
 
@@ -101,8 +113,8 @@ var (
 		//LTC_HOST: ${LTC_HOST:-litecoin:38443}
 		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
-		//GAIA_HOST: ${GAIA_HOST:-http://gaia:26657}
-		//GAIA_GRPC_HOST: ${GAIA_GRPC_HOST:-gaia:9090}
+		"GAIA_HOST=http://gaia-1-val-0-TestThorchain:26657",
+		"GAIA_GRPC_HOST=gaia-1-val-0-TestThorchain:9090",
 		
 		// disable chains until brought in
 		"BIFROST_CHAINS_AVAX_DISABLED=true",
@@ -112,7 +124,7 @@ var (
 		"BIFROST_CHAINS_BTC_DISABLED=true",
 		"BIFROST_CHAINS_DOGE_DISABLED=true",
 		"BIFROST_CHAINS_ETH_DISABLED=true",
-		"BIFROST_CHAINS_GAIA_DISABLED=true",
+		"BIFROST_CHAINS_GAIA_DISABLED=false",
 		"BIFROST_CHAINS_LTC_DISABLED=true",
 		
 		// block above should take care of these

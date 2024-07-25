@@ -3,8 +3,9 @@ package interchaintest
 import (
 	"context"
 	"fmt"
+	"math"
 
-	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -567,12 +568,14 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 
 	// Add faucet for each chain first.
 	for c := range ic.chains {
+		decimalPow := int64(math.Pow10(int(*c.Config().CoinDecimals)))
+
 		// The values are nil at this point, so it is safe to directly assign the slice.
 		walletAmounts[c] = []ibc.WalletAmount{
 			{
 				Address: faucetAddresses[c],
 				Denom:   c.Config().Denom,
-				Amount:  math.NewInt(100_000_000_000_000), // Faucet wallet gets 100T units of denom.
+				Amount:  sdkmath.NewInt(100_000_000).MulRaw(decimalPow), // Faucet wallet gets 100M units of scaled denom.
 			},
 		}
 
@@ -584,10 +587,11 @@ func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][
 	// Then add all defined relayer wallets.
 	for rc, wallet := range ic.relayerWallets {
 		c := rc.C
+		decimalPow := int64(math.Pow10(int(*c.Config().CoinDecimals)))
 		walletAmounts[c] = append(walletAmounts[c], ibc.WalletAmount{
 			Address: wallet.FormattedAddress(),
 			Denom:   c.Config().Denom,
-			Amount:  math.NewInt(1_000_000_000_000), // Every wallet gets 1t units of denom.
+			Amount:  sdkmath.NewInt(1_000_000).MulRaw(decimalPow), // Every wallet gets 1M units of scaled denom.
 		})
 	}
 

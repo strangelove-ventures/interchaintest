@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
-	//"net"
 	"os"
 	"path"
 	"strconv"
@@ -25,12 +24,9 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
@@ -42,7 +38,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -63,8 +58,9 @@ type ChainNode struct {
 	preStartNode func(*ChainNode)
 
 	// Env
-	ValidatorMnemonic string // SIGNER_SEED_PHRASE ThorchainDiff
+	ValidatorMnemonic string // SIGNER_SEED_PHRASE 
 	NodeAccount *NodeAccount
+	KeyringCreated bool
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -111,7 +107,7 @@ func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode 
 type ChainNodes []*ChainNode
 
 const (
-	valKey      = "validator"
+	valKey      = "thorchain"
 	blockTime   = 2 // seconds
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
@@ -280,27 +276,6 @@ func (tn *ChainNode) OverwritePrivValFile(ctx context.Context, content []byte) e
 	return nil
 }
 
-/*func (tn *ChainNode) copyGentx(ctx context.Context, destVal *ChainNode) error {
-	nid, err := tn.NodeID(ctx)
-	if err != nil {
-		return fmt.Errorf("getting node ID: %w", err)
-	}
-
-	relPath := fmt.Sprintf("config/gentx/gentx-%s.json", nid)
-
-	gentx, err := tn.ReadFile(ctx, relPath)
-	if err != nil {
-		return fmt.Errorf("getting gentx content: %w", err)
-	}
-
-	err = destVal.WriteFile(ctx, gentx, relPath)
-	if err != nil {
-		return fmt.Errorf("overwriting gentx: %w", err)
-	}
-
-	return nil
-}*/
-
 type PrivValidatorKey struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
@@ -318,7 +293,7 @@ func (tn *ChainNode) Bind() []string {
 }
 
 func (tn *ChainNode) HomeDir() string {
-	return path.Join("/var/cosmos-chain", tn.Chain.Config().Name)
+	return "/home/heighliner/.thornode"
 }
 
 // SetTestConfig modifies the config to reasonable values for use within interchaintest.
@@ -382,8 +357,9 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public REST API
 	api["enable"] = true
-	api["swagger"] = true
+	api["swagger"] = false
 	api["address"] = "tcp://0.0.0.0:1317"
+	api["enabled-unsafe-cors"] = true
 
 	a["api"] = api
 
@@ -527,7 +503,6 @@ func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	}
 	return tn.NodeCommand(append(command,
 		"--from", keyName,
-		"--keyring-backend", keyring.BackendTest,
 		"--output", "json",
 		"-y",
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -539,7 +514,13 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	stdout, _, err := tn.Exec(ctx, tn.TxCommand(keyName, command...), tn.Chain.Config().Env)
+	keyringCommand := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %s | %s --keyring-backend %s`, "password", strings.Join(tn.TxCommand(keyName, command...), " "), keyring.BackendFile), // TODO: get password from env
+	}
+
+	stdout, _, err := tn.Exec(ctx, keyringCommand, tn.Chain.Config().Env)
 	if err != nil {
 		return "", err
 	}
@@ -618,8 +599,23 @@ func (tn *ChainNode) BinCommand(command ...string) []string {
 // For example, if chain node binary is `gaiad`, and desired command is `gaiad keys show key1`,
 // pass ("keys", "show", "key1") for command to execute the command against the node.
 // Will include additional flags for home directory and chain ID.
-func (tn *ChainNode) ExecBin(ctx context.Context, command ...string) ([]byte, []byte, error) {
-	return tn.Exec(ctx, tn.BinCommand(command...), tn.Chain.Config().Env)
+func (tn *ChainNode) ExecBin(ctx context.Context, backendfile bool, command ...string) ([]byte, []byte, error) {
+	if !backendfile {
+		return tn.Exec(ctx, tn.BinCommand(command...), tn.Chain.Config().Env)
+	}
+
+	password := "password"
+	if !tn.KeyringCreated {
+		password = "\"password\npassword\n\""
+		tn.KeyringCreated = true
+	}
+
+	keyringCommand := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo %s | %s --keyring-backend %s`, password, strings.Join(tn.BinCommand(command...), " "), keyring.BackendFile), // TODO: get password from env
+	}
+	return tn.Exec(ctx, keyringCommand, tn.Chain.Config().Env)
 }
 
 // QueryCommand is a helper to retrieve the full query command. For example,
@@ -672,7 +668,7 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
+	_, _, err := tn.ExecBin(ctx, false,
 		"init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
 	)
@@ -714,17 +710,15 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, stderr, err := tn.ExecBin(ctx,
+	_, stderr, err := tn.ExecBin(ctx, true,
 		"keys", "add", name,
 		"--coin-type", tn.Chain.Config().CoinType,
-		"--keyring-backend", keyring.BackendTest,
 	)
 
 	if err != nil {
 		return err
 	}
 
-	// ThorchainDiff
 	if tn.Validator && tn.ValidatorMnemonic == "" {
 		lines := strings.Split(string(stderr), "\n")
 
@@ -743,10 +737,11 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 // RecoverKey restores a key from a given mnemonic.
 func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	recoverKeyInput := fmt.Sprintf("\"%s\n%s\n\"", "password", mnemonic) //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
+		fmt.Sprintf(`echo %s | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, recoverKeyInput, tn.Chain.Config().Bin, keyName, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
 	tn.lock.Lock()
@@ -810,7 +805,7 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		command = append(command, "--chain-id", tn.Chain.Config().ChainID)
 	}
 
-	_, _, err := tn.ExecBin(ctx, command...)
+	_, _, err := tn.ExecBin(ctx, false, command...)
 
 	return err
 }
@@ -859,12 +854,11 @@ func (tn *ChainNode) GetValidatorConsPubKey(ctx context.Context) (string, error)
 }
 
 func (tn *ChainNode) GetNodePubKey(ctx context.Context) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "keys", "show", valKey, "-p",
-		"--home", tn.HomeDir(),
-		"--keyring-backend", keyring.BackendTest,
+	command := []string{
+		"keys", "show", valKey, "-p",
 	}
 
-	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	stdout, stderr, err := tn.ExecBin(ctx, true, command...)
 	if err != nil {
 		return "", fmt.Errorf("failed to show node pub key json (stderr=%q): %w", stderr, err)
 	}
@@ -931,18 +925,12 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
 		return err
 	}
 
-	// TODO: get ip address of the docker container
-	//nodeIpAddr, err := net.LookupHost(tn.HostName())
-	//if err != nil {
-	//	return err
-	//}
-
 	tn.NodeAccount = &NodeAccount{
 		NodeAddress: bech32NodeAddr,
 		Version: version,
-		IpAddress: "192.168.0.10",
+		IpAddress: "192.168.0.10", // TODO: may need to populate real ip after chain start
 		Status: "Active",
-		Bond: "100000000",
+		Bond: "10000000000000", // 100k rune
 		ActiveBlockHeight: "0",
 		BondAddress: bech32NodeAddr,
 		SignerMembership: []string{},
@@ -952,8 +940,6 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
 			Ed25519: nodePubKeyEd25519,
 		},
 	}
-
-	fmt.Println("NodeAccount:", tn.NodeAccount) //TODO: remove
 
 	return nil
 }
@@ -1001,80 +987,120 @@ func (tn *ChainNode) AddNodeAccount(ctx context.Context, nodeAccount NodeAccount
 	return nil
 }
 
-// Gentx generates the gentx for a given node
-/*func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+type BaseAccount struct {
+	AccountNumber string `json:"account_number"`
+	Address string `json:"address"`
+	PubKey []byte `json:"pub_key"`
+	Sequence string `json:"sequence"`
+}
 
-	var command []string
-	if tn.IsAboveSDK47(ctx) {
-		command = append(command, "genesis")
+type ModuleAccount struct {
+	Type string `json:"@type"`
+	BaseAccount BaseAccount `json:"base_account"`
+	Name string `json:"name"`
+	Permissions []string `json:"permissions"`
+}
+
+type State struct {
+	Accounts []ModuleAccount `json:"accounts"`
+}
+
+type CoinBalance struct {
+	Denom string `json:"denom"`
+	Amount string `json:"amount"`
+}
+
+type Balance struct {
+	Address string `json:"address"`
+	Coins []CoinBalance `json:"coins"`
+}
+
+func (tn *ChainNode) AddBondModule(ctx context.Context) error {
+	genbz, err := tn.GenesisFileContent(ctx)
+	if err != nil {
+		return err
 	}
 
-	command = append(command, "gentx", valKey, fmt.Sprintf("%s%s", genesisSelfDelegation.Amount.String(), genesisSelfDelegation.Denom),
-		"--gas-prices", tn.Chain.Config().GasPrices,
-		"--gas-adjustment", fmt.Sprint(tn.Chain.Config().GasAdjustment),
-		"--keyring-backend", keyring.BackendTest,
-		"--chain-id", tn.Chain.Config().ChainID,
-	)
-
-	_, _, err := tn.ExecBin(ctx, command...)
-	return err
-}*/
-
-// CollectGentxs runs collect gentxs on the node's home folders
-/*func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
-	command := []string{tn.Chain.Config().Bin}
-	if tn.IsAboveSDK47(ctx) {
-		command = append(command, "genesis")
+	bondModule := ModuleAccount{
+		Type: "/cosmos.auth.v1beta1.ModuleAccount",
+		BaseAccount: BaseAccount{
+			AccountNumber: "0",
+			Address: "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+			PubKey: nil,
+			Sequence: "0",
+		},
+		Name: "bond",
+		Permissions: []string{},
 	}
 
-	command = append(command, "collect-gentxs", "--home", tn.HomeDir())
+	newModuleAccount := NewGenesisKV("app_state.state", State{Accounts: []ModuleAccount{bondModule}})
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	g := make(map[string]interface{})
+	if err := json.Unmarshal(genbz, &g); err != nil {
+		return fmt.Errorf("failed to unmarshal genesis file: %w", err)
+	}
 
-	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
-	return err
-}*/
+	splitPath := strings.Split(newModuleAccount.Key, ".")
+
+	path := make([]interface{}, len(splitPath))
+	for i, component := range splitPath {
+		if v, err := strconv.Atoi(component); err == nil {
+			path[i] = v
+		} else {
+			path[i] = component
+		}
+	}
+
+	if err := dyno.Set(g, newModuleAccount.Value, path...); err != nil { 
+		return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newModuleAccount.Key, newModuleAccount.Value, err)
+	}
+
+	bondBalance := Balance{
+		Address: "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+		Coins: []CoinBalance{
+			{
+				Denom: "rune",
+				Amount: fmt.Sprintf("%d0000000000000", tn.Chain.(*Thorchain).NumValidators),
+			},
+		},
+	}
+	newBondBalance := NewGenesisKV("app_state.bank.balances", bondBalance)
+
+	splitPath = strings.Split(newBondBalance.Key, ".")
+
+	path = make([]interface{}, len(splitPath))
+	for i, component := range splitPath {
+		if v, err := strconv.Atoi(component); err == nil {
+			path[i] = v
+		} else {
+			path[i] = component
+		}
+	}
+
+	if err := dyno.Append(g, newBondBalance.Value, path...); err != nil {
+		newBondBalance.Value = []Balance{bondBalance}
+		if err := dyno.Set(g, newBondBalance.Value, path...); err != nil { 
+			return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newBondBalance.Key, newBondBalance.Value, err)
+		}
+	}
+
+
+	genbz, err = json.Marshal(g)
+	if err != nil {
+		return fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
+	}
+
+	if err := tn.OverwriteGenesisFile(ctx, genbz); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 type CosmosTx struct {
 	TxHash string `json:"txhash"`
 	Code   int    `json:"code"`
 	RawLog string `json:"raw_log"`
-}
-
-func (tn *ChainNode) SendIBCTransfer(
-	ctx context.Context,
-	channelID string,
-	keyName string,
-	amount ibc.WalletAmount,
-	options ibc.TransferOptions,
-) (string, error) {
-	command := []string{
-		"ibc-transfer", "transfer", "transfer", channelID,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-		"--gas", "auto",
-	}
-	if options.Timeout != nil {
-		if options.Timeout.NanoSeconds > 0 {
-			command = append(command, "--packet-timeout-timestamp", fmt.Sprint(options.Timeout.NanoSeconds))
-		}
-
-		if options.Timeout.Height > 0 {
-			command = append(command, "--packet-timeout-height", fmt.Sprintf("0-%d", options.Timeout.Height))
-		}
-
-		if options.AbsoluteTimeouts {
-			// ibc-go doesn't support relative heights for packet timeouts
-			// so the absolute height flag must be manually set:
-			command = append(command, "--absolute-timeouts")
-		}
-	}
-	if options.Memo != "" {
-		command = append(command, "--memo", options.Memo)
-	}
-	return tn.ExecTx(ctx, keyName, command...)
 }
 
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {
@@ -1096,7 +1122,7 @@ func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*s
 
 // HasCommand checks if a command in the chain binary is available.
 func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
-	_, _, err := tn.ExecBin(ctx, command...)
+	_, _, err := tn.ExecBin(ctx, false, command...)
 	if err == nil {
 		return true
 	}
@@ -1115,7 +1141,7 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 
 // GetBuildInformation returns the build information and dependencies for the chain binary.
 func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInformation {
-	stdout, _, err := tn.ExecBin(ctx, "version", "--long", "--output", "json")
+	stdout, _, err := tn.ExecBin(ctx, false, "version", "--long", "--output", "json")
 	if err != nil {
 		return nil
 	}
@@ -1232,7 +1258,7 @@ func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, err
 		command = append(command, "--output-document", docPath)
 	}
 
-	stdout, stderr, err := tn.ExecBin(ctx, command...)
+	stdout, stderr, err := tn.ExecBin(ctx, false, command...)
 	if err != nil {
 		return "", err
 	}
@@ -1270,14 +1296,12 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	var cmd []string
 	if chainCfg.NoHostMount {
 		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
-		// startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
 	} else {
 		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
-		// cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
 		}
@@ -1510,16 +1534,15 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
 // bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
 func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
-		"--home", tn.HomeDir(),
-		"--keyring-backend", keyring.BackendTest,
+	command := []string{
+		"keys", "show", "--address", name,
 	}
 
 	if bech != "" {
 		command = append(command, "--bech", bech)
 	}
 
-	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
+	stdout, stderr, err := tn.ExecBin(ctx, true, command...)
 	if err != nil {
 		return "", fmt.Errorf("failed to show key %q (stderr=%q): %w", name, stderr, err)
 	}
@@ -1554,7 +1577,6 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 	return strings.Join(addrs, ",")
 }
 
-// ThorchainDiff
 func (nodes ChainNodes) SidecarBifrostPeers() string {
 	addrs := make([]string, len(nodes))
 	for i, n := range nodes {
@@ -1604,13 +1626,6 @@ func (tn *ChainNode) logger() *zap.Logger {
 	)
 }
 
-// RegisterICA will attempt to register an interchain account on the counterparty chain.
-func (tn *ChainNode) RegisterICA(ctx context.Context, keyName, connectionID string) (string, error) {
-	return tn.ExecTx(ctx, keyName,
-		"interchain-accounts", "controller", "register", connectionID,
-	)
-}
-
 // QueryICA will query for an interchain account controlled by the specified address on the counterparty chain.
 func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string) (string, error) {
 	stdout, _, err := tn.ExecQuery(ctx,
@@ -1628,48 +1643,6 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 		return "", fmt.Errorf("malformed stdout from command: %s", stdout)
 	}
 	return strings.TrimSpace(parts[1]), nil
-}
-
-// SendICATx sends an interchain account transaction for a specified address and sends it to the specified
-// interchain account.
-func (tn *ChainNode) SendICATx(ctx context.Context, keyName, connectionID string, registry codectypes.InterfaceRegistry, msgs []sdk.Msg, icaTxMemo string, encoding string) (string, error) {
-	cdc := codec.NewProtoCodec(registry)
-	icaPacketDataBytes, err := icatypes.SerializeCosmosTx(cdc, msgs, encoding)
-	if err != nil {
-		return "", err
-	}
-
-	icaPacketData := icatypes.InterchainAccountPacketData{
-		Type: icatypes.EXECUTE_TX,
-		Data: icaPacketDataBytes,
-		Memo: icaTxMemo,
-	}
-
-	if err := icaPacketData.ValidateBasic(); err != nil {
-		return "", err
-	}
-
-	icaPacketBytes, err := cdc.MarshalJSON(&icaPacketData)
-	if err != nil {
-		return "", err
-	}
-
-	return tn.ExecTx(ctx, keyName, "interchain-accounts", "controller", "send-tx", connectionID, string(icaPacketBytes))
-}
-
-// SendICABankTransfer builds a bank transfer message for a specified address and sends it to the specified
-// interchain account.
-func (tn *ChainNode) SendICABankTransfer(ctx context.Context, connectionID, fromAddr string, amount ibc.WalletAmount) error {
-	fromAddress := sdk.MustAccAddressFromBech32(fromAddr)
-	toAddress := sdk.MustAccAddressFromBech32(amount.Address)
-	coin := sdk.NewCoin(amount.Denom, amount.Amount)
-	msg := banktypes.NewMsgSend(fromAddress, toAddress, sdk.NewCoins(coin))
-	msgs := []sdk.Msg{msg}
-
-	ir := tn.Chain.Config().EncodingConfig.InterfaceRegistry
-	icaTxMemo := "ica bank transfer"
-	_, err := tn.SendICATx(ctx, fromAddr, connectionID, ir, msgs, icaTxMemo, "proto3")
-	return err
 }
 
 // GetHostAddress returns the host-accessible url for a port in the container.

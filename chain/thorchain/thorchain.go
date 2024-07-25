@@ -3,7 +3,6 @@ package thorchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
@@ -25,7 +24,6 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -38,12 +36,12 @@ type Thorchain struct {
 	cfg           ibc.ChainConfig
 	NumValidators int
 	numFullNodes  int
-	Validators    ChainNodes // ThorchainDiff
-	FullNodes     ChainNodes // ThorchainDiff
+	Validators    ChainNodes
+	FullNodes     ChainNodes
 
 	// preStartNodes is able to mutate the node containers before
 	// they are all started
-	preStartNodes func(*Thorchain) // ThorchainDiff
+	preStartNodes func(*Thorchain)
 
 	// Additional processes that need to be run on a per-chain basis.
 	Sidecars SidecarProcesses
@@ -345,60 +343,61 @@ func (c *Thorchain) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (tx ibc.Tx, _ error) {
-	txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, options)
-	if err != nil {
-		return tx, fmt.Errorf("send ibc transfer: %w", err)
-	}
-	txResp, err := c.GetTransaction(txHash)
-	if err != nil {
-		return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
-	}
-	if txResp.Code != 0 {
-		return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
-	}
-	tx.Height = txResp.Height
-	tx.TxHash = txHash
-	// In cosmos, user is charged for entire gas requested, not the actual gas used.
-	tx.GasSpent = txResp.GasWanted
+	panic("SendIBCTransfer unimplemented")
+	// txHash, err := c.getFullNode().SendIBCTransfer(ctx, channelID, keyName, amount, options)
+	// if err != nil {
+	// 	return tx, fmt.Errorf("send ibc transfer: %w", err)
+	// }
+	// txResp, err := c.GetTransaction(txHash)
+	// if err != nil {
+	// 	return tx, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+	// }
+	// if txResp.Code != 0 {
+	// 	return tx, fmt.Errorf("error in transaction (code: %d): %s", txResp.Code, txResp.RawLog)
+	// }
+	// tx.Height = txResp.Height
+	// tx.TxHash = txHash
+	// // In cosmos, user is charged for entire gas requested, not the actual gas used.
+	// tx.GasSpent = txResp.GasWanted
 
-	const evType = "send_packet"
-	events := txResp.Events
+	// const evType = "send_packet"
+	// events := txResp.Events
 
-	var (
-		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
-		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
-		srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
-		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
-		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
-		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
-		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
-		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
-	)
-	tx.Packet.SourcePort = srcPort
-	tx.Packet.SourceChannel = srcChan
-	tx.Packet.DestPort = dstPort
-	tx.Packet.DestChannel = dstChan
-	tx.Packet.TimeoutHeight = timeoutHeight
+	// var (
+	// 	seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
+	// 	srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
+	// 	srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
+	// 	dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
+	// 	dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
+	// 	timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
+	// 	timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+	// 	dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
+	// )
+	// tx.Packet.SourcePort = srcPort
+	// tx.Packet.SourceChannel = srcChan
+	// tx.Packet.DestPort = dstPort
+	// tx.Packet.DestChannel = dstChan
+	// tx.Packet.TimeoutHeight = timeoutHeight
 
-	data, err := hex.DecodeString(dataHex)
-	if err != nil {
-		return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
-	}
-	tx.Packet.Data = data
+	// data, err := hex.DecodeString(dataHex)
+	// if err != nil {
+	// 	return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
+	// }
+	// tx.Packet.Data = data
 
-	seqNum, err := strconv.ParseUint(seq, 10, 64)
-	if err != nil {
-		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
-	}
-	tx.Packet.Sequence = seqNum
+	// seqNum, err := strconv.ParseUint(seq, 10, 64)
+	// if err != nil {
+	// 	return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
+	// }
+	// tx.Packet.Sequence = seqNum
 
-	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
-	if err != nil {
-		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
-	}
-	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
+	// timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
+	// if err != nil {
+	// 	return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
+	// }
+	// tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
-	return tx, nil
+	// return tx, nil
 }
 
 // QueryParam returns the param state of a given key.
@@ -779,10 +778,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 			if err := validator0.AddNodeAccount(ctx, *validatorN.NodeAccount); err != nil {
 				return fmt.Errorf("failed to add node account to val0: %w", err)
 			}
-
-			//if err := validatorN.copyGentx(ctx, validator0); err != nil {
-			//	return err
-			//}
 		}
 	}
 
@@ -792,11 +787,9 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		}
 	}
 
-	// if !c.cfg.SkipGenTx {
-	// 	if err := validator0.CollectGentxs(ctx); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if err := validator0.AddBondModule(ctx); err != nil {
+		return err
+	}
 
 	genbz, err := validator0.GenesisFileContent(ctx)
 	if err != nil {
@@ -811,8 +804,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 			return err
 		}
 	}
-
-	fmt.Println("Genesis: ", string(genbz)) //TODO: remove when working
 
 	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
 	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
@@ -1064,11 +1055,13 @@ func (c *Thorchain) StartAllValSidecars(ctx context.Context) error {
 			}
 
 			eg.Go(func() error {
-				env := s.env // ThorchainDiff
+				env := s.env 
+				env = append(env, fmt.Sprintf("NODES=%d", c.NumValidators))
 				env = append(env, fmt.Sprintf("SIGNER_SEED_PHRASE=%s", v.ValidatorMnemonic))
 				env = append(env, fmt.Sprintf("CHAIN_API=%s:1317", v.HostName()))
 				env = append(env, fmt.Sprintf("CHAIN_RPC=%s:26657", v.HostName()))
 				env = append(env, fmt.Sprintf("PEER=%s", c.Validators.SidecarBifrostPeers()))
+				s.env = env
 				if err := s.CreateContainer(ctx, v.Bind()); err != nil {
 					return err
 				}
