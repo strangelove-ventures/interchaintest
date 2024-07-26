@@ -737,7 +737,7 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 // RecoverKey restores a key from a given mnemonic.
 func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	recoverKeyInput := fmt.Sprintf("\"%s\n%s\n\"", "password", mnemonic) //TODO: get password from env
+	recoverKeyInput := fmt.Sprintf("\"%s\n%s\n\"", mnemonic, "password") //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",

@@ -4,6 +4,20 @@ import (
 	"errors"
 	"strings"
 )
+const (
+	EmptyChain = Chain("")
+	BNBChain   = Chain("BNB")
+	BSCChain   = Chain("BSC")
+	ETHChain   = Chain("ETH")
+	BTCChain   = Chain("BTC")
+	LTCChain   = Chain("LTC")
+	BCHChain   = Chain("BCH")
+	DOGEChain  = Chain("DOGE")
+	THORChain  = Chain("THOR")
+	TERRAChain = Chain("TERRA")
+	GAIAChain  = Chain("GAIA")
+	AVAXChain  = Chain("AVAX")
+)
 
 type Chain string
 

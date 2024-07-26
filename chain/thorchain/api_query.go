@@ -12,10 +12,11 @@ import (
 	"strconv"
 	"strings"
 	
-	cosmossdk_io_math "cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 )
+
 
 func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
 	url := fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", c.GetAPIAddress(), addr)
@@ -43,7 +44,7 @@ func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
 		if err != nil {
 			return nil, err
 		}
-		coins = append(coins, common.NewCoin(asset, cosmossdk_io_math.NewUint(amount)))
+		coins = append(coins, common.NewCoin(asset, sdkmath.NewUint(amount)))
 	}
 
 	return coins, nil
@@ -117,7 +118,7 @@ func (c *Thorchain) ApiGetPool(asset common.Asset) (Pool, error) {
 	return pool, err
 }
 
-func (c *Thorchain) ApiGetSwapQuote(from, to common.Asset, amount cosmossdk_io_math.Uint) (QuoteSwapResponse, error) {
+func (c *Thorchain) ApiGetSwapQuote(from, to common.Asset, amount sdkmath.Uint) (QuoteSwapResponse, error) {
 	baseURL := fmt.Sprintf("%s/thorchain/quote/swap", c.GetAPIAddress())
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
@@ -135,7 +136,7 @@ func (c *Thorchain) ApiGetSwapQuote(from, to common.Asset, amount cosmossdk_io_m
 	return quote, err
 }
 
-func (c *Thorchain) ApiGetSaverDepositQuote(asset common.Asset, amount cosmossdk_io_math.Uint) (QuoteSaverDepositResponse, error) {
+func (c *Thorchain) ApiGetSaverDepositQuote(asset common.Asset, amount sdkmath.Uint) (QuoteSaverDepositResponse, error) {
 	baseURL := fmt.Sprintf("%s/thorchain/quote/saver/deposit", c.GetAPIAddress())
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
@@ -152,21 +153,21 @@ func (c *Thorchain) ApiGetSaverDepositQuote(asset common.Asset, amount cosmossdk
 	return quote, err
 }
 
-func (c *Thorchain) GetTxStages(txid string) (TxStagesResponse, error) {
+func (c *Thorchain) ApiGetTxStages(txid string) (TxStagesResponse, error) {
 	url := fmt.Sprintf("%s/thorchain/tx/stages/%s", c.GetAPIAddress(), txid)
 	var stages TxStagesResponse
 	err := get(url, &stages)
 	return stages, err
 }
 
-func (c *Thorchain) GetTxDetails(txid string) (TxDetailsResponse, error) {
+func (c *Thorchain) ApiGetTxDetails(txid string) (TxDetailsResponse, error) {
 	url := fmt.Sprintf("%s/thorchain/tx/details/%s", c.GetAPIAddress(), txid)
 	var details TxDetailsResponse
 	err := get(url, &details)
 	return details, err
 }
 
-func (c *Thorchain) GetMimirs() (map[string]int64, error) {
+func (c *Thorchain) ApiGetMimirs() (map[string]int64, error) {
 	url := fmt.Sprintf("%s/thorchain/mimir", c.GetAPIAddress())
 	var mimirs map[string]int64
 	err := get(url, &mimirs)
@@ -200,4 +201,40 @@ func get(url string, target interface{}) error {
 
 	// decode response
 	return json.Unmarshal(buf, target)
+}
+
+// ConvertAssetAmount converts the given coin to the target asset and returns the amount.
+func (c *Thorchain) ConvertAssetAmount(coin Coin, asset string) (sdkmath.Uint, error) {
+	pools, err := c.ApiGetPools()
+	if err != nil {
+		return sdkmath.ZeroUint(), err
+	}
+
+	// find pools for the conversion rate
+	var sourcePool, targetPool Pool
+	for _, pool := range pools {
+		if pool.Asset == coin.Asset {
+			sourcePool = pool
+		}
+		if pool.Asset == asset {
+			targetPool = pool
+		}
+	}
+
+	// ensure we found both pools
+	if sourcePool.Asset == "" {
+		return sdkmath.ZeroUint(), fmt.Errorf("source asset not found")
+	}
+	if targetPool.Asset == "" {
+		return sdkmath.ZeroUint(), fmt.Errorf("target asset not found")
+	}
+
+	// convert the amount
+	converted := sdkmath.NewUintFromString(coin.Amount).
+		Mul(sdkmath.NewUintFromString(sourcePool.BalanceRune)).
+		Quo(sdkmath.NewUintFromString(sourcePool.BalanceAsset)).
+		Mul(sdkmath.NewUintFromString(targetPool.BalanceAsset)).
+		Quo(sdkmath.NewUintFromString(targetPool.BalanceRune))
+
+	return converted, nil
 }

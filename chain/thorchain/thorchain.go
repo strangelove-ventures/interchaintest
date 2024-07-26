@@ -223,7 +223,8 @@ func (c *Thorchain) GetRPCAddress() string {
 
 // Implements Chain interface
 func (c *Thorchain) GetAPIAddress() string {
-	return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
+	return fmt.Sprintf("http://%s:1317", "127.0.0.1")
+	//return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
 }
 
 // Implements Chain interface
