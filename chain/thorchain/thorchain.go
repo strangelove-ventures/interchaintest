@@ -1058,7 +1058,7 @@ func (c *Thorchain) StartAllValSidecars(ctx context.Context) error {
 			eg.Go(func() error {
 				env := s.env 
 				env = append(env, fmt.Sprintf("NODES=%d", c.NumValidators))
-				env = append(env, fmt.Sprintf("SIGNER_SEED_PHRASE=%s", v.ValidatorMnemonic))
+				env = append(env, fmt.Sprintf("SIGNER_SEED_PHRASE=\"%s\"", v.ValidatorMnemonic))
 				env = append(env, fmt.Sprintf("CHAIN_API=%s:1317", v.HostName()))
 				env = append(env, fmt.Sprintf("CHAIN_RPC=%s:26657", v.HostName()))
 				env = append(env, fmt.Sprintf("PEER=%s", c.Validators.SidecarBifrostPeers()))

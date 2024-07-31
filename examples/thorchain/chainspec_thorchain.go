@@ -48,8 +48,8 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) *interch
 				Image: chainImage,
 				HomeDir: "/var/data/bifrost",
 				Ports: []string{"5040", "6040", "9000"},
-				StartCmd: []string{"bifrost", "-p"},
-				//StartCmd: []string{"bifrost", "-p", "-l", "debug"},
+				//StartCmd: []string{"bifrost", "-p"},
+				StartCmd: []string{"bifrost", "-p", "-l", "debug"},
 				//StartCmd: []string{"sleep", "200"},//, "bifrost", "-p"},
 				Env: bifrostDefaults,
 				PreStart: false,
@@ -113,8 +113,8 @@ var (
 		//LTC_HOST: ${LTC_HOST:-litecoin:38443}
 		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
-		"GAIA_HOST=http://gaia-1-val-0-TestThorchain:26657",
-		"GAIA_GRPC_HOST=gaia-1-val-0-TestThorchain:9090",
+		"GAIA_HOST=http://localgaia-val-0-TestThorchain:26657", // TODO: set at runtime
+		"GAIA_GRPC_HOST=localgaia-val-0-TestThorchain:9090", // TODO: set at runtime
 		
 		// disable chains until brought in
 		"BIFROST_CHAINS_AVAX_DISABLED=true",
@@ -145,7 +145,7 @@ var (
 		"BIFROST_CHAINS_BTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
 		"BIFROST_CHAINS_DOGE_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
 		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
-		"BIFROST_CHAINS_GAIA_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
+		"BIFROST_CHAINS_GAIA_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=25",
 		"BIFROST_CHAINS_LTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
 
 		// maintain historical gas behavior for hard-coded smoke test values

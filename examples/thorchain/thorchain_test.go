@@ -22,8 +22,6 @@ import (
 func TestThorchain(t *testing.T) {
 	numThorchainValidators := 1
 	numThorchainFullNodes  := 0
-	numGaiaVals := 1
-	numGaiaFn := 0
 
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -32,16 +30,7 @@ func TestThorchain(t *testing.T) {
 
 	chainSpecs := []*interchaintest.ChainSpec{
 		ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes),
-		{
-			Name: "gaia",
-			Version: "v17.3.0",
-			NumValidators: &numGaiaVals,
-			NumFullNodes: &numGaiaFn,
-			ChainConfig: ibc.ChainConfig{
-				Denom: "uatom",
-				GasPrices: "0uatom",
-			},
-		},
+		GaiaChainSpec(),
 	}
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
@@ -55,7 +44,7 @@ func TestThorchain(t *testing.T) {
 	ic := interchaintest.NewInterchain().
 		AddChain(thorchain).
 		AddChain(gaia)
-
+	
 	ctx := context.Background()
 	client, network := interchaintest.DockerSetup(t)
 
@@ -71,6 +60,8 @@ func TestThorchain(t *testing.T) {
 
 	err = thorchain.StartAllValSidecars(ctx)
 	require.NoError(t, err, "failed starting validator sidecars")
+
+	doTxs(t, ctx, gaia) // Do 100 transactions
 
 	defaultFundAmount := math.NewInt(100_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", defaultFundAmount, thorchain)
@@ -174,7 +165,6 @@ func TestThorchain(t *testing.T) {
 		savers, err := thorchain.ApiGetSavers(common.ATOMAsset)
 		require.NoError(t, err)
 		for _, saver := range savers {
-			fmt.Println(saver.AssetAddress, "/", gaiaSaver.FormattedAddress())
 			if saver.AssetAddress != gaiaSaver.FormattedAddress() {
 				continue
 			}
@@ -185,6 +175,38 @@ func TestThorchain(t *testing.T) {
 		}
 		require.Less(t, count, 30, "saver took longer than 30 sec to show")
 	}
+
+	// --------------------------------------------------------
+	// Arb (implement after adding another chain)
+	// --------------------------------------------------------
+	err = thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice")
+	require.NoError(t, err)
+
+	/*arbFundAmount := math.NewInt(1_000_000_000) // 1k (gaia), 10 (thorchain)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "arb", arbFundAmount, thorchain, gaia)
+	thorchainArber := users[0]
+	gaiaArber := users[1]
+	
+	mimirs, err := thorchain.ApiGetMimirs()
+	require.NoError(t, err)
+
+	if mimir, ok := mimirs["TradeAccountsEnabled"]; (ok && mimir != int64(1) || !ok) {
+		err := thorchain.SetMimir(ctx, "admin", "TradeAccountsEnabled", "1")
+		require.NoError(t, err)
+	}
+
+	memo = fmt.Sprintf("trade+:%s", thorchainArber.FormattedAddress())
+	gaiaInboundAddr, _, err = thorchain.ApiGetInboundAddress("GAIA")
+	require.NoError(t, err)
+	_, err = gaia.GetNode().BankSendWithMemo(ctx, gaiaSaver.KeyName(), ibc.WalletAmount{
+		Address: gaiaInboundAddr,
+		Denom: gaia.Config().Denom,
+		Amount: arbFundAmount.QuoRaw(10).MulRaw(9),
+	}, memo)
+
+	go func() {
+
+	}()*/
 
 	// --------------------------------------------------------
 	// Swap
@@ -258,15 +280,12 @@ func TestThorchain(t *testing.T) {
 	actualRune := thorchainSwapperBalance.Sub(swapperFundAmount)
 	require.True(t, actualRune.GTE(math.Int(minExpectedRune)), fmt.Sprintf("Actual: %s, Min expected: %s", actualRune, minExpectedRune))
 	require.True(t, actualRune.LTE(math.Int(maxExpectedRune)), fmt.Sprintf("Actual: %s, Max expected: %s", actualRune, maxExpectedRune))
-	
+
 	// --------------------------------------------------------
 	// Saver Eject
 	// --------------------------------------------------------
 	// Reset mimirs
 	mimirs, err := thorchain.ApiGetMimirs()
-	require.NoError(t, err)
-
-	err = thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice")
 	require.NoError(t, err)
 
 	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(-1)) {
@@ -302,8 +321,8 @@ func TestThorchain(t *testing.T) {
 	maxExpectedSaverEject := saverEjectQuoteOut.Add(toleranceEject)
 
 	// Alternate between memo and memoless
-	//memo = fmt.Sprintf("+:%s", "GAIA/ATOM")
-	memo = ""
+	memo = fmt.Sprintf("+:%s", "GAIA/ATOM")
+	//memo = ""
 	gaiaInboundAddr, _, err = thorchain.ApiGetInboundAddress("GAIA")
 	require.NoError(t, err)
 	_, err = gaia.GetNode().BankSendWithMemo(ctx, gaiaSaverEjectUser.KeyName(), ibc.WalletAmount{
@@ -329,9 +348,10 @@ func TestThorchain(t *testing.T) {
 		require.Less(t, count, 30, "saver took longer than 30 sec to show")
 	}
 
-	// TODO: compare befor and after balances of gaiaSaver and gaiaSaverEjectUser
-	//gaiaSaverEjectUserBalance, err := gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
-	//fmt.Println("Gaia")
+	gaiaSaverEjectUserBalance, err := gaia.GetBalance(ctx, gaiaSaverEjectUser.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	gaiaSaverBalance, err := gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
 
 	// Set mimirs
 	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(500) || !ok) {
@@ -360,6 +380,74 @@ func TestThorchain(t *testing.T) {
 		}
 		require.Less(t, count, 30, "saver took longer than 30 sec to show")
 	}
+
+	err = PollForBalanceChange(ctx, gaia, 15, ibc.WalletAmount{
+		Address: gaiaSaverEjectUser.FormattedAddress(),
+		Denom: gaia.Config().Denom,
+		Amount: gaiaSaverEjectUserBalance,
+	})
+	gaiaSaverEjectUserAfterBalance, err := gaia.GetBalance(ctx, gaiaSaverEjectUser.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaSaverEjectUserAfterBalance.GT(gaiaSaverEjectUserBalance), fmt.Sprintf("Balance (%s) must be greater after ejection: %s", gaiaSaverEjectUserAfterBalance, gaiaSaverEjectUserBalance))
+	gaiaSaverAfterBalance, err := gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaSaverBalance.Equal(gaiaSaverAfterBalance), fmt.Sprintf("Balance (%s) should be the same (%s)", gaiaSaverAfterBalance, gaiaSaverBalance))
+
+	// --------------------------------------------------------
+	// Ragnarok gaia
+	// --------------------------------------------------------
+	pools, err = thorchain.ApiGetPools()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pools), "only 1 pool is expected")
+
+	gaiaLperBalanceBeforeRag, err := gaia.GetBalance(ctx, gaiaLper.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	
+	err = thorchain.SetMimir(ctx, "admin", "RAGNAROK-GAIA-ATOM", "1")
+	require.NoError(t, err)
+
+	pools, err = thorchain.ApiGetPools()
+	require.NoError(t, err)
+	count = 0
+	for len(pools) > 0 {
+		if pools[0].Status == "Suspended" {
+			break
+		}
+		require.Less(t, count, 6, "atom pool didn't get torn down or suspended in 60 seconds")
+		time.Sleep(10 * time.Second)
+		pools, err = thorchain.ApiGetPools()
+		require.NoError(t, err)
+		count++
+	}
+
+	err = PollForBalanceChange(ctx, gaia, 45, ibc.WalletAmount{
+		Address: gaiaLper.FormattedAddress(),
+		Denom: gaia.Config().Denom,
+		Amount: gaiaLperBalanceBeforeRag,
+	})
+	require.NoError(t, err)
+	gaiaLperBalanceAfterRag, err := gaia.GetBalance(ctx, gaiaLper.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaLperBalanceAfterRag.GT(gaiaLperBalanceBeforeRag), fmt.Sprintf("Lper balance (%s) should be greater after ragnarok (%s)", gaiaLperBalanceAfterRag, gaiaLperBalanceBeforeRag))
+	
+	err = PollForBalanceChange(ctx, gaia, 15, ibc.WalletAmount{
+		Address: gaiaSaver.FormattedAddress(),
+		Denom: gaia.Config().Denom,
+		Amount: gaiaSaverBalance,
+	})
+	require.NoError(t, err)
+	gaiaSaverAfterBalance, err = gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaSaverAfterBalance.GT(gaiaSaverBalance), fmt.Sprintf("Saver balance (%s) should be greater after ragnarok (%s)", gaiaSaverAfterBalance, gaiaSaverBalance))
+	
+	//err = gaia.StopAllNodes(ctx)
+	//require.NoError(t, err)
+
+	//state, err := gaia.ExportState(ctx, -1)
+	//require.NoError(t, err)
+	//fmt.Println("State: ", state)
+
+
 	//err = testutil.WaitForBlocks(ctx, 300, thorchain)
 	//require.NoError(t, err, "thorchain failed to make blocks")
 }
