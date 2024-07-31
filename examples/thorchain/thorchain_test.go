@@ -3,6 +3,7 @@ package thorchain_test
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
+	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -38,7 +39,7 @@ func TestThorchain(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	thorchain := chains[0].(*thorchain.Thorchain)
+	thorchain := chains[0].(*tc.Thorchain)
 	gaia := chains[1].(*cosmos.CosmosChain)
 
 	ic := interchaintest.NewInterchain().
@@ -182,7 +183,7 @@ func TestThorchain(t *testing.T) {
 	err = thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice")
 	require.NoError(t, err)
 
-	/*arbFundAmount := math.NewInt(1_000_000_000) // 1k (gaia), 10 (thorchain)
+	arbFundAmount := math.NewInt(1_000_000_000) // 1k (gaia), 10 (thorchain)
 	users = interchaintest.GetAndFundTestUsers(t, ctx, "arb", arbFundAmount, thorchain, gaia)
 	thorchainArber := users[0]
 	gaiaArber := users[1]
@@ -198,15 +199,91 @@ func TestThorchain(t *testing.T) {
 	memo = fmt.Sprintf("trade+:%s", thorchainArber.FormattedAddress())
 	gaiaInboundAddr, _, err = thorchain.ApiGetInboundAddress("GAIA")
 	require.NoError(t, err)
-	_, err = gaia.GetNode().BankSendWithMemo(ctx, gaiaSaver.KeyName(), ibc.WalletAmount{
+	_, err = gaia.GetNode().BankSendWithMemo(ctx, gaiaArber.KeyName(), ibc.WalletAmount{
 		Address: gaiaInboundAddr,
 		Denom: gaia.Config().Denom,
 		Amount: arbFundAmount.QuoRaw(10).MulRaw(9),
 	}, memo)
 
 	go func() {
+		type Pool struct {
+			BalanceRune math.Uint
+			BalanceAsset math.Uint
+		}
+		originalPools := make(map[string]Pool)
+		maxBasisPts := uint64(10_000)
 
-	}()*/
+		for {
+			pools, err = thorchain.ApiGetPools()
+			require.NoError(t, err)
+
+			allPoolsSuspended := true
+			arbPools := []tc.Pool{}
+			for _, pool := range pools {
+				if pool.Status != "Suspended" {
+					allPoolsSuspended = false
+				}
+
+				// skip unavailable pools and those with no liquidity
+				if pool.BalanceRune == "0" || pool.BalanceAsset == "0" || pool.Status != "Available" {
+					continue
+				}
+
+				// if this is the first time we see the pool, store it to use as the target price
+				if _, ok := originalPools[pool.Asset]; !ok {
+					originalPools[pool.Asset] = Pool{
+						BalanceRune:  math.NewUintFromString(pool.BalanceRune),
+						BalanceAsset: math.NewUintFromString(pool.BalanceAsset),
+					}
+					continue
+				}
+
+				arbPools = append(arbPools, pool)
+			}
+
+			if allPoolsSuspended {
+				return
+			}
+
+			if len(arbPools) < 2 {
+				time.Sleep(time.Second * 5)
+				continue
+			}
+
+			// sort pools by price change
+			priceChangeBps := func(pool tc.Pool) int64 {
+				originalPool := originalPools[pool.Asset]
+				originalPrice := originalPool.BalanceRune.MulUint64(1e8).Quo(originalPool.BalanceAsset)
+				currentPrice := math.NewUintFromString(pool.BalanceRune).MulUint64(1e8).Quo(math.NewUintFromString(pool.BalanceAsset))
+				return int64(maxBasisPts) - int64(originalPrice.MulUint64(maxBasisPts).Quo(currentPrice).Uint64())
+			}
+			sort.Slice(arbPools, func(i, j int) bool {
+				return priceChangeBps(arbPools[i]) > priceChangeBps(arbPools[j])
+			})
+
+			send := arbPools[0]
+			receive := arbPools[len(arbPools)-1]
+
+			// skip if none have diverged more than 10 basis points
+			adjustmentBps := Min(Abs(priceChangeBps(send)), Abs(priceChangeBps(receive)))
+			if adjustmentBps < 10 {
+				// pools have not diverged enough
+				time.Sleep(time.Second * 5)
+				continue
+			}
+
+			// build the swap
+			memo := fmt.Sprintf("=:%s", strings.Replace(receive.Asset, ".", "~", 1))
+			asset, err := common.NewAsset(strings.Replace(send.Asset, ".", "~", 1))
+			require.NoError(t, err)
+			amount := math.NewUint(uint64(adjustmentBps / 2)).Mul(math.NewUintFromString(send.BalanceAsset)).QuoUint64(maxBasisPts)
+
+			err = thorchain.Deposit(ctx, thorchainArber.KeyName(), math.Int(amount), asset.String(), memo)
+			require.NoError(t, err)
+
+			time.Sleep(time.Second * 5)
+		}
+	}()
 
 	// --------------------------------------------------------
 	// Swap
@@ -285,7 +362,7 @@ func TestThorchain(t *testing.T) {
 	// Saver Eject
 	// --------------------------------------------------------
 	// Reset mimirs
-	mimirs, err := thorchain.ApiGetMimirs()
+	mimirs, err = thorchain.ApiGetMimirs()
 	require.NoError(t, err)
 
 	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(-1)) {
@@ -420,7 +497,7 @@ func TestThorchain(t *testing.T) {
 		count++
 	}
 
-	err = PollForBalanceChange(ctx, gaia, 45, ibc.WalletAmount{
+	err = PollForBalanceChange(ctx, gaia, 100, ibc.WalletAmount{
 		Address: gaiaLper.FormattedAddress(),
 		Denom: gaia.Config().Denom,
 		Amount: gaiaLperBalanceBeforeRag,
@@ -430,7 +507,7 @@ func TestThorchain(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, gaiaLperBalanceAfterRag.GT(gaiaLperBalanceBeforeRag), fmt.Sprintf("Lper balance (%s) should be greater after ragnarok (%s)", gaiaLperBalanceAfterRag, gaiaLperBalanceBeforeRag))
 	
-	err = PollForBalanceChange(ctx, gaia, 15, ibc.WalletAmount{
+	err = PollForBalanceChange(ctx, gaia, 30, ibc.WalletAmount{
 		Address: gaiaSaver.FormattedAddress(),
 		Denom: gaia.Config().Denom,
 		Amount: gaiaSaverBalance,
@@ -452,4 +529,16 @@ func TestThorchain(t *testing.T) {
 	//require.NoError(t, err, "thorchain failed to make blocks")
 }
 
+func Min[T int | uint | int64 | uint64](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
 
+func Abs[T int | int64](a T) T {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
