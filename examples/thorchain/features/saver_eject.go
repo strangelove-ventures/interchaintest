@@ -37,7 +37,7 @@ func SaverEject(
 		require.NoError(t, err)
 	}
 
-	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-Saver", exoChain.Config().Name), exoChain)
+	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-SaverEject", exoChain.Config().Name), exoChain)
 	exoUser = users[0]
 
 	exoChainType, err := common.NewChain(exoChain.Config().Name)
@@ -47,7 +47,7 @@ func SaverEject(
 	pool, err := thorchain.ApiGetPool(exoAsset)
 	require.NoError(t, err)
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
-		MulUint64(500).QuoUint64(10_000)
+		MulUint64(2000).QuoUint64(10_000)
 
 	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
 	require.NoError(t, err)
@@ -86,5 +86,48 @@ func SaverEject(
 	require.True(t, deposit.GTE(minExpectedSaver), fmt.Sprintf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver))
 	require.True(t, deposit.LTE(maxExpectedSaver), fmt.Sprintf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver))
 
+	exoUserPreEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
+	require.NoError(t, err)
+
+	// Set mimirs
+	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(500) || !ok) {
+		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500")
+		require.NoError(t, err)
+	}
+
+	if mimir, ok := mimirs["SaversEjectInterval"]; (ok && mimir != int64(1) || !ok) {
+		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1")
+		require.NoError(t, err)
+	}
+
+	_, err = PollForEjectedSaver(ctx, thorchain, 30, exoAsset, exoUser)
+	require.NoError(t, err)
+	/*for count := 0; true; count++ {
+		time.Sleep(time.Second)
+		savers, err := thorchain.ApiGetSavers(common.ATOMAsset)
+		require.NoError(t, err)
+		saverEjectUserFound := false
+		for _, saver := range savers {
+			if saver.AssetAddress != gaiaSaverEjectUser.FormattedAddress() {
+				continue
+			}
+			saverEjectUserFound = true
+		}
+		if !saverEjectUserFound {
+			break
+		}
+		require.Less(t, count, 30, "saver took longer than 30 sec to show")
+	}*/
+
+	err = PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
+		Address: exoUser.FormattedAddress(),
+		Denom: exoChain.Config().Denom,
+		Amount: exoUserPreEjectBalance,
+	})
+	exoUserPostEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, exoUserPostEjectBalance.GT(exoUserPreEjectBalance), 
+		fmt.Sprintf("User (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance))
+	fmt.Printf("\nUser (%s) pre: %s, post: %s\n", exoUser.KeyName(), exoUserPreEjectBalance, exoUserPostEjectBalance)
 	return exoUser
 }

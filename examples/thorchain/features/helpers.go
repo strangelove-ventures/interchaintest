@@ -89,6 +89,30 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 	return saver, err
 }
 
+// PollForEjectedSaver polls until the saver no longer found
+func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, asset common.Asset, exoUser ibc.Wallet) (tc.Saver, error) {
+	h, err := thorchain.Height(ctx)
+	if err != nil {
+		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
+		savers, err := thorchain.ApiGetSavers(asset)
+		if err != nil {
+			return tc.Saver{}, err
+		}
+		for _, saver := range savers {
+			if strings.ToLower(saver.AssetAddress) == strings.ToLower(exoUser.FormattedAddress()) {
+				return saver, fmt.Errorf("saver took longer than %d blocks to eject", deltaBlocks)
+			}
+
+		}
+		return tc.Saver{}, nil
+	}
+	bp := testutil.BlockPoller[tc.Saver]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
+	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
+	return saver, err
+}
+
 // PollSwapCompleted polls until the swap is completed
 func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, txHash string) (any, error) {
 	h, err := thorchain.Height(ctx)
@@ -109,6 +133,51 @@ func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
 	return saver, err
+}
+
+// PollForBalanceChaqnge polls until the balance changes
+func PollForBalanceChange(ctx context.Context, chain ibc.Chain, deltaBlocks int64, balance ibc.WalletAmount) error {
+	h, err := chain.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (any, error) {
+		bal, err := chain.GetBalance(ctx, balance.Address, balance.Denom)
+		if err != nil {
+			return nil, err
+		}
+		if balance.Amount.Equal(bal) {
+			return nil, fmt.Errorf("balance (%s) hasn't changed: (%s)", bal.String(), balance.Amount.String())
+		}
+		return nil, nil
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: chain.Height, PollFunc: doPoll}
+	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
+	return err
+}
+
+// PollForPoolSuspended polls until the pool is gone or suspended
+func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, exoAsset common.Asset) error {
+	h, err := thorchain.Height(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (any, error) {
+		pool, err := thorchain.ApiGetPool(exoAsset)
+		if err != nil {
+			fmt.Println("ApiGetPool error")
+			return nil, nil
+		}
+
+		if pool.Status == "Suspended" {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("Pool (%s) did not suspend in %d blocks", exoAsset, deltaBlocks)
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
+	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
+	return err
 }
 
 func AddAdminIfNecessary(ctx context.Context, thorchain *tc.Thorchain) error {

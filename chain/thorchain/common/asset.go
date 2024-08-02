@@ -157,3 +157,8 @@ func (a Asset) String() string {
 	}
 	return fmt.Sprintf("%s%s%s", a.Chain, div, a.Symbol)
 }
+
+// Replace pool name "." with a "-" for Mimir key checking.
+func (a Asset) MimirString() string {
+	return a.Chain.String() + "-" + a.Symbol
+}
