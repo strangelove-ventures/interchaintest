@@ -24,7 +24,7 @@ type ChainContract struct {
 
 func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string) *interchaintest.ChainSpec {
 	chainID := "thorchain"
-	name := "Thorchain"
+	name := common.THORChain.String() // Must use this name for test
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
 	genesisKVMods := []thorchain.GenesisKV{
 		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
@@ -44,7 +44,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 		},
 		GasAdjustment: 1.5,
 		Type:           "thorchain",
-		Name:           common.THORChain.String(), // Must use this name for test
+		Name:           name,
 		ChainID:        chainID,
 		Bin:            Binary,
 		Bech32Prefix:   Bech32,

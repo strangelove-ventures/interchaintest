@@ -25,7 +25,7 @@ func Arb(
 	chains := append(exoChains, thorchain)
 	users = GetAndFundTestUsers(t, ctx, "arb", chains...)
 
-	err = AddAdmin(ctx, thorchain)
+	err = AddAdminIfNecessary(ctx, thorchain)
 	require.NoError(t, err)
 
 	mimirs, err := thorchain.ApiGetMimirs()

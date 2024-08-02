@@ -184,76 +184,9 @@ func TestThorchain(t *testing.T) {
 	// --------------------------------------------------------
 	// Swap
 	// --------------------------------------------------------
-	swapperFundAmount := math.NewInt(1_000_000_000) // 1k (gaia), 10 (thorchain)
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "swappers", swapperFundAmount, thorchain, gaia)
-	thorchainSwapper := users[0]
-	gaiaSwapper := users[1]
+	err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
+	require.NoError(t, err)
 	
-	// Get quote and calculate expected min/max output
-	swapAmountAtomToRune := math.NewUint(500_000_000)
-	swapQuote, err := thorchain.ApiGetSwapQuote(common.ATOMAsset, common.RuneNative, swapAmountAtomToRune.MulUint64(100)) // Thorchain has 8 dec for atom
-	
-	// store expected range to fail if received amount is outside 5% tolerance
-	quoteOut := math.NewUintFromString(swapQuote.ExpectedAmountOut)
-	tolerance := quoteOut.QuoUint64(14) // We are getting outside this, I think due to arbs, maybe more chains will ease this
-	if swapQuote.Fees.Outbound != nil {
-		outboundFee := math.NewUintFromString(*swapQuote.Fees.Outbound)
-		quoteOut = quoteOut.Add(outboundFee)
-
-		// handle 2x gas rate fluctuation (add 1x outbound fee to tolerance)
-		tolerance = tolerance.Add(outboundFee)
-	}
-	minExpectedRune := quoteOut.Sub(tolerance)
-	maxExpectedRune := quoteOut.Add(tolerance)
-
-	gaiaInboundAddr, _, err := thorchain.ApiGetInboundAddress("GAIA")
-	require.NoError(t, err)
-	memo := fmt.Sprintf("=:%s:%s", common.RuneNative.String(), thorchainSwapper.FormattedAddress())
-	txHash, err := gaia.SendFundsWithNote(ctx, gaiaSwapper.KeyName(), ibc.WalletAmount{
-		Address: gaiaInboundAddr,
-		Denom: gaia.Config().Denom,
-		Amount: math.Int(swapAmountAtomToRune),
-	}, memo)
-	require.NoError(t, err)
-
-	// ----- VerifyOutbound -----
-	stages, err := thorchain.ApiGetTxStages(txHash)
-	require.NoError(t, err)
-	count := 0
-	for stages.SwapFinalised == nil || !stages.SwapFinalised.Completed {
-	//for stages.OutboundSigned == nil || !stages.OutboundSigned.Completed { // Only for non-rune swaps
-		time.Sleep(time.Second)
-		stages, err = thorchain.ApiGetTxStages(txHash)
-		require.NoError(t, err)
-		count++
-		require.Less(t, count, 60, "swap didn't complete in 60 seconds")
-	}
-
-	details, err := thorchain.ApiGetTxDetails(txHash)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(details.OutTxs))
-	require.Equal(t, 1, len(details.Actions))
-
-	// verify outbound amount + max gas within expected range
-	action := details.Actions[0]
-	out := details.OutTxs[0]
-	outAmountPlusMaxGas := math.NewUintFromString(out.Coins[0].Amount)
-	maxGas := action.MaxGas[0]
-	if maxGas.Asset == common.RuneNative.String() {
-		outAmountPlusMaxGas = outAmountPlusMaxGas.Add(math.NewUintFromString(maxGas.Amount))
-	} else { // shouldn't enter here for atom -> rune
-		var maxGasAssetValue math.Uint
-		maxGasAssetValue, err = thorchain.ConvertAssetAmount(maxGas, common.RuneNative.String())
-		require.NoError(t, err)
-		outAmountPlusMaxGas = outAmountPlusMaxGas.Add(maxGasAssetValue)
-	}
-
-	thorchainSwapperBalance, err := thorchain.GetBalance(ctx, thorchainSwapper.FormattedAddress(), thorchain.Config().Denom)
-	require.NoError(t, err)
-	actualRune := thorchainSwapperBalance.Sub(swapperFundAmount)
-	require.True(t, actualRune.GTE(math.Int(minExpectedRune)), fmt.Sprintf("Actual: %s rune, Min expected: %s rune", actualRune, minExpectedRune))
-	require.True(t, actualRune.LTE(math.Int(maxExpectedRune)), fmt.Sprintf("Actual: %s rune, Max expected: %s rune", actualRune, maxExpectedRune))
-
 	// --------------------------------------------------------
 	// Saver Eject
 	// --------------------------------------------------------
@@ -295,9 +228,9 @@ func TestThorchain(t *testing.T) {
 	maxExpectedSaverEject := saverEjectQuoteOut.Add(toleranceEject)
 
 	// Alternate between memo and memoless
-	memo = fmt.Sprintf("+:%s", "GAIA/ATOM")
+	memo := fmt.Sprintf("+:%s", "GAIA/ATOM")
 	//memo = ""
-	gaiaInboundAddr, _, err = thorchain.ApiGetInboundAddress("GAIA")
+	gaiaInboundAddr, _, err := thorchain.ApiGetInboundAddress("GAIA")
 	require.NoError(t, err)
 	_, err = gaia.SendFundsWithNote(ctx, gaiaSaverEjectUser.KeyName(), ibc.WalletAmount{
 		Address: gaiaInboundAddr,
@@ -382,7 +315,7 @@ func TestThorchain(t *testing.T) {
 
 	pools, err = thorchain.ApiGetPools()
 	require.NoError(t, err)
-	count = 0
+	count := 0
 	for len(pools) > 1 {
 		if pools[0].Status == "Suspended" {
 			break

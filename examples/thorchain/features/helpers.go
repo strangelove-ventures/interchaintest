@@ -89,7 +89,29 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 	return saver, err
 }
 
-func AddAdmin(ctx context.Context, thorchain *tc.Thorchain) error {
+// PollSwapCompleted polls until the swap is completed
+func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, txHash string) (any, error) {
+	h, err := thorchain.Height(ctx)
+	if err != nil {
+		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (any, error) {
+		stages, err := thorchain.ApiGetTxStages(txHash)
+		if err != nil {
+			return nil, err
+		}
+		if stages.SwapFinalised == nil || !stages.SwapFinalised.Completed {
+		//if stages.OutboundSigned == nil || !stages.OutboundSigned.Completed { // Only for non-rune swaps
+			return nil, fmt.Errorf("swap (tx: %s) didn't complete in %d blocks", txHash, deltaBlocks)
+		}
+		return nil, nil
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
+	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
+	return saver, err
+}
+
+func AddAdminIfNecessary(ctx context.Context, thorchain *tc.Thorchain) error {
 	_, err := thorchain.GetAddress(ctx, "admin")
 	if err != nil {
 		if err := thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice"); err != nil {
