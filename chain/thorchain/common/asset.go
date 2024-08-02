@@ -87,6 +87,42 @@ func NewAsset(input string) (Asset, error) {
 	return asset, nil
 }
 
+// Get synthetic asset of asset
+func (a Asset) GetSyntheticAsset() Asset {
+	if a.IsSyntheticAsset() {
+		return a
+	}
+	return Asset{
+		Chain:  a.Chain,
+		Symbol: a.Symbol,
+		Ticker: a.Ticker,
+		Synth:  true,
+	}
+}
+
+// Get trade asset of asset
+func (a Asset) GetTradeAsset() Asset {
+	if a.IsTradeAsset() {
+		return a
+	}
+	return Asset{
+		Chain:  a.Chain,
+		Symbol: a.Symbol,
+		Ticker: a.Ticker,
+		Trade:  true,
+	}
+}
+
+// Get derived asset of asset
+func (a Asset) GetDerivedAsset() Asset {
+	return Asset{
+		Chain:  THORChain,
+		Symbol: a.Symbol,
+		Ticker: a.Ticker,
+		Synth:  false,
+	}
+}
+
 // Check if asset is a pegged asset
 func (a Asset) IsSyntheticAsset() bool {
 	return a.Synth

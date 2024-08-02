@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 
@@ -62,4 +63,38 @@ func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
 	return err
+}
+
+// PollForSaver polls until the saver is found
+func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, asset common.Asset, exoUser ibc.Wallet) (tc.Saver, error) {
+	h, err := thorchain.Height(ctx)
+	if err != nil {
+		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
+		savers, err := thorchain.ApiGetSavers(asset)
+		if err != nil {
+			return tc.Saver{}, err
+		}
+		for _, saver := range savers {
+			if strings.ToLower(saver.AssetAddress) == strings.ToLower(exoUser.FormattedAddress()) {
+				return saver, nil
+			}
+
+		}
+		return tc.Saver{}, fmt.Errorf("saver took longer than %d blocks to show", deltaBlocks)
+	}
+	bp := testutil.BlockPoller[tc.Saver]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
+	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
+	return saver, err
+}
+
+func AddAdmin(ctx context.Context, thorchain *tc.Thorchain) error {
+	_, err := thorchain.GetAddress(ctx, "admin")
+	if err != nil {
+		if err := thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
