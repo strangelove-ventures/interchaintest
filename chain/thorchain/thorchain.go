@@ -337,6 +337,11 @@ func (c *Thorchain) SendFunds(ctx context.Context, keyName string, amount ibc.Wa
 }
 
 // Implements Chain interface
+func (c *Thorchain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return c.getFullNode().BankSendWithNote(ctx, keyName, amount, note)
+}
+
+// Implements Chain interface
 func (c *Thorchain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,

@@ -33,6 +33,7 @@ func (*EthereumChain) GetHostPeerAddress() string {
 }
 
 // cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
+// Can re-add/support with this commit: https://github.com/foundry-rs/foundry/pull/6671
 func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	/*cmd := []string{"cast", "wallet", "import", keyName, "--mnemonic", mnemonic, "--password", ""}
 	stdout, stderr, err := c.Exec(ctx, cmd, nil)

@@ -49,3 +49,38 @@ func NewChain(chainID string) (Chain, error) {
 	return chain, nil
 }
 
+// String implement fmt.Stringer
+func (c Chain) String() string {
+	// convert it to upper case again just in case someone created a ticker via Chain("rune")
+	return strings.ToUpper(string(c))
+}
+
+// GetGasAsset chain's base asset
+func (c Chain) GetGasAsset() Asset {
+	switch c {
+	case THORChain:
+		return RuneNative
+	case BNBChain:
+		return BNBAsset
+	case BSCChain:
+		return BNBBEP20Asset
+	case BTCChain:
+		return BTCAsset
+	case LTCChain:
+		return LTCAsset
+	case BCHChain:
+		return BCHAsset
+	case DOGEChain:
+		return DOGEAsset
+	case ETHChain:
+		return ETHAsset
+	case TERRAChain:
+		return LUNAAsset
+	case AVAXChain:
+		return AVAXAsset
+	case GAIAChain:
+		return ATOMAsset
+	default:
+		return EmptyAsset
+	}
+}

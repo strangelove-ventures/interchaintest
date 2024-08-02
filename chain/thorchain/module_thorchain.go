@@ -10,22 +10,21 @@ import (
 )
 
 // BankSend sends tokens from one account to another.
-func (c *Thorchain) BankSendWithMemo(ctx context.Context, keyName string, amount ibc.WalletAmount, memo string) (string, error) {
-	txHash, err := c.getFullNode().ExecTx(ctx,
-		keyName, "thorchain", "send",
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-		"--note", memo,
-	)
-	return txHash, err
-}
-
-// BankSend sends tokens from one account to another.
 func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	_, err := tn.ExecTx(ctx,
 		keyName, "thorchain", "send",
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 	)
 	return err
+}
+
+// BankSendWithNote sends tokens from one account to another with a note/memo.
+func (tn *ChainNode) BankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return tn.ExecTx(ctx,
+		keyName, "thorchain", "send",
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+		"--note", note,
+	)
 }
 
 func (c *Thorchain) Deposit(ctx context.Context, keyName string, amount math.Int, denom string, memo string) error {

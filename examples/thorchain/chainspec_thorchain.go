@@ -4,6 +4,7 @@ import (
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -14,18 +15,28 @@ var (
 	CoinScale = math.NewInt(100_000_000)
 	StaticGas = math.NewInt(2_000_000)
 	InitialFaucetAmount = math.NewInt(100_000_000).Mul(CoinScale)
-
-	GenesisKVMods = []thorchain.GenesisKV{
-		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
-		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false), // disable ibc transfer sends
-		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"), // mint to reserve for mocknet (220M)
-	}
 )
 
-func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) *interchaintest.ChainSpec {
+type ChainContract struct {
+	Chain string `json:"chain"`
+	Router string `json:"router"`
+}
+
+func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string) *interchaintest.ChainSpec {
 	chainID := "thorchain"
 	name := "Thorchain"
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
+	genesisKVMods := []thorchain.GenesisKV{
+		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
+		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false), // disable ibc transfer sends
+		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"), // mint to reserve for mocknet (220M)
+		thorchain.NewGenesisKV("app_state.thorchain.chain_contracts", []ChainContract{
+			{
+				Chain: "ETH",
+				Router: ethRouter,
+			},
+		}), // mint to reserve for mocknet (220M)
+	}
 
 	defaultChainConfig := ibc.ChainConfig{
 		Images: []ibc.DockerImage{
@@ -33,7 +44,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) *interch
 		},
 		GasAdjustment: 1.5,
 		Type:           "thorchain",
-		Name:           name,
+		Name:           common.THORChain.String(), // Must use this name for test
 		ChainID:        chainID,
 		Bin:            Binary,
 		Bech32Prefix:   Bech32,
@@ -56,7 +67,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int) *interch
 				ValidatorProcess: true,
 			},
 		},
-		ModifyGenesis: thorchain.ModifyGenesis(GenesisKVMods),
+		ModifyGenesis: thorchain.ModifyGenesis(genesisKVMods),
 		HostPortOverride: map[int]int{1317: 1317},
 	}
 
@@ -111,7 +122,7 @@ var (
 		//DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
 		//BCH_HOST: ${BCH_HOST:-bitcoin-cash:28443}
 		//LTC_HOST: ${LTC_HOST:-litecoin:38443}
-		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545}
+		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
 		"GAIA_HOST=http://localgaia-val-0-TestThorchain:26657", // TODO: set at runtime
 		"GAIA_GRPC_HOST=localgaia-val-0-TestThorchain:9090", // TODO: set at runtime
@@ -123,7 +134,7 @@ var (
 		"BIFROST_CHAINS_BSC_DISABLED=true",
 		"BIFROST_CHAINS_BTC_DISABLED=true",
 		"BIFROST_CHAINS_DOGE_DISABLED=true",
-		"BIFROST_CHAINS_ETH_DISABLED=true",
+		"BIFROST_CHAINS_ETH_DISABLED=false",
 		"BIFROST_CHAINS_GAIA_DISABLED=false",
 		"BIFROST_CHAINS_LTC_DISABLED=true",
 		

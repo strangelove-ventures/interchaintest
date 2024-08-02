@@ -3,6 +3,7 @@ package thorchain_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -27,4 +28,17 @@ func PollForBalanceChange(ctx context.Context, chain ibc.Chain, deltaBlocks int6
 	bp := testutil.BlockPoller[any]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
 	return err
+}
+
+func GetEthAddressFromStdout(stdout string) (string, error) {
+	// Define the regular expression pattern
+	re := regexp.MustCompile(`"value":"(0x[0-9a-fA-F]+)"`)
+
+	// Find the first match
+	matches := re.FindStringSubmatch(stdout)
+	if len(matches) <= 1 {
+		return "", fmt.Errorf("failed to parse out contract address")
+	}
+	// Extract the value
+	return matches[1], nil
 }

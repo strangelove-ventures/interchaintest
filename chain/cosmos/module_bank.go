@@ -13,23 +13,16 @@ import (
 )
 
 // BankSend sends tokens from one account to another.
-// Temporary to not break existing uses and figure out how we want to integrate a memo field
-func (tn *ChainNode) BankSendWithMemo(ctx context.Context, keyName string, amount ibc.WalletAmount, memo string) (string, error) {
-	txHash, err := tn.ExecTx(ctx,
-		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-		"--note", memo,
-	)
-	return txHash, err
+func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	_, err := tn.ExecTx(ctx, keyName,"bank", "send", keyName,
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom))
+	return err
 }
 
 // BankSend sends tokens from one account to another.
-func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	_, err := tn.ExecTx(ctx,
-		keyName, "bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-	)
-	return err
+func (tn *ChainNode) BankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return tn.ExecTx(ctx, keyName, "bank", "send", keyName, amount.Address,
+		fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom), "--note", note)
 }
 
 // Deprecated: use BankSend instead
