@@ -14,8 +14,9 @@ cd ts
 
 npm i
 
-# starts a cosmoshub testnet
-npm run testnet
+# starts a cosmoshub testnet on :26657
+local-ic start cosmoshub
 
-npm run start # runs a basic test
+# runs a basic test
+npm run start
 ```
