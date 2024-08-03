@@ -1,15 +1,11 @@
 {
   "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.4",
     "tsx": "^4.16.5",
     "typescript": "^5.5.4"
   },
   "scripts": {
     "testnet": "local-ic start cosmoshub",
-    "start": "npx tsx src/index.ts",
-    "test": "jest"
+    "start": "npx tsx src/index.ts"
   },
   "dependencies": {
     "@cosmjs/stargate": "^0.32.4"
