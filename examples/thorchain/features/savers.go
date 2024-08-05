@@ -20,6 +20,7 @@ func Saver(
 	thorchain *tc.Thorchain,
 	exoChain ibc.Chain,
 ) (exoUser ibc.Wallet) {
+	fmt.Println("#### Savers:", exoChain.Config().Name)
 	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-Saver", exoChain.Config().Name), exoChain)
 	exoUser = users[0]
 
@@ -47,22 +48,29 @@ func Saver(
 
 	// send random half as memoless saver
 	memo := ""
-	if rand.Intn(2) == 0 {
+	if rand.Intn(2) == 0 || exoChainType.String() == common.GAIAChain.String() { // if gaia memo is empty, bifrost errors
 		memo = fmt.Sprintf("+:%s", exoAsset.GetSyntheticAsset())
 	}
 
 	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
 	require.NoError(t, err)
-	_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), ibc.WalletAmount{
+
+	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
 		Denom: exoChain.Config().Denom,
 		Amount: sdkmath.Int(saveAmount).
 			MulRaw(int64(math.Pow10(int(*exoChain.Config().CoinDecimals)))).
 			QuoRaw(int64(math.Pow10(int(*thorchain.Config().CoinDecimals)))), // save amount is based on 8 dec
-	}, memo)
+	}
+	if memo != "" {
+		_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), wallet, memo)
+	} else {
+		err = exoChain.SendFunds(ctx, exoUser.KeyName(), wallet)
+	}
+	require.NoError(t, err)
 
-	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	errMsgCommon := fmt.Sprintf("saver (%s - %s) of asset %s", exoUser.KeyName(), exoUser.FormattedAddress(), exoAsset)
+	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	require.NoError(t, err, fmt.Sprintf("%s not found", errMsgCommon))
 
 	deposit := sdkmath.NewUintFromString(saver.AssetDepositValue)

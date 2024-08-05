@@ -14,6 +14,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func GetAndFundTestUsers(
@@ -28,18 +29,22 @@ func GetAndFundTestUsers(
 		i := i
 		chain := chain
 		oneCoin := int64(math.Pow10(int(*chain.Config().CoinDecimals)))
-		amount := sdkmath.NewInt(100 * oneCoin)
+		amount := sdkmath.NewInt(1000 * oneCoin)
 		switch chain.Config().Denom {
 		case "btc", "wei":
-			amount = sdkmath.NewInt(2 * oneCoin)
+			amount = sdkmath.NewInt(9 * oneCoin)
 		case "doge":
-			amount = sdkmath.NewInt(1000 * oneCoin)
+			amount = sdkmath.NewInt(10000 * oneCoin)
 		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			user := interchaintest.GetAndFundTestUsers(t, ctx, keyNamePrefix, amount, chain)
 			users[i] = user[0]
+
+			userBalance, err := chain.GetBalance(ctx, user[0].FormattedAddress(), chain.Config().Denom)
+			require.NoError(t, err)
+			require.True(t, userBalance.Equal(amount), fmt.Sprintf("User (%s) was not properly funded", user[0].KeyName()))
 		}()
 	}
 	wg.Wait()
@@ -125,8 +130,28 @@ func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks
 			return nil, err
 		}
 		if stages.SwapFinalised == nil || !stages.SwapFinalised.Completed {
-		//if stages.OutboundSigned == nil || !stages.OutboundSigned.Completed { // Only for non-rune swaps
 			return nil, fmt.Errorf("swap (tx: %s) didn't complete in %d blocks", txHash, deltaBlocks)
+		}
+		return nil, nil
+	}
+	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
+	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
+	return saver, err
+}
+
+// PollOutboundSigned polls until the swap is completed and outbound has been signed
+func PollOutboundSigned(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, txHash string) (any, error) {
+	h, err := thorchain.Height(ctx)
+	if err != nil {
+		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
+	}
+	doPoll := func(ctx context.Context, height int64) (any, error) {
+		stages, err := thorchain.ApiGetTxStages(txHash)
+		if err != nil {
+			return nil, err
+		}
+		if stages.OutboundSigned == nil || !stages.OutboundSigned.Completed {
+			return nil, fmt.Errorf("swap (tx: %s) didn't outbound sign in %d blocks", txHash, deltaBlocks)
 		}
 		return nil, nil
 	}
@@ -165,7 +190,6 @@ func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlo
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		pool, err := thorchain.ApiGetPool(exoAsset)
 		if err != nil {
-			fmt.Println("ApiGetPool error")
 			return nil, nil
 		}
 

@@ -22,6 +22,7 @@ func Arb(
 	thorchain *tc.Thorchain,
 	exoChains ...ibc.Chain,
 ) (users []ibc.Wallet, err error) {
+	fmt.Println("#### Arb")
 	chains := append(exoChains, thorchain)
 	users = GetAndFundTestUsers(t, ctx, "arb", chains...)
 
@@ -31,7 +32,7 @@ func Arb(
 	mimirs, err := thorchain.ApiGetMimirs()
 	require.NoError(t, err)
 
-	if mimir, ok := mimirs["TradeAccountsEnabled"]; (ok && mimir != int64(1) || !ok) {
+	if mimir, ok := mimirs[strings.ToUpper("TradeAccountsEnabled")]; (ok && mimir != int64(1) || !ok) {
 		err := thorchain.SetMimir(ctx, "admin", "TradeAccountsEnabled", "1")
 		require.NoError(t, err)
 	}
@@ -147,7 +148,7 @@ func Arb(
 			}
 			//require.NoError(t, err)
 
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second) // Deposit already wait 2 blocks, ~4 seconds
 		}
 	}()
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -19,7 +20,9 @@ func SaverEject(
 	ctx context.Context,
 	thorchain *tc.Thorchain,
 	exoChain ibc.Chain,
+	exoSavers ...ibc.Wallet, // Savers that should not be ejected
 ) (exoUser ibc.Wallet) {
+	fmt.Println("#### Saver Eject:", exoChain.Config().Name)
 	err := AddAdminIfNecessary(ctx, thorchain)
 	require.NoError(t, err)
 	
@@ -27,13 +30,15 @@ func SaverEject(
 	mimirs, err := thorchain.ApiGetMimirs()
 	require.NoError(t, err)
 
-	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(-1)) {
-		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "-1")
+	// Set max synth per pool depth to 100% of pool amount
+	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(5000)) {
+		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000")
 		require.NoError(t, err)
 	}
 
-	if mimir, ok := mimirs["SaversEjectInterval"]; (ok && mimir != int64(-1)) {
-		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "-1")
+	// Disable saver ejection
+	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(0) || !ok) {
+		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0")
 		require.NoError(t, err)
 	}
 
@@ -62,24 +67,32 @@ func SaverEject(
 	minExpectedSaver := quoteOut.Sub(tolerance)
 	maxExpectedSaver := quoteOut.Add(tolerance)
 
+	
 	// send random half as memoless saver
 	memo := ""
-	if rand.Intn(2) == 0 {
+	if rand.Intn(2) == 0 || exoChainType.String() == common.GAIAChain.String() { // if gaia memo is empty, bifrost errors
 		memo = fmt.Sprintf("+:%s", exoAsset.GetSyntheticAsset())
 	}
 
 	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
 	require.NoError(t, err)
-	_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), ibc.WalletAmount{
+	
+	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
 		Denom: exoChain.Config().Denom,
 		Amount: sdkmath.Int(saveAmount).
 			MulRaw(int64(math.Pow10(int(*exoChain.Config().CoinDecimals)))).
 			QuoRaw(int64(math.Pow10(int(*thorchain.Config().CoinDecimals)))), // save amount is based on 8 dec
-	}, memo)
+	}
+	if memo != "" {
+		_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), wallet, memo)
+	} else {
+		err = exoChain.SendFunds(ctx, exoUser.KeyName(), wallet)
+	}
+	require.NoError(t, err)
 
-	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	errMsgCommon := fmt.Sprintf("saver (%s - %s) of asset %s", exoUser.KeyName(), exoUser.FormattedAddress(), exoAsset)
+	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	require.NoError(t, err, fmt.Sprintf("%s not found", errMsgCommon))
 
 	deposit := sdkmath.NewUintFromString(saver.AssetDepositValue)
@@ -89,45 +102,45 @@ func SaverEject(
 	exoUserPreEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
 	require.NoError(t, err)
 
-	// Set mimirs
-	if mimir, ok := mimirs["MaxSynthPerPoolDepth"]; (ok && mimir != int64(500) || !ok) {
-		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500")
+	exoSaversBalance := make([]sdkmath.Int, len(exoSavers))
+	for i, exoSaver := range exoSavers {
+		exoSaversBalance[i], err = exoChain.GetBalance(ctx, exoSaver.FormattedAddress(), exoChain.Config().Denom)
 		require.NoError(t, err)
 	}
 
-	if mimir, ok := mimirs["SaversEjectInterval"]; (ok && mimir != int64(1) || !ok) {
+	mimirs, err = thorchain.ApiGetMimirs()
+	require.NoError(t, err)
+
+	// Set mimirs
+	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(500) || !ok) {
+		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500")
+		require.NoError(t, err)
+	}
+	
+	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(1) || !ok) {
 		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1")
 		require.NoError(t, err)
 	}
 
 	_, err = PollForEjectedSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	require.NoError(t, err)
-	/*for count := 0; true; count++ {
-		time.Sleep(time.Second)
-		savers, err := thorchain.ApiGetSavers(common.ATOMAsset)
-		require.NoError(t, err)
-		saverEjectUserFound := false
-		for _, saver := range savers {
-			if saver.AssetAddress != gaiaSaverEjectUser.FormattedAddress() {
-				continue
-			}
-			saverEjectUserFound = true
-		}
-		if !saverEjectUserFound {
-			break
-		}
-		require.Less(t, count, 30, "saver took longer than 30 sec to show")
-	}*/
-
+	
 	err = PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
 		Address: exoUser.FormattedAddress(),
 		Denom: exoChain.Config().Denom,
 		Amount: exoUserPreEjectBalance,
 	})
+	require.NoError(t, err)
 	exoUserPostEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, exoUserPostEjectBalance.GT(exoUserPreEjectBalance), 
 		fmt.Sprintf("User (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance))
-	fmt.Printf("\nUser (%s) pre: %s, post: %s\n", exoUser.KeyName(), exoUserPreEjectBalance, exoUserPostEjectBalance)
+
+	for i, exoSaver := range exoSavers {
+		exoSaverPostBalance, err := exoChain.GetBalance(ctx, exoSaver.FormattedAddress(), exoChain.Config().Denom)
+		require.NoError(t, err)
+		require.True(t, exoSaverPostBalance.Equal(exoSaversBalance[i]), fmt.Sprintf("Saver's (%s) post balance (%s) should be the same as (%s)", exoSaver.KeyName(), exoSaverPostBalance, exoSaversBalance[i]))
+	}
+
 	return exoUser
 }

@@ -83,6 +83,9 @@ func NewThorchainHeighlinerChainConfig(
 }
 
 func NewThorchain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log *zap.Logger) *Thorchain {
+	if numValidators != 1 {
+		panic(fmt.Sprintf("Thorchain must start with 1 validators for vault and router contract setup"))
+	}
 	if chainConfig.EncodingConfig == nil {
 		cfg := DefaultEncoding()
 		chainConfig.EncodingConfig = &cfg
@@ -664,8 +667,8 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
 
 	for i := range c.Validators {
-		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
-		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}
+		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}
 		if chainCfg.ModifyGenesisAmounts != nil {
 			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
 			genesisAmounts[i] = []types.Coin{amount}

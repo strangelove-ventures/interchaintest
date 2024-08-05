@@ -186,6 +186,9 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		"--block-time", "2", // 2 second block times
 		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
+		"--no-cors",
+		"--gas-price", "20000000000",
+		"--block-base-fee-per-gas", "0",
 	}
 
 	var mounts []mount.Mount
@@ -316,6 +319,26 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 	return nil
 }
 
+// cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
+// Can re-add/support with this commit: https://github.com/foundry-rs/foundry/pull/6671
+func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	err := c.MakeKeystoreDir(ctx) // Ensure keystore directory is created
+	if err != nil {
+		return err
+	}
+
+	cmd := []string{"cast", "wallet", "import", keyName, "--keystore-dir", c.KeystoreDir(), "--mnemonic", mnemonic, "--unsafe-password", ""}
+	_, _, err = c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+
+	// This is needed for CreateKey() since that keystore path does not use the keyname
+	c.keystoreMap[keyName] = path.Join(c.KeystoreDir(), keyName)
+
+	return nil
+}
+
 // Get address of account, cast to a string to use
 func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 
@@ -351,7 +374,7 @@ type TransactionReceipt struct {
 }
 
 func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	cmd := []string{"cast", "send", amount.Address, "--value", amount.Amount.String(), "--json"}
+	cmd := []string{"cast", "send", amount.Address, hexutil.Encode([]byte(note)), "--value", amount.Amount.String(), "--json"}
 	if keyName == "faucet" {
 		cmd = append(cmd,
 			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -365,7 +388,6 @@ func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, a
 			"--rpc-url", c.GetRPCAddress(),
 		)
 	}
-	cmd = append(cmd, "--create", hexutil.Encode([]byte(note)))
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err

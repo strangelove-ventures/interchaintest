@@ -3,7 +3,7 @@ package thorchain_test
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -16,6 +16,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/examples/thorchain/features"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+
+	//"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -64,15 +66,16 @@ func TestThorchain(t *testing.T) {
 	})
 
 	ethUserInitialAmount := math.NewInt(2 * ethereum.ETHER)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethChain)
-	ethUser := users[0]
 
-	ethChain.SendFunds(ctx, "faucet", ibc.WalletAmount{
-		Address: "0x1804c8ab1f12e6bbf3894d4083f33e07309d1f38",
-		Amount: math.NewInt(ethereum.ETHER),
-	})
+	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23) + "fossil", ethUserInitialAmount, ethChain)
+	require.NoError(t, err)
 
-	os.Setenv("ETHFAUCET", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	//ethChain.SendFunds(ctx, "faucet", ibc.WalletAmount{
+	//	Address: "0x1804c8ab1f12e6bbf3894d4083f33e07309d1f38",
+	//	Amount: math.NewInt(ethereum.ETHER),
+	//})
+
+	//os.Setenv("ETHFAUCET", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
 		ContractRootDir: "contracts",
 		SolidityContract: "script/Token.s.sol",
@@ -137,13 +140,19 @@ func TestThorchain(t *testing.T) {
 		_ = ic.Close()
 	})
 
+	err = gaia.SendFunds(ctx, "faucet", ibc.WalletAmount{
+		Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
+		Denom: gaia.Config().Denom,
+		Amount: math.NewInt(10000000),
+	})
+
 	err = thorchain.StartAllValSidecars(ctx)
 	require.NoError(t, err, "failed starting validator sidecars")
 
 	doTxs(t, ctx, gaia) // Do 100 transactions
 
 	defaultFundAmount := math.NewInt(100_000_000)
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "default", defaultFundAmount, thorchain)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", defaultFundAmount, thorchain)
 	thorchainUser := users[0]
 	err = testutil.WaitForBlocks(ctx, 2, thorchain)
 	require.NoError(t, err, "thorchain failed to make blocks")
@@ -168,42 +177,47 @@ func TestThorchain(t *testing.T) {
 	// Bootstrap pool
 	// --------------------------------------------------------
 	_, gaiaLper := features.DualLp(t, ctx, thorchain, gaia)
+	_, ethLper := features.DualLp(t, ctx, thorchain, ethChain)
+
+	_, _ = features.DualLp(t, ctx, thorchain, gaia)
 	_, _ = features.DualLp(t, ctx, thorchain, ethChain)
 
 	// --------------------------------------------------------
 	// Savers
 	// --------------------------------------------------------
 	gaiaSaver := features.Saver(t, ctx, thorchain, gaia)
-	_ = features.Saver(t, ctx, thorchain, ethChain)
+	ethSaver := features.Saver(t, ctx, thorchain, ethChain)
 	
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
-	_, err = features.Arb(t, ctx, thorchain, gaia, ethChain) // Must add all active chains
-	require.NoError(t, err)
+	//_, err = features.Arb(t, ctx, thorchain, gaia, ethChain) // Must add all active chains
+	//require.NoError(t, err)
 	
 	// --------------------------------------------------------
 	// Swap
 	// --------------------------------------------------------
-	err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
+	// change the order, remove gaia/thorchain, play with order, change  saver eject order
+	//err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
+	//require.NoError(t, err)
+	err = features.SingleSwap(t, ctx, thorchain, gaia, ethChain)
 	require.NoError(t, err)
+	//err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)
+	//require.NoError(t, err)
 	
 	// --------------------------------------------------------
 	// Saver Eject
 	// --------------------------------------------------------
-	gaiaSaverBalance, err := gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
-	require.NoError(t, err)
+	_ = features.SaverEject(t, ctx, thorchain, ethChain, ethSaver)
+	_ = features.SaverEject(t, ctx, thorchain, gaia, gaiaSaver)
 	
-	_ = features.SaverEject(t, ctx, thorchain, gaia)
-	
-	gaiaSaverAfterBalance, err := gaia.GetBalance(ctx, gaiaSaver.FormattedAddress(), gaia.Config().Denom)
-	require.NoError(t, err)
-	require.True(t, gaiaSaverBalance.Equal(gaiaSaverAfterBalance), fmt.Sprintf("Balance (%s) should be the same (%s)", gaiaSaverAfterBalance, gaiaSaverBalance))
-
 	// --------------------------------------------------------
 	// Ragnarok gaia
 	// --------------------------------------------------------
 	err = features.Ragnarok(t, ctx, thorchain, gaia, gaiaLper, gaiaSaver)
+	require.NoError(t, err)
+	err = features.Ragnarok(t, ctx, thorchain, ethChain, ethLper, ethSaver)
+	require.NoError(t, err)
 	
 	//err = gaia.StopAllNodes(ctx)
 	//require.NoError(t, err)

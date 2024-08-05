@@ -930,7 +930,7 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
 		Version: version,
 		IpAddress: "192.168.0.10", // TODO: may need to populate real ip after chain start
 		Status: "Active",
-		Bond: "10000000000000", // 100k rune
+		Bond: "100000000", // 1 rune
 		ActiveBlockHeight: "0",
 		BondAddress: bech32NodeAddr,
 		SignerMembership: []string{},
@@ -1491,7 +1491,15 @@ func (tn *ChainNode) InitValidatorGenTx(
 	genesisAmounts []sdk.Coin,
 	genesisSelfDelegation sdk.Coin,
 ) error {
-	if err := tn.CreateKey(ctx, valKey); err != nil {
+	//if err := tn.CreateKey(ctx, valKey); err != nil {
+	//	return err
+	//}
+	// Thorchain will only start with 1 validator
+	// it must use this mnemonic since the router contracts are created using it (before this chain starts)
+	// Otherwise, there is nothing special amoun this mnemonic other than it is what Thornode's sim testing uses.
+	// TODO: can we deploy router contracts after thorchain start?
+	tn.ValidatorMnemonic = strings.Repeat("dog ", 23) + "fossil"
+	if err := tn.RecoverKey(ctx, valKey, tn.ValidatorMnemonic); err != nil {
 		return err
 	}
 	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)

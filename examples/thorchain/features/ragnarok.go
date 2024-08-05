@@ -19,6 +19,7 @@ func Ragnarok(
 	exoChain ibc.Chain,
 	exoUsers ...ibc.Wallet,
 ) (error) {
+	fmt.Println("#### Ragnarok:", exoChain.Config().Name)
 	err := AddAdminIfNecessary(ctx, thorchain)
 	require.NoError(t, err)
 
