@@ -172,7 +172,7 @@ func PollForBalanceChange(ctx context.Context, chain ibc.Chain, deltaBlocks int6
 			return nil, err
 		}
 		if balance.Amount.Equal(bal) {
-			return nil, fmt.Errorf("balance (%s) hasn't changed: (%s)", bal.String(), balance.Amount.String())
+			return nil, fmt.Errorf("%s balance (%s) hasn't changed: (%s) in %d blocks", balance.Address, bal.String(), balance.Amount.String(), deltaBlocks)
 		}
 		return nil, nil
 	}

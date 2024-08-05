@@ -95,6 +95,11 @@ func singleSwap(
 		return err
 	}
 
+	if txHash[0:2] == "0x" {
+		txHash = txHash[2:]
+	}
+
+	fmt.Println("Swap tx hash:", txHash)
 	// ----- VerifyOutbound -----
 	if destChainType.String() == common.THORChain.String() {
 		_, err = PollSwapCompleted(ctx, thorchain, 30, txHash)

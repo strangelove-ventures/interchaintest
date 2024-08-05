@@ -191,8 +191,8 @@ func TestThorchain(t *testing.T) {
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
-	//_, err = features.Arb(t, ctx, thorchain, gaia, ethChain) // Must add all active chains
-	//require.NoError(t, err)
+	_, err = features.Arb(t, ctx, thorchain, gaia, ethChain) // Must add all active chains
+	require.NoError(t, err)
 	
 	// --------------------------------------------------------
 	// Swap
@@ -200,10 +200,10 @@ func TestThorchain(t *testing.T) {
 	// change the order, remove gaia/thorchain, play with order, change  saver eject order
 	//err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
 	//require.NoError(t, err)
+	err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)
+	require.NoError(t, err)
 	err = features.SingleSwap(t, ctx, thorchain, gaia, ethChain)
 	require.NoError(t, err)
-	//err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)
-	//require.NoError(t, err)
 	
 	// --------------------------------------------------------
 	// Saver Eject
