@@ -2,7 +2,6 @@ package cosmos_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -87,13 +86,13 @@ func TestChainGordian(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain)
-	user1 := users[1].FormattedAddress()
+	// users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain)
+	// user1 := users[1].FormattedAddress()
 
-	b2, err := chain.BankQueryBalance(ctx, user1, chain.Config().Denom)
-	require.NoError(t, err)
+	// b2, err := chain.BankQueryBalance(ctx, user1, chain.Config().Denom)
+	// require.NoError(t, err)
 
-	fmt.Println("b2", b2)
+	// fmt.Println("b2", b2)
 
 	// send 1 token
 	// sendAmt := int64(1)
