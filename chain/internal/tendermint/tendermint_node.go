@@ -85,8 +85,8 @@ func NewTendermintNode(
 type TendermintNodes []*TendermintNode
 
 const (
-	// BlockTimeSeconds (in seconds) is approx time to create a block
-	BlockTimeSeconds = 2
+	// BlockTime is approx time to create a block
+	BlockTime = 500 * time.Millisecond
 
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
@@ -203,7 +203,7 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 	consensus := make(testutil.Toml)
 
-	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
+	blockT := BlockTime.String()
 	consensus[fmt.Sprintf("timeout%scommit", sep)] = blockT
 	consensus[fmt.Sprintf("timeout%spropose", sep)] = blockT
 

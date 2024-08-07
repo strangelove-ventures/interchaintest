@@ -109,7 +109,7 @@ type ChainNodes []*ChainNode
 
 const (
 	valKey      = "validator"
-	blockTime   = 2 // seconds
+	blockTime   = 500 * time.Millisecond
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -335,7 +335,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	consensus := make(testutil.Toml)
 
-	blockT := (time.Duration(blockTime) * time.Second).String()
+	blockT := blockTime.String()
 	consensus["timeout_commit"] = blockT
 	consensus["timeout_propose"] = blockT
 
