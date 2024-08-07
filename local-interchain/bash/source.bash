@@ -56,3 +56,14 @@ QUERY() {
 
 # todo: info request curl -G -d "chain_id=localjuno-1" -d "request=peer" http://127.0.0.1:8080/info
 
+GET_PEER() {
+    API=$1
+    CHAIN_ID=$2
+
+    if [[ $API != */info ]]; then
+        API="$API/info"
+    fi
+
+    curl -G -d "chain_id=$CHAIN_ID" -d "request=peer" $API
+}
+
