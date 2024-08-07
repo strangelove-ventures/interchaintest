@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -81,6 +82,36 @@ func (c *CosmosChain) FinishICSProviderSetup(ctx context.Context, r ibc.Relayer,
 	}
 
 	return c.FlushPendingICSPackets(ctx, r, eRep, ibcPath)
+}
+
+// ConsumerAdditionProposal submits a legacy governance proposal to add a consumer to the chain.
+func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (tx TxProposal, _ error) {
+	txHash, err := c.getFullNode().ConsumerAdditionProposal(ctx, keyName, prop)
+	if err != nil {
+		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
+	}
+	return c.txProposal(txHash)
+}
+
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+	propBz, err := json.Marshal(prop)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+		return "", fmt.Errorf("failure writing proposal json: %w", err)
+	}
+
+	filePath := filepath.Join(tn.HomeDir(), fileName)
+
+	return tn.ExecTx(ctx, keyName,
+		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
+		"--gas", "auto",
+	)
 }
 
 // FlushPendingICSPackets flushes the pending ICS packets to the consumer chain from the "provider" port.
@@ -196,7 +227,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return err
 		}
 
-		_, err = PollForProposalStatus(ctx, c, height, height+10, propID, govv1beta1.StatusPassed)
+		_, err = PollForProposalStatus(ctx, c, height, height+25, propID, govv1beta1.StatusPassed)
 		if err != nil {
 			return fmt.Errorf("proposal status did not change to passed in expected number of blocks: %w", err)
 		}
@@ -292,9 +323,12 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	spawnTime := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content.spawn_time", c.cfg.ChainID)).Time()
 	c.log.Info("Waiting for chain to spawn", zap.Time("spawn_time", spawnTime), zap.String("chain_id", c.cfg.ChainID))
 	time.Sleep(time.Until(spawnTime))
-	if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {
-		return err
-	}
+	// TODO: do we need?
+	// if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {
+	// 	return err
+	// }
+
+	c.log.Info("Exec")
 
 	validator0 := c.Validators[0]
 
@@ -405,8 +439,8 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
-	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+	// Wait for 2 blocks before considering the chains "started"
+	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
 func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string, icsCfg ibc.ICSConfig) ([]byte, error) {

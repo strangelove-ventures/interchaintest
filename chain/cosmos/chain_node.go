@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,7 +41,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -892,27 +890,6 @@ func (tn *ChainNode) SendIBCTransfer(
 		command = append(command, "--memo", options.Memo)
 	}
 	return tn.ExecTx(ctx, keyName, command...)
-}
-
-func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
-	propBz, err := json.Marshal(prop)
-	if err != nil {
-		return "", err
-	}
-
-	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
-
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
-		return "", fmt.Errorf("failure writing proposal json: %w", err)
-	}
-
-	filePath := filepath.Join(tn.HomeDir(), fileName)
-
-	return tn.ExecTx(ctx, keyName,
-		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
-		"--gas", "auto",
-	)
 }
 
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {

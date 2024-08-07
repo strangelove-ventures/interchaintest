@@ -26,7 +26,6 @@ import (
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -127,7 +126,6 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 func (c *CosmosChain) WithPreStartNodes(preStartNodes func(*CosmosChain)) {
 	c.preStartNodes = preStartNodes
 }
-
 
 // GetCodec returns the codec for the chain.
 func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
@@ -503,15 +501,6 @@ func (c *CosmosChain) QueryParam(ctx context.Context, subspace, key string) (*Pa
 // QueryBankMetadata returns the metadata of a given token denomination.
 func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
 	return c.getFullNode().QueryBankMetadata(ctx, denom)
-}
-
-// ConsumerAdditionProposal submits a legacy governance proposal to add a consumer to the chain.
-func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (tx TxProposal, _ error) {
-	txHash, err := c.getFullNode().ConsumerAdditionProposal(ctx, keyName, prop)
-	if err != nil {
-		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
-	}
-	return c.txProposal(txHash)
 }
 
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
