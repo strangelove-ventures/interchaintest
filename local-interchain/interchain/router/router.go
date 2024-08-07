@@ -3,7 +3,10 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 	ictypes "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
@@ -35,6 +38,27 @@ func NewRouter(
 
 	infoH := handlers.NewInfo(config, installDir, ctx, ic, cosmosChains, vals, relayer, eRep)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	chainRegistryFile := filepath.Join(wd, "chain_registry.json")
+	if _, err := os.Stat(chainRegistryFile); err == nil {
+		crH := handlers.NewChainRegistry(chainRegistryFile)
+		r.HandleFunc("/chain_registry", crH.GetChainRegistry).Methods(http.MethodGet)
+	} else {
+		log.Printf("chain_registry.json not found in %s, not exposing endpoint.", wd)
+	}
+
+	chainRegistryAssetsFile := filepath.Join(wd, "chain_registry_assets.json")
+	if _, err := os.Stat(chainRegistryAssetsFile); err == nil {
+		crH := handlers.NewChainRegistry(chainRegistryAssetsFile)
+		r.HandleFunc("/chain_registry_assets", crH.GetChainRegistry).Methods(http.MethodGet)
+	} else {
+		log.Printf("chain_registry_assets.json not found in %s, not exposing endpoint.", wd)
+	}
 
 	actionsH := handlers.NewActions(ctx, ic, cosmosChains, vals, relayer, eRep, authKey)
 	r.HandleFunc("/", actionsH.PostActions).Methods(http.MethodPost)
