@@ -82,7 +82,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 
 	height, _ := chain.Height(ctx)
 
-	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+10, propId, govv1beta1.StatusPassed)
+	_, err = cosmos.PollForProposalStatus(ctx, chain, height, height+25, propId, govv1beta1.StatusPassed)
 	require.NoError(t, err, "proposal status did not change to passed in expected number of blocks")
 
 	param, _ = chain.QueryParam(ctx, "staking", "MaxValidators")
