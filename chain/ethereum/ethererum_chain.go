@@ -226,7 +226,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil, []string{})
 	if err != nil {
 		return err
 	}

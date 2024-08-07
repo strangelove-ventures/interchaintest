@@ -1,0 +1,592 @@
+package utxo
+
+import (
+	"context"
+	"encoding/json"
+	//"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"time"
+
+	"strconv"
+	"strings"
+
+	sdkmath "cosmossdk.io/math"
+	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/volume"
+	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"go.uber.org/zap"
+)
+
+var _ ibc.Chain = &UtxoChain{}
+
+const (
+	blockTime = 2 // seconds
+	rpcPort   = "18443/tcp"
+	noDefaultKeyWalletVersion = 159_900
+	namedFixWalletVersion = 169_901
+)
+
+var natPorts = nat.PortMap{
+	nat.Port(rpcPort): {},
+}
+
+type UtxoChain struct {
+	testName string
+	cfg      ibc.ChainConfig
+
+	log *zap.Logger
+
+	VolumeName   string
+	NetworkID    string
+	DockerClient *dockerclient.Client
+
+	containerLifecycle *dockerutil.ContainerLifecycle
+
+	hostRPCPort string
+	
+	// cli arguments
+	BinDaemon string
+	BinCli string
+	RpcUser string
+	RpcPassword string
+	BaseCli []string
+	AddrToWalletMap map[string]string
+	WalletToAddrMap map[string]string
+
+	WalletVersion int
+}
+
+
+func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *UtxoChain {
+	bins := strings.Split(chainConfig.Bin, ",")
+	if len(bins) != 2 {
+		panic(fmt.Sprintf("%s chain must set the daemon and cli binaries (i.e. appd,app-cli)", chainConfig.Name))
+	}
+	rpcUser := ""
+	rpcPassword := ""
+	for _, arg := range chainConfig.AdditionalStartArgs {
+		if strings.Contains(arg, "-rpcuser") {
+			rpcUser = arg
+		}
+		if strings.Contains(arg, "-rpcpassword") {
+			rpcPassword = arg
+		}
+	}
+	if rpcUser == "" || rpcPassword == "" {
+		panic(fmt.Sprintf("%s chain must have -rpcuser and -rpcpassword set in config's AdditionalStartArgs", chainConfig.Name))
+	}
+
+	return &UtxoChain{
+		testName:       testName,
+		cfg:            chainConfig,
+		log:            log,
+		BinDaemon:      bins[0],
+		BinCli:         bins[1],
+		RpcUser:        rpcUser,
+		RpcPassword:    rpcPassword,
+		AddrToWalletMap: make(map[string]string),
+		WalletToAddrMap: make(map[string]string),
+	}
+}
+
+func (c *UtxoChain) Config() ibc.ChainConfig {
+	return c.cfg
+}
+
+func (c *UtxoChain) Initialize(ctx context.Context, testName string, cli *dockerclient.Client, networkID string) error {
+	chainCfg := c.Config()
+	c.pullImages(ctx, cli)
+	image := chainCfg.Images[0]
+
+	c.containerLifecycle = dockerutil.NewContainerLifecycle(c.log, cli, c.Name())
+
+	v, err := cli.VolumeCreate(ctx, volume.CreateOptions{
+		Labels: map[string]string{
+			dockerutil.CleanupLabel: testName,
+
+			dockerutil.NodeOwnerLabel: c.Name(),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating volume for chain node: %w", err)
+	}
+	c.VolumeName = v.Name
+	c.NetworkID = networkID
+	c.DockerClient = cli
+
+	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
+		Log: c.log,
+
+		Client: cli,
+
+		VolumeName: v.Name,
+		ImageRef:   image.Ref(),
+		TestName:   testName,
+		UidGid:     image.UidGid,
+	}); err != nil {
+		return fmt.Errorf("set volume owner: %w", err)
+	}
+
+	return nil
+}
+
+func (c *UtxoChain) Name() string {
+	return fmt.Sprintf("utxo-%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
+}
+
+func (c *UtxoChain) HomeDir() string {
+	return "/home/utxo"
+}
+
+
+func (c *UtxoChain) Bind() []string {
+	return []string{fmt.Sprintf("%s:%s", c.VolumeName, c.HomeDir())}
+}
+
+func (c *UtxoChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
+	for _, image := range c.Config().Images {
+		rc, err := cli.ImagePull(
+			ctx,
+			image.Repository+":"+image.Version,
+			dockertypes.ImagePullOptions{},
+		)
+		if err != nil {
+			c.log.Error("Failed to pull image",
+				zap.Error(err),
+				zap.String("repository", image.Repository),
+				zap.String("tag", image.Version),
+			)
+		} else {
+			_, _ = io.Copy(io.Discard, rc)
+			_ = rc.Close()
+		}
+	}
+}
+
+func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	// TODO:
+	//   * add support for different denom configuration, ether or wei, this will affect GetBalance, etc
+	//   * add support for modifying genesis amount config, default is 10 ether
+	//   * add support for ConfigFileOverrides
+	//		* block time
+	//   * add support for custom chain id, must be an int?
+	//   * add support for custom gas-price
+	// Maybe add code-size-limit configuration for larger contracts
+
+	// IBC support, add when necessary
+	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
+
+	cmd := []string{c.BinDaemon,
+		"--regtest",
+		"-printtoconsole",
+		"-regtest=1",
+		"-txindex",
+		"-rpcallowip=0.0.0.0/0",
+		"-rpcbind=0.0.0.0",
+		//"-deprecatedrpc=create_bdb",
+		"-rpcport=18443",
+	}
+
+	cmd = append(cmd, c.cfg.AdditionalStartArgs...)
+
+	usingPorts := nat.PortMap{}
+	for k, v := range natPorts {
+		usingPorts[k] = v
+	}
+
+	if c.cfg.HostPortOverride != nil {
+		for intP, extP := range c.cfg.HostPortOverride {
+			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", extP),
+				},
+			}
+		}
+
+		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
+	}
+
+	env := []string{}
+	if c.cfg.Images[0].UidGid != "" {
+		uidGid := strings.Split(c.cfg.Images[0].UidGid, ":")
+		if len(uidGid) != 2 {
+			panic(fmt.Sprintf("%s chain does not have valid UidGid", c.cfg.Name))
+		}
+		env = []string{
+			fmt.Sprintf("UID=%s", uidGid[0]),
+			fmt.Sprintf("GID=%s", uidGid[1]),
+		}
+	}
+
+	entrypoint := []string{"/entrypoint.sh"}
+	if c.cfg.Images[0].Repository == "registry.gitlab.com/thorchain/devops/node-launcher" { // these images don't have "/entrypoint.sh"
+		entrypoint = []string{}
+		cmd = append(cmd, fmt.Sprintf("--datadir=%s", c.HomeDir()))
+	}
+
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0],
+		usingPorts, c.Bind(), []mount.Mount{}, c.HostName(), cmd, env, entrypoint)
+	if err != nil {
+		return err
+	}
+
+	c.log.Info("Starting container", zap.String("container", c.Name()))
+
+	if err := c.containerLifecycle.StartContainer(ctx); err != nil {
+		return err
+	}
+
+	hostPorts, err := c.containerLifecycle.GetHostPorts(ctx, rpcPort)
+	if err != nil {
+		return err
+	}
+
+	c.hostRPCPort = strings.Split(hostPorts[0], ":")[1]
+
+	c.BaseCli = []string{
+		c.BinCli,
+		"-regtest",
+		c.RpcUser,
+		c.RpcPassword,
+		fmt.Sprintf("-rpcconnect=%s", c.HostName()),
+		"-rpcport=18443",
+	}
+
+	// Wait for rpc to come up
+	time.Sleep(time.Second * 5)
+
+	go func(){
+		ctx := context.Background()
+		amount := "100"
+		if c.cfg.CoinType == "3" {
+			amount = "1000" // Dogecoin needs more blocks for more coins
+		}
+		for {
+			faucetAddr, ok := c.WalletToAddrMap["faucet"]
+			if !ok {
+				time.Sleep(time.Second * 2)
+				continue
+			}
+			
+			// If faucet exists, chain is up and running. Any future error should return from this go routine.
+			// If the chain stops, we will then error and return from this go routine
+			// Don't use ctx from Start(), it gets cancelled soon after returning.
+			cmd = append(c.BaseCli, "generatetoaddress", amount, faucetAddr)
+			_, _, err = c.Exec(ctx, cmd, nil)
+			if err != nil {
+				c.logger().Error("generatetoaddress error", zap.Error(err))
+				return
+			}
+			amount = "1"
+			time.Sleep(time.Second * 2)
+		}
+	}()
+	
+	c.WalletVersion, _ = c.GetWalletVersion(ctx, "")
+
+	keyName := "faucet"
+	if c.WalletVersion == 0 || c.WalletVersion > noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, "-rpcwait", "createwallet", keyName)
+		_, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Second * 2)
+		c.WalletVersion, err = c.GetWalletVersion(ctx, keyName)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
+	} else {
+		cmd = append(c.BaseCli, "getnewaddress")
+	}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+	addr := strings.TrimSpace(string(stdout))
+	
+	if c.WalletVersion < noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, "setaccount", addr, keyName)
+		_, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.AddrToWalletMap[addr] = keyName
+	c.WalletToAddrMap[keyName] = addr
+
+	// Wait for 100 blocks to be created, coins mature after 100 blocks and the faucet starts getting 50 spendable coins/block onwards
+	// Then wait the standard 2 blocks which also gives the faucet a starting balance of 100 coins
+	for height, err := c.Height(ctx); err == nil && height < int64(102); {
+		time.Sleep(time.Second)
+		height, err = c.Height(ctx)
+	}
+	return err
+}
+
+func (c *UtxoChain) HostName() string {
+	return dockerutil.CondenseHostName(c.Name())
+}
+
+func (c *UtxoChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
+	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	opts := dockerutil.ContainerOptions{
+		Env:   env,
+		Binds: c.Bind(),
+	}
+	res := job.Run(ctx, cmd, opts)
+	return res.Stdout, res.Stderr, res.Err
+}
+
+func (c *UtxoChain) logger() *zap.Logger {
+	return c.log.With(
+		zap.String("chain_id", c.cfg.ChainID),
+		zap.String("test", c.testName),
+	)
+}
+
+func (c *UtxoChain) GetRPCAddress() string {
+	return fmt.Sprintf("http://%s:18443", c.HostName())
+}
+
+func (c *UtxoChain) GetWSAddress() string {
+	return fmt.Sprintf("ws://%s:18443", c.HostName())
+}
+
+func (c *UtxoChain) GetHostRPCAddress() string {
+	return "http://0.0.0.0:" + c.hostRPCPort
+}
+
+func (c *UtxoChain) GetHostWSAddress() string {
+	return "ws://0.0.0.0:" + c.hostRPCPort
+}
+
+func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
+	if keyName == "faucet" {
+		// chain has not started, cannot create wallet yet. Faucet will be created in Start().
+		return nil
+	}
+
+	cmd := []string{}
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, "createwallet", keyName)
+		_, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
+
+		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
+	} else {
+		cmd = append(c.BaseCli, "getnewaddress")
+	}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+
+	addr := strings.TrimSpace(string(stdout))
+	
+	if c.WalletVersion < noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, "setaccount", addr, keyName)
+		_, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.AddrToWalletMap[addr] = keyName
+	c.WalletToAddrMap[keyName] = addr
+
+	return nil
+}
+
+type ListReceivedByAddress []ReceivedByAddress
+
+type ReceivedByAddress struct {
+	Address string `json:"address"`
+	Amount  float64 `json:"amount"`
+}
+
+// Get address of account, cast to a string to use
+func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	addr, ok := c.WalletToAddrMap[keyName]
+	if ok {
+		return []byte(addr), nil
+	}
+
+	// Pre-start GetAddress doesn't matter
+	if keyName == "faucet" {
+		return []byte(keyName), nil
+	}
+
+	return nil, fmt.Errorf("Keyname: %s's address not found", keyName)
+}
+
+func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+	cmd := []string{}
+	if c.WalletVersion >= namedFixWalletVersion {
+		cmd = append(c.BaseCli,
+			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
+			fmt.Sprintf("address=%s", amount.Address), 
+			fmt.Sprintf("amount=%s.%s", fullCoins, partialCoin),
+		)
+	} else if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, 
+			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
+			amount.Address,
+			fmt.Sprintf("%s.%s", fullCoins, partialCoin),
+			fmt.Sprintf("fee_rate=25"),
+		)
+	} else {
+		cmd = append(c.BaseCli,
+			"sendfrom",
+			keyName,
+			amount.Address, 
+			fmt.Sprintf("%s.%s", fullCoins, partialCoin),
+		)
+	}
+	
+	_, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+	
+	return testutil.WaitForBlocks(ctx, 1, c)
+}
+
+type TransactionReceipt struct {
+	TxHash string `json:"transactionHash"`
+}
+
+func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	script := []byte{0x6a} // OP_RETURN
+	dataLen := len(note)
+	OP_DATA_1 := 0x01 // 1
+	script = append(script, byte((OP_DATA_1-1)+dataLen))
+	script = append(script, []byte(note)...)
+	
+	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+
+	cmd := append(c.BaseCli, 
+		fmt.Sprintf("-rpcwallet=%s", keyName), "sendtoaddress", amount.Address, fmt.Sprintf("%s.%s", fullCoins, partialCoin),
+		"", "", "false", "false", "null", "\"unset\"", "false", "25")
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	err = testutil.WaitForBlocks(ctx, 1, c)	
+
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
+	cmd := append(c.BaseCli, "getblockcount")
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.ParseInt(strings.TrimSpace(string(stdout)), 10, 64)
+}
+
+func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
+	wallet, ok := c.AddrToWalletMap[address]
+	if !ok {
+		return sdkmath.Int{}, fmt.Errorf("wallet not found for address: %s", address)
+	}
+
+	balance := ""
+	var coinsWithDecimal float64
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", wallet), "getbalance")
+		stdout, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return sdkmath.Int{}, err
+		}
+		balance = strings.TrimSpace(string(stdout))
+		coinsWithDecimal, err = strconv.ParseFloat(balance, 64)
+		if err != nil {
+			return sdkmath.Int{}, err
+		}
+	} else {
+		cmd := append(c.BaseCli, "listaccounts")
+		stdout, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return sdkmath.Int{}, err
+		}
+		var accounts map[string]float64
+		err = json.Unmarshal(stdout, &accounts)
+		coinsWithDecimal = accounts[wallet]
+	}
+
+	coinsScaled := int64(coinsWithDecimal * math.Pow10(int(*c.Config().CoinDecimals)))
+	return sdkmath.NewInt(coinsScaled), nil
+}
+
+type WalletInfo struct {
+	WalletVersion int `json:"walletversion"`
+}
+
+// Depending on the wallet version, getwalletinfo may require a created wallet name
+func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, error) {
+	var walletInfo WalletInfo
+	var stdout []byte
+	var err error
+	
+	if keyName == "" {
+		cmd := append(c.BaseCli, "getwalletinfo")
+		stdout, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getwalletinfo")
+		stdout, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if err := json.Unmarshal(stdout, &walletInfo); err != nil {
+		return 0, err
+	}
+	
+	return walletInfo.WalletVersion, nil
+}
+
+func (c *UtxoChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
+	if mnemonic != "" {
+		err := c.RecoverKey(ctx, keyName, mnemonic)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Create new account
+		err := c.CreateKey(ctx, keyName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	address, err := c.GetAddress(ctx, keyName)
+	if err != nil {
+		return nil, err
+	}
+	return NewWallet(keyName, string(address)), nil
+}

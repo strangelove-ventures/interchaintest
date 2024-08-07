@@ -1163,7 +1163,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env, []string{})
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

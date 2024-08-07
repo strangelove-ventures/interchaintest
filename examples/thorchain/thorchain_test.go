@@ -197,7 +197,6 @@ func TestThorchain(t *testing.T) {
 	// --------------------------------------------------------
 	// Swap
 	// --------------------------------------------------------
-	// change the order, remove gaia/thorchain, play with order, change  saver eject order
 	//err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
 	//require.NoError(t, err)
 	err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)

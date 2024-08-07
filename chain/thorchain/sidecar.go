@@ -115,7 +115,7 @@ func (s *SidecarProcess) CreateContainer(ctx context.Context, nodeVolume []strin
 	if nodeVolume != nil {
 		volumes = append(volumes, nodeVolume...)
 	}
-	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, volumes, nil, s.HostName(), s.startCmd, s.env)
+	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, volumes, nil, s.HostName(), s.startCmd, s.env, []string{})
 }
 
 func (s *SidecarProcess) StartContainer(ctx context.Context) error {
