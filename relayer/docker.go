@@ -362,7 +362,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	containerImage := r.ContainerImage()
 	joinedPaths := strings.Join(pathNames, ".")
-	containerName := fmt.Sprintf("ictrelay-%s-%s-%s", r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
+	containerName := fmt.Sprintf("%s-%s-%s-%s", dockerutil.RelayerDockerPrefix, r.c.Name(), joinedPaths, dockerutil.RandLowerCaseLetterString(5))
 
 	cmd := r.c.StartRelayer(r.HomeDir(), pathNames...)
 
@@ -492,7 +492,7 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 }
 
 func (r *DockerRelayer) Name() string {
-	return "ictrelay-" + r.c.Name() + "-" + dockerutil.SanitizeContainerName(r.testName)
+	return dockerutil.RelayerDockerPrefix + "-" + r.c.Name() + "-" + dockerutil.SanitizeContainerName(r.testName)
 }
 
 // Bind returns the home folder bind point for running the node.
@@ -506,7 +506,7 @@ func (r *DockerRelayer) HomeDir() string {
 }
 
 func (r *DockerRelayer) HostName(pathName string) string {
-	return dockerutil.CondenseHostName(fmt.Sprintf("ictrelay-%s-%s", r.c.Name(), pathName))
+	return dockerutil.CondenseHostName(fmt.Sprintf("%s-%s-%s", dockerutil.RelayerDockerPrefix, r.c.Name(), pathName))
 }
 
 func (r *DockerRelayer) UseDockerNetwork() bool {

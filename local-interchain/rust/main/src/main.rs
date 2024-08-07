@@ -163,7 +163,7 @@ fn test_node_information(node: &Chain) {
 
     node.get_chain_config();
 
-    assert!(node.get_name().starts_with("ict-localjuno-1-val-0"));
+    assert!(node.get_name().starts_with("interchaintest-localjuno-1-val-0"));
     node.get_container_id();
     node.get_host_name();
     node.get_genesis_file_content();

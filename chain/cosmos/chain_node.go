@@ -216,7 +216,7 @@ func (tn *ChainNode) CliContext() client.Context {
 
 // Name of the test node container
 func (tn *ChainNode) Name() string {
-	return fmt.Sprintf("ict-%s-%s-%d-%s", tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
+	return fmt.Sprintf("%s-%s-%s-%d-%s", dockerutil.ICTDockerPrefix, tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
 
 func (tn *ChainNode) NodeType() string {

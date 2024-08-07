@@ -15,6 +15,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -242,7 +243,7 @@ func KillAllICTContainers(ctx context.Context) {
 		name = strings.TrimPrefix(name, "/")
 
 		// leave non ict relayed containers running
-		if !(strings.HasPrefix(name, "ict-") || strings.HasPrefix(name, "interchaintest-") || strings.HasPrefix(name, "ictrelay-")) {
+		if !(strings.HasPrefix(name, dockerutil.ICTDockerPrefix) || strings.HasPrefix(name, dockerutil.RelayerDockerPrefix)) {
 			// fmt.Println("Skipping container", name, "as it is not ict")
 			continue
 		}
