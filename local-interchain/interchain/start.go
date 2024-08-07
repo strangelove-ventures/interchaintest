@@ -45,10 +45,8 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		defer wg.Done()
 		select {
 		case <-c:
-			fmt.Println("Got signal to cancel")
-			// handlers.KillAll(ctx, ic, vals, relayer, eRep) // cant do here, have to do after ic.Build() so there are containers
-			handlers.KillAllLocalICContainers(ctx)
-			// <-ctx.Done()
+			fmt.Println("\nReceived signal to stop local-ic...")
+			handlers.KillAllICTContainers(ctx)
 			cancel()
 			os.Exit(1)
 		case <-ctx.Done():
@@ -184,16 +182,8 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		// new context with 5 second timeout to allow for cleanup
-		// newCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		// defer cancel()
-
-		// // TODO: cleanup containers
-		// fmt.Println("Waiting for cleanup")
-		// handlers.KillAll(newCtx, ic, vals, relayer, eRep)
-		// fmt.Println("ic.Build: Cleanup done")
-
-		<-ctx.Done() // calls the handlers.KillAllLocalICContainers(ctx) above
+		// calls the handlers.KillAllICTContainers(ctx) above
+		<-ctx.Done()
 
 		logger.Fatal("ic.Build", zap.Error(err))
 	}
@@ -270,8 +260,9 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
-		if ctx.Err() == nil {
-			log.Fatal("WaitForBlocks StartChain: ", err)
+		// when the network is stopped / killed (ctrl + c), ignore error
+		if !strings.Contains(err.Error(), "post failed:") {
+			fmt.Println("WaitForBlocks StartChain: ", err)
 		}
 	}
 

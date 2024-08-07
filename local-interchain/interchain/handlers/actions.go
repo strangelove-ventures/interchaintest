@@ -70,7 +70,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	action := ah.Action
 	if action == "kill-all" {
-		KillAll(a.ctx, a.ic, a.vals, a.relayer, a.eRep)
+		KillAllICTContainers(a.ctx)
 		return
 	}
 
@@ -218,28 +218,10 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	return err
 }
 
-func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string][]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
-	fmt.Println("KillAll: Stopping all containers")
-	for _, v := range vals {
-		fmt.Println("KillAll: Stopping chain contains", v)
-		for _, c := range v {
-			fmt.Printf("KillAll: Stopping container %s\n", c.ContainerID())
-			go c.StopContainer(ctx) // nolint:errcheck
-		}
-	}
-
-	if relayer != nil {
-		fmt.Println("KillAll: Pausing relayer")
-		relayer.PauseRelayer(ctx)
-		fmt.Println("KillAll: Stopping relayer")
-		relayer.StopRelayer(ctx, eRep)
-	}
-
-	ic.Close()
-	<-ctx.Done()
-}
-
-func KillAllLocalICContainers(ctx context.Context) {
+// KillAllICTContainers kills all containers that are prefixed with interchaintest specific container names.
+// This is required as you can not ctrl+c kill a local-ic instance before the ic.Build(), else containers will remain running.
+// (Since the vals map does not have context to these containers yet - due to still being built)
+func KillAllICTContainers(ctx context.Context) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
@@ -250,7 +232,6 @@ func KillAllLocalICContainers(ctx context.Context) {
 		panic(err)
 	}
 
-	fmt.Println("Killing all local-interchain containers")
 	for _, container := range containers {
 
 		if len(container.Names) == 0 {
@@ -260,12 +241,11 @@ func KillAllLocalICContainers(ctx context.Context) {
 		name := strings.ToLower(container.Names[0])
 		name = strings.TrimPrefix(name, "/")
 
+		// leave non ict relayed containers running
 		if !(strings.HasPrefix(name, "ict-") || strings.HasPrefix(name, "interchaintest-") || strings.HasPrefix(name, "ictrelay-")) {
 			// fmt.Println("Skipping container", name, "as it is not ict")
 			continue
 		}
-
-		fmt.Printf("  - %s\n", name)
 
 		inspected, err := cli.ContainerInspect(ctx, container.ID)
 		if err != nil {
@@ -276,6 +256,8 @@ func KillAllLocalICContainers(ctx context.Context) {
 			if err := cli.ContainerKill(ctx, container.ID, "SIGKILL"); err != nil {
 				panic(err)
 			}
+
+			fmt.Printf("  - %s\n", name)
 		}
 
 	}
