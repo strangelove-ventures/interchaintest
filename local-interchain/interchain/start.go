@@ -13,11 +13,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/handlers"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -46,7 +46,10 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		select {
 		case <-c:
 			fmt.Println("\nReceived signal to stop local-ic...")
-			handlers.KillAllICTContainers(ctx)
+			removed := dockerutil.KillAllInterchaintestContainers(ctx)
+			for _, r := range removed {
+				fmt.Println("  - ", r)
+			}
 			cancel()
 			os.Exit(1)
 		case <-ctx.Done():
@@ -182,7 +185,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		// calls the handlers.KillAllICTContainers(ctx) above
+		// calls the KillAllInterchaintestContainers(...) above
 		<-ctx.Done()
 
 		logger.Fatal("ic.Build", zap.Error(err))

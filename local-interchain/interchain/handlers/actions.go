@@ -10,8 +10,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	dockerapitypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -71,7 +69,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	action := ah.Action
 	if action == "kill-all" {
-		KillAllICTContainers(a.ctx)
+		dockerutil.KillAllInterchaintestContainers(a.ctx)
 		return
 	}
 
@@ -217,51 +215,6 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return err
-}
-
-// KillAllICTContainers kills all containers that are prefixed with interchaintest specific container names.
-// This is required as you can not ctrl+c kill a local-ic instance before the ic.Build(), else containers will remain running.
-// (Since the vals map does not have context to these containers yet - due to still being built)
-func KillAllICTContainers(ctx context.Context) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		panic(err)
-	}
-
-	containers, err := cli.ContainerList(ctx, dockerapitypes.ContainerListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	for _, container := range containers {
-
-		if len(container.Names) == 0 {
-			continue
-		}
-
-		name := strings.ToLower(container.Names[0])
-		name = strings.TrimPrefix(name, "/")
-
-		// leave non ict relayed containers running
-		if !(strings.HasPrefix(name, dockerutil.ICTDockerPrefix) || strings.HasPrefix(name, dockerutil.RelayerDockerPrefix)) {
-			// fmt.Println("Skipping container", name, "as it is not ict")
-			continue
-		}
-
-		inspected, err := cli.ContainerInspect(ctx, container.ID)
-		if err != nil {
-			panic(err)
-		}
-
-		if inspected.State.Running {
-			if err := cli.ContainerKill(ctx, container.ID, "SIGKILL"); err != nil {
-				panic(err)
-			}
-
-			fmt.Printf("  - %s\n", name)
-		}
-
-	}
 }
 
 func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {

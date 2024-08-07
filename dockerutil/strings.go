@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ICTDockerPrefix     = "interchaintest"
+	ICTDockerPrefix     = "ict"
 	RelayerDockerPrefix = "ictrelayer"
 )
 
