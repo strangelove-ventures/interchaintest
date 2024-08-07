@@ -78,7 +78,8 @@ func getLoggerConfig() zap.Config {
 	config := zap.NewDevelopmentConfig()
 
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	config.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	config.DisableCaller = true
 
 	return config
 }
