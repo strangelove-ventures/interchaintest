@@ -13,21 +13,17 @@
 
 # MAKE_REQUEST http://127.0.0.1:8080 localjuno-1 q "bank total"
 MAKE_REQUEST() {
-    # echo $4
     API=$1
 
     CHAIN_ID=$2
     ACTION=$3
-    shift 3
-    # COMMAND=`echo $* | sed 's/"/\\"/g'` # allows multiple word commands
+    shift 3 # get the 4th argument and up as the command
     COMMAND="$*"
-    echo $COMMAND
 
     DATA=`printf '{"chain_id":"%s","action":"%s","cmd":"MYCOMMAND"}' $CHAIN_ID $ACTION`
     DATA=`echo $DATA | sed "s/MYCOMMAND/$COMMAND/g"`
-    echo $DATA
 
-    curl "$API" --include --header "Content-Type: application/json" -X POST -d "$DATA"
+    curl "$API" --header "Content-Type: application/json" -X POST -d "$DATA"
 }
 
 
