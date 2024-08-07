@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -130,20 +132,31 @@ var (
 )
 
 // NewClient creates and assigns a new Tendermint RPC client to the ChainNode
-func (tn *ChainNode) NewClient(addr string) error {
-	httpClient, err := libclient.DefaultHTTPClient(addr)
-	if err != nil {
-		return err
+func (tn *ChainNode) NewClient(ctx context.Context, addr string) error {
+	// TODO: cleanup. Make a new interface for CometBFT vs Gordian
+	if tn.IsCometBFT(ctx) {
+		httpClient, err := libclient.DefaultHTTPClient(addr)
+		if err != nil {
+			return err
+		}
+
+		httpClient.Timeout = 10 * time.Second
+		rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
+		if err != nil {
+			return err
+		}
+
+		tn.Client = rpcClient
+
+	} else if tn.IsGordian(ctx) {
+		httpClient, err := libclient.DefaultHTTPClient(addr)
+		if err != nil {
+			return err
+		}
+		httpClient.Timeout = 10 * time.Second
 	}
 
-	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
-	if err != nil {
-		return err
-	}
-
-	tn.Client = rpcClient
-
+	// TODO: will this work with gordian?
 	grpcConn, err := grpc.Dial(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -416,12 +429,69 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
-	res, err := tn.Client.Status(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
+
+	type GordianBlockWatermark struct {
+		VotingHeight     int64 `json:"VotingHeight"`
+		VotingRound      int64 `json:"VotingRound"`
+		CommittingHeight int64 `json:"CommittingHeight"`
+		CommittingRound  int64 `json:"CommittingRound"`
 	}
-	height := res.SyncInfo.LatestBlockHeight
-	return height, nil
+
+	// TODO: cleanup / cache this on first call. gRPC here instead of HTTP.
+
+	if tn.IsCometBFT(ctx) {
+		fmt.Println("Height CometBFT chain consensus")
+		res, err := tn.Client.Status(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("tendermint rpc client status: %w", err)
+		}
+		height := res.SyncInfo.LatestBlockHeight
+		return height, nil
+	}
+
+	if tn.IsGordian(ctx) {
+		fmt.Println("Height Gordian chain consensus")
+		// http query http://127.0.0.1:26657/blocks/watermark and save to GordianBlockWatermark
+
+		ports, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort)
+		if err != nil {
+			return 0, fmt.Errorf("getting host ports: %w", err)
+		}
+		hostPort := ports[0]
+
+		// TODO: get hostname query to work
+		// endpoint := fmt.Sprintf("http://%s:26657/blocks/watermark", tn.HostName())
+		endpoint := fmt.Sprintf("http://%s/blocks/watermark", hostPort)
+		req, err := http.NewRequest("GET", endpoint, nil)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		q := req.URL.Query()
+
+		// make request as JSON
+		req.Header.Set("Content-Type", "application/json")
+		req.URL.RawQuery = q.Encode()
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+
+		var watermark GordianBlockWatermark
+		if err := json.NewDecoder(resp.Body).Decode(&watermark); err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		fmt.Println("watermark VotingHeight: ", watermark.VotingHeight)
+
+		return watermark.VotingHeight, nil
+	}
+
+	return 0, fmt.Errorf("unsupported chain consensus")
 }
 
 // FindTxs implements blockdb.BlockSaver.
@@ -745,6 +815,18 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
 	return tn.HasCommand(ctx, "genesis")
+}
+
+// IsCometBFT returns if the binary has the cometbft command is available.
+func (tn *ChainNode) IsCometBFT(ctx context.Context) bool {
+	fmt.Println("IsCometBFT call check")
+	return tn.HasCommand(ctx, "cometbft")
+}
+
+// IsGordian returns if the binary has the gordian command is available.
+func (tn *ChainNode) IsGordian(ctx context.Context) bool {
+	fmt.Println("IsGordian call check")
+	return tn.HasCommand(ctx, "gordian")
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
@@ -1096,15 +1178,23 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
 
+	consensusFlags := ""
+	if tn.IsCometBFT(ctx) {
+		consensusFlags = "--x-crisis-skip-assert-invariants"
+	} else if tn.IsGordian(ctx) {
+		// TODO: gordian flags here
+		consensusFlags = ""
+	}
+
 	var cmd []string
 	if chainCfg.NoHostMount {
-		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt %s", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir(), consensusFlags)
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
 	} else {
-		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), consensusFlags}
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
 		}
@@ -1225,24 +1315,38 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		tn.hostRPCPort = rpcOverrideAddr
 	}
 
-	err = tn.NewClient("tcp://" + tn.hostRPCPort)
+	err = tn.NewClient(ctx, "tcp://"+tn.hostRPCPort)
 	if err != nil {
 		return err
 	}
 
+	fmt.Printf("StartContainer Node %s started with RPC port %s\n", tn.Name(), tn.hostRPCPort)
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
-		stat, err := tn.Client.Status(ctx)
-		if err != nil {
-			return err
-		}
-		// TODO: re-enable this check, having trouble with it for some reason
-		if stat != nil && stat.SyncInfo.CatchingUp {
-			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
-				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
+		if tn.IsCometBFT(ctx) {
+			stat, err := tn.Client.Status(ctx)
+			if err != nil {
+				return err
+			}
+			// TODO: re-enable this check, having trouble with it for some reason
+			if stat != nil && stat.SyncInfo.CatchingUp {
+				return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
+					stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
+			}
+			return nil
+		} else if tn.IsGordian(ctx) {
+			// return height
+			height, err := tn.Height(ctx)
+			if err != nil {
+				return fmt.Errorf("gordian error getting height: %w", err)
+			}
+
+			if height > 0 {
+				return nil
+			}
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {

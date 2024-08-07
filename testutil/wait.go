@@ -19,6 +19,7 @@ func WaitForBlocks(ctx context.Context, delta int, chains ...ChainHeighter) erro
 	if len(chains) == 0 {
 		panic("missing chains")
 	}
+	fmt.Printf("WaitForBlocks: Waiting for %d blocks on %d chains\n", delta, len(chains))
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i := range chains {
 		chain := chains[i]
@@ -101,6 +102,7 @@ type height struct {
 func (h *height) WaitForDelta(ctx context.Context, delta int) error {
 	for h.delta() < delta {
 		cur, err := h.Chain.Height(ctx)
+		fmt.Printf("WaitForDelta Current height: %d\n", cur)
 		if err != nil {
 			return err
 		}
