@@ -323,10 +323,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	spawnTime := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content.spawn_time", c.cfg.ChainID)).Time()
 	c.log.Info("Waiting for chain to spawn", zap.Time("spawn_time", spawnTime), zap.String("chain_id", c.cfg.ChainID))
 	time.Sleep(time.Until(spawnTime))
-	// TODO: do we need?
-	// if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {
-	// 	return err
-	// }
 
 	c.log.Info("Exec")
 
