@@ -6,9 +6,14 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"sync"
+	"syscall"
 
+	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/handlers"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -31,18 +36,25 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
-	// TODO: cleanup on ctrl + c
-	// Properly cleanup at the start, during build, and after the REST API is created
-	// The following only works at the start and after the REST API is created.
-	//
-	// c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt)
-	// go func() {
-	// 	for sig := range c {
-	// 		log.Printf("Closing from signal: %s\n", sig)
-	// 		handlers.KillAll(ctx, ic, vals, relayer, eRep)
-	// 	}
-	// }()
+	// Cleanup servers on ctrl+c signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case <-c:
+			fmt.Println("Got signal to cancel")
+			// handlers.KillAll(ctx, ic, vals, relayer, eRep) // cant do here, have to do after ic.Build() so there are containers
+			handlers.KillAllLocalICContainers(ctx)
+			// <-ctx.Done()
+			cancel()
+			os.Exit(1)
+		case <-ctx.Done():
+			fmt.Println("Context is done")
+		}
+	}()
 
 	// Logger for ICTest functions only.
 	logger, err := InitLogger()
@@ -170,9 +182,19 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		Client:           client,
 		NetworkID:        network,
 		SkipPathCreation: false,
-		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 	})
 	if err != nil {
+		// new context with 5 second timeout to allow for cleanup
+		// newCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// defer cancel()
+
+		// // TODO: cleanup containers
+		// fmt.Println("Waiting for cleanup")
+		// handlers.KillAll(newCtx, ic, vals, relayer, eRep)
+		// fmt.Println("ic.Build: Cleanup done")
+
+		<-ctx.Done() // calls the handlers.KillAllLocalICContainers(ctx) above
+
 		logger.Fatal("ic.Build", zap.Error(err))
 	}
 
@@ -248,8 +270,12 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
-		log.Fatal("WaitForBlocks StartChain: ", err)
+		if ctx.Err() == nil {
+			log.Fatal("WaitForBlocks StartChain: ", err)
+		}
 	}
+
+	wg.Wait()
 }
 
 func GetTestName(chainCfgFile string) string {

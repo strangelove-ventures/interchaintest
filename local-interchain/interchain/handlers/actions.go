@@ -10,6 +10,8 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
+	dockerapitypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -217,20 +219,66 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 }
 
 func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string][]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
-	if relayer != nil {
-		if err := relayer.StopRelayer(ctx, eRep); err != nil {
-			panic(err)
-		}
-	}
-
+	fmt.Println("KillAll: Stopping all containers")
 	for _, v := range vals {
+		fmt.Println("KillAll: Stopping chain contains", v)
 		for _, c := range v {
+			fmt.Printf("KillAll: Stopping container %s\n", c.ContainerID())
 			go c.StopContainer(ctx) // nolint:errcheck
 		}
 	}
 
+	if relayer != nil {
+		fmt.Println("KillAll: Pausing relayer")
+		relayer.PauseRelayer(ctx)
+		fmt.Println("KillAll: Stopping relayer")
+		relayer.StopRelayer(ctx, eRep)
+	}
+
 	ic.Close()
 	<-ctx.Done()
+}
+
+func KillAllLocalICContainers(ctx context.Context) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		panic(err)
+	}
+
+	containers, err := cli.ContainerList(ctx, dockerapitypes.ContainerListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Killing all local-interchain containers")
+	for _, container := range containers {
+
+		if len(container.Names) == 0 {
+			continue
+		}
+
+		name := strings.ToLower(container.Names[0])
+		name = strings.TrimPrefix(name, "/")
+
+		if !(strings.HasPrefix(name, "ict-") || strings.HasPrefix(name, "interchaintest-") || strings.HasPrefix(name, "ictrelay-")) {
+			// fmt.Println("Skipping container", name, "as it is not ict")
+			continue
+		}
+
+		fmt.Printf("  - %s\n", name)
+
+		inspected, err := cli.ContainerInspect(ctx, container.ID)
+		if err != nil {
+			panic(err)
+		}
+
+		if inspected.State.Running {
+			if err := cli.ContainerKill(ctx, container.ID, "SIGKILL"); err != nil {
+				panic(err)
+			}
+		}
+
+	}
 }
 
 func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {
