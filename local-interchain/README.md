@@ -2,7 +2,11 @@
 
 A simple way to config and run IBC local chain testing environments with any language of choice for interaction.
 
-## Repository CI
+- [**Rust**](./rust/README.md)
+- [**Typescript**](./ts/README.md)
+- [**Python**](./python/README.md)
+
+## External Repository CI
 
 - [**Rust**](./rust/README.md)
 

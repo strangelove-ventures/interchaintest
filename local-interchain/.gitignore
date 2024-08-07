@@ -13,3 +13,5 @@ contracts/*.wasm
 
 
 __pycache__/
+
+node_modules/

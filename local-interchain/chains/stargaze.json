@@ -13,6 +13,11 @@
             "chain_type": "cosmos",
             "coin_type": 118,
             "trusting_period": "112h",
+            "host_port_override": {
+                "26657": "26657",
+                "1317": "1317",
+                "9090": "9090"
+            },
             "gas_adjustment": 2.0,
             "number_vals": 1,
             "number_node": 0,
