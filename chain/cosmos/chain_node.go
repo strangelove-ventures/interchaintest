@@ -554,11 +554,29 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := testutil.WaitForBlocks(ctx, 1, tn); err != nil {
+
+	var txHash string
+	err = retry.Do(
+		func() error {
+			txHash, err = tn.queryForTxHash(ctx, output)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Delay(blockTime/4),
+		retry.Attempts(8), // 2 blocks, 8 polls
+	)
+	if err != nil {
 		return "", err
 	}
+
+	return txHash, nil
+}
+
+func (tn *ChainNode) queryForTxHash(ctx context.Context, output CosmosTx) (string, error) {
 	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
-	stdout, _, err = tn.ExecQuery(ctx, "tx", output.TxHash)
+	stdout, _, err := tn.ExecQuery(ctx, "tx", output.TxHash)
 	if err != nil {
 		return "", err
 	}

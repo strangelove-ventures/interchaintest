@@ -55,7 +55,7 @@ type CosmosRelayerChainConfigValue struct {
 	RPCAddr         string        `json:"rpc-addr"`
 	SignMode        string        `json:"sign-mode"`
 	Timeout         string        `json:"timeout"`
-	MinLoopDuration time.Duration `json:"min-loop-duration" default:"100ms"`
+	MinLoopDuration time.Duration `json:"min-loop-duration"`
 }
 
 type CosmosRelayerChainConfig struct {
