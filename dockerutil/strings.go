@@ -12,6 +12,11 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+const (
+	ICTDockerPrefix     = "ict"
+	RelayerDockerPrefix = "ictrelayer"
+)
+
 // GetHostPort returns a resource's published port with an address.
 // cont is the type returned by the Docker client's ContainerInspect method.
 func GetHostPort(cont types.ContainerJSON, portID string) string {
