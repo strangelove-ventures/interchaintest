@@ -85,9 +85,6 @@ func NewTendermintNode(
 type TendermintNodes []*TendermintNode
 
 const (
-	// BlockTime is approx time to create a block
-	BlockTime = 500 * time.Millisecond
-
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -96,6 +93,9 @@ const (
 )
 
 var (
+	// BlockTime is approx time to create a block
+	BlockTime = dockerutil.GetTimeFromEnv("ICTEST_BLOCK_TIME", "500ms")
+
 	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},

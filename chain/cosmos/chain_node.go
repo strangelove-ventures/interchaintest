@@ -105,15 +105,15 @@ func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode 
 // ChainNodes is a collection of ChainNode
 type ChainNodes []*ChainNode
 
-const (
-	valKey      = "validator"
-	blockTime   = 500 * time.Millisecond
-	p2pPort     = "26656/tcp"
-	rpcPort     = "26657/tcp"
-	grpcPort    = "9090/tcp"
-	apiPort     = "1317/tcp"
-	privValPort = "1234/tcp"
+var blockTime = dockerutil.GetTimeFromEnv("ICTEST_BLOCK_TIME", "500ms")
 
+const (
+	valKey           = "validator"
+	p2pPort          = "26656/tcp"
+	rpcPort          = "26657/tcp"
+	grpcPort         = "9090/tcp"
+	apiPort          = "1317/tcp"
+	privValPort      = "1234/tcp"
 	cometMockRawPort = "22331"
 )
 

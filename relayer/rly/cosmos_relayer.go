@@ -10,6 +10,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
@@ -97,7 +98,7 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 			Timeout:         "10s",
 			OutputFormat:    "json",
 			SignMode:        "direct",
-			MinLoopDuration: 50 * time.Millisecond,
+			MinLoopDuration: dockerutil.GetTimeFromEnv("ICTEST_RELAYER_LOOP_DURATION", "50ms"),
 		},
 	}
 }
