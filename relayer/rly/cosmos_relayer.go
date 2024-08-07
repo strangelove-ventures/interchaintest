@@ -97,7 +97,7 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 			Timeout:         "10s",
 			OutputFormat:    "json",
 			SignMode:        "direct",
-			MinLoopDuration: 100 * time.Millisecond,
+			MinLoopDuration: 50 * time.Millisecond,
 		},
 	}
 }

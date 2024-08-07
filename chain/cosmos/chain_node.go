@@ -554,7 +554,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 1, tn); err != nil {
 		return "", err
 	}
 	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
@@ -672,8 +672,8 @@ func CondenseMoniker(m string) string {
 
 // InitHomeFolder initializes a home folder for the given node
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.ExecBin(ctx,
 		"init", CondenseMoniker(tn.Name()),
@@ -714,8 +714,8 @@ func (tn *ChainNode) ReadFile(ctx context.Context, relPath string) ([]byte, erro
 
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
@@ -733,8 +733,8 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
@@ -775,8 +775,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		amount += fmt.Sprintf("%s%s", coin.Amount.String(), coin.Denom)
 	}
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	// Adding a genesis account should complete instantly,
 	// so use a 1-minute timeout to more quickly detect if Docker has locked up.
@@ -801,8 +801,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 
 // Gentx generates the gentx for a given node
 func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	var command []string
 	if tn.IsAboveSDK47(ctx) {
@@ -829,8 +829,9 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 
 	command = append(command, "collect-gentxs", "--home", tn.HomeDir())
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// TODO: prob re-enable this
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
@@ -905,8 +906,8 @@ func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*s
 		return err
 	},
 		// retry for total of 3 seconds
-		retry.Attempts(15),
-		retry.Delay(200*time.Millisecond),
+		retry.Attempts(10*3),
+		retry.Delay(100*time.Millisecond),
 		retry.DelayType(retry.FixedDelay),
 		retry.LastErrorOnly(true),
 	)
@@ -1230,7 +1231,6 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
 		if err != nil {
@@ -1242,7 +1242,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {

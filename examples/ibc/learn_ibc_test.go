@@ -20,6 +20,10 @@ import (
 
 // This test is meant to be used as a basic interchaintest tutorial.
 // Code snippets are broken down in ./docs/upAndRunning.md
+
+// rly config init hangs
+// TODO: time to beat: 70.39s / 67.03s
+// 62.8s
 func TestLearn(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
