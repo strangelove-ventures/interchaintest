@@ -111,6 +111,9 @@ type ContainerExecResult struct {
 // Run blocks until the command completes. Thus, Run is not suitable for daemons or servers. Use Start instead.
 // A non-zero status code returns an error.
 func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerExecResult {
+	if image == nil {
+		panic("BUG: image for image.Run is nil")
+	}
 	c, err := image.Start(ctx, cmd, opts)
 	if err != nil {
 		return ContainerExecResult{
