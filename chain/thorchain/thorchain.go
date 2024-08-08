@@ -850,7 +850,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 
 			totalConsensus += validator.BondUInt
 
-			if totalConsensus > twoThirdsConsensus {
+			if !chainCfg.Genesis.AllValidators && totalConsensus > twoThirdsConsensus {
 				break
 			}
 		}
@@ -860,10 +860,12 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		}
 
 		if len(activeVals) > chainCfg.Genesis.MaxVals {
-			return fmt.Errorf("too many validators required to meet bond threshold: %d, max allowed: %d: increase this limit to proceed", len(activeVals), chainCfg.Genesis.MaxVals)
+			c.log.Warn("Not enough validators to meet 2/3 bond threshold, increase GenesisConfig.MaxVals to reach consensus", zap.Int("required", len(activeVals)), zap.Int("max", chainCfg.Genesis.MaxVals))
+			//return fmt.Errorf("too many validators required to meet bond threshold: %d, max allowed: %d: increase this limit to proceed", len(activeVals), chainCfg.Genesis.MaxVals)
+			c.NumValidators = chainCfg.Genesis.MaxVals
+		} else {
+			c.NumValidators = len(activeVals)
 		}
-
-		c.NumValidators = len(activeVals)
 
 		c.log.Info("Will launch validators", zap.Int("count", c.NumValidators))
 	}
@@ -933,6 +935,9 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 	} else {
 		var eg errgroup.Group
 		for i, validator := range activeVals {
+			if i >= chainCfg.Genesis.MaxVals {
+				break
+			}
 			v := c.Validators[i]
 			validator := validator
 			c.log.Info(

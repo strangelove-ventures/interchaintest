@@ -11,7 +11,7 @@ import (
 var (
 	Denom               = "rune"
 	Binary              = "thornode"
-	Bech32              = "tthor"
+	Bech32              = "thor"
 	CoinScale           = math.NewInt(100_000_000)
 	StaticGas           = math.NewInt(2_000_000)
 	InitialFaucetAmount = math.NewInt(100_000_000).Mul(CoinScale)

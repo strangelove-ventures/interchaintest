@@ -39,7 +39,7 @@ func TestThorchainHardFork(t *testing.T) {
 	thorchainChainSpec.Genesis = &ibc.GenesisConfig{
 		Contents:      genesisBz,
 		AllValidators: false, // only top 2/3 VP
-		MaxVals:       65,    // MAKE SURE YOUR MACHINE CAN HANDLE THIS
+		MaxVals:       4,     // MAKE SURE YOUR MACHINE CAN HANDLE THIS, need 63 to reach consensus
 	}
 
 	// TODO: add router contracts to thorchain
