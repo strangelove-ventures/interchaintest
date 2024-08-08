@@ -231,8 +231,8 @@ github.com/ComposableFi/go-subkey/v2 v2.0.0-tm03420 h1:oknQF/iIhf5lVjbwjsVDzDByu
 github.com/ComposableFi/go-subkey/v2 v2.0.0-tm03420/go.mod h1:KYkiMX5AbOlXXYfxkrYPrRPV6EbVUALTQh5ptUOJzu8=
 github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2 h1:j8J9LnhC6IikohLEYMAFX0xPQmgPez9vsj0rNQISkiE=
 github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2/go.mod h1:3sCglc35LoFUGmh4a/auoJALitaE4qw+jAqK53ak7+s=
-github.com/CosmWasm/wasmvm v1.4.0 h1:84I3MlvvzcOo2z+ed0ztPi7eeDNk6/sYuK76uyXP1nI=
-github.com/CosmWasm/wasmvm v1.4.0/go.mod h1:vW/E3h8j9xBQs9bCoijDuawKo9kCtxOaS8N8J7KFtkc=
+github.com/CosmWasm/wasmvm v1.5.4 h1:Opqy65ubJ8bMsT08dn85VjRdsLJVPIAgIXif92qOMGc=
+github.com/CosmWasm/wasmvm v1.5.4/go.mod h1:Q0bSEtlktzh7W2hhEaifrFp1Erx11ckQZmjq8FLCyys=
 github.com/DataDog/datadog-go v3.2.0+incompatible h1:qSG2N4FghB1He/r2mFrWKCaL7dXCilEuNEeAn20fdD4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=
