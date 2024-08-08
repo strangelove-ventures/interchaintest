@@ -14,7 +14,7 @@ func DefaultBitcoinChainConfig(
 	return ibc.ChainConfig{
 		Type:           "utxo",
 		Name:           name,
-		ChainID:        "bitcoin",
+		ChainID:        name,
 		Bech32Prefix:   "n/a",
 		CoinType:       "0",
 		Denom:          "sat",
@@ -45,7 +45,7 @@ func DefaultBitcoinCashChainConfig(
 	return ibc.ChainConfig{
 		Type:           "utxo",
 		Name:           name,
-		ChainID:        "bch",
+		ChainID:        name,
 		Bech32Prefix:   "n/a",
 		CoinType:       "145",
 		Denom:          "sat",
@@ -76,7 +76,7 @@ func DefaultLitecoinChainConfig(
 	return ibc.ChainConfig{
 		Type:           "utxo",
 		Name:           name,
-		ChainID:        "litecoin",
+		ChainID:        name,
 		Bech32Prefix:   "n/a",
 		CoinType:       "2",
 		Denom:          "sat",
@@ -107,7 +107,7 @@ func DefaultDogecoinChainConfig(
 	return ibc.ChainConfig{
 		Type:           "utxo",
 		Name:           name,
-		ChainID:        "dogecoin",
+		ChainID:        name,
 		Bech32Prefix:   "n/a",
 		CoinType:       "3",
 		Denom:          "sat",

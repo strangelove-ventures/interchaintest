@@ -52,16 +52,20 @@ func GetAndFundTestUsers(
 	return users
 }
 
-// PollForPool polls until the pool is found
+// PollForPool polls until the pool is found and funded
 func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64, asset common.Asset) error {
 	h, err := thorchain.Height(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (any, error) {
-		_, err = thorchain.ApiGetPool(asset)
+		pool, err := thorchain.ApiGetPool(asset)
 		if err != nil {
 			return nil, err
+		}
+
+		if pool.BalanceAsset == "0" {
+			return nil, fmt.Errorf("Pool (%s) exists, but not asset balance", asset)
 		}
 		return nil, nil
 	}

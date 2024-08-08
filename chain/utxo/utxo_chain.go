@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 
 	//"encoding/json"
@@ -192,7 +191,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 		"-txindex",
 		"-rpcallowip=0.0.0.0/0",
 		"-rpcbind=0.0.0.0",
-		//"-deprecatedrpc=create_bdb",
+		"-deprecatedrpc=create_bdb",
 		"-rpcport=18443",
 	}
 
@@ -294,40 +293,26 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	c.WalletVersion, _ = c.GetWalletVersion(ctx, "")
 
 	keyName := "faucet"
-	if c.WalletVersion == 0 || c.WalletVersion > noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, "-rpcwait", "createwallet", keyName)
-		_, _, err = c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-		time.Sleep(time.Second * 2)
+	if err := c.CreateWallet(ctx, keyName); err != nil {
+		return err
+	}
+	
+	if c.WalletVersion == 0 {
+		time.Sleep(time.Second * 2) // Remove?
 		c.WalletVersion, err = c.GetWalletVersion(ctx, keyName)
 		if err != nil {
 			return err
 		}
 	}
 
-	if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
-	} else {
-		cmd = append(c.BaseCli, "getnewaddress")
-	}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
+	addr, err := c.GetNewAddress(ctx, keyName)
 	if err != nil {
 		return err
 	}
-	addr := strings.TrimSpace(string(stdout))
-	
-	if c.WalletVersion < noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, "setaccount", addr, keyName)
-		_, _, err = c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-	}
 
-	c.AddrToWalletMap[addr] = keyName
-	c.WalletToAddrMap[keyName] = addr
+	if err := c.SetAccount(ctx, addr, keyName); err != nil {
+		return err
+	}
 
 	// Wait for 100 blocks to be created, coins mature after 100 blocks and the faucet starts getting 50 spendable coins/block onwards
 	// Then wait the standard 2 blocks which also gives the faucet a starting balance of 100 coins
@@ -381,44 +366,16 @@ func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
 		return nil
 	}
 
-	cmd := []string{}
-	if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, "createwallet", keyName)
-		_, _, err := c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-
-		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
-	} else {
-		cmd = append(c.BaseCli, "getnewaddress")
+	if err := c.CreateWallet(ctx, keyName); err != nil {
+		return err
 	}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
+
+	addr, err := c.GetNewAddress(ctx, keyName)
 	if err != nil {
 		return err
 	}
 
-	addr := strings.TrimSpace(string(stdout))
-	
-	if c.WalletVersion < noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, "setaccount", addr, keyName)
-		_, _, err = c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	c.AddrToWalletMap[addr] = keyName
-	c.WalletToAddrMap[keyName] = addr
-
-	return nil
-}
-
-type ListReceivedByAddress []ReceivedByAddress
-
-type ReceivedByAddress struct {
-	Address string `json:"address"`
-	Amount  float64 `json:"amount"`
+	return c.SetAccount(ctx, addr, keyName)
 }
 
 // Get address of account, cast to a string to use
@@ -440,115 +397,20 @@ func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wa
 	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	amountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64()) / math.Pow10(int(*c.Config().CoinDecimals)) 
-	cmd := []string{}
-	if c.WalletVersion >= namedFixWalletVersion {
-		cmd = append(c.BaseCli,
-			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
-			fmt.Sprintf("address=%s", amount.Address), 
-			fmt.Sprintf("amount=%.8f", amountFloat),
-		)
-	} else if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, 
-			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
-			amount.Address,
-			fmt.Sprintf("%.8f", amountFloat),
-			fmt.Sprintf("fee_rate=25"),
-		)
-	} else {
-		cmd = append(c.BaseCli,
-			"sendfrom",
-			keyName,
-			amount.Address, 
-			fmt.Sprintf("%s.%s", fullCoins, partialCoin),
-		)
-	}
 	
-	_, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
+	if err := c.SendToAddress(ctx, keyName, amount.Address, amountFloat); err != nil {
 		return err
 	}
 	
 	return testutil.WaitForBlocks(ctx, 1, c)
 }
 
-type TransactionReceipt struct {
-	TxHash string `json:"transactionHash"`
-}
-
-type ListUtxo []Utxo
-
-type Utxo struct {
-	TxId string `json:"txid,omitempty"`
-	Vout int `json:"vout,omitempty"`
-	Address string `json:"address,omitempty"`
-	Label string `json:"label,omitempty"`
-	ScriptPubKey string `json:"scriptPubKey,omitempty"`
-	Amount float64 `json:"amount,omitempty"`
-	Confirmations int `json:"confirmations,omitempty"`
-	Spendable bool `json:"spendable,omitempty"`
-	Solvable bool `json:"solvable,omitempty"`
-	Desc string `json:"desc,omitempty"`
-	Safe bool `json:"safe,omitempty"`
-}
-
-func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, error) {
-	cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "listunspent")
-	stdout, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var listUtxo ListUtxo
-	if err := json.Unmarshal(stdout, &listUtxo); err != nil {
-		return nil, err
-	}
-
-	return listUtxo, nil
-}
-
-type SendInputs []SendInput
-
-type SendInput struct {
-	TxId string `json:"txid"` // hex
-	Vout int `json:"vout"`
-}
-
-type SendOutputs []SendOutput
-
-type SendOutput struct {
-	Amount float64 `json:"replaceWithAddress,omitempty"`
-	Data string `json:"data,omitempty"` // hex
-}
-
-type SignRawTxError struct {
-	Txid string `json:"txid"`
-	Vout int `json:"vout"`
-	Witness []string `json:"witness"`
-	ScriptSig string `json:"scriptSig"`
-	Sequence int `json:"sequence"`
-	Error string `json:"error"`
-}
-
-type SignRawTxOutput struct {
-	Hex string `json:"hex"`
-	Complete bool `json:"complete"`
-	Errors []SignRawTxError `json:"errors"`
-}
-
 func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	script := []byte{0x6a} // OP_RETURN
-	dataLen := len(note)
-	OP_DATA_1 := 0x01 // 1
-	script = append(script, byte((OP_DATA_1-1)+dataLen))
-	script = append(script, []byte(note)...)
-
-	// Can we support larger memos?
-	
 	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+	sendAmountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64()) / math.Pow10(int(*c.Config().CoinDecimals)) 
 
-	sendAmountFloat, err := strconv.ParseFloat(fmt.Sprintf("%s.%s", fullCoins, partialCoin), 64)
-	if err != nil {
+	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
 
@@ -558,101 +420,29 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 		return "", err
 	}
 
-	var sendInputs SendInputs
-	utxoTotal := float64(0.0)
-	for _, utxo := range listUtxo {
-		sendInputs = append(sendInputs, SendInput{
-			TxId: utxo.TxId,
-			Vout: utxo.Vout,
-		})
-		utxoTotal += utxo.Amount
-		// Need to take fees into account? If no, it can be >= instead of >. If yes, update.
-		if utxoTotal > sendAmountFloat {
-			break
-		}
-	}
-
-	sendOutputs := SendOutputs{
-		SendOutput{
-			Amount: sendAmountFloat,
-		},
-		SendOutput{
-			Data: hex.EncodeToString(script),
-		},
-	}
-
-	// create raw transaction
-	sendInputsBz, err := json.Marshal(sendInputs)
+	rawTxHex, err := c.CreateRawTransaction(ctx, listUtxo, amount.Address, sendAmountFloat, []byte(note))
 	if err != nil {
 		return "", err
 	}
-
-	sendOutputsBz, err := json.Marshal(sendOutputs)
-	if err != nil {
-		return "", err
-	}
-
-	sendInputsStr := string(sendInputsBz)
-	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", amount.Address, 1)
-
-	fmt.Println("SendFundsWithNote inputs", sendInputsStr)
-	fmt.Println("SendFundsWithNote outputs", sendOutputsStr)
-
-	// createrawtransaction 
-	cmd := append(c.BaseCli, 
-		"createrawtransaction", fmt.Sprintf("%s", sendInputsStr), fmt.Sprintf("%s", sendOutputsStr))
-	stdout, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return "", err
-	}
-
-	rawTxHex := strings.TrimSpace(string(stdout))
-
-	fmt.Println("SendFundsWithNote rawtxHex", rawTxHex)
-
-	rawTxDecoded, err := hex.DecodeString(rawTxHex)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println("SendFundsWithNote rawTx decoded:", rawTxDecoded)
-
 
 	// sign raw transaction
-	cmd = append(c.BaseCli, 
-		fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
-	stdout, _, err = c.Exec(ctx, cmd, nil)
+	signedRawTxHex, err := c.SignRawTransaction(ctx, keyName, rawTxHex)
 	if err != nil {
 		return "", err
-	}
-
-	var signRawTxOutput SignRawTxOutput
-	if err := json.Unmarshal(stdout, &signRawTxOutput); err != nil {
-		return "", err
-	}
-
-	if signRawTxOutput.Complete {
-		fmt.Println("Signing of transaction complete!")
-	} else {
-		fmt.Println("Signing of tx incomplete")
-		fmt.Println("Number of errors", len(signRawTxOutput.Errors))
-		for i, sErr := range signRawTxOutput.Errors {
-			fmt.Println("Signing error", i, ":", sErr.Error)
-		}
-		return "", fmt.Errorf("Signing error")
 	}
 	
 	// send raw transaction
-	cmd = append(c.BaseCli, 
-		fmt.Sprintf("-rpcwallet=%s", keyName), "sendrawtransaction", signRawTxOutput.Hex, "0")
-	stdout, _, err = c.Exec(ctx, cmd, nil)
+	txHash, err := c.SendRawTransaction(ctx, keyName, signedRawTxHex)
 	if err != nil {
+		return "", err
+	}
+
+	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
 
 	err = testutil.WaitForBlocks(ctx, 1, c)	
-
-	return strings.TrimSpace(string(stdout)), nil
+	return txHash, err
 }
 
 func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
@@ -674,9 +464,15 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 	balance := ""
 	var coinsWithDecimal float64
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		if err := c.LoadWallet(ctx, wallet); err != nil {
+			return sdkmath.Int{}, err
+		}
 		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", wallet), "getbalance")
 		stdout, _, err := c.Exec(ctx, cmd, nil)
 		if err != nil {
+			return sdkmath.Int{}, err
+		}
+		if err := c.UnloadWallet(ctx, wallet); err != nil {
 			return sdkmath.Int{}, err
 		}
 		balance = strings.TrimSpace(string(stdout))
@@ -697,37 +493,6 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 
 	coinsScaled := int64(coinsWithDecimal * math.Pow10(int(*c.Config().CoinDecimals)))
 	return sdkmath.NewInt(coinsScaled), nil
-}
-
-type WalletInfo struct {
-	WalletVersion int `json:"walletversion"`
-}
-
-// Depending on the wallet version, getwalletinfo may require a created wallet name
-func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, error) {
-	var walletInfo WalletInfo
-	var stdout []byte
-	var err error
-	
-	if keyName == "" {
-		cmd := append(c.BaseCli, "getwalletinfo")
-		stdout, _, err = c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getwalletinfo")
-		stdout, _, err = c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	if err := json.Unmarshal(stdout, &walletInfo); err != nil {
-		return 0, err
-	}
-	
-	return walletInfo.WalletVersion, nil
 }
 
 func (c *UtxoChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {

@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/examples/thorchain/features"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -36,6 +37,7 @@ func TestThorchain(t *testing.T) {
 	// Setup EVM chains first
 	// ------------------------
 	ethChainName := common.ETHChain.String() // must use this name for test
+	btcChainName := common.BTCChain.String() // must use this name for test 
 	cf0 := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			ChainName:   ethChainName,
@@ -43,14 +45,22 @@ func TestThorchain(t *testing.T) {
 			Version:     "latest",
 			ChainConfig: ethereum.DefaultEthereumAnvilChainConfig(ethChainName),
 		},
+		{
+			ChainName:   btcChainName,
+			Name:        btcChainName,
+			Version:     "26.2",
+			ChainConfig: utxo.DefaultBitcoinChainConfig(btcChainName, "thorchain", "password"),
+		},
 	})
 
 	chains, err := cf0.Chains(t.Name())
 	require.NoError(t, err)
 	ethChain := chains[0].(*ethereum.EthereumChain)
+	btcChain := chains[1].(*utxo.UtxoChain)
 
 	ic0 := interchaintest.NewInterchain().
-		AddChain(ethChain)
+		AddChain(ethChain).
+		AddChain(btcChain)
 	
 	ctx := context.Background()
 	client, network := interchaintest.DockerSetup(t)
@@ -178,9 +188,11 @@ func TestThorchain(t *testing.T) {
 	// --------------------------------------------------------
 	_, gaiaLper := features.DualLp(t, ctx, thorchain, gaia)
 	_, ethLper := features.DualLp(t, ctx, thorchain, ethChain)
+	_, _ = features.DualLp(t, ctx, thorchain, btcChain)
 
 	_, _ = features.DualLp(t, ctx, thorchain, gaia)
 	_, _ = features.DualLp(t, ctx, thorchain, ethChain)
+	_, _ = features.DualLp(t, ctx, thorchain, btcChain)
 
 	// --------------------------------------------------------
 	// Savers
