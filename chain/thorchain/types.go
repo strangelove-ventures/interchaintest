@@ -6,20 +6,21 @@ type VersionOutput struct {
 
 type NodeAccountPubKeySet struct {
 	Secp256k1 string `json:"secp256k1"`
-	Ed25519 string `json:"ed25519"`
+	Ed25519   string `json:"ed25519"`
 }
 
 type NodeAccount struct {
-	NodeAddress string `json:"node_address"`
-	Version string `json:"version"`
-	IpAddress string `json:"ip_address"`
-	Status string `json:"status"`
-	Bond string `json:"bond"`
-	ActiveBlockHeight string `json:"active_block_height"`
-	BondAddress string `json:"bond_address"`
-	SignerMembership []string `json:"signer_membership"`
-	ValidatorConsPubKey string `json:"validator_cons_pub_key"`
-	PubKeySet NodeAccountPubKeySet `json:"pub_key_set"`
+	NodeAddress         string               `json:"node_address"`
+	Version             string               `json:"version"`
+	IpAddress           string               `json:"ip_address"`
+	Status              string               `json:"status"`
+	Bond                string               `json:"bond"`
+	BondUInt            uint64               `json:"-"`
+	ActiveBlockHeight   string               `json:"active_block_height"`
+	BondAddress         string               `json:"bond_address"`
+	SignerMembership    []string             `json:"signer_membership"`
+	ValidatorConsPubKey string               `json:"validator_cons_pub_key"`
+	PubKeySet           NodeAccountPubKeySet `json:"pub_key_set"`
 }
 
 // ProtoMessage is implemented by generated protocol buffer messages.
@@ -86,10 +87,10 @@ type DenomAuthorityMetadata struct {
 
 // InboundAddress struct for InboundAddress
 type InboundAddress struct {
-	Chain *string `json:"chain,omitempty"`
-	PubKey *string `json:"pub_key,omitempty"`
+	Chain   *string `json:"chain,omitempty"`
+	PubKey  *string `json:"pub_key,omitempty"`
 	Address *string `json:"address,omitempty"`
-	Router *string `json:"router,omitempty"`
+	Router  *string `json:"router,omitempty"`
 	// Returns true if trading is unavailable for this chain, either because trading is halted globally or specifically for this chain
 	Halted bool `json:"halted"`
 	// Returns true if trading is paused globally
@@ -112,46 +113,46 @@ type InboundAddress struct {
 
 // LiquidityProvider struct for LiquidityProvider
 type LiquidityProvider struct {
-	Asset string `json:"asset"`
-	RuneAddress *string `json:"rune_address,omitempty"`
-	AssetAddress *string `json:"asset_address,omitempty"`
-	LastAddHeight *int64 `json:"last_add_height,omitempty"`
-	LastWithdrawHeight *int64 `json:"last_withdraw_height,omitempty"`
-	Units string `json:"units"`
-	PendingRune string `json:"pending_rune"`
-	PendingAsset string `json:"pending_asset"`
-	PendingTxId *string `json:"pending_tx_id,omitempty"`
-	RuneDepositValue string `json:"rune_deposit_value"`
-	AssetDepositValue string `json:"asset_deposit_value"`
-	RuneRedeemValue *string `json:"rune_redeem_value,omitempty"`
-	AssetRedeemValue *string `json:"asset_redeem_value,omitempty"`
-	LuviDepositValue *string `json:"luvi_deposit_value,omitempty"`
-	LuviRedeemValue *string `json:"luvi_redeem_value,omitempty"`
-	LuviGrowthPct *string `json:"luvi_growth_pct,omitempty"`
+	Asset              string  `json:"asset"`
+	RuneAddress        *string `json:"rune_address,omitempty"`
+	AssetAddress       *string `json:"asset_address,omitempty"`
+	LastAddHeight      *int64  `json:"last_add_height,omitempty"`
+	LastWithdrawHeight *int64  `json:"last_withdraw_height,omitempty"`
+	Units              string  `json:"units"`
+	PendingRune        string  `json:"pending_rune"`
+	PendingAsset       string  `json:"pending_asset"`
+	PendingTxId        *string `json:"pending_tx_id,omitempty"`
+	RuneDepositValue   string  `json:"rune_deposit_value"`
+	AssetDepositValue  string  `json:"asset_deposit_value"`
+	RuneRedeemValue    *string `json:"rune_redeem_value,omitempty"`
+	AssetRedeemValue   *string `json:"asset_redeem_value,omitempty"`
+	LuviDepositValue   *string `json:"luvi_deposit_value,omitempty"`
+	LuviRedeemValue    *string `json:"luvi_redeem_value,omitempty"`
+	LuviGrowthPct      *string `json:"luvi_growth_pct,omitempty"`
 }
 
 // Saver struct for Saver
 type Saver struct {
-	Asset string `json:"asset"`
-	AssetAddress string `json:"asset_address"`
-	LastAddHeight *int64 `json:"last_add_height,omitempty"`
+	Asset              string `json:"asset"`
+	AssetAddress       string `json:"asset_address"`
+	LastAddHeight      *int64 `json:"last_add_height,omitempty"`
 	LastWithdrawHeight *int64 `json:"last_withdraw_height,omitempty"`
-	Units string `json:"units"`
-	AssetDepositValue string `json:"asset_deposit_value"`
-	AssetRedeemValue string `json:"asset_redeem_value"`
-	GrowthPct string `json:"growth_pct"`
+	Units              string `json:"units"`
+	AssetDepositValue  string `json:"asset_deposit_value"`
+	AssetRedeemValue   string `json:"asset_redeem_value"`
+	GrowthPct          string `json:"growth_pct"`
 }
 
 // Pool struct for Pool
 type Pool struct {
-	Asset string `json:"asset"`
-	ShortCode *string `json:"short_code,omitempty"`
-	Status string `json:"status"`
-	Decimals *int64 `json:"decimals,omitempty"`
-	PendingInboundAsset string `json:"pending_inbound_asset"`
-	PendingInboundRune string `json:"pending_inbound_rune"`
-	BalanceAsset string `json:"balance_asset"`
-	BalanceRune string `json:"balance_rune"`
+	Asset               string  `json:"asset"`
+	ShortCode           *string `json:"short_code,omitempty"`
+	Status              string  `json:"status"`
+	Decimals            *int64  `json:"decimals,omitempty"`
+	PendingInboundAsset string  `json:"pending_inbound_asset"`
+	PendingInboundRune  string  `json:"pending_inbound_rune"`
+	BalanceAsset        string  `json:"balance_asset"`
+	BalanceRune         string  `json:"balance_rune"`
 	// the USD (TOR) price of the asset in 1e8
 	AssetTorPrice string `json:"asset_tor_price"`
 	// the total pool units, this is the sum of LP and synth units
@@ -213,8 +214,8 @@ type QuoteSwapResponse struct {
 	// the number of thorchain blocks the outbound will be delayed
 	OutboundDelayBlocks int64 `json:"outbound_delay_blocks"`
 	// the approximate seconds for the outbound delay before it will be sent
-	OutboundDelaySeconds int64 `json:"outbound_delay_seconds"`
-	Fees QuoteFees `json:"fees"`
+	OutboundDelaySeconds int64     `json:"outbound_delay_seconds"`
+	Fees                 QuoteFees `json:"fees"`
 	// the EVM chain router contract address
 	Router *string `json:"router,omitempty"`
 	// expiration timestamp in unix seconds
@@ -256,8 +257,8 @@ type QuoteSaverDepositResponse struct {
 	// the number of thorchain blocks the outbound will be delayed
 	OutboundDelayBlocks *int64 `json:"outbound_delay_blocks,omitempty"`
 	// the approximate seconds for the outbound delay before it will be sent
-	OutboundDelaySeconds *int64 `json:"outbound_delay_seconds,omitempty"`
-	Fees QuoteFees `json:"fees"`
+	OutboundDelaySeconds *int64    `json:"outbound_delay_seconds,omitempty"`
+	Fees                 QuoteFees `json:"fees"`
 	// the EVM chain router contract address
 	Router *string `json:"router,omitempty"`
 	// expiration timestamp in unix seconds
@@ -329,7 +330,7 @@ type StreamingStatus struct {
 // SwapStatus struct for SwapStatus
 type SwapStatus struct {
 	// true when awaiting a swap
-	Pending bool `json:"pending"`
+	Pending   bool             `json:"pending"`
 	Streaming *StreamingStatus `json:"streaming,omitempty"`
 }
 
@@ -361,36 +362,36 @@ type OutboundSignedStage struct {
 
 // TxStagesResponse struct for TxStagesResponse
 type TxStagesResponse struct {
-	InboundObserved InboundObservedStage `json:"inbound_observed"`
+	InboundObserved            InboundObservedStage             `json:"inbound_observed"`
 	InboundConfirmationCounted *InboundConfirmationCountedStage `json:"inbound_confirmation_counted,omitempty"`
-	InboundFinalised *InboundFinalisedStage `json:"inbound_finalised,omitempty"`
-	SwapStatus *SwapStatus `json:"swap_status,omitempty"`
-	SwapFinalised *SwapFinalisedStage `json:"swap_finalised,omitempty"`
-	OutboundDelay *OutboundDelayStage `json:"outbound_delay,omitempty"`
-	OutboundSigned *OutboundSignedStage `json:"outbound_signed,omitempty"`
+	InboundFinalised           *InboundFinalisedStage           `json:"inbound_finalised,omitempty"`
+	SwapStatus                 *SwapStatus                      `json:"swap_status,omitempty"`
+	SwapFinalised              *SwapFinalisedStage              `json:"swap_finalised,omitempty"`
+	OutboundDelay              *OutboundDelayStage              `json:"outbound_delay,omitempty"`
+	OutboundSigned             *OutboundSignedStage             `json:"outbound_signed,omitempty"`
 }
 
 // Coin struct for Coin
 type Coin struct {
-	Asset string `json:"asset"`
-	Amount string `json:"amount"`
+	Asset    string `json:"asset"`
+	Amount   string `json:"amount"`
 	Decimals *int64 `json:"decimals,omitempty"`
 }
 
 // Tx struct for Tx
 type Tx struct {
-	Id *string `json:"id,omitempty"`
-	Chain *string `json:"chain,omitempty"`
+	Id          *string `json:"id,omitempty"`
+	Chain       *string `json:"chain,omitempty"`
 	FromAddress *string `json:"from_address,omitempty"`
-	ToAddress *string `json:"to_address,omitempty"`
-	Coins []Coin `json:"coins"`
-	Gas []Coin `json:"gas"`
-	Memo *string `json:"memo,omitempty"`
+	ToAddress   *string `json:"to_address,omitempty"`
+	Coins       []Coin  `json:"coins"`
+	Gas         []Coin  `json:"gas"`
+	Memo        *string `json:"memo,omitempty"`
 }
 
 // ObservedTx struct for ObservedTx
 type ObservedTx struct {
-	Tx Tx `json:"tx"`
+	Tx             Tx      `json:"tx"`
 	ObservedPubKey *string `json:"observed_pub_key,omitempty"`
 	// the block height on the external source chain when the transaction was observed, not provided if chain is THOR
 	ExternalObservedHeight *int64 `json:"external_observed_height,omitempty"`
@@ -401,42 +402,42 @@ type ObservedTx struct {
 	// the aggregator target asset provided to transferOutAndCall
 	AggregatorTarget *string `json:"aggregator_target,omitempty"`
 	// the aggregator target asset limit provided to transferOutAndCall
-	AggregatorTargetLimit *string `json:"aggregator_target_limit,omitempty"`
-	Signers []string `json:"signers,omitempty"`
-	KeysignMs *int64 `json:"keysign_ms,omitempty"`
-	OutHashes []string `json:"out_hashes,omitempty"`
-	Status *string `json:"status,omitempty"`
+	AggregatorTargetLimit *string  `json:"aggregator_target_limit,omitempty"`
+	Signers               []string `json:"signers,omitempty"`
+	KeysignMs             *int64   `json:"keysign_ms,omitempty"`
+	OutHashes             []string `json:"out_hashes,omitempty"`
+	Status                *string  `json:"status,omitempty"`
 }
 
 // TxOutItem struct for TxOutItem
 type TxOutItem struct {
-	Chain string `json:"chain"`
-	ToAddress string `json:"to_address"`
+	Chain       string  `json:"chain"`
+	ToAddress   string  `json:"to_address"`
 	VaultPubKey *string `json:"vault_pub_key,omitempty"`
-	Coin Coin `json:"coin"`
-	Memo *string `json:"memo,omitempty"`
-	MaxGas []Coin `json:"max_gas"`
-	GasRate *int64 `json:"gas_rate,omitempty"`
-	InHash *string `json:"in_hash,omitempty"`
-	OutHash *string `json:"out_hash,omitempty"`
-	Height *int64 `json:"height,omitempty"`
+	Coin        Coin    `json:"coin"`
+	Memo        *string `json:"memo,omitempty"`
+	MaxGas      []Coin  `json:"max_gas"`
+	GasRate     *int64  `json:"gas_rate,omitempty"`
+	InHash      *string `json:"in_hash,omitempty"`
+	OutHash     *string `json:"out_hash,omitempty"`
+	Height      *int64  `json:"height,omitempty"`
 	// clout spent in RUNE for the outbound
 	CloutSpent *string `json:"clout_spent,omitempty"`
 }
 
 // TxDetailsResponse struct for TxDetailsResponse
 type TxDetailsResponse struct {
-	TxId *string `json:"tx_id,omitempty"`
-	Tx ObservedTx `json:"tx"`
-	Txs []ObservedTx `json:"txs"`
-	Actions []TxOutItem `json:"actions"`
-	OutTxs []Tx `json:"out_txs"`
+	TxId    *string      `json:"tx_id,omitempty"`
+	Tx      ObservedTx   `json:"tx"`
+	Txs     []ObservedTx `json:"txs"`
+	Actions []TxOutItem  `json:"actions"`
+	OutTxs  []Tx         `json:"out_txs"`
 	// the thorchain height at which the inbound reached consensus
 	ConsensusHeight *int64 `json:"consensus_height,omitempty"`
 	// the thorchain height at which the outbound was finalised
 	FinalisedHeight *int64 `json:"finalised_height,omitempty"`
-	UpdatedVault *bool `json:"updated_vault,omitempty"`
-	Reverted *bool `json:"reverted,omitempty"`
+	UpdatedVault    *bool  `json:"updated_vault,omitempty"`
+	Reverted        *bool  `json:"reverted,omitempty"`
 	// the thorchain height for which the outbound was scheduled
 	OutboundHeight *int64 `json:"outbound_height,omitempty"`
 }

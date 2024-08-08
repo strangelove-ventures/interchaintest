@@ -157,6 +157,10 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.HostPortOverride = s.HostPortOverride
 	}
 
+	if s.Genesis != nil {
+		cfg.Genesis = s.Genesis
+	}
+
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
 	if cfg.CoinDecimals == nil {

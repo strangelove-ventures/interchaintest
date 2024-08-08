@@ -104,6 +104,11 @@ func (c ChainConfig) Clone() ChainConfig {
 		x.CoinDecimals = &coinDecimals
 	}
 
+	if c.Genesis != nil {
+		genesis := *c.Genesis
+		x.Genesis = &genesis
+	}
+
 	return x
 }
 
@@ -227,6 +232,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if !cmp.Equal(other.InterchainSecurityConfig, ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
+	if other.Genesis != nil {
+		c.Genesis = other.Genesis
 	}
 
 	return c
@@ -437,4 +446,8 @@ type GenesisConfig struct {
 	// If true, all validators will be emulated in the genesis file.
 	// By default, only the first 2/3 (sorted by Voting Power desc) of validators will be emulated.
 	AllValidators bool
+
+	// MaxVals is a safeguard so that we don't accidentally emulate too many validators. Defaults to 10.
+	// If more than MaxVals validators are required to meet 2/3 VP, the test will fail.
+	MaxVals int
 }

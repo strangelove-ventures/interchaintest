@@ -3,10 +3,13 @@ package thorchain
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -164,7 +167,7 @@ func (c *Thorchain) AddFullNodes(ctx context.Context, configFileOverrides map[st
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,
@@ -287,10 +290,12 @@ func (c *Thorchain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 // If mnemonic == "", it will create a new key
 func (c *Thorchain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
+		c.log.Info("BuildWallet recovering key", zap.String("key_name", keyName))
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
 			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
 		}
 	} else {
+		c.log.Info("BuildWallet creating key", zap.String("key_name", keyName))
 		if err := c.CreateKey(ctx, keyName); err != nil {
 			return nil, fmt.Errorf("failed to create key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
 		}
@@ -300,6 +305,8 @@ func (c *Thorchain) BuildWallet(ctx context.Context, keyName string, mnemonic st
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
 	}
+
+	c.log.Info("BuildWallet got address", zap.String("key_name", keyName), zap.String("address", hex.EncodeToString(addrBytes)), zap.String("bech32addr", types.MustBech32ifyAddressBytes(c.cfg.Bech32Prefix, addrBytes)))
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
@@ -436,6 +443,9 @@ func (c *Thorchain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 
 func (c *Thorchain) pullImages(ctx context.Context, cli *client.Client) {
 	for _, image := range c.Config().Images {
+		if image.Version == "local" {
+			continue
+		}
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
@@ -468,6 +478,8 @@ func (c *Thorchain) NewChainNode(
 	// The ChainNode's VolumeName cannot be set until after we create the volume.
 	tn := NewChainNode(c.log, validator, c, cli, networkID, testName, image, index)
 
+	tn.logger().Info("Creating volume")
+
 	v, err := cli.VolumeCreate(ctx, volumetypes.CreateOptions{
 		Labels: map[string]string{
 			dockerutil.CleanupLabel: testName,
@@ -478,6 +490,9 @@ func (c *Thorchain) NewChainNode(
 	if err != nil {
 		return nil, fmt.Errorf("creating volume for chain node: %w", err)
 	}
+
+	tn.logger().Info("Setting volume owner", zap.String("volume", v.Name))
+
 	tn.VolumeName = v.Name
 
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
@@ -493,16 +508,22 @@ func (c *Thorchain) NewChainNode(
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
 
+	tn.logger().Info("Created docker volume and set owner", zap.String("volume", v.Name))
+
 	for _, cfg := range c.cfg.SidecarConfigs {
 		if !cfg.ValidatorProcess {
 			continue
 		}
+
+		tn.logger().Info("Creating sidecar process", zap.String("process", cfg.ProcessName))
 
 		err = tn.NewSidecarProcess(ctx, cfg.PreStart, cfg.ProcessName, cli, networkID, cfg.Image, cfg.HomeDir, cfg.Ports, cfg.StartCmd, cfg.Env)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	tn.logger().Info("Done initializing chain node")
 
 	return tn, nil
 }
@@ -597,10 +618,15 @@ func (c *Thorchain) initializeChainNodes(
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+
 	c.findTxMu.Lock()
 	defer c.findTxMu.Unlock()
+
 	c.Validators = newVals
 	c.FullNodes = newFullNodes
+
+	c.log.Info("Initialized chain nodes", zap.Int("validators", len(newVals)), zap.Int("fullnodes", len(newFullNodes)))
+
 	return nil
 }
 
@@ -639,60 +665,42 @@ type GenesisValidatorPubKey struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
-type GenesisValidators struct {
-	Address string                 `json:"address"`
-	Name    string                 `json:"name"`
-	Power   string                 `json:"power"`
-	PubKey  GenesisValidatorPubKey `json:"pub_key"`
-}
+
 type GenesisFile struct {
-	Validators []GenesisValidators `json:"validators"`
+	AppState struct {
+		Thorchain struct {
+			NodeAccounts []NodeAccount `json:"node_accounts"`
+		} `json:"thorchain"`
+	} `json:"app_state"`
 }
 
 type ValidatorWithIntPower struct {
-	Address      string
-	Power        int64
-	PubKeyBase64 string
+	Address string
+	Power   int64
+	PubKey  string
 }
 
-// Bootstraps the chain and starts it from genesis
-func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+func (c *Thorchain) prepNodes(ctx context.Context, genesisAmounts [][]types.Coin, genesisSelfDelegation []types.Coin) error {
 	chainCfg := c.Config()
-
-	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
-
-	genesisAmounts := make([][]types.Coin, len(c.Validators))
-	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
-
-	for i := range c.Validators {
-		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}}
-		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}
-		if chainCfg.ModifyGenesisAmounts != nil {
-			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
-			genesisAmounts[i] = []types.Coin{amount}
-			genesisSelfDelegation[i] = selfDelegation
-		}
-	}
-
 	configFileOverrides := chainCfg.ConfigFileOverrides
 
-	eg := new(errgroup.Group)
+	eg, egCtx := errgroup.WithContext(ctx)
 	// Initialize config and sign gentx for each validator.
 	for i, v := range c.Validators {
 		v := v
 		i := i
 		v.Validator = true
 		eg.Go(func() error {
-			if err := v.InitFullNodeFiles(ctx); err != nil {
+			if err := v.InitFullNodeFiles(egCtx); err != nil {
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
-					ctx,
+					egCtx,
 					v.logger(),
 					v.DockerClient,
 					v.TestName,
@@ -704,17 +712,36 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 				}
 			}
 
-			if !c.cfg.SkipGenTx {
-				if err := v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i]); err != nil {
+			v.ValidatorMnemonic = strings.Repeat("dog ", 23) + "fossil"
+			if v.Index == 0 {
+				v.logger().Debug("Recover validator key")
+
+				if err := v.RecoverKey(ctx, valKey, v.ValidatorMnemonic); err != nil {
+					return err
+				}
+			} else {
+				v.logger().Debug("Create validator key")
+				if err := v.CreateKey(ctx, valKey); err != nil {
+					return fmt.Errorf("failed to create key: %w", err)
+				}
+			}
+
+			if !c.cfg.SkipGenTx && c.cfg.Genesis == nil {
+				v.logger().Info("Initializing gentx")
+				if err := v.InitValidatorGenTx(egCtx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i]); err != nil {
 					return fmt.Errorf("failed to init validator gentx for validator %d: %w", i, err)
 				}
+			}
 
-				if err := v.GetNodeAccount(ctx); err != nil {
-					return fmt.Errorf("failed to get node account info: %w", err)
-				}
-				if err := v.AddNodeAccount(ctx, *v.NodeAccount); err != nil {
-					return fmt.Errorf("failed to add node account: %w", err)
-				}
+			v.logger().Info("Getting node account info")
+
+			if err := v.GetNodeAccount(egCtx); err != nil {
+				return fmt.Errorf("failed to get node account info: %w", err)
+			}
+
+			v.logger().Info("Adding node account info")
+			if err := v.AddNodeAccount(egCtx, *v.NodeAccount); err != nil {
+				return fmt.Errorf("failed to add node account: %w", err)
 			}
 
 			return nil
@@ -726,16 +753,16 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		n := n
 		n.Validator = false
 		eg.Go(func() error {
-			if err := n.InitFullNodeFiles(ctx); err != nil {
+			if err := n.InitFullNodeFiles(egCtx); err != nil {
 				return err
 			}
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (testutil.Toml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (testutil.Toml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
-					ctx,
+					egCtx,
 					n.logger(),
 					n.DockerClient,
 					n.TestName,
@@ -751,8 +778,104 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 	}
 
 	// wait for this to finish
-	if err := eg.Wait(); err != nil {
+	return eg.Wait()
+}
+
+// Bootstraps the chain and starts it from genesis
+func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	c.log.Info("Starting", zap.String("chain", c.Config().Name))
+	chainCfg := c.Config()
+
+	var genBz []byte
+
+	genesisAmounts := make([][]types.Coin, len(c.Validators))
+	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
+
+	var activeVals []NodeAccount
+	var genBzReplace func(find, replace []byte)
+
+	if chainCfg.Genesis == nil {
+		decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
+
+		for i := range c.Validators {
+			genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+			genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}
+			if chainCfg.ModifyGenesisAmounts != nil {
+				amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
+				genesisAmounts[i] = []types.Coin{amount}
+				genesisSelfDelegation[i] = selfDelegation
+			}
+		}
+	} else {
+		genBz = chainCfg.Genesis.Contents
+		var genesisFile GenesisFile
+		if err := json.Unmarshal(genBz, &genesisFile); err != nil {
+			return fmt.Errorf("failed to unmarshal genesis file: %w", err)
+		}
+
+		genesisValidators := genesisFile.AppState.Thorchain.NodeAccounts
+		totalBond := uint64(0)
+
+		validatorsWithPower := make([]NodeAccount, 0)
+
+		for _, genesisValidator := range genesisValidators {
+			if genesisValidator.Status != "Active" {
+				continue
+			}
+			bond, err := strconv.ParseUint(genesisValidator.Bond, 10, 64)
+			if err != nil {
+				return err
+			}
+			totalBond += bond
+			genesisValidator.BondUInt = bond
+			validatorsWithPower = append(validatorsWithPower, genesisValidator)
+		}
+
+		sort.Slice(validatorsWithPower, func(i, j int) bool {
+			return validatorsWithPower[i].BondUInt > validatorsWithPower[j].BondUInt
+		})
+
+		var mu sync.Mutex
+		genBzReplace = func(find, replace []byte) {
+			mu.Lock()
+			defer mu.Unlock()
+			genBz = bytes.ReplaceAll(genBz, find, replace)
+		}
+
+		twoThirdsConsensus := uint64(math.Ceil(float64(totalBond) * 2 / 3))
+		totalConsensus := uint64(0)
+
+		for _, validator := range validatorsWithPower {
+			activeVals = append(activeVals, validator)
+
+			totalConsensus += validator.BondUInt
+
+			if totalConsensus > twoThirdsConsensus {
+				break
+			}
+		}
+
+		if chainCfg.Genesis.MaxVals == 0 {
+			chainCfg.Genesis.MaxVals = 10
+		}
+
+		if len(activeVals) > chainCfg.Genesis.MaxVals {
+			return fmt.Errorf("too many validators required to meet bond threshold: %d, max allowed: %d: increase this limit to proceed", len(activeVals), chainCfg.Genesis.MaxVals)
+		}
+
+		c.NumValidators = len(activeVals)
+
+		c.log.Info("Will launch validators", zap.Int("count", c.NumValidators))
+	}
+
+	fn := c.getFullNode()
+
+	if err := c.initializeChainNodes(ctx, testName, fn.DockerClient, fn.NetworkID); err != nil {
 		return err
+	}
+
+	if err := c.prepNodes(ctx, genesisAmounts, genesisSelfDelegation); err != nil {
+		return fmt.Errorf("failed to prep nodes: %w", err)
 	}
 
 	if c.preStartNodes != nil {
@@ -766,47 +889,78 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		}
 	}
 
-	// for the validators we need to collect the gentxs and the accounts
-	// to the first node's genesis file
-	validator0 := c.Validators[0]
-	for i := 1; i < len(c.Validators); i++ {
-		validatorN := c.Validators[i]
+	var err error
 
-		bech32, err := validatorN.AccountKeyBech32(ctx, valKey)
+	if chainCfg.Genesis == nil {
+		// for the validators we need to collect the gentxs and the accounts
+		// to the first node's genesis file
+		validator0 := c.Validators[0]
+		for i := 1; i < len(c.Validators); i++ {
+			validatorN := c.Validators[i]
+
+			bech32, err := validatorN.AccountKeyBech32(ctx, valKey)
+			if err != nil {
+				return err
+			}
+
+			if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
+				return err
+			}
+
+			if !c.cfg.SkipGenTx {
+				if err := validator0.AddNodeAccount(ctx, *validatorN.NodeAccount); err != nil {
+					return fmt.Errorf("failed to add node account to val0: %w", err)
+				}
+			}
+		}
+
+		for _, wallet := range additionalGenesisWallets {
+			if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
+				return err
+			}
+		}
+
+		if err := validator0.AddBondModule(ctx); err != nil {
+			return err
+		}
+
+		genBz, err = validator0.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
 
-		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
+		genBz = bytes.ReplaceAll(genBz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
+	} else {
+		var eg errgroup.Group
+		for i, validator := range activeVals {
+			v := c.Validators[i]
+			validator := validator
+			c.log.Info(
+				"Will emulate validator",
+				zap.String("bond_address", validator.BondAddress),
+				zap.String("node_address", validator.NodeAddress),
+			)
+			eg.Go(func() error {
+				na := v.NodeAccount
+
+				// modify genesis file overwriting validators info with the one generated for this test node
+				genBzReplace([]byte(validator.ValidatorConsPubKey), []byte(na.ValidatorConsPubKey))
+				genBzReplace([]byte(validator.NodeAddress), []byte(na.NodeAddress))
+				genBzReplace([]byte(validator.BondAddress), []byte(na.BondAddress))
+				genBzReplace([]byte(validator.PubKeySet.Secp256k1), []byte(na.PubKeySet.Secp256k1))
+				genBzReplace([]byte(validator.PubKeySet.Ed25519), []byte(na.PubKeySet.Ed25519))
+
+				return nil
+			})
+		}
+
+		if err := eg.Wait(); err != nil {
 			return err
 		}
-
-		if !c.cfg.SkipGenTx {
-			if err := validator0.AddNodeAccount(ctx, *validatorN.NodeAccount); err != nil {
-				return fmt.Errorf("failed to add node account to val0: %w", err)
-			}
-		}
 	}
-
-	for _, wallet := range additionalGenesisWallets {
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
-			return err
-		}
-	}
-
-	if err := validator0.AddBondModule(ctx); err != nil {
-		return err
-	}
-
-	genbz, err := validator0.GenesisFileContent(ctx)
-	if err != nil {
-		return err
-	}
-
-	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
 
 	if c.cfg.ModifyGenesis != nil {
-		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
+		genBz, err = c.cfg.ModifyGenesis(chainCfg, genBz)
 		if err != nil {
 			return err
 		}
@@ -820,13 +974,13 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
+		_ = os.WriteFile(exportGenesis, genBz, 0600)
 	}
 
 	chainNodes := c.Nodes()
 
 	for _, cn := range chainNodes {
-		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
+		if err := cn.OverwriteGenesisFile(ctx, genBz); err != nil {
 			return err
 		}
 	}

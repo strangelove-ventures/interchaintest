@@ -39,6 +39,7 @@ func TestThorchainHardFork(t *testing.T) {
 	thorchainChainSpec.Genesis = &ibc.GenesisConfig{
 		Contents:      genesisBz,
 		AllValidators: false, // only top 2/3 VP
+		MaxVals:       65,    // MAKE SURE YOUR MACHINE CAN HANDLE THIS
 	}
 
 	// TODO: add router contracts to thorchain
@@ -49,7 +50,9 @@ func TestThorchainHardFork(t *testing.T) {
 		thorchainChainSpec,
 	}
 
-	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
+	log := zaptest.NewLogger(t)
+
+	cf := interchaintest.NewBuiltinChainFactory(log, chainSpecs)
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
@@ -57,7 +60,7 @@ func TestThorchainHardFork(t *testing.T) {
 	thorchain := chains[0].(*tc.Thorchain)
 
 	ic := interchaintest.NewInterchain().
-		AddChain(thorchain)
+		AddChain(thorchain).WithLog(log)
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),
