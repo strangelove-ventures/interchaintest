@@ -37,7 +37,6 @@ func TestSingleValBenchmark(t *testing.T) {
 		},
 	})
 	fmt.Println("Chain Factory took", time.Since(now))
-	now = time.Now()
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
@@ -51,9 +50,7 @@ func TestSingleValBenchmark(t *testing.T) {
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
 
-	fmt.Println("Other setup", time.Since(now))
 	now = time.Now()
-
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),
 		Client:           client,

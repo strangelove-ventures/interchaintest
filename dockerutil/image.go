@@ -32,6 +32,8 @@ type Image struct {
 
 	networkID string
 	testName  string
+
+	pulledCache bool
 }
 
 // NewImage returns a valid Image.
@@ -132,6 +134,10 @@ func (image *Image) imageRef() string {
 
 // EnsurePulled can only pull public images.
 func (image *Image) EnsurePulled(ctx context.Context) error {
+	if image.pulledCache {
+		return nil
+	}
+
 	ref := image.imageRef()
 	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
@@ -142,6 +148,7 @@ func (image *Image) EnsurePulled(ctx context.Context) error {
 		_, _ = io.Copy(io.Discard, rc)
 		_ = rc.Close()
 	}
+	image.pulledCache = true
 	return nil
 }
 

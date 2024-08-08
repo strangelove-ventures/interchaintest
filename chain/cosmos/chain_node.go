@@ -75,6 +75,10 @@ type ChainNode struct {
 	hostGRPCPort  string
 	hostP2PPort   string
 	cometHostname string
+
+	isAboveSDKv47Cache bool
+	// keyName -> address
+	addressCache map[string]cosmosWalletExported
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -89,6 +93,9 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+
+		isAboveSDKv47Cache: false,
+		addressCache:       make(map[string]cosmosWalletExported),
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -690,7 +697,6 @@ func CondenseMoniker(m string) string {
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	// tn.lock.Lock()
 	// defer tn.lock.Unlock()
-
 	_, _, err := tn.ExecBin(ctx,
 		"init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -733,11 +739,20 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	// tn.lock.Lock()
 	// defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
+	stdout, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
 		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
+		"--output", "json",
 	)
+
+	k := cosmosWalletExported{}
+	if err := json.Unmarshal(stdout, &k); err != nil {
+		return err
+	}
+
+	tn.addressCache[name] = k
+
 	return err
 }
 
@@ -760,7 +775,12 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
-	return tn.HasCommand(ctx, "genesis")
+	if tn.isAboveSDKv47Cache {
+		return true
+	}
+
+	tn.isAboveSDKv47Cache = tn.HasCommand(ctx, "genesis")
+	return tn.isAboveSDKv47Cache
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
@@ -1237,7 +1257,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
+	}, retry.Context(ctx), retry.Attempts(5*40), retry.Delay(200*time.Millisecond), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {
@@ -1325,6 +1345,10 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
 // bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
 func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
+	if k, ok := tn.addressCache[name]; ok && bech == "" {
+		return k.Address, nil
+	}
+
 	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
@@ -1389,13 +1413,17 @@ func (nodes ChainNodes) logger() *zap.Logger {
 	return nodes[0].logger()
 }
 
+var cachedExecContainer *dockerutil.Image = nil
+
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	if cachedExecContainer == nil {
+		cachedExecContainer = dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	}
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	res := job.Run(ctx, cmd, opts)
+	res := cachedExecContainer.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }
 

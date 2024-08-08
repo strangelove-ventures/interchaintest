@@ -15,6 +15,15 @@ type CosmosWallet struct {
 	chainCfg ibc.ChainConfig
 }
 
+// cosmosWalletExported is used for accounts created on startup.
+// Useful to get account defaults such as the faucet.
+type cosmosWalletExported struct {
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	PubKey   string `json:"pubkey"`
+	Mnemonic string `json:"mnemonic"`
+}
+
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) ibc.Wallet {
 	return &CosmosWallet{
 		mnemonic: mnemonic,
