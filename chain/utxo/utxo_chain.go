@@ -2,7 +2,9 @@ package utxo
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+
 	//"encoding/json"
 	"fmt"
 	"io"
@@ -437,18 +439,19 @@ func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
+	amountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64()) / math.Pow10(int(*c.Config().CoinDecimals)) 
 	cmd := []string{}
 	if c.WalletVersion >= namedFixWalletVersion {
 		cmd = append(c.BaseCli,
 			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
 			fmt.Sprintf("address=%s", amount.Address), 
-			fmt.Sprintf("amount=%s.%s", fullCoins, partialCoin),
+			fmt.Sprintf("amount=%.8f", amountFloat),
 		)
 	} else if c.WalletVersion >= noDefaultKeyWalletVersion {
 		cmd = append(c.BaseCli, 
 			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
 			amount.Address,
-			fmt.Sprintf("%s.%s", fullCoins, partialCoin),
+			fmt.Sprintf("%.8f", amountFloat),
 			fmt.Sprintf("fee_rate=25"),
 		)
 	} else {
@@ -472,20 +475,177 @@ type TransactionReceipt struct {
 	TxHash string `json:"transactionHash"`
 }
 
+type ListUtxo []Utxo
+
+type Utxo struct {
+	TxId string `json:"txid,omitempty"`
+	Vout int `json:"vout,omitempty"`
+	Address string `json:"address,omitempty"`
+	Label string `json:"label,omitempty"`
+	ScriptPubKey string `json:"scriptPubKey,omitempty"`
+	Amount float64 `json:"amount,omitempty"`
+	Confirmations int `json:"confirmations,omitempty"`
+	Spendable bool `json:"spendable,omitempty"`
+	Solvable bool `json:"solvable,omitempty"`
+	Desc string `json:"desc,omitempty"`
+	Safe bool `json:"safe,omitempty"`
+}
+
+func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, error) {
+	cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "listunspent")
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var listUtxo ListUtxo
+	if err := json.Unmarshal(stdout, &listUtxo); err != nil {
+		return nil, err
+	}
+
+	return listUtxo, nil
+}
+
+type SendInputs []SendInput
+
+type SendInput struct {
+	TxId string `json:"txid"` // hex
+	Vout int `json:"vout"`
+}
+
+type SendOutputs []SendOutput
+
+type SendOutput struct {
+	Amount float64 `json:"replaceWithAddress,omitempty"`
+	Data string `json:"data,omitempty"` // hex
+}
+
+type SignRawTxError struct {
+	Txid string `json:"txid"`
+	Vout int `json:"vout"`
+	Witness []string `json:"witness"`
+	ScriptSig string `json:"scriptSig"`
+	Sequence int `json:"sequence"`
+	Error string `json:"error"`
+}
+
+type SignRawTxOutput struct {
+	Hex string `json:"hex"`
+	Complete bool `json:"complete"`
+	Errors []SignRawTxError `json:"errors"`
+}
+
 func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	script := []byte{0x6a} // OP_RETURN
 	dataLen := len(note)
 	OP_DATA_1 := 0x01 // 1
 	script = append(script, byte((OP_DATA_1-1)+dataLen))
 	script = append(script, []byte(note)...)
+
+	// Can we support larger memos?
 	
 	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 
+	sendAmountFloat, err := strconv.ParseFloat(fmt.Sprintf("%s.%s", fullCoins, partialCoin), 64)
+	if err != nil {
+		return "", err
+	}
+
+	// get utxo
+	listUtxo, err := c.ListUnspent(ctx, keyName)
+	if err != nil {
+		return "", err
+	}
+
+	var sendInputs SendInputs
+	utxoTotal := float64(0.0)
+	for _, utxo := range listUtxo {
+		sendInputs = append(sendInputs, SendInput{
+			TxId: utxo.TxId,
+			Vout: utxo.Vout,
+		})
+		utxoTotal += utxo.Amount
+		// Need to take fees into account? If no, it can be >= instead of >. If yes, update.
+		if utxoTotal > sendAmountFloat {
+			break
+		}
+	}
+
+	sendOutputs := SendOutputs{
+		SendOutput{
+			Amount: sendAmountFloat,
+		},
+		SendOutput{
+			Data: hex.EncodeToString(script),
+		},
+	}
+
+	// create raw transaction
+	sendInputsBz, err := json.Marshal(sendInputs)
+	if err != nil {
+		return "", err
+	}
+
+	sendOutputsBz, err := json.Marshal(sendOutputs)
+	if err != nil {
+		return "", err
+	}
+
+	sendInputsStr := string(sendInputsBz)
+	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", amount.Address, 1)
+
+	fmt.Println("SendFundsWithNote inputs", sendInputsStr)
+	fmt.Println("SendFundsWithNote outputs", sendOutputsStr)
+
+	// createrawtransaction 
 	cmd := append(c.BaseCli, 
-		fmt.Sprintf("-rpcwallet=%s", keyName), "sendtoaddress", amount.Address, fmt.Sprintf("%s.%s", fullCoins, partialCoin),
-		"", "", "false", "false", "null", "\"unset\"", "false", "25")
+		"createrawtransaction", fmt.Sprintf("%s", sendInputsStr), fmt.Sprintf("%s", sendOutputsStr))
 	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	rawTxHex := strings.TrimSpace(string(stdout))
+
+	fmt.Println("SendFundsWithNote rawtxHex", rawTxHex)
+
+	rawTxDecoded, err := hex.DecodeString(rawTxHex)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("SendFundsWithNote rawTx decoded:", rawTxDecoded)
+
+
+	// sign raw transaction
+	cmd = append(c.BaseCli, 
+		fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
+	stdout, _, err = c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var signRawTxOutput SignRawTxOutput
+	if err := json.Unmarshal(stdout, &signRawTxOutput); err != nil {
+		return "", err
+	}
+
+	if signRawTxOutput.Complete {
+		fmt.Println("Signing of transaction complete!")
+	} else {
+		fmt.Println("Signing of tx incomplete")
+		fmt.Println("Number of errors", len(signRawTxOutput.Errors))
+		for i, sErr := range signRawTxOutput.Errors {
+			fmt.Println("Signing error", i, ":", sErr.Error)
+		}
+		return "", fmt.Errorf("Signing error")
+	}
+	
+	// send raw transaction
+	cmd = append(c.BaseCli, 
+		fmt.Sprintf("-rpcwallet=%s", keyName), "sendrawtransaction", signRawTxOutput.Hex, "0")
+	stdout, _, err = c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
 	}
