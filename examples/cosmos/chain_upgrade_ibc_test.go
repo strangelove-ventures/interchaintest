@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	haltHeightDelta    = 10 // will propose upgrade this many blocks in the future
+	haltHeightDelta    = 25 // will propose upgrade this many blocks in the future
 	blocksAfterUpgrade = 10
 	votingPeriod       = "10s"
 	maxDepositPeriod   = "10s"

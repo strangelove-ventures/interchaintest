@@ -46,9 +46,10 @@ func (f mainFlags) Logger() (lc LoggerCloser, _ error) {
 func (f mainFlags) newZap(w zapcore.WriteSyncer) *zap.Logger {
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
-		encoder.AppendString(ts.UTC().Format("2006-01-02T15:04:05.000000Z07:00"))
+		encoder.AppendString(ts.UTC().Format(time.RFC3339))
 	}
 	config.LevelKey = "lvl"
+	config.CallerKey = ""
 
 	enc := zapcore.NewConsoleEncoder(config)
 	if f.LogFormat == "json" {

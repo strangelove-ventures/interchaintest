@@ -24,12 +24,12 @@ var (
 const busyboxRef = "busybox:stable"
 
 func EnsureBusybox(ctx context.Context, cli *client.Client) error {
-	ensureBusyboxMu.Lock()
-	defer ensureBusyboxMu.Unlock()
-
 	if hasBusybox {
 		return nil
 	}
+
+	ensureBusyboxMu.Lock()
+	defer ensureBusyboxMu.Unlock()
 
 	images, err := cli.ImageList(ctx, types.ImageListOptions{
 		Filters: filters.NewArgs(filters.Arg("reference", busyboxRef)),

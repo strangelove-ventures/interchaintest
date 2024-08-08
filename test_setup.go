@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
@@ -139,9 +138,6 @@ func StopStartRelayerWithPreStartFuncs(
 			t.Logf("error stopping relayer: %v", err)
 		}
 	})
-
-	// wait for relayer(s) to start up
-	time.Sleep(5 * time.Second)
 
 	return channels, nil
 }
