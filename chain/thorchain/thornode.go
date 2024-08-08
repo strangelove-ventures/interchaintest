@@ -58,9 +58,9 @@ type ChainNode struct {
 	preStartNode func(*ChainNode)
 
 	// Env
-	ValidatorMnemonic string // SIGNER_SEED_PHRASE 
-	NodeAccount *NodeAccount
-	KeyringCreated bool
+	ValidatorMnemonic string // SIGNER_SEED_PHRASE
+	NodeAccount       *NodeAccount
+	KeyringCreated    bool
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -710,11 +710,20 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, stderr, err := tn.ExecBin(ctx, true,
-		"keys", "add", name,
-		"--coin-type", tn.Chain.Config().CoinType,
-	)
+	//recoverKeyInput := fmt.Sprintf("%s\n%s\n", mnemonic, "password") //TODO: get password from env
+	command := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`cat <<EOF | %s keys add %s --keyring-backend %s --coin-type %s --home %s --output json
+		password
+		EOF
+		`, tn.Chain.Config().Bin, name, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir()),
+	}
 
+	tn.lock.Lock()
+	defer tn.lock.Unlock()
+
+	_, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
 		return err
 	}
@@ -737,11 +746,15 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 // RecoverKey restores a key from a given mnemonic.
 func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	recoverKeyInput := fmt.Sprintf("\"%s\n%s\n\"", mnemonic, "password") //TODO: get password from env
+	//recoverKeyInput := fmt.Sprintf("%s\n%s\n", mnemonic, "password") //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %s | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, recoverKeyInput, tn.Chain.Config().Bin, keyName, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir()),
+		fmt.Sprintf(`cat <<EOF | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json
+		%s
+		password
+		EOF
+		`, tn.Chain.Config().Bin, keyName, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir(), mnemonic),
 	}
 
 	tn.lock.Lock()
@@ -844,7 +857,7 @@ func (tn *ChainNode) GetValidatorConsPubKey(ctx context.Context) (string, error)
 		fmt.Sprintf(`echo %q | %s pubkey --bech cons`,
 			stdout, tn.Chain.Config().Bin),
 	}
-	
+
 	stdout, stderr, err = tn.Exec(ctx, command2, tn.Chain.Config().Env)
 	if err != nil {
 		return "", fmt.Errorf("failed to show validator pubkey (stderr=%q): %w", stderr, err)
@@ -869,7 +882,7 @@ func (tn *ChainNode) GetNodePubKey(ctx context.Context) (string, error) {
 		fmt.Sprintf(`echo %q | %s pubkey`,
 			stdout, tn.Chain.Config().Bin),
 	}
-	
+
 	stdout, stderr, err = tn.Exec(ctx, command2, tn.Chain.Config().Env)
 	if err != nil {
 		return "", fmt.Errorf("failed to show node pubkey (stderr=%q): %w", stderr, err)
@@ -879,14 +892,18 @@ func (tn *ChainNode) GetNodePubKey(ctx context.Context) (string, error) {
 }
 
 func (tn *ChainNode) GenerateEd25519(ctx context.Context) (string, error) {
-	ed25519input := fmt.Sprintf("\"%s\n%s\n\"", "password", tn.ValidatorMnemonic) //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %s | %s ed25519 --home %s`,
-			ed25519input, tn.Chain.Config().Bin, tn.HomeDir()),
+		fmt.Sprintf(`cat <<EOF | %s ed25519 --home %s
+		password
+		%s
+		EOF
+		`,
+			tn.Chain.Config().Bin, tn.HomeDir(), tn.ValidatorMnemonic,
+		),
 	}
-	
+
 	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate ed25519 (stderr=%q): %w", stderr, err)
@@ -895,14 +912,14 @@ func (tn *ChainNode) GenerateEd25519(ctx context.Context) (string, error) {
 	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
 }
 
-func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
+func (tn *ChainNode) GetNodeAccount(ctx context.Context) error {
 	if tn.NodeAccount != nil {
 		return nil // Already populated
 	}
 
 	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
-		return  err
+		return err
 	}
 
 	validator, err := tn.GetValidatorConsPubKey(ctx)
@@ -926,18 +943,18 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) (error) {
 	}
 
 	tn.NodeAccount = &NodeAccount{
-		NodeAddress: bech32NodeAddr,
-		Version: version,
-		IpAddress: "192.168.0.10", // TODO: may need to populate real ip after chain start
-		Status: "Active",
-		Bond: "100000000", // 1 rune
-		ActiveBlockHeight: "0",
-		BondAddress: bech32NodeAddr,
-		SignerMembership: []string{},
+		NodeAddress:         bech32NodeAddr,
+		Version:             version,
+		IpAddress:           "192.168.0.10", // TODO: may need to populate real ip after chain start
+		Status:              "Active",
+		Bond:                "100000000", // 1 rune
+		ActiveBlockHeight:   "0",
+		BondAddress:         bech32NodeAddr,
+		SignerMembership:    []string{},
 		ValidatorConsPubKey: validator,
 		PubKeySet: NodeAccountPubKeySet{
 			Secp256k1: nodePubKey,
-			Ed25519: nodePubKeyEd25519,
+			Ed25519:   nodePubKeyEd25519,
 		},
 	}
 
@@ -970,7 +987,7 @@ func (tn *ChainNode) AddNodeAccount(ctx context.Context, nodeAccount NodeAccount
 
 	if err := dyno.Append(g, newNodeAccount.Value, path...); err != nil {
 		newNodeAccount.Value = []NodeAccount{nodeAccount}
-		if err := dyno.Set(g, newNodeAccount.Value, path...); err != nil { 
+		if err := dyno.Set(g, newNodeAccount.Value, path...); err != nil {
 			return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newNodeAccount.Key, newNodeAccount.Value, err)
 		}
 	}
@@ -989,16 +1006,16 @@ func (tn *ChainNode) AddNodeAccount(ctx context.Context, nodeAccount NodeAccount
 
 type BaseAccount struct {
 	AccountNumber string `json:"account_number"`
-	Address string `json:"address"`
-	PubKey []byte `json:"pub_key"`
-	Sequence string `json:"sequence"`
+	Address       string `json:"address"`
+	PubKey        []byte `json:"pub_key"`
+	Sequence      string `json:"sequence"`
 }
 
 type ModuleAccount struct {
-	Type string `json:"@type"`
+	Type        string      `json:"@type"`
 	BaseAccount BaseAccount `json:"base_account"`
-	Name string `json:"name"`
-	Permissions []string `json:"permissions"`
+	Name        string      `json:"name"`
+	Permissions []string    `json:"permissions"`
 }
 
 type State struct {
@@ -1006,13 +1023,13 @@ type State struct {
 }
 
 type CoinBalance struct {
-	Denom string `json:"denom"`
+	Denom  string `json:"denom"`
 	Amount string `json:"amount"`
 }
 
 type Balance struct {
-	Address string `json:"address"`
-	Coins []CoinBalance `json:"coins"`
+	Address string        `json:"address"`
+	Coins   []CoinBalance `json:"coins"`
 }
 
 func (tn *ChainNode) AddBondModule(ctx context.Context) error {
@@ -1025,11 +1042,11 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		Type: "/cosmos.auth.v1beta1.ModuleAccount",
 		BaseAccount: BaseAccount{
 			AccountNumber: "0",
-			Address: "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
-			PubKey: nil,
-			Sequence: "0",
+			Address:       "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+			PubKey:        nil,
+			Sequence:      "0",
 		},
-		Name: "bond",
+		Name:        "bond",
 		Permissions: []string{},
 	}
 
@@ -1051,7 +1068,7 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		}
 	}
 
-	if err := dyno.Set(g, newModuleAccount.Value, path...); err != nil { 
+	if err := dyno.Set(g, newModuleAccount.Value, path...); err != nil {
 		return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newModuleAccount.Key, newModuleAccount.Value, err)
 	}
 
@@ -1059,7 +1076,7 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		Address: "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
 		Coins: []CoinBalance{
 			{
-				Denom: "rune",
+				Denom:  "rune",
 				Amount: fmt.Sprintf("%d0000000000000", tn.Chain.(*Thorchain).NumValidators),
 			},
 		},
@@ -1079,11 +1096,10 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 
 	if err := dyno.Append(g, newBondBalance.Value, path...); err != nil {
 		newBondBalance.Value = []Balance{bondBalance}
-		if err := dyno.Set(g, newBondBalance.Value, path...); err != nil { 
+		if err := dyno.Set(g, newBondBalance.Value, path...); err != nil {
 			return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newBondBalance.Key, newBondBalance.Value, err)
 		}
 	}
-
 
 	genbz, err = json.Marshal(g)
 	if err != nil {
@@ -1498,10 +1514,19 @@ func (tn *ChainNode) InitValidatorGenTx(
 	// it must use this mnemonic since the router contracts are created using it (before this chain starts)
 	// Otherwise, there is nothing special amoun this mnemonic other than it is what Thornode's sim testing uses.
 	// TODO: can we deploy router contracts after thorchain start?
-	tn.ValidatorMnemonic = strings.Repeat("dog ", 23) + "fossil"
-	if err := tn.RecoverKey(ctx, valKey, tn.ValidatorMnemonic); err != nil {
-		return err
+	if tn.Index == 0 {
+		tn.logger().Debug("Recover validator key")
+		tn.ValidatorMnemonic = strings.Repeat("dog ", 23) + "fossil"
+		if err := tn.RecoverKey(ctx, valKey, tn.ValidatorMnemonic); err != nil {
+			return err
+		}
+	} else {
+		tn.logger().Debug("Create validator key")
+		if err := tn.CreateKey(ctx, valKey); err != nil {
+			return fmt.Errorf("failed to create key: %w", err)
+		}
 	}
+
 	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
 		return err
@@ -1618,7 +1643,12 @@ func (nodes ChainNodes) logger() *zap.Logger {
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	job := dockerutil.NewImage(
+		tn.logger().With(
+			zap.Bool("validator", tn.Validator),
+			zap.Int("i", tn.Index),
+		),
+		tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
