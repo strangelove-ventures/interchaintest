@@ -77,8 +77,8 @@ type ChainNode struct {
 	cometHostname string
 
 	isAboveSDKv47Cache bool
-	// keyName -> address
-	addressCache map[string]cosmosWalletExported
+	addressCache       map[string]cosmosWalletExported
+	execContainerCache *dockerutil.Image
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -96,6 +96,7 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 
 		isAboveSDKv47Cache: false,
 		addressCache:       make(map[string]cosmosWalletExported),
+		execContainerCache: nil,
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -748,10 +749,11 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 	k := cosmosWalletExported{}
 	if err := json.Unmarshal(stdout, &k); err != nil {
-		return err
+		// we do not care for older versions, sdk v47+ works fine
+		fmt.Println("CreateKey err: ", err.Error())
+	} else {
+		tn.addressCache[name] = k
 	}
-
-	tn.addressCache[name] = k
 
 	return err
 }
@@ -1413,17 +1415,15 @@ func (nodes ChainNodes) logger() *zap.Logger {
 	return nodes[0].logger()
 }
 
-var cachedExecContainer *dockerutil.Image = nil
-
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	if cachedExecContainer == nil {
-		cachedExecContainer = dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	if tn.execContainerCache == nil {
+		tn.execContainerCache = dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
 	}
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	res := cachedExecContainer.Run(ctx, cmd, opts)
+	res := tn.execContainerCache.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }
 
