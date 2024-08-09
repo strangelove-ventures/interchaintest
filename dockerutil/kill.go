@@ -2,9 +2,11 @@ package dockerutil
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	dockerapitypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
 
@@ -12,6 +14,10 @@ import (
 // This can be called during cleanup, which is especially useful when running tests which fail to cleanup after themselves.
 // Specifically, on failed ic.Build(...) calls.
 func KillAllInterchaintestContainers(ctx context.Context) []string {
+	if os.Getenv("KEEP_CONTAINERS") != "" {
+		return nil
+	}
+
 	removedContainers := []string{}
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -19,7 +25,13 @@ func KillAllInterchaintestContainers(ctx context.Context) []string {
 		panic(err)
 	}
 
-	containers, err := cli.ContainerList(ctx, dockerapitypes.ContainerListOptions{})
+	containers, err := cli.ContainerList(ctx, dockerapitypes.ContainerListOptions{
+		// grabs only running containers
+		All: false,
+		Filters: filters.NewArgs(
+			filters.Arg("label", CleanupLabel),
+		),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -31,11 +43,6 @@ func KillAllInterchaintestContainers(ctx context.Context) []string {
 
 		name := strings.ToLower(container.Names[0])
 		name = strings.TrimPrefix(name, "/")
-
-		// leave non ict relayed containers running
-		if !(strings.HasPrefix(name, ICTDockerPrefix) || strings.HasPrefix(name, RelayerDockerPrefix)) {
-			continue
-		}
 
 		inspected, err := cli.ContainerInspect(ctx, container.ID)
 		if err != nil {
