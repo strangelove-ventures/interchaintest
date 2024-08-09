@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	ICTDockerPrefix     = "ict"
-	RelayerDockerPrefix = "ictrelayer"
+	ICTDockerPrefix = "interchaintest"
 )
 
 // GetHostPort returns a resource's published port with an address.

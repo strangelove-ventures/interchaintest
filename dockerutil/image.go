@@ -210,7 +210,7 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 	}
 
 	var (
-		containerName = SanitizeContainerName(ICTDockerPrefix + "-" + image.testName + "-" + RandLowerCaseLetterString(6))
+		containerName = SanitizeContainerName(image.testName + "-" + RandLowerCaseLetterString(6))
 		hostName      = CondenseHostName(containerName)
 		logger        = image.log.With(
 			zap.String("command", strings.Join(cmd, " ")),
