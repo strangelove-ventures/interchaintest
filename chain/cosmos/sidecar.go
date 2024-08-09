@@ -93,7 +93,7 @@ func NewSidecar(
 // on a per validator level.
 func (s *SidecarProcess) Name() string {
 	if s.validatorProcess {
-		return fmt.Sprintf("-%s-%s-val-%d-%s", s.Chain.Config().ChainID, s.ProcessName, s.Index, dockerutil.SanitizeContainerName(s.TestName))
+		return fmt.Sprintf("%s-%s-val-%d-%s", s.Chain.Config().ChainID, s.ProcessName, s.Index, dockerutil.SanitizeContainerName(s.TestName))
 	}
 
 	return fmt.Sprintf("%s-%s-%d-%s", s.Chain.Config().ChainID, s.ProcessName, s.Index, dockerutil.SanitizeContainerName(s.TestName))
