@@ -29,11 +29,15 @@ func GetAndFundTestUsers(
 		i := i
 		chain := chain
 		oneCoin := int64(math.Pow10(int(*chain.Config().CoinDecimals)))
-		amount := sdkmath.NewInt(1000 * oneCoin)
-		switch chain.Config().Denom {
-		case "btc", "wei":
-			amount = sdkmath.NewInt(9 * oneCoin)
-		case "doge":
+		amount := sdkmath.NewInt(1000 * oneCoin) // thor, gaia
+		switch chain.Config().CoinType {
+		case "60":
+			amount = sdkmath.NewInt(9 * oneCoin) // change once gwei is supported
+		case "0": // btc
+			amount = sdkmath.NewInt(10 * oneCoin)
+		case "2", "145": // ltc, bch
+			amount = sdkmath.NewInt(100 * oneCoin)
+		case "3": // doge
 			amount = sdkmath.NewInt(10000 * oneCoin)
 		}
 		wg.Add(1)

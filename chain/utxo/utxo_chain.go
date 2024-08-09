@@ -268,8 +268,10 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	go func(){
 		ctx := context.Background()
 		amount := "100"
+		nextBlockHeight := 100
 		if c.cfg.CoinType == "3" {
 			amount = "1000" // Dogecoin needs more blocks for more coins
+			nextBlockHeight = 1000
 		}
 		for {
 			faucetAddr, ok := c.WalletToAddrMap["faucet"]
@@ -288,6 +290,23 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 				return
 			}
 			amount = "1"
+			if nextBlockHeight == 431 && c.cfg.CoinType == "2" {
+				keyName := "mweb"
+				if err := c.CreateWallet(ctx, keyName); err != nil {
+					c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+					return
+				}
+				addr, err := c.GetNewAddress(ctx, keyName, true)
+				if err != nil {
+					c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+					return
+				}
+				if err := c.SendToAddress(ctx, "faucet", addr, 1); err != nil {
+					c.logger().Error("error sending to mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+					return
+				}
+			}
+			nextBlockHeight++
 			time.Sleep(time.Second * 2)
 		}
 	}()
@@ -306,7 +325,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 		}
 	}
 
-	addr, err := c.GetNewAddress(ctx, keyName)
+	addr, err := c.GetNewAddress(ctx, keyName, false)
 	if err != nil {
 		return err
 	}
@@ -329,7 +348,11 @@ func (c *UtxoChain) HostName() string {
 }
 
 func (c *UtxoChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	logger := zap.NewNop()
+	if cmd[len(cmd)-1] != "getblockcount" && cmd[len(cmd)-3] != "generatetoaddress" { // too much logging, maybe switch to an rpc lib in the future
+		logger = c.logger()
+	}
+	job := dockerutil.NewImage(logger, c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: c.Bind(),
@@ -371,7 +394,7 @@ func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
-	addr, err := c.GetNewAddress(ctx, keyName)
+	addr, err := c.GetNewAddress(ctx, keyName, false)
 	if err != nil {
 		return err
 	}

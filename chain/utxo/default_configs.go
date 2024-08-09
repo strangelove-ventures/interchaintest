@@ -19,7 +19,7 @@ func DefaultBitcoinChainConfig(
 		CoinType:       "0",
 		Denom:          "sat",
 		GasPrices:      "0.00001", // min fee / kb
-		GasAdjustment:  5, // min fee multiplier
+		GasAdjustment:  2, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -33,7 +33,7 @@ func DefaultBitcoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
-			"-fallbackfee=0.00001",
+			"-fallbackfee=0.0005",
 			"-mintxfee=0.00001",
 		},
 	}
@@ -52,7 +52,7 @@ func DefaultBitcoinCashChainConfig(
 		CoinType:       "145",
 		Denom:          "sat",
 		GasPrices:      "0.00001", // min fee / kb
-		GasAdjustment:  5, // min fee multiplier
+		GasAdjustment:  2, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -66,7 +66,7 @@ func DefaultBitcoinCashChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
-			"-fallbackfee=0.00001",
+			"-fallbackfee=0.0005",
 			"-mintxfee=0.00001",
 		},
 	}
@@ -85,7 +85,7 @@ func DefaultLitecoinChainConfig(
 		CoinType:       "2",
 		Denom:          "sat",
 		GasPrices:      "0.0001", // min fee / kb
-		GasAdjustment:  5, // min fee multiplier
+		GasAdjustment:  2, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -99,7 +99,7 @@ func DefaultLitecoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
-			"-fallbackfee=0.0001",
+			"-fallbackfee=0.005",
 			"-mintxfee=0.0001",
 		},
 	}
@@ -118,7 +118,7 @@ func DefaultDogecoinChainConfig(
 		CoinType:       "3",
 		Denom:          "sat",
 		GasPrices:      "0.01", // min fee / kb
-		GasAdjustment:  5, // min fee multiplier
+		GasAdjustment:  2, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -134,7 +134,7 @@ func DefaultDogecoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
-			"-fallbackfee=0.01",
+			"-fallbackfee=0.5",
 			"-mintxfee=0.01",
 		},
 	}

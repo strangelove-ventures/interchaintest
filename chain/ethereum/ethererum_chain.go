@@ -253,7 +253,11 @@ func (c *EthereumChain) HostName() string {
 }
 
 func (c *EthereumChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	logger := zap.NewNop()
+	if cmd[1] != "block-number" { // too much logging, maybe switch to an rpc lib in the future
+		logger = c.logger()
+	}
+	job := dockerutil.NewImage(logger, c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: c.Bind(),

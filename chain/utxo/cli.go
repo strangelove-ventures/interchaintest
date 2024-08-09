@@ -93,7 +93,7 @@ func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 	return c.UnloadWallet(ctx, keyName)
 }
 
-func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string) (string, error){
+func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool) (string, error){
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
@@ -103,6 +103,10 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string) (string, 
 		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
 	} else {
 		cmd = append(c.BaseCli, "getnewaddress")
+	}
+
+	if mweb {
+		cmd = append(cmd, "mweb", "mweb")
 	}
 	
 	stdout, _, err := c.Exec(ctx, cmd, nil)
@@ -156,7 +160,6 @@ func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr stri
 			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
 			addr,
 			fmt.Sprintf("%.8f", amount),
-			fmt.Sprintf("fee_rate=25"),
 		)
 	} else {
 		cmd = append(c.BaseCli,
@@ -209,12 +212,22 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 		}
 	}
 
+	sanitizedSendAmount, err := strconv.ParseFloat(fmt.Sprintf("%.8f", sendAmount), 64)
+	if err != nil {
+		return "", err
+	}
+
+	sanitizedChange, err := strconv.ParseFloat(fmt.Sprintf("%.8f", utxoTotal - sendAmount - fees), 64)
+	if err != nil {
+		return "", err
+	}
+
 	sendOutputs := SendOutputs{
 		SendOutput{
-			Amount: sendAmount,
+			Amount: sanitizedSendAmount,
 		},
 		SendOutput{
-			Change: utxoTotal - sendAmount - fees,
+			Change: sanitizedChange,
 		},
 		SendOutput{
 			Data: hex.EncodeToString(script),

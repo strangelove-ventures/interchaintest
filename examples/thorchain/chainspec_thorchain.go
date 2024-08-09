@@ -120,8 +120,8 @@ var (
 		//BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
 		"BTC_HOST=utxo-BTC-TestThorchain:18443", // TODO: set at runtime
 		//DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
-		"BCH_HOST=utxo-BCH-TestThorchain:18443",
-		//LTC_HOST: ${LTC_HOST:-litecoin:38443}
+		"BCH_HOST=utxo-BCH-TestThorchain:18443", // TODO: set at runtime
+		"LTC_HOST=utxo-LTC-TestThorchain:18443", // TODO: set at runtime
 		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
 		"GAIA_HOST=http://localgaia-val-0-TestThorchain:26657", // TODO: set at runtime
@@ -136,7 +136,7 @@ var (
 		"BIFROST_CHAINS_DOGE_DISABLED=true",
 		"BIFROST_CHAINS_ETH_DISABLED=false",
 		"BIFROST_CHAINS_GAIA_DISABLED=false",
-		"BIFROST_CHAINS_LTC_DISABLED=true",
+		"BIFROST_CHAINS_LTC_DISABLED=false",
 		
 		// block above should take care of these
 		//"GAIA_DISABLED=true",
