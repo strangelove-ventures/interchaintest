@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -42,7 +43,19 @@ func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, 
 	return walletInfo.WalletVersion, nil
 }
 
+// UnloadWalletAfterUse() sets whether non-default wallets stay loaded
+// Default value is false, wallets will stay loaded
+// Setting this to true will load/unload a wallet for each action on a specific wallet.
+// Currently, the only know case where this is required true is when using bifrost.
+func (c *UtxoChain) UnloadWalletAfterUse(on bool) {
+	c.unloadWalletAfterUse = on
+}
+
 func (c *UtxoChain) LoadWallet(ctx context.Context, keyName string) error {
+	if !c.unloadWalletAfterUse {
+		return nil
+	}
+
 	if c.WalletVersion == 0 || c.WalletVersion >= noDefaultKeyWalletVersion {
 		cmd := append(c.BaseCli, "loadwallet", keyName)
 		_, _, err := c.Exec(ctx, cmd, nil)
@@ -54,6 +67,10 @@ func (c *UtxoChain) LoadWallet(ctx context.Context, keyName string) error {
 }
 
 func (c *UtxoChain) UnloadWallet(ctx context.Context, keyName string) error {
+	if !c.unloadWalletAfterUse {
+		return nil
+	}
+
 	if c.WalletVersion == 0 || c.WalletVersion >= noDefaultKeyWalletVersion {
 		cmd := append(c.BaseCli, "unloadwallet", keyName)
 		_, _, err := c.Exec(ctx, cmd, nil)
@@ -93,6 +110,12 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string) (string, 
 		return "", err
 	}
 	addr := strings.TrimSpace(string(stdout))
+	
+	// Remove "bchreg:" from addresses like: bchreg:qz2lxh4vzg2tqw294p7d6taxntu2snwnjuxd2k9auq
+	splitAddr := strings.Split(addr, ":")
+	if len(splitAddr) == 2 {
+		addr = splitAddr[1]
+	}
 	
 	c.AddrToWalletMap[addr] = keyName
 	c.WalletToAddrMap[keyName] = addr
@@ -167,17 +190,21 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 	return listUtxo, nil
 }
 
-func (c *UtxoChain) CreateRawTransaction(ctx context.Context, listUtxo ListUtxo, addr string, sendAmount float64, script []byte) (string, error) {
+func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, listUtxo ListUtxo, addr string, sendAmount float64, script []byte) (string, error) {
 	var sendInputs SendInputs
 	utxoTotal := float64(0.0)
+	fees, err := strconv.ParseFloat(c.cfg.GasPrices, 64)
+	if err != nil {
+		return "", err
+	}
+	fees = fees * c.cfg.GasAdjustment
 	for _, utxo := range listUtxo {
 		sendInputs = append(sendInputs, SendInput{
 			TxId: utxo.TxId,
 			Vout: utxo.Vout,
 		})
 		utxoTotal += utxo.Amount
-		// Need to take fees into account? If no, it can be >= instead of >. If yes, update.
-		if utxoTotal > sendAmount {
+		if utxoTotal > sendAmount + fees {
 			break
 		}
 	}
@@ -185,6 +212,9 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, listUtxo ListUtxo,
 	sendOutputs := SendOutputs{
 		SendOutput{
 			Amount: sendAmount,
+		},
+		SendOutput{
+			Change: utxoTotal - sendAmount - fees,
 		},
 		SendOutput{
 			Data: hex.EncodeToString(script),
@@ -204,6 +234,7 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, listUtxo ListUtxo,
 
 	sendInputsStr := string(sendInputsBz)
 	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", addr, 1)
+	sendOutputsStr = strings.Replace(sendOutputsStr, "replaceWithChangeAddr", c.WalletToAddrMap[keyName], 1)
 
 	fmt.Println("SendFundsWithNote inputs", sendInputsStr)
 	fmt.Println("SendFundsWithNote outputs", sendOutputsStr)
@@ -257,9 +288,15 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 	return signRawTxOutput.Hex, nil
 }
 
-func (c *UtxoChain) SendRawTransaction(ctx context.Context, keyName string, signedRawTxHex string) (string, error) {
-	cmd := append(c.BaseCli, 
-		fmt.Sprintf("-rpcwallet=%s", keyName), "sendrawtransaction", signedRawTxHex, "0")
+func (c *UtxoChain) SendRawTransaction(ctx context.Context, signedRawTxHex string) (string, error) {
+	cmd := []string{}
+	if c.WalletVersion >= namedFixWalletVersion {
+		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
+	} else if c.WalletVersion > noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0")
+	} else {
+		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0", "1", "3", "4")
+	}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err

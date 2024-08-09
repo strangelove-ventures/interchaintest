@@ -18,8 +18,8 @@ func DefaultBitcoinChainConfig(
 		Bech32Prefix:   "n/a",
 		CoinType:       "0",
 		Denom:          "sat",
-		GasPrices:      "0",
-		GasAdjustment:  0,
+		GasPrices:      "0.00001", // min fee / kb
+		GasAdjustment:  5, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -33,6 +33,8 @@ func DefaultBitcoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
+			"-fallbackfee=0.00001",
+			"-mintxfee=0.00001",
 		},
 	}
 }
@@ -49,8 +51,8 @@ func DefaultBitcoinCashChainConfig(
 		Bech32Prefix:   "n/a",
 		CoinType:       "145",
 		Denom:          "sat",
-		GasPrices:      "0",
-		GasAdjustment:  0,
+		GasPrices:      "0.00001", // min fee / kb
+		GasAdjustment:  5, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -64,6 +66,8 @@ func DefaultBitcoinCashChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
+			"-fallbackfee=0.00001",
+			"-mintxfee=0.00001",
 		},
 	}
 }
@@ -80,8 +84,8 @@ func DefaultLitecoinChainConfig(
 		Bech32Prefix:   "n/a",
 		CoinType:       "2",
 		Denom:          "sat",
-		GasPrices:      "0",
-		GasAdjustment:  0,
+		GasPrices:      "0.0001", // min fee / kb
+		GasAdjustment:  5, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -95,6 +99,8 @@ func DefaultLitecoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
+			"-fallbackfee=0.0001",
+			"-mintxfee=0.0001",
 		},
 	}
 }
@@ -111,8 +117,8 @@ func DefaultDogecoinChainConfig(
 		Bech32Prefix:   "n/a",
 		CoinType:       "3",
 		Denom:          "sat",
-		GasPrices:      "0",
-		GasAdjustment:  0,
+		GasPrices:      "0.01", // min fee / kb
+		GasAdjustment:  5, // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -128,6 +134,8 @@ func DefaultDogecoinChainConfig(
 		AdditionalStartArgs: []string{
 			fmt.Sprintf("-rpcuser=%s", rpcUser),
 			fmt.Sprintf("-rpcpassword=%s", rpcPassword),
+			"-fallbackfee=0.01",
+			"-mintxfee=0.01",
 		},
 	}
 }

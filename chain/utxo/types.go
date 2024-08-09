@@ -39,6 +39,7 @@ type SendOutputs []SendOutput
 
 type SendOutput struct {
 	Amount float64 `json:"replaceWithAddress,omitempty"`
+	Change float64 `json:"replaceWithChangeAddr,omitempty"`
 	Data string `json:"data,omitempty"` // hex
 }
 

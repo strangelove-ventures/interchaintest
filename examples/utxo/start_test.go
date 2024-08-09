@@ -28,8 +28,8 @@ func TestUtxo(t *testing.T) {
 
 	// Get default bitcoin chain config
 	btcConfig := utxo.DefaultBitcoinChainConfig("bitcoin", "thorchain", "password")
-	///bchConfig := utxo.DefaultBitcoinCashChainConfig("bch", "thorchain", "password")
-	//liteConfig := utxo.DefaultLitecoinChainConfig("litecoin", "thorchain", "password")
+	bchConfig := utxo.DefaultBitcoinCashChainConfig("bch", "thorchain", "password")
+	liteConfig := utxo.DefaultLitecoinChainConfig("litecoin", "thorchain", "password")
 	//dogeConfig := utxo.DefaultDogecoinChainConfig("dogecoin", "thorchain", "password")
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -39,18 +39,18 @@ func TestUtxo(t *testing.T) {
 			Version:     "26.2",
 			ChainConfig: btcConfig,
 		},
-		// {
-		// 	ChainName:   "bch",
-		// 	Name:        "bch",
-		// 	Version:     "27.1.0",
-		// 	ChainConfig: bchConfig,
-		// },
-		// {
-		// 	ChainName:   "litecoin",
-		// 	Name:        "litecoin",
-		// 	Version:     "0.21",
-		// 	ChainConfig: liteConfig,
-		// },
+		{
+			ChainName:   "bch",
+			Name:        "bch",
+			Version:     "27.1.0",
+			ChainConfig: bchConfig,
+		},
+		{
+			ChainName:   "litecoin",
+			Name:        "litecoin",
+			Version:     "0.21",
+			ChainConfig: liteConfig,
+		},
 		// {
 		// 	ChainName:   "dogecoin",
 		// 	Name:        "dogecoin",
@@ -63,14 +63,18 @@ func TestUtxo(t *testing.T) {
 	require.NoError(t, err)
 
 	btcChain := chains[0].(*utxo.UtxoChain)
-	// bchChain := chains[1].(*utxo.UtxoChain)
-	// liteChain := chains[2].(*utxo.UtxoChain)
+	bchChain := chains[1].(*utxo.UtxoChain)
+	liteChain := chains[2].(*utxo.UtxoChain)
 	// dogeChain := chains[3].(*utxo.UtxoChain)
 
+	btcChain.UnloadWalletAfterUse(true)
+	bchChain.UnloadWalletAfterUse(true)
+	liteChain.UnloadWalletAfterUse(true)
+
 	ic := interchaintest.NewInterchain().
-		AddChain(btcChain)
-		// AddChain(bchChain).
-		// AddChain(liteChain).
+		AddChain(btcChain).
+		AddChain(bchChain).
+		AddChain(liteChain)
 		// AddChain(dogeChain)
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
@@ -131,7 +135,7 @@ func TestUtxo(t *testing.T) {
 
 	// ------ BCH -------
 	// Check faucet balance on start
-	/*faucetAddrBz, err = bchChain.GetAddress(ctx, "faucet")
+	faucetAddrBz, err = bchChain.GetAddress(ctx, "faucet")
 	require.NoError(t, err)
 	faucetAddr = string(faucetAddrBz)
 	balance, err = bchChain.GetBalance(ctx, faucetAddr, "")
@@ -148,6 +152,29 @@ func TestUtxo(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, bchUserInitialAmount.Equal(balance), fmt.Sprintf("%s user balance (%s) is not expected (%s)", bchUser.KeyName(), balance, bchUserInitialAmount))
 	fmt.Println("Bch user balance:", balance)
+
+	bchUserInitialAmount = math.NewInt(100_000)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user2", bchUserInitialAmount, bchChain)
+	bchUser2 := users[0]
+	fmt.Println("Bch user2:", bchUser2.KeyName())
+
+	balance, err = bchChain.GetBalance(ctx, bchUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	require.True(t, bchUserInitialAmount.Equal(balance), fmt.Sprintf("%s user balance (%s) is not expected (%s)", bchUser2.KeyName(), balance, bchUserInitialAmount))
+	fmt.Println("Bch user2 balance:", balance)
+
+	memo = fmt.Sprintf("+:%s:%s", "BCH.BCH", "tthor16sg0fxrdd0vgpl4pkcnqwzjlu5lrs6ymcqldel")
+	txHash, err = bchChain.SendFundsWithNote(ctx, bchUser.KeyName(), ibc.WalletAmount{
+		Address: bchUser2.FormattedAddress(),
+		Amount: math.NewInt(100_000_000),
+	}, memo)
+	require.NoError(t, err)
+	fmt.Println("txHash:", txHash)
+
+	balance, err = bchChain.GetBalance(ctx, bchUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("Bch user2 balance after memo tx:", balance)
+
 	// TODO: Use SendFundsWithNote
 
 	// ------ litecoin -------
@@ -169,11 +196,34 @@ func TestUtxo(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, liteUserInitialAmount.Equal(balance), fmt.Sprintf("%s user balance (%s) is not expected (%s)", liteUser.KeyName(), balance, liteUserInitialAmount))
 	fmt.Println("Lite user balance:", balance)
+
+	liteUserInitialAmount = math.NewInt(100_000)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user2", liteUserInitialAmount, liteChain)
+	liteUser2 := users[0]
+	fmt.Println("Lite user2:", liteUser2.KeyName())
+
+	balance, err = liteChain.GetBalance(ctx, liteUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	require.True(t, liteUserInitialAmount.Equal(balance), fmt.Sprintf("%s user balance (%s) is not expected (%s)", liteUser2.KeyName(), balance, liteUserInitialAmount))
+	fmt.Println("Bch user2 balance:", balance)
+
+	memo = fmt.Sprintf("+:%s:%s", "LTC.LTC", "tthor16sg0fxrdd0vgpl4pkcnqwzjlu5lrs6ymcqldel")
+	txHash, err = liteChain.SendFundsWithNote(ctx, liteUser.KeyName(), ibc.WalletAmount{
+		Address: liteUser2.FormattedAddress(),
+		Amount: math.NewInt(100_000_000),
+	}, memo)
+	require.NoError(t, err)
+	fmt.Println("txHash:", txHash)
+
+	balance, err = liteChain.GetBalance(ctx, liteUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("Lite user2 balance after memo tx (should be ~1.001e8):", balance)
+
 	// TODO: Use SendFundsWithNote
 
-	// ------ litecoin -------
+	// ------ dogecoin -------
 	// Check faucet balance on start
-	faucetAddrBz, err = dogeChain.GetAddress(ctx, "faucet")
+	/*faucetAddrBz, err = dogeChain.GetAddress(ctx, "faucet")
 	require.NoError(t, err)
 	faucetAddr = string(faucetAddrBz)
 	balance, err = dogeChain.GetBalance(ctx, faucetAddr, "")

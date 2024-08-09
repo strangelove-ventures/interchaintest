@@ -120,7 +120,7 @@ var (
 		//BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
 		"BTC_HOST=utxo-BTC-TestThorchain:18443", // TODO: set at runtime
 		//DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
-		//BCH_HOST: ${BCH_HOST:-bitcoin-cash:28443}
+		"BCH_HOST=utxo-BCH-TestThorchain:18443",
 		//LTC_HOST: ${LTC_HOST:-litecoin:38443}
 		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
@@ -129,7 +129,7 @@ var (
 		
 		// disable chains until brought in
 		"BIFROST_CHAINS_AVAX_DISABLED=true",
-		"BIFROST_CHAINS_BCH_DISABLED=true",
+		"BIFROST_CHAINS_BCH_DISABLED=false",
 		"BIFROST_CHAINS_BNB_DISABLED=true",
 		"BIFROST_CHAINS_BSC_DISABLED=true",
 		"BIFROST_CHAINS_BTC_DISABLED=false",

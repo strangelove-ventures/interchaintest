@@ -62,6 +62,7 @@ type UtxoChain struct {
 	WalletToAddrMap map[string]string
 
 	WalletVersion int
+	unloadWalletAfterUse bool
 }
 
 
@@ -94,6 +95,7 @@ func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 		RpcPassword:    rpcPassword,
 		AddrToWalletMap: make(map[string]string),
 		WalletToAddrMap: make(map[string]string),
+		unloadWalletAfterUse: false,
 	}
 }
 
@@ -272,7 +274,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 		for {
 			faucetAddr, ok := c.WalletToAddrMap["faucet"]
 			if !ok {
-				time.Sleep(time.Second * 2)
+				time.Sleep(time.Second)
 				continue
 			}
 			
@@ -298,7 +300,6 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	}
 	
 	if c.WalletVersion == 0 {
-		time.Sleep(time.Second * 2) // Remove?
 		c.WalletVersion, err = c.GetWalletVersion(ctx, keyName)
 		if err != nil {
 			return err
@@ -420,7 +421,7 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 		return "", err
 	}
 
-	rawTxHex, err := c.CreateRawTransaction(ctx, listUtxo, amount.Address, sendAmountFloat, []byte(note))
+	rawTxHex, err := c.CreateRawTransaction(ctx, keyName, listUtxo, amount.Address, sendAmountFloat, []byte(note))
 	if err != nil {
 		return "", err
 	}
@@ -432,7 +433,7 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 	}
 	
 	// send raw transaction
-	txHash, err := c.SendRawTransaction(ctx, keyName, signedRawTxHex)
+	txHash, err := c.SendRawTransaction(ctx, signedRawTxHex)
 	if err != nil {
 		return "", err
 	}
