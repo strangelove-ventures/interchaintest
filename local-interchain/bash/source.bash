@@ -42,6 +42,7 @@ ICT_BIN() {
 }
 
 # ICT_SH_EXEC "http://localhost:8080" "localjuno-1" "ls -l"
+# NOTE: if using a /, make sure to escape it with \
 ICT_SH_EXEC() {
     API=$1
     CHAIN_ID=$2

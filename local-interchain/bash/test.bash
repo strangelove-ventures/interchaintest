@@ -7,7 +7,6 @@
 set -e
 
 thisDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
 # EXTERNAL: source <(curl -s https://raw.githubusercontent.com/strangelove-ventures/interchaintest/main/local-interchain/bash/source.bash)
 source "$thisDir/source.bash"
 API_ADDR="http://localhost:8080"
@@ -47,6 +46,15 @@ CODE_ID_JSON=`ICT_WASM_STORE_FILE $API_ADDR "localjuno-1" "$contract_source" "ac
 CODE_ID=`echo $CODE_ID_JSON | jq -r '.code_id'` && echo "CODE_ID: $CODE_ID"
 ICT_exitIfEmpty "$CODE_ID" "CODE_ID"
 
+# Upload random file
+FILE_RESP=`ICT_STORE_FILE $API_ADDR "localjuno-1" "$thisDir/test.bash"` && echo "FILE_RESP: $FILE_RESP"
+FILE_LOCATION=`echo $FILE_RESP | jq -r '.location'` && echo "FILE_LOCATION: $FILE_LOCATION"
+ICT_exitIfEmpty "$FILE_LOCATION" "FILE_LOCATION"
+
+# Verify file contents are there
+FILE_LOCATION_ESC=$(echo $FILE_LOCATION | sed 's/\//\\\//g')
+MISC_BASH_CMD=`ICT_SH_EXEC "$API_ADDR" "localjuno-1" "cat $FILE_LOCATION_ESC"` && echo "MISC_BASH_CMD: $MISC_BASH_CMD"
+ICT_exitIfEmpty "$MISC_BASH_CMD" "MISC_BASH_CMD"
 
 PEER=`ICT_GET_PEER $API_ADDR "localjuno-1"` && echo "PEER: $PEER"
 ICT_exitIfEmpty "$PEER" "PEER"
@@ -67,10 +75,6 @@ COSMOS_KEY_STATUS=`ICT_RECOVER_KEY $API_ADDR "localjuno-1" "mynewkey" "abandon a
 
 COSMOS_KEY_ADDRESS=`ICT_BIN "$API_ADDR" "localjuno-1" "keys show mynewkey -a"` && echo "COSMOS_KEY_ADDRESS: $COSMOS_KEY_ADDRESS"
 ICT_exitIfEmpty "$COSMOS_KEY_ADDRESS" "COSMOS_KEY_ADDRESS"
-
-# Run a bash / shell command in the docekr instance
-MISC_BASH_CMD=`ICT_SH_EXEC "$API_ADDR" "localjuno-1" "ls -l"` && echo "MISC_BASH_CMD: $MISC_BASH_CMD"
-ICT_exitIfEmpty "$MISC_BASH_CMD" "MISC_BASH_CMD"
 
 FULL_NODE_ADDED=`ICT_ADD_FULL_NODE $API_ADDR "localjuno-1" "1"`
 ICT_exitIfEmpty "$FULL_NODE_ADDED" "FULL_NODE_ADDED"
