@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -30,7 +30,7 @@ func TestUtxo(t *testing.T) {
 	btcConfig := utxo.DefaultBitcoinChainConfig("bitcoin", "thorchain", "password")
 	bchConfig := utxo.DefaultBitcoinCashChainConfig("bch", "thorchain", "password")
 	liteConfig := utxo.DefaultLitecoinChainConfig("litecoin", "thorchain", "password")
-	//dogeConfig := utxo.DefaultDogecoinChainConfig("dogecoin", "thorchain", "password")
+	dogeConfig := utxo.DefaultDogecoinChainConfig("dogecoin", "thorchain", "password")
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
@@ -51,12 +51,12 @@ func TestUtxo(t *testing.T) {
 			Version:     "0.21",
 			ChainConfig: liteConfig,
 		},
-		// {
-		// 	ChainName:   "dogecoin",
-		// 	Name:        "dogecoin",
-		// 	Version:     "dogecoin-daemon-1.14.7",
-		// 	ChainConfig: dogeConfig,
-		// },
+		{
+			ChainName:   "dogecoin",
+			Name:        "dogecoin",
+			Version:     "dogecoin-daemon-1.14.7",
+			ChainConfig: dogeConfig,
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -65,7 +65,7 @@ func TestUtxo(t *testing.T) {
 	btcChain := chains[0].(*utxo.UtxoChain)
 	bchChain := chains[1].(*utxo.UtxoChain)
 	liteChain := chains[2].(*utxo.UtxoChain)
-	// dogeChain := chains[3].(*utxo.UtxoChain)
+	dogeChain := chains[3].(*utxo.UtxoChain)
 
 	btcChain.UnloadWalletAfterUse(true)
 	bchChain.UnloadWalletAfterUse(true)
@@ -74,8 +74,8 @@ func TestUtxo(t *testing.T) {
 	ic := interchaintest.NewInterchain().
 		AddChain(btcChain).
 		AddChain(bchChain).
-		AddChain(liteChain)
-		// AddChain(dogeChain)
+		AddChain(liteChain).
+		AddChain(dogeChain)
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:  t.Name(),
@@ -223,7 +223,7 @@ func TestUtxo(t *testing.T) {
 
 	// ------ dogecoin -------
 	// Check faucet balance on start
-	/*faucetAddrBz, err = dogeChain.GetAddress(ctx, "faucet")
+	faucetAddrBz, err = dogeChain.GetAddress(ctx, "faucet")
 	require.NoError(t, err)
 	faucetAddr = string(faucetAddrBz)
 	balance, err = dogeChain.GetBalance(ctx, faucetAddr, "")
@@ -231,7 +231,7 @@ func TestUtxo(t *testing.T) {
 	fmt.Println("Doge faucet balance:", balance)
 
 	// Create and fund a user using GetAndFundTestUsers
-	dogeUserInitialAmount := math.NewInt(290_000_000)
+	dogeUserInitialAmount := math.NewInt(20_900_000_000)
 	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", dogeUserInitialAmount, dogeChain)
 	dogeUser := users[0]
 	fmt.Println("Doge user:", dogeUser.KeyName())
@@ -242,22 +242,50 @@ func TestUtxo(t *testing.T) {
 	fmt.Println("Doge user balance:", balance)
 	// TODO: Use SendFundsWithNote
 
-	users = interchaintest.GetAndFundTestUsers(t, ctx, "user", dogeUserInitialAmount, dogeChain)
+
+
+
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user2", dogeUserInitialAmount, dogeChain)
 	dogeUser2 := users[0]
 	fmt.Println("Doge user2:", dogeUser2.KeyName())
 
 	err = dogeChain.SendFunds(ctx, dogeUser.KeyName(), ibc.WalletAmount{
 		Address: dogeUser2.FormattedAddress(),
-		Amount: math.NewInt(100_000_000),
+		Amount: math.NewInt(200_000_000),
 	})
 	require.NoError(t, err)
 	balance1, err := dogeChain.GetBalance(ctx, dogeUser.FormattedAddress(), "")
 	require.NoError(t, err)
 	balance2, err := dogeChain.GetBalance(ctx, dogeUser2.FormattedAddress(), "")
 	require.NoError(t, err)
-	fmt.Println("Doge user1 balance:", balance1, "User2 balance:", balance2)*/
+	fmt.Println("Doge user1 balance:", balance1, "User2 balance:", balance2)
 
-	// Sleep for an additional testing
-	time.Sleep(10 * time.Second)
+
+
+
+	dogeUserInitialAmount = math.NewInt(100_000_000)
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "user3", dogeUserInitialAmount, dogeChain)
+	dogeUser3 := users[0]
+	fmt.Println("Doge user3:", dogeUser3.KeyName())
+
+	balance, err = dogeChain.GetBalance(ctx, dogeUser3.FormattedAddress(), "")
+	require.NoError(t, err)
+	require.True(t, dogeUserInitialAmount.Equal(balance), fmt.Sprintf("%s user balance (%s) is not expected (%s)", dogeUser3.KeyName(), balance, dogeUserInitialAmount))
+	fmt.Println("Doge user2 balance:", balance)
+
+	err = testutil.WaitForBlocks(ctx, 7, dogeChain)
+	require.NoError(t, err)
+
+	memo = fmt.Sprintf("+:%s:%s", "DOGE.DOGE", "tthor16sg0fxrdd0vgpl4pkcnqwzjlu5lrs6ymcqldel")
+	txHash, err = dogeChain.SendFundsWithNote(ctx, dogeUser.KeyName(), ibc.WalletAmount{
+		Address: dogeUser3.FormattedAddress(),
+		Amount: math.NewInt(1_000_000_000),
+	}, memo)
+	require.NoError(t, err)
+	fmt.Println("txHash:", txHash)
+
+	balance, err = dogeChain.GetBalance(ctx, dogeUser3.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("Doge user2 balance after memo tx (should be ~11e8):", balance)	
 
 }

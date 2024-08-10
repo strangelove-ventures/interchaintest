@@ -119,7 +119,7 @@ var (
 		// set at runtime (when enabled)
 		//BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
 		"BTC_HOST=utxo-BTC-TestThorchain:18443", // TODO: set at runtime
-		//DOGE_HOST: ${DOGE_HOST:-dogecoin:18332}
+		"DOGE_HOST=utxo-DOGE-TestThorchain:18443", // TODO: set at runtime
 		"BCH_HOST=utxo-BCH-TestThorchain:18443", // TODO: set at runtime
 		"LTC_HOST=utxo-LTC-TestThorchain:18443", // TODO: set at runtime
 		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
@@ -133,7 +133,7 @@ var (
 		"BIFROST_CHAINS_BNB_DISABLED=true",
 		"BIFROST_CHAINS_BSC_DISABLED=true",
 		"BIFROST_CHAINS_BTC_DISABLED=false",
-		"BIFROST_CHAINS_DOGE_DISABLED=true",
+		"BIFROST_CHAINS_DOGE_DISABLED=false",
 		"BIFROST_CHAINS_ETH_DISABLED=false",
 		"BIFROST_CHAINS_GAIA_DISABLED=false",
 		"BIFROST_CHAINS_LTC_DISABLED=false",

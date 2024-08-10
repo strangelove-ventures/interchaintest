@@ -148,38 +148,62 @@ func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr stri
 		return err
 	}
 
-	cmd := []string{}
 	if c.WalletVersion >= namedFixWalletVersion {
-		cmd = append(c.BaseCli,
+		cmd := append(c.BaseCli,
 			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
 			fmt.Sprintf("address=%s", addr), 
 			fmt.Sprintf("amount=%.8f", amount),
 		)
+		_, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
 	} else if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, 
+		cmd := append(c.BaseCli, 
 			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
 			addr,
 			fmt.Sprintf("%.8f", amount),
 		)
+		_, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
 	} else {
-		cmd = append(c.BaseCli,
-			"sendfrom",
-			keyName,
-			addr, 
-			fmt.Sprintf("%.8f", amount),
-		)
+		// get utxo
+		listUtxo, err := c.ListUnspent(ctx, keyName)
+		if err != nil {
+			return err
+		}
+
+		rawTxHex, err := c.CreateRawTransaction(ctx, keyName, listUtxo, addr, amount, []byte{})
+		if err != nil {
+			return err
+		}
+
+		// sign raw transaction
+		signedRawTxHex, err := c.SignRawTransaction(ctx, keyName, rawTxHex)
+		if err != nil {
+			return err
+		}
+	
+		// send raw transaction
+		_, err = c.SendRawTransaction(ctx, signedRawTxHex)
+		if err != nil {
+			return err
+		}
 	}
 	
-	_, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return err
-	}
-
 	return c.UnloadWallet(ctx, keyName)
 }
 
 func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, error) {
-	cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "listunspent")
+	var cmd []string
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "listunspent")
+	} else {
+		cmd = append(c.BaseCli, "listunspent", "0", "99999999", fmt.Sprintf("[\"%s\"]", c.WalletToAddrMap[keyName]))
+	}
+	
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -188,7 +212,7 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 	var listUtxo ListUtxo
 	if err := json.Unmarshal(stdout, &listUtxo); err != nil {
 		return nil, err
-	}
+	}	
 
 	return listUtxo, nil
 }
@@ -211,6 +235,10 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 			break
 		}
 	}
+	sendInputsBz, err := json.Marshal(sendInputs)
+	if err != nil {
+		return "", err
+	}
 
 	sanitizedSendAmount, err := strconv.ParseFloat(fmt.Sprintf("%.8f", sendAmount), 64)
 	if err != nil {
@@ -222,35 +250,42 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 		return "", err
 	}
 
-	sendOutputs := SendOutputs{
-		SendOutput{
+	var sendOutputsBz []byte
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		sendOutputs := SendOutputs{
+			SendOutput{
+				Amount: sanitizedSendAmount,
+			},
+			SendOutput{
+				Change: sanitizedChange,
+			},
+			SendOutput{
+				Data: hex.EncodeToString(script),
+			},
+		}
+
+		sendOutputsBz, err = json.Marshal(sendOutputs)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		sendOutputs := SendOutput{
 			Amount: sanitizedSendAmount,
-		},
-		SendOutput{
 			Change: sanitizedChange,
-		},
-		SendOutput{
 			Data: hex.EncodeToString(script),
-		},
+		}
+
+		sendOutputsBz, err = json.Marshal(sendOutputs)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// create raw transaction
-	sendInputsBz, err := json.Marshal(sendInputs)
-	if err != nil {
-		return "", err
-	}
-
-	sendOutputsBz, err := json.Marshal(sendOutputs)
-	if err != nil {
-		return "", err
-	}
 
 	sendInputsStr := string(sendInputsBz)
 	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", addr, 1)
 	sendOutputsStr = strings.Replace(sendOutputsStr, "replaceWithChangeAddr", c.WalletToAddrMap[keyName], 1)
-
-	fmt.Println("SendFundsWithNote inputs", sendInputsStr)
-	fmt.Println("SendFundsWithNote outputs", sendOutputsStr)
 
 	// createrawtransaction 
 	cmd := append(c.BaseCli, 
@@ -260,23 +295,27 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 		return "", err
 	}
 
-	rawTxHex := strings.TrimSpace(string(stdout))
-
-	fmt.Println("SendFundsWithNote rawtxHex", rawTxHex)
-
-	rawTxDecoded, err := hex.DecodeString(rawTxHex)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println("SendFundsWithNote rawTx decoded:", string(rawTxDecoded))
-
-	return rawTxHex, nil
+	return strings.TrimSpace(string(stdout)), nil
 }
 
 func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawTxHex string) (string, error) {
-	cmd := append(c.BaseCli, 
-		fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
+	var cmd []string
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		cmd = append(c.BaseCli, 
+			fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
+	} else {
+		// export priv key of sending address
+		cmd = append(c.BaseCli, "dumpprivkey", c.WalletToAddrMap[keyName])
+		stdout, _, err := c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return "", err
+		}
+
+		// sign raw tx with priv key
+		cmd = append(c.BaseCli, 
+			"signrawtransaction", rawTxHex, "null", fmt.Sprintf("[\"%s\"]",
+			strings.TrimSpace(string(stdout))))
+	}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
@@ -287,15 +326,12 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 		return "", err
 	}
 
-	if signRawTxOutput.Complete {
-		fmt.Println("Signing of transaction complete!")
-	} else {
-		fmt.Println("Signing of tx incomplete")
-		fmt.Println("Number of errors", len(signRawTxOutput.Errors))
+	if !signRawTxOutput.Complete {
+		c.logger().Error(fmt.Sprintf("Signing transaction did not complete, (%d) errors", len(signRawTxOutput.Errors)))
 		for i, sErr := range signRawTxOutput.Errors {
-			fmt.Println("Signing error", i, ":", sErr.Error)
+			c.logger().Error(fmt.Sprintf("Signing error %d: %s", i, sErr.Error))
 		}
-		return "", fmt.Errorf("Signing error")
+		return "", fmt.Errorf("Sign transaction error on %s", c.cfg.Name)
 	}
 	
 	return signRawTxOutput.Hex, nil
@@ -308,7 +344,7 @@ func (c *UtxoChain) SendRawTransaction(ctx context.Context, signedRawTxHex strin
 	} else if c.WalletVersion > noDefaultKeyWalletVersion {
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0")
 	} else {
-		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0", "1", "3", "4")
+		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
 	}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {

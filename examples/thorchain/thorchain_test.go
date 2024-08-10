@@ -40,6 +40,7 @@ func TestThorchain(t *testing.T) {
 	btcChainName := common.BTCChain.String() // must use this name for test 
 	bchChainName := common.BCHChain.String() // must use this name for test 
 	liteChainName := common.LTCChain.String() // must use this name for test 
+	dogeChainName := common.DOGEChain.String() // must use this name for test 
 	
 	// TODO: return default chainspec instead of chain config
 	cf0 := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -67,6 +68,12 @@ func TestThorchain(t *testing.T) {
 			Version:   "0.21",
 			ChainConfig: utxo.DefaultLitecoinChainConfig(liteChainName, "thorchain", "password"),
 		},
+		{
+			ChainName: dogeChainName,
+			Name:      dogeChainName,
+			Version:   "dogecoin-daemon-1.14.7",
+			ChainConfig: utxo.DefaultDogecoinChainConfig(dogeChainName, "thorchain", "password"),
+		},
 	})
 
 	chains, err := cf0.Chains(t.Name())
@@ -75,6 +82,7 @@ func TestThorchain(t *testing.T) {
 	btcChain := chains[1].(*utxo.UtxoChain)
 	bchChain := chains[2].(*utxo.UtxoChain)
 	liteChain := chains[3].(*utxo.UtxoChain)
+	dogeChain := chains[4].(*utxo.UtxoChain)
 
 	btcChain.UnloadWalletAfterUse(true)
 	bchChain.UnloadWalletAfterUse(true)
@@ -84,7 +92,8 @@ func TestThorchain(t *testing.T) {
 		AddChain(ethChain).
 		AddChain(btcChain).
 		AddChain(bchChain).
-		AddChain(liteChain)
+		AddChain(liteChain).
+		AddChain(dogeChain)
 	
 	ctx := context.Background()
 	client, network := interchaintest.DockerSetup(t)
@@ -215,12 +224,7 @@ func TestThorchain(t *testing.T) {
 	_, btcLper := features.DualLp(t, ctx, thorchain, btcChain)
 	_, bchLper := features.DualLp(t, ctx, thorchain, bchChain)
 	_, liteLper := features.DualLp(t, ctx, thorchain, liteChain)
-
-	// _, _ = features.DualLp(t, ctx, thorchain, gaia)
-	// _, _ = features.DualLp(t, ctx, thorchain, ethChain)
-	// _, _ = features.DualLp(t, ctx, thorchain, btcChain)
-	// _, _ = features.DualLp(t, ctx, thorchain, bchChain)
-	// _, _ = features.DualLp(t, ctx, thorchain, liteChain)
+	_, dogeLper := features.DualLp(t, ctx, thorchain, dogeChain)
 
 	// --------------------------------------------------------
 	// Savers
@@ -230,12 +234,13 @@ func TestThorchain(t *testing.T) {
 	btcSaver := features.Saver(t, ctx, thorchain, btcChain)
 	bchSaver := features.Saver(t, ctx, thorchain, bchChain)
 	liteSaver := features.Saver(t, ctx, thorchain, liteChain)
+	dogeSaver := features.Saver(t, ctx, thorchain, dogeChain)
 	
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
 	_, err = features.Arb(t, ctx, thorchain, 
-		gaia, ethChain, btcChain, bchChain, liteChain) // Must add all active chains
+		gaia, ethChain, btcChain, bchChain, liteChain, dogeChain) // Must add all active chains
 	require.NoError(t, err)
 	
 	// --------------------------------------------------------
@@ -243,29 +248,7 @@ func TestThorchain(t *testing.T) {
 	// --------------------------------------------------------
 	//err = features.SingleSwap(t, ctx, thorchain, gaia, thorchain)
 	//require.NoError(t, err)
-	/*err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)
-	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, gaia, ethChain)
-	require.NoError(t, err)
-
-	err = features.SingleSwap(t, ctx, thorchain, btcChain, gaia)
-	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, gaia, btcChain)
-	require.NoError(t, err)
-
-	err = features.SingleSwap(t, ctx, thorchain, ethChain, btcChain)
-	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, btcChain, ethChain)
-	require.NoError(t, err)
-
-	err = features.SingleSwap(t, ctx, thorchain, ethChain, bchChain)
-	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, bchChain, liteChain)
-	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, liteChain, ethChain)
-	require.NoError(t, err)*/
-
-	// Next test, tests two things: 1. these new swaps, 2. New fallback fee/rawtx fee
+	
 	err = features.SingleSwap(t, ctx, thorchain, ethChain, gaia)
 	require.NoError(t, err)
 	err = features.SingleSwap(t, ctx, thorchain, gaia, ethChain)
@@ -276,9 +259,9 @@ func TestThorchain(t *testing.T) {
 	err = features.SingleSwap(t, ctx, thorchain, bchChain, btcChain)
 	require.NoError(t, err)
 
-	err = features.SingleSwap(t, ctx, thorchain, bchChain, liteChain)
+	err = features.SingleSwap(t, ctx, thorchain, dogeChain, liteChain)
 	require.NoError(t, err)
-	err = features.SingleSwap(t, ctx, thorchain, liteChain, bchChain)
+	err = features.SingleSwap(t, ctx, thorchain, liteChain, dogeChain)
 	require.NoError(t, err)
 	
 	// --------------------------------------------------------
@@ -289,6 +272,7 @@ func TestThorchain(t *testing.T) {
 	_ = features.SaverEject(t, ctx, thorchain, btcChain, btcSaver)
 	_ = features.SaverEject(t, ctx, thorchain, bchChain, bchSaver)
 	_ = features.SaverEject(t, ctx, thorchain, liteChain, liteSaver)
+	_ = features.SaverEject(t, ctx, thorchain, dogeChain, dogeSaver)
 	
 	// --------------------------------------------------------
 	// Ragnarok
@@ -302,6 +286,8 @@ func TestThorchain(t *testing.T) {
 	err = features.Ragnarok(t, ctx, thorchain, bchChain, bchLper, bchSaver)
 	require.NoError(t, err)
 	err = features.Ragnarok(t, ctx, thorchain, liteChain, liteLper, liteSaver)
+	require.NoError(t, err)
+	err = features.Ragnarok(t, ctx, thorchain, dogeChain, dogeLper, dogeSaver)
 	require.NoError(t, err)
 	
 	//err = gaia.StopAllNodes(ctx)
