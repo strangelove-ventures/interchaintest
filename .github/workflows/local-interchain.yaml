@@ -73,7 +73,7 @@ jobs:
       - name: Run Rust Script
         run: |
           cd bash
-          sh ./test.sh
+          sh ./test.bash
 
       - name: Cleanup
         run: killall local-ic && exit 0

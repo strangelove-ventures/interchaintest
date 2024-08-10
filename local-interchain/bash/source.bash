@@ -1,6 +1,4 @@
-# IMPORT ME WITH: source <(curl -s https://github.com/strangelove-ventures/interchaintest/tree/main/local-interchain/bash/source.bash)
-
-# TODOL: prefix with ICT_ for all functions
+# IMPORT ME WITH: source <(curl -s https://raw.githubusercontent.com/strangelove-ventures/interchaintest/main/local-interchain/bash/source.bash)
 
 # ICT_MAKE_REQUEST http://127.0.0.1:8080 localjuno-1 "q" "bank total"
 ICT_MAKE_REQUEST() {
@@ -18,7 +16,7 @@ ICT_MAKE_REQUEST() {
 }
 
 
-# "http://localhost:8080" "localjuno-1" "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"
+# ICT_QUERY "http://localhost:8080" "localjuno-1" "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"
 ICT_QUERY() {
     API=$1
     CHAIN_ID=$2
