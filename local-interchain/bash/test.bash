@@ -1,10 +1,8 @@
 #!/bin/bash
-
-# local-ic start base_ibc
+# local-ic start juno_ibc
 
 source ./source.bash
 # source <(curl -s https://github.com/strangelove-ventures/interchaintest/tree/main/local-interchain/bash/source.bash)
-
 
 API_ADDR="http://localhost:8080"
 
@@ -71,7 +69,7 @@ exitIfEmpty "$FULL_NODE_ADDED" "FULL_NODE_ADDED"
 # Stop the relayer
 ICT_RELAYER_STOP $API_ADDR "localjuno-1"
 
+# Kills all containers, not the local-ic process. Use `killall local-ic` to kill that as well
 ICT_KILL_ALL $API_ADDR "localjuno-1"
 
-killall local-ic
 exit 0
