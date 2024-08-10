@@ -62,10 +62,10 @@ jobs:
       - name: Start background ibc local-interchain
         run: /tmp/local-ic start juno_ibc --api-port 8080 &
 
-      - name: Run Rust Script
+      - name: Run Bash Script
         run: |
           cd bash
-          sh ./test.bash
+          bash ./test.bash
 
       - name: Cleanup
         run: killall local-ic && exit 0
