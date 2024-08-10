@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -68,7 +69,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	action := ah.Action
 	if action == "kill-all" {
-		KillAll(a.ctx, a.ic, a.vals, a.relayer, a.eRep)
+		dockerutil.KillAllInterchaintestContainers(a.ctx)
 		return
 	}
 
@@ -214,23 +215,6 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return err
-}
-
-func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string][]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
-	if relayer != nil {
-		if err := relayer.StopRelayer(ctx, eRep); err != nil {
-			panic(err)
-		}
-	}
-
-	for _, v := range vals {
-		for _, c := range v {
-			go c.StopContainer(ctx) // nolint:errcheck
-		}
-	}
-
-	ic.Close()
-	<-ctx.Done()
 }
 
 func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {
