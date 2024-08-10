@@ -6,13 +6,18 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	interchaintestrelayer "github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -31,18 +36,26 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	ic := interchaintest.NewInterchain()
 	defer ic.Close()
 
-	// TODO: cleanup on ctrl + c
-	// Properly cleanup at the start, during build, and after the REST API is created
-	// The following only works at the start and after the REST API is created.
-	//
-	// c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt)
-	// go func() {
-	// 	for sig := range c {
-	// 		log.Printf("Closing from signal: %s\n", sig)
-	// 		handlers.KillAll(ctx, ic, vals, relayer, eRep)
-	// 	}
-	// }()
+	// Cleanup servers on ctrl+c signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case <-c:
+			fmt.Println("\nReceived signal to stop local-ic...")
+			removed := dockerutil.KillAllInterchaintestContainers(ctx)
+			for _, r := range removed {
+				fmt.Println("  - ", r)
+			}
+			cancel()
+			os.Exit(1)
+		case <-ctx.Done():
+			fmt.Println("Context is done")
+		}
+	}()
 
 	// Logger for ICTest functions only.
 	logger, err := InitLogger()
@@ -170,9 +183,11 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		Client:           client,
 		NetworkID:        network,
 		SkipPathCreation: false,
-		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 	})
 	if err != nil {
+		// calls the KillAllInterchaintestContainers(...) above
+		<-ctx.Done()
+
 		logger.Fatal("ic.Build", zap.Error(err))
 	}
 
@@ -248,8 +263,13 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
-		log.Fatal("WaitForBlocks StartChain: ", err)
+		// when the network is stopped / killed (ctrl + c), ignore error
+		if !strings.Contains(err.Error(), "post failed:") {
+			fmt.Println("WaitForBlocks StartChain: ", err)
+		}
 	}
+
+	wg.Wait()
 }
 
 func GetTestName(chainCfgFile string) string {
