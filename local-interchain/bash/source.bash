@@ -15,6 +15,14 @@ ICT_MAKE_REQUEST() {
     curl "$API" -ss --no-progress-meter --header "Content-Type: application/json" -X POST -d "$DATA"
 }
 
+ICT_POLL_FOR_START() {
+    API=$1
+
+    attempt_counter=1
+    ATTEMPTS_MAX=$2
+
+    curl --head -X GET --retry $ATTEMPTS_MAX --retry-connrefused --retry-delay 3 $API
+}
 
 # ICT_QUERY "http://localhost:8080" "localjuno-1" "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"
 ICT_QUERY() {

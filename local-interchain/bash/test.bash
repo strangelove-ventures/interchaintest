@@ -6,6 +6,8 @@ source ./source.bash
 
 API_ADDR="http://localhost:8080"
 
+ICT_POLL_FOR_START $API_ADDR 50
+
 # Set standard interaction defaults
 ICT_BIN "$API_ADDR" "localjuno-1" "config keyring-backend test"
 ICT_BIN "$API_ADDR" "localjuno-1" "config output json"
