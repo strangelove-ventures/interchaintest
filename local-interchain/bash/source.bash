@@ -2,8 +2,8 @@
 
 # TODOL: prefix with ICT_ for all functions
 
-# MAKE_REQUEST http://127.0.0.1:8080 localjuno-1 "q" "bank total"
-MAKE_REQUEST() {
+# ICT_MAKE_REQUEST http://127.0.0.1:8080 localjuno-1 "q" "bank total"
+ICT_MAKE_REQUEST() {
     API=$1
 
     CHAIN_ID=$2
@@ -18,59 +18,63 @@ MAKE_REQUEST() {
 }
 
 
-# QUERY "http://localhost:8080" "localjuno-1" "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"
-QUERY() {
+# "http://localhost:8080" "localjuno-1" "bank balances juno10r39fueph9fq7a6lgswu4zdsg8t3gxlq670lt0"
+ICT_QUERY() {
     API=$1
     CHAIN_ID=$2
     CMD=$3 # can be multiple words
-    MAKE_REQUEST "$API" $CHAIN_ID "q" "$CMD"
+    ICT_MAKE_REQUEST "$API" $CHAIN_ID "q" "$CMD"
 }
 
-# MAKE_BIN "http://localhost:8080" "localjuno-1" "decode"
-MAKE_BIN() {
+# ICT_BIN "http://localhost:8080" "localjuno-1" "decode"
+ICT_BIN() {
     API=$1
     CHAIN_ID=$2
     CMD=$3 # can be multiple words
-    MAKE_REQUEST "$API" $CHAIN_ID "bin" "$CMD"
+    ICT_MAKE_REQUEST "$API" $CHAIN_ID "bin" "$CMD"
 }
 
-# MAKE_SH_EXEC "http://localhost:8080" "localjuno-1" "ls -l"
-MAKE_SH_EXEC() {
+# ICT_SH_EXEC "http://localhost:8080" "localjuno-1" "ls -l"
+ICT_SH_EXEC() {
     API=$1
     CHAIN_ID=$2
     CMD=$3 # can be multiple words
-    MAKE_REQUEST "$API" $CHAIN_ID "exec" "$CMD"
+    ICT_MAKE_REQUEST "$API" $CHAIN_ID "exec" "$CMD"
 }
 
-# FAUCET_REQUEST "http://localhost:8080" "localjuno-1" "1000000000ujuno" "juno1qk7zqy3k2v3jx2zq2z2zq2zq2zq2zq2zq2zq"
-FAUCET_REQUEST() {
+# ICT_FAUCET_REQUEST "http://localhost:8080" "localjuno-1" "1000000000ujuno" "juno1qk7zqy3k2v3jx2zq2z2zq2zq2zq2zq2zq2zq"
+ICT_FAUCET_REQUEST() {
     API=$1
     CHAIN_ID=$2
     AMOUNT=$3
     ADDRESS=$4
-    MAKE_REQUEST $API $CHAIN_ID "faucet" "amount=$AMOUNT;address=$ADDRESS"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "faucet" "amount=$AMOUNT;address=$ADDRESS"
 }
 
-
-
 # === COSMWASM ===
-DUMP_CONTRACT_STATE() {
+
+# ICT_DUMP_CONTRACT_STATE "http://localhost:8080" "localjuno-1" "cosmos1contractaddress" "100"
+ICT_DUMP_CONTRACT_STATE() {
     API=$1
     CHAIN_ID=$2
     CONTRACT=$3
     HEIGHT=$4
 
-    MAKE_REQUEST $API $CHAIN_ID "recover-key" "contract=$CONTRACT;height=$HEIGHT"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "recover-key" "contract=$CONTRACT;height=$HEIGHT"
 }
 
 # === OTHER ===
-KILL_ALL() {
+
+# ICT_KILL_ALL "http://localhost:8080" "localjuno-1"
+# (Kills all running, keeps local-ic process. `killall local-ic` to kill that as well)
+ICT_KILL_ALL() {
     API=$1
     CHAIN_ID=$2
-    MAKE_REQUEST $API $CHAIN_ID "kill-all" ""
+    ICT_MAKE_REQUEST $API $CHAIN_ID "kill-all" ""
 }
 
-GET_PEER() {
+# ICT_GET_PEER "http://localhost:8080" "localjuno-1"
+ICT_GET_PEER() {
     API=$1
     CHAIN_ID=$2
 
@@ -81,59 +85,62 @@ GET_PEER() {
     curl -G -d "chain_id=$CHAIN_ID" -d "request=peer" $API
 }
 
-# ADD_FULL_NODE http://127.0.0.1:8080 "localjuno-1" "1"
-ADD_FULL_NODE() {
+# ICT_ADD_FULL_NODE http://127.0.0.1:8080 "localjuno-1" "1"
+ICT_ADD_FULL_NODE() {
     API=$1
     CHAIN_ID=$2
     AMOUNT=$3
 
-    MAKE_REQUEST $API $CHAIN_ID "add-full-nodes" "amount=$AMOUNT"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "add-full-nodes" "amount=$AMOUNT"
 }
 
-# RECOVER_KEY "http://localhost:8080" "localjuno-1" "mykey" "my mnemonic string here"
-RECOVER_KEY() {
+# ICT_RECOVER_KEY "http://localhost:8080" "localjuno-1" "mykey" "my mnemonic string here"
+ICT_RECOVER_KEY() {
     API=$1
     CHAIN_ID=$2
     KEYNAME=$3
     shift 3 # get the 4th argument and up as the command
     MNEMONIC="$*"
 
-    MAKE_REQUEST $API $CHAIN_ID "recover-key" "keyname=$KEYNAME;mnemonic=$MNEMONIC"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "recover-key" "keyname=$KEYNAME;mnemonic=$MNEMONIC"
 }
 
 # === RELAYER ===
-RELAYER_STOP() {
+
+# ICT_RELAYER_STOP http://127.0.0.1 "localjuno-1"
+ICT_RELAYER_STOP() {
     API=$1
     CHAIN_ID=$2
 
     # TODO: how does this function?
-    MAKE_REQUEST $API $CHAIN_ID "stop-relayer" ""
+    ICT_MAKE_REQUEST $API $CHAIN_ID "stop-relayer" ""
 }
 
-RELAYER_START() {
+# ICT_RELAYER_START http://127.0.0.1 "localjuno-1" "demo-path2 --max-tx-size 10"
+ICT_RELAYER_START() {
     API=$1
     CHAIN_ID=$2
     CMD=$3
 
-    MAKE_REQUEST $API $CHAIN_ID "start-relayer" "$CMD"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "start-relayer" "$CMD"
 }
 
 # RELAYER_EXEC http://127.0.0.1:8080 "localjuno-1" "rly paths list"
-RELAYER_EXEC() {
+ICT_RELAYER_EXEC() {
     API=$1
     CHAIN_ID=$2
     shift 2 # get the 3rd argument and up as the command
     CMD="$*"
 
-    MAKE_REQUEST $API $CHAIN_ID "relayer-exec" "$CMD"
+    ICT_MAKE_REQUEST $API $CHAIN_ID "relayer-exec" "$CMD"
 }
 
 # RELAYER_CHANNELS http://127.0.0.1:8080 "localjuno-1"
-RELAYER_CHANNELS() {
+ICT_RELAYER_CHANNELS() {
     API=$1
     CHAIN_ID=$2
 
-    MAKE_REQUEST $API $CHAIN_ID "get_channels" ""
+    ICT_MAKE_REQUEST $API $CHAIN_ID "get_channels" ""
 }
 
 
