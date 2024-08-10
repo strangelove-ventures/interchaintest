@@ -50,14 +50,6 @@ jobs:
       - name: checkout chain
         uses: actions/checkout@v4
 
-      - name: Install latest toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
-
       - name: Download Tarball Artifact
         uses: actions/download-artifact@v3
         with:
