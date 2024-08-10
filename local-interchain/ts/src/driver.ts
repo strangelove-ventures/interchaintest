@@ -1,11 +1,8 @@
-
-
-
-// create a class which holds the API & chain id
 export class Chain {
-    api: string; // local-interchain
+    api: string;
     chainID: string;
 
+    // api is the local-interchain API address (:8080 by default)
     constructor(api: string, chainID: string) {
         this.api = api;
         this.chainID = chainID;
@@ -29,8 +26,7 @@ export class Chain {
         return makeRequest(this.api, this.chainID, "query", command, isJSON)
     }
 
-    // execute a binary command within the container
-    // i.e. the content after appd in the command
+    // execute a binary command within the container (i.e. the content after appd in the command)
     async binary(command: string, isJSON?: boolean): Promise<any> {
         return makeRequest(this.api, this.chainID, "bin", command, isJSON)
     }
@@ -54,12 +50,12 @@ export class Chain {
         return makeRequest(this.api, this.chainID, "get_channels", "", true)
     }
 
-    // === CosmWasm ===
+    // === COSMWASM ===
     async wasmStoreFile(absFilePath: string, keyName: string): Promise<any> {
         return storeFile(this.api, this.chainID, absFilePath, keyName);
     }
 
-    // other
+    // === OTHER ===
     async storeFile(absFilePath: string): Promise<any> {
         return storeFile(this.api, this.chainID, absFilePath);
     }
