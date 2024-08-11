@@ -108,7 +108,7 @@ func TestThorchain(t *testing.T) {
 		_ = ic0.Close()
 	})
 
-	ethUserInitialAmount := math.NewInt(2 * ethereum.ETHER)
+	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23) + "fossil", ethUserInitialAmount, ethChain)
 	require.NoError(t, err)

@@ -29,8 +29,11 @@ var _ ibc.Chain = &EthereumChain{}
 const (
 	blockTime = 2 // seconds
 	rpcPort   = "8545/tcp"
-	GWEI      = 1_000_000_000
-	ETHER     = 1_000_000_000 * GWEI
+)
+
+var (
+	GWEI  = sdkmath.NewInt(1_000_000_000)
+	ETHER = GWEI.MulRaw(1_000_000_000)
 )
 
 var natPorts = nat.PortMap{
