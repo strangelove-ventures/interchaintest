@@ -58,8 +58,8 @@ type UtxoChain struct {
 	RpcUser string
 	RpcPassword string
 	BaseCli []string
-	AddrToWalletMap map[string]string
-	WalletToAddrMap map[string]string
+	AddrToKeyNameMap map[string]string
+	KeyNameToWalletMap map[string]*NodeWallet
 
 	WalletVersion int
 	unloadWalletAfterUse bool
@@ -93,8 +93,8 @@ func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 		BinCli:         bins[1],
 		RpcUser:        rpcUser,
 		RpcPassword:    rpcPassword,
-		AddrToWalletMap: make(map[string]string),
-		WalletToAddrMap: make(map[string]string),
+		AddrToKeyNameMap: make(map[string]string),
+		KeyNameToWalletMap: make(map[string]*NodeWallet),
 		unloadWalletAfterUse: false,
 	}
 }
@@ -274,8 +274,8 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 			nextBlockHeight = 1000
 		}
 		for {
-			faucetAddr, ok := c.WalletToAddrMap["faucet"]
-			if !ok {
+			faucetWallet, found := c.KeyNameToWalletMap["faucet"]
+			if !found || !faucetWallet.ready {
 				time.Sleep(time.Second)
 				continue
 			}
@@ -283,7 +283,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 			// If faucet exists, chain is up and running. Any future error should return from this go routine.
 			// If the chain stops, we will then error and return from this go routine
 			// Don't use ctx from Start(), it gets cancelled soon after returning.
-			cmd = append(c.BaseCli, "generatetoaddress", amount, faucetAddr)
+			cmd = append(c.BaseCli, "generatetoaddress", amount, faucetWallet.address)
 			_, _, err = c.Exec(ctx, cmd, nil)
 			if err != nil {
 				c.logger().Error("generatetoaddress error", zap.Error(err))
@@ -404,9 +404,9 @@ func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
 
 // Get address of account, cast to a string to use
 func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	addr, ok := c.WalletToAddrMap[keyName]
+	wallet, ok := c.KeyNameToWalletMap[keyName]
 	if ok {
-		return []byte(addr), nil
+		return []byte(wallet.address), nil
 	}
 
 	// Pre-start GetAddress doesn't matter
@@ -480,7 +480,7 @@ func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
 }
 
 func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	wallet, ok := c.AddrToWalletMap[address]
+	keyName, ok := c.AddrToKeyNameMap[address]
 	if !ok {
 		return sdkmath.Int{}, fmt.Errorf("wallet not found for address: %s", address)
 	}
@@ -488,15 +488,15 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 	balance := ""
 	var coinsWithDecimal float64
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
-		if err := c.LoadWallet(ctx, wallet); err != nil {
+		if err := c.LoadWallet(ctx, keyName); err != nil {
 			return sdkmath.Int{}, err
 		}
-		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", wallet), "getbalance")
+		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getbalance")
 		stdout, _, err := c.Exec(ctx, cmd, nil)
 		if err != nil {
 			return sdkmath.Int{}, err
 		}
-		if err := c.UnloadWallet(ctx, wallet); err != nil {
+		if err := c.UnloadWallet(ctx, keyName); err != nil {
 			return sdkmath.Int{}, err
 		}
 		balance = strings.TrimSpace(string(stdout))
@@ -512,7 +512,7 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 		}
 		var accounts map[string]float64
 		err = json.Unmarshal(stdout, &accounts)
-		coinsWithDecimal = accounts[wallet]
+		coinsWithDecimal = accounts[keyName]
 	}
 
 	coinsScaled := int64(coinsWithDecimal * math.Pow10(int(*c.Config().CoinDecimals)))

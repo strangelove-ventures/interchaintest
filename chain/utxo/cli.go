@@ -57,11 +57,20 @@ func (c *UtxoChain) LoadWallet(ctx context.Context, keyName string) error {
 	}
 
 	if c.WalletVersion == 0 || c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd := append(c.BaseCli, "loadwallet", keyName)
-		_, _, err := c.Exec(ctx, cmd, nil)
+		wallet, err := c.getWallet(keyName)
 		if err != nil {
 			return err
 		}
+		wallet.mu.Lock()
+		defer wallet.mu.Unlock()
+		if wallet.loadCount == 0 {
+			cmd := append(c.BaseCli, "loadwallet", keyName)
+			_, _, err = c.Exec(ctx, cmd, nil)
+			if err != nil {
+				return err
+			}
+		}
+		wallet.loadCount++
 	} 
 	return nil
 }
@@ -72,10 +81,21 @@ func (c *UtxoChain) UnloadWallet(ctx context.Context, keyName string) error {
 	}
 
 	if c.WalletVersion == 0 || c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd := append(c.BaseCli, "unloadwallet", keyName)
-		_, _, err := c.Exec(ctx, cmd, nil)
+		wallet, err := c.getWallet(keyName)
 		if err != nil {
 			return err
+		}
+		wallet.mu.Lock()
+		defer wallet.mu.Unlock()
+		if wallet.loadCount == 1 {
+			cmd := append(c.BaseCli, "unloadwallet", keyName)
+			_, _, err = c.Exec(ctx, cmd, nil)
+			if err != nil {
+				return err
+			}
+		}
+		if wallet.loadCount > 0 {
+			wallet.loadCount--
 		}
 	} 
 	return nil
@@ -88,12 +108,22 @@ func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 		if err != nil {
 			return err
 		}
+	
+		c.KeyNameToWalletMap[keyName] = &NodeWallet{
+			keyName: keyName,
+			loadCount: 1,
+		}
 	}
-
+	
 	return c.UnloadWallet(ctx, keyName)
 }
 
 func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool) (string, error){
+	wallet, err := c.getWalletForNewAddress(keyName)
+	if err != nil {
+		return "", err
+	}
+
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
@@ -121,11 +151,15 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 		addr = splitAddr[1]
 	}
 	
-	c.AddrToWalletMap[addr] = keyName
-	c.WalletToAddrMap[keyName] = addr
+	wallet.address = addr
+	c.AddrToKeyNameMap[addr] = keyName
+
+	if c.WalletVersion >= noDefaultKeyWalletVersion {
+		wallet.ready = true
+	}
 
 	if err := c.UnloadWallet(ctx, keyName); err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return addr, nil
@@ -133,17 +167,27 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 
 func (c *UtxoChain) SetAccount(ctx context.Context, addr string, keyName string) error {
 	if c.WalletVersion < noDefaultKeyWalletVersion {
-		cmd := append(c.BaseCli, "setaccount", addr, keyName)
-		_, _, err := c.Exec(ctx, cmd, nil)
+		wallet, err := c.getWalletForSetAccount(keyName, addr)
 		if err != nil {
 			return err
 		}
+		cmd := append(c.BaseCli, "setaccount", addr, keyName)
+		_, _, err = c.Exec(ctx, cmd, nil)
+		if err != nil {
+			return err
+		}
+		wallet.ready = true
 	}
 
 	return nil
 }
 
 func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr string, amount float64) error {
+	_, err := c.getWalletForUse(keyName)
+	if err != nil {
+		return err
+	}
+
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return err
 	}
@@ -197,15 +241,28 @@ func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr stri
 }
 
 func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, error) {
+	wallet, err := c.getWalletForUse(keyName)
+	if err != nil {
+		return nil, err
+	}
+	
+	if err := c.LoadWallet(ctx, keyName); err != nil {
+		return nil, err
+	}
+
 	var cmd []string
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "listunspent")
 	} else {
-		cmd = append(c.BaseCli, "listunspent", "0", "99999999", fmt.Sprintf("[\"%s\"]", c.WalletToAddrMap[keyName]))
+		cmd = append(c.BaseCli, "listunspent", "0", "99999999", fmt.Sprintf("[\"%s\"]", wallet.address))
 	}
 	
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
+		return nil, err
+	}
+	
+	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return nil, err
 	}
 
@@ -218,6 +275,11 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 }
 
 func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, listUtxo ListUtxo, addr string, sendAmount float64, script []byte) (string, error) {
+	wallet, err := c.getWalletForUse(keyName)
+	if err != nil {
+		return "", err
+	}
+
 	var sendInputs SendInputs
 	utxoTotal := float64(0.0)
 	fees, err := strconv.ParseFloat(c.cfg.GasPrices, 64)
@@ -285,7 +347,7 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 
 	sendInputsStr := string(sendInputsBz)
 	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", addr, 1)
-	sendOutputsStr = strings.Replace(sendOutputsStr, "replaceWithChangeAddr", c.WalletToAddrMap[keyName], 1)
+	sendOutputsStr = strings.Replace(sendOutputsStr, "replaceWithChangeAddr", wallet.address, 1)
 
 	// createrawtransaction 
 	cmd := append(c.BaseCli, 
@@ -299,13 +361,18 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 }
 
 func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawTxHex string) (string, error) {
+	wallet, err := c.getWalletForUse(keyName)
+	if err != nil {
+		return "", err
+	}
+
 	var cmd []string
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		cmd = append(c.BaseCli, 
 			fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
 	} else {
 		// export priv key of sending address
-		cmd = append(c.BaseCli, "dumpprivkey", c.WalletToAddrMap[keyName])
+		cmd = append(c.BaseCli, "dumpprivkey", wallet.address)
 		stdout, _, err := c.Exec(ctx, cmd, nil)
 		if err != nil {
 			return "", err
@@ -316,8 +383,17 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 			"signrawtransaction", rawTxHex, "null", fmt.Sprintf("[\"%s\"]",
 			strings.TrimSpace(string(stdout))))
 	}
+	
+	if err := c.LoadWallet(ctx, keyName); err != nil {
+		return "", err
+	}
+
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
+		return "", err
+	}
+	
+	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
 

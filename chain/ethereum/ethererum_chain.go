@@ -173,7 +173,8 @@ func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client
 
 func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	// TODO:
-	//   * add support for different denom configuration, ether or wei, this will affect GetBalance, etc
+	//   * add support for different denom configuration, ether, gwei or wei,
+	//       this will affect SendFunds, SendFundsWithNote, GetBalance and anything other than wei will lose precision for GetBalance
 	//   * add support for modifying genesis amount config, default is 10 ether
 	//   * add support for ConfigFileOverrides
 	//		* block time

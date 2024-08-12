@@ -1,6 +1,5 @@
 package utxo
 
-
 type ListReceivedByAddress []ReceivedByAddress
 
 type ReceivedByAddress struct {
