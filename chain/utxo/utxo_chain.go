@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	//"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -301,7 +300,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 					c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
 					return
 				}
-				if err := c.SendToAddress(ctx, "faucet", addr, 1); err != nil {
+				if err := c.sendToMwebAddress(ctx, "faucet", addr, 1); err != nil {
 					c.logger().Error("error sending to mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
 					return
 				}
@@ -418,15 +417,8 @@ func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 }
 
 func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
-	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
-	amountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64()) / math.Pow10(int(*c.Config().CoinDecimals)) 
-	
-	if err := c.SendToAddress(ctx, keyName, amount.Address, amountFloat); err != nil {
-		return err
-	}
-	
-	return testutil.WaitForBlocks(ctx, 1, c)
+	_, err := c.SendFundsWithNote(ctx, keyName, amount, "")
+	return err
 }
 
 func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {

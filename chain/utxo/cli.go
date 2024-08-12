@@ -182,7 +182,9 @@ func (c *UtxoChain) SetAccount(ctx context.Context, addr string, keyName string)
 	return nil
 }
 
-func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr string, amount float64) error {
+// sendToMwebAddress is used for creating the mweb transaction needed at block 431
+// no other use case is currently supported
+func (c *UtxoChain) sendToMwebAddress(ctx context.Context, keyName string, addr string, amount float64) error {
 	_, err := c.getWalletForUse(keyName)
 	if err != nil {
 		return err
@@ -192,49 +194,15 @@ func (c *UtxoChain) SendToAddress(ctx context.Context, keyName string, addr stri
 		return err
 	}
 
-	if c.WalletVersion >= namedFixWalletVersion {
-		cmd := append(c.BaseCli,
-			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
-			fmt.Sprintf("address=%s", addr), 
-			fmt.Sprintf("amount=%.8f", amount),
-		)
-		_, _, err := c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-	} else if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd := append(c.BaseCli, 
-			fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
-			addr,
-			fmt.Sprintf("%.8f", amount),
-		)
-		_, _, err := c.Exec(ctx, cmd, nil)
-		if err != nil {
-			return err
-		}
-	} else {
-		// get utxo
-		listUtxo, err := c.ListUnspent(ctx, keyName)
-		if err != nil {
-			return err
-		}
-
-		rawTxHex, err := c.CreateRawTransaction(ctx, keyName, listUtxo, addr, amount, []byte{})
-		if err != nil {
-			return err
-		}
-
-		// sign raw transaction
-		signedRawTxHex, err := c.SignRawTransaction(ctx, keyName, rawTxHex)
-		if err != nil {
-			return err
-		}
+	cmd := append(c.BaseCli,
+		fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
+		fmt.Sprintf("address=%s", addr), 
+		fmt.Sprintf("amount=%.8f", amount),
+	)
 	
-		// send raw transaction
-		_, err = c.SendRawTransaction(ctx, signedRawTxHex)
-		if err != nil {
-			return err
-		}
+	_, _, err = c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
 	}
 	
 	return c.UnloadWallet(ctx, keyName)
@@ -321,9 +289,12 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 			SendOutput{
 				Change: sanitizedChange,
 			},
-			SendOutput{
+		}
+
+		if len(script) > 0 {
+			sendOutputs = append(sendOutputs, SendOutput{
 				Data: hex.EncodeToString(script),
-			},
+			})
 		}
 
 		sendOutputsBz, err = json.Marshal(sendOutputs)
