@@ -80,6 +80,14 @@ type ChainConfig struct {
 	AdditionalStartArgs []string
 	// Environment variables for chain nodes
 	Env []string
+	// Genesis file path and information for the chain to start with.
+	OverrideGenesisStart GenesisFileStart `yaml:"genesis-file-start"`
+}
+
+type GenesisFileStart struct {
+	GenesisFilePath string         `yaml:"genesis-file-path"`
+	Client          *client.Client `yaml:"-" json:"-"`
+	NetworkID       string         `yaml:"network-id"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -229,6 +237,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if !cmp.Equal(other.InterchainSecurityConfig, ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
+	if !cmp.Equal(other.OverrideGenesisStart, GenesisFileStart{}) {
+		c.OverrideGenesisStart = other.OverrideGenesisStart
 	}
 
 	return c

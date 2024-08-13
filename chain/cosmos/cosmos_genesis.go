@@ -26,21 +26,19 @@ import (
 func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 
-	// genesisAmount := types.Coin{
-	// 	Amount: types.NewInt(10_000_000_000_000),
-	// 	Denom:  chainCfg.Denom,
-	// }
+	// call StartWithGenesisFile here instead if something is changed
+	overGen := chainCfg.OverrideGenesisStart
+	if overGen.GenesisFilePath != "" {
+		c.log.Info("Starting with genesis file", zap.String("name", c.cfg.Name), zap.String("path", overGen.GenesisFilePath))
 
-	// genesisSelfDelegation := types.Coin{
-	// 	Amount: types.NewInt(5_000_000_000_000),
-	// 	Denom:  chainCfg.Denom,
-	// }
+		if overGen.Client == nil || overGen.NetworkID == "" {
+			panic("BUG: OverrideGenesisStart is nil when using GenesisFilePath")
+		}
 
-	// if chainCfg.ModifyGenesisAmounts != nil {
-	// 	genesisAmount, genesisSelfDelegation = chainCfg.ModifyGenesisAmounts()
-	// }
+		return c.StartWithGenesisFile(ctx, testName, overGen.Client, overGen.NetworkID, overGen.GenesisFilePath)
+	}
 
-	// genesisAmounts := []types.Coin{genesisAmount}
+	c.log.Info("Starting chain", zap.String("name", c.cfg.Name))
 
 	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 	genesisAmounts := make([][]types.Coin, len(c.Validators))
@@ -60,9 +58,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	// TODO: this was changed to chain, we good?
 	if c.cfg.PreGenesis != nil {
-		// err := c.cfg.PreGenesis(chainCfg)
 		err := c.cfg.PreGenesis(c)
 		if err != nil {
 			return err
@@ -133,8 +129,13 @@ func (c *CosmosChain) StartWithGenesisFile(
 		return err
 	}
 
-	genesisValidators := genesisFile.Validators
+	// TODO: SDK v47 check here (genesisFile.V47Validators)
+	genesisValidators := genesisFile.Consensus.Validators
 	totalPower := int64(0)
+
+	if len(genesisValidators) == 0 {
+		panic("BUG: genesisValidators is empty with custom genesis file start.")
+	}
 
 	validatorsWithPower := make([]ValidatorWithIntPower, 0)
 
@@ -178,6 +179,9 @@ func (c *CosmosChain) StartWithGenesisFile(
 	}
 
 	c.NumValidators = len(activeVals)
+	if c.NumValidators == 0 {
+		panic("BUG: c.NumValidators is 0 with custom genesis file start.")
+	}
 
 	if err := c.initializeChainNodes(ctx, testName, client, network); err != nil {
 		return err
@@ -313,7 +317,7 @@ func (c *CosmosChain) startWithFinalGenesis(ctx context.Context, genbz []byte) e
 	}
 
 	// Wait for blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
+	return testutil.WaitForBlocks(ctx, 2, c.GetNode())
 }
 
 // Bootstraps the chain and starts it from genesis

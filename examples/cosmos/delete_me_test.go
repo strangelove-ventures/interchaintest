@@ -23,6 +23,14 @@ func TestSingleValBenchmark(t *testing.T) {
 
 	ctx := context.Background()
 
+	client, network := interchaintest.DockerSetup(t)
+	icOpts := interchaintest.InterchainBuildOptions{
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
+		SkipPathCreation: false,
+	}
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      "ibc-go-simd",
@@ -34,6 +42,11 @@ func TestSingleValBenchmark(t *testing.T) {
 				CoinType:      "118",
 				ModifyGenesis: cosmos.ModifyGenesis(sdk47Genesis),
 				GasAdjustment: 1.5,
+				OverrideGenesisStart: ibc.GenesisFileStart{
+					GenesisFilePath: path.Join(t.Name(), "export.json"), // TODO: if this is not there, do we continue as normal? (or add an option here for PanicOnMissing)
+					Client:          client,
+					NetworkID:       network,
+				},
 			},
 			NumValidators: &numValsOne,
 			NumFullNodes:  &numFullNodesZero,
@@ -45,8 +58,6 @@ func TestSingleValBenchmark(t *testing.T) {
 	require.NoError(t, err)
 	chainA := chains[0].(*cosmos.CosmosChain)
 
-	client, network := interchaintest.DockerSetup(t)
-
 	ic := interchaintest.NewInterchain().
 		AddChain(chainA)
 
@@ -54,12 +65,7 @@ func TestSingleValBenchmark(t *testing.T) {
 	eRep := rep.RelayerExecReporter(t)
 
 	now = time.Now()
-	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:         t.Name(),
-		Client:           client,
-		NetworkID:        network,
-		SkipPathCreation: false,
-	}))
+	require.NoError(t, ic.Build(ctx, eRep, icOpts))
 
 	_, err = performExport(t, ctx, chainA, "export.json")
 	require.NoError(t, err)

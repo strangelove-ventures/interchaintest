@@ -817,8 +817,12 @@ type GenesisValidators struct {
 	Power   string                 `json:"power"`
 	PubKey  GenesisValidatorPubKey `json:"pub_key"`
 }
-type GenesisFile struct {
+type GenesisConsensus struct {
 	Validators []GenesisValidators `json:"validators"`
+}
+type GenesisFile struct {
+	V47Validators []GenesisValidators `json:"validators"` // SDK v47 backwards Compatability
+	Consensus     GenesisConsensus    `json:"consensus"`  // v47+
 }
 
 type ValidatorWithIntPower struct {
