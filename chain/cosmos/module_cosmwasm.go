@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -77,7 +78,12 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 
 // InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
 func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, codeID string, initMessage string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
-	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", "wasm-contract"}
+	return tn.InstantiateLabeledContract(ctx, keyName, codeID, initMessage, "wasm-contract", needsNoAdminFlag, extraExecTxArgs...)
+}
+
+// InstantiateContract takes a code id for a smart contract and initialization message and returns the instantiated contract address.
+func (tn *ChainNode) InstantiateLabeledContract(ctx context.Context, keyName string, codeID string, initMessage string, label string, needsNoAdminFlag bool, extraExecTxArgs ...string) (string, error) {
+	command := []string{"wasm", "instantiate", codeID, initMessage, "--label", label}
 	command = append(command, extraExecTxArgs...)
 	if needsNoAdminFlag {
 		command = append(command, "--no-admin")
@@ -138,6 +144,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 
 	if q, ok := queryMsg.(string); ok {
 		var jsonMap map[string]interface{}
+		log.Println("Querying contract with string query: ", queryMsg, jsonMap)
 		if err := json.Unmarshal([]byte(q), &jsonMap); err != nil {
 			return err
 		}
@@ -158,6 +165,51 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 		return err
 	}
 	err = json.Unmarshal([]byte(stdout), response)
+	return err
+}
+
+// NullableQueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
+// This should be used when the contract is returning an Option value.
+func (tn *ChainNode) NullableQueryContract(ctx context.Context, contractAddress string, queryMsg any, response any) error {
+	var query []byte
+	var err error
+
+	if q, ok := queryMsg.(string); ok {
+		var jsonMap map[string]interface{}
+		log.Println("Querying contract with string query: ", queryMsg, jsonMap, q)
+		log.Println("Querying query: ", []byte(q), q)
+		if err := json.Unmarshal([]byte(q), &jsonMap); err != nil {
+			return err
+		}
+
+		query, err = json.Marshal(jsonMap)
+		log.Println("Nullable marshal query: ", query, " err: ", err)
+		if err != nil {
+			return err
+		}
+	} else {
+		query, err = json.Marshal(queryMsg)
+		if err != nil {
+			return err
+		}
+	}
+
+	stdout, _, err := tn.ExecQuery(ctx, "wasm", "contract-state", "smart", contractAddress, string(query))
+	log.Println("NullableQueryContract stdout: ", stdout)
+	if err != nil {
+		return err
+	}
+
+	// first let's see if data is null
+	var jsonMap map[string]*string
+	nilCaseErr := json.Unmarshal(stdout, &jsonMap)
+	if nilCaseErr == nil && jsonMap["data"] == nil {
+		response = nil
+		return nil
+	}
+
+	// if not, let's try to unmarshal the data
+	err = json.Unmarshal(stdout, response)
 	return err
 }
 

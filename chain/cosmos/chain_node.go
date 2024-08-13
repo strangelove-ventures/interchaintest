@@ -1046,6 +1046,20 @@ func (tn *ChainNode) QueryBankMetadata(ctx context.Context, denom string) (*Bank
 	return &meta, nil
 }
 
+// QueryConsensusParams returns the consensus parameters of the chain.
+func (tn *ChainNode) QueryConsensusParams(ctx context.Context) (*ConsensusParamsResponse, error) {
+	stdout, _, err := tn.ExecQuery(ctx, "consensus", "params")
+	if err != nil {
+		return nil, err
+	}
+	var params ConsensusParamsResponse
+	err = json.Unmarshal(stdout, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
 func (tn *ChainNode) ExportState(ctx context.Context, height int64) (string, error) {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()

@@ -128,7 +128,6 @@ func (c *CosmosChain) WithPreStartNodes(preStartNodes func(*CosmosChain)) {
 	c.preStartNodes = preStartNodes
 }
 
-
 // GetCodec returns the codec for the chain.
 func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
 	return c.cdc
@@ -544,6 +543,26 @@ func (c *CosmosChain) InstantiateContract(ctx context.Context, keyName string, c
 	return c.getFullNode().InstantiateContract(ctx, keyName, codeID, initMessage, needsNoAdminFlag, extraExecTxArgs...)
 }
 
+// UploadAndInstantiateContract uploads a contract and then instantiates it immediately. Returns both the code id and the new address.
+func (c *CosmosChain) UploadAndInstantiateContract(ctx context.Context, keyName string, fileName string, initMessage string, label string, needsNoAdminFlag bool, extraExecTxArgs ...string) (*ContractInfoResponse, error) {
+	codeID, err := c.StoreContract(ctx, keyName, fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	contractAddress, err := c.getFullNode().InstantiateLabeledContract(ctx, keyName, codeID, initMessage, label, needsNoAdminFlag, extraExecTxArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	contractInfo, err := c.QueryContractInfo(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return contractInfo, err
+}
+
 // ExecuteContract executes a contract transaction with a message using it's address.
 func (c *CosmosChain) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
 	return c.getFullNode().ExecuteContract(ctx, keyName, contractAddress, message, extraExecTxArgs...)
@@ -557,6 +576,11 @@ func (c *CosmosChain) MigrateContract(ctx context.Context, keyName string, contr
 // QueryContract performs a smart query, taking in a query struct and returning a error with the response struct populated.
 func (c *CosmosChain) QueryContract(ctx context.Context, contractAddress string, query any, response any) error {
 	return c.getFullNode().QueryContract(ctx, contractAddress, query, response)
+}
+
+// NullableQueryContract performs a smart query, taking in a query struct and returning a error with the response struct possibly populated. If the query returned null the response will be nil.
+func (c *CosmosChain) NullableQueryContract(ctx context.Context, contractAddress string, query any, response any) error {
+	return c.getFullNode().NullableQueryContract(ctx, contractAddress, query, response)
 }
 
 // DumpContractState dumps the state of a contract at a block height.
@@ -594,6 +618,23 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
 	return int64(math.Ceil(fees))
+}
+
+// GetBlockGasLimit returns the gas limit for a block on the chain.
+func (c *CosmosChain) GetBlockGasLimit(ctx context.Context) (*uint64, error) {
+	consensus_params, err := c.ConsensusQueryParams(ctx)
+	if err == nil {
+		max_gas_limit := consensus_params.Params.Block.MaxGas
+		// the chain only has a block gas limit if it's not set to -1
+		if max_gas_limit > -1 {
+			var gas_limit = uint64(max_gas_limit)
+			return &gas_limit, nil
+		} else {
+			return nil, nil
+
+		}
+	}
+	return nil, err
 }
 
 func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
