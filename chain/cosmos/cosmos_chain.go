@@ -1,7 +1,6 @@
 package cosmos
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -127,7 +125,6 @@ func NewCosmosChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 func (c *CosmosChain) WithPreStartNodes(preStartNodes func(*CosmosChain)) {
 	c.preStartNodes = preStartNodes
 }
-
 
 // GetCodec returns the codec for the chain.
 func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
@@ -828,238 +825,6 @@ type ValidatorWithIntPower struct {
 	Address      string
 	Power        int64
 	PubKeyBase64 string
-}
-
-// Bootstraps the chain and starts it from genesis
-func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	if c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil && c.Provider == nil {
-		return fmt.Errorf("don't set ConsumerCopyProviderKey if it's not a consumer chain")
-	}
-
-	chainCfg := c.Config()
-
-	decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
-
-	genesisAmounts := make([][]types.Coin, len(c.Validators))
-	genesisSelfDelegation := make([]types.Coin, len(c.Validators))
-
-	for i := range c.Validators {
-		genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(10_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
-		genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(5_000_000).MulRaw(decimalPow), Denom: chainCfg.Denom}
-		if chainCfg.ModifyGenesisAmounts != nil {
-			amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
-			genesisAmounts[i] = []types.Coin{amount}
-			genesisSelfDelegation[i] = selfDelegation
-		}
-	}
-
-	configFileOverrides := chainCfg.ConfigFileOverrides
-
-	eg := new(errgroup.Group)
-	// Initialize config and sign gentx for each validator.
-	for i, v := range c.Validators {
-		v := v
-		i := i
-		v.Validator = true
-		eg.Go(func() error {
-			if err := v.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					v.logger(),
-					v.DockerClient,
-					v.TestName,
-					v.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return fmt.Errorf("failed to modify toml config file: %w", err)
-				}
-			}
-			if !c.cfg.SkipGenTx {
-				return v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i])
-			}
-			return nil
-		})
-	}
-
-	// Initialize config for each full node.
-	for _, n := range c.FullNodes {
-		n := n
-		n.Validator = false
-		eg.Go(func() error {
-			if err := n.InitFullNodeFiles(ctx); err != nil {
-				return err
-			}
-			for configFile, modifiedConfig := range configFileOverrides {
-				modifiedToml, ok := modifiedConfig.(testutil.Toml)
-				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
-				}
-				if err := testutil.ModifyTomlConfigFile(
-					ctx,
-					n.logger(),
-					n.DockerClient,
-					n.TestName,
-					n.VolumeName,
-					configFile,
-					modifiedToml,
-				); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	}
-
-	// wait for this to finish
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	if c.preStartNodes != nil {
-		c.preStartNodes(c)
-	}
-
-	if c.cfg.PreGenesis != nil {
-		err := c.cfg.PreGenesis(c)
-		if err != nil {
-			return err
-		}
-	}
-
-	// for the validators we need to collect the gentxs and the accounts
-	// to the first node's genesis file
-	validator0 := c.Validators[0]
-	for i := 1; i < len(c.Validators); i++ {
-		validatorN := c.Validators[i]
-
-		bech32, err := validatorN.AccountKeyBech32(ctx, valKey)
-		if err != nil {
-			return err
-		}
-
-		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
-			return err
-		}
-
-		if !c.cfg.SkipGenTx {
-			if err := validatorN.copyGentx(ctx, validator0); err != nil {
-				return err
-			}
-		}
-	}
-
-	for _, wallet := range additionalGenesisWallets {
-
-		if err := validator0.AddGenesisAccount(ctx, wallet.Address, []types.Coin{{Denom: wallet.Denom, Amount: wallet.Amount}}); err != nil {
-			return err
-		}
-	}
-
-	if !c.cfg.SkipGenTx {
-		if err := validator0.CollectGentxs(ctx); err != nil {
-			return err
-		}
-	}
-
-	genbz, err := validator0.GenesisFileContent(ctx)
-	if err != nil {
-		return err
-	}
-
-	genbz = bytes.ReplaceAll(genbz, []byte(`"stake"`), []byte(fmt.Sprintf(`"%s"`, chainCfg.Denom)))
-
-	if c.cfg.ModifyGenesis != nil {
-		genbz, err = c.cfg.ModifyGenesis(chainCfg, genbz)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Provide EXPORT_GENESIS_FILE_PATH and EXPORT_GENESIS_CHAIN to help debug genesis file
-	exportGenesis := os.Getenv("EXPORT_GENESIS_FILE_PATH")
-	exportGenesisChain := os.Getenv("EXPORT_GENESIS_CHAIN")
-	if exportGenesis != "" && exportGenesisChain == c.cfg.Name {
-		c.log.Debug("Exporting genesis file",
-			zap.String("chain", exportGenesisChain),
-			zap.String("path", exportGenesis),
-		)
-		_ = os.WriteFile(exportGenesis, genbz, 0600)
-	}
-
-	chainNodes := c.Nodes()
-
-	for _, cn := range chainNodes {
-		if err := cn.OverwriteGenesisFile(ctx, genbz); err != nil {
-			return err
-		}
-	}
-
-	if err := chainNodes.LogGenesisHashes(ctx); err != nil {
-		return err
-	}
-
-	// Start any sidecar processes that should be running before the chain starts
-	eg, egCtx := errgroup.WithContext(ctx)
-	for _, s := range c.Sidecars {
-		s := s
-
-		err = s.containerLifecycle.Running(ctx)
-		if s.preStart && err != nil {
-			eg.Go(func() error {
-				if err := s.CreateContainer(egCtx); err != nil {
-					return err
-				}
-
-				if err := s.StartContainer(egCtx); err != nil {
-					return err
-				}
-
-				return nil
-			})
-		}
-	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	eg, egCtx = errgroup.WithContext(ctx)
-	for _, n := range chainNodes {
-		n := n
-		eg.Go(func() error {
-			return n.CreateNodeContainer(egCtx)
-		})
-	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	peers := chainNodes.PeerString(ctx)
-
-	eg, egCtx = errgroup.WithContext(ctx)
-	for _, n := range chainNodes {
-		n := n
-		c.log.Info("Starting container", zap.String("container", n.Name()))
-		eg.Go(func() error {
-			if err := n.SetPeers(egCtx, peers); err != nil {
-				return err
-			}
-			return n.StartContainer(egCtx)
-		})
-	}
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	// Wait for blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
 // Height implements ibc.Chain
