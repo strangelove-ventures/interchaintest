@@ -12,32 +12,29 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
-func (c *CosmosChain) SetupDAODAO(ctx context.Context,
-	ibcPath string,
-	keyName string) (any, error) {
-
-	dao_proposal_single_code_id, err := c.StoreContract(ctx, keyName, "../../../external_contracts/daodao/dao_proposal_single.wasm")
-	if err != nil {
-		return nil, err
-	}
-	// Convert the proposal code id to an int
-	proposal_code_id, err := strconv.Atoi(dao_proposal_single_code_id)
+func (c *CosmosChain) SetupDAODAO(ctx context.Context, ibcPath string, keyName string) (any, error) {
+	daoProposalSingleCodeID, err := c.StoreContract(ctx, keyName, "../../../external_contracts/daodao/dao_proposal_single.wasm")
 	if err != nil {
 		return nil, err
 	}
 
-	dao_voting_token_staked_code_id, err := c.StoreContract(ctx, keyName, "../../../external_contracts/daodao/dao_voting_token_staked.wasm")
+	propCodeID, err := strconv.Atoi(daoProposalSingleCodeID)
 	if err != nil {
 		return nil, err
 	}
 
-	user_address_bytes, err := c.GetAddress(ctx, keyName)
+	votingTokenStakedCodeID, err := c.StoreContract(ctx, keyName, "../../../external_contracts/daodao/dao_voting_token_staked.wasm")
 	if err != nil {
 		return nil, err
 	}
-	user_address := string(user_address_bytes)
 
-	core_instantiation_msg := daodaocore.InstantiateMsg{
+	userAddrBz, err := c.GetAddress(ctx, keyName)
+	if err != nil {
+		return nil, err
+	}
+	userAddr := string(userAddrBz)
+
+	coreInitMsg := daodaocore.InstantiateMsg{
 		ImageUrl:     nil,
 		InitialItems: []daodaocore.InitialItem{},
 		Name:         "V2_DAO",
@@ -47,7 +44,7 @@ func (c *CosmosChain) SetupDAODAO(ctx context.Context,
 					Address:    nil,
 					CoreModule: &daodaocore.Admin_CoreModule{},
 				},
-				CodeId: proposal_code_id,
+				CodeId: propCodeID,
 				Funds:  []daodaocore.Coin{},
 				Label:  "v2_dao",
 				Msg:    "",
@@ -58,23 +55,23 @@ func (c *CosmosChain) SetupDAODAO(ctx context.Context,
 		AutomaticallyAddCw20S:       true,
 		DaoUri:                      nil,
 		Description:                 "V2_DAO",
-		Admin:                       &user_address,
+		Admin:                       &userAddr,
 	}
 
-	instantiate_msg, err := json.Marshal(core_instantiation_msg)
+	initMsg, err := json.Marshal(coreInitMsg)
 
 	if err != nil {
 		return nil, err
 	}
 
-	dao_core, err := c.UploadAndInstantiateContract(ctx, keyName, "../../../external_contracts/daodao/dao_dao_core.wasm",
-		string(instantiate_msg), "daodao_core", true,
+	daoCore, err := c.UploadAndInstantiateContract(ctx, keyName, "../../../external_contracts/daodao/dao_dao_core.wasm",
+		string(initMsg), "daodao_core", true,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println(dao_proposal_single_code_id, dao_voting_token_staked_code_id, dao_core)
+	log.Println(daoProposalSingleCodeID, votingTokenStakedCodeID, daoCore)
 
 	return nil, nil
 }
@@ -88,15 +85,12 @@ func (c *CosmosChain) SetupPolytone(
 	destinationChain *CosmosChain,
 	destinationKeyName string,
 ) (*PolytoneInstantiation, error) {
-
 	note, listener, err := c.SetupPolytoneSourceChain(ctx, keyName, destinationChain.Config().ChainID)
-
 	if err != nil || note == nil || listener == nil {
 		return nil, err
 	}
 
 	voice, err := destinationChain.SetupPolytoneDestinationChain(ctx, destinationKeyName, c.Config().ChainID)
-
 	if err != nil || voice == nil {
 		return nil, err
 	}
@@ -116,20 +110,20 @@ func (c *CosmosChain) SetupPolytone(
 
 func (c *CosmosChain) SetupPolytoneDestinationChain(ctx context.Context, keyName string, sourceChainId string) (*ContractInfoResponse, error) {
 
-	var block_gas_limit uint64
-	queried_limit, err := c.GetBlockGasLimit(ctx)
+	var blockGasLimit uint64
+	queriedLimit, err := c.GetBlockGasLimit(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if queried_limit == nil {
+	if queriedLimit == nil {
 		// Default to 100M gas limit
-		block_gas_limit = uint64(100_000_000)
+		blockGasLimit = uint64(100_000_000)
 	} else {
-		block_gas_limit = *queried_limit
+		blockGasLimit = *queriedLimit
 	}
 
-	proxy_code_id, err := c.StoreContract(
+	proxyCodeID, err := c.StoreContract(
 		ctx,
 		keyName,
 		"../../../external_contracts/polytone/v1.0.0/polytone_proxy.wasm")
@@ -140,7 +134,7 @@ func (c *CosmosChain) SetupPolytoneDestinationChain(ctx context.Context, keyName
 
 	voice, err := c.UploadAndInstantiateContract(ctx, keyName,
 		"../../../external_contracts/polytone/v1.0.0/polytone_voice.wasm",
-		fmt.Sprintf("{\"proxy_code_id\":\"%s\", \"block_max_gas\":\"%d\"}", proxy_code_id, block_gas_limit),
+		fmt.Sprintf("{\"proxy_code_id\":\"%s\", \"block_max_gas\":\"%d\"}", proxyCodeID, blockGasLimit),
 		fmt.Sprintf("polytone_voice_from_%s", sourceChainId),
 		true)
 
@@ -153,23 +147,23 @@ func (c *CosmosChain) SetupPolytoneDestinationChain(ctx context.Context, keyName
 }
 
 func (c *CosmosChain) SetupPolytoneSourceChain(ctx context.Context, keyName string, destinationChainId string) (*ContractInfoResponse, *ContractInfoResponse, error) {
-	var block_gas_limit uint64
-	queried_limit, err := c.GetBlockGasLimit(ctx)
+	var blockGasLimit uint64
+	queriedLimit, err := c.GetBlockGasLimit(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if queried_limit == nil {
+	if queriedLimit == nil {
 		// Default to 100M gas limit
-		block_gas_limit = uint64(100_000_000)
+		blockGasLimit = uint64(100_000_000)
 	} else {
-		block_gas_limit = *queried_limit
+		blockGasLimit = *queriedLimit
 	}
 
 	// Upload the note contract- it emits the ibc messages
 	note, err := c.UploadAndInstantiateContract(ctx, keyName,
 		"../../../external_contracts/polytone/v1.0.0/polytone_note.wasm",
-		fmt.Sprintf(`{"block_max_gas":"%d"}`, block_gas_limit),
+		fmt.Sprintf(`{"block_max_gas":"%d"}`, blockGasLimit),
 		fmt.Sprintf("polytone_note_to_%v", destinationChainId),
 		true)
 
@@ -214,7 +208,6 @@ func (c *CosmosChain) FinishPolytoneSetup(ctx context.Context, r ibc.Relayer, eR
 		return "", err
 	}
 
-	// Get the new channel
 	channelsInfo, err := r.GetChannels(ctx, eRep, c.Config().ChainID)
 	if err != nil {
 		return "", err

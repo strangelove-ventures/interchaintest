@@ -144,7 +144,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 
-	grpcConn, err := grpc.Dial(
+	grpcConn, err := grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {

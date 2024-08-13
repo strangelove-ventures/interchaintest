@@ -204,7 +204,7 @@ func (tn *ChainNode) NullableQueryContract(ctx context.Context, contractAddress 
 	var jsonMap map[string]*string
 	nilCaseErr := json.Unmarshal(stdout, &jsonMap)
 	if nilCaseErr == nil && jsonMap["data"] == nil {
-		response = nil
+		// response = nil
 		return nil
 	}
 
