@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"context"
-	"encoding/json"
 
 	"fmt"
 	"io"
@@ -497,14 +496,16 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 			return sdkmath.Int{}, err
 		}
 	} else {
-		cmd := append(c.BaseCli, "listaccounts")
-		stdout, _, err := c.Exec(ctx, cmd, nil)
+		listUtxo, err := c.ListUnspent(ctx, keyName)
 		if err != nil {
 			return sdkmath.Int{}, err
 		}
-		var accounts map[string]float64
-		err = json.Unmarshal(stdout, &accounts)
-		coinsWithDecimal = accounts[keyName]
+
+		for _, utxo := range listUtxo {
+			if utxo.Spendable {
+				coinsWithDecimal += utxo.Amount
+			}
+		}
 	}
 
 	coinsScaled := int64(coinsWithDecimal * math.Pow10(int(*c.Config().CoinDecimals)))
