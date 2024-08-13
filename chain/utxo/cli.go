@@ -256,13 +256,15 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 	}
 	fees = fees * c.cfg.GasAdjustment
 	for _, utxo := range listUtxo {
-		sendInputs = append(sendInputs, SendInput{
-			TxId: utxo.TxId,
-			Vout: utxo.Vout,
-		})
-		utxoTotal += utxo.Amount
-		if utxoTotal > sendAmount + fees {
-			break
+		if wallet.address == utxo.Address || strings.Contains(utxo.Address, wallet.address) {
+			sendInputs = append(sendInputs, SendInput{
+				TxId: utxo.TxId,
+				Vout: utxo.Vout,
+			})
+			utxoTotal += utxo.Amount
+			if utxoTotal > sendAmount + fees {
+				break
+			}
 		}
 	}
 	sendInputsBz, err := json.Marshal(sendInputs)

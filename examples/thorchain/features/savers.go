@@ -11,7 +11,6 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/stretchr/testify/require"
 )
 
 func Saver(
@@ -19,22 +18,31 @@ func Saver(
 	ctx context.Context,
 	thorchain *tc.Thorchain,
 	exoChain ibc.Chain,
-) (exoUser ibc.Wallet) {
+) (exoUser ibc.Wallet, err error) {
 	fmt.Println("#### Savers:", exoChain.Config().Name)
-	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-Saver", exoChain.Config().Name), exoChain)
+	users, err := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-Saver", exoChain.Config().Name), exoChain)
+	if err != nil {
+		return exoUser, err
+	}
 	exoUser = users[0]
 
 	exoChainType, err := common.NewChain(exoChain.Config().Name)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	exoAsset := exoChainType.GetGasAsset()
 
 	pool, err := thorchain.ApiGetPool(exoAsset)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
 		MulUint64(500).QuoUint64(10_000)
 
 	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	
 	// store expected range to fail if received amount is outside 5% tolerance
 	quoteOut := sdkmath.NewUintFromString(saverQuote.ExpectedAmountDeposit)
@@ -48,12 +56,14 @@ func Saver(
 
 	// send random half as memoless saver
 	memo := ""
-	if rand.Intn(2) == 0 || exoChainType.String() == common.GAIAChain.String() { // if gaia memo is empty, bifrost errors
+	if rand.Intn(2) == 0 || exoChainType.String() == common.GAIAChain.String() { // if gaia memo is empty, bifrost errors, maybe benign
 		memo = fmt.Sprintf("+:%s", exoAsset.GetSyntheticAsset())
 	}
 
 	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 
 	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
@@ -64,18 +74,28 @@ func Saver(
 	}
 	if memo != "" {
 		_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), wallet, memo)
+		if err != nil {
+			return exoUser, err
+		}
 	} else {
-		err = exoChain.SendFunds(ctx, exoUser.KeyName(), wallet)
+		if err := exoChain.SendFunds(ctx, exoUser.KeyName(), wallet); err != nil {
+			return exoUser, err
+		}
 	}
-	require.NoError(t, err)
 
 	errMsgCommon := fmt.Sprintf("saver (%s - %s) of asset %s", exoUser.KeyName(), exoUser.FormattedAddress(), exoAsset)
 	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
-	require.NoError(t, err, fmt.Sprintf("%s not found", errMsgCommon))
+	if err != nil {
+		return exoUser, fmt.Errorf("%s not found, %w", errMsgCommon, err)
+	}
 
 	deposit := sdkmath.NewUintFromString(saver.AssetDepositValue)
-	require.True(t, deposit.GTE(minExpectedSaver), fmt.Sprintf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver))
-	require.True(t, deposit.LTE(maxExpectedSaver), fmt.Sprintf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver))
+	if deposit.LT(minExpectedSaver) {
+		return exoUser, fmt.Errorf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver)
+	}
+	if deposit.GT(maxExpectedSaver) {
+		return exoUser, fmt.Errorf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver)
+	}
 
-	return exoUser
+	return exoUser, nil
 }

@@ -10,6 +10,7 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"golang.org/x/sync/errgroup"
 )
 
 func SingleSwap(
@@ -20,10 +21,40 @@ func SingleSwap(
 	destChain ibc.Chain,
 ) error {
 	fmt.Println("#### Single swap:", srcChain.Config().Name, "to", destChain.Config().Name)
-	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("swap-%s-%s", srcChain.Config().Name, destChain.Config().Name), srcChain, destChain)
+	users, err := GetAndFundTestUsers(t, ctx, fmt.Sprintf("swap-%s-%s", srcChain.Config().Name, destChain.Config().Name), srcChain, destChain)
+	if err != nil {
+		return err
+	}
 	srcUser, destUser := users[0], users[1]
 
 	return singleSwap(ctx, thorchain, srcChain, srcUser, destChain, destUser)
+}
+
+func DualSwap(
+	t *testing.T,
+	ctx context.Context,
+	thorchain *tc.Thorchain,
+	srcChain ibc.Chain,
+	destChain ibc.Chain,
+) error {
+	fmt.Println("#### Dual swap:", srcChain.Config().Name, "<->", destChain.Config().Name)
+	users, err := GetAndFundTestUsers(t, ctx, fmt.Sprintf("swap-%s-%s", srcChain.Config().Name, destChain.Config().Name), srcChain, destChain)
+	if err != nil {
+		return err
+	}
+	srcUser, destUser := users[0], users[1]
+
+	var eg errgroup.Group
+
+	eg.Go(func() error {
+		return singleSwap(ctx, thorchain, srcChain, srcUser, destChain, destUser)
+	})
+
+	eg.Go(func() error {
+		return singleSwap(ctx, thorchain, destChain, destUser, srcChain, srcUser)
+	})
+
+	return eg.Wait()
 }
 
 // swap 0.5% of pool depth

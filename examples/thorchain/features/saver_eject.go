@@ -6,56 +6,72 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/stretchr/testify/require"
 )
 
 func SaverEject(
 	t *testing.T,
 	ctx context.Context,
+	mimirLock *sync.Mutex, // Lock must be used across all chains testing saver eject in parallel
 	thorchain *tc.Thorchain,
 	exoChain ibc.Chain,
 	exoSavers ...ibc.Wallet, // Savers that should not be ejected
-) (exoUser ibc.Wallet) {
+) (exoUser ibc.Wallet, err error) {
 	fmt.Println("#### Saver Eject:", exoChain.Config().Name)
-	err := AddAdminIfNecessary(ctx, thorchain)
-	require.NoError(t, err)
+	if err := AddAdminIfNecessary(ctx, thorchain); err != nil {
+		return exoUser, err
+	}
 	
+	users, err := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-SaverEject", exoChain.Config().Name), exoChain)
+	if err != nil {
+		return exoUser, err
+	}
+	exoUser = users[0]
+
 	// Reset mimirs
+	mimirLock.Lock()
 	mimirs, err := thorchain.ApiGetMimirs()
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 
 	// Set max synth per pool depth to 100% of pool amount
 	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(5000)) {
-		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000")
-		require.NoError(t, err)
+		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000"); err != nil {
+			return exoUser, err
+		}
 	}
 
 	// Disable saver ejection
 	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(0) || !ok) {
-		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0")
-		require.NoError(t, err)
+		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0"); err != nil {
+			return exoUser, err
+		}
 	}
 
-	users := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-SaverEject", exoChain.Config().Name), exoChain)
-	exoUser = users[0]
-
 	exoChainType, err := common.NewChain(exoChain.Config().Name)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	exoAsset := exoChainType.GetGasAsset()
 
 	pool, err := thorchain.ApiGetPool(exoAsset)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
 		MulUint64(2000).QuoUint64(10_000)
 
 	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	
 	// store expected range to fail if received amount is outside 5% tolerance
 	quoteOut := sdkmath.NewUintFromString(saverQuote.ExpectedAmountDeposit)
@@ -75,7 +91,9 @@ func SaverEject(
 	}
 
 	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 	
 	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
@@ -89,58 +107,85 @@ func SaverEject(
 	} else {
 		err = exoChain.SendFunds(ctx, exoUser.KeyName(), wallet)
 	}
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 
 	errMsgCommon := fmt.Sprintf("saver (%s - %s) of asset %s", exoUser.KeyName(), exoUser.FormattedAddress(), exoAsset)
 	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
-	require.NoError(t, err, fmt.Sprintf("%s not found", errMsgCommon))
+	if err != nil {
+		return exoUser, fmt.Errorf("%s not found, %w", errMsgCommon, err)
+	}
 
 	deposit := sdkmath.NewUintFromString(saver.AssetDepositValue)
-	require.True(t, deposit.GTE(minExpectedSaver), fmt.Sprintf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver))
-	require.True(t, deposit.LTE(maxExpectedSaver), fmt.Sprintf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver))
+	if deposit.LT(minExpectedSaver) {
+		return exoUser, fmt.Errorf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver)
+	}
+	if deposit.GT(maxExpectedSaver) {
+		return exoUser, fmt.Errorf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver)
+	}
 
 	exoUserPreEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 
 	exoSaversBalance := make([]sdkmath.Int, len(exoSavers))
 	for i, exoSaver := range exoSavers {
 		exoSaversBalance[i], err = exoChain.GetBalance(ctx, exoSaver.FormattedAddress(), exoChain.Config().Denom)
-		require.NoError(t, err)
+		if err != nil {
+			return exoUser, err
+		}
 	}
 
 	mimirs, err = thorchain.ApiGetMimirs()
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
 
 	// Set mimirs
 	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(500) || !ok) {
-		err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500")
-		require.NoError(t, err)
+		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500"); err != nil {
+			return exoUser, err
+		}
 	}
 	
 	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(1) || !ok) {
-		err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1")
-		require.NoError(t, err)
+		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1"); err != nil {
+			return exoUser, err
+		}
 	}
 
 	_, err = PollForEjectedSaver(ctx, thorchain, 30, exoAsset, exoUser)
-	require.NoError(t, err)
+	if err != nil {
+		return exoUser, err
+	}
+	mimirLock.Unlock()
 	
-	err = PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
+	if err := PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
 		Address: exoUser.FormattedAddress(),
 		Denom: exoChain.Config().Denom,
 		Amount: exoUserPreEjectBalance,
-	})
-	require.NoError(t, err)
+	}); err != nil {
+		return exoUser, err
+	}
 	exoUserPostEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
-	require.NoError(t, err)
-	require.True(t, exoUserPostEjectBalance.GT(exoUserPreEjectBalance), 
-		fmt.Sprintf("User (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance))
+	if err != nil {
+		return exoUser, err
+	}
+	if exoUserPostEjectBalance.LTE(exoUserPreEjectBalance) {
+		return exoUser, fmt.Errorf("User (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance)
+	}
 
 	for i, exoSaver := range exoSavers {
 		exoSaverPostBalance, err := exoChain.GetBalance(ctx, exoSaver.FormattedAddress(), exoChain.Config().Denom)
-		require.NoError(t, err)
-		require.True(t, exoSaverPostBalance.Equal(exoSaversBalance[i]), fmt.Sprintf("Saver's (%s) post balance (%s) should be the same as (%s)", exoSaver.KeyName(), exoSaverPostBalance, exoSaversBalance[i]))
+		if err != nil {
+			return exoUser, err
+		}
+		if !exoSaverPostBalance.Equal(exoSaversBalance[i]) {
+			return exoUser, fmt.Errorf("Saver's (%s) post balance (%s) should be the same as (%s)", exoSaver.KeyName(), exoSaverPostBalance, exoSaversBalance[i])
+		}
 	}
 
-	return exoUser
+	return exoUser, nil
 }

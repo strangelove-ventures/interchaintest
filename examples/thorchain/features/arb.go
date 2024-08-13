@@ -12,7 +12,6 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -24,17 +23,26 @@ func Arb(
 ) (users []ibc.Wallet, err error) {
 	fmt.Println("#### Arb")
 	chains := append(exoChains, thorchain)
-	users = GetAndFundTestUsers(t, ctx, "arb", chains...)
+	users, err = GetAndFundTestUsers(t, ctx, "arb", chains...)
+	if err != nil {
+		return users, err
+	}
 
 	err = AddAdminIfNecessary(ctx, thorchain)
-	require.NoError(t, err)
+	if err != nil {
+		return users, err
+	}
 
 	mimirs, err := thorchain.ApiGetMimirs()
-	require.NoError(t, err)
+	if err != nil {
+		return users, err
+	}
 
 	if mimir, ok := mimirs[strings.ToUpper("TradeAccountsEnabled")]; (ok && mimir != int64(1) || !ok) {
 		err := thorchain.SetMimir(ctx, "admin", "TradeAccountsEnabled", "1")
-		require.NoError(t, err)
+		if err != nil {
+			return users, err
+		}
 	}
 
 	thorUser := users[len(users)-1]
@@ -45,26 +53,34 @@ func Arb(
 		exoChain := exoChain
 		eg.Go(func() error {
 			exoChainType, err := common.NewChain(exoChain.Config().Name)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 
 			exoUser := users[i]
 	
 			exoUserBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 
 			memo := fmt.Sprintf("trade+:%s", thorUser.FormattedAddress())
 			exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 			_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), ibc.WalletAmount{
 				Address: exoInboundAddr,
 				Denom: exoChain.Config().Denom,
 				Amount: exoUserBalance.QuoRaw(10).MulRaw(9),
 			}, memo)
 
-			return nil
+			return err
 		})
 	}
-	require.NoError(t, eg.Wait())
+	if err := eg.Wait(); err != nil {
+		return users, err
+	}
 
 	go func() {
 		type Pool struct {
@@ -76,7 +92,11 @@ func Arb(
 
 		for {
 			pools, err := thorchain.ApiGetPools()
-			require.NoError(t, err)
+			if err != nil {
+				fmt.Println("Error getting arb api pools", err)
+				time.Sleep(time.Second * 2)
+				continue
+			}
 
 			allPoolsSuspended := true
 			arbPools := []tc.Pool{}
@@ -136,7 +156,11 @@ func Arb(
 			// build the swap
 			memo := fmt.Sprintf("=:%s", strings.Replace(receive.Asset, ".", "~", 1))
 			asset, err := common.NewAsset(strings.Replace(send.Asset, ".", "~", 1))
-			require.NoError(t, err)
+			if err != nil {
+				fmt.Println("Error building arb swap asset", err)
+				time.Sleep(time.Second * 2)
+				continue
+			}
 			amount := sdkmath.NewUint(uint64(adjustmentBps / 2)).Mul(sdkmath.NewUintFromString(send.BalanceAsset)).QuoUint64(maxBasisPts)
 
 			fmt.Println("Arbing:", amount, asset.String(), memo)

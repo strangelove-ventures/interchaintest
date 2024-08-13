@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"sync"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -14,7 +14,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 func GetAndFundTestUsers(
@@ -22,9 +22,9 @@ func GetAndFundTestUsers(
 	ctx context.Context,
 	keyNamePrefix string,
 	chains ...ibc.Chain,
-) []ibc.Wallet {
+) ([]ibc.Wallet, error) {
 	users := make([]ibc.Wallet, len(chains))
-	wg := &sync.WaitGroup{}
+	eg, egCtx := errgroup.WithContext(ctx)
 	for i, chain := range chains {
 		i := i
 		chain := chain
@@ -38,20 +38,25 @@ func GetAndFundTestUsers(
 		case "3": // doge
 			amount = oneCoin.MulRaw(10_000)
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			user := interchaintest.GetAndFundTestUsers(t, ctx, keyNamePrefix, amount, chain)
+		eg.Go(func() error {
+			user := interchaintest.GetAndFundTestUsers(t, egCtx, keyNamePrefix, amount, chain)
 			users[i] = user[0]
 
-			userBalance, err := chain.GetBalance(ctx, user[0].FormattedAddress(), chain.Config().Denom)
-			require.NoError(t, err)
-			require.True(t, userBalance.Equal(amount), fmt.Sprintf("User (%s) was not properly funded", user[0].KeyName()))
-		}()
-	}
-	wg.Wait()
+			userBalance, err := chain.GetBalance(egCtx, user[0].FormattedAddress(), chain.Config().Denom)
+			if err != nil {
+				return err
+			}
+			if !userBalance.Equal(amount) {
+				return fmt.Errorf("User (%s) was not properly funded", user[0].KeyName())
+			}
 
-	return users
+			return nil
+		})
+	}
+
+	err := eg.Wait()
+
+	return users, err
 }
 
 // PollForPool polls until the pool is found and funded
@@ -63,14 +68,17 @@ func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		pool, err := thorchain.ApiGetPool(asset)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return nil, err
 		}
 
 		if pool.BalanceAsset == "0" {
+			time.Sleep(time.Second) // rate limit
 			return nil, fmt.Errorf("Pool (%s) exists, but not asset balance", asset)
 		}
 		return nil, nil
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
 	return err
@@ -85,6 +93,7 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
 		savers, err := thorchain.ApiGetSavers(asset)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return tc.Saver{}, err
 		}
 		for _, saver := range savers {
@@ -93,8 +102,10 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 			}
 
 		}
+		time.Sleep(time.Second) // rate limit
 		return tc.Saver{}, fmt.Errorf("saver took longer than %d blocks to show", deltaBlocks)
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[tc.Saver]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
 	return saver, err
@@ -109,16 +120,19 @@ func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBloc
 	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
 		savers, err := thorchain.ApiGetSavers(asset)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return tc.Saver{}, err
 		}
 		for _, saver := range savers {
 			if strings.ToLower(saver.AssetAddress) == strings.ToLower(exoUser.FormattedAddress()) {
+				time.Sleep(time.Second) // rate limit
 				return saver, fmt.Errorf("saver took longer than %d blocks to eject", deltaBlocks)
 			}
 
 		}
 		return tc.Saver{}, nil
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[tc.Saver]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
 	return saver, err
@@ -133,13 +147,16 @@ func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		stages, err := thorchain.ApiGetTxStages(txHash)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return nil, err
 		}
 		if stages.SwapFinalised == nil || !stages.SwapFinalised.Completed {
+			time.Sleep(time.Second) // rate limit
 			return nil, fmt.Errorf("swap (tx: %s) didn't complete in %d blocks", txHash, deltaBlocks)
 		}
 		return nil, nil
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
 	return saver, err
@@ -154,13 +171,16 @@ func PollOutboundSigned(ctx context.Context, thorchain *tc.Thorchain, deltaBlock
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		stages, err := thorchain.ApiGetTxStages(txHash)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return nil, err
 		}
 		if stages.OutboundSigned == nil || !stages.OutboundSigned.Completed {
+			time.Sleep(time.Second) // rate limit
 			return nil, fmt.Errorf("swap (tx: %s) didn't outbound sign in %d blocks", txHash, deltaBlocks)
 		}
 		return nil, nil
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	saver, err := bp.DoPoll(ctx, h, h+deltaBlocks)
 	return saver, err
@@ -175,13 +195,16 @@ func PollForBalanceChange(ctx context.Context, chain ibc.Chain, deltaBlocks int6
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		bal, err := chain.GetBalance(ctx, balance.Address, balance.Denom)
 		if err != nil {
+			time.Sleep(time.Second) // rate limit
 			return nil, err
 		}
 		if balance.Amount.Equal(bal) {
+			time.Sleep(time.Second) // rate limit
 			return nil, fmt.Errorf("%s balance (%s) hasn't changed: (%s) in %d blocks", balance.Address, bal.String(), balance.Amount.String(), deltaBlocks)
 		}
 		return nil, nil
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: chain.Height, PollFunc: doPoll}
 	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
 	return err
@@ -196,15 +219,18 @@ func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlo
 	doPoll := func(ctx context.Context, height int64) (any, error) {
 		pool, err := thorchain.ApiGetPool(exoAsset)
 		if err != nil {
-			return nil, nil
+			time.Sleep(time.Second) // rate limit
+			return nil, err
 		}
 
 		if pool.Status == "Suspended" {
 			return nil, nil
 		}
 
+		time.Sleep(time.Second) // rate limit
 		return nil, fmt.Errorf("Pool (%s) did not suspend in %d blocks", exoAsset, deltaBlocks)
 	}
+	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}
 	_, err = bp.DoPoll(ctx, h, h+deltaBlocks)
 	return err

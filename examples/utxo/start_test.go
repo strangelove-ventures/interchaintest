@@ -27,10 +27,10 @@ func TestUtxo(t *testing.T) {
 	ctx := context.Background()
 
 	// Get default bitcoin chain config
-	btcConfig := utxo.DefaultBitcoinChainConfig("bitcoin", "thorchain", "password")
-	bchConfig := utxo.DefaultBitcoinCashChainConfig("bch", "thorchain", "password")
-	liteConfig := utxo.DefaultLitecoinChainConfig("litecoin", "thorchain", "password")
-	dogeConfig := utxo.DefaultDogecoinChainConfig("dogecoin", "thorchain", "password")
+	btcConfig := utxo.DefaultBitcoinChainConfig("btc", "rpcuser", "password")
+	bchConfig := utxo.DefaultBitcoinCashChainConfig("bch", "rpcuser", "password")
+	liteConfig := utxo.DefaultLitecoinChainConfig("ltc", "rpcuser", "password")
+	dogeConfig := utxo.DefaultDogecoinChainConfig("doge", "rpcuser", "password")
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
