@@ -70,9 +70,9 @@ func TestUtxo(t *testing.T) {
 	}
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
 		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
 	}))
 	t.Cleanup(func() {
@@ -90,7 +90,7 @@ func TestUtxo(t *testing.T) {
 			user1 := users[0]
 			users = interchaintest.GetAndFundTestUsers(t, egCtx, "user2", fundAmount, chain)
 			user2 := users[0]
-	
+
 			// Verify user1 balance
 			balanceUser1, err := chain.GetBalance(egCtx, user1.FormattedAddress(), "")
 			if err != nil {
@@ -108,18 +108,18 @@ func TestUtxo(t *testing.T) {
 			if !balanceUser2.Equal(fundAmount) {
 				return fmt.Errorf("User (%s) balance (%s) is not expected (%s)", user2.KeyName(), balanceUser2, fundAmount)
 			}
-			
+
 			// Send 1 coin from user1 to user2 with a note/memo
 			memo := fmt.Sprintf("+:%s:%s", "abc.abc", "bech16sg0fxrdd0vgpl4pkcnqwzjlu5lrs6ymcqldel")
 			transferAmount := sdkmath.NewInt(100_000_000)
 			_, err = chain.SendFundsWithNote(ctx, user1.KeyName(), ibc.WalletAmount{
 				Address: user2.FormattedAddress(),
-				Amount: transferAmount,
+				Amount:  transferAmount,
 			}, memo)
 			if err != nil {
 				return err
 			}
-			
+
 			// Verify user1 balance
 			balanceUser1, err = chain.GetBalance(egCtx, user1.FormattedAddress(), "")
 			if err != nil {

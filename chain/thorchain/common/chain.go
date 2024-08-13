@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 )
+
 const (
 	EmptyChain = Chain("")
 	BNBChain   = Chain("BNB")

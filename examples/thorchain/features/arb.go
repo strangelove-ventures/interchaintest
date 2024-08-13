@@ -38,7 +38,7 @@ func Arb(
 		return users, err
 	}
 
-	if mimir, ok := mimirs[strings.ToUpper("TradeAccountsEnabled")]; (ok && mimir != int64(1) || !ok) {
+	if mimir, ok := mimirs[strings.ToUpper("TradeAccountsEnabled")]; ok && mimir != int64(1) || !ok {
 		err := thorchain.SetMimir(ctx, "admin", "TradeAccountsEnabled", "1")
 		if err != nil {
 			return users, err
@@ -58,7 +58,7 @@ func Arb(
 			}
 
 			exoUser := users[i]
-	
+
 			exoUserBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
 			if err != nil {
 				return err
@@ -71,8 +71,8 @@ func Arb(
 			}
 			_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), ibc.WalletAmount{
 				Address: exoInboundAddr,
-				Denom: exoChain.Config().Denom,
-				Amount: exoUserBalance.QuoRaw(10).MulRaw(9),
+				Denom:   exoChain.Config().Denom,
+				Amount:  exoUserBalance.QuoRaw(10).MulRaw(9),
 			}, memo)
 
 			return err
@@ -84,7 +84,7 @@ func Arb(
 
 	go func() {
 		type Pool struct {
-			BalanceRune sdkmath.Uint
+			BalanceRune  sdkmath.Uint
 			BalanceAsset sdkmath.Uint
 		}
 		originalPools := make(map[string]Pool)

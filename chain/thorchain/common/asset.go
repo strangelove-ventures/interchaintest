@@ -46,7 +46,7 @@ var (
 )
 
 type Asset struct {
-	Chain  Chain `json:"chain,omitempty"`
+	Chain  Chain  `json:"chain,omitempty"`
 	Symbol string `json:"symbol,omitempty"`
 	Ticker string `json:"ticker,omitempty"`
 	Synth  bool   `json:"synth,omitempty"`

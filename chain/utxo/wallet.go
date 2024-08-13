@@ -41,11 +41,11 @@ func (w *UtxoWallet) Address() []byte {
 }
 
 type NodeWallet struct {
-	keyName string
-	address string
-	mu sync.Mutex
+	keyName   string
+	address   string
+	mu        sync.Mutex
 	loadCount int
-	ready bool
+	ready     bool
 }
 
 func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) {
@@ -58,7 +58,7 @@ func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) 
 			return nil, fmt.Errorf("Wallet keyname (%s) already has an address", keyName)
 		}
 	}
-	
+
 	if c.WalletVersion < noDefaultKeyWalletVersion {
 		if found {
 			return nil, fmt.Errorf("Wallet keyname (%s) already has an address", keyName)
@@ -95,7 +95,7 @@ func (c *UtxoChain) getWalletForUse(keyName string) (*NodeWallet, error) {
 	if !wallet.ready {
 		return nil, fmt.Errorf("Wallet keyname (%s) is not ready for use, check creation steps", keyName)
 	}
-	return wallet, nil	
+	return wallet, nil
 }
 
 func (c *UtxoChain) getWallet(keyName string) (*NodeWallet, error) {

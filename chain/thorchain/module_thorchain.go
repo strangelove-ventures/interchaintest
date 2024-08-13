@@ -35,7 +35,7 @@ func (c *Thorchain) Deposit(ctx context.Context, keyName string, amount math.Int
 	return err
 }
 
-func (c *Thorchain) SetMimir(ctx context.Context, keyName string, key string, value string) error {	
+func (c *Thorchain) SetMimir(ctx context.Context, keyName string, key string, value string) error {
 	_, err := c.getFullNode().ExecTx(ctx,
 		keyName, "thorchain", "mimir", key, value,
 	)

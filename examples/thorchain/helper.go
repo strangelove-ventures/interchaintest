@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-	
+
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -35,7 +35,7 @@ func doTxs(t *testing.T, ctx context.Context, gaia *cosmos.CosmosChain) {
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "temp", fundAmount, gaia, gaia, gaia, gaia, gaia, gaia, gaia, gaia)
 
 	amount := ibc.WalletAmount{
-		Denom: gaia.Config().Denom,
+		Denom:  gaia.Config().Denom,
 		Amount: math.NewInt(1_000_000),
 	}
 

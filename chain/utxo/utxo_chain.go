@@ -26,10 +26,10 @@ import (
 var _ ibc.Chain = &UtxoChain{}
 
 const (
-	blockTime = 2 // seconds
-	rpcPort   = "18443/tcp"
+	blockTime                 = 2 // seconds
+	rpcPort                   = "18443/tcp"
 	noDefaultKeyWalletVersion = 159_900
-	namedFixWalletVersion = 169_901
+	namedFixWalletVersion     = 169_901
 )
 
 var natPorts = nat.PortMap{
@@ -49,20 +49,19 @@ type UtxoChain struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	hostRPCPort string
-	
+
 	// cli arguments
-	BinDaemon string
-	BinCli string
-	RpcUser string
-	RpcPassword string
-	BaseCli []string
-	AddrToKeyNameMap map[string]string
+	BinDaemon          string
+	BinCli             string
+	RpcUser            string
+	RpcPassword        string
+	BaseCli            []string
+	AddrToKeyNameMap   map[string]string
 	KeyNameToWalletMap map[string]*NodeWallet
 
-	WalletVersion int
+	WalletVersion        int
 	unloadWalletAfterUse bool
 }
-
 
 func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *UtxoChain {
 	bins := strings.Split(chainConfig.Bin, ",")
@@ -84,15 +83,15 @@ func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 	}
 
 	return &UtxoChain{
-		testName:       testName,
-		cfg:            chainConfig,
-		log:            log,
-		BinDaemon:      bins[0],
-		BinCli:         bins[1],
-		RpcUser:        rpcUser,
-		RpcPassword:    rpcPassword,
-		AddrToKeyNameMap: make(map[string]string),
-		KeyNameToWalletMap: make(map[string]*NodeWallet),
+		testName:             testName,
+		cfg:                  chainConfig,
+		log:                  log,
+		BinDaemon:            bins[0],
+		BinCli:               bins[1],
+		RpcUser:              rpcUser,
+		RpcPassword:          rpcPassword,
+		AddrToKeyNameMap:     make(map[string]string),
+		KeyNameToWalletMap:   make(map[string]*NodeWallet),
 		unloadWalletAfterUse: false,
 	}
 }
@@ -145,7 +144,6 @@ func (c *UtxoChain) Name() string {
 func (c *UtxoChain) HomeDir() string {
 	return "/home/utxo"
 }
-
 
 func (c *UtxoChain) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", c.VolumeName, c.HomeDir())}
@@ -263,7 +261,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	// Wait for rpc to come up
 	time.Sleep(time.Second * 5)
 
-	go func(){
+	go func() {
 		ctx := context.Background()
 		amount := "100"
 		nextBlockHeight := 100
@@ -277,7 +275,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 				time.Sleep(time.Second)
 				continue
 			}
-			
+
 			// If faucet exists, chain is up and running. Any future error should return from this go routine.
 			// If the chain stops, we will then error and return from this go routine
 			// Don't use ctx from Start(), it gets cancelled soon after returning.
@@ -308,14 +306,14 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 			time.Sleep(time.Second * 2)
 		}
 	}()
-	
+
 	c.WalletVersion, _ = c.GetWalletVersion(ctx, "")
 
 	keyName := "faucet"
 	if err := c.CreateWallet(ctx, keyName); err != nil {
 		return err
 	}
-	
+
 	if c.WalletVersion == 0 {
 		c.WalletVersion, err = c.GetWalletVersion(ctx, keyName)
 		if err != nil {
@@ -423,7 +421,7 @@ func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wa
 func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
-	sendAmountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64()) / math.Pow10(int(*c.Config().CoinDecimals)) 
+	sendAmountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64())/math.Pow10(int(*c.Config().CoinDecimals))
 
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return "", err
@@ -445,7 +443,7 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 	if err != nil {
 		return "", err
 	}
-	
+
 	// send raw transaction
 	txHash, err := c.SendRawTransaction(ctx, signedRawTxHex)
 	if err != nil {
@@ -456,7 +454,7 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 		return "", err
 	}
 
-	err = testutil.WaitForBlocks(ctx, 1, c)	
+	err = testutil.WaitForBlocks(ctx, 1, c)
 	return txHash, err
 }
 

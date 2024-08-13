@@ -14,7 +14,7 @@ func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, 
 	var walletInfo WalletInfo
 	var stdout []byte
 	var err error
-	
+
 	if keyName == "" {
 		cmd := append(c.BaseCli, "getwalletinfo")
 		stdout, _, err = c.Exec(ctx, cmd, nil)
@@ -39,7 +39,7 @@ func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, 
 	if err := json.Unmarshal(stdout, &walletInfo); err != nil {
 		return 0, err
 	}
-	
+
 	return walletInfo.WalletVersion, nil
 }
 
@@ -71,7 +71,7 @@ func (c *UtxoChain) LoadWallet(ctx context.Context, keyName string) error {
 			}
 		}
 		wallet.loadCount++
-	} 
+	}
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (c *UtxoChain) UnloadWallet(ctx context.Context, keyName string) error {
 		if wallet.loadCount > 0 {
 			wallet.loadCount--
 		}
-	} 
+	}
 	return nil
 }
 
@@ -108,17 +108,17 @@ func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 		if err != nil {
 			return err
 		}
-	
+
 		c.KeyNameToWalletMap[keyName] = &NodeWallet{
-			keyName: keyName,
+			keyName:   keyName,
 			loadCount: 1,
 		}
 	}
-	
+
 	return c.UnloadWallet(ctx, keyName)
 }
 
-func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool) (string, error){
+func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool) (string, error) {
 	wallet, err := c.getWalletForNewAddress(keyName)
 	if err != nil {
 		return "", err
@@ -138,19 +138,19 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 	if mweb {
 		cmd = append(cmd, "mweb", "mweb")
 	}
-	
+
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
 	}
 	addr := strings.TrimSpace(string(stdout))
-	
+
 	// Remove "bchreg:" from addresses like: bchreg:qz2lxh4vzg2tqw294p7d6taxntu2snwnjuxd2k9auq
 	splitAddr := strings.Split(addr, ":")
 	if len(splitAddr) == 2 {
 		addr = splitAddr[1]
 	}
-	
+
 	wallet.address = addr
 	c.AddrToKeyNameMap[addr] = keyName
 
@@ -195,16 +195,16 @@ func (c *UtxoChain) sendToMwebAddress(ctx context.Context, keyName string, addr 
 	}
 
 	cmd := append(c.BaseCli,
-		fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress", 
-		fmt.Sprintf("address=%s", addr), 
+		fmt.Sprintf("-rpcwallet=%s", keyName), "-named", "sendtoaddress",
+		fmt.Sprintf("address=%s", addr),
 		fmt.Sprintf("amount=%.8f", amount),
 	)
-	
+
 	_, _, err = c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return err
 	}
-	
+
 	return c.UnloadWallet(ctx, keyName)
 }
 
@@ -213,7 +213,7 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return nil, err
 	}
@@ -224,12 +224,12 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 	} else {
 		cmd = append(c.BaseCli, "listunspent", "0", "99999999", fmt.Sprintf("[\"%s\"]", wallet.address))
 	}
-	
+
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (c *UtxoChain) ListUnspent(ctx context.Context, keyName string) (ListUtxo, 
 	var listUtxo ListUtxo
 	if err := json.Unmarshal(stdout, &listUtxo); err != nil {
 		return nil, err
-	}	
+	}
 
 	return listUtxo, nil
 }
@@ -262,7 +262,7 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 				Vout: utxo.Vout,
 			})
 			utxoTotal += utxo.Amount
-			if utxoTotal > sendAmount + fees {
+			if utxoTotal > sendAmount+fees {
 				break
 			}
 		}
@@ -277,7 +277,7 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 		return "", err
 	}
 
-	sanitizedChange, err := strconv.ParseFloat(fmt.Sprintf("%.8f", utxoTotal - sendAmount - fees), 64)
+	sanitizedChange, err := strconv.ParseFloat(fmt.Sprintf("%.8f", utxoTotal-sendAmount-fees), 64)
 	if err != nil {
 		return "", err
 	}
@@ -307,7 +307,7 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 		sendOutputs := SendOutput{
 			Amount: sanitizedSendAmount,
 			Change: sanitizedChange,
-			Data: hex.EncodeToString(script),
+			Data:   hex.EncodeToString(script),
 		}
 
 		sendOutputsBz, err = json.Marshal(sendOutputs)
@@ -322,9 +322,8 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 	sendOutputsStr := strings.Replace(string(sendOutputsBz), "replaceWithAddress", addr, 1)
 	sendOutputsStr = strings.Replace(sendOutputsStr, "replaceWithChangeAddr", wallet.address, 1)
 
-	// createrawtransaction 
-	cmd := append(c.BaseCli, 
-		"createrawtransaction", fmt.Sprintf("%s", sendInputsStr), fmt.Sprintf("%s", sendOutputsStr))
+	// createrawtransaction
+	cmd := append(c.BaseCli, "createrawtransaction", sendInputsStr, sendOutputsStr)
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
@@ -341,7 +340,7 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 
 	var cmd []string
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, 
+		cmd = append(c.BaseCli,
 			fmt.Sprintf("-rpcwallet=%s", keyName), "signrawtransactionwithwallet", rawTxHex)
 	} else {
 		// export priv key of sending address
@@ -352,11 +351,11 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 		}
 
 		// sign raw tx with priv key
-		cmd = append(c.BaseCli, 
+		cmd = append(c.BaseCli,
 			"signrawtransaction", rawTxHex, "null", fmt.Sprintf("[\"%s\"]",
-			strings.TrimSpace(string(stdout))))
+				strings.TrimSpace(string(stdout))))
 	}
-	
+
 	if err := c.LoadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
@@ -365,7 +364,7 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 	if err != nil {
 		return "", err
 	}
-	
+
 	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return "", err
 	}
@@ -382,12 +381,12 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 		}
 		return "", fmt.Errorf("Sign transaction error on %s", c.cfg.Name)
 	}
-	
+
 	return signRawTxOutput.Hex, nil
 }
 
 func (c *UtxoChain) SendRawTransaction(ctx context.Context, signedRawTxHex string) (string, error) {
-	cmd := []string{}
+	var cmd []string
 	if c.WalletVersion >= namedFixWalletVersion {
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
 	} else if c.WalletVersion > noDefaultKeyWalletVersion {

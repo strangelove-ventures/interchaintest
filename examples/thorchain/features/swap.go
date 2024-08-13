@@ -87,7 +87,7 @@ func singleSwap(
 	if err != nil {
 		return fmt.Errorf("get swap quote, %w", err)
 	}
-	
+
 	// store expected range to fail if received amount is outside 5% tolerance
 	quoteOut := sdkmath.NewUintFromString(swapQuote.ExpectedAmountOut)
 	tolerance := quoteOut.QuoUint64(14) // TODO: was 5%, but got failures, now 7.1%
@@ -117,7 +117,7 @@ func singleSwap(
 	memo := fmt.Sprintf("=:%s:%s", destChainAsset, destUser.FormattedAddress())
 	txHash, err := srcChain.SendFundsWithNote(ctx, srcUser.KeyName(), ibc.WalletAmount{
 		Address: srcChainInboundAddr,
-		Denom: srcChain.Config().Denom,
+		Denom:   srcChain.Config().Denom,
 		Amount: sdkmath.Int(swapAmount).
 			MulRaw(int64(math.Pow10(int(*srcChain.Config().CoinDecimals)))).
 			QuoRaw(int64(math.Pow10(int(*thorchain.Config().CoinDecimals)))), // swap amount is based on 8 dec,

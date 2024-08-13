@@ -27,7 +27,7 @@ func SaverEject(
 	if err := AddAdminIfNecessary(ctx, thorchain); err != nil {
 		return exoUser, err
 	}
-	
+
 	users, err := GetAndFundTestUsers(t, ctx, fmt.Sprintf("%s-SaverEject", exoChain.Config().Name), exoChain)
 	if err != nil {
 		return exoUser, err
@@ -42,14 +42,14 @@ func SaverEject(
 	}
 
 	// Set max synth per pool depth to 100% of pool amount
-	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(5000)) {
+	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; ok && mimir != int64(5000) {
 		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000"); err != nil {
 			return exoUser, err
 		}
 	}
 
 	// Disable saver ejection
-	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(0) || !ok) {
+	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; ok && mimir != int64(0) || !ok {
 		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0"); err != nil {
 			return exoUser, err
 		}
@@ -72,7 +72,7 @@ func SaverEject(
 	if err != nil {
 		return exoUser, err
 	}
-	
+
 	// store expected range to fail if received amount is outside 5% tolerance
 	quoteOut := sdkmath.NewUintFromString(saverQuote.ExpectedAmountDeposit)
 	tolerance := quoteOut.QuoUint64(20)
@@ -83,7 +83,6 @@ func SaverEject(
 	minExpectedSaver := quoteOut.Sub(tolerance)
 	maxExpectedSaver := quoteOut.Add(tolerance)
 
-	
 	// send random half as memoless saver
 	memo := ""
 	if rand.Intn(2) == 0 || exoChainType.String() == common.GAIAChain.String() { // if gaia memo is empty, bifrost errors
@@ -94,10 +93,10 @@ func SaverEject(
 	if err != nil {
 		return exoUser, err
 	}
-	
+
 	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
-		Denom: exoChain.Config().Denom,
+		Denom:   exoChain.Config().Denom,
 		Amount: sdkmath.Int(saveAmount).
 			MulRaw(int64(math.Pow10(int(*exoChain.Config().CoinDecimals)))).
 			QuoRaw(int64(math.Pow10(int(*thorchain.Config().CoinDecimals)))), // save amount is based on 8 dec
@@ -144,13 +143,13 @@ func SaverEject(
 	}
 
 	// Set mimirs
-	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; (ok && mimir != int64(500) || !ok) {
+	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; ok && mimir != int64(500) || !ok {
 		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500"); err != nil {
 			return exoUser, err
 		}
 	}
-	
-	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; (ok && mimir != int64(1) || !ok) {
+
+	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; ok && mimir != int64(1) || !ok {
 		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1"); err != nil {
 			return exoUser, err
 		}
@@ -161,11 +160,11 @@ func SaverEject(
 		return exoUser, err
 	}
 	mimirLock.Unlock()
-	
+
 	if err := PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
 		Address: exoUser.FormattedAddress(),
-		Denom: exoChain.Config().Denom,
-		Amount: exoUserPreEjectBalance,
+		Denom:   exoChain.Config().Denom,
+		Amount:  exoUserPreEjectBalance,
 	}); err != nil {
 		return exoUser, err
 	}

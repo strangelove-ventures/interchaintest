@@ -9,16 +9,16 @@ import (
 )
 
 var (
-	Denom  = "rune"
-	Binary = "thornode"
-	Bech32 = "tthor"
-	CoinScale = math.NewInt(100_000_000)
-	StaticGas = math.NewInt(2_000_000)
+	Denom               = "rune"
+	Binary              = "thornode"
+	Bech32              = "tthor"
+	CoinScale           = math.NewInt(100_000_000)
+	StaticGas           = math.NewInt(2_000_000)
 	InitialFaucetAmount = math.NewInt(100_000_000).Mul(CoinScale)
 )
 
 type ChainContract struct {
-	Chain string `json:"chain"`
+	Chain  string `json:"chain"`
 	Router string `json:"router"`
 }
 
@@ -28,11 +28,11 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
 	genesisKVMods := []thorchain.GenesisKV{
 		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
-		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false), // disable ibc transfer sends
-		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"), // mint to reserve for mocknet (220M)
+		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false),     // disable ibc transfer sends
+		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"),  // mint to reserve for mocknet (220M)
 		thorchain.NewGenesisKV("app_state.thorchain.chain_contracts", []ChainContract{
 			{
-				Chain: "ETH",
+				Chain:  "ETH",
 				Router: ethRouter,
 			},
 		}), // mint to reserve for mocknet (220M)
@@ -42,7 +42,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 		Images: []ibc.DockerImage{
 			chainImage,
 		},
-		GasAdjustment: 1.5,
+		GasAdjustment:  1.5,
 		Type:           "thorchain",
 		Name:           name,
 		ChainID:        chainID,
@@ -56,18 +56,18 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 		SidecarConfigs: []ibc.SidecarConfig{
 			{
 				ProcessName: "bifrost",
-				Image: chainImage,
-				HomeDir: "/var/data/bifrost",
-				Ports: []string{"5040", "6040", "9000"},
+				Image:       chainImage,
+				HomeDir:     "/var/data/bifrost",
+				Ports:       []string{"5040", "6040", "9000"},
 				//StartCmd: []string{"bifrost", "-p"},
 				StartCmd: []string{"bifrost", "-p", "-l", "debug"},
 				//StartCmd: []string{"sleep", "200"},//, "bifrost", "-p"},
-				Env: bifrostDefaults,
-				PreStart: false,
+				Env:              bifrostDefaults,
+				PreStart:         false,
 				ValidatorProcess: true,
 			},
 		},
-		ModifyGenesis: thorchain.ModifyGenesis(genesisKVMods),
+		ModifyGenesis:    thorchain.ModifyGenesis(genesisKVMods),
 		HostPortOverride: map[int]int{1317: 1317},
 	}
 
@@ -83,9 +83,9 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 
 var (
 	allNodeDefaults = []string{
-		"NET=mocknet", 
+		"NET=mocknet",
 		"CHAIN_ID=thorchain",
-		"SIGNER_NAME=thorchain", // Must be thorchain, hardcoded in thorchain module
+		"SIGNER_NAME=thorchain",  // Must be thorchain, hardcoded in thorchain module
 		"SIGNER_PASSWD=password", // Must use this password, used to generate ed25519
 	}
 
@@ -97,16 +97,16 @@ var (
 		"NEW_GENESIS_TIME=",
 		"CHURN_MIGRATION_ROUNDS=2",
 		"FUND_MIGRATION_INTERVAL=10",
-	
+
 		// set at runtime
 		//NODES: 1
-   	 	//SEED: thornode (don't need)
-  		//SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-   		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc} (is this needed for thornode?)
-   		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545 (is this needed for thornode?)}
-   		//BSC_HOST: ${BSC_HOST:-http://binance-smart:8545 (is this needed for thornode?)}
+		//SEED: thornode (don't need)
+		//SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
+		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc} (is this needed for thornode?)
+		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545 (is this needed for thornode?)}
+		//BSC_HOST: ${BSC_HOST:-http://binance-smart:8545 (is this needed for thornode?)}
 
-		// 
+		//
 	}...)
 
 	bifrostDefaults = append(thornodeDefaults, []string{
@@ -118,15 +118,15 @@ var (
 
 		// set at runtime (when enabled)
 		//BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
-		"BTC_HOST=utxo-BTC-TestThorchain:18443", // TODO: set at runtime
-		"DOGE_HOST=utxo-DOGE-TestThorchain:18443", // TODO: set at runtime
-		"BCH_HOST=utxo-BCH-TestThorchain:18443", // TODO: set at runtime
-		"LTC_HOST=utxo-LTC-TestThorchain:18443", // TODO: set at runtime
+		"BTC_HOST=utxo-BTC-TestThorchain:18443",          // TODO: set at runtime
+		"DOGE_HOST=utxo-DOGE-TestThorchain:18443",        // TODO: set at runtime
+		"BCH_HOST=utxo-BCH-TestThorchain:18443",          // TODO: set at runtime
+		"LTC_HOST=utxo-LTC-TestThorchain:18443",          // TODO: set at runtime
 		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
 		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
 		"GAIA_HOST=http://localgaia-val-0-TestThorchain:26657", // TODO: set at runtime
-		"GAIA_GRPC_HOST=localgaia-val-0-TestThorchain:9090", // TODO: set at runtime
-		
+		"GAIA_GRPC_HOST=localgaia-val-0-TestThorchain:9090",    // TODO: set at runtime
+
 		// disable chains until brought in
 		"BIFROST_CHAINS_AVAX_DISABLED=true",
 		"BIFROST_CHAINS_BCH_DISABLED=false",
@@ -137,7 +137,7 @@ var (
 		"BIFROST_CHAINS_ETH_DISABLED=false",
 		"BIFROST_CHAINS_GAIA_DISABLED=false",
 		"BIFROST_CHAINS_LTC_DISABLED=false",
-		
+
 		// block above should take care of these
 		//"GAIA_DISABLED=true",
 		//"DOGE_DISABLED=true",
@@ -145,7 +145,7 @@ var (
 		//"AVAX_DISABLED=true",
 
 		"BLOCK_SCANNER_BACKOFF=5s",
-		"BIFROST_METRICS_PPROF_ENABLED=false", // todo change to true
+		"BIFROST_METRICS_PPROF_ENABLED=false",   // todo change to true
 		"BIFROST_SIGNER_BACKUP_KEYSHARES=false", // todo change to true
 		"BIFROST_SIGNER_AUTO_OBSERVE=false",
 		"BIFROST_SIGNER_KEYGEN_TIMEOUT=30s",
@@ -170,16 +170,14 @@ var (
 		//"BIFROST_CHAINS_BSC_DISABLED=false", // todo change to false once brought in
 		//"BIFROST_CHAINS_BSC_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
 		//"BIFROST_CHAINS_BSC_BLOCK_SCANNER_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
-  
+
 		// set fixed gas rate for evm chains
-		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE=30000000000", // 30 gwei
+		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE=30000000000",      // 30 gwei
 		"BIFROST_CHAINS_AVAX_BLOCK_SCANNER_FIXED_GAS_RATE=100_000_000_000", // 100 navax
-		"BIFROST_CHAINS_BSC_BLOCK_SCANNER_FIXED_GAS_RATE=50_000_000_000", // 50 gwei
-  
+		"BIFROST_CHAINS_BSC_BLOCK_SCANNER_FIXED_GAS_RATE=50_000_000_000",   // 50 gwei
+
 		// override bifrost whitelist tokens
 		"BIFROST_CHAINS_AVAX_BLOCK_SCANNER_WHITELIST_TOKENS=0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25",
 		"BIFROST_CHAINS_BSC_BLOCK_SCANNER_WHITELIST_TOKENS=0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-  
-
 	}...)
 )

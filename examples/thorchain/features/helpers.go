@@ -239,7 +239,7 @@ func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlo
 func AddAdminIfNecessary(ctx context.Context, thorchain *tc.Thorchain) error {
 	_, err := thorchain.GetAddress(ctx, "admin")
 	if err != nil {
-		if err := thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23) + "notice"); err != nil {
+		if err := thorchain.RecoverKey(ctx, "admin", strings.Repeat("master ", 23)+"notice"); err != nil {
 			return err
 		}
 	}

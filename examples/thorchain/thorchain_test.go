@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// go test -timeout 20m -v -run TestThorchain examples/thorchain/*.go -count 1
 func TestThorchain(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -64,13 +65,13 @@ func TestThorchain(t *testing.T) {
 		})
 	}
 	require.NoError(t, eg.Wait())
-	
+
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
 	_, err := features.Arb(t, ctx, thorchain, exoChains.GetChains()...) // Must add all active chains
 	require.NoError(t, err)
-	
+
 	// --------------------------------------------------------
 	// Swap - only swaps non-rune assets for now
 	// --------------------------------------------------------
@@ -86,7 +87,7 @@ func TestThorchain(t *testing.T) {
 		}
 	}
 	require.NoError(t, eg.Wait())
-	
+
 	// ------------------------------------------------------------
 	// Saver Eject - must be done sequentially due to mimir states
 	// ------------------------------------------------------------
@@ -103,7 +104,7 @@ func TestThorchain(t *testing.T) {
 		})
 	}
 	require.NoError(t, eg.Wait())
-	
+
 	// --------------------------------------------------------
 	// Ragnarok
 	// --------------------------------------------------------
@@ -116,7 +117,7 @@ func TestThorchain(t *testing.T) {
 		})
 	}
 	require.NoError(t, eg.Wait())
-	
+
 	//err = testutil.WaitForBlocks(ctx, 300, thorchain)
 	//require.NoError(t, err, "thorchain failed to make blocks")
 }

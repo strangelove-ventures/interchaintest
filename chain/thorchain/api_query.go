@@ -11,12 +11,11 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	
+
 	sdkmath "cosmossdk.io/math"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 )
-
 
 func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
 	url := fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", c.GetAPIAddress(), addr)

@@ -43,7 +43,7 @@ func Saver(
 	if err != nil {
 		return exoUser, err
 	}
-	
+
 	// store expected range to fail if received amount is outside 5% tolerance
 	quoteOut := sdkmath.NewUintFromString(saverQuote.ExpectedAmountDeposit)
 	tolerance := quoteOut.QuoUint64(20)
@@ -67,7 +67,7 @@ func Saver(
 
 	wallet := ibc.WalletAmount{
 		Address: exoInboundAddr,
-		Denom: exoChain.Config().Denom,
+		Denom:   exoChain.Config().Denom,
 		Amount: sdkmath.Int(saveAmount).
 			MulRaw(int64(math.Pow10(int(*exoChain.Config().CoinDecimals)))).
 			QuoRaw(int64(math.Pow10(int(*thorchain.Config().CoinDecimals)))), // save amount is based on 8 dec

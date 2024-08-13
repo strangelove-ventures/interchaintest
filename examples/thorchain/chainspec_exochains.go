@@ -4,16 +4,16 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 type ExoChains map[string]*ExoChain
 
 type ExoChain struct {
-	chain ibc.Chain
-	lpers []ibc.Wallet
+	chain  ibc.Chain
+	lpers  []ibc.Wallet
 	savers []ibc.Wallet
 	arbers []ibc.Wallet
 }
@@ -41,10 +41,10 @@ func GaiaChainSpec() *interchaintest.ChainSpec {
 	}
 
 	defaultChainConfig := ibc.ChainConfig{
-		Denom:          denom,
-		GasPrices:      gasPrices,
-		ChainID:        "localgaia",
-		ModifyGenesis:  cosmos.ModifyGenesis(genesisKVMods),
+		Denom:         denom,
+		GasPrices:     gasPrices,
+		ChainID:       "localgaia",
+		ModifyGenesis: cosmos.ModifyGenesis(genesisKVMods),
 	}
 
 	return &interchaintest.ChainSpec{
@@ -68,8 +68,8 @@ func EthChainSpec() *interchaintest.ChainSpec {
 	}
 }
 
-func BtcChainSpec() *interchaintest.ChainSpec { 
-	btcChainName := common.BTCChain.String() // must use this name for test 
+func BtcChainSpec() *interchaintest.ChainSpec {
+	btcChainName := common.BTCChain.String() // must use this name for test
 
 	return &interchaintest.ChainSpec{
 		ChainName:   btcChainName,
@@ -79,8 +79,8 @@ func BtcChainSpec() *interchaintest.ChainSpec {
 	}
 }
 
-func BchChainSpec() *interchaintest.ChainSpec { 
-	bchChainName := common.BCHChain.String() // must use this name for test 
+func BchChainSpec() *interchaintest.ChainSpec {
+	bchChainName := common.BCHChain.String() // must use this name for test
 
 	return &interchaintest.ChainSpec{
 		ChainName:   bchChainName,
@@ -90,24 +90,24 @@ func BchChainSpec() *interchaintest.ChainSpec {
 	}
 }
 
-func LtcChainSpec() *interchaintest.ChainSpec { 
-	liteChainName := common.LTCChain.String() // must use this name for test 
+func LtcChainSpec() *interchaintest.ChainSpec {
+	liteChainName := common.LTCChain.String() // must use this name for test
 
 	return &interchaintest.ChainSpec{
-		ChainName: liteChainName,
-		Name:      liteChainName,
-		Version:   "0.21",
+		ChainName:   liteChainName,
+		Name:        liteChainName,
+		Version:     "0.21",
 		ChainConfig: utxo.DefaultLitecoinChainConfig(liteChainName, "thorchain", "password"),
 	}
 }
 
-func DogeChainSpec() *interchaintest.ChainSpec { 
-	dogeChainName := common.DOGEChain.String() // must use this name for test 
+func DogeChainSpec() *interchaintest.ChainSpec {
+	dogeChainName := common.DOGEChain.String() // must use this name for test
 
 	return &interchaintest.ChainSpec{
-		ChainName: dogeChainName,
-		Name:      dogeChainName,
-		Version:   "dogecoin-daemon-1.14.7",
+		ChainName:   dogeChainName,
+		Name:        dogeChainName,
+		Version:     "dogecoin-daemon-1.14.7",
 		ChainConfig: utxo.DefaultDogecoinChainConfig(dogeChainName, "thorchain", "password"),
 	}
 }

@@ -52,7 +52,6 @@ type Thorchain struct {
 	findTxMu sync.Mutex
 }
 
-
 func NewThorchainHeighlinerChainConfig(
 	name string,
 	binary string,
@@ -84,7 +83,7 @@ func NewThorchainHeighlinerChainConfig(
 
 func NewThorchain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log *zap.Logger) *Thorchain {
 	if numValidators != 1 {
-		panic(fmt.Sprintf("Thorchain must start with 1 validators for vault and router contract setup"))
+		panic("Thorchain must start with 1 validators for vault and router contract setup")
 	}
 	if chainConfig.EncodingConfig == nil {
 		cfg := DefaultEncoding()
@@ -120,7 +119,6 @@ func NewThorchain(testName string, chainConfig ibc.ChainConfig, numValidators in
 func (c *Thorchain) WithPreStartNodes(preStartNodes func(*Thorchain)) {
 	c.preStartNodes = preStartNodes
 }
-
 
 // GetCodec returns the codec for the chain.
 func (c *Thorchain) GetCodec() *codec.ProtoCodec {
@@ -705,7 +703,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 					return fmt.Errorf("failed to modify toml config file: %w", err)
 				}
 			}
-			
+
 			if !c.cfg.SkipGenTx {
 				if err := v.InitValidatorGenTx(ctx, &chainCfg, genesisAmounts[i], genesisSelfDelegation[i]); err != nil {
 					return err
@@ -718,7 +716,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 					return fmt.Errorf("failed to add node account: %w", err)
 				}
 			}
-			
+
 			return nil
 		})
 	}
@@ -782,7 +780,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		if err := validator0.AddGenesisAccount(ctx, bech32, genesisAmounts[0]); err != nil {
 			return err
 		}
-		
+
 		if !c.cfg.SkipGenTx {
 			if err := validator0.AddNodeAccount(ctx, *validatorN.NodeAccount); err != nil {
 				return fmt.Errorf("failed to add node account to val0: %w", err)
@@ -1064,7 +1062,7 @@ func (c *Thorchain) StartAllValSidecars(ctx context.Context) error {
 			}
 
 			eg.Go(func() error {
-				env := s.env 
+				env := s.env
 				env = append(env, fmt.Sprintf("NODES=%d", c.NumValidators))
 				env = append(env, fmt.Sprintf("SIGNER_SEED_PHRASE=\"%s\"", v.ValidatorMnemonic))
 				env = append(env, fmt.Sprintf("CHAIN_API=%s:1317", v.HostName()))

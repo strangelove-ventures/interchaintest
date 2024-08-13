@@ -17,7 +17,7 @@ func Ragnarok(
 	thorchain *tc.Thorchain,
 	exoChain ibc.Chain,
 	exoUsers ...ibc.Wallet,
-) (error) {
+) error {
 	fmt.Println("#### Ragnarok:", exoChain.Config().Name)
 	if err := AddAdminIfNecessary(ctx, thorchain); err != nil {
 		return err
@@ -53,8 +53,8 @@ func Ragnarok(
 	for i, exoUser := range exoUsers {
 		if err := PollForBalanceChange(ctx, exoChain, 100, ibc.WalletAmount{
 			Address: exoUser.FormattedAddress(),
-			Denom: exoChain.Config().Denom,
-			Amount: exoUsersPreRagBalance[i],
+			Denom:   exoChain.Config().Denom,
+			Amount:  exoUsersPreRagBalance[i],
 		}); err != nil {
 			return err
 		}

@@ -50,8 +50,8 @@ func DualLp(
 	}
 	_, err = exoChain.SendFundsWithNote(ctx, exoUser.KeyName(), ibc.WalletAmount{
 		Address: exoInboundAddr,
-		Denom: exoChain.Config().Denom,
-		Amount: exoUserBalance.QuoRaw(100).MulRaw(90), // LP 90% of balance
+		Denom:   exoChain.Config().Denom,
+		Amount:  exoUserBalance.QuoRaw(100).MulRaw(90), // LP 90% of balance
 	}, memo)
 	if err != nil {
 		return thorUser, exoUser, err

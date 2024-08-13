@@ -30,7 +30,7 @@ type SidecarProcess struct {
 
 	ProcessName string
 	TestName    string
-	
+
 	// Env
 	Peers string // PEER
 

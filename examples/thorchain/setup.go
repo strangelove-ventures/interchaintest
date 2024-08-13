@@ -53,7 +53,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 	for _, chain := range chains {
 		ic.AddChain(chain)
 	}
-	
+
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),
 		Client:           client,
@@ -69,7 +69,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 
 func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, ethRouterContractAddress string) *tc.Thorchain {
 	numThorchainValidators := 1
-	numThorchainFullNodes  := 0
+	numThorchainFullNodes := 0
 
 	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress)
 	// TODO: add router contracts to thorchain
@@ -85,7 +85,7 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 
 	ic := interchaintest.NewInterchain().
 		AddChain(thorchain)
-	
+
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),
 		Client:           client,
@@ -108,11 +108,11 @@ func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) st
 
 	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 
-	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23) + "fossil", ethUserInitialAmount, ethChain)
+	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
 	require.NoError(t, err)
 
 	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
-		ContractRootDir: "contracts",
+		ContractRootDir:  "contracts",
 		SolidityContract: "script/Token.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
@@ -126,7 +126,7 @@ func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) st
 	fmt.Println("Token contract address:", tokenContractAddress)
 
 	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
-		ContractRootDir: "contracts",
+		ContractRootDir:  "contracts",
 		SolidityContract: "script/Router.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
@@ -150,8 +150,8 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *sync.Wait
 	go func() {
 		err := gaia.SendFunds(ctx, "faucet", ibc.WalletAmount{
 			Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
-			Denom: gaia.Config().Denom,
-			Amount: sdkmath.NewInt(10000000),
+			Denom:   gaia.Config().Denom,
+			Amount:  sdkmath.NewInt(10000000),
 		})
 		require.NoError(t, err)
 
