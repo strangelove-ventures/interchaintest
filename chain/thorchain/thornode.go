@@ -80,7 +80,7 @@ type ChainNode struct {
 
 func NewChainNode(log *zap.Logger, validator bool, chain *Thorchain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
 	tn := &ChainNode{
-		log: log,
+		log: log.With(zap.Bool("validator", validator), zap.Int("i", index)),
 
 		Validator: validator,
 
@@ -604,16 +604,14 @@ func (tn *ChainNode) ExecBin(ctx context.Context, backendfile bool, command ...s
 		return tn.Exec(ctx, tn.BinCommand(command...), tn.Chain.Config().Env)
 	}
 
-	password := "password"
-	if !tn.KeyringCreated {
-		password = "\"password\npassword\n\""
-		tn.KeyringCreated = true
-	}
-
 	keyringCommand := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %s | %s --keyring-backend %s`, password, strings.Join(tn.BinCommand(command...), " "), keyring.BackendFile), // TODO: get password from env
+		fmt.Sprintf(`cat <<EOF | %s --keyring-backend %s
+password
+password
+EOF
+`, strings.Join(tn.BinCommand(command...), " "), keyring.BackendFile), // TODO: get password from env
 	}
 	return tn.Exec(ctx, keyringCommand, tn.Chain.Config().Env)
 }
@@ -710,26 +708,28 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
 
-	_, stderr, err := tn.ExecBin(ctx, true,
-		"keys", "add", name,
-		"--coin-type", tn.Chain.Config().CoinType,
-	)
+	command := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`cat <<EOF | %s keys add %s --keyring-backend %s --coin-type %s --home %s --output json
+password
+password
+EOF
+`, tn.Chain.Config().Bin, name, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir()),
+	}
 
+	stdout, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
 		return err
 	}
 
 	if tn.Validator && tn.ValidatorMnemonic == "" {
-		lines := strings.Split(string(stderr), "\n")
-
-		updated := []string{}
-		for _, line := range lines {
-			if line != "" {
-				updated = append(updated, line)
-			}
+		var createKeyOutput map[string]string
+		if err := json.Unmarshal(stdout, &createKeyOutput); err != nil {
+			return err
 		}
 
-		tn.ValidatorMnemonic = updated[len(updated)-1]
+		tn.ValidatorMnemonic = createKeyOutput["mnemonic"]
 	}
 
 	return nil
@@ -737,11 +737,15 @@ func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 
 // RecoverKey restores a key from a given mnemonic.
 func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	recoverKeyInput := fmt.Sprintf("\"%s\n%s\n\"", mnemonic, "password") //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %s | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, recoverKeyInput, tn.Chain.Config().Bin, keyName, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir()),
+		fmt.Sprintf(`cat <<EOF | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json
+%s
+password
+password
+EOF
+`, tn.Chain.Config().Bin, keyName, keyring.BackendFile, tn.Chain.Config().CoinType, tn.HomeDir(), mnemonic),
 	}
 
 	tn.lock.Lock()
@@ -879,17 +883,21 @@ func (tn *ChainNode) GetNodePubKey(ctx context.Context) (string, error) {
 }
 
 func (tn *ChainNode) GenerateEd25519(ctx context.Context) (string, error) {
-	ed25519input := fmt.Sprintf("\"%s\n%s\n\"", "password", tn.ValidatorMnemonic) //TODO: get password from env
 	command := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %s | %s ed25519 --home %s`,
-			ed25519input, tn.Chain.Config().Bin, tn.HomeDir()),
+		fmt.Sprintf(`cat <<EOF | %s ed25519 --home %s
+password
+%s
+EOF
+`,
+			tn.Chain.Config().Bin, tn.HomeDir(), tn.ValidatorMnemonic,
+		),
 	}
 
 	stdout, stderr, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate ed25519 (stderr=%q): %w", stderr, err)
+		return "", fmt.Errorf("failed to generate ed25519 (stdout=%q,stderr=%q): %w", stdout, stderr, err)
 	}
 
 	return string(bytes.TrimSuffix(stdout, []byte("\n"))), nil
@@ -920,9 +928,11 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) error {
 		return err
 	}
 
+	tn.log.Info("Generating Ed25519 key for node account", zap.String("mnemonic", tn.ValidatorMnemonic))
+
 	nodePubKeyEd25519, err := tn.GenerateEd25519(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("val: %t, index: %d, mnemonic: %s: %w", tn.Validator, tn.Index, tn.ValidatorMnemonic, err)
 	}
 
 	tn.NodeAccount = &NodeAccount{
@@ -1497,10 +1507,7 @@ func (tn *ChainNode) InitValidatorGenTx(
 	// it must use this mnemonic since the router contracts are created using it (before this chain starts)
 	// Otherwise, there is nothing special amoun this mnemonic other than it is what Thornode's sim testing uses.
 	// TODO: can we deploy router contracts after thorchain start?
-	tn.ValidatorMnemonic = strings.Repeat("dog ", 23) + "fossil"
-	if err := tn.RecoverKey(ctx, valKey, tn.ValidatorMnemonic); err != nil {
-		return err
-	}
+
 	bech32NodeAddr, err := tn.AccountKeyBech32(ctx, valKey)
 	if err != nil {
 		return err

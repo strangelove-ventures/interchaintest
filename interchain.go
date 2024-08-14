@@ -318,16 +318,22 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to initialize chains: %w", err)
 	}
 
+	ic.log.Info("Chains initialized")
+
 	err := ic.generateRelayerWallets(ctx) // Build the relayer wallet mapping.
 	if err != nil {
 		return err
 	}
+
+	ic.log.Info("Relayer wallets generated")
 
 	walletAmounts, err := ic.genesisWalletAmounts(ctx)
 	if err != nil {
 		// Error already wrapped with appropriate detail.
 		return err
 	}
+
+	ic.log.Info("Received genesis wallet amounts")
 
 	if err := ic.cs.Start(ctx, opts.TestName, walletAmounts); err != nil {
 		return fmt.Errorf("failed to start chains: %w", err)
@@ -558,6 +564,7 @@ func (ic *Interchain) Close() error {
 
 func (ic *Interchain) genesisWalletAmounts(ctx context.Context) (map[ibc.Chain][]ibc.WalletAmount, error) {
 	// Faucet addresses are created separately because they need to be explicitly added to the chains.
+	ic.log.Info("Creating faucet accounts")
 	faucetAddresses, err := ic.cs.CreateCommonAccount(ctx, FaucetAccountKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create faucet accounts: %w", err)

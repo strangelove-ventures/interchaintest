@@ -15,6 +15,7 @@ type NodeAccount struct {
 	IpAddress           string               `json:"ip_address"`
 	Status              string               `json:"status"`
 	Bond                string               `json:"bond"`
+	BondUInt            uint64               `json:"-"`
 	ActiveBlockHeight   string               `json:"active_block_height"`
 	BondAddress         string               `json:"bond_address"`
 	SignerMembership    []string             `json:"signer_membership"`

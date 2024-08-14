@@ -61,7 +61,6 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Ports:       []string{"5040", "6040", "9000"},
 				//StartCmd: []string{"bifrost", "-p"},
 				StartCmd: []string{"bifrost", "-p", "-l", "debug"},
-				//StartCmd: []string{"sleep", "200"},//, "bifrost", "-p"},
 				Env:              bifrostDefaults,
 				PreStart:         false,
 				ValidatorProcess: true,
@@ -100,13 +99,7 @@ var (
 
 		// set at runtime
 		//NODES: 1
-		//SEED: thornode (don't need)
 		//SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc} (is this needed for thornode?)
-		//ETH_HOST: ${ETH_HOST:-http://ethereum:8545 (is this needed for thornode?)}
-		//BSC_HOST: ${BSC_HOST:-http://binance-smart:8545 (is this needed for thornode?)}
-
-		//
 	}...)
 
 	bifrostDefaults = append(thornodeDefaults, []string{

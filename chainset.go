@@ -54,10 +54,14 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 
 	for c := range cs.chains {
 		c := c
+		cs.log.Info("Initializing chain", zap.String("chain_id", c.Config().ChainID))
 		eg.Go(func() error {
+
 			if err := c.Initialize(ctx, testName, cli, networkID); err != nil {
 				return fmt.Errorf("failed to initialize chain %s: %w", c.Config().Name, err)
 			}
+
+			cs.log.Info("Initialized chain", zap.String("chain_id", c.Config().ChainID))
 
 			return nil
 		})
