@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 
 	"github.com/docker/docker/client"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -18,8 +22,10 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	"golang.org/x/sync/errgroup"
 )
 
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
@@ -47,11 +53,32 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 			utxoChain := chain.(*utxo.UtxoChain)
 			utxoChain.UnloadWalletAfterUse(true)
 		}
+
+		if name == "GAIA" {
+			exoChains[name].genWallets = BuildGaiaWallets(t, 5, chain.Config())
+		}
 	}
 
 	ic := interchaintest.NewInterchain()
 	for _, chain := range chains {
-		ic.AddChain(chain)
+		name := chain.Config().Name
+		var additionalGenesisWallets []ibc.WalletAmount
+		for _, wallet := range exoChains[name].genWallets {
+			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
+				Address: wallet.FormattedAddress(),
+				Amount: sdkmath.NewInt(100_000_000),
+				Denom: chain.Config().Denom,
+			})
+		}
+		if name == "GAIA" {
+			// this wallet just stops bifrost complaining about it not existing
+			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
+				Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
+				Amount: sdkmath.NewInt(1_000_000),
+				Denom: chain.Config().Denom,
+			})
+		}
+		ic.AddChain(chain, additionalGenesisWallets...)
 	}
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
@@ -72,7 +99,6 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	numThorchainFullNodes := 0
 
 	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress)
-	// TODO: add router contracts to thorchain
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		thorchainChainSpec,
@@ -96,9 +122,12 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 		_ = ic.Close()
 	})
 
-	// TODO: make sure bifrost starts at gaia block 1
 	err = thorchain.StartAllValSidecars(ctx)
 	require.NoError(t, err, "failed starting validator sidecars")
+
+	// Give some time for bifrost to initialize before any tests start
+	err = testutil.WaitForBlocks(ctx, 2, thorchain)
+	require.NoError(t, err)
 
 	return thorchain
 }
@@ -123,8 +152,6 @@ func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) st
 	require.NotEmpty(t, tokenContractAddress)
 	require.True(t, ethcommon.IsHexAddress(tokenContractAddress))
 
-	fmt.Println("Token contract address:", tokenContractAddress)
-
 	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
 		ContractRootDir:  "contracts",
 		SolidityContract: "script/Router.s.sol",
@@ -137,27 +164,68 @@ func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) st
 	require.NotEmpty(t, ethRouterContractAddress)
 	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
 
-	fmt.Println("Router contract address:", ethRouterContractAddress)
-
 	return ethRouterContractAddress
 }
 
-func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *sync.WaitGroup {
+func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.Group {
 	gaia := exoChain.chain.(*cosmos.CosmosChain)
+	
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		for _, genWallet := range exoChain.genWallets {
+			err := gaia.RecoverKey(egCtx, genWallet.KeyName(), genWallet.Mnemonic())
+			if err != nil {
+				return err
+			}
+		}
+	
+		amount := ibc.WalletAmount{
+			Denom:  gaia.Config().Denom,
+			Amount: sdkmath.NewInt(1_000_000),
+		}
+	
+		// Send 100 txs on gaia so that bifrost can automatically set the network fee
+		// Sim testing can directly use bifrost to do this, right now, we can't, but may in the future
+		val0 := gaia.GetNode()
+		for i := 0; i < 100/len(exoChain.genWallets) + 1; i++ {
+			for j, genWallet := range exoChain.genWallets {
+				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
+				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)
+			}
+			err := testutil.WaitForBlocks(ctx, 1, gaia)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		err := gaia.SendFunds(ctx, "faucet", ibc.WalletAmount{
-			Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
-			Denom:   gaia.Config().Denom,
-			Amount:  sdkmath.NewInt(10000000),
-		})
+	return eg
+}
+
+func BuildGaiaWallets(t *testing.T, numWallets int, cfg ibc.ChainConfig) []ibc.Wallet {
+	registry := codectypes.NewInterfaceRegistry()
+	cryptocodec.RegisterInterfaces(registry)
+	cdc := codec.NewProtoCodec(registry)
+	kr := keyring.NewInMemory(cdc)
+
+	gaiaWallets := make([]ibc.Wallet, numWallets)
+	for i := 0; i < numWallets; i++ {
+		keyName := fmt.Sprintf("tx100_%d", i)
+		record, mnemonic, err := kr.NewMnemonic(
+			keyName,
+			keyring.English,
+			hd.CreateHDPath(118, 0, 0).String(),
+			"", // Empty passphrase.
+			hd.Secp256k1,
+		)
 		require.NoError(t, err)
 
-		doTxs(t, ctx, gaia) // Do 100 transactions
-		wg.Done()
-	}()
+		addrBytes, err := record.GetAddress()
+		require.NoError(t, err)
 
-	return wg
+		gaiaWallets[i] = cosmos.NewWallet(keyName, addrBytes, mnemonic, cfg)
+	}
+
+	return gaiaWallets
 }

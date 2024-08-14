@@ -25,13 +25,13 @@ func TestThorchain(t *testing.T) {
 
 	// Start non-thorchain chains
 	exoChains := StartExoChains(t, ctx, client, network)
-	ethRouterContractAddress := SetupEthContracts(t, ctx, exoChains["ETH"])
 	gaiaWg := SetupGaia(t, ctx, exoChains["GAIA"])
+	ethRouterContractAddress := SetupEthContracts(t, ctx, exoChains["ETH"])
 
 	// Start thorchain
 	thorchain := StartThorchain(t, ctx, client, network, ethRouterContractAddress)
-	gaiaWg.Wait() // Wait for 100 transactions before starting tests
-
+	require.NoError(t, gaiaWg.Wait()) // Wait for 100 transactions before starting tests
+	
 	// --------------------------------------------------------
 	// Bootstrap pool
 	// --------------------------------------------------------

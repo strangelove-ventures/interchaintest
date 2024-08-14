@@ -12,10 +12,11 @@ import (
 type ExoChains map[string]*ExoChain
 
 type ExoChain struct {
-	chain  ibc.Chain
-	lpers  []ibc.Wallet
-	savers []ibc.Wallet
-	arbers []ibc.Wallet
+	chain      ibc.Chain
+	lpers      []ibc.Wallet
+	savers     []ibc.Wallet
+	arbers     []ibc.Wallet
+	genWallets []ibc.Wallet
 }
 
 func (e ExoChains) GetChains() []ibc.Chain {

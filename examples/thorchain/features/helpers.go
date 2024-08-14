@@ -74,7 +74,7 @@ func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64
 
 		if pool.BalanceAsset == "0" {
 			time.Sleep(time.Second) // rate limit
-			return nil, fmt.Errorf("Pool (%s) exists, but not asset balance", asset)
+			return nil, fmt.Errorf("Pool (%s) exists, but not asset balance in %d blocks", asset, deltaBlocks)
 		}
 		return nil, nil
 	}
