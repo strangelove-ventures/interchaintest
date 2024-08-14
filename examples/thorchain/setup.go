@@ -94,11 +94,25 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 	return exoChains
 }
 
-func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, ethRouterContractAddress string) *tc.Thorchain {
+func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, exoChains ExoChains, ethRouterContractAddress string) *tc.Thorchain {
 	numThorchainValidators := 1
 	numThorchainFullNodes := 0
 
-	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress)
+	bifrostEnvOverrides := map[string]string{
+		"BIFROST_CHAINS_GAIA_BLOCK_SCANNER_START_BLOCK_HEIGHT": "2",
+	}
+	for _, exoChain := range exoChains {
+		name := exoChain.chain.Config().Name
+		hostKey := fmt.Sprintf("%s_HOST", name)
+		bifrostEnvOverrides[hostKey] = exoChain.chain.GetRPCAddress()
+		if name == "GAIA" {
+			hostGRPCKey := fmt.Sprintf("%s_GRPC_HOST", name)
+			bifrostEnvOverrides[hostGRPCKey] = exoChain.chain.GetGRPCAddress()
+		}
+		disableChainKey := fmt.Sprintf("BIFROST_CHAINS_%s_DISABLED", name)
+		bifrostEnvOverrides[disableChainKey] = "false"
+	}
+	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress, nil, bifrostEnvOverrides)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		thorchainChainSpec,

@@ -14,7 +14,7 @@ import (
 )
 
 // go test -timeout 20m -v -run TestThorchain examples/thorchain/*.go -count 1
-func TestThorchain(t *testing.T) {
+func TestThorchainSim(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -29,7 +29,7 @@ func TestThorchain(t *testing.T) {
 	ethRouterContractAddress := SetupEthContracts(t, ctx, exoChains["ETH"])
 
 	// Start thorchain
-	thorchain := StartThorchain(t, ctx, client, network, ethRouterContractAddress)
+	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress)
 	require.NoError(t, gaiaWg.Wait()) // Wait for 100 transactions before starting tests
 	
 	// --------------------------------------------------------

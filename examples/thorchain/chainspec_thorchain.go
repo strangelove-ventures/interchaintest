@@ -1,6 +1,9 @@
 package thorchain_test
 
 import (
+	"fmt"
+	"strings"
+
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
@@ -22,7 +25,7 @@ type ChainContract struct {
 	Router string `json:"router"`
 }
 
-func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string) *interchaintest.ChainSpec {
+func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string, thornodeEnvOverrides, bifrostEnvOverrides map[string]string) *interchaintest.ChainSpec {
 	chainID := "thorchain"
 	name := common.THORChain.String() // Must use this name for test
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
@@ -36,6 +39,36 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Router: ethRouter,
 			},
 		}), // mint to reserve for mocknet (220M)
+	}
+
+	thornodeEnv := thornodeDefaults
+	for k, v := range thornodeEnvOverrides {
+		found := false
+		modifiedEnv := fmt.Sprintf("%s=%s", k, v)
+		for i, env := range thornodeEnv {
+			if strings.Contains(env, fmt.Sprintf("%s=", k)) {
+				found = true
+				thornodeEnv[i] = modifiedEnv
+			}
+		}
+		if !found {
+			thornodeEnv = append(thornodeEnv, modifiedEnv)
+		}
+	}
+
+	bifrostEnv := bifrostDefaults
+	for k, v := range bifrostEnvOverrides {
+		found := false
+		modifiedEnv := fmt.Sprintf("%s=%s", k, v)
+		for i, env := range bifrostEnv {
+			if strings.Contains(env, fmt.Sprintf("%s=", k)) {
+				found = true
+				bifrostEnv[i] = modifiedEnv
+			}
+		}
+		if !found {
+			bifrostEnv = append(bifrostEnv, modifiedEnv)
+		}
 	}
 
 	defaultChainConfig := ibc.ChainConfig{
@@ -52,7 +85,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 		CoinType:       "931",
 		GasPrices:      "0" + Denom,
 		TrustingPeriod: "336h",
-		Env:            thornodeDefaults,
+		Env:            thornodeEnv,
 		SidecarConfigs: []ibc.SidecarConfig{
 			{
 				ProcessName: "bifrost",
@@ -61,7 +94,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Ports:       []string{"5040", "6040", "9000"},
 				//StartCmd: []string{"bifrost", "-p"},
 				StartCmd: []string{"bifrost", "-p", "-l", "debug"},
-				Env:              bifrostDefaults,
+				Env:              bifrostEnv,
 				PreStart:         false,
 				ValidatorProcess: true,
 			},
@@ -90,52 +123,24 @@ var (
 
 	thornodeDefaults = append(allNodeDefaults, []string{
 		"THOR_BLOCK_TIME=2s", // link to config override
-		"THOR_API_LIMIT_COUNT=100",
+		"THOR_API_LIMIT_COUNT=500",
 		"THOR_API_LIMIT_DURATION=1s",
 		"HARDFORK_BLOCK_HEIGHT=",
 		"NEW_GENESIS_TIME=",
 		"CHURN_MIGRATION_ROUNDS=2",
 		"FUND_MIGRATION_INTERVAL=10",
-
-		// set at runtime
-		//NODES: 1
-		//SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
 	}...)
 
 	bifrostDefaults = append(thornodeDefaults, []string{
-		// set at runtime
-		//SIGNER_SEED_PHRASE: "dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog fossil"
-		//CHAIN_API: thornode:1317
-		//CHAIN_RPC: thornode:26657
-		//PEER: ${PEER:-}
-
-		// set at runtime (when enabled)
-		//BINANCE_HOST: ${BINANCE_HOST:-http://binance:26660}
-		"BTC_HOST=utxo-BTC-TestThorchain:18443",          // TODO: set at runtime
-		"DOGE_HOST=utxo-DOGE-TestThorchain:18443",        // TODO: set at runtime
-		"BCH_HOST=utxo-BCH-TestThorchain:18443",          // TODO: set at runtime
-		"LTC_HOST=utxo-LTC-TestThorchain:18443",          // TODO: set at runtime
-		"ETH_HOST=http://anvil-31337-TestThorchain:8545", // TODO: set at runtime
-		//AVAX_HOST: ${AVAX_HOST:-http://avalanche:9650/ext/bc/C/rpc}
-		"GAIA_HOST=http://localgaia-val-0-TestThorchain:26657", // TODO: set at runtime
-		"GAIA_GRPC_HOST=localgaia-val-0-TestThorchain:9090",    // TODO: set at runtime
-
-		// disable chains until brought in
 		"BIFROST_CHAINS_AVAX_DISABLED=true",
-		"BIFROST_CHAINS_BCH_DISABLED=false",
+		"BIFROST_CHAINS_BCH_DISABLED=true",
 		"BIFROST_CHAINS_BNB_DISABLED=true",
 		"BIFROST_CHAINS_BSC_DISABLED=true",
-		"BIFROST_CHAINS_BTC_DISABLED=false",
-		"BIFROST_CHAINS_DOGE_DISABLED=false",
-		"BIFROST_CHAINS_ETH_DISABLED=false",
-		"BIFROST_CHAINS_GAIA_DISABLED=false",
-		"BIFROST_CHAINS_LTC_DISABLED=false",
-
-		// block above should take care of these
-		//"GAIA_DISABLED=true",
-		//"DOGE_DISABLED=true",
-		//"LTC_DISABLED=true",
-		//"AVAX_DISABLED=true",
+		"BIFROST_CHAINS_BTC_DISABLED=true",
+		"BIFROST_CHAINS_DOGE_DISABLED=true",
+		"BIFROST_CHAINS_ETH_DISABLED=true",
+		"BIFROST_CHAINS_GAIA_DISABLED=true",
+		"BIFROST_CHAINS_LTC_DISABLED=true",
 
 		"BLOCK_SCANNER_BACKOFF=5s",
 		"BIFROST_METRICS_PPROF_ENABLED=false",   // todo change to true
@@ -151,13 +156,6 @@ var (
 		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
 		"BIFROST_CHAINS_GAIA_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=25",
 		"BIFROST_CHAINS_LTC_BLOCK_SCANNER_OBSERVATION_FLEXIBILITY_BLOCKS=5",
-
-		"BIFROST_CHAINS_GAIA_BLOCK_SCANNER_START_BLOCK_HEIGHT=2",
-		// "BIFROST_CHAINS_ETH_BLOCK_SCANNER_START_BLOCK_HEIGHT=20",
-		// "BIFROST_CHAINS_BTC_BLOCK_SCANNER_START_BLOCK_HEIGHT=120",
-		// "BIFROST_CHAINS_BCH_BLOCK_SCANNER_START_BLOCK_HEIGHT=120",
-		// "BIFROST_CHAINS_LTC_BLOCK_SCANNER_START_BLOCK_HEIGHT=120",
-		// "BIFROST_CHAINS_DOGE_BLOCK_SCANNER_START_BLOCK_HEIGHT=1020",
 
 		// maintain historical gas behavior for hard-coded smoke test values
 		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_MAX_GAS_LIMIT=80000",
