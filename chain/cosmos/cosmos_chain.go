@@ -622,7 +622,7 @@ func (c *CosmosChain) GetTransaction(txhash string) (*types.TxResponse, error) {
 func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	gasPrice, _ := strconv.ParseFloat(strings.Replace(c.cfg.GasPrices, c.cfg.Denom, "", 1), 64)
 	fees := float64(gasPaid) * gasPrice
-	return int64(fees)
+	return int64(math.Ceil(fees))
 }
 
 func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
