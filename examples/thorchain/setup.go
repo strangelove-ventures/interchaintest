@@ -126,7 +126,7 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	require.NoError(t, err, "failed starting validator sidecars")
 
 	// Give some time for bifrost to initialize before any tests start
-	err = testutil.WaitForBlocks(ctx, 2, thorchain)
+	err = testutil.WaitForBlocks(ctx, 5, thorchain)
 	require.NoError(t, err)
 
 	return thorchain
