@@ -158,6 +158,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 		c.GasAdjustment = other.GasAdjustment
 	}
 
+	if other.Gas != "" {
+		c.Gas = other.Gas
+	}
+
 	if other.TrustingPeriod != "" {
 		c.TrustingPeriod = other.TrustingPeriod
 	}
