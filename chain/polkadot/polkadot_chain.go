@@ -770,11 +770,12 @@ func (c *PolkadotChain) SendFunds(ctx context.Context, keyName string, amount ib
 	return c.ParachainNodes[0][0].SendFunds(ctx, keyName, amount)
 }
 
-// SendFunds sends funds to a wallet from a user account.
+// SendFundsWithNote sends funds to a wallet from a user account with a note/memo.
 // Implements Chain interface.
 func (c *PolkadotChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	panic("PolkadotChain: SendFundsWithNote unimplemented")
 }
+
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 // Implements Chain interface.
 func (c *PolkadotChain) SendIBCTransfer(

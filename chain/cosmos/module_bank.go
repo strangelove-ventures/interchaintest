@@ -14,8 +14,10 @@ import (
 
 // BankSend sends tokens from one account to another.
 func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	_, err := tn.ExecTx(ctx, keyName,"bank", "send", keyName,
-		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom))
+	_, err := tn.ExecTx(ctx,
+		keyName, "bank", "send", keyName,
+		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
+	)
 	return err
 }
 
