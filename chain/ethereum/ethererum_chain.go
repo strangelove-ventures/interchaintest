@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -222,7 +223,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil, []string{})
 	if err != nil {
 		return err
 	}
@@ -298,6 +299,11 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
+	_, ok := c.keystoreMap[keyName]
+	if ok {
+		return fmt.Errorf("Keyname (%s) already used", keyName)
+	}
+
 	cmd := []string{"cast", "wallet", "new", c.KeystoreDir(), "--unsafe-password", "", "--json"}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
@@ -317,8 +323,12 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 
 // Get address of account, cast to a string to use
 func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	keystore, ok := c.keystoreMap[keyName]
+	if !ok {
+		return nil, fmt.Errorf("Keyname (%s) not found", keyName)
+	}
 
-	cmd := []string{"cast", "wallet", "address", "--keystore", c.keystoreMap[keyName], "--password", ""}
+	cmd := []string{"cast", "wallet", "address", "--keystore", keystore, "--password", ""}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -335,14 +345,54 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 		)
 
 	} else {
+		keystore, ok := c.keystoreMap[keyName]
+		if !ok {
+			return fmt.Errorf("keyname (%s) not found", keyName)
+		}
 		cmd = append(cmd,
-			"--keystore", c.keystoreMap[keyName],
+			"--keystore", keystore,
 			"--password", "",
 			"--rpc-url", c.GetRPCAddress(),
 		)
 	}
 	_, _, err := c.Exec(ctx, cmd, nil)
 	return err
+}
+
+type TransactionReceipt struct {
+	TxHash string `json:"transactionHash"`
+}
+
+func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	cmd := []string{"cast", "send", amount.Address, hexutil.Encode([]byte(note)), "--value", amount.Amount.String(), "--json"}
+	if keyName == "faucet" {
+		cmd = append(cmd,
+			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+
+	} else {
+		keystore, ok := c.keystoreMap[keyName]
+		if !ok {
+			return "", fmt.Errorf("Keyname (%s) not found", keyName)
+		}
+		cmd = append(cmd,
+			"--keystore", keystore,
+			"--password", "",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+	}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var txReceipt TransactionReceipt
+	if err = json.Unmarshal(stdout, &txReceipt); err != nil {
+		return "", err
+	}
+
+	return txReceipt.TxHash, nil
 }
 
 func (c *EthereumChain) Height(ctx context.Context) (int64, error) {
