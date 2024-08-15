@@ -346,6 +346,11 @@ func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 }
 
 // Implements Chain interface
+func (c *CosmosChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return c.getFullNode().BankSendWithNote(ctx, keyName, amount, note)
+}
+
+// Implements Chain interface
 func (c *CosmosChain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,

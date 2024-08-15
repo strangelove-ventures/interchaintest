@@ -561,7 +561,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 		"start",
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env, []string{})
 }
 
 // StopContainer stops the container associated with the PenumbraClientNode.
