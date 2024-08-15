@@ -11,13 +11,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -299,6 +299,11 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
+	_, ok := c.keystoreMap[keyName]
+	if ok {
+		return fmt.Errorf("Keyname (%s) already used", keyName)
+	}
+
 	cmd := []string{"cast", "wallet", "new", c.KeystoreDir(), "--unsafe-password", "", "--json"}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
@@ -318,8 +323,12 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 
 // Get address of account, cast to a string to use
 func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	keystore, ok := c.keystoreMap[keyName]
+	if !ok {
+		return nil, fmt.Errorf("Keyname (%s) not found", keyName)
+	}
 
-	cmd := []string{"cast", "wallet", "address", "--keystore", c.keystoreMap[keyName], "--password", ""}
+	cmd := []string{"cast", "wallet", "address", "--keystore", keystore, "--password", ""}
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return nil, err
@@ -336,8 +345,12 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 		)
 
 	} else {
+		keystore, ok := c.keystoreMap[keyName]
+		if !ok {
+			return fmt.Errorf("keyname (%s) not found", keyName)
+		}
 		cmd = append(cmd,
-			"--keystore", c.keystoreMap[keyName],
+			"--keystore", keystore,
 			"--password", "",
 			"--rpc-url", c.GetRPCAddress(),
 		)
@@ -359,8 +372,12 @@ func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, a
 		)
 
 	} else {
+		keystore, ok := c.keystoreMap[keyName]
+		if !ok {
+			return "", fmt.Errorf("Keyname (%s) not found", keyName)
+		}
 		cmd = append(cmd,
-			"--keystore", c.keystoreMap[keyName],
+			"--keystore", keystore,
 			"--password", "",
 			"--rpc-url", c.GetRPCAddress(),
 		)
