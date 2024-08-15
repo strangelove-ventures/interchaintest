@@ -272,7 +272,7 @@ func (tn *TendermintNode) CreateNodeContainer(ctx context.Context, additionalFla
 	cmd := []string{chainCfg.Bin, "start", "--home", tn.HomeDir()}
 	cmd = append(cmd, additionalFlags...)
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), nil, tn.HostName(), cmd, nil)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, sentryPorts, tn.Bind(), nil, tn.HostName(), cmd, nil, []string{})
 }
 
 func (tn *TendermintNode) StopContainer(ctx context.Context) error {

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
@@ -222,7 +223,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil)
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil, []string{})
 	if err != nil {
 		return err
 	}
@@ -343,6 +344,38 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 	}
 	_, _, err := c.Exec(ctx, cmd, nil)
 	return err
+}
+
+type TransactionReceipt struct {
+	TxHash string `json:"transactionHash"`
+}
+
+func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	cmd := []string{"cast", "send", amount.Address, hexutil.Encode([]byte(note)), "--value", amount.Amount.String(), "--json"}
+	if keyName == "faucet" {
+		cmd = append(cmd,
+			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+
+	} else {
+		cmd = append(cmd,
+			"--keystore", c.keystoreMap[keyName],
+			"--password", "",
+			"--rpc-url", c.GetRPCAddress(),
+		)
+	}
+	stdout, _, err := c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var txReceipt TransactionReceipt
+	if err = json.Unmarshal(stdout, &txReceipt); err != nil {
+		return "", err
+	}
+
+	return txReceipt.TxHash, nil
 }
 
 func (c *EthereumChain) Height(ctx context.Context) (int64, error) {

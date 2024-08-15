@@ -21,6 +21,12 @@ func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.Wa
 	return err
 }
 
+// BankSend sends tokens from one account to another.
+func (tn *ChainNode) BankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return tn.ExecTx(ctx, keyName, "bank", "send", keyName, amount.Address,
+		fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom), "--note", note)
+}
+
 // Deprecated: use BankSend instead
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return tn.BankSend(ctx, keyName, amount)
