@@ -35,6 +35,7 @@ func TestThorchainHardFork(t *testing.T) {
 	// ----------------------------
 	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, "", nil, nil)
 	thorchainChainSpec.Bech32Prefix = "thor"
+	thorchainChainSpec.Images[0].Version = "local-mainnet"
 
 	// Start from mainnet state
 	thorchainChainSpec.Genesis = &ibc.GenesisConfig{
