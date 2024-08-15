@@ -109,11 +109,7 @@ export async function pollForStart(addr: string, maxRetriesLimit: number) {
     }
 }
 
-export async function makeRequest(api: string, chainID: string, action: string, command: string, isJSON?: boolean): Promise<any> {
-    if (isJSON === undefined) {
-        isJSON = true;
-    }
-
+export async function makeRequest(api: string, chainID: string, action: string, command: string, isJSON: boolean = true): Promise<any> {
     let resp = await fetch(api, {
         method: 'POST',
         headers: {
@@ -165,11 +161,7 @@ export async function storeFile(api: string, chainID: string, absFilePath: strin
     return await resp.json();
 }
 
-export async function makeInfoRequest(api: string, chainID: string, request: string, isJSON?: boolean): Promise<any> {
-    if (isJSON === undefined) {
-        isJSON = true;
-    }
-
+export async function makeInfoRequest(api: string, chainID: string, request: string, isJSON: boolean = true): Promise<any> {
     if (!api.endsWith("/info")) {
         api = api + "/info";
     }
