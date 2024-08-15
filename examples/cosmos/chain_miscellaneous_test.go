@@ -3,6 +3,7 @@ package cosmos_test
 import (
 	"context"
 	"fmt"
+	"path"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -455,7 +456,7 @@ func testTXEncodeDecode(ctx context.Context, t *testing.T, chain *cosmos.CosmosC
 	// encode
 	err = chain.GetNode().WriteFile(ctx, txJson, "tx.json")
 	require.NoError(t, err)
-	encode := chain.GetNode().TxCommand(users[0].KeyName(), "encode", chain.GetNode().HomeDir()+"/tx.json")
+	encode := chain.GetNode().TxCommand(users[0].KeyName(), "encode", path.Join(chain.GetNode().HomeDir(), "tx.json"))
 	encoded, _, err := chain.GetNode().Exec(ctx, encode, nil)
 	require.NoError(t, err)
 
@@ -467,13 +468,13 @@ func testTXEncodeDecode(ctx context.Context, t *testing.T, chain *cosmos.CosmosC
 	err = chain.GetNode().WriteFile(ctx, decoded, "decoded.json")
 	require.NoError(t, err)
 
-	sign := chain.GetNode().TxCommand(users[0].KeyName(), "sign", chain.GetNode().HomeDir()+"/decoded.json")
+	sign := chain.GetNode().TxCommand(users[0].KeyName(), "sign", path.Join(chain.GetNode().HomeDir(), "decoded.json"))
 	signed, _, err := chain.GetNode().Exec(ctx, sign, nil)
 	require.NoError(t, err)
 
 	err = chain.GetNode().WriteFile(ctx, signed, "signed.json")
 	require.NoError(t, err)
-	_, err = chain.GetNode().ExecTx(ctx, users[0].KeyName(), "broadcast", chain.GetNode().HomeDir()+"/signed.json")
+	_, err = chain.GetNode().ExecTx(ctx, users[0].KeyName(), "broadcast", path.Join(chain.GetNode().HomeDir(), "signed.json"))
 	require.NoError(t, err)
 }
 
