@@ -170,18 +170,6 @@ func (c *UtxoChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
 }
 
 func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	// TODO:
-	//   * add support for different denom configuration, ether or wei, this will affect GetBalance, etc
-	//   * add support for modifying genesis amount config, default is 10 ether
-	//   * add support for ConfigFileOverrides
-	//		* block time
-	//   * add support for custom chain id, must be an int?
-	//   * add support for custom gas-price
-	// Maybe add code-size-limit configuration for larger contracts
-
-	// IBC support, add when necessary
-	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
-
 	cmd := []string{c.BinDaemon,
 		"--regtest",
 		"-printtoconsole",

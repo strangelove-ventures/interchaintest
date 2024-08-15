@@ -101,11 +101,12 @@ func TestEthereum(t *testing.T) {
 
 	// Fund user2 wallet using SendFunds() from user1 wallet
 	ethUser2InitialAmount := ethereum.ETHER
-	ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
+	err = ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
 		Address: ethUser2.FormattedAddress(),
 		Denom:   ethereumChain.Config().Denom,
 		Amount:  ethUser2InitialAmount,
 	})
+	require.NoError(t, err)
 
 	// Final check of balances
 	balance, err = ethereumChain.GetBalance(ctx, faucetAddr, "")

@@ -44,6 +44,8 @@ type ChainConfig struct {
 	GasPrices string `yaml:"gas-prices"`
 	// Adjustment multiplier for gas fees.
 	GasAdjustment float64 `yaml:"gas-adjustment"`
+	// Default gas limit for transactions. May be empty, "auto", or a number.
+	Gas string `yaml:"gas" default:"auto"`
 	// Trusting period of the chain.
 	TrustingPeriod string `yaml:"trusting-period"`
 	// Do not use docker host mount.
@@ -183,6 +185,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if other.GasAdjustment > 0 {
 		c.GasAdjustment = other.GasAdjustment
+	}
+
+	if other.Gas != "" {
+		c.Gas = other.Gas
 	}
 
 	if other.TrustingPeriod != "" {

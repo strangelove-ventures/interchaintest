@@ -261,9 +261,50 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 	return nil
 }
 
+func (r *Relayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.PathUpdateOptions) error {
+	// the concept of paths doesn't exist in hermes, but update our in-memory paths so we can use them elsewhere
+	path, ok := r.paths[pathName]
+	if !ok {
+		return fmt.Errorf("path %s not found", pathName)
+	}
+	if opts.SrcChainID != nil {
+		path.chainA.chainID = *opts.SrcChainID
+	}
+	if opts.DstChainID != nil {
+		path.chainB.chainID = *opts.DstChainID
+	}
+	if opts.SrcClientID != nil {
+		path.chainA.clientID = *opts.SrcClientID
+	}
+	if opts.DstClientID != nil {
+		path.chainB.clientID = *opts.DstClientID
+	}
+	if opts.SrcConnID != nil {
+		path.chainA.connectionID = *opts.SrcConnID
+	}
+	if opts.DstConnID != nil {
+		path.chainB.connectionID = *opts.DstConnID
+	}
+	return nil
+}
+
 func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelID string) error {
 	path := r.paths[pathName]
-	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", path.chainA.portID}
+	channels, err := r.GetChannels(ctx, rep, path.chainA.chainID)
+	if err != nil {
+		return err
+	}
+	var portID string
+	for _, ch := range channels {
+		if ch.ChannelID == channelID {
+			portID = ch.PortID
+			break
+		}
+	}
+	if portID == "" {
+		return fmt.Errorf("channel %s not found on chain %s", channelID, path.chainA.chainID)
+	}
+	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", portID}
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
 }

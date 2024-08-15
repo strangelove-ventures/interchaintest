@@ -35,30 +35,10 @@ func TestUtxo(t *testing.T) {
 	dogeConfig := utxo.DefaultDogecoinChainConfig("doge", "rpcuser", "password")
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			ChainName:   "btc",
-			Name:        "btc",
-			Version:     "26.2",
-			ChainConfig: btcConfig,
-		},
-		{
-			ChainName:   "bch",
-			Name:        "bch",
-			Version:     "27.1.0",
-			ChainConfig: bchConfig,
-		},
-		{
-			ChainName:   "ltc",
-			Name:        "ltc",
-			Version:     "0.21",
-			ChainConfig: liteConfig,
-		},
-		{
-			ChainName:   "doge",
-			Name:        "doge",
-			Version:     "dogecoin-daemon-1.14.7",
-			ChainConfig: dogeConfig,
-		},
+		{ChainConfig: btcConfig},
+		{ChainConfig: bchConfig},
+		{ChainConfig: liteConfig},
+		{ChainConfig: dogeConfig},
 	})
 
 	chains, err := cf.Chains(t.Name())

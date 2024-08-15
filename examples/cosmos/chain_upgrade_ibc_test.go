@@ -30,6 +30,10 @@ func TestJunoUpgradeIBC(t *testing.T) {
 	CosmosChainUpgradeIBCTest(t, "juno", "v6.0.0", "ghcr.io/strangelove-ventures/heighliner/juno", "v8.0.0", "multiverse")
 }
 
+func TestGaiaUpgradeIBC(t *testing.T) {
+	CosmosChainUpgradeIBCTest(t, "gaia", "v17.3.0", "ghcr.io/strangelove-ventures/heighliner/gaia", "v18.1.0", "v18")
+}
+
 func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeContainerRepo, upgradeVersion string, upgradeName string) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -37,11 +41,21 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 
 	t.Parallel()
 
-	// SDK v45 params for Juno genesis
-	shortVoteGenesis := []cosmos.GenesisKV{
-		cosmos.NewGenesisKV("app_state.gov.voting_params.voting_period", votingPeriod),
-		cosmos.NewGenesisKV("app_state.gov.deposit_params.max_deposit_period", maxDepositPeriod),
-		cosmos.NewGenesisKV("app_state.gov.deposit_params.min_deposit.0.denom", "ujuno"),
+	var shortVoteGenesis []cosmos.GenesisKV
+	if chainName == "juno" {
+		// SDK v45 params for Juno genesis
+		shortVoteGenesis = []cosmos.GenesisKV{
+			cosmos.NewGenesisKV("app_state.gov.voting_params.voting_period", votingPeriod),
+			cosmos.NewGenesisKV("app_state.gov.deposit_params.max_deposit_period", maxDepositPeriod),
+			cosmos.NewGenesisKV("app_state.gov.deposit_params.min_deposit.0.denom", "ujuno"),
+		}
+	} else {
+		// SDK > v45 params for Gaia genesis
+		shortVoteGenesis = []cosmos.GenesisKV{
+			cosmos.NewGenesisKV("app_state.gov.params.voting_period", votingPeriod),
+			cosmos.NewGenesisKV("app_state.gov.params.max_deposit_period", maxDepositPeriod),
+			cosmos.NewGenesisKV("app_state.gov.params.min_deposit.0.denom", "uatom"),
+		}
 	}
 
 	chains := interchaintest.CreateChainsWithChainSpecs(t, []*interchaintest.ChainSpec{
@@ -57,7 +71,7 @@ func CosmosChainUpgradeIBCTest(t *testing.T, chainName, initialVersion, upgradeC
 		},
 		{
 			Name:          "gaia",
-			ChainName:     "gaia",
+			ChainName:     "gaia-ibc",
 			Version:       "v7.0.3",
 			NumValidators: &numValsOne,
 			NumFullNodes:  &numFullNodesZero,
