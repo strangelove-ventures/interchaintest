@@ -112,7 +112,7 @@ ICT_KILL_ALL() {
 ICT_GET_PEER() {
     local API=$1 CHAIN_ID=$2
 
-    if [[ $API != */info ]] then
+    if [[ $API != */info ]]; then
         API="$API/info"
     fi
 
