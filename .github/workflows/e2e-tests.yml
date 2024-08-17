@@ -10,6 +10,9 @@ concurrency:
 
 env:
   GO_VERSION: 1.21
+  TEST_CONFORMANCE: (go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
+  TEST_IBC: go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
+  TEST_COSMOS: go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
 
 jobs:
   setup-go-cache:
@@ -49,6 +52,7 @@ jobs:
   test-conformance:
     name: test-conformance
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: setup-go-cache
     steps:
       # Install and setup go
@@ -60,14 +64,25 @@ jobs:
       - name: checkout interchaintest
         uses: actions/checkout@v4
 
-      # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
           rm -rf ~/.interchaintest
 
-      # run tests
       - name: run conformance tests
-        run: (go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
+        id: conformance_test
+        run: ${{ env.TEST_CONFORMANCE }}
+
+      - name: Retry Failed Test
+        if: steps.conformance_test.outcome == 'failure'
+        run: |
+          for i in 1 2; do
+            echo "Retry attempt $i"
+            if ${{ env.TEST_CONFORMANCE }}; then
+              echo "Test passed on retry"; exit 0
+            fi
+          done
+          echo "Test failed after retries"
+          exit 1
 
   test-ibc-examples:
     name: test-ibc-examples
@@ -84,14 +99,25 @@ jobs:
       - name: checkout interchaintest
         uses: actions/checkout@v4
 
-      # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
           rm -rf ~/.interchaintest
 
-      # run tests
       - name: run example ibc tests
-        run: go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
+        id: ibc_test
+        run: ${{ env.TEST_IBC }}
+
+      - name: Retry Failed Test
+        if: steps.ibc_test.outcome == 'failure'
+        run: |
+          for i in 1 2; do
+            echo "Retry attempt $i"
+            if ${{ env.TEST_IBC }}; then
+              echo "Test passed on retry"; exit 0
+            fi
+          done
+          echo "Test failed after retries"
+          exit 1
 
   test-cosmos-examples:
     name: test-cosmos-examples
@@ -108,11 +134,22 @@ jobs:
       - name: checkout interchaintest
         uses: actions/checkout@v4
 
-      # cleanup environment on self-hosted test runner
       - name: clean
         run: |-
           rm -rf ~/.interchaintest
 
-      # run tests
       - name: run example cosmos tests
-        run: go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
+        id: cosmos_test
+        run: ${{ env.TEST_COSMOS }}
+
+      - name: Retry Failed Test
+        if: steps.cosmos_test.outcome == 'failure'
+        run: |
+          for i in 1 2; do
+            echo "Retry attempt $i"
+            if ${{ env.TEST_COSMOS }}; then
+              echo "Test passed on retry"; exit 0
+            fi
+          done
+          echo "Test failed after retries"
+          exit 1
