@@ -13,7 +13,7 @@ env:
 
 jobs:
   setup-go-cache:
-    name: test-conformance
+    name: setup-go-cache
     runs-on: ubuntu-latest
     steps:
       - id: go-cache-paths
