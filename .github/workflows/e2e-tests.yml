@@ -26,6 +26,9 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
+      - name: checkout interchaintest
+        uses: actions/checkout@v4
+
       - name: Go Mod Cache
         uses: actions/cache@v2
         with:
@@ -36,9 +39,6 @@ jobs:
         with:
           path: ${{ steps.go-cache-paths.outputs.go-build }}
           key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-
-      - name: checkout interchaintest
-        uses: actions/checkout@v4
 
       - name: Download Go Dependencies
         run: |
