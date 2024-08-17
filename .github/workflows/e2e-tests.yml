@@ -42,8 +42,9 @@ jobs:
 
       - name: Download Go Dependencies
         run: |
+          go mod tidy
           go mod download
-          cd local-interchain && go mod download
+          cd local-interchain && go mod tidy && go mod download
 
   test-conformance:
     name: test-conformance
