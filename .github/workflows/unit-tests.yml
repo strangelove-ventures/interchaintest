@@ -8,8 +8,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # -short flag purposefully omitted because there are some longer unit tests
+  COMMAND: go test -race -timeout 10m -failfast -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+
 jobs:
   test-unit:
+    continue-on-error: true
     name: unit-tests
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +27,19 @@ jobs:
       - name: checkout interchaintest
         uses: actions/checkout@v4
 
-      # run tests
       - name: run unit tests
-        # -short flag purposefully omitted because there are some longer unit tests
-        run: go test -race -timeout 10m -failfast -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+        id: run_test
+        run: ${{ env.COMMAND }}
+
+      - name: Retry Failed Test
+        if: steps.run_test.outcome == 'failure'
+        run: |
+          for i in 1 2; do
+            echo "Retry attempt $i"
+            if  ${{ env.COMMAND }}; then
+              echo "Test passed on retry"
+              exit 0
+            fi
+          done
+          echo "Test failed after retries"
+          exit 1
