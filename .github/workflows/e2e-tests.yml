@@ -8,16 +8,53 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  GO_VERSION: 1.21
+
 jobs:
-  test-conformance:
+  setup-go-cache:
     name: test-conformance
     runs-on: ubuntu-latest
     steps:
-      # Install and setup go
-      - name: Set up Go 1.21
+      - id: go-cache-paths
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+
+      - name: Set up Go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Go Mod Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-mod }}
+          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+      - name: Go Build Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+
+      - name: checkout interchaintest
+        uses: actions/checkout@v4
+
+      - name: Download Go Dependencies
+        run: |
+          go mod download
+          cd local-interchain && go mod download
+
+  test-conformance:
+    name: test-conformance
+    runs-on: ubuntu-latest
+    needs: setup-go-cache
+    steps:
+      # Install and setup go
+      - name: Set up Go ${{ env.GO_VERSION}}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION}}
 
       - name: checkout interchaintest
         uses: actions/checkout@v4
@@ -30,15 +67,17 @@ jobs:
       # run tests
       - name: run conformance tests
         run: (go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest) || (echo "\n\n*****CHAIN and RELAYER LOGS*****" && cat "$HOME/.interchaintest/logs/interchaintest.log" && exit 1)
+
   test-ibc-examples:
     name: test-ibc-examples
     runs-on: ubuntu-latest
+    needs: setup-go-cache
     steps:
       # Install and setup go
-      - name: Set up Go 1.21
+      - name: Set up Go ${{ env.GO_VERSION}}
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ env.GO_VERSION}}
           cache: false
 
       - name: checkout interchaintest
@@ -52,15 +91,17 @@ jobs:
       # run tests
       - name: run example ibc tests
         run: go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
+
   test-cosmos-examples:
     name: test-cosmos-examples
     runs-on: ubuntu-latest
+    needs: setup-go-cache
     steps:
       # Install and setup go
-      - name: Set up Go 1.21
+      - name: Set up Go ${{ env.GO_VERSION}}
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ env.GO_VERSION}}
           cache: false
 
       - name: checkout interchaintest
