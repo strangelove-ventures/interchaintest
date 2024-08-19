@@ -8,7 +8,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestEthereum(t *testing.T) {
+func TestFoundry(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip()
