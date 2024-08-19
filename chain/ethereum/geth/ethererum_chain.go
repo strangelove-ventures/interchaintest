@@ -2,6 +2,7 @@ package geth
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
@@ -21,8 +24,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var _ ibc.Chain = &EthereumChain{}
@@ -310,8 +313,35 @@ EOF
 }
 
 func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	panic("Geth, RecoverKey unimplemented")
-	//return nil
+	_, ok := c.keynameToAcctNum[keyName]
+	if ok {
+		return fmt.Errorf("Keyname (%s) already used", keyName)
+	}
+
+	derivedPriv, err := hd.Secp256k1.Derive()(mnemonic, "", hd.CreateHDPath(60, 0, 0).String())
+	if err != nil {
+		return err
+	}
+
+	privKey := hd.Secp256k1.Generate()(derivedPriv)
+
+	cmd := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`cat <<EOF | geth --datadir %s account import <(echo %s)
+
+
+EOF
+`, c.HomeDir(), hex.EncodeToString(privKey.Bytes()))}
+	_, _, err = c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+
+	c.keynameToAcctNum[keyName] = c.nextAcctNum
+	c.nextAcctNum++
+
+	return nil
 }
 
 // Get address of account, cast to a string to use

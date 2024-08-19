@@ -3,6 +3,7 @@ package ethereum_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,10 +65,19 @@ func TestGeth(t *testing.T) {
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 
-	// Check balances of faucet and then user1
+	// Check balances of user
 	balance, err := ethereumChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
 	require.NoError(t, err)
 	fmt.Println("User balance:", balance)
+
+	ethUser2, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user2", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethereumChain)
+	require.NoError(t, err)
+
+	fmt.Println("ethUser2", ethUser2.FormattedAddress())
+	balance, err = ethereumChain.GetBalance(ctx, ethUser2.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("User2 balance:", balance)
+
 
 	// Sleep for an additional testing
 	time.Sleep(1 * time.Second)
