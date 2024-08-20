@@ -84,6 +84,9 @@ func TestThorchainSim(t *testing.T) {
 			eg.Go(func() error {
 				return features.SingleSwap(t, egCtx, thorchain, exoChainList[i], exoChainList[i+1])
 			})
+			eg.Go(func() error {
+				return features.SingleSwap(t, egCtx, thorchain, exoChainList[i+1], exoChainList[i])
+			})
 		}
 	}
 	require.NoError(t, eg.Wait())

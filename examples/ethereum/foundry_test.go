@@ -36,7 +36,7 @@ func TestFoundry(t *testing.T) {
 	ctx := context.Background()
 
 	// Get default ethereum chain config for anvil
-	anvilConfig := ethereum.DefaultEthereumAnvilChainConfig("ethereum")
+	anvilConfig := foundry.DefaultEthereumAnvilChainConfig("ethereum")
 
 	// add --load-state config (this step is not required for tests that don't require an existing state)
 	configFileOverrides := make(map[string]any)
@@ -55,7 +55,7 @@ func TestFoundry(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	ethereumChain := chains[0].(*ethereum.EthereumChain)
+	ethereumChain := chains[0].(*foundry.EthereumChain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(ethereumChain)
@@ -78,7 +78,7 @@ func TestFoundry(t *testing.T) {
 	require.True(t, expectedFaucetInitialBalance.Equal(balance))
 
 	// Create and fund a user using GetAndFundTestUsers
-	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
+	ethUserInitialAmount := foundry.ETHER.MulRaw(2)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 
@@ -100,7 +100,7 @@ func TestFoundry(t *testing.T) {
 	require.True(t, math.ZeroInt().Equal(balance))
 
 	// Fund user2 wallet using SendFunds() from user1 wallet
-	ethUser2InitialAmount := ethereum.ETHER
+	ethUser2InitialAmount := foundry.ETHER
 	err = ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
 		Address: ethUser2.FormattedAddress(),
 		Denom:   ethereumChain.Config().Denom,

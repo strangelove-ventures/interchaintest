@@ -56,8 +56,8 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 			}
 
 			mainLogs.Chains = append(mainLogs.Chains, log)
-		case *ethereum.EthereumChain:
-			chainObj := chains[idx].(*ethereum.EthereumChain)
+		case *foundry.EthereumChain:
+			chainObj := chains[idx].(*foundry.EthereumChain)
 
 			log := types.LogOutput{
 				ChainID:    chainObj.Config().ChainID,

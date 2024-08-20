@@ -1,4 +1,4 @@
-package ethereum
+package foundry
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
@@ -57,6 +58,7 @@ type EthereumChain struct {
 	genesisWallets GenesisWallets
 
 	keystoreMap map[string]string
+	keyNameLocks map[string]*sync.Mutex
 }
 
 func DefaultEthereumAnvilChainConfig(
@@ -69,7 +71,7 @@ func DefaultEthereumAnvilChainConfig(
 		Bech32Prefix:   "n/a",
 		CoinType:       "60",
 		Denom:          "wei",
-		GasPrices:      "0",
+		GasPrices:      "20000000000", // 20 gwei
 		GasAdjustment:  0,
 		TrustingPeriod: "0",
 		NoHostMount:    false,
@@ -91,6 +93,7 @@ func NewEthereumChain(testName string, chainConfig ibc.ChainConfig, log *zap.Log
 		log:            log,
 		genesisWallets: NewGenesisWallet(),
 		keystoreMap:    make(map[string]string),
+		keyNameLocks:   make(map[string]*sync.Mutex),
 	}
 }
 
@@ -173,13 +176,10 @@ func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client
 
 func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	// TODO:
-	//   * add support for different denom configuration, ether, gwei or wei,
-	//       this will affect SendFunds, SendFundsWithNote, GetBalance and anything other than wei will lose precision for GetBalance
 	//   * add support for modifying genesis amount config, default is 10 ether
 	//   * add support for ConfigFileOverrides
 	//		* block time
 	//   * add support for custom chain id, must be an int?
-	//   * add support for custom gas-price
 	// Maybe add code-size-limit configuration for larger contracts
 
 	// IBC support, add when necessary
@@ -191,7 +191,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
 		"--no-cors",
-		"--gas-price", "20000000000",
+		"--gas-price", c.cfg.GasPrices,
 		"--block-base-fee-per-gas", "0",
 	}
 
@@ -247,7 +247,6 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	c.hostRPCPort = hostPorts[0]
-	fmt.Println("Host RPC port: ", c.hostRPCPort)
 
 	return testutil.WaitForBlocks(ctx, 2, c)
 }
@@ -328,6 +327,7 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 	}
 
 	c.keystoreMap[keyName] = newWallet[0].Path
+	c.keyNameLocks[keyName] = &sync.Mutex{}
 
 	return nil
 }
@@ -346,12 +346,17 @@ func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string
 
 	// This is needed for CreateKey() since that keystore path does not use the keyname
 	c.keystoreMap[keyName] = path.Join(c.KeystoreDir(), keyName)
+	c.keyNameLocks[keyName] = &sync.Mutex{}
 
 	return nil
 }
 
 // Get address of account, cast to a string to use
 func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	if keyName == "faucet" {
+		return []byte("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"), nil
+	}
+	
 	keystore, ok := c.keystoreMap[keyName]
 	if !ok {
 		return nil, fmt.Errorf("Keyname (%s) not found", keyName)
@@ -384,6 +389,8 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 			"--rpc-url", c.GetRPCAddress(),
 		)
 	}
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
 	_, _, err := c.Exec(ctx, cmd, nil)
 	return err
 }
@@ -411,6 +418,8 @@ func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, a
 			"--rpc-url", c.GetRPCAddress(),
 		)
 	}
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return "", err
@@ -439,6 +448,7 @@ func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom st
 	if err != nil {
 		return sdkmath.ZeroInt(), err
 	}
+
 	balance, ok := sdkmath.NewIntFromString(strings.TrimSpace(string(stdout)))
 	if !ok {
 		return sdkmath.ZeroInt(), fmt.Errorf("Error parsing string to sdk int")
@@ -455,7 +465,8 @@ func (c *EthereumChain) BuildWallet(ctx context.Context, keyName string, mnemoni
 	} else {
 		// Use the genesis account
 		if keyName == "faucet" {
-			// TODO: implement RecoverKey() so faucet can be saved to keystore
+			// TODO: add faucet to keystore now that recover key is implemented
+			c.keyNameLocks[keyName] = &sync.Mutex{}
 			return c.genesisWallets.GetFaucetWallet(keyName), nil
 		} else {
 			// Create new account

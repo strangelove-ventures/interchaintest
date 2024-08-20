@@ -38,31 +38,36 @@ func SaverEject(
 	mimirLock.Lock()
 	mimirs, err := thorchain.ApiGetMimirs()
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
 	// Set max synth per pool depth to 100% of pool amount
 	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; ok && mimir != int64(5000) {
-		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000"); err != nil {
+		if err = thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "5000"); err != nil {
+			mimirLock.Unlock()
 			return exoUser, err
 		}
 	}
 
 	// Disable saver ejection
 	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; ok && mimir != int64(0) || !ok {
-		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0"); err != nil {
+		if err = thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "0"); err != nil {
+			mimirLock.Unlock()
 			return exoUser, err
 		}
 	}
 
 	exoChainType, err := common.NewChain(exoChain.Config().Name)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 	exoAsset := exoChainType.GetGasAsset()
 
 	pool, err := thorchain.ApiGetPool(exoAsset)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
@@ -70,6 +75,7 @@ func SaverEject(
 
 	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
@@ -91,6 +97,7 @@ func SaverEject(
 
 	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
@@ -107,25 +114,30 @@ func SaverEject(
 		err = exoChain.SendFunds(ctx, exoUser.KeyName(), wallet)
 	}
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
 	errMsgCommon := fmt.Sprintf("saver (%s - %s) of asset %s", exoUser.KeyName(), exoUser.FormattedAddress(), exoAsset)
 	saver, err := PollForSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, fmt.Errorf("%s not found, %w", errMsgCommon, err)
 	}
 
 	deposit := sdkmath.NewUintFromString(saver.AssetDepositValue)
 	if deposit.LT(minExpectedSaver) {
+		mimirLock.Unlock()
 		return exoUser, fmt.Errorf("%s deposit: %s, min expected: %s", errMsgCommon, deposit, minExpectedSaver)
 	}
 	if deposit.GT(maxExpectedSaver) {
+		mimirLock.Unlock()
 		return exoUser, fmt.Errorf("%s deposit: %s, max expected: %s", errMsgCommon, deposit, maxExpectedSaver)
 	}
 
 	exoUserPreEjectBalance, err := exoChain.GetBalance(ctx, exoUser.FormattedAddress(), exoChain.Config().Denom)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
@@ -133,35 +145,40 @@ func SaverEject(
 	for i, exoSaver := range exoSavers {
 		exoSaversBalance[i], err = exoChain.GetBalance(ctx, exoSaver.FormattedAddress(), exoChain.Config().Denom)
 		if err != nil {
+			mimirLock.Unlock()
 			return exoUser, err
 		}
 	}
 
 	mimirs, err = thorchain.ApiGetMimirs()
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 
 	// Set mimirs
 	if mimir, ok := mimirs[strings.ToUpper("MaxSynthPerPoolDepth")]; ok && mimir != int64(500) || !ok {
 		if err := thorchain.SetMimir(ctx, "admin", "MaxSynthPerPoolDepth", "500"); err != nil {
+			mimirLock.Unlock()
 			return exoUser, err
 		}
 	}
 
 	if mimir, ok := mimirs[strings.ToUpper("SaversEjectInterval")]; ok && mimir != int64(1) || !ok {
 		if err := thorchain.SetMimir(ctx, "admin", "SaversEjectInterval", "1"); err != nil {
+			mimirLock.Unlock()
 			return exoUser, err
 		}
 	}
 
 	_, err = PollForEjectedSaver(ctx, thorchain, 30, exoAsset, exoUser)
 	if err != nil {
+		mimirLock.Unlock()
 		return exoUser, err
 	}
 	mimirLock.Unlock()
 
-	if err := PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
+	if err = PollForBalanceChange(ctx, exoChain, 15, ibc.WalletAmount{
 		Address: exoUser.FormattedAddress(),
 		Denom:   exoChain.Config().Denom,
 		Amount:  exoUserPreEjectBalance,

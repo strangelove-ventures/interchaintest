@@ -2,13 +2,17 @@ package ethereum_test
 
 import (
 	"context"
+
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	//sdkmath "cosmossdk.io/math"
+
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
@@ -39,9 +43,7 @@ func TestGeth(t *testing.T) {
 
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{
-			ChainConfig: gethConfig,
-		},
+		{ChainConfig: gethConfig},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -61,7 +63,7 @@ func TestGeth(t *testing.T) {
 	fmt.Println("Interchain built")
 
 	// Create and fund a user using GetAndFundTestUsers
-	ethUserInitialAmount := geth.ETHER.MulRaw(2)
+	ethUserInitialAmount := geth.ETHER.MulRaw(1000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 
@@ -78,8 +80,19 @@ func TestGeth(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("User2 balance:", balance)
 
+	txHash, err := ethereumChain.SendFundsWithNote(ctx, ethUser2.KeyName(), ibc.WalletAmount{
+		Address: ethUser.FormattedAddress(),
+		Amount: ethUserInitialAmount.QuoRaw(3),
+		Denom: ethereumChain.Config().Denom,
+	}, "hello")
+	require.NoError(t, err)
+	fmt.Println("Tx hash:", txHash)
 
-	// Sleep for an additional testing
+	// Sleep for additional testing
 	time.Sleep(1 * time.Second)
 
+}
+
+type ContractOutput struct {
+	TxHash string `json:"transactionHash"`
 }

@@ -1,4 +1,4 @@
-package ethereum
+package foundry
 
 import (
 	"context"
@@ -79,6 +79,8 @@ func WriteConfigFile(configFile string, localContractRootDir string, solidityCon
 // Run "forge script"
 // see: https://book.getfoundry.sh/reference/forge/forge-script
 func (c *EthereumChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
 	pwd, err := os.Getwd()
 	if err != nil {
 		return nil, nil, err

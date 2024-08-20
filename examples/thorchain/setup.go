@@ -2,6 +2,7 @@ package thorchain_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"testing"
@@ -18,7 +19,8 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
+	//"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -140,46 +142,93 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	require.NoError(t, err, "failed starting validator sidecars")
 
 	// Give some time for bifrost to initialize before any tests start
-	err = testutil.WaitForBlocks(ctx, 5, thorchain)
+	err = testutil.WaitForBlocks(ctx, 10, thorchain)
 	require.NoError(t, err)
 
 	return thorchain
 }
 
-func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
-	ethChain := exoChain.chain.(*ethereum.EthereumChain)
 
-	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
+//go:embed contracts/eth-router-abi.json
+var ethRouterAbi []byte
+
+//go:embed contracts/eth-router-bytecode.txt
+var ethRouterByteCode []byte
+
+//go:embed contracts/router-abi.json
+var routerAbi []byte
+
+//go:embed contracts/router-bytecode.txt
+var routerByteCode []byte
+
+func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
+	abi := routerAbi
+	byteCode := routerByteCode
+	if exoChain.chain.Config().Name == "ETH" {
+		abi = ethRouterAbi
+		byteCode = append(ethRouterByteCode, []byte("000000000000000000000000de06987c28d839daaefb6c85816a2cc55277654c")...) // RUNE token (doesn't matter)
+	}
+	
+	ethChain := exoChain.chain.(*geth.EthereumChain)
+
+	ethUserInitialAmount := geth.ETHER.MulRaw(100)
 
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
 	require.NoError(t, err)
 
-	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
-		ContractRootDir:  "contracts",
-		SolidityContract: "script/Token.s.sol",
-		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
-	})
-	require.NoError(t, err)
-
-	tokenContractAddress, err := GetEthAddressFromStdout(string(stdout))
-	require.NoError(t, err)
-	require.NotEmpty(t, tokenContractAddress)
-	require.True(t, ethcommon.IsHexAddress(tokenContractAddress))
-
-	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
-		ContractRootDir:  "contracts",
-		SolidityContract: "script/Router.s.sol",
-		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
-	})
-	require.NoError(t, err)
-
-	ethRouterContractAddress, err := GetEthAddressFromStdout(string(stdout))
+	ethRouterContractAddress, err := ethChain.DeployContract(ctx, ethUser.KeyName(), abi, byteCode)
 	require.NoError(t, err)
 	require.NotEmpty(t, ethRouterContractAddress)
 	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
 
 	return ethRouterContractAddress
 }
+
+// func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
+// 	ethChain := exoChain.chain.(*foundry.EthereumChain)
+
+// 	ethUserInitialAmount := foundry.ETHER.MulRaw(2)
+
+// 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
+// 	require.NoError(t, err)
+
+// 	fmt.Println("*****########*********")
+// 	fmt.Println("Dog address:", ethUser.FormattedAddress())
+// 	fmt.Println("*****########*********")
+
+// 	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
+// 		ContractRootDir:  "contracts",
+// 		SolidityContract: "script/Token.s.sol",
+// 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
+// 	})
+// 	require.NoError(t, err)
+
+// 	tokenContractAddress, err := GetEthAddressFromStdout(string(stdout))
+// 	require.NoError(t, err)
+// 	require.NotEmpty(t, tokenContractAddress)
+// 	require.True(t, ethcommon.IsHexAddress(tokenContractAddress))
+
+// 	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
+// 		ContractRootDir:  "contracts",
+// 		SolidityContract: "script/Router.s.sol",
+// 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
+// 	})
+// 	require.NoError(t, err)
+
+// 	fmt.Println("*****########*********")
+// 	fmt.Println("ForgeScript stdout:", string(stdout))
+// 	fmt.Println("*****########*********")
+
+// 	ethRouterContractAddress, err := GetEthAddressFromStdout(string(stdout))
+// 	require.NoError(t, err)
+// 	require.NotEmpty(t, ethRouterContractAddress)
+// 	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
+// 	fmt.Println("*****########*********")
+// 	fmt.Println("eth router contract:", ethRouterContractAddress)
+// 	fmt.Println("*****########*********")
+
+// 	return ethRouterContractAddress
+// }
 
 func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.Group {
 	gaia := exoChain.chain.(*cosmos.CosmosChain)

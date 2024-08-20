@@ -160,7 +160,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	case "ethereum":
 		switch cfg.Bin {
 		case "anvil":
-			return ethereum.NewEthereumChain(testName, cfg, log), nil
+			return foundry.NewEthereumChain(testName, cfg, log), nil
 		case "geth":
 			return geth.NewEthereumChain(testName, cfg, log), nil
 		default:

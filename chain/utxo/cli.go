@@ -185,7 +185,7 @@ func (c *UtxoChain) SetAccount(ctx context.Context, addr string, keyName string)
 // sendToMwebAddress is used for creating the mweb transaction needed at block 431
 // no other use case is currently supported
 func (c *UtxoChain) sendToMwebAddress(ctx context.Context, keyName string, addr string, amount float64) error {
-	_, err := c.getWalletForUse(keyName)
+	wallet, err := c.getWalletForUse(keyName)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,9 @@ func (c *UtxoChain) sendToMwebAddress(ctx context.Context, keyName string, addr 
 		fmt.Sprintf("amount=%.8f", amount),
 	)
 
+	wallet.txLock.Lock()
 	_, _, err = c.Exec(ctx, cmd, nil)
+	wallet.txLock.Unlock()
 	if err != nil {
 		return err
 	}

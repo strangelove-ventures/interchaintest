@@ -1,4 +1,4 @@
-package ethereum
+package foundry
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"

@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"io"
 	"time"
-
-	"path"
 	"strings"
+	"sync"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -59,6 +58,8 @@ type EthereumChain struct {
 	hostRPCPort string
 	rpcClient *ethclient.Client
 
+
+	keyNameLocks map[string]*sync.Mutex
 	keynameToAcctNum map[string]int
 	acctNumToAddr map[int]string
 	nextAcctNum int
@@ -99,6 +100,7 @@ func NewEthereumChain(testName string, chainConfig ibc.ChainConfig, log *zap.Log
 		},
 		acctNumToAddr: make(map[int]string),
 		nextAcctNum: 1,
+		keyNameLocks: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -151,10 +153,6 @@ func (c *EthereumChain) HomeDir() string {
 	return "/home/geth"
 }
 
-func (c *EthereumChain) KeystoreDir() string {
-	return path.Join(c.HomeDir(), ".foundry", "keystores")
-}
-
 func (c *EthereumChain) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", c.VolumeName, c.HomeDir())}
 }
@@ -186,9 +184,15 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	//   * add support for custom gas-price
 
 	cmd := []string{c.cfg.Bin,
-		"--dev" ,"--dev.period", "2", "--verbosity", "4", "--networkid", "15", "--datadir", c.HomeDir(),
-		"-http", "--http.addr", "0.0.0.0", "--http.port", "8545", "--allow-insecure-unlock",
-		"--http.api", "eth,net,web3,miner,personal,txpool,debug", "--http.corsdomain", "\"*\"", "-nodiscover", "--http.vhosts=\"*\"",
+		"--dev" ,"--dev.period", "2", "--verbosity", "5", "--networkid", "15", "--datadir", c.HomeDir(),
+		"-http", "--http.addr", "0.0.0.0", "--http.port", "8545", "--allow-insecure-unlock", "--rpc.enabledeprecatedpersonal",
+		"--http.api", "eth,net,web3,miner,personal,txpool,debug", "--http.corsdomain", "*", "-nodiscover", "--http.vhosts=*",
+		"--rpc.txfeecap", "50.0", // 50 eth
+		"--rpc.gascap", "30000000", //30M
+		"--miner.gasprice", "2000000000", // 2gwei, default 1M
+		"--gpo.percentile", "150", // default 60
+		"--gpo.ignoreprice", "1000000000", // 1gwei, default 2
+		"--dev.gaslimit", "30000000", // 30M, default 11.5M
 	}
 
 	usingPorts := nat.PortMap{}
@@ -308,6 +312,7 @@ EOF
 
 	c.keynameToAcctNum[keyName] = c.nextAcctNum
 	c.nextAcctNum++
+	c.keyNameLocks[keyName] = &sync.Mutex{}
 
 	return nil
 }
@@ -340,6 +345,7 @@ EOF
 
 	c.keynameToAcctNum[keyName] = c.nextAcctNum
 	c.nextAcctNum++
+	c.keyNameLocks[keyName] = &sync.Mutex{}
 
 	return nil
 }
@@ -375,30 +381,120 @@ func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte,
 	return hexutil.MustDecode(strings.Trim(strings.TrimSpace(string(stdout)), "\"")), nil
 }
 
+func (c *EthereumChain) UnlockAccount(ctx context.Context, keyName string) error {
+	accountNum, found := c.keynameToAcctNum[keyName]
+	if !found {
+		return fmt.Errorf("UnlockAccount(): Keyname (%s) not found", keyName)
+	}
+
+	if accountNum == 0 {
+		return nil
+	}
+
+	_, _, err := c.JavaScriptExec(ctx,
+		fmt.Sprintf("personal.unlockAccount(eth.accounts[%d], \"\", 100)", accountNum),
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	accountNum, found := c.keynameToAcctNum[keyName]
 	if !found {
 		return fmt.Errorf("SendFunds(): Keyname (%s) not found", keyName)
 	}
 
+	if err := c.UnlockAccount(ctx, keyName); err != nil {
+		return err
+	}
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
 	_, _, err := c.JavaScriptExec(ctx,
 		fmt.Sprintf("eth.sendTransaction({from: eth.accounts[%d],to: %q,value: %s});", accountNum, amount.Address, amount.Amount),
 	)
 	if err != nil {
 		return err
 	}
+		
 	return testutil.WaitForBlocks(ctx, 1, c)
 }
 
-type TransactionReceipt struct {
-	TxHash string `json:"transactionHash"`
+func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	accountNum, found := c.keynameToAcctNum[keyName]
+	if !found {
+		return "", fmt.Errorf("SendFundsWithNote(): Keyname (%s) not found", keyName)
+	}
+
+	if err := c.UnlockAccount(ctx, keyName); err != nil {
+		return "", err
+	}
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
+	stdout, _, err := c.JavaScriptExec(ctx,
+		fmt.Sprintf("eth.sendTransaction({from: eth.accounts[%d],to: %q,value: %s,data: \"%s\"});", accountNum, amount.Address, amount.Amount, hexutil.Encode([]byte(note))),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := testutil.WaitForBlocks(ctx, 1, c); err != nil {
+		return "", err
+	}
+
+	return strings.Trim(strings.TrimSpace(string(stdout)), "\""), nil
 }
 
-func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	return "", nil
+// DeployContract creates a new contract on-chain, returning the contract address
+// Constructor params are appended to the byteCode
+func (c *EthereumChain) DeployContract(ctx context.Context, keyName string, abi []byte, byteCode []byte) (string, error) {
+	accountNum, found := c.keynameToAcctNum[keyName]
+	if !found {
+		return "", fmt.Errorf("SendFundsWithNote(): Keyname (%s) not found", keyName)
+	}
+
+	if err := c.UnlockAccount(ctx, keyName); err != nil {
+		return "", err
+	}
+
+	c.keyNameLocks[keyName].Lock()
+	defer c.keyNameLocks[keyName].Unlock()
+	stdout, _, err := c.JavaScriptExec(ctx, 
+		fmt.Sprintf("eth.contract(abi=%s).new({from: eth.accounts[%d], data: %q, gas: 20000000}).transactionHash", abi, accountNum, byteCode),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := testutil.WaitForBlocks(ctx, 1, c); err != nil {
+		return "", nil
+	}
+	
+	status, _, err := c.JavaScriptExec(ctx, 
+		fmt.Sprintf("eth.getTransactionReceipt(%s).status", string(stdout)),
+	)
+	if err != nil {
+		return "", err
+	}
+	
+	if strings.Trim(strings.TrimSpace(string(status)), "\"") == "0x0" {
+		return "", fmt.Errorf("contract deployment failed")
+	}
+
+	stdout, _, err = c.JavaScriptExec(ctx, 
+		fmt.Sprintf("eth.getTransactionReceipt(%s).contractAddress", string(stdout)),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Trim(strings.TrimSpace(string(stdout)), "\""), nil
 }
 
 func (c *EthereumChain) Height(ctx context.Context) (int64, error) {
+	time.Sleep(time.Millisecond * 200)
 	height, err := c.rpcClient.BlockNumber(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get height: %w", err)
@@ -411,7 +507,6 @@ func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom st
 	if err != nil {
 		return sdkmath.Int{}, fmt.Errorf("failed to get height: %w", err)
 	}	
-	
 	return sdkmath.NewIntFromBigInt(balance), nil
 }
 
@@ -424,6 +519,7 @@ func (c *EthereumChain) BuildWallet(ctx context.Context, keyName string, mnemoni
 	} else {
 		// faucet is created when the chain starts and will be account #0
 		if keyName == "faucet" {
+			c.keyNameLocks[keyName] = &sync.Mutex{}
 			return NewWallet(keyName, []byte{}), nil
 		} else {
 			// Create new account

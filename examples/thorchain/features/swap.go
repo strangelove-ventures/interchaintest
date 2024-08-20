@@ -140,7 +140,7 @@ func singleSwap(
 	} else {
 		_, err = PollOutboundSigned(ctx, thorchain, 200, txHash)
 		if err != nil {
-			return err
+			return fmt.Errorf("Outbound chain: %s, err: %w", destChainType, err)
 		}
 	}
 

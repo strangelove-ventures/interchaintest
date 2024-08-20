@@ -415,6 +415,13 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 		return "", err
 	}
 
+	wallet, err := c.getWalletForUse(keyName)
+	if err != nil {
+		return "", err
+	}
+	wallet.txLock.Lock()
+	defer wallet.txLock.Unlock()
+
 	// get utxo
 	listUtxo, err := c.ListUnspent(ctx, keyName)
 	if err != nil {
