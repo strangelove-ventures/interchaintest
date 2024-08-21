@@ -726,11 +726,7 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	if tn.Chain.Config().Env != nil {
 		for _, str := range tn.Chain.Config().Env {
 			if strings.Contains(str, "ICT_ABOVE_SDK_47") {
-				if strings.Contains(str, "true") {
-					return true
-				} else {
-					return false
-				}
+				return strings.Contains(str, "true")
 			}
 		}
 	}
@@ -738,11 +734,7 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// Check OS environment variables for the SDK version.
 	env := os.Getenv("ICT_ABOVE_SDK_47")
 	if env != "" {
-		if env == "true" {
-			return true
-		} else {
-			return false
-		}
+		return env == "true"
 	}
 
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
