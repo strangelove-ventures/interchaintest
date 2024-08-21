@@ -160,9 +160,9 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	case "ethereum":
 		switch cfg.Bin {
 		case "anvil":
-			return foundry.NewEthereumChain(testName, cfg, log), nil
+			return foundry.NewAnvilChain(testName, cfg, log), nil
 		case "geth":
-			return geth.NewEthereumChain(testName, cfg, log), nil
+			return geth.NewGethChain(testName, cfg, log), nil
 		default:
 			return nil, fmt.Errorf("unknown binary: %s for ethereum chain type, must be anvil or geth", cfg.Bin)
 		}

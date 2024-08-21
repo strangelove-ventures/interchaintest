@@ -11,6 +11,7 @@ import (
 	//sdkmath "cosmossdk.io/math"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
@@ -49,7 +50,7 @@ func TestGeth(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	ethereumChain := chains[0].(*geth.EthereumChain)
+	ethereumChain := chains[0].(*geth.GethChain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(ethereumChain)
@@ -63,7 +64,7 @@ func TestGeth(t *testing.T) {
 	fmt.Println("Interchain built")
 
 	// Create and fund a user using GetAndFundTestUsers
-	ethUserInitialAmount := geth.ETHER.MulRaw(1000)
+	ethUserInitialAmount := ethereum.ETHER.MulRaw(1000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 

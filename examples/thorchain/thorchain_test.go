@@ -26,7 +26,7 @@ func TestThorchainSim(t *testing.T) {
 	// Start non-thorchain chains
 	exoChains := StartExoChains(t, ctx, client, network)
 	gaiaEg := SetupGaia(t, ctx, exoChains["GAIA"])
-	ethRouterContractAddress := SetupEthContracts(t, ctx, exoChains["ETH"])
+	ethRouterContractAddress := SetupContracts(t, ctx, exoChains["ETH"])
 
 	// Start thorchain
 	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress)

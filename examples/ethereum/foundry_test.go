@@ -8,6 +8,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
@@ -55,7 +56,7 @@ func TestFoundry(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	ethereumChain := chains[0].(*foundry.EthereumChain)
+	ethereumChain := chains[0].(*foundry.AnvilChain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(ethereumChain)
@@ -78,7 +79,7 @@ func TestFoundry(t *testing.T) {
 	require.True(t, expectedFaucetInitialBalance.Equal(balance))
 
 	// Create and fund a user using GetAndFundTestUsers
-	ethUserInitialAmount := foundry.ETHER.MulRaw(2)
+	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 
@@ -100,7 +101,7 @@ func TestFoundry(t *testing.T) {
 	require.True(t, math.ZeroInt().Equal(balance))
 
 	// Fund user2 wallet using SendFunds() from user1 wallet
-	ethUser2InitialAmount := foundry.ETHER
+	ethUser2InitialAmount := ethereum.ETHER
 	err = ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
 		Address: ethUser2.FormattedAddress(),
 		Denom:   ethereumChain.Config().Denom,

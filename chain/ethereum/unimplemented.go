@@ -1,4 +1,4 @@
-package foundry
+package ethereum
 
 import (
 	"context"
