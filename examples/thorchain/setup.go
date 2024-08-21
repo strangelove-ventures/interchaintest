@@ -33,7 +33,8 @@ import (
 
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
 	chainSpecs := []*interchaintest.ChainSpec{
-		EthChainSpec(),
+		//EthChainSpec("geth"),
+		EthChainSpec("anvil"),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),

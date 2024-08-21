@@ -4,7 +4,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
-	//"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -59,14 +59,18 @@ func GaiaChainSpec() *interchaintest.ChainSpec {
 	}
 }
 
-func EthChainSpec() *interchaintest.ChainSpec {
+func EthChainSpec(chainType string) *interchaintest.ChainSpec {
 	ethChainName := common.ETHChain.String() // must use this name for test
+
+	chainConfig := geth.DefaultEthereumGethChainConfig(ethChainName)
+	if chainType == "anvil" {
+		chainConfig = foundry.DefaultEthereumAnvilChainConfig(ethChainName)
+	}
 
 	return &interchaintest.ChainSpec{
 		ChainName:   ethChainName,
 		Name:        ethChainName,
-		//ChainConfig: foundry.DefaultEthereumAnvilChainConfig(ethChainName),
-		ChainConfig: geth.DefaultEthereumGethChainConfig(ethChainName),
+		ChainConfig: chainConfig,
 	}
 }
 

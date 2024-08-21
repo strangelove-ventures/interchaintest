@@ -163,7 +163,7 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 	if len(note) > 0 {
 		cmd = []string{"cast", "send", amount.Address, hexutil.Encode([]byte(note)), "--value", amount.Amount.String(), "--json"}
 	} else {
-		cmd = []string{"cast", "send", amount.Address, "--value", amount.Amount.String()}
+		cmd = []string{"cast", "send", amount.Address, "--value", amount.Amount.String(), "--json"}
 	}
 
 	account, ok := c.keystoreMap[keyName]

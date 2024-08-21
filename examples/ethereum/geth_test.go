@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	//sdkmath "cosmossdk.io/math"
-
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
@@ -71,27 +69,26 @@ func TestGeth(t *testing.T) {
 	// Check balances of user
 	balance, err := ethereumChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
 	require.NoError(t, err)
-	fmt.Println("User balance:", balance)
+	require.True(t, balance.Equal(ethUserInitialAmount))
 
 	ethUser2, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user2", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethereumChain)
 	require.NoError(t, err)
 
-	fmt.Println("ethUser2", ethUser2.FormattedAddress())
 	balance, err = ethereumChain.GetBalance(ctx, ethUser2.FormattedAddress(), "")
 	require.NoError(t, err)
-	fmt.Println("User2 balance:", balance)
+	require.True(t, balance.Equal(ethUserInitialAmount))
 
 	txHash, err := ethereumChain.SendFundsWithNote(ctx, ethUser2.KeyName(), ibc.WalletAmount{
 		Address: ethUser.FormattedAddress(),
-		Amount: ethUserInitialAmount.QuoRaw(3),
+		Amount: ethUserInitialAmount.QuoRaw(10),
 		Denom: ethereumChain.Config().Denom,
-	}, "hello")
+	}, "memo")
 	require.NoError(t, err)
-	fmt.Println("Tx hash:", txHash)
+	require.NotEmpty(t, txHash)
 
-	// Sleep for additional testing
-	time.Sleep(1 * time.Second)
-
+	balance, err = ethereumChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
+	require.NoError(t, err)
+	require.True(t, balance.Equal(ethUserInitialAmount.Add(ethUserInitialAmount.QuoRaw(10))))
 }
 
 type ContractOutput struct {
