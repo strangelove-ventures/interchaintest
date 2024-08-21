@@ -15,7 +15,8 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-//go:embed mainnet-genesis.json
+// mainnet-genesis.json will not be included in interchaintest repo
+// //go:embed mainnet-genesis.json
 var genesisBz []byte
 
 func TestThorchainHardFork(t *testing.T) {
