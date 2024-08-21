@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/gorilla/handlers"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -244,8 +245,25 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			Port: fmt.Sprintf("%d", ac.Port),
 		}
 
-		server := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
-		if err := http.ListenAndServe(server, r); err != nil {
+		if config.Server.Host == "" {
+			config.Server.Host = "127.0.0.1"
+		}
+		if config.Server.Port == "" {
+			config.Server.Port = "8080"
+		}
+
+		serverAddr := fmt.Sprintf("%s:%s", config.Server.Host, config.Server.Port)
+
+		// Where ORIGIN_ALLOWED is like `scheme://dns[:port]`, or `*` (insecure)
+		corsHandler := handlers.CORS(
+			handlers.AllowedOrigins([]string{"*"}),
+			handlers.AllowedHeaders([]string{"*"}),
+			handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"}),
+			handlers.AllowCredentials(),
+			handlers.ExposedHeaders([]string{"*"}),
+		)
+
+		if err := http.ListenAndServe(serverAddr, corsHandler(r)); err != nil {
 			log.Default().Println(err)
 		}
 	}()
