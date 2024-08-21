@@ -13,3 +13,8 @@
 - `CONTAINER_LOG_TAIL`: Specifies the number of lines to display from container logs. Defaults to 50 lines.
 
 - `ICS_SPAWN_TIME_WAIT`: A go duration (e.g. 2m) that specifies how long to wait for ICS chains to spawn
+
+- `ICT_ABOVE_SDK_47`: (Set via `os.Setenv` or within the IBC Chain Config)
+
+  - Set to `"true"` to run tests that require SDK version 0.47.0 or higher. 
+  - Set to `"false"` to run tests that require SDK version 0.46.0 or lower.
