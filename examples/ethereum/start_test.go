@@ -78,7 +78,7 @@ func TestEthereum(t *testing.T) {
 	require.True(t, expectedFaucetInitialBalance.Equal(balance))
 
 	// Create and fund a user using GetAndFundTestUsers
-	ethUserInitialAmount := math.NewInt(2 * ethereum.ETHER)
+	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", ethUserInitialAmount, ethereumChain)
 	ethUser := users[0]
 
@@ -100,7 +100,7 @@ func TestEthereum(t *testing.T) {
 	require.True(t, math.ZeroInt().Equal(balance))
 
 	// Fund user2 wallet using SendFunds() from user1 wallet
-	ethUser2InitialAmount := math.NewInt(ethereum.ETHER)
+	ethUser2InitialAmount := ethereum.ETHER
 	err = ethereumChain.SendFunds(ctx, ethUser.KeyName(), ibc.WalletAmount{
 		Address: ethUser2.FormattedAddress(),
 		Denom:   ethereumChain.Config().Denom,

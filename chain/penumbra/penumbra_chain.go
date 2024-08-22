@@ -234,7 +234,6 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 	return fn.PenumbraClientNodes[keyName].SendFunds(ctx, amount)
 }
 
-
 // SendFundsWithNote will initiate a local transfer from the account associated with the specified keyName,
 // amount, token denom, and recipient are specified in the amount and attach a note/memo
 func (c *PenumbraChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {

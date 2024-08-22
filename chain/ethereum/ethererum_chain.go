@@ -29,8 +29,11 @@ var _ ibc.Chain = &EthereumChain{}
 const (
 	blockTime = 2 // seconds
 	rpcPort   = "8545/tcp"
-	GWEI      = 1_000_000_000
-	ETHER     = 1_000_000_000 * GWEI
+)
+
+var (
+	GWEI  = sdkmath.NewInt(1_000_000_000)
+	ETHER = GWEI.MulRaw(1_000_000_000)
 )
 
 var natPorts = nat.PortMap{
@@ -170,7 +173,8 @@ func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client
 
 func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	// TODO:
-	//   * add support for different denom configuration, ether or wei, this will affect GetBalance, etc
+	//   * add support for different denom configuration, ether, gwei or wei,
+	//       this will affect SendFunds, SendFundsWithNote, GetBalance and anything other than wei will lose precision for GetBalance
 	//   * add support for modifying genesis amount config, default is 10 ether
 	//   * add support for ConfigFileOverrides
 	//		* block time
@@ -186,6 +190,9 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		"--block-time", "2", // 2 second block times
 		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
 		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
+		"--no-cors",
+		"--gas-price", "20000000000",
+		"--block-base-fee-per-gas", "0",
 	}
 
 	var mounts []mount.Mount
@@ -250,7 +257,11 @@ func (c *EthereumChain) HostName() string {
 }
 
 func (c *EthereumChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	logger := zap.NewNop()
+	if cmd[1] != "block-number" { // too much logging, maybe switch to an rpc lib in the future
+		logger = c.logger()
+	}
+	job := dockerutil.NewImage(logger, c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: c.Bind(),
@@ -317,6 +328,26 @@ func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
 	}
 
 	c.keystoreMap[keyName] = newWallet[0].Path
+
+	return nil
+}
+
+// cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
+// Can re-add/support with this commit: https://github.com/foundry-rs/foundry/pull/6671
+func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	err := c.MakeKeystoreDir(ctx) // Ensure keystore directory is created
+	if err != nil {
+		return err
+	}
+
+	cmd := []string{"cast", "wallet", "import", keyName, "--keystore-dir", c.KeystoreDir(), "--mnemonic", mnemonic, "--unsafe-password", ""}
+	_, _, err = c.Exec(ctx, cmd, nil)
+	if err != nil {
+		return err
+	}
+
+	// This is needed for CreateKey() since that keystore path does not use the keyname
+	c.keystoreMap[keyName] = path.Join(c.KeystoreDir(), keyName)
 
 	return nil
 }

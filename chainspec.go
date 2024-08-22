@@ -157,11 +157,16 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.HostPortOverride = s.HostPortOverride
 	}
 
+	if s.Genesis != nil {
+		cfg.Genesis = s.Genesis
+	}
+
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
 	if cfg.CoinDecimals == nil {
 		evm := int64(18)
 		cosmos := int64(6)
+		thorchain := int64(8)
 		bitcoin := int64(8)
 
 		switch cfg.CoinType {
@@ -171,6 +176,8 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			cfg.CoinDecimals = &evm
 		case "118", "330", "529":
 			cfg.CoinDecimals = &cosmos
+		case "931":
+			cfg.CoinDecimals = &thorchain
 		}
 	}
 

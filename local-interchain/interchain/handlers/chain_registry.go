@@ -27,5 +27,8 @@ func NewChainRegistry(loc string) *chainRegistry {
 func (cr chainRegistry) GetChainRegistry(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(cr.DataJSON)
+	if _, err := w.Write(cr.DataJSON); err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
+
 }

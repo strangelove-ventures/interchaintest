@@ -81,7 +81,10 @@ type ChainNode struct {
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
 	tn := &ChainNode{
-		log: log,
+		log: log.With(
+			zap.Bool("validator", validator),
+			zap.Int("i", index),
+		),
 
 		Validator: validator,
 
@@ -144,7 +147,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 
 	tn.Client = rpcClient
 
-	grpcConn, err := grpc.Dial(
+	grpcConn, err := grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
