@@ -8,8 +8,8 @@ import (
 var _ ibc.Wallet = &EthereumWallet{}
 
 type EthereumWallet struct {
-	address []byte
-	keyName string
+	address  []byte
+	keyName  string
 	mnemonic string
 }
 

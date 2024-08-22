@@ -40,7 +40,6 @@ func TestGeth(t *testing.T) {
 	// Get default ethereum chain config for anvil
 	gethConfig := geth.DefaultEthereumGethChainConfig("ethereum")
 
-
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{ChainConfig: gethConfig},
 	})
@@ -54,9 +53,9 @@ func TestGeth(t *testing.T) {
 		AddChain(ethereumChain)
 
 	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
-		TestName:  t.Name(),
-		Client:    client,
-		NetworkID: network,
+		TestName:         t.Name(),
+		Client:           client,
+		NetworkID:        network,
 		SkipPathCreation: true, // Skip path creation, so we can have granular control over the process
 	}))
 	fmt.Println("Interchain built")
@@ -80,8 +79,8 @@ func TestGeth(t *testing.T) {
 
 	txHash, err := ethereumChain.SendFundsWithNote(ctx, ethUser2.KeyName(), ibc.WalletAmount{
 		Address: ethUser.FormattedAddress(),
-		Amount: ethUserInitialAmount.QuoRaw(10),
-		Denom: ethereumChain.Config().Denom,
+		Amount:  ethUserInitialAmount.QuoRaw(10),
+		Denom:   ethereumChain.Config().Denom,
 	}, "memo")
 	require.NoError(t, err)
 	require.NotEmpty(t, txHash)

@@ -33,7 +33,7 @@ func TestThorchainSim(t *testing.T) {
 	// Start thorchain
 	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress, bscRouterContractAddress)
 	require.NoError(t, gaiaEg.Wait()) // Wait for 100 transactions before starting tests
-	
+
 	// --------------------------------------------------------
 	// Bootstrap pool
 	// --------------------------------------------------------

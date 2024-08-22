@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	rpcPort   = "8545/tcp"
+	rpcPort = "8545/tcp"
 )
 
 var natPorts = nat.PortMap{
@@ -49,7 +49,7 @@ type EthereumChain struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	hostRPCPort string
-	rpcClient *ethclient.Client
+	rpcClient   *ethclient.Client
 }
 
 func NewEthereumChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *EthereumChain {
@@ -171,7 +171,7 @@ func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.M
 
 	// wait for rpc to come up
 	time.Sleep(time.Second * 2)
-	
+
 	// dial the rpc host
 	c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
 	if err != nil {
@@ -239,6 +239,6 @@ func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom st
 	balance, err := c.rpcClient.BalanceAt(ctx, common.Address(hexutil.MustDecode(address)), nil)
 	if err != nil {
 		return sdkmath.Int{}, fmt.Errorf("failed to get height: %w", err)
-	}	
+	}
 	return sdkmath.NewIntFromBigInt(balance), nil
 }

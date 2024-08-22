@@ -39,7 +39,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Router: ethRouter,
 			},
 			{
-				Chain: "BSC",
+				Chain:  "BSC",
 				Router: bscRouter,
 			},
 		}),
@@ -97,7 +97,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				HomeDir:     "/var/data/bifrost",
 				Ports:       []string{"5040", "6040", "9000"},
 				//StartCmd: []string{"bifrost", "-p"},
-				StartCmd: []string{"bifrost", "-p", "-l", "debug"},
+				StartCmd:         []string{"bifrost", "-p", "-l", "debug"},
 				Env:              bifrostEnv,
 				PreStart:         false,
 				ValidatorProcess: true,

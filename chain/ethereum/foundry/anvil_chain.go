@@ -28,7 +28,7 @@ type AnvilChain struct {
 func NewAnvilChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *AnvilChain {
 	return &AnvilChain{
 		EthereumChain: ethereum.NewEthereumChain(testName, chainConfig, log),
-		keystoreMap:    make(map[string]*NodeWallet),
+		keystoreMap:   make(map[string]*NodeWallet),
 	}
 }
 
@@ -175,7 +175,7 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 		"--password", "",
 		"--rpc-url", c.GetRPCAddress(),
 	)
-	
+
 	account.txLock.Lock()
 	defer account.txLock.Unlock()
 	stdout, _, err := c.Exec(ctx, cmd, nil)
@@ -222,7 +222,7 @@ func (c *AnvilChain) BuildWallet(ctx context.Context, keyName string, mnemonic s
 }
 
 type NodeWallet struct {
-	address    string
-	keystore   string
-	txLock     sync.Mutex
+	address  string
+	keystore string
+	txLock   sync.Mutex
 }

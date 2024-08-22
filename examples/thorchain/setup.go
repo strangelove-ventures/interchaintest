@@ -72,16 +72,16 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 		for _, wallet := range exoChains[name].genWallets {
 			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
 				Address: wallet.FormattedAddress(),
-				Amount: sdkmath.NewInt(100_000_000),
-				Denom: chain.Config().Denom,
+				Amount:  sdkmath.NewInt(100_000_000),
+				Denom:   chain.Config().Denom,
 			})
 		}
 		if name == "GAIA" {
 			// this wallet just stops bifrost complaining about it not existing
 			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
 				Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
-				Amount: sdkmath.NewInt(1_000_000),
-				Denom: chain.Config().Denom,
+				Amount:  sdkmath.NewInt(1_000_000),
+				Denom:   chain.Config().Denom,
 			})
 		}
 		ic.AddChain(chain, additionalGenesisWallets...)
@@ -120,7 +120,7 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 		if name == "BSC" {
 			hostKey = fmt.Sprintf("BIFROST_CHAINS_%s_RPC_HOST", name)
 			bifrostEnvOverrides[hostKey] = exoChain.chain.GetRPCAddress()
-			bsRpcHost:= fmt.Sprintf("BIFROST_CHAINS_%s_BLOCK_SCANNER_RPC_HOST", name)
+			bsRpcHost := fmt.Sprintf("BIFROST_CHAINS_%s_BLOCK_SCANNER_RPC_HOST", name)
 			bifrostEnvOverrides[bsRpcHost] = exoChain.chain.GetRPCAddress()
 		}
 	}
@@ -249,7 +249,7 @@ func SetupAnvilContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) 
 
 func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.Group {
 	gaia := exoChain.chain.(*cosmos.CosmosChain)
-	
+
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		for _, genWallet := range exoChain.genWallets {
@@ -258,16 +258,16 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				return err
 			}
 		}
-	
+
 		amount := ibc.WalletAmount{
 			Denom:  gaia.Config().Denom,
 			Amount: sdkmath.NewInt(1_000_000),
 		}
-	
+
 		// Send 100 txs on gaia so that bifrost can automatically set the network fee
 		// Sim testing can directly use bifrost to do this, right now, we can't, but may in the future
 		val0 := gaia.GetNode()
-		for i := 0; i < 100/len(exoChain.genWallets) + 1; i++ {
+		for i := 0; i < 100/len(exoChain.genWallets)+1; i++ {
 			for j, genWallet := range exoChain.genWallets {
 				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
 				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)

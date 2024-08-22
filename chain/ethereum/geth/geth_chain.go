@@ -24,7 +24,7 @@ type GethChain struct {
 	*ethereum.EthereumChain
 
 	keynameToAccountMap map[string]*NodeWallet
-	nextAcctNum int
+	nextAcctNum         int
 }
 
 func NewGethChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *GethChain {
@@ -143,7 +143,7 @@ func (c *GethChain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// it can take a second or two for the web3 interface to get access to a new account
 	for count := 0; strings.TrimSpace(string(stdout)) == "undefined"; count++ {
 		time.Sleep(time.Second)
@@ -220,7 +220,7 @@ func (c *GethChain) DeployContract(ctx context.Context, keyName string, abi []by
 	if err != nil {
 		return "", err
 	}
-	
+
 	if strings.Trim(strings.TrimSpace(string(status)), "\"") == "0x0" {
 		return "", fmt.Errorf("contract deployment failed")
 	}
