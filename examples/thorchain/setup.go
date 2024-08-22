@@ -16,12 +16,13 @@ import (
 
 	"github.com/docker/docker/client"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -33,13 +34,14 @@ import (
 
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
 	chainSpecs := []*interchaintest.ChainSpec{
-		//EthChainSpec("geth"),
+		//EthChainSpec("geth"), // only use this chain spec for eth or the one below
 		EthChainSpec("anvil"),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),
 		LtcChainSpec(),
 		DogeChainSpec(),
+		BscChainSpec(),
 	}
 	cf0 := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
 
@@ -98,7 +100,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 	return exoChains
 }
 
-func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, exoChains ExoChains, ethRouterContractAddress string) *tc.Thorchain {
+func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, exoChains ExoChains, ethRouterContractAddress string, bscRouterContractAddress string) *tc.Thorchain {
 	numThorchainValidators := 1
 	numThorchainFullNodes := 0
 
@@ -115,8 +117,14 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 		}
 		disableChainKey := fmt.Sprintf("BIFROST_CHAINS_%s_DISABLED", name)
 		bifrostEnvOverrides[disableChainKey] = "false"
+		if name == "BSC" {
+			hostKey = fmt.Sprintf("BIFROST_CHAINS_%s_RPC_HOST", name)
+			bifrostEnvOverrides[hostKey] = exoChain.chain.GetRPCAddress()
+			bsRpcHost:= fmt.Sprintf("BIFROST_CHAINS_%s_BLOCK_SCANNER_RPC_HOST", name)
+			bifrostEnvOverrides[bsRpcHost] = exoChain.chain.GetRPCAddress()
+		}
 	}
-	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress, nil, bifrostEnvOverrides)
+	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress, bscRouterContractAddress, nil, bifrostEnvOverrides)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		thorchainChainSpec,
@@ -184,8 +192,20 @@ func SetupGethContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) s
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
 	require.NoError(t, err)
 
+	faucetAddrBz, err := ethChain.GetAddress(ctx, "faucet")
+	require.NoError(t, err)
+
+	balance, err := ethChain.GetBalance(ctx, hexutil.Encode(faucetAddrBz), "")
+	require.NoError(t, err)
+	fmt.Println("Faucet balance:", balance)
+
+	balance, err = ethChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
+	require.NoError(t, err)
+	fmt.Println("Dog balance:", balance)
+
 	ethRouterContractAddress, err := ethChain.DeployContract(ctx, ethUser.KeyName(), abi, byteCode)
 	require.NoError(t, err)
+	fmt.Println("Router contract addr", ethRouterContractAddress)
 	require.NotEmpty(t, ethRouterContractAddress)
 	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
 

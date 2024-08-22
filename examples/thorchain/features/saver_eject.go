@@ -190,7 +190,7 @@ func SaverEject(
 		return exoUser, err
 	}
 	if exoUserPostEjectBalance.LTE(exoUserPreEjectBalance) {
-		return exoUser, fmt.Errorf("User (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance)
+		return exoUser, fmt.Errorf("user (%s) balance (%s) must be greater after ejection: %s", exoUser.KeyName(), exoUserPostEjectBalance, exoUserPreEjectBalance)
 	}
 
 	for i, exoSaver := range exoSavers {
@@ -199,7 +199,7 @@ func SaverEject(
 			return exoUser, err
 		}
 		if !exoSaverPostBalance.Equal(exoSaversBalance[i]) {
-			return exoUser, fmt.Errorf("Saver's (%s) post balance (%s) should be the same as (%s)", exoSaver.KeyName(), exoSaverPostBalance, exoSaversBalance[i])
+			return exoUser, fmt.Errorf("saver's (%s) post balance (%s) should be the same as (%s)", exoSaver.KeyName(), exoSaverPostBalance, exoSaversBalance[i])
 		}
 	}
 

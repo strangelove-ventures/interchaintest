@@ -25,7 +25,7 @@ type ChainContract struct {
 	Router string `json:"router"`
 }
 
-func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string, thornodeEnvOverrides, bifrostEnvOverrides map[string]string) *interchaintest.ChainSpec {
+func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string, bscRouter string, thornodeEnvOverrides, bifrostEnvOverrides map[string]string) *interchaintest.ChainSpec {
 	chainID := "thorchain"
 	name := common.THORChain.String() // Must use this name for test
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
@@ -38,7 +38,11 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Chain:  "ETH",
 				Router: ethRouter,
 			},
-		}), // mint to reserve for mocknet (220M)
+			{
+				Chain: "BSC",
+				Router: bscRouter,
+			},
+		}),
 	}
 
 	thornodeEnv := thornodeDefaults

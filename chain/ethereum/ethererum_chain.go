@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	blockTime = 2 // seconds
 	rpcPort   = "8545/tcp"
 )
 
@@ -103,7 +102,7 @@ func (c *EthereumChain) Initialize(ctx context.Context, testName string, cli *do
 }
 
 func (c *EthereumChain) Name() string {
-	return fmt.Sprintf("eth-%s-%s-%s", c.cfg.Bin, c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
+	return fmt.Sprintf("%s-%s-%s-%s", c.cfg.Name, c.cfg.Bin, c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
 func (c *EthereumChain) HomeDir() string {
@@ -228,7 +227,7 @@ func (c *EthereumChain) GetHostWSAddress() string {
 }
 
 func (c *EthereumChain) Height(ctx context.Context) (int64, error) {
-	time.Sleep(time.Millisecond * 200)
+	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
 	height, err := c.rpcClient.BlockNumber(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get height: %w", err)

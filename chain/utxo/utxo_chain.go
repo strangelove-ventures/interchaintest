@@ -454,6 +454,7 @@ func (c *UtxoChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 }
 
 func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
+	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
 	cmd := append(c.BaseCli, "getblockcount")
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {

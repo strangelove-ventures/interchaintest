@@ -85,7 +85,7 @@ func (c *AnvilChain) CreateKey(ctx context.Context, keyName string) error {
 
 	_, ok := c.keystoreMap[keyName]
 	if ok {
-		return fmt.Errorf("Keyname (%s) already used", keyName)
+		return fmt.Errorf("keyname (%s) already used", keyName)
 	}
 
 	cmd := []string{"cast", "wallet", "new", c.KeystoreDir(), "--unsafe-password", "", "--json"}
@@ -131,7 +131,7 @@ func (c *AnvilChain) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 func (c *AnvilChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	account, ok := c.keystoreMap[keyName]
 	if !ok {
-		return nil, fmt.Errorf("Keyname (%s) not found", keyName)
+		return nil, fmt.Errorf("keyname (%s) not found", keyName)
 	}
 
 	if account.address != "" {
@@ -168,7 +168,7 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 
 	account, ok := c.keystoreMap[keyName]
 	if !ok {
-		return "", fmt.Errorf("Keyname (%s) not found", keyName)
+		return "", fmt.Errorf("keyname (%s) not found", keyName)
 	}
 	cmd = append(cmd,
 		"--keystore", account.keystore,

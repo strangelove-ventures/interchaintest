@@ -78,7 +78,7 @@ func WriteConfigFile(configFile string, localContractRootDir string, solidityCon
 func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
 	account, ok := c.keystoreMap[keyName]
 	if !ok {
-		return nil, nil, fmt.Errorf("Keyname (%s) not found", keyName)
+		return nil, nil, fmt.Errorf("keyname (%s) not found", keyName)
 	}
 	account.txLock.Lock()
 	defer account.txLock.Unlock()

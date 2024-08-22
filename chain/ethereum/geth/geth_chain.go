@@ -41,10 +41,10 @@ func NewGethChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 
 func (c *GethChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	cmd := []string{c.Config().Bin,
-		"--dev", "--datadir", c.HomeDir(),
-		"-http", "--http.addr", "0.0.0.0", "--http.port", "8545", "--allow-insecure-unlock", "--rpc.enabledeprecatedpersonal",
+		"--dev", "--datadir", c.HomeDir(), "-http", "--http.addr", "0.0.0.0", "--http.port", "8545", "--allow-insecure-unlock",
 		"--http.api", "eth,net,web3,miner,personal,txpool,debug", "--http.corsdomain", "*", "-nodiscover", "--http.vhosts=*",
 		"--miner.gasprice", c.Config().GasPrices,
+		"--rpc.allow-unprotected-txs",
 	}
 
 	cmd = append(cmd, c.Config().AdditionalStartArgs...)
@@ -71,14 +71,14 @@ func (c *GethChain) JavaScriptExecTx(ctx context.Context, account *NodeWallet, j
 		return nil, nil, err
 	}
 
-	err = testutil.WaitForBlocks(ctx, 1, c)
+	err = testutil.WaitForBlocks(ctx, 2, c)
 	return stdout, stderr, err
 }
 
 func (c *GethChain) CreateKey(ctx context.Context, keyName string) error {
 	_, ok := c.keynameToAccountMap[keyName]
 	if ok {
-		return fmt.Errorf("Keyname (%s) already used", keyName)
+		return fmt.Errorf("keyname (%s) already used", keyName)
 	}
 
 	cmd := []string{
@@ -105,7 +105,7 @@ EOF
 func (c *GethChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	_, ok := c.keynameToAccountMap[keyName]
 	if ok {
-		return fmt.Errorf("Keyname (%s) already used", keyName)
+		return fmt.Errorf("keyname (%s) already used", keyName)
 	}
 
 	derivedPriv, err := hd.Secp256k1.Derive()(mnemonic, "", hd.CreateHDPath(60, 0, 0).String())
@@ -115,15 +115,7 @@ func (c *GethChain) RecoverKey(ctx context.Context, keyName, mnemonic string) er
 
 	privKey := hd.Secp256k1.Generate()(derivedPriv)
 
-	cmd := []string{
-		"sh",
-		"-c",
-		fmt.Sprintf(`cat <<EOF | geth --datadir %s account import <(echo %s)
-
-
-EOF
-`, c.HomeDir(), hex.EncodeToString(privKey.Bytes()))}
-	_, _, err = c.Exec(ctx, cmd, nil)
+	_, _, err = c.JavaScriptExec(ctx, fmt.Sprintf("personal.importRawKey(%q, \"\")", hex.EncodeToString(privKey.Bytes())))
 	if err != nil {
 		return err
 	}
@@ -160,7 +152,7 @@ func (c *GethChain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 			return nil, err
 		}
 		if count > 3 {
-			return nil, fmt.Errorf("GetAddress(): Keyname (%s) with account (%d) not found",
+			return nil, fmt.Errorf("getAddress(): Keyname (%s) with account (%d) not found",
 				keyName, account.accountNum)
 		}
 	}
@@ -189,7 +181,7 @@ func (c *GethChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wa
 func (c *GethChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	account, found := c.keynameToAccountMap[keyName]
 	if !found {
-		return "", fmt.Errorf("Keyname (%s) not found", keyName)
+		return "", fmt.Errorf("keyname (%s) not found", keyName)
 	}
 
 	var cmd string
@@ -223,7 +215,8 @@ func (c *GethChain) DeployContract(ctx context.Context, keyName string, abi []by
 		return "", err
 	}
 
-	status, _, err := c.JavaScriptExec(ctx, fmt.Sprintf("eth.getTransactionReceipt(%s).status", string(stdout)))
+	txHash := strings.TrimSpace(string(stdout))
+	status, _, err := c.JavaScriptExec(ctx, fmt.Sprintf("eth.getTransactionReceipt(%s).status", txHash))
 	if err != nil {
 		return "", err
 	}
@@ -232,7 +225,7 @@ func (c *GethChain) DeployContract(ctx context.Context, keyName string, abi []by
 		return "", fmt.Errorf("contract deployment failed")
 	}
 
-	stdout, _, err = c.JavaScriptExec(ctx, fmt.Sprintf("eth.getTransactionReceipt(%s).contractAddress", string(stdout)))
+	stdout, _, err = c.JavaScriptExec(ctx, fmt.Sprintf("eth.getTransactionReceipt(%s).contractAddress", txHash))
 	if err != nil {
 		return "", err
 	}
