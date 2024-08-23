@@ -26,7 +26,6 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -34,8 +33,8 @@ import (
 
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
 	chainSpecs := []*interchaintest.ChainSpec{
-		//EthChainSpec("geth"), // only use this chain spec for eth or the one below
-		EthChainSpec("anvil"),
+		EthChainSpec("geth"), // only use this chain spec for eth or the one below
+		//EthChainSpec("anvil"),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),
@@ -61,7 +60,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 		}
 
 		if name == "GAIA" {
-			exoChains[name].genWallets = BuildGaiaWallets(t, 8, chain.Config())
+			exoChains[name].genWallets = BuildGaiaWallets(t, 5, chain.Config())
 		}
 	}
 
@@ -284,21 +283,27 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				return err
 			}
 		}
-		amount := ibc.WalletAmount{
-			Denom:  gaia.Config().Denom,
-			Amount: sdkmath.NewInt(1_000_000),
-		}
 
 		// Send 100 txs on gaia so that bifrost can automatically set the network fee
 		// Sim testing can directly use bifrost to do this, right now, we can't, but may in the future
 		val0 := gaia.GetNode()
+		amount := fmt.Sprintf("%s%s", sdkmath.NewInt(1_000_000).String(), gaia.Config().Denom)
 		for i := 0; i < 100/len(exoChain.genWallets)+1; i++ {
+			cmd := ""
 			for j, genWallet := range exoChain.genWallets {
 				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
-				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)
+				bankSend := []string{"bank", "send", genWallet.KeyName(), toUser.FormattedAddress(), amount}
+				bankSend = val0.TxCommand(genWallet.KeyName(), bankSend...)
+				if j < len(exoChain.genWallets)-1 {
+					bankSend = append(bankSend, "&& ")
+				}
+				cmd = fmt.Sprintf("%s%s", cmd, strings.Join(bankSend, " "))
 			}
-			time.Sleep(time.Second * 2) // Reduce the get height hammering
-			err := testutil.WaitForBlocks(ctx, 1, gaia)
+			_, _, err := val0.Exec(ctx, []string{"sh", "-c", cmd}, val0.Chain.Config().Env)
+			if err != nil {
+				fmt.Println("Gaia send funds err:", err)
+			}
+			err = NiceWaitForBlocks(ctx, 1, gaia)
 			if err != nil {
 				return err
 			}

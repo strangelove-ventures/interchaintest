@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"time"
+	
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -22,11 +22,22 @@ func GetEthAddressFromStdout(stdout string) (string, error) {
 	return matches[1], nil
 }
 
-func sendFunds(ctx context.Context, keyName string, toAddr string, amount ibc.WalletAmount, val0 *cosmos.ChainNode) {
-	memo := strings.Repeat("Hello World ", 10)
-	command := []string{"bank", "send", keyName, toAddr, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom), "--note", memo}
-	_, _, err := val0.Exec(ctx, val0.TxCommand(keyName, command...), val0.Chain.Config().Env)
+// We are running many nodes, using many resources. This function is similar to
+// testutils.WaitForBlocks(), but does not hammer calls as fast as possible.
+func NiceWaitForBlocks(ctx context.Context, delta int64, chain ibc.Chain) error {
+	startingHeight, err := chain.Height(ctx)
 	if err != nil {
-		fmt.Println("Gaia send funds err:", err)
+		return err
 	}
+
+	currentHeight := startingHeight
+	for ; currentHeight < startingHeight + delta; {
+		time.Sleep(time.Millisecond * 200)
+		currentHeight, err = chain.Height(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
