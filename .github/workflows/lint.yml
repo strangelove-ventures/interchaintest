@@ -1,41 +1,34 @@
-name: golangci-lint
+# Lint the entire golang project. This workflow relies on the
+# '.golangci.yml' file for its configuration settings.
+name: Lint
 on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
   pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: 1.22
 
 jobs:
   golangci:
-    name: lint
+    name: golangci-lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-          cache: false
+          go-version: ${{ env.GO_VERSION }}
+
       - uses: actions/checkout@v4
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6.1.0
         with:
-          version: v1.54
-          only-new-issues: true
-          args: --timeout=10m
-
-  clippy-lint:
-    defaults:
-      run:
-        working-directory: local-interchain/rust/localic-std
-    runs-on:  ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install stable with clippy and rustfmt
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        components: rustfmt, clippy
-    - name: Install clippy
-      run: rustup component add clippy
-    - name: Update
-      run: cargo update
-    - name: Run clippy
-      run: make lint
-
+          version: v1.57.2
+          args: --timeout 15m
