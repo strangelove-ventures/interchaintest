@@ -25,5 +25,8 @@ func GetEthAddressFromStdout(stdout string) (string, error) {
 func sendFunds(ctx context.Context, keyName string, toAddr string, amount ibc.WalletAmount, val0 *cosmos.ChainNode) {
 	memo := strings.Repeat("Hello World ", 10)
 	command := []string{"bank", "send", keyName, toAddr, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom), "--note", memo}
-	_, _, _ = val0.Exec(ctx, val0.TxCommand(keyName, command...), val0.Chain.Config().Env)
+	_, _, err := val0.Exec(ctx, val0.TxCommand(keyName, command...), val0.Chain.Config().Env)
+	if err != nil {
+		fmt.Println("Gaia send funds err:", err)
+	}
 }

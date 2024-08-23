@@ -296,7 +296,7 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
 				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)
 			}
-			err := testutil.WaitForBlocks(ctx, 1, gaia)
+			err := testutil.WaitForBlocks(ctx, 2, gaia)
 			if err != nil {
 				return err
 			}
