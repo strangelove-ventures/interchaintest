@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-//go:embed mainnet-genesis.json
+// //go:embed mainnet-genesis.json
 var genesisBz []byte
 
 func TestThorchainHardFork(t *testing.T) {

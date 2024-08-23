@@ -71,7 +71,7 @@ func TestThorchainSim(t *testing.T) {
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
-	_, err := features.Arb(t, ctx, thorchain, exoChains.GetChains()...) // Must add all active chains
+	_, err := features.Arb(t, ctx, thorchain, exoChains.GetChains()...)
 	require.NoError(t, err)
 
 	// --------------------------------------------------------

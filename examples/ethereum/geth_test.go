@@ -37,7 +37,7 @@ func TestGeth(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Get default ethereum chain config for anvil
+	// Get default ethereum chain config for geth
 	gethConfig := geth.DefaultEthereumGethChainConfig("ethereum")
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
