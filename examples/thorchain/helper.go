@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )

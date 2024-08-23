@@ -27,8 +27,8 @@ func TestThorchainSim(t *testing.T) {
 	// Start non-thorchain chains
 	exoChains := StartExoChains(t, ctx, client, network)
 	gaiaEg := SetupGaia(t, ctx, exoChains["GAIA"])
-	bscRouterContractAddress := SetupContracts(t, ctx, exoChains["BSC"])
-	ethRouterContractAddress := SetupContracts(t, ctx, exoChains["ETH"])
+	ethRouterContractAddress, bscRouterContractAddress, err := SetupContracts(ctx, exoChains["ETH"], exoChains["BSC"])
+	require.NoError(t, err)
 
 	// Start thorchain
 	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress, bscRouterContractAddress)
@@ -71,7 +71,7 @@ func TestThorchainSim(t *testing.T) {
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
-	_, err := features.Arb(t, ctx, thorchain, exoChains.GetChains()...)
+	_, err = features.Arb(t, ctx, thorchain, exoChains.GetChains()...)
 	require.NoError(t, err)
 
 	// --------------------------------------------------------

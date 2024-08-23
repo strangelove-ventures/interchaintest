@@ -16,7 +16,6 @@ import (
 
 	"github.com/docker/docker/client"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
@@ -158,11 +157,24 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	return thorchain
 }
 
-func SetupContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
-	if exoChain.chain.Config().Bin == "geth" {
-		return SetupGethContracts(t, ctx, exoChain)
-	}
-	return SetupAnvilContracts(t, ctx, exoChain)
+func SetupContracts(ctx context.Context, ethExoChain *ExoChain, bscExoChain *ExoChain) (ethContractAddr, bscContractAddr string, err error) {
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		if ethExoChain.chain.Config().Bin == "geth" {
+			ethContractAddr, err = SetupGethContracts(egCtx, ethExoChain)
+		} else {
+			ethContractAddr, err = SetupAnvilContracts(egCtx, ethExoChain) 
+		}
+		return err
+	})
+	eg.Go(func() error {
+		var err error
+		bscContractAddr, err = SetupGethContracts(egCtx, bscExoChain)
+		return err
+	})
+		
+	return ethContractAddr, bscContractAddr, eg.Wait()
 }
 
 //go:embed contracts/eth-router-abi.json
@@ -177,7 +189,7 @@ var routerAbi []byte
 //go:embed contracts/router-bytecode.txt
 var routerByteCode []byte
 
-func SetupGethContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
+func SetupGethContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
 	abi := routerAbi
 	byteCode := routerByteCode
 	if exoChain.chain.Config().Name == "ETH" {
@@ -190,66 +202,79 @@ func SetupGethContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) s
 	ethUserInitialAmount := ethereum.ETHER.MulRaw(100)
 
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
-	require.NoError(t, err)
-
-	faucetAddrBz, err := ethChain.GetAddress(ctx, "faucet")
-	require.NoError(t, err)
-
-	balance, err := ethChain.GetBalance(ctx, hexutil.Encode(faucetAddrBz), "")
-	require.NoError(t, err)
-	fmt.Println("Faucet balance:", balance)
-
-	balance, err = ethChain.GetBalance(ctx, ethUser.FormattedAddress(), "")
-	require.NoError(t, err)
-	fmt.Println("Dog balance:", balance)
+	if err != nil {
+		return "", err
+	}
 
 	ethRouterContractAddress, err := ethChain.DeployContract(ctx, ethUser.KeyName(), abi, byteCode)
-	require.NoError(t, err)
-	fmt.Println("Router contract addr", ethRouterContractAddress)
-	require.NotEmpty(t, ethRouterContractAddress)
-	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
+	if err != nil {
+		return "", err
+	}
+	if ethRouterContractAddress == "" {
+		return "", fmt.Errorf("router contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(ethRouterContractAddress) {
+		return "", fmt.Errorf("router contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
 
-	return ethRouterContractAddress
+	return ethRouterContractAddress, nil
 }
 
-func SetupAnvilContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
+func SetupAnvilContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
 	ethChain := exoChain.chain.(*foundry.AnvilChain)
 
 	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
 	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
 		ContractRootDir:  "contracts",
 		SolidityContract: "script/Token.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
 	tokenContractAddress, err := GetEthAddressFromStdout(string(stdout))
-	require.NoError(t, err)
-	require.NotEmpty(t, tokenContractAddress)
-	require.True(t, ethcommon.IsHexAddress(tokenContractAddress))
+	if err != nil {
+		return "", err
+	}
+	if tokenContractAddress == "" {
+		return "", fmt.Errorf("token contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(tokenContractAddress) {
+		return "", fmt.Errorf("token contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
 
 	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
 		ContractRootDir:  "contracts",
 		SolidityContract: "script/Router.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
 	ethRouterContractAddress, err := GetEthAddressFromStdout(string(stdout))
-	require.NoError(t, err)
-	require.NotEmpty(t, ethRouterContractAddress)
-	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
+	if err != nil {
+		return "", err
+	}
+	if ethRouterContractAddress == "" {
+		return "", fmt.Errorf("router contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(ethRouterContractAddress) {
+		return "", fmt.Errorf("router contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
 
-	return ethRouterContractAddress
+	return ethRouterContractAddress, nil
 }
 
 func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.Group {
 	gaia := exoChain.chain.(*cosmos.CosmosChain)
-
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		for _, genWallet := range exoChain.genWallets {
@@ -258,7 +283,6 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				return err
 			}
 		}
-
 		amount := ibc.WalletAmount{
 			Denom:  gaia.Config().Denom,
 			Amount: sdkmath.NewInt(1_000_000),

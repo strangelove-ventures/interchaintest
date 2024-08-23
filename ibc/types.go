@@ -439,9 +439,9 @@ type PathUpdateOptions struct {
 }
 
 type ICSConfig struct {
-	ProviderVerOverride     string `yaml:"provider,omitempty" json:"provider,omitempty"`
-	ConsumerVerOverride     string `yaml:"consumer,omitempty" json:"consumer,omitempty"`
-	ConsumerCopyProviderKey func(int) bool
+	ProviderVerOverride     string         `yaml:"provider,omitempty" json:"provider,omitempty"`
+	ConsumerVerOverride     string         `yaml:"consumer,omitempty" json:"consumer,omitempty"`
+	ConsumerCopyProviderKey func(int) bool `yaml:"-" json:"-"`
 }
 
 // GenesisConfig is used to start a chain from a pre-defined genesis state.

@@ -151,21 +151,29 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	// Relayer Actions if the above is not used.
 	if len(stdout) == 0 && len(stderr) == 0 && err == nil {
-		if err := a.relayerCheck(w, r); err != nil {
-			return
-		}
-
 		switch action {
 		case "stop-relayer", "stop_relayer", "stopRelayer":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			err = a.relayer.StopRelayer(a.ctx, a.eRep)
 
 		case "start-relayer", "start_relayer", "startRelayer":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			paths := strings.FieldsFunc(ah.Cmd, func(c rune) bool {
 				return c == ',' || c == ' '
 			})
 			err = a.relayer.StartRelayer(a.ctx, a.eRep, paths...)
 
 		case "relayer", "relayer-exec", "relayer_exec", "relayerExec":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			if !strings.Contains(ah.Cmd, "--home") {
 				// does this ever change for any other relayer?
 				cmd = append(cmd, "--home", "/home/relayer")
@@ -177,6 +185,10 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 			err = res.Err
 
 		case "get_channels", "get-channels", "getChannels":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			res, err := a.relayer.GetChannels(a.ctx, a.eRep, chainId)
 			if err != nil {
 				util.WriteError(w, err)

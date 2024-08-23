@@ -582,7 +582,7 @@ func (p *PenumbraClientNode) StartContainer(ctx context.Context) error {
 
 	p.hostGRPCPort = hostPorts[0]
 
-	p.GRPCConn, err = grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	p.GRPCConn, err = grpc.NewClient(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
