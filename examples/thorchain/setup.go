@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -60,7 +61,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 		}
 
 		if name == "GAIA" {
-			exoChains[name].genWallets = BuildGaiaWallets(t, 5, chain.Config())
+			exoChains[name].genWallets = BuildGaiaWallets(t, 8, chain.Config())
 		}
 	}
 
@@ -151,7 +152,7 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	require.NoError(t, err, "failed starting validator sidecars")
 
 	// Give some time for bifrost to initialize before any tests start
-	err = testutil.WaitForBlocks(ctx, 10, thorchain)
+	time.Sleep(time.Second * 15)
 	require.NoError(t, err)
 
 	return thorchain
@@ -296,7 +297,8 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
 				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)
 			}
-			err := testutil.WaitForBlocks(ctx, 2, gaia)
+			time.Sleep(time.Second * 2) // Reduce the get height hammering
+			err := testutil.WaitForBlocks(ctx, 1, gaia)
 			if err != nil {
 				return err
 			}
