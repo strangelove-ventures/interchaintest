@@ -180,12 +180,12 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 	defer account.txLock.Unlock()
 	stdout, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("send funds, exec, %w", err)
 	}
 
 	var txReceipt TransactionReceipt
 	if err = json.Unmarshal(stdout, &txReceipt); err != nil {
-		return "", err
+		return "", fmt.Errorf("tx receipt unmarshal:\n %s\nerror: %w", string(stdout), err)
 	}
 
 	return txReceipt.TxHash, nil
