@@ -184,7 +184,7 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 	}
 
 	var txReceipt TransactionReceipt
-	if err = json.Unmarshal(stdout, &txReceipt); err != nil {
+	if err = json.Unmarshal([]byte(strings.TrimSpace(string(stdout))), &txReceipt); err != nil {
 		return "", fmt.Errorf("tx receipt unmarshal:\n %s\nerror: %w", string(stdout), err)
 	}
 
