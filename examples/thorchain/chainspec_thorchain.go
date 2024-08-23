@@ -31,7 +31,6 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
 	genesisKVMods := []thorchain.GenesisKV{
 		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
-		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false),     // disable ibc transfer sends
 		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"),  // mint to reserve for mocknet (220M)
 		thorchain.NewGenesisKV("app_state.thorchain.chain_contracts", []ChainContract{
 			{
