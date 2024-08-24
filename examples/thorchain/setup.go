@@ -2,9 +2,11 @@ package thorchain_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,10 +21,11 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -30,12 +33,14 @@ import (
 
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
 	chainSpecs := []*interchaintest.ChainSpec{
-		EthChainSpec(),
+		EthChainSpec("geth"), // only use this chain spec for eth or the one below
+		//EthChainSpec("anvil"),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),
 		LtcChainSpec(),
 		DogeChainSpec(),
+		BscChainSpec(),
 	}
 	cf0 := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
 
@@ -66,16 +71,16 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 		for _, wallet := range exoChains[name].genWallets {
 			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
 				Address: wallet.FormattedAddress(),
-				Amount: sdkmath.NewInt(100_000_000),
-				Denom: chain.Config().Denom,
+				Amount:  sdkmath.NewInt(100_000_000),
+				Denom:   chain.Config().Denom,
 			})
 		}
 		if name == "GAIA" {
 			// this wallet just stops bifrost complaining about it not existing
 			additionalGenesisWallets = append(additionalGenesisWallets, ibc.WalletAmount{
 				Address: "cosmos1zf3gsk7edzwl9syyefvfhle37cjtql35427vcp",
-				Amount: sdkmath.NewInt(1_000_000),
-				Denom: chain.Config().Denom,
+				Amount:  sdkmath.NewInt(1_000_000),
+				Denom:   chain.Config().Denom,
 			})
 		}
 		ic.AddChain(chain, additionalGenesisWallets...)
@@ -94,7 +99,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 	return exoChains
 }
 
-func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, exoChains ExoChains, ethRouterContractAddress string) *tc.Thorchain {
+func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, network string, exoChains ExoChains, ethRouterContractAddress string, bscRouterContractAddress string) *tc.Thorchain {
 	numThorchainValidators := 1
 	numThorchainFullNodes := 0
 
@@ -111,8 +116,14 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 		}
 		disableChainKey := fmt.Sprintf("BIFROST_CHAINS_%s_DISABLED", name)
 		bifrostEnvOverrides[disableChainKey] = "false"
+		if name == "BSC" {
+			hostKey = fmt.Sprintf("BIFROST_CHAINS_%s_RPC_HOST", name)
+			bifrostEnvOverrides[hostKey] = exoChain.chain.GetRPCAddress()
+			bsRpcHost := fmt.Sprintf("BIFROST_CHAINS_%s_BLOCK_SCANNER_RPC_HOST", name)
+			bifrostEnvOverrides[bsRpcHost] = exoChain.chain.GetRPCAddress()
+		}
 	}
-	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress, nil, bifrostEnvOverrides)
+	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, ethRouterContractAddress, bscRouterContractAddress, nil, bifrostEnvOverrides)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		thorchainChainSpec,
@@ -140,50 +151,130 @@ func StartThorchain(t *testing.T, ctx context.Context, client *client.Client, ne
 	require.NoError(t, err, "failed starting validator sidecars")
 
 	// Give some time for bifrost to initialize before any tests start
-	err = testutil.WaitForBlocks(ctx, 5, thorchain)
+	time.Sleep(time.Second * 15)
 	require.NoError(t, err)
 
 	return thorchain
 }
 
-func SetupEthContracts(t *testing.T, ctx context.Context, exoChain *ExoChain) string {
-	ethChain := exoChain.chain.(*ethereum.EthereumChain)
+func SetupContracts(ctx context.Context, ethExoChain *ExoChain, bscExoChain *ExoChain) (ethContractAddr, bscContractAddr string, err error) {
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		var err error
+		if ethExoChain.chain.Config().Bin == "geth" {
+			ethContractAddr, err = SetupGethContracts(egCtx, ethExoChain)
+		} else {
+			ethContractAddr, err = SetupAnvilContracts(egCtx, ethExoChain) 
+		}
+		return err
+	})
+	eg.Go(func() error {
+		var err error
+		bscContractAddr, err = SetupGethContracts(egCtx, bscExoChain)
+		return err
+	})
+		
+	return ethContractAddr, bscContractAddr, eg.Wait()
+}
+
+//go:embed contracts/eth-router-abi.json
+var ethRouterAbi []byte
+
+//go:embed contracts/eth-router-bytecode.txt
+var ethRouterByteCode []byte
+
+//go:embed contracts/router-abi.json
+var routerAbi []byte
+
+//go:embed contracts/router-bytecode.txt
+var routerByteCode []byte
+
+func SetupGethContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
+	abi := routerAbi
+	byteCode := routerByteCode
+	if exoChain.chain.Config().Name == "ETH" {
+		abi = ethRouterAbi
+		byteCode = append(ethRouterByteCode, []byte("000000000000000000000000de06987c28d839daaefb6c85816a2cc55277654c")...) // RUNE token (doesn't matter)
+	}
+
+	ethChain := exoChain.chain.(*geth.GethChain)
+
+	ethUserInitialAmount := ethereum.ETHER.MulRaw(100)
+
+	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
+	if err != nil {
+		return "", err
+	}
+
+	ethRouterContractAddress, err := ethChain.DeployContract(ctx, ethUser.KeyName(), abi, byteCode)
+	if err != nil {
+		return "", err
+	}
+	if ethRouterContractAddress == "" {
+		return "", fmt.Errorf("router contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(ethRouterContractAddress) {
+		return "", fmt.Errorf("router contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
+
+	return ethRouterContractAddress, nil
+}
+
+func SetupAnvilContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
+	ethChain := exoChain.chain.(*foundry.AnvilChain)
 
 	ethUserInitialAmount := ethereum.ETHER.MulRaw(2)
 
 	ethUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", ethUserInitialAmount, ethChain)
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
-	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
+	stdout, _, err := ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
 		ContractRootDir:  "contracts",
 		SolidityContract: "script/Token.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
 	tokenContractAddress, err := GetEthAddressFromStdout(string(stdout))
-	require.NoError(t, err)
-	require.NotEmpty(t, tokenContractAddress)
-	require.True(t, ethcommon.IsHexAddress(tokenContractAddress))
+	if err != nil {
+		return "", err
+	}
+	if tokenContractAddress == "" {
+		return "", fmt.Errorf("token contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(tokenContractAddress) {
+		return "", fmt.Errorf("token contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
 
-	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), ethereum.ForgeScriptOpts{
+	stdout, _, err = ethChain.ForgeScript(ctx, ethUser.KeyName(), foundry.ForgeScriptOpts{
 		ContractRootDir:  "contracts",
 		SolidityContract: "script/Router.s.sol",
 		RawOptions:       []string{"--sender", ethUser.FormattedAddress(), "--json"},
 	})
-	require.NoError(t, err)
+	if err != nil {
+		return "", err
+	}
 
 	ethRouterContractAddress, err := GetEthAddressFromStdout(string(stdout))
-	require.NoError(t, err)
-	require.NotEmpty(t, ethRouterContractAddress)
-	require.True(t, ethcommon.IsHexAddress(ethRouterContractAddress))
+	if err != nil {
+		return "", err
+	}
+	if ethRouterContractAddress == "" {
+		return "", fmt.Errorf("router contract address for (%s) chain is empty", ethChain.Config().Name)
+	}
+	if !ethcommon.IsHexAddress(ethRouterContractAddress) {
+		return "", fmt.Errorf("router contract address for (%s) chain is not a hex address", ethChain.Config().Name)
+	}
 
-	return ethRouterContractAddress
+	return ethRouterContractAddress, nil
 }
 
 func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.Group {
 	gaia := exoChain.chain.(*cosmos.CosmosChain)
-	
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		for _, genWallet := range exoChain.genWallets {
@@ -192,21 +283,27 @@ func SetupGaia(t *testing.T, ctx context.Context, exoChain *ExoChain) *errgroup.
 				return err
 			}
 		}
-	
-		amount := ibc.WalletAmount{
-			Denom:  gaia.Config().Denom,
-			Amount: sdkmath.NewInt(1_000_000),
-		}
-	
+
 		// Send 100 txs on gaia so that bifrost can automatically set the network fee
 		// Sim testing can directly use bifrost to do this, right now, we can't, but may in the future
 		val0 := gaia.GetNode()
-		for i := 0; i < 100/len(exoChain.genWallets) + 1; i++ {
+		amount := fmt.Sprintf("%s%s", sdkmath.NewInt(1_000_000).String(), gaia.Config().Denom)
+		for i := 0; i < 100/len(exoChain.genWallets)+1; i++ {
+			cmd := ""
 			for j, genWallet := range exoChain.genWallets {
 				toUser := exoChain.genWallets[(j+1)%len(exoChain.genWallets)]
-				go sendFunds(ctx, genWallet.KeyName(), toUser.FormattedAddress(), amount, val0)
+				bankSend := []string{"bank", "send", genWallet.KeyName(), toUser.FormattedAddress(), amount}
+				bankSend = val0.TxCommand(genWallet.KeyName(), bankSend...)
+				if j < len(exoChain.genWallets)-1 {
+					bankSend = append(bankSend, "&& ")
+				}
+				cmd = fmt.Sprintf("%s%s", cmd, strings.Join(bankSend, " "))
 			}
-			err := testutil.WaitForBlocks(ctx, 1, gaia)
+			_, _, err := val0.Exec(ctx, []string{"sh", "-c", cmd}, val0.Chain.Config().Env)
+			if err != nil {
+				fmt.Println("Gaia send funds err:", err)
+			}
+			err = NiceWaitForBlocks(ctx, 1, gaia)
 			if err != nil {
 				return err
 			}

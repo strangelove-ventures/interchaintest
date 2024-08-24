@@ -1,7 +1,8 @@
-package ethereum
+package foundry
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,19 +22,15 @@ type ForgeScriptOpts struct {
 }
 
 // Add private-key or keystore to cmd
-func (c *EthereumChain) AddKey(cmd []string, keyName string) []string {
-	// choose whether to use private-key or keystore
-	if keyName == "faucet" {
-		cmd = append(cmd,
-			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-		)
-
-	} else {
-		cmd = append(cmd,
-			"--keystores", c.keystoreMap[keyName],
-			"--password", "",
-		)
+func (c *AnvilChain) AddKey(cmd []string, keyName string) []string {
+	account, ok := c.keystoreMap[keyName]
+	if !ok {
+		panic(fmt.Sprintf("Keyname (%s) not found", keyName))
 	}
+	cmd = append(cmd,
+		"--keystores", account.keystore,
+		"--password", "",
+	)
 	return cmd
 }
 
@@ -78,7 +75,13 @@ func WriteConfigFile(configFile string, localContractRootDir string, solidityCon
 
 // Run "forge script"
 // see: https://book.getfoundry.sh/reference/forge/forge-script
-func (c *EthereumChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
+func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
+	account, ok := c.keystoreMap[keyName]
+	if !ok {
+		return nil, nil, fmt.Errorf("keyname (%s) not found", keyName)
+	}
+	account.txLock.Lock()
+	defer account.txLock.Unlock()
 	pwd, err := os.Getwd()
 	if err != nil {
 		return nil, nil, err
@@ -96,7 +99,7 @@ func (c *EthereumChain) ForgeScript(ctx context.Context, keyName string, opts Fo
 		return nil, nil, err
 	}
 
-	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	job := c.NewJob()
 	containerOpts := dockerutil.ContainerOptions{
 		Binds: c.Bind(),
 		Mounts: []mount.Mount{

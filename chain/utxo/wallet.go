@@ -44,6 +44,7 @@ type NodeWallet struct {
 	keyName   string
 	address   string
 	mu        sync.Mutex
+	txLock    sync.Mutex
 	loadCount int
 	ready     bool
 }
