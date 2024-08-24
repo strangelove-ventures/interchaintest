@@ -63,7 +63,7 @@ func Ragnarok(
 			return err
 		}
 		if exoUserPostRagBalance.LTE(exoUsersPreRagBalance[i]) {
-			return fmt.Errorf("User (%s) balance did not increase after %s ragnarok", exoUser.KeyName(), exoChainType)
+			return fmt.Errorf("user (%s) balance did not increase after %s ragnarok", exoUser.KeyName(), exoChainType)
 		}
 		fmt.Printf("\nUser (%s), pre: %s, post: %s\n", exoUser.KeyName(), exoUsersPreRagBalance[i], exoUserPostRagBalance)
 	}

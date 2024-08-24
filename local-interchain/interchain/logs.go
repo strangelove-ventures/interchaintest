@@ -8,7 +8,7 @@ import (
 
 	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -56,8 +56,8 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 			}
 
 			mainLogs.Chains = append(mainLogs.Chains, log)
-		case *ethereum.EthereumChain:
-			chainObj := chains[idx].(*ethereum.EthereumChain)
+		case *foundry.AnvilChain:
+			chainObj := chains[idx].(*foundry.AnvilChain)
 
 			log := types.LogOutput{
 				ChainID:    chainObj.Config().ChainID,

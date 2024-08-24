@@ -10,7 +10,6 @@ import (
 	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"golang.org/x/sync/errgroup"
 )
 
 func SingleSwap(
@@ -44,17 +43,12 @@ func DualSwap(
 	}
 	srcUser, destUser := users[0], users[1]
 
-	var eg errgroup.Group
+	// Perform these swap sequential so the balance checks work properly
+	if err := singleSwap(ctx, thorchain, srcChain, srcUser, destChain, destUser); err != nil {
+		return err
+	}
 
-	eg.Go(func() error {
-		return singleSwap(ctx, thorchain, srcChain, srcUser, destChain, destUser)
-	})
-
-	eg.Go(func() error {
-		return singleSwap(ctx, thorchain, destChain, destUser, srcChain, srcUser)
-	})
-
-	return eg.Wait()
+	return singleSwap(ctx, thorchain, destChain, destUser, srcChain, srcUser)
 }
 
 // swap 0.5% of pool depth
@@ -140,7 +134,7 @@ func singleSwap(
 	} else {
 		_, err = PollOutboundSigned(ctx, thorchain, 200, txHash)
 		if err != nil {
-			return err
+			return fmt.Errorf("outbound chain: %s, err: %w", destChainType, err)
 		}
 	}
 
@@ -179,10 +173,10 @@ func singleSwap(
 	}
 	actualSwapAmount := destUserBalancePostSwap.Sub(destUserBalancePreSwap)
 	if actualSwapAmount.LT(sdkmath.Int(minExpectedSwapAmount)) {
-		return fmt.Errorf("Actual swap amount: %s %s, min expected: %s", actualSwapAmount, destChain.Config().Denom, minExpectedSwapAmount)
+		return fmt.Errorf("actual swap amount: %s %s, min expected: %s", actualSwapAmount, destChain.Config().Denom, minExpectedSwapAmount)
 	}
 	if actualSwapAmount.GT(sdkmath.Int(maxExpectedSwapAmount)) {
-		return fmt.Errorf("Actual swap amount: %s %s, max expected: %s", actualSwapAmount, destChain.Config().Denom, maxExpectedSwapAmount)
+		return fmt.Errorf("actual swap amount: %s %s, max expected: %s", actualSwapAmount, destChain.Config().Denom, maxExpectedSwapAmount)
 	}
 	// TODO: compare outAmountPlusMaxGas -> actualSwapAmount
 	fmt.Println("outAmountPlusMaxGas:", outAmountPlusMaxGas, "actualSwapAmount:", actualSwapAmount)

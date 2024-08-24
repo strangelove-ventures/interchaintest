@@ -3,7 +3,8 @@ package thorchain_test
 import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -15,7 +16,6 @@ type ExoChain struct {
 	chain      ibc.Chain
 	lpers      []ibc.Wallet
 	savers     []ibc.Wallet
-	arbers     []ibc.Wallet
 	genWallets []ibc.Wallet
 }
 
@@ -58,14 +58,28 @@ func GaiaChainSpec() *interchaintest.ChainSpec {
 	}
 }
 
-func EthChainSpec() *interchaintest.ChainSpec {
+func EthChainSpec(chainType string) *interchaintest.ChainSpec {
 	ethChainName := common.ETHChain.String() // must use this name for test
+
+	chainConfig := geth.DefaultEthereumGethChainConfig(ethChainName)
+	if chainType == "anvil" {
+		chainConfig = foundry.DefaultEthereumAnvilChainConfig(ethChainName)
+	}
 
 	return &interchaintest.ChainSpec{
 		ChainName:   ethChainName,
 		Name:        ethChainName,
-		Version:     "latest",
-		ChainConfig: ethereum.DefaultEthereumAnvilChainConfig(ethChainName),
+		ChainConfig: chainConfig,
+	}
+}
+
+func BscChainSpec() *interchaintest.ChainSpec {
+	bscChainName := common.BSCChain.String() // must use this name for test
+
+	return &interchaintest.ChainSpec{
+		ChainName:   bscChainName,
+		Name:        bscChainName,
+		ChainConfig: geth.DefaultBscChainConfig(bscChainName),
 	}
 }
 
@@ -75,7 +89,6 @@ func BtcChainSpec() *interchaintest.ChainSpec {
 	return &interchaintest.ChainSpec{
 		ChainName:   btcChainName,
 		Name:        btcChainName,
-		Version:     "26.2",
 		ChainConfig: utxo.DefaultBitcoinChainConfig(btcChainName, "thorchain", "password"),
 	}
 }
@@ -86,7 +99,6 @@ func BchChainSpec() *interchaintest.ChainSpec {
 	return &interchaintest.ChainSpec{
 		ChainName:   bchChainName,
 		Name:        bchChainName,
-		Version:     "27.1.0",
 		ChainConfig: utxo.DefaultBitcoinCashChainConfig(bchChainName, "thorchain", "password"),
 	}
 }
@@ -97,7 +109,6 @@ func LtcChainSpec() *interchaintest.ChainSpec {
 	return &interchaintest.ChainSpec{
 		ChainName:   liteChainName,
 		Name:        liteChainName,
-		Version:     "0.21",
 		ChainConfig: utxo.DefaultLitecoinChainConfig(liteChainName, "thorchain", "password"),
 	}
 }
@@ -108,7 +119,6 @@ func DogeChainSpec() *interchaintest.ChainSpec {
 	return &interchaintest.ChainSpec{
 		ChainName:   dogeChainName,
 		Name:        dogeChainName,
-		Version:     "dogecoin-daemon-1.14.7",
 		ChainConfig: utxo.DefaultDogecoinChainConfig(dogeChainName, "thorchain", "password"),
 	}
 }
