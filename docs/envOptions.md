@@ -8,6 +8,8 @@
 
 - `ICTEST_HOME`: The folder to use as the home / working directory.
 
+- `ICTEST_RELAYER_LOOP_DURATION`: Override the default 50ms relayer loop check duration. Input is in time format (20ms, 1s, etc.). Extremely fast chains may require as low as 5-10ms.
+
 - `ICTEST_SKIP_FAILURE_CLEANUP`: skip cleanup of the temporary directory on a test failure.
 
 - `KEEP_CONTAINERS`: Prevents testnet cleanup after completion.
