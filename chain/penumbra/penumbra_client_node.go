@@ -561,7 +561,7 @@ func (p *PenumbraClientNode) CreateNodeContainer(ctx context.Context) error {
 		"start",
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env)
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, pclientdPorts, p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env, []string{})
 }
 
 // StopContainer stops the container associated with the PenumbraClientNode.
@@ -582,7 +582,7 @@ func (p *PenumbraClientNode) StartContainer(ctx context.Context) error {
 
 	p.hostGRPCPort = hostPorts[0]
 
-	p.GRPCConn, err = grpc.Dial(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	p.GRPCConn, err = grpc.NewClient(p.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}

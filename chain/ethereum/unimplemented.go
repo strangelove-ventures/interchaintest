@@ -32,19 +32,6 @@ func (*EthereumChain) GetHostPeerAddress() string {
 	return ""
 }
 
-// cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
-func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	/*cmd := []string{"cast", "wallet", "import", keyName, "--mnemonic", mnemonic, "--password", ""}
-	stdout, stderr, err := c.Exec(ctx, cmd, nil)
-	fmt.Println("stdout: ", string(stdout))
-	fmt.Println("stderr: ", string(stderr))
-	if err != nil {
-		return err
-	}*/
-	PanicFunctionName()
-	return nil
-}
-
 func (c *EthereumChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	PanicFunctionName()
 	return 0

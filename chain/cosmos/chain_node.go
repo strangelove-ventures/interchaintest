@@ -83,7 +83,10 @@ type ChainNode struct {
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
 	tn := &ChainNode{
-		log: log,
+		log: log.With(
+			zap.Bool("validator", validator),
+			zap.Int("i", index),
+		),
 
 		Validator: validator,
 
@@ -157,7 +160,7 @@ func (tn *ChainNode) NewClient(ctx context.Context, addr string) error {
 	}
 
 	// TODO: will this work with gordian?
-	grpcConn, err := grpc.Dial(
+	grpcConn, err := grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -1259,7 +1262,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env)
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env, []string{})
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

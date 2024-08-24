@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -35,8 +36,12 @@ var (
 // Relayer is the ibc.Relayer implementation for hermes.
 type Relayer struct {
 	*relayer.DockerRelayer
+
+	// lock protects the relayer's state
+	lock         sync.RWMutex
 	paths        map[string]*pathConfiguration
 	chainConfigs []ChainConfig
+	chainLocks   map[string]*sync.Mutex
 }
 
 // ChainConfig holds all values required to write an entry in the "chains" section in the hermes config file.
@@ -72,6 +77,7 @@ func NewHermesRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 
 	return &Relayer{
 		DockerRelayer: dr,
+		chainLocks:    map[string]*sync.Mutex{},
 	}
 }
 
@@ -87,13 +93,21 @@ func (r *Relayer) AddChainConfiguration(ctx context.Context, rep ibc.RelayerExec
 		return fmt.Errorf("failed to write hermes config: %w", err)
 	}
 
-	return r.validateConfig(ctx, rep)
+	if err := r.validateConfig(ctx, rep); err != nil {
+		return err
+	}
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.chainLocks[chainConfig.ChainID] = &sync.Mutex{}
+	return nil
 }
 
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
 // and establishing a channel. This happens across multiple operations rather than a single link path cli command.
 func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
+	r.lock.RLock()
 	_, ok := r.paths[pathName]
+	r.lock.RUnlock()
 	if !ok {
 		return fmt.Errorf("path %s not found", pathName)
 	}
@@ -114,7 +128,12 @@ func (r *Relayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pat
 }
 
 func (r *Relayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateChannelOptions) error {
-	pathConfig := r.paths[pathName]
+	pathConfig, unlock, err := r.getAndLockPath(pathName)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
 	cmd := []string{hermes, "--json", "create", "channel", "--order", opts.Order.String(), "--a-chain", pathConfig.chainA.chainID, "--a-port", opts.SourcePortName, "--b-port", opts.DestPortName, "--a-connection", pathConfig.chainA.connectionID}
 	if opts.Version != "" {
 		cmd = append(cmd, "--channel-version", opts.Version)
@@ -129,7 +148,12 @@ func (r *Relayer) CreateChannel(ctx context.Context, rep ibc.RelayerExecReporter
 }
 
 func (r *Relayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	pathConfig := r.paths[pathName]
+	pathConfig, unlock, err := r.getAndLockPath(pathName)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
 	cmd := []string{hermes, "--json", "create", "connection", "--a-chain", pathConfig.chainA.chainID, "--a-client", pathConfig.chainA.clientID, "--b-client", pathConfig.chainB.clientID}
 
 	res := r.Exec(ctx, rep, cmd, nil)
@@ -147,10 +171,12 @@ func (r *Relayer) CreateConnections(ctx context.Context, rep ibc.RelayerExecRepo
 }
 
 func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string) error {
-	pathConfig, ok := r.paths[pathName]
-	if !ok {
-		return fmt.Errorf("path %s not found", pathName)
+	pathConfig, unlock, err := r.getAndLockPath(pathName)
+	if err != nil {
+		return err
 	}
+	defer unlock()
+
 	updateChainACmd := []string{hermes, "--json", "update", "client", "--host-chain", pathConfig.chainA.chainID, "--client", pathConfig.chainA.clientID}
 	res := r.Exec(ctx, rep, updateChainACmd, nil)
 	if res.Err != nil {
@@ -164,7 +190,12 @@ func (r *Relayer) UpdateClients(ctx context.Context, rep ibc.RelayerExecReporter
 // Note: in the go relayer this can be done with a single command using the path reference,
 // however in Hermes this needs to be done as two separate commands.
 func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.CreateClientOptions) error {
-	pathConfig := r.paths[pathName]
+	pathConfig, unlock, err := r.getAndLockPath(pathName)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
 	chainACreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainA.chainID, "--reference-chain", pathConfig.chainB.chainID}
 	if opts.TrustingPeriod != "" {
 		chainACreateClientCmd = append(chainACreateClientCmd, "--trusting-period", opts.TrustingPeriod)
@@ -205,7 +236,11 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 }
 
 func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string, opts ibc.CreateClientOptions) error {
-	pathConfig := r.paths[pathName]
+	pathConfig, unlock, err := r.getAndLockPath(pathName)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 
 	createClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", srcChainID, "--reference-chain", dstChainID}
 	if opts.TrustingPeriod != "" {
@@ -262,6 +297,8 @@ func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, c
 }
 
 func (r *Relayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, opts ibc.PathUpdateOptions) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	// the concept of paths doesn't exist in hermes, but update our in-memory paths so we can use them elsewhere
 	path, ok := r.paths[pathName]
 	if !ok {
@@ -289,6 +326,7 @@ func (r *Relayer) UpdatePath(ctx context.Context, rep ibc.RelayerExecReporter, p
 }
 
 func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelID string) error {
+	r.lock.RLock()
 	path := r.paths[pathName]
 	channels, err := r.GetChannels(ctx, rep, path.chainA.chainID)
 	if err != nil {
@@ -304,6 +342,7 @@ func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathNa
 	if portID == "" {
 		return fmt.Errorf("channel %s not found on chain %s", channelID, path.chainA.chainID)
 	}
+	r.lock.RUnlock()
 	cmd := []string{hermes, "clear", "packets", "--chain", path.chainA.chainID, "--channel", channelID, "--port", portID}
 	res := r.Exec(ctx, rep, cmd, nil)
 	return res.Err
@@ -312,6 +351,8 @@ func (r *Relayer) Flush(ctx context.Context, rep ibc.RelayerExecReporter, pathNa
 // GeneratePath establishes an in memory path representation. The concept does not exist in hermes, so it is handled
 // at the interchain test level.
 func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter, srcChainID, dstChainID, pathName string) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	if r.paths == nil {
 		r.paths = map[string]*pathConfiguration{}
 	}
@@ -330,6 +371,8 @@ func (r *Relayer) GeneratePath(ctx context.Context, rep ibc.RelayerExecReporter,
 // rather than multiple config files, we need to maintain a list of chain configs each time they are added to write the
 // full correct file update calling Relayer.AddChainConfiguration.
 func (r *Relayer) configContent(cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	r.chainConfigs = append(r.chainConfigs, ChainConfig{
 		cfg:      cfg,
 		keyName:  keyName,
@@ -365,6 +408,25 @@ func extractJsonResult(stdout []byte) []byte {
 		}
 	}
 	return []byte(jsonOutput)
+}
+
+func (r *Relayer) getAndLockPath(pathName string) (*pathConfiguration, func(), error) {
+	// we don't get an RLock here because we could deadlock while trying to get the chain locks
+	r.lock.Lock()
+	path, ok := r.paths[pathName]
+	defer r.lock.Unlock()
+	if !ok {
+		return nil, nil, fmt.Errorf("path %s not found", pathName)
+	}
+	chainALock := r.chainLocks[path.chainA.chainID]
+	chainBLock := r.chainLocks[path.chainB.chainID]
+	chainALock.Lock()
+	chainBLock.Lock()
+	unlock := func() {
+		chainALock.Unlock()
+		chainBLock.Unlock()
+	}
+	return path, unlock, nil
 }
 
 // GetClientIdFromStdout extracts the client ID from stdout.

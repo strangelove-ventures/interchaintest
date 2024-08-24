@@ -45,6 +45,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	hostName string,
 	cmd []string,
 	env []string,
+	entrypoint []string,
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(
@@ -75,7 +76,7 @@ func (c *ContainerLifecycle) CreateContainer(
 		&container.Config{
 			Image: imageRef,
 
-			Entrypoint: []string{},
+			Entrypoint: entrypoint,
 			Cmd:        cmd,
 			Env:        env,
 

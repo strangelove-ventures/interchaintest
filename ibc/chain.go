@@ -61,6 +61,9 @@ type Chain interface {
 	// SendFunds sends funds to a wallet from a user account.
 	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
 
+	// SendFundsWithNote sends funds to a wallet from a user account with a note/memo
+	SendFundsWithNote(ctx context.Context, keyName string, amount WalletAmount, note string) (string, error)
+
 	// SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.
 	SendIBCTransfer(ctx context.Context, channelID, keyName string, amount WalletAmount, options TransferOptions) (Tx, error)
 
