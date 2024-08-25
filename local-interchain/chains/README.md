@@ -1,6 +1,6 @@
 # Chains Examples
 
-## interchainsecurity
+## interchainsecurity & neutron
 
 Current the neutron heighliner image does not work due to some /tmp issue in the docker image. For this reason, you must compile the image yourself to use the latest v50 instance.
 
