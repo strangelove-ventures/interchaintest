@@ -15,6 +15,7 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"gotest.tools/assert/cmp"
 )
 
 type AvalancheSubnetClient interface {
@@ -467,9 +468,23 @@ type PathUpdateOptions struct {
 }
 
 type ICSConfig struct {
-	ProviderVerOverride     string `yaml:"provider,omitempty" json:"provider,omitempty"`
-	ConsumerVerOverride     string `yaml:"consumer,omitempty" json:"consumer,omitempty"`
-	ConsumerCopyProviderKey func(int) bool
+	ProviderVerOverride     string         `yaml:"provider,omitempty" json:"provider,omitempty"`
+	ConsumerVerOverride     string         `yaml:"consumer,omitempty" json:"consumer,omitempty"`
+	ConsumerCopyProviderKey func(int) bool `yaml:"-" json:"-"`
+}
+
+// GenesisConfig is used to start a chain from a pre-defined genesis state.
+type GenesisConfig struct {
+	// Genesis file contents for the chain (e.g. genesis.json for CometBFT chains).
+	Contents []byte
+
+	// If true, all validators will be emulated in the genesis file.
+	// By default, only the first 2/3 (sorted by Voting Power desc) of validators will be emulated.
+	AllValidators bool
+
+	// MaxVals is a safeguard so that we don't accidentally emulate too many validators. Defaults to 10.
+	// If more than MaxVals validators are required to meet 2/3 VP, the test will fail.
+	MaxVals int
 }
 
 // GenesisConfig is used to start a chain from a pre-defined genesis state.

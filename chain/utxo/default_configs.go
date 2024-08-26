@@ -19,7 +19,7 @@ func DefaultBitcoinChainConfig(
 		CoinType:       "0",
 		Denom:          "sat",
 		GasPrices:      "0.00001", // min fee / kb
-		GasAdjustment:  2,         // min fee multiplier
+		GasAdjustment:  4,         // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -52,7 +52,7 @@ func DefaultBitcoinCashChainConfig(
 		CoinType:       "145",
 		Denom:          "sat",
 		GasPrices:      "0.00001", // min fee / kb
-		GasAdjustment:  2,         // min fee multiplier
+		GasAdjustment:  4,         // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -85,7 +85,7 @@ func DefaultLitecoinChainConfig(
 		CoinType:       "2",
 		Denom:          "sat",
 		GasPrices:      "0.0001", // min fee / kb
-		GasAdjustment:  2,        // min fee multiplier
+		GasAdjustment:  4,        // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{
@@ -118,7 +118,7 @@ func DefaultDogecoinChainConfig(
 		CoinType:       "3",
 		Denom:          "sat",
 		GasPrices:      "0.01", // min fee / kb
-		GasAdjustment:  2,      // min fee multiplier
+		GasAdjustment:  4,      // min fee multiplier
 		TrustingPeriod: "0",
 		NoHostMount:    false,
 		Images: []ibc.DockerImage{

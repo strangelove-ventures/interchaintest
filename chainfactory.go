@@ -12,7 +12,8 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
@@ -161,7 +162,14 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
 		}
 	case "ethereum":
-		return ethereum.NewEthereumChain(testName, cfg, log), nil
+		switch cfg.Bin {
+		case "anvil":
+			return foundry.NewAnvilChain(testName, cfg, log), nil
+		case "geth":
+			return geth.NewGethChain(testName, cfg, log), nil
+		default:
+			return nil, fmt.Errorf("unknown binary: %s for ethereum chain type, must be anvil or geth", cfg.Bin)
+		}
 	case "thorchain":
 		return thorchain.NewThorchain(testName, cfg, nv, nf, log), nil
 	case "utxo":
