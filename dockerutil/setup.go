@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 )
@@ -78,7 +79,16 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	name := fmt.Sprintf("%s-%s", ICTDockerPrefix, RandLowerCaseLetterString(8))
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
 		CheckDuplicate: true,
-
+		Internal:       false,
+		Attachable:     true,
+		IPAM: &network.IPAM{
+			Config: []network.IPAMConfig{
+				{
+					Subnet:  "10.11.0.0/16",
+					Gateway: "10.11.0.1",
+				},
+			},
+		},
 		Labels: map[string]string{CleanupLabel: t.Name()},
 	})
 	if err != nil {

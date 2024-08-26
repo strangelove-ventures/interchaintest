@@ -7,6 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
@@ -14,8 +18,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -132,6 +134,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	}
 
 	switch cfg.Type {
+	case "avalanche":
+		return avalanche.NewAvalancheChain(log, testName, cfg, nv, nf)
 	case "cosmos":
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case "penumbra":

@@ -47,6 +47,36 @@ func (c *ContainerLifecycle) CreateContainer(
 	env []string,
 	entrypoint []string,
 ) error {
+	return c.CreateContainerInNetwork(
+		ctx,
+		testName,
+		image,
+		ports,
+		volumeBinds,
+		mounts,
+		hostName,
+		cmd,
+		env,
+		&network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				networkID: {},
+			},
+		})
+
+}
+
+func (c *ContainerLifecycle) CreateContainerInNetwork(
+	ctx context.Context,
+	testName string,
+	image ibc.DockerImage,
+	ports nat.PortMap,
+	volumeBinds []string,
+	mounts []mount.Mount,
+	hostName string,
+	cmd []string,
+	env []string,
+	netConfig *network.NetworkingConfig,
+) error {
 	imageRef := image.Ref()
 	c.log.Info(
 		"Will run command",
@@ -94,11 +124,7 @@ func (c *ContainerLifecycle) CreateContainer(
 			DNS:             []string{},
 			Mounts:          mounts,
 		},
-		&network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				networkID: {},
-			},
-		},
+		netConfig,
 		nil,
 		c.containerName,
 	)
@@ -119,6 +145,11 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 
 	c.preStartListeners.CloseAll()
 	c.preStartListeners = []net.Listener{}
+
+	c.log.Info("Starting container",
+		zap.String("container", c.containerName),
+		zap.String("id", c.id),
+	)
 
 	if err := StartContainer(ctx, c.client, c.id); err != nil {
 		return err

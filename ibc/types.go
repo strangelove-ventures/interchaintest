@@ -15,8 +15,30 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/google/go-cmp/cmp"
 )
+
+type AvalancheSubnetClient interface {
+	// SendFunds sends funds to a wallet from a user account.
+	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
+
+	// Height returns the current block height or an error if unable to get current height.
+	Height(ctx context.Context) (uint64, error)
+
+	// GetBankBalance returns balance from Bank Smart contract
+	GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error)
+
+	// GetBalance fetches the current balance for a specific account address
+	GetBalance(ctx context.Context, address string) (int64, error)
+}
+
+type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
+
+type AvalancheSubnetConfig struct {
+	Name                string
+	ChainID             string
+	Genesis             []byte
+	SubnetClientFactory AvalancheSubnetClientFactory
+}
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
@@ -84,6 +106,8 @@ type ChainConfig struct {
 	// Used if starting from an already populated genesis.json, e.g for hard fork upgrades.
 	// When nil, the chain will generate the number of validators specified in the ChainSpec.
 	Genesis *GenesisConfig
+	// Avalanche Subnet config
+	AvalancheSubnets []AvalancheSubnetConfig `yaml:"avalanche-subnet"`
 }
 
 func (c ChainConfig) Clone() ChainConfig {
@@ -238,6 +262,10 @@ func (c ChainConfig) MergeChainSpecConfig(other ChainConfig) ChainConfig {
 
 	if !cmp.Equal(other.InterchainSecurityConfig, ICSConfig{}) {
 		c.InterchainSecurityConfig = other.InterchainSecurityConfig
+	}
+
+	if len(other.AvalancheSubnets) > 0 {
+		c.AvalancheSubnets = other.AvalancheSubnets
 	}
 
 	if other.Genesis != nil {

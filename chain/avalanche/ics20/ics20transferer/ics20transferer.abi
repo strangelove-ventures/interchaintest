@@ -1,0 +1,280 @@
+[
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ibcAddr",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IICS20Bank",
+          "name": "_bank",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "sequence",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "sourcePort",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "sourceChannel",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "destinationPort",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "destinationChannel",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "revisionNumber",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "revisionHeight",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct Height",
+              "name": "timeoutHeight",
+              "type": "tuple"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timeoutTimestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct Packet",
+          "name": "packet",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "ack",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "name": "OnAcknowledgementPacket",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "sequence",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "sourcePort",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "sourceChannel",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "destinationPort",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "destinationChannel",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "revisionNumber",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "revisionHeight",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct Height",
+              "name": "timeoutHeight",
+              "type": "tuple"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timeoutTimestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct Packet",
+          "name": "packet",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "name": "OnRecvPacket",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "someAddr",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "portId",
+          "type": "string"
+        }
+      ],
+      "name": "bindPort",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ibcAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "chan",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "chanAddr",
+          "type": "address"
+        }
+      ],
+      "name": "setChannelEscrowAddresses",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
