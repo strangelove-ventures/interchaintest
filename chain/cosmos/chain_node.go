@@ -35,6 +35,7 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/tidwall/sjson"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -43,6 +44,7 @@ import (
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	providertypes "github.com/cosmos/interchain-security/v5/x/ccv/provider/types"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -883,24 +885,63 @@ func (tn *ChainNode) SendIBCTransfer(
 }
 
 func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
-	propBz, err := json.Marshal(prop)
-	if err != nil {
-		return "", err
+	cosmosChain := (tn.Chain).(*CosmosChain)
+	if !tn.HasCommand(ctx, "tx", "gov", "submit-legacy-proposal", "consumer-addition") {
+		authority, err := cosmosChain.GetGovernanceAddress(ctx)
+		if err != nil {
+			return "", err
+		}
+		ccvProp := &providertypes.MsgConsumerAddition{
+			ChainId:                           prop.ChainId,
+			InitialHeight:                     prop.InitialHeight,
+			GenesisHash:                       prop.GenesisHash,
+			BinaryHash:                        prop.BinaryHash,
+			SpawnTime:                         prop.SpawnTime,
+			UnbondingPeriod:                   prop.UnbondingPeriod,
+			CcvTimeoutPeriod:                  prop.CcvTimeoutPeriod,
+			TransferTimeoutPeriod:             prop.TransferTimeoutPeriod,
+			ConsumerRedistributionFraction:    prop.ConsumerRedistributionFraction,
+			BlocksPerDistributionTransmission: prop.BlocksPerDistributionTransmission,
+			HistoricalEntries:                 prop.HistoricalEntries,
+			DistributionTransmissionChannel:   prop.DistributionTransmissionChannel,
+			Top_N:                             prop.TopN,
+			ValidatorsPowerCap:                prop.ValidatorsPowerCap,
+			ValidatorSetCap:                   prop.ValidatorSetCap,
+			Allowlist:                         prop.Allowlist,
+			Denylist:                          prop.Denylist,
+			Authority:                         authority,
+			AllowInactiveVals:                 prop.AllowInactiveVals,
+			MinStake:                          prop.MinStake,
+		}
+		propObj, err := cosmosChain.BuildProposal([]ProtoMessage{ccvProp}, prop.Title, prop.Summary, "ipfs://CID", prop.Deposit, "", false)
+		if err != nil {
+			return "", err
+		}
+		return tn.SubmitProposal(ctx, keyName, propObj)
+	} else {
+		propBz, err := json.Marshal(prop)
+		if err != nil {
+			return "", err
+		}
+		propBz, err = sjson.SetBytes(propBz, "metadata", "ipfs://CID")
+		if err != nil {
+			return "", err
+		}
+
+		fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
+
+		fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
+		if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
+			return "", fmt.Errorf("failure writing proposal json: %w", err)
+		}
+
+		filePath := filepath.Join(tn.HomeDir(), fileName)
+
+		return tn.ExecTx(ctx, keyName,
+			"gov", "submit-legacy-proposal", "consumer-addition", filePath,
+			"--gas", "auto",
+		)
 	}
-
-	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
-
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
-		return "", fmt.Errorf("failure writing proposal json: %w", err)
-	}
-
-	filePath := filepath.Join(tn.HomeDir(), fileName)
-
-	return tn.ExecTx(ctx, keyName,
-		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
-		"--gas", "auto",
-	)
 }
 
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {

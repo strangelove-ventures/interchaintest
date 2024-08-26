@@ -16,10 +16,11 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	"golang.org/x/mod/semver"
 )
 
 var (
-	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0"}
+	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0", "v5.0.0"}
 	vals            = 2
 	fNodes          = 0
 	providerChainID = "provider-1"
@@ -60,7 +61,7 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 	ctx := context.Background()
 
 	consumerBechPrefix := "cosmos"
-	if version == "v4.0.0" {
+	if semver.Compare(version, "v4.0.0") >= 0 {
 		consumerBechPrefix = "consumer"
 	}
 

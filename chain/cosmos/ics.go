@@ -289,7 +289,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err != nil {
 		return fmt.Errorf("failed to query proposed chains: %w", err)
 	}
-	spawnTime := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content.spawn_time", c.cfg.ChainID)).Time()
+	msgContent := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content", c.cfg.ChainID))
+	if !msgContent.Exists() {
+		msgContent = gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.value.chain_id==%q).messages.0.value", c.cfg.ChainID))
+	}
+	spawnTime := msgContent.Get("spawn_time").Time()
 	c.log.Info("Waiting for chain to spawn", zap.Time("spawn_time", spawnTime), zap.String("chain_id", c.cfg.ChainID))
 	time.Sleep(time.Until(spawnTime))
 	if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {

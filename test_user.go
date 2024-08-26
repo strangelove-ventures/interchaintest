@@ -65,7 +65,7 @@ func GetAndFundTestUsers(
 		eg.Go(func() error {
 			user, err := GetAndFundTestUserWithMnemonic(ctx, keyNamePrefix, "", amount, chain)
 			if err != nil {
-				return err
+				return fmt.Errorf("chain %s failed to get and fund user: %w", chain.Config().ChainID, err)
 			}
 			users[i] = user
 			return nil
