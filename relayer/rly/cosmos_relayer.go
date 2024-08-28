@@ -197,6 +197,9 @@ func createClientOptsHelper(opts ibc.CreateClientOptions) []string {
 	if opts.MaxClockDrift != "" {
 		clientOptions = append(clientOptions, "--max-clock-drift", opts.MaxClockDrift)
 	}
+	if opts.Override {
+		clientOptions = append(clientOptions, "--override")
+	}
 
 	return clientOptions
 }

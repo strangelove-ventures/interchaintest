@@ -279,6 +279,7 @@ type CreateClientOptions struct {
 	TrustingPeriod           string
 	TrustingPeriodPercentage int64 // only available for Go Relayer
 	MaxClockDrift            string
+	Override                 bool // only available for Go Relayer
 }
 
 // DefaultClientOpts returns the default settings for creating clients.
