@@ -13,6 +13,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -68,13 +69,18 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	action := ah.Action
 	if action == "kill-all" {
-		KillAll(a.ctx, a.ic, a.vals, a.relayer, a.eRep)
+		dockerutil.KillAllInterchaintestContainers(a.ctx)
 		return
 	}
 
 	chainId := ah.ChainId
 	if _, ok := a.vals[chainId]; !ok {
-		util.Write(w, []byte(fmt.Sprintf(`{"error":"chain_id '%s' not found. Chains %v"}`, chainId, a.vals[chainId])))
+		var chainIds []string
+		for k := range a.vals {
+			chainIds = append(chainIds, k)
+		}
+
+		util.Write(w, []byte(fmt.Sprintf(`{"error":"chain_id '%s' not found. available chain ids: %v"}`, chainId, chainIds)))
 		return
 	}
 
@@ -150,21 +156,29 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	// Relayer Actions if the above is not used.
 	if len(stdout) == 0 && len(stderr) == 0 && err == nil {
-		if err := a.relayerCheck(w, r); err != nil {
-			return
-		}
-
 		switch action {
 		case "stop-relayer", "stop_relayer", "stopRelayer":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			err = a.relayer.StopRelayer(a.ctx, a.eRep)
 
 		case "start-relayer", "start_relayer", "startRelayer":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			paths := strings.FieldsFunc(ah.Cmd, func(c rune) bool {
 				return c == ',' || c == ' '
 			})
 			err = a.relayer.StartRelayer(a.ctx, a.eRep, paths...)
 
 		case "relayer", "relayer-exec", "relayer_exec", "relayerExec":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			if !strings.Contains(ah.Cmd, "--home") {
 				// does this ever change for any other relayer?
 				cmd = append(cmd, "--home", "/home/relayer")
@@ -176,6 +190,10 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 			err = res.Err
 
 		case "get_channels", "get-channels", "getChannels":
+			if err := a.relayerCheck(w, r); err != nil {
+				return
+			}
+
 			res, err := a.relayer.GetChannels(a.ctx, a.eRep, chainId)
 			if err != nil {
 				util.WriteError(w, err)
@@ -214,23 +232,6 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return err
-}
-
-func KillAll(ctx context.Context, ic *interchaintest.Interchain, vals map[string][]*cosmos.ChainNode, relayer ibc.Relayer, eRep ibc.RelayerExecReporter) {
-	if relayer != nil {
-		if err := relayer.StopRelayer(ctx, eRep); err != nil {
-			panic(err)
-		}
-	}
-
-	for _, v := range vals {
-		for _, c := range v {
-			go c.StopContainer(ctx) // nolint:errcheck
-		}
-	}
-
-	ic.Close()
-	<-ctx.Done()
 }
 
 func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {

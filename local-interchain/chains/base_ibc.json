@@ -9,6 +9,11 @@
             "docker_image": {
                 "version": "v9.1.0"
             },
+            "host_port_override": {
+                "26657": "26657",
+                "1317": "1317",
+                "9090": "9090"
+            },
             "block_time": "2s",
             "gas_prices": "0%DENOM%",
             "gas_adjustment": 2.0,

@@ -128,7 +128,6 @@ func (c *CosmosChain) WithPreStartNodes(preStartNodes func(*CosmosChain)) {
 	c.preStartNodes = preStartNodes
 }
 
-
 // GetCodec returns the codec for the chain.
 func (c *CosmosChain) GetCodec() *codec.ProtoCodec {
 	return c.cdc
@@ -343,6 +342,11 @@ func (c *CosmosChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 // Implements Chain interface
 func (c *CosmosChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.getFullNode().BankSend(ctx, keyName, amount)
+}
+
+// Implements Chain interface
+func (c *CosmosChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return c.getFullNode().BankSendWithNote(ctx, keyName, amount, note)
 }
 
 // Implements Chain interface
@@ -611,6 +615,9 @@ func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, co
 
 func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
 	for _, image := range c.Config().Images {
+		if image.Version == "local" {
+			continue
+		}
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,

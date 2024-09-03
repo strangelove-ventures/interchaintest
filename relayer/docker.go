@@ -370,7 +370,7 @@ func (r *DockerRelayer) StartRelayer(ctx context.Context, rep ibc.RelayerExecRep
 
 	if err := r.containerLifecycle.CreateContainer(
 		ctx, r.testName, r.networkID, containerImage, nil,
-		r.Bind(), nil, r.HostName(joinedPaths), cmd, nil,
+		r.Bind(), nil, r.HostName(joinedPaths), cmd, nil, []string{},
 	); err != nil {
 		return err
 	}
