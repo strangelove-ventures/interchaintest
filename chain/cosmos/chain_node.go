@@ -852,8 +852,12 @@ func (tn *ChainNode) SendIBCTransfer(
 	amount ibc.WalletAmount,
 	options ibc.TransferOptions,
 ) (string, error) {
+	port := "transfer"
+	if options.Port != "" {
+		port = options.Port
+	}
 	command := []string{
-		"ibc-transfer", "transfer", "transfer", channelID,
+		"ibc-transfer", "transfer", port, channelID,
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
 		"--gas", "auto",
 	}

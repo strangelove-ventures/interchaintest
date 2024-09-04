@@ -75,7 +75,12 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 
 	chainId := ah.ChainId
 	if _, ok := a.vals[chainId]; !ok {
-		util.Write(w, []byte(fmt.Sprintf(`{"error":"chain_id '%s' not found. Chains %v"}`, chainId, a.vals[chainId])))
+		var chainIds []string
+		for k := range a.vals {
+			chainIds = append(chainIds, k)
+		}
+
+		util.Write(w, []byte(fmt.Sprintf(`{"error":"chain_id '%s' not found. available chain ids: %v"}`, chainId, chainIds)))
 		return
 	}
 
