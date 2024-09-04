@@ -98,4 +98,5 @@ type TransferOptions struct {
 	Timeout          *IBCTimeout
 	Memo             string
 	AbsoluteTimeouts bool
+	Port             string // default: transfer
 }
