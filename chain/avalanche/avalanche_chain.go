@@ -74,6 +74,11 @@ func (c *AvalancheChain) Node() *AvalancheNode {
 	return c.nodes[0]
 }
 
+// GetDefaultChainURI returns the default chain URI for a given blockchainID
+func (c *AvalancheChain) GetDefaultChainURI(blockchainID string) string {
+	return fmt.Sprintf("%s/ext/bc/%s/rpc", c.GetRPCAddress(), blockchainID)
+}
+
 // Config fetches the chain configuration.
 func (c *AvalancheChain) Config() ibc.ChainConfig {
 	return c.cfg
@@ -527,6 +532,10 @@ func (c *AvalancheChain) GetAddress(ctx context.Context, keyName string) ([]byte
 // SendFunds sends funds to a wallet from a user account.
 func (c *AvalancheChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.Node().SendFunds(ctx, keyName, amount)
+}
+
+func (c *AvalancheChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	panic("AvalancheChain SendFundsWithNote Unimplemented")
 }
 
 // SendIBCTransfer sends an IBC transfer returning a transaction or an error if the transfer failed.

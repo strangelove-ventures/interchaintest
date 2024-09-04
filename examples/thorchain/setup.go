@@ -35,6 +35,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 	chainSpecs := []*interchaintest.ChainSpec{
 		EthChainSpec("geth"), // only use this chain spec for eth or the one below
 		//EthChainSpec("anvil"),
+		AvaxChainSpec(),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),
@@ -54,7 +55,7 @@ func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, ne
 			chain: chain,
 		}
 
-		if name == "BTC" || name == "BCH" || name == "LTC" {
+		if name == "BTC" || name == "BCH" || name == "LTC" || name == "AVAX" {
 			utxoChain := chain.(*utxo.UtxoChain)
 			utxoChain.UnloadWalletAfterUse(true)
 		}
@@ -219,6 +220,42 @@ func SetupGethContracts(ctx context.Context, exoChain *ExoChain) (string, error)
 
 	return ethRouterContractAddress, nil
 }
+
+// func SetupAvaxContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
+// 	// TODO: figure out which of these router bytecodes are needed for Avalanche
+// 	abi := routerAbi
+// 	byteCode := routerByteCode
+// 	if exoChain.chain.Config().Name == "AVAX" {
+// 		//byteCode = append(ethRouterByteCode, []byte("000000000000000000000000de06987c28d839daaefb6c85816a2cc55277654c")...) // RUNE token (doesn't matter)
+// 	}
+
+// 	avaChain := exoChain.chain.(*avalanche.AvalancheChain)
+// 	avaxUserInitialAmount := math.NewInt(1000000)
+
+// 	avaUser, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, "user", strings.Repeat("dog ", 23)+"fossil", avaxUserInitialAmount, avaChain)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	chainURI := avaChain.GetDefaultChainURI(avaChain.Config().ChainID)
+// 	rpcClient, err := rpc.DialContext(ctx, chainURI)
+// 	require.NoError(t, err)
+
+// 	ethClient = ethclient.NewClient(rpcClient)
+
+// 	avaxRouterContractAddress, err := avaChain.DeployContract(ctx, avaUser.KeyName(), abi, byteCode)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	if avaxRouterContractAddress == "" {
+// 		return "", fmt.Errorf("router contract address for (%s) chain is empty", avaChain.Config().Name)
+// 	}
+// 	if !ethcommon.IsHexAddress(avaxRouterContractAddress) {
+// 		return "", fmt.Errorf("router contract address for (%s) chain is not a hex address", avaChain.Config().Name)
+// 	}
+
+// 	return avaxRouterContractAddress, nil
+// }
 
 func SetupAnvilContracts(ctx context.Context, exoChain *ExoChain) (string, error) {
 	ethChain := exoChain.chain.(*foundry.AnvilChain)

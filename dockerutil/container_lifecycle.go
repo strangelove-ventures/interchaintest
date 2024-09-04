@@ -61,8 +61,8 @@ func (c *ContainerLifecycle) CreateContainer(
 			EndpointsConfig: map[string]*network.EndpointSettings{
 				networkID: {},
 			},
-		})
-
+		},
+		entrypoint)
 }
 
 func (c *ContainerLifecycle) CreateContainerInNetwork(
@@ -76,6 +76,7 @@ func (c *ContainerLifecycle) CreateContainerInNetwork(
 	cmd []string,
 	env []string,
 	netConfig *network.NetworkingConfig,
+	entrypoint []string,
 ) error {
 	imageRef := image.Ref()
 	c.log.Info(

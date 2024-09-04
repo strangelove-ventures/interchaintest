@@ -12,7 +12,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	subnetevm "github.com/strangelove-ventures/interchaintest/v8/examples/avalanche/subnet-evm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -49,8 +48,8 @@ func TestAvalancheCosmos(t *testing.T) {
 					{
 						Name:                "subnetevm",
 						ChainID:             subnetChainID,
-						Genesis:             subnetevm.Genesis,
-						SubnetClientFactory: subnetevm.NewSubnetEvmClient,
+						Genesis:             ibc.SubnetEvmGenesis,
+						SubnetClientFactory: ibc.NewSubnetEvmClient,
 					},
 				},
 				CoinType: "60",

@@ -15,31 +15,9 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"gotest.tools/assert/cmp"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/google/go-cmp/cmp"
 )
-
-type AvalancheSubnetClient interface {
-	// SendFunds sends funds to a wallet from a user account.
-	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
-
-	// Height returns the current block height or an error if unable to get current height.
-	Height(ctx context.Context) (uint64, error)
-
-	// GetBankBalance returns balance from Bank Smart contract
-	GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error)
-
-	// GetBalance fetches the current balance for a specific account address
-	GetBalance(ctx context.Context, address string) (int64, error)
-}
-
-type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
-
-type AvalancheSubnetConfig struct {
-	Name                string
-	ChainID             string
-	Genesis             []byte
-	SubnetClientFactory AvalancheSubnetClientFactory
-}
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
@@ -137,6 +115,44 @@ func (c ChainConfig) Clone() ChainConfig {
 	}
 
 	return x
+}
+
+func GetAvalancheChainVersion() string {
+	return "v1.10.18-ibc"
+}
+
+func GetAvalancheDockerImageMetadata() DockerImage {
+	return DockerImage{
+		Repository: "avalanchego",
+		Version:    GetAvalancheChainVersion(),
+		UidGid:     "1025:1025",
+	}
+}
+
+func GetAvalancheChainConfig(name string) ChainConfig {
+	return ChainConfig{
+		Type:    "avalanche",
+		Name:    name,
+		ChainID: "43114",
+		Images: []DockerImage{
+			GetAvalancheDockerImageMetadata(),
+		},
+		AvalancheSubnets: []AvalancheSubnetConfig{
+			{
+				Name:                "subnetevm",
+				Genesis:             SubnetEvmGenesis,
+				SubnetClientFactory: NewSubnetEvmClient,
+			},
+		},
+	}
+}
+
+func NewSubnetEvmClient(rpcHost string, pk string) (AvalancheSubnetClient, error) {
+	cli, err := ethclient.Dial(fmt.Sprintf("%s/rpc", rpcHost))
+	if err != nil {
+		return nil, err
+	}
+	return &SubnetEvmClient{client: cli}, nil
 }
 
 func (c ChainConfig) UsesCometMock() bool {
@@ -471,20 +487,6 @@ type ICSConfig struct {
 	ProviderVerOverride     string         `yaml:"provider,omitempty" json:"provider,omitempty"`
 	ConsumerVerOverride     string         `yaml:"consumer,omitempty" json:"consumer,omitempty"`
 	ConsumerCopyProviderKey func(int) bool `yaml:"-" json:"-"`
-}
-
-// GenesisConfig is used to start a chain from a pre-defined genesis state.
-type GenesisConfig struct {
-	// Genesis file contents for the chain (e.g. genesis.json for CometBFT chains).
-	Contents []byte
-
-	// If true, all validators will be emulated in the genesis file.
-	// By default, only the first 2/3 (sorted by Voting Power desc) of validators will be emulated.
-	AllValidators bool
-
-	// MaxVals is a safeguard so that we don't accidentally emulate too many validators. Defaults to 10.
-	// If more than MaxVals validators are required to meet 2/3 VP, the test will fail.
-	MaxVals int
 }
 
 // GenesisConfig is used to start a chain from a pre-defined genesis state.

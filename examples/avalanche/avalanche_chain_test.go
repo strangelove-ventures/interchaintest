@@ -10,7 +10,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
-	subnetevm "github.com/strangelove-ventures/interchaintest/v8/examples/avalanche/subnet-evm"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -42,8 +41,8 @@ func TestAvalanche(t *testing.T) {
 				AvalancheSubnets: []ibc.AvalancheSubnetConfig{
 					{
 						Name:                "subnetevm",
-						Genesis:             subnetevm.Genesis,
-						SubnetClientFactory: subnetevm.NewSubnetEvmClient,
+						Genesis:             ibc.SubnetEvmGenesis,
+						SubnetClientFactory: ibc.NewSubnetEvmClient,
 					},
 				},
 			},

@@ -1,4 +1,4 @@
-package subnetevm
+package ibc
 
 import (
 	"context"
@@ -11,22 +11,36 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/ics20/ics20bank"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 type SubnetEvmClient struct {
 	client *ethclient.Client
 }
 
-func NewSubnetEvmClient(rpcHost string, pk string) (ibc.AvalancheSubnetClient, error) {
-	client, err := ethclient.Dial(fmt.Sprintf("%s/rpc", rpcHost))
-	if err != nil {
-		return nil, err
-	}
-	return &SubnetEvmClient{client: client}, nil
+type AvalancheSubnetClient interface {
+	// SendFunds sends funds to a wallet from a user account.
+	SendFunds(ctx context.Context, keyName string, amount WalletAmount) error
+
+	// Height returns the current block height or an error if unable to get current height.
+	Height(ctx context.Context) (uint64, error)
+
+	// GetBankBalance returns balance from Bank Smart contract
+	GetBankBalance(ctx context.Context, bank, address, denom string) (int64, error)
+
+	// GetBalance fetches the current balance for a specific account address
+	GetBalance(ctx context.Context, address string) (int64, error)
 }
 
-func (sec SubnetEvmClient) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+type AvalancheSubnetClientFactory func(string, string) (AvalancheSubnetClient, error)
+
+type AvalancheSubnetConfig struct {
+	Name                string
+	ChainID             string
+	Genesis             []byte
+	SubnetClientFactory AvalancheSubnetClientFactory
+}
+
+func (sec SubnetEvmClient) SendFunds(ctx context.Context, keyName string, amount WalletAmount) error {
 	chainID, err := sec.client.NetworkID(context.Background())
 	if err != nil {
 		return fmt.Errorf("can't get chainID: %w", err)

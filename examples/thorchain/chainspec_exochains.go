@@ -73,6 +73,20 @@ func EthChainSpec(chainType string) *interchaintest.ChainSpec {
 	}
 }
 
+// TODO: 1337 causes a conflict with ETH but was hardcoded by CIDT. Does this matter?
+func AvaxChainSpec() *interchaintest.ChainSpec {
+	avaxChainName := common.AVAXChain.String() // must use this name for test
+	chainConfig := ibc.GetAvalancheChainConfig(avaxChainName)
+	numVal := 5
+
+	return &interchaintest.ChainSpec{
+		NumValidators: &numVal,
+		ChainName:     avaxChainName,
+		Name:          "avalanche",
+		ChainConfig:   chainConfig,
+	}
+}
+
 func BscChainSpec() *interchaintest.ChainSpec {
 	bscChainName := common.BSCChain.String() // must use this name for test
 

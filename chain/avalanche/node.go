@@ -36,9 +36,8 @@ import (
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-
 	"github.com/strangelove-ventures/interchaintest/v8/chain/avalanche/lib"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -565,6 +564,7 @@ func (n *AvalancheNode) CreateContainer(ctx context.Context) error {
 				},
 			},
 		},
+		[]string{},
 	)
 }
 
