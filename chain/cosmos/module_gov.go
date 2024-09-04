@@ -74,7 +74,7 @@ func (tn *ChainNode) UpgradeProposal(ctx context.Context, keyName string, prop S
 			},
 		}
 
-		proposal, err := cosmosChain.BuildProposal([]ProtoMessage{&msg}, prop.Title, prop.Description, "", prop.Deposit, prop.Proposer, prop.Expedited)
+		proposal, err := cosmosChain.BuildProposal([]ProtoMessage{&msg}, prop.Title, prop.Description, "ipfs://CID", prop.Deposit, prop.Proposer, prop.Expedited)
 		if err != nil {
 			return "", err
 		}

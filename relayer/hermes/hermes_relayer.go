@@ -19,9 +19,9 @@ import (
 const (
 	hermes                  = "hermes"
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
-	DefaultContainerVersion = "1.8.2"
+	DefaultContainerVersion = "1.10.1"
 
-	hermesDefaultUidGid = "1000:1000"
+	hermesDefaultUidGid = "2000:2000"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )

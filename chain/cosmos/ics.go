@@ -245,6 +245,16 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
+	consumerID := c.cfg.ChainID
+	consumerChains, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "list-consumer-chains")
+	if err != nil {
+		return err
+	}
+	consumerChain := gjson.GetBytes(consumerChains, fmt.Sprintf("chains.#(chain_id=%q)", c.cfg.ChainID))
+	if consumerChain.Get("consumer_id").Exists() {
+		consumerID = consumerChain.Get("consumer_id").String()
+	}
+
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
 		i := i
@@ -265,7 +275,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 					return fmt.Errorf("failed to get consumer validator pubkey: %w", err)
 				}
 				keyStr := strings.TrimSpace(string(key))
-				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", c.cfg.ChainID, keyStr)
+				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", consumerID, keyStr)
 				if err != nil {
 					return fmt.Errorf("failed to assign consumer validator pubkey: %w", err)
 				}
@@ -289,7 +299,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err != nil {
 		return fmt.Errorf("failed to query proposed chains: %w", err)
 	}
-	spawnTime := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content.spawn_time", c.cfg.ChainID)).Time()
+	msgContent := gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.content.chain_id==%q).messages.0.content", c.cfg.ChainID))
+	if !msgContent.Exists() {
+		msgContent = gjson.GetBytes(proposals, fmt.Sprintf("proposals.#(messages.0.value.chain_id==%q).messages.0.value", c.cfg.ChainID))
+	}
+	spawnTime := msgContent.Get("spawn_time").Time()
 	c.log.Info("Waiting for chain to spawn", zap.Time("spawn_time", spawnTime), zap.String("chain_id", c.cfg.ChainID))
 	time.Sleep(time.Until(spawnTime))
 	if err := testutil.WaitForBlocks(ctx, 2, c.Provider); err != nil {
@@ -309,7 +323,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
-	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
+	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", consumerID)
 	if err != nil {
 		return fmt.Errorf("failed to query provider for ccv state: %w", err)
 	}
