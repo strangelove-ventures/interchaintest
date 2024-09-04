@@ -51,3 +51,39 @@ Before opening a PR, please review LICENSE.md and familiarize yourself with its 
 Please be advised that by opening a PR, you are granting Strangelove (or the owner of the relevant repository) a perpetual,
 worldwide, non-exclusive, no-charge, royalty-free, irrevocable license, in copyright and in patent, with respect to your
 Contribution and any portion thereof.
+
+## Getting Started
+
+Before you start contributing, make sure you have the following prerequisites installed:
+
+- [Go](https://golang.org/dl/)
+- [Docker](https://www.docker.com/get-started)
+- [VSCode (recommended editor)](https://code.visualstudio.com/)
+
+To get started, follow these steps:
+
+1. Fork the interchaintest repository to your own GitHub account.
+
+2. Clone your forked repository to your local machine:
+
+   ```sh
+   git clone https://github.com/<Username>/interchaintest.git
+   ```
+
+3. Create a new branch on your fork
+
+    ```sh
+    git checkout -b name/broad-description-of-feature
+    ```
+
+4. Make your changes and commit them with descriptive commit messages. 
+
+5. Test your changes locally with `go test ./...`, or by running the specific test affecting your feature or fix.
+
+6. Push your changes to your GitHub forked repository
+
+    ```sh
+    git push origin name/broad-description-of-feature
+    ```
+
+7. Create a pull request (PR) against the main branch of the interchaintest repository. If the PR is still a work-in-progress, please mark the PR as draft.
