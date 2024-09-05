@@ -5,13 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	bip32 "github.com/tyler-smith/go-bip32"
 	bip39 "github.com/tyler-smith/go-bip39"
+
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 type HyperspaceRelayerCoreConfig struct {

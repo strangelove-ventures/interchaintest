@@ -17,7 +17,7 @@ type Workspace struct {
 }
 
 // NewWorkspace returns a workspace struct, populated with defaults and its relative path
-// relativePath is the relative path to the workspace on local machine
+// relativePath is the relative path to the workspace on local machine.
 func NewWorkspace(relativePath string) *Workspace {
 	return &Workspace{
 		DockerImage:  "cosmwasm/workspace-optimizer",
@@ -26,13 +26,13 @@ func NewWorkspace(relativePath string) *Workspace {
 	}
 }
 
-// WithDockerImage sets a custom docker image to use
+// WithDockerImage sets a custom docker image to use.
 func (w *Workspace) WithDockerImage(image string) *Workspace {
 	w.DockerImage = image
 	return w
 }
 
-// WithVersion sets a custom version to use
+// WithVersion sets a custom version to use.
 func (w *Workspace) WithVersion(version string) *Workspace {
 	w.Version = version
 	return w
@@ -42,7 +42,7 @@ func (w *Workspace) WithVersion(version string) *Workspace {
 //
 //	cosmwasm/workspace-optimizer is the expected docker image
 //
-// The workspace object is returned, call WaitForCompile() to get results
+// The workspace object is returned, call WaitForCompile() to get results.
 func (w *Workspace) Compile() *Workspace {
 	w.wasmBinariesChan = make(chan map[string]string)
 	w.errChan = make(chan error, 1)
@@ -88,7 +88,7 @@ func (w *Workspace) Compile() *Workspace {
 }
 
 // WaitForCompile will wait until coyympilation is complete, this can be called after chain setup
-// Successful compilation will return a map of crate names to binary locations in a channel
+// Successful compilation will return a map of crate names to binary locations in a channel.
 func (w *Workspace) WaitForCompile() (map[string]string, error) {
 	contractBinaries := make(map[string]string)
 	select {

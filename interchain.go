@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"math"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	sdkmath "cosmossdk.io/math"
 )
 
 // Interchain represents a full IBC network, encompassing a collection of

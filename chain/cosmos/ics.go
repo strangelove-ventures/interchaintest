@@ -11,11 +11,6 @@ import (
 	"strings"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/types"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -26,6 +21,13 @@ import (
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 
+	sdkmath "cosmossdk.io/math"
+
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
+	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+
+	"github.com/cosmos/cosmos-sdk/types"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -100,7 +102,7 @@ func (c *CosmosChain) FlushPendingICSPackets(ctx context.Context, r ibc.Relayer,
 	return r.Flush(ctx, eRep, ibcPath, ICSChannel)
 }
 
-// Bootstraps the provider chain and starts it from genesis
+// Bootstraps the provider chain and starts it from genesis.
 func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	if c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil {
 		return fmt.Errorf("don't set ConsumerCopyProviderKey in the provider chain")
@@ -205,7 +207,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	return nil
 }
 
-// Bootstraps the consumer chain and starts it from genesis
+// Bootstraps the consumer chain and starts it from genesis.
 func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	chainCfg := c.Config()
 

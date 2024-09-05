@@ -25,17 +25,17 @@ func (w *EthereumWallet) KeyName() string {
 	return w.keyName
 }
 
-// Get formatted address, passing in a prefix
+// Get formatted address, passing in a prefix.
 func (w *EthereumWallet) FormattedAddress() string {
 	return hexutil.Encode(w.address)
 }
 
-// Get mnemonic, only used for relayer wallets
+// Get mnemonic, only used for relayer wallets.
 func (w *EthereumWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address with chain's prefix
+// Get Address with chain's prefix.
 func (w *EthereumWallet) Address() []byte {
 	return w.address
 }

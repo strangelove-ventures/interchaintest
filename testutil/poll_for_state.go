@@ -50,7 +50,7 @@ func (p BlockPoller[T]) DoPoll(ctx context.Context, startHeight, maxHeight int64
 	return zero, pollErr
 }
 
-// ChainAcker is a chain that can get its acknowledgements at a specified height
+// ChainAcker is a chain that can get its acknowledgements at a specified height.
 type ChainAcker interface {
 	ChainHeighter
 	Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error)
@@ -86,7 +86,7 @@ func PollForAck(ctx context.Context, chain ChainAcker, startHeight, maxHeight in
 	return found, nil
 }
 
-// ChainTimeouter is a chain that can get its timeouts at a specified height
+// ChainTimeouter is a chain that can get its timeouts at a specified height.
 type ChainTimeouter interface {
 	ChainHeighter
 	Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error)
@@ -138,7 +138,7 @@ func (pe *packetPollError) Unwrap() error {
 	return pe.error
 }
 
-// Format is expected to be used by testify/require which prints errors via %+v
+// Format is expected to be used by testify/require which prints errors via %+v.
 func (pe *packetPollError) Format(s fmt.State, verb rune) {
 	if verb != 'v' && !s.Flag('+') {
 		fmt.Fprint(s, pe.error.Error())

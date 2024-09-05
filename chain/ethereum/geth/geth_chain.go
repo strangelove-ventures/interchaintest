@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-
 	"github.com/docker/docker/api/types/mount"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
+
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 )
 
 var _ ibc.Chain = &GethChain{}
@@ -40,7 +40,8 @@ func NewGethChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 }
 
 func (c *GethChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	cmd := []string{c.Config().Bin,
+	cmd := []string{
+		c.Config().Bin,
 		"--dev", "--datadir", c.HomeDir(), "-http", "--http.addr", "0.0.0.0", "--http.port", "8545", "--allow-insecure-unlock",
 		"--http.api", "eth,net,web3,miner,personal,txpool,debug", "--http.corsdomain", "*", "-nodiscover", "--http.vhosts=*",
 		"--miner.gasprice", c.Config().GasPrices,
@@ -52,13 +53,13 @@ func (c *GethChain) Start(testName string, ctx context.Context, additionalGenesi
 	return c.EthereumChain.Start(ctx, cmd, []mount.Mount{})
 }
 
-// JavaScriptExec() - Execute web3 code via geth's attach command
+// JavaScriptExec() - Execute web3 code via geth's attach command.
 func (c *GethChain) JavaScriptExec(ctx context.Context, jsCmd string) (stdout, stderr []byte, err error) {
 	cmd := []string{c.Config().Bin, "--exec", jsCmd, "--datadir", c.HomeDir(), "attach"}
 	return c.Exec(ctx, cmd, nil)
 }
 
-// JavaScriptExecTx() - Execute a tx via web3, function ensures account is unlocked and blocks multiple txs
+// JavaScriptExecTx() - Execute a tx via web3, function ensures account is unlocked and blocks multiple txs.
 func (c *GethChain) JavaScriptExecTx(ctx context.Context, account *NodeWallet, jsCmd string) (stdout, stderr []byte, err error) {
 	if err := c.UnlockAccount(ctx, account); err != nil {
 		return nil, nil, err
@@ -88,7 +89,8 @@ func (c *GethChain) CreateKey(ctx context.Context, keyName string) error {
 
 
 EOF
-`, c.HomeDir())}
+`, c.HomeDir()),
+	}
 	_, _, err := c.Exec(ctx, cmd, nil)
 	if err != nil {
 		return err
@@ -128,7 +130,7 @@ func (c *GethChain) RecoverKey(ctx context.Context, keyName, mnemonic string) er
 	return nil
 }
 
-// Get address of account, cast to a string to use
+// Get address of account, cast to a string to use.
 func (c *GethChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	account, found := c.keynameToAccountMap[keyName]
 	if !found {
@@ -200,7 +202,7 @@ func (c *GethChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 }
 
 // DeployContract creates a new contract on-chain, returning the contract address
-// Constructor params are appended to the byteCode
+// Constructor params are appended to the byteCode.
 func (c *GethChain) DeployContract(ctx context.Context, keyName string, abi []byte, byteCode []byte) (string, error) {
 	account, found := c.keynameToAccountMap[keyName]
 	if !found {

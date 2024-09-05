@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 var (

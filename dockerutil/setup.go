@@ -88,7 +88,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	return cli, network.ID
 }
 
-// DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
+// DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing.
 func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")

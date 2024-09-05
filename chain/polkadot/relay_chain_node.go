@@ -8,19 +8,18 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
-
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"go.uber.org/zap"
-
-	"github.com/decred/dcrd/dcrec/secp256k1/v2"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"go.uber.org/zap"
+
+	"cosmossdk.io/math"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.
@@ -51,7 +50,7 @@ type RelayChainNodes []*RelayChainNode
 
 const (
 	wsPort = "27451/tcp"
-	// rpcPort        = "27452/tcp"
+	// rpcPort        = "27452/tcp".
 	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"

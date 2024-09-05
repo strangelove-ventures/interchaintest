@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
@@ -19,6 +18,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
+
+	sdkmath "cosmossdk.io/math"
 )
 
 var _ ibc.Chain = &UtxoChain{}
@@ -385,7 +386,7 @@ func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.SetAccount(ctx, addr, keyName)
 }
 
-// Get address of account, cast to a string to use
+// Get address of account, cast to a string to use.
 func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	wallet, ok := c.KeyNameToWalletMap[keyName]
 	if ok {

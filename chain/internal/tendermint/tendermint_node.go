@@ -9,11 +9,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	tmjson "github.com/cometbft/cometbft/libs/json"
-	"github.com/cometbft/cometbft/p2p"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -22,9 +17,15 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
+
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 )
 
-// TendermintNode represents a node in the test network that is being created
+// TendermintNode represents a node in the test network that is being created.
 type TendermintNode struct {
 	Log *zap.Logger
 
@@ -83,11 +84,11 @@ func NewTendermintNode(
 	return tn, nil
 }
 
-// TendermintNodes is a collection of TendermintNode
+// TendermintNodes is a collection of TendermintNode.
 type TendermintNodes []*TendermintNode
 
 const (
-	// BlockTimeSeconds (in seconds) is approx time to create a block
+	// BlockTimeSeconds (in seconds) is approx time to create a block.
 	BlockTimeSeconds = 2
 
 	p2pPort     = "26656/tcp"
@@ -105,7 +106,7 @@ var sentryPorts = nat.PortMap{
 	nat.Port(privValPort): {},
 }
 
-// NewClient creates and assigns a new Tendermint RPC client to the TendermintNode
+// NewClient creates and assigns a new Tendermint RPC client to the TendermintNode.
 func (tn *TendermintNode) NewClient(addr string) error {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
@@ -122,7 +123,7 @@ func (tn *TendermintNode) NewClient(addr string) error {
 	return nil
 }
 
-// Name is the hostname of the test node container
+// Name is the hostname of the test node container.
 func (tn *TendermintNode) Name() string {
 	return fmt.Sprintf("node-%d-%s-%s", tn.Index, tn.Chain.Config().ChainID, dockerutil.SanitizeContainerName(tn.TestName))
 }
@@ -171,7 +172,7 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (tn *TendermintNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
@@ -180,7 +181,7 @@ func (tn *TendermintNode) HomeDir() string {
 	return path.Join("/var/tendermint", tn.Chain.Config().Name)
 }
 
-// SetConfigAndPeers modifies the config for a validator node to start a chain
+// SetConfigAndPeers modifies the config for a validator node to start a chain.
 func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) error {
 	c := make(testutil.Toml)
 
@@ -258,7 +259,7 @@ func (tn *TendermintNode) Height(ctx context.Context) (int64, error) {
 	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
-// InitHomeFolder initializes a home folder for the given node
+// InitHomeFolder initializes a home folder for the given node.
 func (tn *TendermintNode) InitHomeFolder(ctx context.Context, mode string) error {
 	command := []string{
 		tn.Chain.Config().Bin, "init", mode,
@@ -312,7 +313,7 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), retry.DelayType(retry.BackOffDelay))
 }
 
-// InitValidatorFiles creates the node files and signs a genesis transaction
+// InitValidatorFiles creates the node files and signs a genesis transaction.
 func (tn *TendermintNode) InitValidatorFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx, "validator")
 }
@@ -321,7 +322,7 @@ func (tn *TendermintNode) InitFullNodeFiles(ctx context.Context) error {
 	return tn.InitHomeFolder(ctx, "full")
 }
 
-// NodeID returns the node of a given node
+// NodeID returns the node of a given node.
 func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
 	// This used to call p2p.LoadNodeKey against the file on the host,
 	// but because we are transitioning to operating on Docker volumes,
@@ -339,7 +340,7 @@ func (tn *TendermintNode) NodeID(ctx context.Context) (string, error) {
 	return string(nk.ID()), nil
 }
 
-// PeerString returns the string for connecting the nodes passed in
+// PeerString returns the string for connecting the nodes passed in.
 func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) string {
 	addrs := make([]string, len(tn))
 	for i, n := range tn {
@@ -361,7 +362,7 @@ func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) 
 	return strings.Join(addrs, ",")
 }
 
-// LogGenesisHashes logs the genesis hashes for the various nodes
+// LogGenesisHashes logs the genesis hashes for the various nodes.
 func (tn TendermintNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range tn {
 		gen, err := n.GenesisFileContent(ctx)

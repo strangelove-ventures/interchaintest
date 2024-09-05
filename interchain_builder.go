@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -13,6 +11,9 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 )
 
 type codecRegistry func(registry codectypes.InterfaceRegistry)

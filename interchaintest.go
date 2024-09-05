@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// CreateLogFile creates a file with name in dir $HOME/.interchaintest/logs/
+// CreateLogFile creates a file with name in dir $HOME/.interchaintest/logs/.
 func CreateLogFile(name string) (*os.File, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

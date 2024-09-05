@@ -10,9 +10,10 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type InstantiateContractAttribute struct {
@@ -161,7 +162,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 	return err
 }
 
-// MigrateContract performs contract migration
+// MigrateContract performs contract migration.
 func (tn *ChainNode) MigrateContract(ctx context.Context, keyName string, contractAddress string, codeID string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
 	cmd := []string{"wasm", "migrate", contractAddress, codeID, message}
 	cmd = append(cmd, extraExecTxArgs...)

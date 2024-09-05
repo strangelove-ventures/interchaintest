@@ -33,12 +33,12 @@ func (w *HyperspaceWallet) FormattedAddress() string {
 	return w.address
 }
 
-// Get mnemonic, only used for relayer wallets
+// Get mnemonic, only used for relayer wallets.
 func (w *HyperspaceWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address
+// Get Address.
 func (w *HyperspaceWallet) Address() []byte {
 	return []byte(w.address)
 }

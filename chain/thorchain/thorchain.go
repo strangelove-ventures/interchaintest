@@ -14,15 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -32,6 +23,18 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	sdkmath "cosmossdk.io/math"
+
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
+	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 type Thorchain struct {
@@ -190,12 +193,12 @@ func (c *Thorchain) AddFullNodes(ctx context.Context, configFileOverrides map[st
 	return eg.Wait()
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	if err := c.initializeSidecars(ctx, testName, cli, networkID); err != nil {
 		return err
@@ -216,7 +219,7 @@ func (c *Thorchain) Exec(ctx context.Context, cmd []string, env []string) (stdou
 	return c.getFullNode().Exec(ctx, cmd, env)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) GetRPCAddress() string {
 	if c.Config().UsesCometMock() {
 		return fmt.Sprintf("http://%s:22331", c.getFullNode().HostnameCometMock())
@@ -225,13 +228,13 @@ func (c *Thorchain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.getFullNode().HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) GetAPIAddress() string {
 	return fmt.Sprintf("http://%s:1317", "127.0.0.1")
 	// return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().HostName())
 }
@@ -265,17 +268,17 @@ func (c *Thorchain) HomeDir() string {
 	return c.getFullNode().HomeDir()
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) CreateKey(ctx context.Context, keyName string) error {
 	return c.getFullNode().CreateKey(ctx, keyName)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	return c.getFullNode().RecoverKey(ctx, keyName, mnemonic)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	b32Addr, err := c.getFullNode().AccountKeyBech32(ctx, keyName)
 	if err != nil {
@@ -287,7 +290,7 @@ func (c *Thorchain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 
 // BuildWallet will return a Cosmos wallet
 // If mnemonic != "", it will restore using that mnemonic
-// If mnemonic == "", it will create a new key
+// If mnemonic == "", it will create a new key.
 func (c *Thorchain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		c.log.Info("BuildWallet recovering key", zap.String("key_name", keyName))
@@ -339,17 +342,17 @@ func (c *Thorchain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	return c.getFullNode().BankSend(ctx, keyName, amount)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	return c.getFullNode().BankSendWithNote(ctx, keyName, amount, note)
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -425,7 +428,7 @@ func (c *Thorchain) QueryBankMetadata(ctx context.Context, denom string) (*BankM
 }
 
 // ExportState exports the chain state at specific height.
-// Implements Chain interface
+// Implements Chain interface.
 func (c *Thorchain) ExportState(ctx context.Context, height int64) (string, error) {
 	return c.getFullNode().ExportState(ctx, height)
 }
@@ -576,7 +579,7 @@ func (c *Thorchain) NewSidecarProcess(
 	return nil
 }
 
-// creates the test node objects required for bootstrapping tests
+// creates the test node objects required for bootstrapping tests.
 func (c *Thorchain) initializeChainNodes(
 	ctx context.Context,
 	testName string,
@@ -653,7 +656,6 @@ func (c *Thorchain) initializeSidecars(
 			}
 			return nil
 		})
-
 	}
 	if err := eg.Wait(); err != nil {
 		return err
@@ -781,7 +783,7 @@ func (c *Thorchain) prepNodes(ctx context.Context, genesisAmounts [][]types.Coin
 	return eg.Wait()
 }
 
-// Bootstraps the chain and starts it from genesis
+// Bootstraps the chain and starts it from genesis.
 func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	c.log.Info("Starting", zap.String("chain", c.Config().Name))
 	chainCfg := c.Config()
@@ -1050,12 +1052,12 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 	return testutil.WaitForBlocks(ctx, 2, c.getFullNode())
 }
 
-// Height implements ibc.Chain
+// Height implements ibc.Chain.
 func (c *Thorchain) Height(ctx context.Context) (int64, error) {
 	return c.getFullNode().Height(ctx)
 }
 
-// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
+// Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height.
 func (c *Thorchain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
@@ -1088,7 +1090,7 @@ func (c *Thorchain) Acknowledgements(ctx context.Context, height int64) ([]ibc.P
 	return ibcAcks, nil
 }
 
-// Timeouts implements ibc.Chain, returning all timeouts in block at height
+// Timeouts implements ibc.Chain, returning all timeouts in block at height.
 func (c *Thorchain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
 	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
@@ -1128,7 +1130,7 @@ func (c *Thorchain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, er
 	return fn.FindTxs(ctx, height)
 }
 
-// StopAllNodes stops and removes all long running containers (validators and full nodes)
+// StopAllNodes stops and removes all long running containers (validators and full nodes).
 func (c *Thorchain) StopAllNodes(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
@@ -1240,7 +1242,7 @@ func (c *Thorchain) StartAllValSidecars(ctx context.Context) error {
 }
 
 // GetTimeoutHeight returns a timeout height of 1000 blocks above the current block height.
-// This function should be used when the timeout is never expected to be reached
+// This function should be used when the timeout is never expected to be reached.
 func (c *Thorchain) GetTimeoutHeight(ctx context.Context) (clienttypes.Height, error) {
 	height, err := c.Height(ctx)
 	if err != nil {

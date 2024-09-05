@@ -69,7 +69,7 @@ func HyperspaceCapabilities() map[relayer.Capability]bool {
 
 // LinkPath performs the operations that happen when a path is linked. This includes creating clients, creating connections
 // and establishing a channel. This happens across multiple operations rather than a single link path cli command.
-// Parachains need a Polkadot epoch/session before starting, do not link in interchain.Build()
+// Parachains need a Polkadot epoch/session before starting, do not link in interchain.Build().
 func (r *HyperspaceRelayer) LinkPath(ctx context.Context, rep ibc.RelayerExecReporter, pathName string, channelOpts ibc.CreateChannelOptions, clientOpts ibc.CreateClientOptions) error {
 	if err := r.CreateClients(ctx, rep, pathName, clientOpts); err != nil {
 		return err

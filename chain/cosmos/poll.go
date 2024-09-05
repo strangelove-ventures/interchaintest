@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status using gov v1.
@@ -82,7 +82,7 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
-// PollForBalance polls until the balance matches
+// PollForBalance polls until the balance matches.
 func PollForBalance(ctx context.Context, chain *CosmosChain, deltaBlocks int64, balance ibc.WalletAmount) error {
 	h, err := chain.Height(ctx)
 	if err != nil {
