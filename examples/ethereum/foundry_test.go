@@ -9,6 +9,7 @@ import (
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -16,7 +17,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestEthereum(t *testing.T) {
+func TestFoundry(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip()
@@ -36,7 +37,7 @@ func TestEthereum(t *testing.T) {
 	ctx := context.Background()
 
 	// Get default ethereum chain config for anvil
-	anvilConfig := ethereum.DefaultEthereumAnvilChainConfig("ethereum")
+	anvilConfig := foundry.DefaultEthereumAnvilChainConfig("ethereum")
 
 	// add --load-state config (this step is not required for tests that don't require an existing state)
 	configFileOverrides := make(map[string]any)
@@ -55,7 +56,7 @@ func TestEthereum(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	ethereumChain := chains[0].(*ethereum.EthereumChain)
+	ethereumChain := chains[0].(*foundry.AnvilChain)
 
 	ic := interchaintest.NewInterchain().
 		AddChain(ethereumChain)
