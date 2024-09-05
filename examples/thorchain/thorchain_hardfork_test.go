@@ -15,7 +15,6 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// mainnet-genesis.json will not be included in interchaintest repo
 // //go:embed mainnet-genesis.json
 var genesisBz []byte
 
@@ -34,7 +33,7 @@ func TestThorchainHardFork(t *testing.T) {
 	// ----------------------------
 	// Set up thorchain and others
 	// ----------------------------
-	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, "", nil, nil)
+	thorchainChainSpec := ThorchainDefaultChainSpec(t.Name(), numThorchainValidators, numThorchainFullNodes, "", "", nil, nil)
 	thorchainChainSpec.Bech32Prefix = "thor"
 	thorchainChainSpec.Images[0].Version = "local-mainnet"
 

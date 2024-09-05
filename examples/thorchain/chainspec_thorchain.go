@@ -25,20 +25,23 @@ type ChainContract struct {
 	Router string `json:"router"`
 }
 
-func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string, thornodeEnvOverrides, bifrostEnvOverrides map[string]string) *interchaintest.ChainSpec {
+func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRouter string, bscRouter string, thornodeEnvOverrides, bifrostEnvOverrides map[string]string) *interchaintest.ChainSpec {
 	chainID := "thorchain"
 	name := common.THORChain.String() // Must use this name for test
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
 	genesisKVMods := []thorchain.GenesisKV{
 		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", false), // disable bank module transfers
-		thorchain.NewGenesisKV("app_state.transfer.params.send_enabled", false),     // disable ibc transfer sends
 		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"),  // mint to reserve for mocknet (220M)
 		thorchain.NewGenesisKV("app_state.thorchain.chain_contracts", []ChainContract{
 			{
 				Chain:  "ETH",
 				Router: ethRouter,
 			},
-		}), // mint to reserve for mocknet (220M)
+			{
+				Chain:  "BSC",
+				Router: bscRouter,
+			},
+		}),
 	}
 
 	thornodeEnv := thornodeDefaults
@@ -92,7 +95,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				Image:       chainImage,
 				HomeDir:     "/var/data/bifrost",
 				Ports:       []string{"5040", "6040", "9000"},
-				// StartCmd: []string{"bifrost", "-p"},
+				//StartCmd: []string{"bifrost", "-p"},
 				StartCmd:         []string{"bifrost", "-p", "-l", "debug"},
 				Env:              bifrostEnv,
 				PreStart:         false,
@@ -161,11 +164,6 @@ var (
 		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_MAX_GAS_LIMIT=80000",
 		"BIFROST_CHAINS_AVAX_BLOCK_SCANNER_MAX_GAS_LIMIT=80000",
 		"BIFROST_CHAINS_BSC_BLOCK_SCANNER_MAX_GAS_LIMIT=80000",
-
-		// enable bsc
-		//"BIFROST_CHAINS_BSC_DISABLED=false", // todo change to false once brought in
-		//"BIFROST_CHAINS_BSC_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
-		//"BIFROST_CHAINS_BSC_BLOCK_SCANNER_RPC_HOST: ${BSC_HOST:-http://binance-smart:8545}
 
 		// set fixed gas rate for evm chains
 		"BIFROST_CHAINS_ETH_BLOCK_SCANNER_FIXED_GAS_RATE=30000000000",      // 30 gwei

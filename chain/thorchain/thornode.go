@@ -393,6 +393,7 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
+	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
 	res, err := tn.Client.Status(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("tendermint rpc client status: %w", err)

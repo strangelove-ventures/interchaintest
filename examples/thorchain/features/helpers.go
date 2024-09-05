@@ -47,7 +47,7 @@ func GetAndFundTestUsers(
 				return err
 			}
 			if !userBalance.Equal(amount) {
-				return fmt.Errorf("User (%s) was not properly funded", user[0].KeyName())
+				return fmt.Errorf("user (%s) was not properly funded", user[0].KeyName())
 			}
 
 			return nil
@@ -74,7 +74,7 @@ func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64
 
 		if pool.BalanceAsset == "0" {
 			time.Sleep(time.Second) // rate limit
-			return nil, fmt.Errorf("Pool (%s) exists, but not asset balance in %d blocks", asset, deltaBlocks)
+			return nil, fmt.Errorf("pool (%s) exists, but not asset balance in %d blocks", asset, deltaBlocks)
 		}
 		return nil, nil
 	}
@@ -97,7 +97,7 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 			return tc.Saver{}, err
 		}
 		for _, saver := range savers {
-			if strings.ToLower(saver.AssetAddress) == strings.ToLower(exoUser.FormattedAddress()) {
+			if strings.EqualFold(saver.AssetAddress, exoUser.FormattedAddress()) {
 				return saver, nil
 			}
 		}
@@ -123,7 +123,7 @@ func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBloc
 			return tc.Saver{}, err
 		}
 		for _, saver := range savers {
-			if strings.ToLower(saver.AssetAddress) == strings.ToLower(exoUser.FormattedAddress()) {
+			if strings.EqualFold(saver.AssetAddress, exoUser.FormattedAddress()) {
 				time.Sleep(time.Second) // rate limit
 				return saver, fmt.Errorf("saver took longer than %d blocks to eject", deltaBlocks)
 			}
@@ -226,7 +226,7 @@ func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlo
 		}
 
 		time.Sleep(time.Second) // rate limit
-		return nil, fmt.Errorf("Pool (%s) did not suspend in %d blocks", exoAsset, deltaBlocks)
+		return nil, fmt.Errorf("pool (%s) did not suspend in %d blocks", exoAsset, deltaBlocks)
 	}
 	time.Sleep(time.Second) // Limit how quickly Height() is called back to back per go routine
 	bp := testutil.BlockPoller[any]{CurrentHeight: thorchain.Height, PollFunc: doPoll}

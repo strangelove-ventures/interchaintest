@@ -3,6 +3,7 @@ package thorchain_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 
@@ -26,10 +27,11 @@ func TestThorchainSim(t *testing.T) {
 	// Start non-thorchain chains
 	exoChains := StartExoChains(t, ctx, client, network)
 	gaiaEg := SetupGaia(t, ctx, exoChains["GAIA"])
-	ethRouterContractAddress := SetupEthContracts(t, ctx, exoChains["ETH"])
+	ethRouterContractAddress, bscRouterContractAddress, err := SetupContracts(ctx, exoChains["ETH"], exoChains["BSC"])
+	require.NoError(t, err)
 
 	// Start thorchain
-	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress)
+	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress, bscRouterContractAddress)
 	require.NoError(t, gaiaEg.Wait()) // Wait for 100 transactions before starting tests
 
 	// --------------------------------------------------------
@@ -69,7 +71,7 @@ func TestThorchainSim(t *testing.T) {
 	// --------------------------------------------------------
 	// Arb
 	// --------------------------------------------------------
-	_, err := features.Arb(t, ctx, thorchain, exoChains.GetChains()...) // Must add all active chains
+	_, err = features.Arb(t, ctx, thorchain, exoChains.GetChains()...)
 	require.NoError(t, err)
 
 	// --------------------------------------------------------
@@ -80,11 +82,15 @@ func TestThorchainSim(t *testing.T) {
 	for i := range exoChainList {
 		i := i
 		fmt.Println("Chain:", i, "Name:", exoChainList[i].Config().Name)
-		if i%2 == 0 {
-			eg.Go(func() error {
-				return features.SingleSwap(t, egCtx, thorchain, exoChainList[i], exoChainList[i+1])
-			})
+		randomChain := rand.Intn(len(exoChainList))
+		if i == randomChain && i == 0 {
+			randomChain++
+		} else if i == randomChain {
+			randomChain--
 		}
+		eg.Go(func() error {
+			return features.DualSwap(t, ctx, thorchain, exoChainList[i], exoChainList[randomChain])
+		})
 	}
 	require.NoError(t, eg.Wait())
 

@@ -2,16 +2,12 @@ package ethereum
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
+
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
@@ -22,23 +18,23 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
-)
 
-var _ ibc.Chain = &EthereumChain{}
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
 
 const (
-	blockTime = 2 // seconds
-	rpcPort   = "8545/tcp"
-)
-
-var (
-	GWEI  = sdkmath.NewInt(1_000_000_000)
-	ETHER = GWEI.MulRaw(1_000_000_000)
+	rpcPort = "8545/tcp"
 )
 
 var natPorts = nat.PortMap{
 	nat.Port(rpcPort): {},
 }
+
+var (
+	GWEI  = sdkmath.NewInt(1_000_000_000)
+	ETHER = GWEI.MulRaw(1_000_000_000)
+)
 
 type EthereumChain struct {
 	testName string
@@ -46,51 +42,21 @@ type EthereumChain struct {
 
 	log *zap.Logger
 
-	VolumeName   string
-	NetworkID    string
-	DockerClient *dockerclient.Client
+	volumeName   string
+	networkID    string
+	dockerClient *dockerclient.Client
 
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	hostRPCPort string
-
-	genesisWallets GenesisWallets
-
-	keystoreMap map[string]string
-}
-
-func DefaultEthereumAnvilChainConfig(
-	name string,
-) ibc.ChainConfig {
-	return ibc.ChainConfig{
-		Type:           "ethereum",
-		Name:           name,
-		ChainID:        "31337", // default anvil chain-id
-		Bech32Prefix:   "n/a",
-		CoinType:       "60",
-		Denom:          "wei",
-		GasPrices:      "0",
-		GasAdjustment:  0,
-		TrustingPeriod: "0",
-		NoHostMount:    false,
-		Images: []ibc.DockerImage{
-			{
-				Repository: "ghcr.io/foundry-rs/foundry",
-				Version:    "latest",
-				UidGid:     "1000:1000",
-			},
-		},
-		Bin: "anvil",
-	}
+	rpcClient   *ethclient.Client
 }
 
 func NewEthereumChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *EthereumChain {
 	return &EthereumChain{
-		testName:       testName,
-		cfg:            chainConfig,
-		log:            log,
-		genesisWallets: NewGenesisWallet(),
-		keystoreMap:    make(map[string]string),
+		testName: testName,
+		cfg:      chainConfig,
+		log:      log,
 	}
 }
 
@@ -115,9 +81,9 @@ func (c *EthereumChain) Initialize(ctx context.Context, testName string, cli *do
 	if err != nil {
 		return fmt.Errorf("creating volume for chain node: %w", err)
 	}
-	c.VolumeName = v.Name
-	c.NetworkID = networkID
-	c.DockerClient = cli
+	c.volumeName = v.Name
+	c.networkID = networkID
+	c.dockerClient = cli
 
 	if err := dockerutil.SetVolumeOwner(ctx, dockerutil.VolumeOwnerOptions{
 		Log: c.log,
@@ -136,19 +102,15 @@ func (c *EthereumChain) Initialize(ctx context.Context, testName string, cli *do
 }
 
 func (c *EthereumChain) Name() string {
-	return fmt.Sprintf("anvil-%s-%s", c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
+	return fmt.Sprintf("%s-%s-%s-%s", c.cfg.Name, c.cfg.Bin, c.cfg.ChainID, dockerutil.SanitizeContainerName(c.testName))
 }
 
 func (c *EthereumChain) HomeDir() string {
-	return "/home/foundry"
-}
-
-func (c *EthereumChain) KeystoreDir() string {
-	return path.Join(c.HomeDir(), ".foundry", "keystores")
+	return "/home/ethereum"
 }
 
 func (c *EthereumChain) Bind() []string {
-	return []string{fmt.Sprintf("%s:%s", c.VolumeName, c.HomeDir())}
+	return []string{fmt.Sprintf("%s:%s", c.volumeName, c.HomeDir())}
 }
 
 func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
@@ -171,49 +133,7 @@ func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client
 	}
 }
 
-func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	// TODO:
-	//   * add support for different denom configuration, ether, gwei or wei,
-	//       this will affect SendFunds, SendFundsWithNote, GetBalance and anything other than wei will lose precision for GetBalance
-	//   * add support for modifying genesis amount config, default is 10 ether
-	//   * add support for ConfigFileOverrides
-	//		* block time
-	//   * add support for custom chain id, must be an int?
-	//   * add support for custom gas-price
-	// Maybe add code-size-limit configuration for larger contracts
-
-	// IBC support, add when necessary
-	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
-
-	cmd := []string{
-		c.cfg.Bin,
-		"--host", "0.0.0.0", // Anyone can call
-		"--block-time", "2", // 2 second block times
-		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
-		"--balance", "10000000", // Genesis accounts loaded with 10mil ether, change as needed
-		"--no-cors",
-		"--gas-price", "20000000000",
-		"--block-base-fee-per-gas", "0",
-	}
-
-	var mounts []mount.Mount
-	if loadState, ok := c.cfg.ConfigFileOverrides["--load-state"].(string); ok {
-		pwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		localJsonFile := filepath.Join(pwd, loadState)
-		dockerJsonFile := path.Join(c.HomeDir(), path.Base(loadState))
-		mounts = []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: localJsonFile,
-				Target: dockerJsonFile,
-			},
-		}
-		cmd = append(cmd, "--load-state", dockerJsonFile)
-	}
-
+func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.Mount) error {
 	usingPorts := nat.PortMap{}
 	for k, v := range natPorts {
 		usingPorts[k] = v
@@ -231,7 +151,7 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0], usingPorts, c.Bind(), mounts, c.HostName(), cmd, nil, []string{})
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.networkID, c.cfg.Images[0], usingPorts, c.Bind(), mount, c.HostName(), cmd, nil, []string{})
 	if err != nil {
 		return err
 	}
@@ -248,7 +168,19 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	c.hostRPCPort = hostPorts[0]
-	fmt.Println("Host RPC port: ", c.hostRPCPort)
+
+	// wait for rpc to come up
+	time.Sleep(time.Second * 2)
+
+	// dial the rpc host
+	c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
+	if err != nil {
+		time.Sleep(time.Second * 2)
+		c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
+		if err != nil {
+			return fmt.Errorf("failed to dial ETH rpc host(%s): %w", c.GetHostRPCAddress(), err)
+		}
+	}
 
 	return testutil.WaitForBlocks(ctx, 2, c)
 }
@@ -257,12 +189,12 @@ func (c *EthereumChain) HostName() string {
 	return dockerutil.CondenseHostName(c.Name())
 }
 
+func (c *EthereumChain) NewJob() *dockerutil.Image {
+	return dockerutil.NewImage(c.Logger(), c.dockerClient, c.networkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+}
+
 func (c *EthereumChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	logger := zap.NewNop()
-	if cmd[1] != "block-number" { // too much logging, maybe switch to an rpc lib in the future
-		logger = c.logger()
-	}
-	job := dockerutil.NewImage(logger, c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
+	job := c.NewJob()
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: c.Bind(),
@@ -271,7 +203,7 @@ func (c *EthereumChain) Exec(ctx context.Context, cmd []string, env []string) (s
 	return res.Stdout, res.Stderr, res.Err
 }
 
-func (c *EthereumChain) logger() *zap.Logger {
+func (c *EthereumChain) Logger() *zap.Logger {
 	return c.log.With(
 		zap.String("chain_id", c.cfg.ChainID),
 		zap.String("test", c.testName),
@@ -294,182 +226,19 @@ func (c *EthereumChain) GetHostWSAddress() string {
 	return "ws://" + c.hostRPCPort
 }
 
-type NewWalletOutput struct {
-	Address string `json:"address"`
-	Path    string `json:"path"`
-}
-
-func (c *EthereumChain) MakeKeystoreDir(ctx context.Context) error {
-	cmd := []string{"mkdir", "-p", c.KeystoreDir()}
-	_, _, err := c.Exec(ctx, cmd, nil)
-	return err
-}
-
-func (c *EthereumChain) CreateKey(ctx context.Context, keyName string) error {
-	err := c.MakeKeystoreDir(ctx) // Ensure keystore directory is created
-	if err != nil {
-		return err
-	}
-
-	_, ok := c.keystoreMap[keyName]
-	if ok {
-		return fmt.Errorf("Keyname (%s) already used", keyName)
-	}
-
-	cmd := []string{"cast", "wallet", "new", c.KeystoreDir(), "--unsafe-password", "", "--json"}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return err
-	}
-
-	newWallet := []NewWalletOutput{}
-	err = json.Unmarshal(stdout, &newWallet)
-	if err != nil {
-		return err
-	}
-
-	c.keystoreMap[keyName] = newWallet[0].Path
-
-	return nil
-}
-
-// cast wallet import requires a password prompt which docker isn't properly handling. For now, we only use CreateKey().
-// Can re-add/support with this commit: https://github.com/foundry-rs/foundry/pull/6671
-func (c *EthereumChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	err := c.MakeKeystoreDir(ctx) // Ensure keystore directory is created
-	if err != nil {
-		return err
-	}
-
-	cmd := []string{"cast", "wallet", "import", keyName, "--keystore-dir", c.KeystoreDir(), "--mnemonic", mnemonic, "--unsafe-password", ""}
-	_, _, err = c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return err
-	}
-
-	// This is needed for CreateKey() since that keystore path does not use the keyname
-	c.keystoreMap[keyName] = path.Join(c.KeystoreDir(), keyName)
-
-	return nil
-}
-
-// Get address of account, cast to a string to use
-func (c *EthereumChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	keystore, ok := c.keystoreMap[keyName]
-	if !ok {
-		return nil, fmt.Errorf("Keyname (%s) not found", keyName)
-	}
-
-	cmd := []string{"cast", "wallet", "address", "--keystore", keystore, "--password", ""}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return nil, err
-	}
-	return []byte(strings.TrimSpace(string(stdout))), nil
-}
-
-func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	cmd := []string{"cast", "send", amount.Address, "--value", amount.Amount.String()}
-	if keyName == "faucet" {
-		cmd = append(cmd,
-			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-			"--rpc-url", c.GetRPCAddress(),
-		)
-	} else {
-		keystore, ok := c.keystoreMap[keyName]
-		if !ok {
-			return fmt.Errorf("keyname (%s) not found", keyName)
-		}
-		cmd = append(cmd,
-			"--keystore", keystore,
-			"--password", "",
-			"--rpc-url", c.GetRPCAddress(),
-		)
-	}
-	_, _, err := c.Exec(ctx, cmd, nil)
-	return err
-}
-
-type TransactionReceipt struct {
-	TxHash string `json:"transactionHash"`
-}
-
-func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	cmd := []string{"cast", "send", amount.Address, hexutil.Encode([]byte(note)), "--value", amount.Amount.String(), "--json"}
-	if keyName == "faucet" {
-		cmd = append(cmd,
-			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-			"--rpc-url", c.GetRPCAddress(),
-		)
-	} else {
-		keystore, ok := c.keystoreMap[keyName]
-		if !ok {
-			return "", fmt.Errorf("Keyname (%s) not found", keyName)
-		}
-		cmd = append(cmd,
-			"--keystore", keystore,
-			"--password", "",
-			"--rpc-url", c.GetRPCAddress(),
-		)
-	}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
-	if err != nil {
-		return "", err
-	}
-
-	var txReceipt TransactionReceipt
-	if err = json.Unmarshal(stdout, &txReceipt); err != nil {
-		return "", err
-	}
-
-	return txReceipt.TxHash, nil
-}
-
 func (c *EthereumChain) Height(ctx context.Context) (int64, error) {
-	cmd := []string{"cast", "block-number", "--rpc-url", c.GetRPCAddress()}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
+	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
+	height, err := c.rpcClient.BlockNumber(ctx)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get height: %w", err)
 	}
-	return strconv.ParseInt(strings.TrimSpace(string(stdout)), 10, 64)
+	return int64(height), nil
 }
 
 func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	cmd := []string{"cast", "balance", "--rpc-url", c.GetRPCAddress(), address}
-	stdout, _, err := c.Exec(ctx, cmd, nil)
+	balance, err := c.rpcClient.BalanceAt(ctx, common.Address(hexutil.MustDecode(address)), nil)
 	if err != nil {
-		return sdkmath.ZeroInt(), err
+		return sdkmath.Int{}, fmt.Errorf("failed to get height: %w", err)
 	}
-	balance, ok := sdkmath.NewIntFromString(strings.TrimSpace(string(stdout)))
-	if !ok {
-		return sdkmath.ZeroInt(), fmt.Errorf("Error parsing string to sdk int")
-	}
-	return balance, nil
-}
-
-func (c *EthereumChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
-	if mnemonic != "" {
-		err := c.RecoverKey(ctx, keyName, mnemonic)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Use the genesis account
-		if keyName == "faucet" {
-			// TODO: implement RecoverKey() so faucet can be saved to keystore
-			return c.genesisWallets.GetFaucetWallet(keyName), nil
-		} else {
-			// Create new account
-			err := c.CreateKey(ctx, keyName)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	address, err := c.GetAddress(ctx, keyName)
-	if err != nil {
-		return nil, err
-	}
-	return NewWallet(keyName, string(address)), nil
+	return sdkmath.NewIntFromBigInt(balance), nil
 }
