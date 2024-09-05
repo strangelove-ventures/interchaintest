@@ -2,8 +2,9 @@ package cosmos
 
 import (
 	"errors"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"strings"
+
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

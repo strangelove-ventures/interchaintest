@@ -187,6 +187,7 @@ func (r *HyperspaceRelayer) GetRelayerChainConfig(
 	}
 	return nil, fmt.Errorf("unsupported chain config: %s", chainType)
 }
+
 func (r *HyperspaceRelayer) SetRelayerChainConfig(
 	ctx context.Context,
 	filePath string,

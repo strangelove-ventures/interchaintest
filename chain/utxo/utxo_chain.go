@@ -2,14 +2,12 @@ package utxo
 
 import (
 	"context"
-
 	"fmt"
 	"io"
 	"math"
-	"time"
-
 	"strconv"
 	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
@@ -170,7 +168,8 @@ func (c *UtxoChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
 }
 
 func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	cmd := []string{c.BinDaemon,
+	cmd := []string{
+		c.BinDaemon,
 		"--regtest",
 		"-printtoconsole",
 		"-regtest=1",

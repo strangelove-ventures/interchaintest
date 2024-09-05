@@ -170,7 +170,7 @@ func Arb(
 			} else {
 				fmt.Println("No arb error")
 			}
-			//require.NoError(t, err)
+			// require.NoError(t, err)
 
 			time.Sleep(time.Second) // Deposit already wait 2 blocks, ~4 seconds
 		}

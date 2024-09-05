@@ -118,15 +118,13 @@ const (
 	cometMockRawPort = "22331"
 )
 
-var (
-	sentryPorts = nat.PortMap{
-		nat.Port(p2pPort):     {},
-		nat.Port(rpcPort):     {},
-		nat.Port(grpcPort):    {},
-		nat.Port(apiPort):     {},
-		nat.Port(privValPort): {},
-	}
-)
+var sentryPorts = nat.PortMap{
+	nat.Port(p2pPort):     {},
+	nat.Port(rpcPort):     {},
+	nat.Port(grpcPort):    {},
+	nat.Port(apiPort):     {},
+	nat.Port(privValPort): {},
+}
 
 // NewClient creates and assigns a new Tendermint RPC client to the ChainNode
 func (tn *ChainNode) NewClient(addr string) error {
@@ -483,7 +481,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	var gasPriceFound, gasAdjustmentFound, feesFound = false, false, false
+	gasPriceFound, gasAdjustmentFound, feesFound := false, false, false
 	for i := 0; i < len(command); i++ {
 		if command[i] == "--gas-prices" {
 			gasPriceFound = true
@@ -815,7 +813,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 }
 
 func (tn *ChainNode) Version(ctx context.Context) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "query", "thorchain", "version", "--output", "json",
+	command := []string{
+		tn.Chain.Config().Bin, "query", "thorchain", "version", "--output", "json",
 		"--home", tn.HomeDir(),
 	}
 
@@ -833,7 +832,8 @@ func (tn *ChainNode) Version(ctx context.Context) (string, error) {
 }
 
 func (tn *ChainNode) GetValidatorConsPubKey(ctx context.Context) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "tendermint", "show-validator",
+	command := []string{
+		tn.Chain.Config().Bin, "tendermint", "show-validator",
 		"--home", tn.HomeDir(),
 	}
 
@@ -1516,7 +1516,7 @@ func (tn *ChainNode) InitValidatorGenTx(
 		return err
 	}
 	return nil
-	//return tn.Gentx(ctx, valKey, genesisSelfDelegation)
+	// return tn.Gentx(ctx, valKey, genesisSelfDelegation)
 }
 
 func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {

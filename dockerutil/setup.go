@@ -198,7 +198,6 @@ func PruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *clie
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune volumes during docker cleanup: %v", err)
 		return
@@ -232,7 +231,6 @@ func PruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune networks during docker cleanup: %v", err)
 		return

@@ -27,7 +27,6 @@ func (c *EthereumChain) AddKey(cmd []string, keyName string) []string {
 		cmd = append(cmd,
 			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
 		)
-
 	} else {
 		cmd = append(cmd,
 			"--keystores", c.keystoreMap[keyName],
@@ -68,7 +67,7 @@ func ReadAndAppendConfigFile(cmd []string, configFile, localContractRootDir, sol
 func WriteConfigFile(configFile string, localContractRootDir string, solidityContractDir string, configFileBz []byte) error {
 	if configFile != "" {
 		configFilePath := GetConfigFilePath(configFile, localContractRootDir, solidityContractDir)
-		err := os.WriteFile(configFilePath, configFileBz, 0644)
+		err := os.WriteFile(configFilePath, configFileBz, 0o644)
 		if err != nil {
 			return err
 		}

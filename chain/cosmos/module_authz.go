@@ -13,7 +13,6 @@ import (
 
 // AuthzGrant grants a message as a permission to an account.
 func (tn *ChainNode) AuthzGrant(ctx context.Context, granter ibc.Wallet, grantee, authType string, extraFlags ...string) (*sdk.TxResponse, error) {
-
 	allowed := "send|generic|delegate|unbond|redelegate"
 	if !strings.Contains(allowed, authType) {
 		return nil, fmt.Errorf("invalid auth type: %s allowed: %s", authType, allowed)

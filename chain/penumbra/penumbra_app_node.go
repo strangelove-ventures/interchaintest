@@ -53,8 +53,10 @@ func NewPenumbraAppNode(
 	networkID string,
 	image ibc.DockerImage,
 ) (*PenumbraAppNode, error) {
-	pn := &PenumbraAppNode{log: log, Index: index, Chain: chain,
-		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+	pn := &PenumbraAppNode{
+		log: log, Index: index, Chain: chain,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image,
+	}
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
 
@@ -398,7 +400,8 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 	parts := strings.Split(channelID, "-")
 	chanNum := parts[1]
 
-	cmd := []string{"pcli", "--home", keyPath, "tx", "withdraw",
+	cmd := []string{
+		"pcli", "--home", keyPath, "tx", "withdraw",
 		"--to", amount.Address,
 		"--channel", chanNum,
 		"--timeout-height", fmt.Sprintf("0-%d", opts.Timeout.Height),

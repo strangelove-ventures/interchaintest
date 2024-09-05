@@ -228,7 +228,7 @@ func (c *Thorchain) GetRPCAddress() string {
 // Implements Chain interface
 func (c *Thorchain) GetAPIAddress() string {
 	return fmt.Sprintf("http://%s:1317", "127.0.0.1")
-	//return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
+	// return fmt.Sprintf("http://%s:1317", c.getFullNode().HostName())
 }
 
 // Implements Chain interface
@@ -861,7 +861,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 
 		if len(activeVals) > chainCfg.Genesis.MaxVals {
 			c.log.Warn("Not enough validators to meet 2/3 bond threshold, increase GenesisConfig.MaxVals to reach consensus", zap.Int("required", len(activeVals)), zap.Int("max", chainCfg.Genesis.MaxVals))
-			//return fmt.Errorf("too many validators required to meet bond threshold: %d, max allowed: %d: increase this limit to proceed", len(activeVals), chainCfg.Genesis.MaxVals)
+			// return fmt.Errorf("too many validators required to meet bond threshold: %d, max allowed: %d: increase this limit to proceed", len(activeVals), chainCfg.Genesis.MaxVals)
 			c.NumValidators = chainCfg.Genesis.MaxVals
 		} else {
 			c.NumValidators = len(activeVals)
@@ -979,7 +979,7 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 			zap.String("chain", exportGenesisChain),
 			zap.String("path", exportGenesis),
 		)
-		_ = os.WriteFile(exportGenesis, genBz, 0600)
+		_ = os.WriteFile(exportGenesis, genBz, 0o600)
 	}
 
 	chainNodes := c.Nodes()

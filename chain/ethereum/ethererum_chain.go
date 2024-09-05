@@ -185,7 +185,8 @@ func (c *EthereumChain) Start(testName string, ctx context.Context, additionalGe
 	// IBC support, add when necessary
 	//   * add additionalGenesisWallet support for relayer wallet, either add genesis accounts or tx after chain starts
 
-	cmd := []string{c.cfg.Bin,
+	cmd := []string{
+		c.cfg.Bin,
 		"--host", "0.0.0.0", // Anyone can call
 		"--block-time", "2", // 2 second block times
 		"--accounts", "10", // We current only use the first account for the faucet, but tests may expect the default
@@ -374,7 +375,6 @@ func (c *EthereumChain) SendFunds(ctx context.Context, keyName string, amount ib
 			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
 			"--rpc-url", c.GetRPCAddress(),
 		)
-
 	} else {
 		keystore, ok := c.keystoreMap[keyName]
 		if !ok {
@@ -401,7 +401,6 @@ func (c *EthereumChain) SendFundsWithNote(ctx context.Context, keyName string, a
 			"--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
 			"--rpc-url", c.GetRPCAddress(),
 		)
-
 	} else {
 		keystore, ok := c.keystoreMap[keyName]
 		if !ok {

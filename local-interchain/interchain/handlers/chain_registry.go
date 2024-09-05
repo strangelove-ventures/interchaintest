@@ -30,5 +30,4 @@ func (cr chainRegistry) GetChainRegistry(w http.ResponseWriter, r *http.Request)
 	if _, err := w.Write(cr.DataJSON); err != nil {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
 	}
-
 }

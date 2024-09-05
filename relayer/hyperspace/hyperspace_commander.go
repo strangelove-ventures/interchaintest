@@ -43,7 +43,7 @@ func (hyperspaceCommander) DockerUser() string {
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
 	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
-	//c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
+	// c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
 	return []string{
 		"hyperspace",
 		"-h",
@@ -155,7 +155,6 @@ func (c *hyperspaceCommander) GeneratePath(srcChainID, dstChainID, pathName, hom
 // Hyperspace does not have paths, just two configs
 func (hyperspaceCommander) UpdatePath(pathName, homeDir string, opts ibc.PathUpdateOptions) []string {
 	panic("[UpdatePath] Do not call me")
-
 }
 
 // Prints chain config which is populated by hyperspace

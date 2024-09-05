@@ -23,7 +23,7 @@ func WriteRunningChains(configsDir string, bz []byte) {
 	}
 
 	file := filepath.Join(path, "logs.json")
-	_ = os.WriteFile(file, bz, 0644)
+	_ = os.WriteFile(file, bz, 0o644)
 }
 
 func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.Chain, connections []types.IBCChannel) {
@@ -35,7 +35,6 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 
 	// Iterate chain config & get the ibc chain's to save data to logs.
 	for idx, chain := range config.Chains {
-
 		switch chains[idx].(type) {
 		case *cosmos.CosmosChain:
 			chainObj := chains[idx].(*cosmos.CosmosChain)

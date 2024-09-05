@@ -49,7 +49,6 @@ func (c *CosmosChain) UpgradeQueryAppliedPlan(ctx context.Context, name string) 
 		Name: name,
 	})
 	return res, err
-
 }
 
 // UpgradeQueryAuthority returns the account with authority to conduct upgrades

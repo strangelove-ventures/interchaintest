@@ -31,7 +31,7 @@ func TestThorchainSim(t *testing.T) {
 	// Start thorchain
 	thorchain := StartThorchain(t, ctx, client, network, exoChains, ethRouterContractAddress)
 	require.NoError(t, gaiaEg.Wait()) // Wait for 100 transactions before starting tests
-	
+
 	// --------------------------------------------------------
 	// Bootstrap pool
 	// --------------------------------------------------------
@@ -118,6 +118,6 @@ func TestThorchainSim(t *testing.T) {
 	}
 	require.NoError(t, eg.Wait())
 
-	//err = testutil.WaitForBlocks(ctx, 300, thorchain)
-	//require.NoError(t, err, "thorchain failed to make blocks")
+	// err = testutil.WaitForBlocks(ctx, 300, thorchain)
+	// require.NoError(t, err, "thorchain failed to make blocks")
 }

@@ -34,5 +34,4 @@ func TestChainsGeneration(t *testing.T) {
 
 		require.NoError(t, NewChainsConfig(hub, hub2, juno1, osmo1).SaveJSON("chains/gen-4-ibc.json"))
 	})
-
 }
