@@ -8,7 +8,6 @@ import (
 	"cosmossdk.io/math"
 
 	banktypes "cosmossdk.io/x/bank/types"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
@@ -97,8 +96,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
-	cfg := cosmos.DefaultEncoding()
-	wasmtypes.RegisterInterfaces(cfg.InterfaceRegistry)
+	cfg := cosmos.DefaultEncoding() // TODO: change to use the default wasm encoding with cosmos.DefaultEncoding
 	return &cfg
 }
 

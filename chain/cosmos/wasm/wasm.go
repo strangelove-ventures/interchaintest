@@ -1,7 +1,7 @@
 package wasm
 
 import (
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	// wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types" // TODO:
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	// simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
@@ -11,7 +11,7 @@ import (
 func WasmEncoding() *testutil.TestEncodingConfig {
 	cfg := cosmos.DefaultEncoding()
 
-	wasmtypes.RegisterInterfaces(cfg.InterfaceRegistry)
+	// wasmtypes.RegisterInterfaces(cfg.InterfaceRegistry)
 
 	return &cfg
 }
