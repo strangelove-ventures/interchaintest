@@ -12,8 +12,8 @@ import (
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"go.uber.org/zap"
 )
 

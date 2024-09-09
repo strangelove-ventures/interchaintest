@@ -7,7 +7,7 @@ import (
 	"path"
 
 	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
 )
 
 // VestingCreateAccount creates a new vesting account funded with an allocation of tokens. The account can either be a delayed or continuous vesting account, which is determined by the '--delayed' flag.

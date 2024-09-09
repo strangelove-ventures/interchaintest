@@ -14,7 +14,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/thorchain/common"
 )
 
 func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {

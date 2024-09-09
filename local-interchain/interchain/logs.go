@@ -7,9 +7,9 @@ import (
 	"time"
 
 	types "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/ethereum/foundry"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

@@ -7,7 +7,7 @@ replace (
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.2 //indirect
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000 => ../
+	github.com/strangelove-ventures/interchaintest/v9 v9.0.0-00010101000000-000000000000 => ../
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
 
@@ -19,7 +19,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/spf13/cobra v1.8.0
-	github.com/strangelove-ventures/interchaintest/v8 v8.0.0-00010101000000-000000000000
+	github.com/strangelove-ventures/interchaintest/v9 v9.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1

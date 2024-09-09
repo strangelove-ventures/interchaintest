@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	dockerclient "github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"go.uber.org/zap"
 )
 
