@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+	paramsutils "cosmossdk.io/x/params/client/utils"
 	"github.com/strangelove-ventures/interchaintest/v9"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"github.com/stretchr/testify/require"
 
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	govv1beta1 "cosmossdk.io/x/gov/types/v1beta1"
 )
 
 func TestJunoParamChange(t *testing.T) {

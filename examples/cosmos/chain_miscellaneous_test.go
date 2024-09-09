@@ -7,8 +7,8 @@ import (
 
 	"cosmossdk.io/math"
 
+	banktypes "cosmossdk.io/x/bank/types"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"

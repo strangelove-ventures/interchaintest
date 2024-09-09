@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"path"
-	"strings"
+	"strings"s
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
+	"cosmossdk.io/x/authz"
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 

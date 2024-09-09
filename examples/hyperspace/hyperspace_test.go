@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	govv1beta1 "cosmossdk.io/x/gov/types/v1beta1"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v9"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"

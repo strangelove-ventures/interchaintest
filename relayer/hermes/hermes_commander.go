@@ -9,8 +9,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v9/relayer"
 	"go.uber.org/zap"
 
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	"github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
+	"github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
 )
 
 var _ relayer.RelayerCommander = &commander{}

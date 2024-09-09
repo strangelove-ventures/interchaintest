@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	stakingtypes "cosmossdk.io/x/staking/types"
 )
 
 // StakingCancelUnbond cancels an unbonding delegation.

@@ -12,11 +12,11 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	transactionv1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/transaction/v1"
 
 	//nolint:staticcheck
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
