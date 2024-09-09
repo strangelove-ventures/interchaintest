@@ -2,6 +2,7 @@ package cosmos_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -32,7 +33,7 @@ func TestChainGordian(t *testing.T) {
 	decimals := int64(6)
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			Name:      "gordian",
+			Name:      "myproject",
 			ChainName: "cosmos",
 			Version:   "local", // spawn -> gordian, modify docker file, build
 			ChainConfig: ibc.ChainConfig{
@@ -40,7 +41,7 @@ func TestChainGordian(t *testing.T) {
 					{
 						Repository: "myproject",
 						Version:    "local",
-						UidGid:     "1000:1000",
+						UidGid:     "0:0",
 					},
 				},
 				Type:           "cosmos",
@@ -86,8 +87,10 @@ func TestChainGordian(t *testing.T) {
 		_ = ic.Close()
 	})
 
-	// users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain)
-	// user1 := users[1].FormattedAddress()
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain)
+	user1 := users[1].FormattedAddress()
+
+	fmt.Println("user1", user1)
 
 	// b2, err := chain.BankQueryBalance(ctx, user1, chain.Config().Denom)
 	// require.NoError(t, err)
