@@ -3,8 +3,8 @@ package cosmos
 import (
 	"context"
 
+	distrtypes "cosmossdk.io/x/distribution/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
 // DistributionFundCommunityPool funds the community pool with the specified amount of coins.

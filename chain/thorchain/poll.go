@@ -7,8 +7,8 @@ import (
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 // PollForMessage searches every transaction for a message. Must pass a coded registry capable of decoding the cosmos transaction.

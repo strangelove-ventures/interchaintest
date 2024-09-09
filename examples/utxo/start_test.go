@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/utxo"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/stretchr/testify/require"

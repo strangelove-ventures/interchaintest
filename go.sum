@@ -229,8 +229,6 @@ github.com/ChainSafe/go-schnorrkel v1.0.0 h1:3aDA67lAykLaG1y3AOjs88dMxC88PgUuHRr
 github.com/ChainSafe/go-schnorrkel v1.0.0/go.mod h1:dpzHYVxLZcp8pjlV+O+UR8K0Hp/z7vcchBSbMBEhCw4=
 github.com/ComposableFi/go-subkey/v2 v2.0.0-tm03420 h1:oknQF/iIhf5lVjbwjsVDzDByupRhga8nhA3NAmwyHDA=
 github.com/ComposableFi/go-subkey/v2 v2.0.0-tm03420/go.mod h1:KYkiMX5AbOlXXYfxkrYPrRPV6EbVUALTQh5ptUOJzu8=
-github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2 h1:j8J9LnhC6IikohLEYMAFX0xPQmgPez9vsj0rNQISkiE=
-github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2/go.mod h1:3sCglc35LoFUGmh4a/auoJALitaE4qw+jAqK53ak7+s=
 github.com/CosmWasm/wasmvm v1.4.0 h1:84I3MlvvzcOo2z+ed0ztPi7eeDNk6/sYuK76uyXP1nI=
 github.com/CosmWasm/wasmvm v1.4.0/go.mod h1:vW/E3h8j9xBQs9bCoijDuawKo9kCtxOaS8N8J7KFtkc=
 github.com/DataDog/datadog-go v3.2.0+incompatible h1:qSG2N4FghB1He/r2mFrWKCaL7dXCilEuNEeAn20fdD4=
@@ -393,14 +391,10 @@ github.com/cosmos/gogoproto v1.5.0 h1:SDVwzEqZDDBoslaeZg+dGE55hdzHfgUA40pEanMh52
 github.com/cosmos/gogoproto v1.5.0/go.mod h1:iUM31aofn3ymidYG6bUR5ZFrk+Om8p5s754eMUcyp8I=
 github.com/cosmos/iavl v1.1.2 h1:zL9FK7C4L/P4IF1Dm5fIwz0WXCnn7Bp1M2FxH0ayM7Y=
 github.com/cosmos/iavl v1.1.2/go.mod h1:jLeUvm6bGT1YutCaL2fIar/8vGUE8cPZvh/gXEWDaDM=
-github.com/cosmos/ibc-go/modules/capability v1.0.0 h1:r/l++byFtn7jHYa09zlAdSeevo8ci1mVZNO9+V0xsLE=
-github.com/cosmos/ibc-go/modules/capability v1.0.0/go.mod h1:D81ZxzjZAe0ZO5ambnvn1qedsFQ8lOwtqicG6liLBco=
-github.com/cosmos/ibc-go/v8 v8.3.2 h1:8X1oHHKt2Bh9hcExWS89rntLaCKZp2EjFTUSxKlPhGI=
-github.com/cosmos/ibc-go/v8 v8.3.2/go.mod h1:WVVIsG39jGrF9Cjggjci6LzySyWGloz194sjTxiGNIE=
+github.com/cosmos/ibc-go/v9 v8.3.2 h1:8X1oHHKt2Bh9hcExWS89rntLaCKZp2EjFTUSxKlPhGI=
+github.com/cosmos/ibc-go/v9 v8.3.2/go.mod h1:WVVIsG39jGrF9Cjggjci6LzySyWGloz194sjTxiGNIE=
 github.com/cosmos/ics23/go v0.10.0 h1:iXqLLgp2Lp+EdpIuwXTYIQU+AiHj9mOC2X9ab++bZDM=
 github.com/cosmos/ics23/go v0.10.0/go.mod h1:ZfJSmng/TBNTBkFemHHHj5YY7VAU/MBU980F4VU1NG0=
-github.com/cosmos/interchain-security/v5 v5.0.0-alpha1.0.20240424193412-7cd900ad2a74 h1:6atU/xizTL10q6EprP7oRuvfgUP2F6puvutnVoE+FRc=
-github.com/cosmos/interchain-security/v5 v5.0.0-alpha1.0.20240424193412-7cd900ad2a74/go.mod h1:h/RkwOppo5AJj+1pkQyfjqU1MPdpohD/S6oEeAXpGZY=
 github.com/cosmos/ledger-cosmos-go v0.13.3 h1:7ehuBGuyIytsXbd4MP43mLeoN2LTOEnk5nvue4rK+yM=
 github.com/cosmos/ledger-cosmos-go v0.13.3/go.mod h1:HENcEP+VtahZFw38HZ3+LS3Iv5XV6svsnkk9vdJtLr8=
 github.com/cpuguy83/go-md2man v1.0.10 h1:BSKMNlYxDvnunlTymqtgONjNnaRV1sTpcovwwjF22jk=

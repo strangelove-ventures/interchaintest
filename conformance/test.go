@@ -14,8 +14,8 @@
 //	import (
 //	  "testing"
 //
-//	  "github.com/strangelove-ventures/interchaintest/v8/conformance"
-//	  "github.com/strangelove-ventures/interchaintest/v8/ibc"
+//	  "github.com/strangelove-ventures/interchaintest/v9/conformance"
+//	  "github.com/strangelove-ventures/interchaintest/v9/ibc"
 //	)
 //
 //	func TestMyRelayer(t *testing.T) {
@@ -36,15 +36,15 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer"
+	"github.com/strangelove-ventures/interchaintest/v9/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )

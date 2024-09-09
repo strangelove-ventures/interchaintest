@@ -7,14 +7,13 @@ import (
 
 	"cosmossdk.io/math"
 
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	banktypes "cosmossdk.io/x/bank/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	testutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -97,8 +96,7 @@ func TestICTestMiscellaneous(t *testing.T) {
 }
 
 func wasmEncoding() *testutil.TestEncodingConfig {
-	cfg := cosmos.DefaultEncoding()
-	wasmtypes.RegisterInterfaces(cfg.InterfaceRegistry)
+	cfg := cosmos.DefaultEncoding() // TODO: change to use the default wasm encoding with cosmos.DefaultEncoding
 	return &cfg
 }
 

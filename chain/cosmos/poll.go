@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	govv1 "cosmossdk.io/x/gov/types/v1"
+	govv1beta1 "cosmossdk.io/x/gov/types/v1beta1"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 // PollForProposalStatus attempts to find a proposal with matching ID and status using gov v1.

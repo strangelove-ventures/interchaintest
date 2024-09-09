@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	tc "github.com/strangelove-ventures/interchaintest/v9/chain/thorchain"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/thorchain/common"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 func DualLp(

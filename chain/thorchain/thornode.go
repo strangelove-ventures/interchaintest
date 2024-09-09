@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	stakingtypes "cosmossdk.io/x/staking/types"
 	"github.com/avast/retry-go/v4"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/p2p"
@@ -27,7 +28,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -38,10 +38,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 type ChainNode struct {
