@@ -558,6 +558,20 @@ lumnetwork:
       uid-gid: 1025:1025
   no-host-mount: false
 
+namada:
+  name: namada
+  type: namada
+  bin: namada
+  bech32-prefix: tnam
+  denom: nam
+  gas-prices: 0.000001nam
+  gas-adjustment: 1.1
+  trusting-period: 672h
+  images:
+    - repository: ghcr.io/anoma/namada
+      uid-gid: 1000:1000
+  no-host-mount: false
+
 neutron:
   name: neutron
   type: cosmos
