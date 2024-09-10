@@ -201,7 +201,7 @@ func (n *NamadaNode) CreateContainer(ctx context.Context, hostBaseDir string) er
 
 	setConfigDir := fmt.Sprintf("NAMADA_NETWORK_CONFIGS_DIR=%s", n.HomeDir())
 
-	joinNetworkCmd := fmt.Sprintf(`%s namadac --base-dir %s utils join-network --add-persistent-peers --chain-id %s`, setConfigDir, n.HomeDir(), n.Chain.Config().ChainID)
+	joinNetworkCmd := fmt.Sprintf(`%s namadac --base-dir %s utils join-network --add-persistent-peers --chain-id %s --allow-duplicate-ip`, setConfigDir, n.HomeDir(), n.Chain.Config().ChainID)
 	if n.Validator {
 		joinNetworkCmd += " --genesis-validator " + fmt.Sprintf("validator-%d", n.Index)
 	}
@@ -234,7 +234,6 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 	rpcPort := hostPorts[0]
-	n.logger().Info(fmt.Sprintf("DEBUG: rpcPort: %s", hostPorts))
 	err = n.NewRpcClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err

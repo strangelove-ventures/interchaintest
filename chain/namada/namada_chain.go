@@ -471,6 +471,14 @@ func copyFile(src, dst string) error {
 
 func (c *NamadaChain) setValidators(baseDir string) error {
 	transactionPath := filepath.Join(baseDir, "transactions.toml")
+	destTransactionsPath := filepath.Join(baseDir, "templates", "transactions.toml")
+	transactionsFile, err := os.Create(destTransactionsPath)
+	if err != nil {
+		return err
+	}
+	defer transactionsFile.Close()
+	encoder := toml.NewEncoder(transactionsFile)
+
 	for i := 0; i < c.NumValidators; i++ {
 		alias := fmt.Sprintf("validator-%d-balance-key", i)
 		validatorAlias := fmt.Sprintf("validator-%d", i)
@@ -518,10 +526,15 @@ func (c *NamadaChain) setValidators(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("Signing genesis transactions failed: %v", err)
 		}
-	}
 
-	destPath := filepath.Join(baseDir, "templates", "transactions.toml")
-	copyFile(transactionPath, destPath)
+		var data map[string]interface{}
+		if _, err := toml.DecodeFile(transactionPath, &data); err != nil {
+			return err
+		}
+		if err := encoder.Encode(data); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
