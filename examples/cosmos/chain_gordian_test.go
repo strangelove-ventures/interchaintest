@@ -34,25 +34,26 @@ func TestChainGordian(t *testing.T) {
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name:      "myproject",
-			ChainName: "cosmos",
+			ChainName: "gordianproject",
 			Version:   "local", // spawn -> gordian, modify docker file, build
 			ChainConfig: ibc.ChainConfig{
 				Images: []ibc.DockerImage{
 					{
 						Repository: "myproject",
 						Version:    "local",
-						UidGid:     "0:0",
+						UidGid:     "1025:1025",
 					},
 				},
 				Type:           "cosmos",
 				Name:           "gordian",
 				ChainID:        "gordian-1",
-				GasPrices:      "0.025" + denomMetadata.Base,
+				GasPrices:      "0.0" + denomMetadata.Base,
 				CoinDecimals:   &decimals,
 				Bin:            "appd",
 				TrustingPeriod: "330h",
 				AdditionalStartArgs: []string{
-					"--g-http-addr", ":26657", // --grpc.address localhost:9090
+					"--g-http-addr", ":26657",
+					"--g-grpc-addr", ":9092",
 				},
 				Denom: denomMetadata.Base,
 				// ExposeAdditionalPorts: ,

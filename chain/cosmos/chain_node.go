@@ -64,6 +64,7 @@ type ChainNode struct {
 	TestName     string
 	Image        ibc.DockerImage
 	preStartNode func(*ChainNode)
+	Cache        map[string]interface{}
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -96,6 +97,7 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+		Cache:        make(map[string]interface{}),
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -817,19 +819,40 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
-	return tn.HasCommand(ctx, "genesis")
+	key := "IsAboveSDK47"
+	if tn.Cache[key] != nil {
+		return tn.Cache[key].(bool)
+	}
+
+	hasGenesisSubCmd := tn.HasCommand(ctx, "genesis")
+	tn.Cache[key] = hasGenesisSubCmd
+	return hasGenesisSubCmd
 }
 
 // IsCometBFT returns if the binary has the cometbft command is available.
 func (tn *ChainNode) IsCometBFT(ctx context.Context) bool {
+	key := "is_cometbft_consensus"
+	if tn.Cache[key] != nil {
+		return tn.Cache[key].(bool)
+	}
+
 	fmt.Println("IsCometBFT call check")
-	return tn.HasCommand(ctx, "cometbft")
+	isComet := tn.HasCommand(ctx, "cometbft")
+	tn.Cache[key] = isComet
+	return isComet
 }
 
 // IsGordian returns if the binary has the gordian command is available.
 func (tn *ChainNode) IsGordian(ctx context.Context) bool {
+	key := "is_gordian_consensus"
+	if tn.Cache[key] != nil {
+		return tn.Cache[key].(bool)
+	}
+
 	fmt.Println("IsGordian call check")
-	return tn.HasCommand(ctx, "gordian")
+	isGordian := tn.HasCommand(ctx, "gordian")
+	tn.Cache[key] = isGordian
+	return isGordian
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
