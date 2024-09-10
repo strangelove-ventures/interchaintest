@@ -53,7 +53,7 @@ func TestChainGordian(t *testing.T) {
 				TrustingPeriod: "330h",
 				AdditionalStartArgs: []string{
 					"--g-http-addr", ":26657",
-					"--g-grpc-addr", ":9092",
+					"--g-grpc-addr", ":9092", // gRPC 9090 is already used?
 				},
 				Denom: denomMetadata.Base,
 				// ExposeAdditionalPorts: ,
@@ -88,10 +88,10 @@ func TestChainGordian(t *testing.T) {
 		_ = ic.Close()
 	})
 
+	// TODO: gordian does not yet accept standard tx commands, it requires a manual broadcast of a generate only. Need to submit the raw bytes properly
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", genesisAmt, chain, chain)
 	user1 := users[1].FormattedAddress()
-
-	fmt.Println("user1", user1)
+	fmt.Println("user1", user1, "yuh")
 
 	// b2, err := chain.BankQueryBalance(ctx, user1, chain.Config().Denom)
 	// require.NoError(t, err)

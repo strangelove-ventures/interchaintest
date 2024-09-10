@@ -434,18 +434,16 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
-
-	type GordianBlockWatermark struct {
-		VotingHeight     int64 `json:"VotingHeight"`
-		VotingRound      int64 `json:"VotingRound"`
-		CommittingHeight int64 `json:"CommittingHeight"`
-		CommittingRound  int64 `json:"CommittingRound"`
+	type GordianCurrentBlockResponse struct {
+		VotingHeight     *uint64 `protobuf:"varint,1,opt,name=voting_height,json=votingHeight,proto3,oneof" json:"voting_height,omitempty"`
+		VotingRound      *uint32 `protobuf:"varint,2,opt,name=voting_round,json=votingRound,proto3,oneof" json:"voting_round,omitempty"`
+		CommittingHeight *uint64 `protobuf:"varint,3,opt,name=committing_height,json=committingHeight,proto3,oneof" json:"committing_height,omitempty"`
+		CommittingRound  *uint32 `protobuf:"varint,4,opt,name=committing_round,json=committingRound,proto3,oneof" json:"committing_round,omitempty"`
 	}
 
 	// TODO: cleanup / cache this on first call. gRPC here instead of HTTP.
 
 	if tn.IsCometBFT(ctx) {
-		fmt.Println("Height CometBFT chain consensus")
 		res, err := tn.Client.Status(ctx)
 		if err != nil {
 			return 0, fmt.Errorf("tendermint rpc client status: %w", err)
@@ -455,9 +453,6 @@ func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 	}
 
 	if tn.IsGordian(ctx) {
-		fmt.Println("Height Gordian chain consensus")
-		// http query http://127.0.0.1:26657/blocks/watermark and save to GordianBlockWatermark
-
 		ports, err := tn.containerLifecycle.GetHostPorts(ctx, rpcPort)
 		if err != nil {
 			return 0, fmt.Errorf("getting host ports: %w", err)
@@ -486,14 +481,13 @@ func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 		}
 		defer resp.Body.Close()
 
-		var watermark GordianBlockWatermark
+		var watermark GordianCurrentBlockResponse
 		if err := json.NewDecoder(resp.Body).Decode(&watermark); err != nil {
 			log.Print(err)
 			os.Exit(1)
 		}
-		fmt.Println("watermark VotingHeight: ", watermark.VotingHeight)
 
-		return watermark.VotingHeight, nil
+		return int64(*watermark.VotingHeight), nil
 	}
 
 	return 0, fmt.Errorf("unsupported chain consensus")
@@ -621,6 +615,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("ExecTx-stdout", string(stdout))
 	output := CosmosTx{}
 	err = json.Unmarshal([]byte(stdout), &output)
 	if err != nil {
@@ -836,9 +831,9 @@ func (tn *ChainNode) IsCometBFT(ctx context.Context) bool {
 		return tn.Cache[key].(bool)
 	}
 
-	fmt.Println("IsCometBFT call check")
 	isComet := tn.HasCommand(ctx, "cometbft")
 	tn.Cache[key] = isComet
+	fmt.Println("IsCometBFT call check", isComet)
 	return isComet
 }
 
@@ -849,9 +844,9 @@ func (tn *ChainNode) IsGordian(ctx context.Context) bool {
 		return tn.Cache[key].(bool)
 	}
 
-	fmt.Println("IsGordian call check")
 	isGordian := tn.HasCommand(ctx, "gordian")
 	tn.Cache[key] = isGordian
+	fmt.Println("IsGordian call check", isGordian)
 	return isGordian
 }
 
