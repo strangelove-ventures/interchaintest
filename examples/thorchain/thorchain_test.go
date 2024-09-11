@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 
@@ -138,6 +139,10 @@ func TestThorchainMsgSend(t *testing.T) {
 	}
 	t.Parallel()
 
+	os.Setenv("ICTEST_SKIP_FAILURE_CLEANUP", "true")
+	interchaintest.KeepDockerVolumesOnFailure(true)
+	//testDir := interchaintest.TempDir(t)
+
 	ctx := context.Background()
 	client, network := interchaintest.DockerSetup(t)
 
@@ -174,7 +179,7 @@ func TestThorchainMsgSend(t *testing.T) {
 	}
 
 	// No error verifies that the route is enabled for a normal bank send
-	err = thorchain.CosmosBankSend(ctx, thorUsr1.KeyName(), amount)
+	err = thorchain.CosmosBankSendWithNote(ctx, thorUsr1.KeyName(), amount, "THOR MSGSEND TEST")
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 1, thorchain)
