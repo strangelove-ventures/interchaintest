@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,9 +38,8 @@ type NamadaNode struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	// Ports set during StartContainer.
-	hostRPCPort string
-	hostAPIPort string
 	hostP2PPort string
+	hostRPCPort string
 }
 
 // Collection of NamadaNode
@@ -221,7 +221,8 @@ func (n *NamadaNode) CreateContainer(ctx context.Context, hostBaseDir string) er
 		nat.Port(rpcPort): {},
 	}
 
-	return n.containerLifecycle.CreateContainer(ctx, n.TestName, n.NetworkID, n.Image, exposedPorts, n.Bind(), nil, n.HostName(), cmd, n.Chain.Config().Env, []string{})
+	ipAddr := strings.Split(n.netAddress(), ":")[0]
+	return n.containerLifecycle.CreateContainer(ctx, n.TestName, n.NetworkID, n.Image, exposedPorts, ipAddr, n.Bind(), nil, n.HostName(), cmd, n.Chain.Config().Env, []string{})
 }
 
 func (n *NamadaNode) StartContainer(ctx context.Context) error {
@@ -229,15 +230,17 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	hostPorts, err := n.containerLifecycle.GetHostPorts(ctx, rpcPort)
+	hostPorts, err := n.containerLifecycle.GetHostPorts(ctx, p2pPort, rpcPort)
 	if err != nil {
 		return err
 	}
-	rpcPort := hostPorts[0]
+	rpcPort := hostPorts[1]
 	err = n.NewRpcClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err
 	}
+
+	n.hostP2PPort, n.hostRPCPort = hostPorts[0], hostPorts[1]
 
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
@@ -272,10 +275,12 @@ func (n *NamadaNode) CheckMaspFiles(ctx context.Context) error {
 	return nil
 }
 
-func netAddress() string {
-	return "127.0.0.1:26656"
-}
-
-func (n *NamadaNode) netConfigDir() string {
-	return filepath.Join(n.HomeDir(), "network-config")
+func (n *NamadaNode) netAddress() string {
+  var index int
+  if n.Validator {
+    index = n.Index + 2
+  } else {
+    index = n.Index + 128
+  }
+	return fmt.Sprintf("172.18.0.%d:%s", index, strings.Split(p2pPort, "/")[0])
 }

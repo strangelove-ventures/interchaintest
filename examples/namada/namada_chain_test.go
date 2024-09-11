@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -21,7 +22,7 @@ func TestNamadaNetwork(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	nv := 1
-	fn := 0
+	fn := 1
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
@@ -58,4 +59,16 @@ func TestNamadaNetwork(t *testing.T) {
 			panic(err)
 		}
 	})
+
+	faucetBalInitial, err := chain.GetBalance(ctx, "faucet", "nam")
+	require.NoError(t, err)
+	require.True(t, faucetBalInitial.Equal(math.NewInt(100000000)))
+
+	initBalance := math.NewInt(1_000_000)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
+	require.Equal(t, 1, len(users))
+
+	userBalInitial, err := chain.GetBalance(ctx, "user", "nam")
+	require.NoError(t, err)
+	require.True(t, userBalInitial.Equal(initBalance))
 }

@@ -107,7 +107,7 @@ func (s *SidecarProcess) logger() *zap.Logger {
 }
 
 func (s *SidecarProcess) CreateContainer(ctx context.Context) error {
-	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, s.Bind(), nil, s.HostName(), s.startCmd, s.env, []string{})
+	return s.containerLifecycle.CreateContainer(ctx, s.TestName, s.NetworkID, s.Image, s.ports, "", s.Bind(), nil, s.HostName(), s.startCmd, s.env, []string{})
 }
 
 func (s *SidecarProcess) StartContainer(ctx context.Context) error {

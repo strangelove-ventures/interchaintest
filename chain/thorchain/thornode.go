@@ -1439,7 +1439,7 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 		env = append(env, fmt.Sprintf("SIGNER_SEED_PHRASE=%s", tn.ValidatorMnemonic))
 	}
 
-	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, env, []string{})
+	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, "", tn.Bind(), nil, tn.HostName(), cmd, env, []string{})
 }
 
 func (tn *ChainNode) StartContainer(ctx context.Context) error {

@@ -46,6 +46,7 @@ func (c *ContainerLifecycle) CreateContainer(
 	networkID string,
 	image ibc.DockerImage,
 	ports nat.PortMap,
+	ipAddr string,
 	volumeBinds []string,
 	mounts []mount.Mount,
 	hostName string,
@@ -77,6 +78,17 @@ func (c *ContainerLifecycle) CreateContainer(
 
 	c.preStartListeners = listeners
 
+	var endpointSettings network.EndpointSettings
+	if ipAddr == "" {
+		endpointSettings = network.EndpointSettings{}
+	} else {
+		endpointSettings = network.EndpointSettings{
+			IPAMConfig: &network.EndpointIPAMConfig{
+				IPv4Address: ipAddr,
+			},
+		}
+	}
+
 	cc, err := c.client.ContainerCreate(
 		ctx,
 		&container.Config{
@@ -102,7 +114,7 @@ func (c *ContainerLifecycle) CreateContainer(
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
-				networkID: {},
+				networkID: &endpointSettings,
 			},
 		},
 		nil,

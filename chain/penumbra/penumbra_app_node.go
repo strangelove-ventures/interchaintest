@@ -355,7 +355,7 @@ func (p *PenumbraAppNode) CreateNodeContainer(ctx context.Context, tendermintAdd
 		"--home", p.HomeDir(),
 	}
 
-	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env, []string{})
+	return p.containerLifecycle.CreateContainer(ctx, p.TestName, p.NetworkID, p.Image, exposedPorts, "", p.Bind(), nil, p.HostName(), cmd, p.Chain.Config().Env, []string{})
 }
 
 // StopContainer stops the running container for the PenumbraAppNode.

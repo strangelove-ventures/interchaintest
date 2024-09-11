@@ -32,7 +32,8 @@ type NamadaChain struct {
 	Validators    NamadaNodes
 	FullNodes     NamadaNodes
 
-	baseDir string
+	baseDir   string
+	isRunning bool
 
 	mutex sync.Mutex
 }
@@ -99,6 +100,7 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 
 	fmt.Println("Temporary base directory:", tempBaseDir)
 	c.baseDir = tempBaseDir
+	c.isRunning = false
 
 	return nil
 }
@@ -179,6 +181,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	if err := testutil.WaitForBlocks(ctx, 2, c.Validators[0]); err != nil {
 		return err
 	}
+	c.isRunning = true
 
 	return nil
 }
@@ -195,7 +198,7 @@ func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, er
 
 // RPC address
 func (c *NamadaChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:27657", c.Validators[0].HostName())
+	return fmt.Sprintf("http://%s:26657", c.Validators[0].HostName())
 }
 
 // gRPC address
@@ -225,16 +228,18 @@ func (c *NamadaChain) HomeDir() string {
 
 // Create a test key
 func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
-	cmd := exec.Command(
-		"namadaw",
+	args := []string{
 		"--base-dir",
 		c.HomeDir(),
-		"--pre-genesis",
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
-	)
+	}
+	if !c.isRunning {
+		args = append(args, "--pre-genesis")
+	}
+	cmd := exec.Command("namadaw", args...)
 	_, err := cmd.CombinedOutput()
 
 	return err
@@ -249,7 +254,6 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 		"namadaw",
 		"--base-dir",
 		c.HomeDir(),
-		"--pre-genesis",
 		"derive",
 		"--alias",
 		keyName,
@@ -262,16 +266,17 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 
 // Get the Namada address
 func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	cmd := exec.Command(
-		"namadaw",
+	args := []string{
 		"--base-dir",
 		c.HomeDir(),
-		"--pre-genesis",
 		"find",
 		"--alias",
 		keyName,
-	)
-
+	}
+	if !c.isRunning {
+		args = append(args, "--pre-genesis")
+	}
+	cmd := exec.Command("namadaw", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("Getting an address failed with name %q: %w", keyName, err)
@@ -289,7 +294,25 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 
 // Send funds to a wallet from a user account
 func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	panic("implement me")
+	args := []string{
+		"--base-dir",
+		c.HomeDir(),
+		"transparent-transfer",
+		"--source",
+		keyName,
+		"--target",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--node",
+		c.GetRPCAddress(),
+	}
+	cmd := exec.Command("namadac", args...)
+	_, err := cmd.CombinedOutput()
+
+	return err
 }
 
 // Send funds to a wallet from a user account with a memo
@@ -304,12 +327,48 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 
 // Current block height
 func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
-	panic("implement me")
+	return c.Validators[0].Height(ctx)
 }
 
 // Get the balance
 func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
-	panic("implement me")
+	args := []string{
+		"--base-dir",
+		c.HomeDir(),
+		"balance",
+		"--token",
+		denom,
+		"--owner",
+		address,
+		"--node",
+		c.GetRPCAddress(),
+	}
+	cmd := exec.Command("namadac", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return math.NewInt(0), fmt.Errorf("GetBalance failed: error %s, output %s", err, output)
+	}
+	outputStr := string(output)
+	lines := strings.Split(outputStr, "\n")
+	re := regexp.MustCompile(`:\s*(\d+)$`)
+
+	var ret math.Int
+	for _, line := range lines {
+		if strings.Contains(line, "Last committed masp epoch") {
+			continue
+		}
+
+		matches := re.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			amount, ok := math.NewIntFromString(matches[1])
+			if !ok {
+				return math.NewInt(0), fmt.Errorf("Parsing the amount failed: %s", outputStr)
+			}
+			ret = amount
+		}
+	}
+
+	return ret, err
 }
 
 // Get the gas fees
@@ -350,16 +409,18 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 // Namada wallet for a relayer
 func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	// Execute the command here to get the mnemonic
-	cmd := exec.Command(
-		"namadaw",
+	args := []string{
 		"--base-dir",
 		c.HomeDir(),
-		"--pre-genesis",
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
-	)
+	}
+	if !c.isRunning {
+		args = append(args, "--pre-genesis")
+	}
+	cmd := exec.Command("namadaw", args...)
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	re := regexp.MustCompile(`[a-z]+(?:\s+[a-z]+){23}`)
@@ -494,7 +555,7 @@ func (c *NamadaChain) setValidators(baseDir string) error {
 		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "init-genesis-established-account", "--aliases", alias, "--path", transactionPath)
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("Initializing an validator account failed: %v", err)
+			return fmt.Errorf("Initializing a validator account failed: %v", err)
 		}
 		outputStr := string(output)
 		// Trim ANSI escape sequence
@@ -515,10 +576,10 @@ func (c *NamadaChain) setValidators(baseDir string) error {
 		}
 
 		// Initialize a genesis validator
-		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "init-genesis-validator", "--alias", validatorAlias, "--address", validatorAddress, "--path", transactionPath, "--net-address", netAddress(), "--commission-rate", "0.05", "--max-commission-rate-change", "0.01", "--email", "null@null.net", "--self-bond-amount", "100000", "--unsafe-dont-encrypt")
+		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "init-genesis-validator", "--alias", validatorAlias, "--address", validatorAddress, "--path", transactionPath, "--net-address", c.Validators[i].netAddress(), "--commission-rate", "0.05", "--max-commission-rate-change", "0.01", "--email", "null@null.net", "--self-bond-amount", "100000", "--unsafe-dont-encrypt")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("Initializing a genesis validator failed: %v", err)
+			return fmt.Errorf("Initializing a genesis validator failed: %v, %s", err, output)
 		}
 
 		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "sign-genesis-txs", "--alias", validatorAlias, "--path", transactionPath, "--output", transactionPath)

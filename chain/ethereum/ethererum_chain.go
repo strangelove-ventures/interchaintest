@@ -159,7 +159,7 @@ func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.M
 		c.log.Info("Port overrides", fields...)
 	}
 
-	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.networkID, c.cfg.Images[0], usingPorts, c.Bind(), mount, c.HostName(), cmd, nil, []string{})
+	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.networkID, c.cfg.Images[0], usingPorts, "", c.Bind(), mount, c.HostName(), cmd, nil, []string{})
 	if err != nil {
 		return err
 	}

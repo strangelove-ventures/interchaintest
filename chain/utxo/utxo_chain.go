@@ -234,7 +234,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	}
 
 	err := c.containerLifecycle.CreateContainer(ctx, c.testName, c.NetworkID, c.cfg.Images[0],
-		usingPorts, c.Bind(), []mount.Mount{}, c.HostName(), cmd, env, entrypoint)
+		usingPorts, "", c.Bind(), []mount.Mount{}, c.HostName(), cmd, env, entrypoint)
 	if err != nil {
 		return err
 	}
