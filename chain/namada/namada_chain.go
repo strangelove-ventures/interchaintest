@@ -107,7 +107,7 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 
 // Start to set up
 func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	baseDir := c.HomeDir()
+	baseDir := c.baseDir
 	c.copyTemplates(baseDir)
 	c.copyWasms(baseDir)
 
@@ -181,6 +181,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	if err := testutil.WaitForBlocks(ctx, 2, c.Validators[0]); err != nil {
 		return err
 	}
+
 	c.isRunning = true
 
 	return nil
@@ -188,7 +189,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 
 // Execut a command
 func (c *NamadaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.Validators[0].Exec(ctx, cmd, env)
+	return c.FullNodes[0].Exec(ctx, cmd, env)
 }
 
 // / Exports the chain state at the specific height
@@ -221,33 +222,35 @@ func (c *NamadaChain) GetHostGRPCAddress() string {
 	panic("No gRPC address for Namada")
 }
 
-// Home directory
+// Node's home directory
 func (c *NamadaChain) HomeDir() string {
-	return c.baseDir
+	return c.FullNodes[0].HomeDir()
 }
 
 // Create a test key
 func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
+	var err error
 	args := []string{
-		"--base-dir",
-		c.HomeDir(),
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
 	}
-	if !c.isRunning {
-		args = append(args, "--pre-genesis")
+	if c.isRunning {
+		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
+	} else {
+		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		cmd := exec.Command("namadaw", args...)
+		_, err = cmd.CombinedOutput()
 	}
-	cmd := exec.Command("namadaw", args...)
-	_, err := cmd.CombinedOutput()
 
 	return err
 }
 
 // Recovery a test key
 func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	cmd := exec.Command(
+	cmd := []string{
 		"echo",
 		mnemonic,
 		"|",
@@ -258,26 +261,29 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
-	)
-	_, err := cmd.CombinedOutput()
+	}
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 
 	return err
 }
 
 // Get the Namada address
 func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	var output []byte
+	var err error
 	args := []string{
-		"--base-dir",
-		c.HomeDir(),
 		"find",
 		"--alias",
 		keyName,
 	}
-	if !c.isRunning {
-		args = append(args, "--pre-genesis")
+	if c.isRunning {
+		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
+	} else {
+		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		cmd := exec.Command("namadaw", args...)
+		output, err = cmd.CombinedOutput()
 	}
-	cmd := exec.Command("namadaw", args...)
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("Getting an address failed with name %q: %w", keyName, err)
 	}
@@ -294,7 +300,8 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 
 // Send funds to a wallet from a user account
 func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	args := []string{
+	cmd := []string{
+		"namadac",
 		"--base-dir",
 		c.HomeDir(),
 		"transparent-transfer",
@@ -309,15 +316,34 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 		"--node",
 		c.GetRPCAddress(),
 	}
-	cmd := exec.Command("namadac", args...)
-	_, err := cmd.CombinedOutput()
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 
 	return err
 }
 
 // Send funds to a wallet from a user account with a memo
 func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	panic("implement me")
+	cmd := []string{
+		"namadac",
+		"--base-dir",
+		c.HomeDir(),
+		"transparent-transfer",
+		"--source",
+		keyName,
+		"--target",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--memo",
+		note,
+		"--node",
+		c.GetRPCAddress(),
+	}
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+
+	return note, err
 }
 
 // Send on IBC transfer
@@ -332,7 +358,8 @@ func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
 
 // Get the balance
 func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
-	args := []string{
+	cmd := []string{
+		"namadac",
 		"--base-dir",
 		c.HomeDir(),
 		"balance",
@@ -343,8 +370,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 		"--node",
 		c.GetRPCAddress(),
 	}
-	cmd := exec.Command("namadac", args...)
-	output, err := cmd.CombinedOutput()
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
 		return math.NewInt(0), fmt.Errorf("GetBalance failed: error %s, output %s", err, output)
 	}
@@ -386,42 +412,46 @@ func (c *NamadaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketT
 	panic("implement me")
 }
 
-// Namada wallet for pre-genesis
+// Namada wallet
 func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
 			return nil, fmt.Errorf("failed to recover key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
 		}
-	} else {
-		if err := c.CreateKey(ctx, keyName); err != nil {
-			return nil, fmt.Errorf("failed to generate a key with name %q on chain %s: %w", keyName, c.cfg.Name, err)
+
+		addrBytes, err := c.GetAddress(ctx, keyName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
 		}
-	}
 
-	addrBytes, err := c.GetAddress(ctx, keyName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
+		return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	} else {
+		return c.createKeyAndMnemonic(ctx, keyName)
 	}
-
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
 // Namada wallet for a relayer
 func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	// Execute the command here to get the mnemonic
+	return c.createKeyAndMnemonic(ctx, keyName)
+}
+
+func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) (ibc.Wallet, error) {
+	var output []byte
+	var err error
 	args := []string{
-		"--base-dir",
-		c.HomeDir(),
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
 	}
-	if !c.isRunning {
-		args = append(args, "--pre-genesis")
+	if c.isRunning {
+		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
+	} else {
+		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		cmd := exec.Command("namadaw", args...)
+		output, err = cmd.CombinedOutput()
 	}
-	cmd := exec.Command("namadaw", args...)
-	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	re := regexp.MustCompile(`[a-z]+(?:\s+[a-z]+){23}`)
 	mnemonic := re.FindString(outputStr)

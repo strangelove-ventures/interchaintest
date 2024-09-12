@@ -174,26 +174,22 @@ func (n *NamadaNode) Height(ctx context.Context) (int64, error) {
 
 func (n *NamadaNode) CreateContainer(ctx context.Context, hostBaseDir string) error {
 	archiveFile := fmt.Sprintf("%s.tar.gz", n.Chain.Config().ChainID)
-	archivePath := filepath.Join(hostBaseDir, archiveFile)
-	archive, err := os.ReadFile(archivePath)
+	err := n.copyFile(ctx, archiveFile, hostBaseDir, ".")
 	if err != nil {
 		return err
 	}
-	fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
-	err = fw.WriteFile(ctx, n.VolumeName, archiveFile, archive)
+
+	srcDir := filepath.Join(hostBaseDir, "pre-genesis")
+	err = n.copyFile(ctx, "wallet.toml", srcDir, ".")
 	if err != nil {
 		return err
 	}
 
 	if n.Validator {
 		validatorAlias := fmt.Sprintf("validator-%d", n.Index)
-		relPath := filepath.Join("pre-genesis", validatorAlias, "validator-wallet.toml")
-		validatorWalletPath := filepath.Join(hostBaseDir, relPath)
-		wallet, err := os.ReadFile(validatorWalletPath)
-		if err != nil {
-			return err
-		}
-		err = fw.WriteFile(ctx, n.VolumeName, relPath, wallet)
+		destDir := filepath.Join("pre-genesis", validatorAlias)
+		validatorWalletPath := filepath.Join(hostBaseDir, destDir)
+		err = n.copyFile(ctx, "validator-wallet.toml", validatorWalletPath, destDir)
 		if err != nil {
 			return err
 		}
@@ -208,12 +204,17 @@ func (n *NamadaNode) CreateContainer(ctx context.Context, hostBaseDir string) er
 
 	updateCmd := fmt.Sprintf(`sed -i s/127.0.0.1:26657/0.0.0.0:26657/g %s/%s/config.toml`, n.HomeDir(), n.Chain.Config().ChainID)
 
+	mvCmd := "echo 'starting a validator node'"
+	if !n.Validator {
+		mvCmd = fmt.Sprintf(`mv %s/wallet.toml %s/%s`, n.HomeDir(), n.HomeDir(), n.Chain.Config().ChainID)
+	}
+
 	ledgerCmd := fmt.Sprintf(`namadan --base-dir %s ledger`, n.HomeDir())
 
 	cmd := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`%s && %s && %s`, joinNetworkCmd, updateCmd, ledgerCmd),
+		fmt.Sprintf(`%s && %s && %s && %s`, joinNetworkCmd, updateCmd, mvCmd, ledgerCmd),
 	}
 
 	exposedPorts := nat.PortMap{
@@ -276,11 +277,22 @@ func (n *NamadaNode) CheckMaspFiles(ctx context.Context) error {
 }
 
 func (n *NamadaNode) netAddress() string {
-  var index int
-  if n.Validator {
-    index = n.Index + 2
-  } else {
-    index = n.Index + 128
-  }
+	var index int
+	if n.Validator {
+		index = n.Index + 2
+	} else {
+		index = n.Index + 128
+	}
 	return fmt.Sprintf("172.18.0.%d:%s", index, strings.Split(p2pPort, "/")[0])
+}
+
+func (n *NamadaNode) copyFile(ctx context.Context, fileName, srcDir, destDir string) error {
+	path := filepath.Join(srcDir, fileName)
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
+	destPath := filepath.Join(destDir, fileName)
+	return fw.WriteFile(ctx, n.VolumeName, destPath, file)
 }

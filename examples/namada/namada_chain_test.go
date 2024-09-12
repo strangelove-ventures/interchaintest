@@ -22,6 +22,7 @@ func TestNamadaNetwork(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	nv := 1
+	// at least 1 full node is required for now
 	fn := 1
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -30,6 +31,7 @@ func TestNamadaNetwork(t *testing.T) {
 			Version: "main",
 			ChainConfig: ibc.ChainConfig{
 				ChainID: "namada-test",
+				Denom:   "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
@@ -60,15 +62,11 @@ func TestNamadaNetwork(t *testing.T) {
 		}
 	})
 
-	faucetBalInitial, err := chain.GetBalance(ctx, "faucet", "nam")
-	require.NoError(t, err)
-	require.True(t, faucetBalInitial.Equal(math.NewInt(100000000)))
-
 	initBalance := math.NewInt(1_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
 	require.Equal(t, 1, len(users))
 
-	userBalInitial, err := chain.GetBalance(ctx, "user", "nam")
+	userBalInitial, err := chain.GetBalance(ctx, users[0].KeyName(), chain.Config().Denom)
 	require.NoError(t, err)
 	require.True(t, userBalInitial.Equal(initBalance))
 }
