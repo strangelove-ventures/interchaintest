@@ -6,16 +6,21 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
 
-version: 1
+version: 2
 
 before:
   hooks:
+    - cd local-interchain
     - go mod tidy
-    - go generate ./...
 
 builds:
-  - env:
+  - id: "local-ic"
+    main: "./local-interchain/cmd/local-ic"
+    binary: "local-ic"
+    env:
       - CGO_ENABLED=0
+    ldflags:
+      - -X main.Version=$(VERSION)
     goos:
       - linux
       - windows
