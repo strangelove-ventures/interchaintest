@@ -279,9 +279,9 @@ func (n *NamadaNode) CheckMaspFiles(ctx context.Context) error {
 func (n *NamadaNode) netAddress() string {
 	var index int
 	if n.Validator {
-		index = n.Index + 2
-	} else {
 		index = n.Index + 128
+	} else {
+		index = n.Index + 192
 	}
 	return fmt.Sprintf("172.18.0.%d:%s", index, strings.Split(p2pPort, "/")[0])
 }

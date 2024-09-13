@@ -2,17 +2,23 @@ package namada_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
+// Need to set the Namada directory before running this test
+// `export ENV_NAMADA_REPO=/path/to/namada`
 func TestNamadaNetwork(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -26,6 +32,9 @@ func TestNamadaNetwork(t *testing.T) {
 	fn := 1
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
+		{Name: "gaia", Version: "v19.2.0", ChainConfig: ibc.ChainConfig{
+			GasPrices: "1uatom",
+		}},
 		{
 			Name:    "namada",
 			Version: "main",
@@ -39,20 +48,45 @@ func TestNamadaNetwork(t *testing.T) {
 	},
 	).Chains(t.Name())
 	require.NoError(t, err, "failed to get namada chain")
-	require.Len(t, chains, 1)
-	chain := chains[0].(*namada.NamadaChain)
+	gaia, namada := chains[0], chains[1]
 
+	// Relayer Factory
+	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t),
+		relayer.CustomDockerImage(
+			"ghcr.io/heliaxdev/hermes",
+			"v1.10.3-namada-beta16-rc@sha256:9ebecd51fb9aecefee840b264a4eb2eccd58f64bfdf2f0a5fe2b6613c947b422",
+			"2000:2000",
+		)).
+		Build(t, client, network)
+
+	// Prep Interchain
+	const ibcPath = "gaia-namada-demo"
 	ic := interchaintest.NewInterchain().
-		AddChain(chain)
+		AddChain(gaia).
+		AddChain(namada).
+		AddRelayer(r, "relayer").
+		AddLink(interchaintest.InterchainLink{
+			Chain1:  gaia,
+			Chain2:  namada,
+			Relayer: r,
+			Path:    ibcPath,
+		})
+
+	// Log location
+	f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
+	require.NoError(t, err)
+	// Reporter/logs
+	rep := testreporter.NewReporter(f)
+	eRep := rep.RelayerExecReporter(t)
 
 	ctx := context.Background()
-	rep := testreporter.NewNopReporter()
 
-	require.NoError(t, ic.Build(ctx, rep.RelayerExecReporter(t), interchaintest.InterchainBuildOptions{
+	// Build interchain
+	require.NoError(t, ic.Build(ctx, eRep, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),
 		Client:           client,
 		NetworkID:        network,
-		SkipPathCreation: true,
+		SkipPathCreation: false,
 	}))
 
 	t.Cleanup(func() {
@@ -63,10 +97,50 @@ func TestNamadaNetwork(t *testing.T) {
 	})
 
 	initBalance := math.NewInt(1_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain)
-	require.Equal(t, 1, len(users))
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, gaia, namada)
+	gaiaUser := users[0]
+	namadaUser := users[1]
 
-	userBalInitial, err := chain.GetBalance(ctx, users[0].KeyName(), chain.Config().Denom)
+	gaiaUserBalInitial, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, userBalInitial.Equal(initBalance))
+	require.True(t, gaiaUserBalInitial.Equal(initBalance))
+
+	namadaUserBalInitial, err := namada.GetBalance(ctx, namadaUser.KeyName(), namada.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, namadaUserBalInitial.Equal(initBalance))
+
+	// Get Channel ID
+	gaiaChannelInfo, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
+	require.NoError(t, err)
+	gaiaChannelID := gaiaChannelInfo[0].ChannelID
+	namadaChannelInfo, err := r.GetChannels(ctx, eRep, namada.Config().ChainID)
+	require.NoError(t, err)
+	namadaChannelID := namadaChannelInfo[0].ChannelID
+
+	// Send Transaction
+	amountToSend := math.NewInt(1)
+	dstAddress := namadaUser.FormattedAddress()
+	transfer := ibc.WalletAmount{
+		Address: dstAddress,
+		Denom:   gaia.Config().Denom,
+		Amount:  amountToSend,
+	}
+	tx, err := gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())
+
+	// relay MsgRecvPacket to namada, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
+
+	// test source wallet has decreased funds
+	expectedBal := gaiaUserBalInitial.Sub(amountToSend).Sub(math.NewInt(tx.GasSpent))
+	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaUserBalNew.Equal(expectedBal))
+
+	// Test destination wallet has increased funds
+	dstIbcTrace := transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
+	namadaUserBalNew, err := namada.GetBalance(ctx, namadaUser.FormattedAddress(), dstIbcTrace)
+	require.NoError(t, err)
+	require.True(t, namadaUserBalNew.Equal(amountToSend))
 }

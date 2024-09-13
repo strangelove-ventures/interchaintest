@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
@@ -610,7 +613,7 @@ func (ic *Interchain) generateRelayerWallets(ctx context.Context) error {
 	for r, chains := range relayerChains {
 		for _, c := range chains {
 			// Just an ephemeral unique name, only for the local use of the keyring.
-			accountName := ic.relayers[r] + "-" + ic.chains[c]
+			accountName := ic.chains[c]
 			newWallet, err := c.BuildRelayerWallet(ctx, accountName)
 			if err != nil {
 				return err
@@ -642,6 +645,19 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 				rpcAddr, grpcAddr,
 			); err != nil {
 				return fmt.Errorf("failed to configure relayer %s for chain %s: %w", ic.relayers[r], chainName, err)
+			}
+
+			if c.Config().Type == "namada" {
+				// Copy Namada wallet to the relayer container
+				walletPath := filepath.Join(c.HomeDir(), "pre-genesis", "wallet.toml")
+				wallet, err := os.ReadFile(walletPath)
+				if err != nil {
+					return err
+				}
+				relativeWalletFilePath := fmt.Sprintf("%s/wallet.toml", c.Config().ChainID)
+				if err := r.(*hermes.Relayer).WriteFileToHomeDir(ctx, relativeWalletFilePath, wallet); err != nil {
+					return fmt.Errorf("failed to copy Namada wallet file: %w", err)
+				}
 			}
 
 			if err := r.RestoreKey(ctx,

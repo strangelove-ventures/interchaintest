@@ -564,9 +564,9 @@ namada:
   bin: namada
   bech32-prefix: tnam
   denom: nam
-  gas-prices: 0.000001nam
+  gas-prices: 0.000001tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e
   gas-adjustment: 1.1
-  trusting-period: 672h
+  trusting-period: 2000s
   images:
     - repository: ghcr.io/anoma/namada
       uid-gid: 1000:1000

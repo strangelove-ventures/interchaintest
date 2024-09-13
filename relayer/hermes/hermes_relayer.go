@@ -276,12 +276,19 @@ func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter,
 // to copy the contents of the mnemonic into a file on disk and then reference the newly created file.
 func (r *Relayer) RestoreKey(ctx context.Context, rep ibc.RelayerExecReporter, cfg ibc.ChainConfig, keyName, mnemonic string) error {
 	chainID := cfg.ChainID
-	relativeMnemonicFilePath := fmt.Sprintf("%s/mnemonic.txt", chainID)
-	if err := r.WriteFileToHomeDir(ctx, relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
-		return fmt.Errorf("failed to write mnemonic file: %w", err)
-	}
+	var cmd []string
+	switch cfg.Type {
+	case "namada":
+		relativeWalletFilePath := fmt.Sprintf("%s/wallet.toml", chainID)
+		cmd = []string{hermes, "keys", "add", "--chain", chainID, "--key-file", fmt.Sprintf("%s/%s", r.HomeDir(), relativeWalletFilePath), "--key-name", keyName}
+	default:
+		relativeMnemonicFilePath := fmt.Sprintf("%s/mnemonic.txt", chainID)
+		if err := r.WriteFileToHomeDir(ctx, relativeMnemonicFilePath, []byte(mnemonic)); err != nil {
+			return fmt.Errorf("failed to write mnemonic file: %w", err)
+		}
 
-	cmd := []string{hermes, "keys", "add", "--chain", chainID, "--mnemonic-file", fmt.Sprintf("%s/%s", r.HomeDir(), relativeMnemonicFilePath), "--key-name", keyName}
+		cmd = []string{hermes, "keys", "add", "--chain", chainID, "--mnemonic-file", fmt.Sprintf("%s/%s", r.HomeDir(), relativeMnemonicFilePath), "--key-name", keyName}
+	}
 
 	// Restoring a key should be near-instantaneous, so add a 1-minute timeout
 	// to detect if Docker has hung.

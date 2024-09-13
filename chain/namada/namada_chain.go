@@ -2,7 +2,6 @@ package namada
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -107,7 +106,7 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 
 // Start to set up
 func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	baseDir := c.baseDir
+	baseDir := c.HomeDir()
 	c.copyTemplates(baseDir)
 	c.copyWasms(baseDir)
 
@@ -199,22 +198,23 @@ func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, er
 
 // RPC address
 func (c *NamadaChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.Validators[0].HostName())
+	return fmt.Sprintf("http://%s:26657", c.FullNodes[0].HostName())
 }
 
 // gRPC address
 func (c *NamadaChain) GetGRPCAddress() string {
-	panic("No gRPC address for Namada")
+	// Returns a dummy address because Namada doesn't support gRPC
+	return fmt.Sprintf("http://%s:9090", c.FullNodes[0].HostName())
 }
 
 // Host RPC
 func (c *NamadaChain) GetHostRPCAddress() string {
-	return "http://" + c.Validators[0].hostRPCPort
+	return "http://" + c.FullNodes[0].hostRPCPort
 }
 
 // Host peer address
 func (c *NamadaChain) GetHostPeerAddress() string {
-	return c.Validators[0].hostP2PPort
+	return c.FullNodes[0].hostP2PPort
 }
 
 // Host gRPC address
@@ -222,8 +222,12 @@ func (c *NamadaChain) GetHostGRPCAddress() string {
 	panic("No gRPC address for Namada")
 }
 
-// Node's home directory
+// Host Namada home directory
 func (c *NamadaChain) HomeDir() string {
+	return c.baseDir
+}
+
+func (c *NamadaChain) nodeHomeDir() string {
 	return c.FullNodes[0].HomeDir()
 }
 
@@ -237,10 +241,10 @@ func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
 		"--unsafe-dont-encrypt",
 	}
 	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 	} else {
-		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
 		cmd := exec.Command("namadaw", args...)
 		_, err = cmd.CombinedOutput()
 	}
@@ -256,7 +260,7 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 		"|",
 		"namadaw",
 		"--base-dir",
-		c.HomeDir(),
+		c.nodeHomeDir(),
 		"derive",
 		"--alias",
 		keyName,
@@ -277,10 +281,10 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 		keyName,
 	}
 	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
 		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
 	} else {
-		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
 		cmd := exec.Command("namadaw", args...)
 		output, err = cmd.CombinedOutput()
 	}
@@ -303,7 +307,7 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.HomeDir(),
+		c.nodeHomeDir(),
 		"transparent-transfer",
 		"--source",
 		keyName,
@@ -326,7 +330,7 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.HomeDir(),
+		c.nodeHomeDir(),
 		"transparent-transfer",
 		"--source",
 		keyName,
@@ -348,7 +352,25 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 
 // Send on IBC transfer
 func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	panic("implement me")
+	cmd := []string{
+		"namadac",
+		"--base-dir",
+		c.nodeHomeDir(),
+		"ibc-transfer",
+		"--source",
+		keyName,
+		"--target",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--node",
+		c.GetRPCAddress(),
+	}
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+
+	return ibc.Tx{}, err
 }
 
 // Current block height
@@ -361,7 +383,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.HomeDir(),
+		c.nodeHomeDir(),
 		"balance",
 		"--token",
 		denom,
@@ -445,10 +467,10 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) 
 		"--unsafe-dont-encrypt",
 	}
 	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.HomeDir()}, args...)
+		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
 		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
 	} else {
-		args = append([]string{"--base-dir", c.baseDir, "--pre-genesis"}, args...)
+		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
 		cmd := exec.Command("namadaw", args...)
 		output, err = cmd.CombinedOutput()
 	}
@@ -467,8 +489,7 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) 
 func (c *NamadaChain) copyTemplates(baseDir string) error {
 	namadaRepo := os.Getenv("ENV_NAMADA_REPO")
 	if namadaRepo == "" {
-		fmt.Println("ENV_NAMADA_REPO is empty")
-		return errors.New("ENV_NAMADA_REPO isn't specified")
+		return fmt.Errorf("ENV_NAMADA_REPO is empty")
 	}
 	sourceDir := filepath.Join(namadaRepo, "genesis", "localnet")
 
@@ -504,15 +525,13 @@ func (c *NamadaChain) copyTemplates(baseDir string) error {
 func (c *NamadaChain) copyWasms(baseDir string) error {
 	namadaRepo := os.Getenv("ENV_NAMADA_REPO")
 	if namadaRepo == "" {
-		fmt.Println("ENV_NAMADA_REPO is empty")
-		return errors.New("ENV_NAMADA_REPO isn't specified")
+		return fmt.Errorf("ENV_NAMADA_REPO isn't specified")
 	}
 	sourceDir := filepath.Join(namadaRepo, "wasm")
 
 	destDir := filepath.Join(baseDir, "wasm")
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
-		fmt.Println("Making wasm directory failed: %v", err)
-		return err
+		return fmt.Errorf("Making wasm directory failed: %v", err)
 	}
 
 	err := filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
@@ -677,11 +696,27 @@ func (c *NamadaChain) updateParameters(baseDir string) error {
 	if _, err := toml.DecodeFile(paramPath, &data); err != nil {
 		return err
 	}
+
+	params, ok := data["parameters"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("No parameters")
+	}
+	// for enough trusting period
+	params["epochs_per_year"] = 31536
+
 	pgfParams, ok := data["pgf_params"].(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("No pgf_params")
 	}
 	pgfParams["stewards"] = []string{}
+
+	// Update IBC rate limits
+	ibcParams, ok := data["ibc_params"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("No IBC parameters")
+	}
+	ibcParams["default_mint_limit"] = "1000000000000"
+	ibcParams["default_per_epoch_throughput_limit"] = "1000000000000"
 
 	file, err := os.Create(paramPath)
 	if err != nil {
