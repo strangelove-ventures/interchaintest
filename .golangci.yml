@@ -60,8 +60,7 @@ linters-settings:
       - prefix(github.com/cosmos)
       - prefix(github.com/cosmos/cosmos-sdk)
       - prefix(github.com/cometbft/cometbft)
-      # TODO: Replace below with '- prefix(<project-package-name>)'
-      - prefix(github.com/strangelove-ventures/oss-repo-template)
+      - prefix(github.com/strangelove-ventures/interchaintest)
   gosec:
     excludes:
       - G404 # disables checks on insecure random number source

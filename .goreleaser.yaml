@@ -20,7 +20,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -X main.Version=$(VERSION)
+      - -X main.Version={{.Version}}
     goos:
       - linux
       - windows
