@@ -1,4 +1,4 @@
 [codespell]
-skip = *.pulsar.go,*.pb.go,*.pb.gw.go,*.json,*.git,*.bin,*.sum,*.mod,query_test.go
+skip = *.pulsar.go,*.pb.go,*.pb.gw.go,*.json,*.git,*.bin,*.sum,*.mod,query_test.go,*.sol
 ignore-words-list = usera,pres,crate
 quiet-level = 3
