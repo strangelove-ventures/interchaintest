@@ -49,6 +49,14 @@ func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
 	return coins, nil
 }
 
+// View all RUNEPool holder's positions
+func (c *Thorchain) ApiGetRuneProviders() ([]RUNEProvider, error) {
+	url := fmt.Sprintf("%s/thorchain/rune_providers", c.GetAPIAddress())
+	var prov []RUNEProvider
+	err := get(url, &prov)
+	return prov, err
+}
+
 func (c *Thorchain) ApiGetInboundAddress(chain string) (address string, router *string, err error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", c.GetAPIAddress())
 	var inboundAddresses []InboundAddress

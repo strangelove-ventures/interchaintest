@@ -441,3 +441,15 @@ type TxDetailsResponse struct {
 	// the thorchain height for which the outbound was scheduled
 	OutboundHeight *int64 `json:"outbound_height,omitempty"`
 }
+
+// RUNEProvider struct for RUNEProvider
+type RUNEProvider struct {
+	RuneAddress        string `json:"rune_address"`
+	Units              string `json:"units"`
+	Value              string `json:"value"`
+	Pnl                string `json:"pnl"`
+	DepositAmount      string `json:"deposit_amount"`
+	WithdrawAmount     string `json:"withdraw_amount"`
+	LastDepositHeight  int64  `json:"last_deposit_height"`
+	LastWithdrawHeight int64  `json:"last_withdraw_height"`
+}

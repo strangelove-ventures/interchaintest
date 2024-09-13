@@ -32,7 +32,7 @@ func (tn *ChainNode) BankSendWithNote(ctx context.Context, keyName string, amoun
 	return tn.ExecTx(ctx,
 		keyName, "thorchain", "send",
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
-		"--note", note,
+		"--note", "\""+note+"\"",
 	)
 }
 
