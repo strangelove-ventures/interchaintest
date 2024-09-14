@@ -11,10 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivo/tview"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	blockdbtui "github.com/strangelove-ventures/interchaintest/v8/blockdb/tui"
 	"github.com/strangelove-ventures/interchaintest/v8/conformance"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
@@ -52,15 +49,8 @@ func TestMain(m *testing.M) {
 	addFlags()
 	parseFlags()
 
-	ctx := context.Background()
-
 	switch subcommand() {
 	case "debug":
-		if err := runDebugTerminalUI(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to run debug: %v\n", err)
-			os.Exit(1)
-		}
-		os.Exit(0)
 	case "version":
 		fmt.Fprintln(os.Stderr, interchaintest.GitSha)
 		os.Exit(0)
@@ -259,45 +249,4 @@ func parseFlags() {
 
 func subcommand() string {
 	return flag.Arg(0)
-}
-
-func runDebugTerminalUI(ctx context.Context) error {
-	dbPath := extraFlags.BlockDatabaseFile
-
-	// Explicitly check for file existence otherwise blockdb.ConnectDB implicitly creates and migrates a sqlite file.
-	if _, err := os.Stat(dbPath); err != nil {
-		return err
-	}
-
-	db, err := blockdb.ConnectDB(ctx, dbPath)
-	if err != nil {
-		return fmt.Errorf("connect to database %s: %w", dbPath, err)
-	}
-	defer db.Close()
-
-	if err = blockdb.Migrate(db, interchaintest.GitSha); err != nil {
-		return fmt.Errorf("migrate database %s: %w", dbPath, err)
-	}
-
-	querySvc := blockdb.NewQuery(db)
-
-	schemaInfo, err := querySvc.CurrentSchemaVersion(ctx)
-	if err != nil {
-		return fmt.Errorf("query schema version: %w", err)
-	}
-
-	testCases, err := querySvc.RecentTestCases(ctx, 100)
-	if err != nil {
-		return fmt.Errorf("query recent test cases: %w", err)
-	}
-	if len(testCases) == 0 {
-		return fmt.Errorf("no test cases found in database %s", dbPath)
-	}
-
-	app := tview.NewApplication()
-	model := blockdbtui.NewModel(blockdb.NewQuery(db), dbPath, schemaInfo.GitSha, schemaInfo.CreatedAt, testCases)
-	return app.
-		SetInputCapture(model.Update(ctx)).
-		SetRoot(model.RootView(), true).
-		Run()
 }

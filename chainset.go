@@ -4,12 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"sync"
-	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/multierr"
@@ -27,9 +24,8 @@ type chainSet struct {
 	chains map[ibc.Chain]struct{}
 
 	// The following fields are set during TrackBlocks, and used in Close.
-	trackerEg  *errgroup.Group
-	db         *sql.DB
-	collectors []*blockdb.Collector
+	trackerEg *errgroup.Group
+	db        *sql.DB
 }
 
 func newChainSet(log *zap.Logger, chains []ibc.Chain) *chainSet {
@@ -158,79 +154,11 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 	return eg.Wait()
 }
 
-// TrackBlocks initializes database tables and polls for transactions to be saved in the database.
-// This method is a nop if dbPath is blank.
-// The gitSha is used to pin a git commit to a test invocation. Thus, when a user is looking at historical
-// data they are able to determine which version of the code produced the results.
-// Expected to be called after Start.
-func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha string) error {
-	if len(dbPath) == 0 {
-		// nop
-		return nil
-	}
-
-	db, err := blockdb.ConnectDB(ctx, dbPath)
-	if err != nil {
-		return fmt.Errorf("connect to sqlite database %s: %w", dbPath, err)
-	}
-	cs.db = db
-
-	if len(gitSha) == 0 {
-		gitSha = "unknown"
-	}
-
-	if err := blockdb.Migrate(db, gitSha); err != nil {
-		return fmt.Errorf("migrate sqlite database %s; deleting file recommended: %w", dbPath, err)
-	}
-
-	testCase, err := blockdb.CreateTestCase(ctx, db, testName, gitSha)
-	if err != nil {
-		_ = db.Close()
-		return fmt.Errorf("create test case in sqlite database: %w", err)
-	}
-
-	// TODO (nix - 6/1/22) Need logger instead of fmt.Fprint
-	cs.trackerEg = new(errgroup.Group)
-	cs.collectors = make([]*blockdb.Collector, len(cs.chains))
-	i := 0
-	for c := range cs.chains {
-		c := c
-		id := c.Config().ChainID
-		finder, ok := c.(blockdb.TxFinder)
-		if !ok {
-			fmt.Fprintf(os.Stderr, `Chain %s is not configured to save blocks; must implement "FindTxs(ctx context.Context, height int64) ([][]byte, error)"`+"\n", id)
-			return nil
-		}
-		j := i // Avoid closure on loop variable.
-		cs.trackerEg.Go(func() error {
-			chaindb, err := testCase.AddChain(ctx, id, c.Config().Type)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to add chain %s to database: %v", id, err)
-				return nil
-			}
-			log := cs.log.With(zap.String("chain_id", id))
-			collector := blockdb.NewCollector(log, finder, chaindb, 100*time.Millisecond)
-			cs.collectors[j] = collector
-			collector.Collect(ctx)
-			return nil
-		})
-		i++
-	}
-
-	return nil
-}
-
 // Close frees any resources associated with the chainSet.
 //
 // Currently, it only frees resources from TrackBlocks.
 // Close is safe to call even if TrackBlocks was not called.
 func (cs *chainSet) Close() error {
-	for _, c := range cs.collectors {
-		if c != nil {
-			c.Stop()
-		}
-	}
-
 	var err error
 	if cs.trackerEg != nil {
 		multierr.AppendInto(&err, cs.trackerEg.Wait())

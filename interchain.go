@@ -339,10 +339,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 		return fmt.Errorf("failed to start chains: %w", err)
 	}
 
-	if err := ic.cs.TrackBlocks(ctx, opts.TestName, opts.BlockDatabaseFile, opts.GitSha); err != nil {
-		return fmt.Errorf("failed to track blocks: %w", err)
-	}
-
 	// If any configured chain is an instance of Penumbra we need to initialize new pclientd instances for the
 	// newly created faucet account.
 	for c := range ic.chains {
