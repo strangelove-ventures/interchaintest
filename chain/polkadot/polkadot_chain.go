@@ -22,7 +22,6 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
@@ -845,11 +844,6 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 	}
 
 	return kp, nil
-}
-
-// FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
-func (c *PolkadotChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
-	return []blockdb.Tx{}, nil
 }
 
 // GetIbcBalance returns the Coins type of ibc coins in account

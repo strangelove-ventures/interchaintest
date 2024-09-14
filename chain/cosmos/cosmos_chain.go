@@ -30,7 +30,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
@@ -1137,14 +1136,6 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketT
 		}
 	}
 	return ibcTimeouts, nil
-}
-
-// FindTxs implements blockdb.BlockSaver.
-func (c *CosmosChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
-	fn := c.getFullNode()
-	c.findTxMu.Lock()
-	defer c.findTxMu.Unlock()
-	return fn.FindTxs(ctx, height)
 }
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)

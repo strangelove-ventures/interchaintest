@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -21,7 +20,6 @@ import (
 	"github.com/cometbft/cometbft/p2p"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -34,11 +32,9 @@ import (
 	"github.com/icza/dyno"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -402,82 +398,6 @@ func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 	}
 	height := res.SyncInfo.LatestBlockHeight
 	return height, nil
-}
-
-// FindTxs implements blockdb.BlockSaver.
-func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
-	h := int64(height)
-	var eg errgroup.Group
-	var blockRes *coretypes.ResultBlockResults
-	var block *coretypes.ResultBlock
-	eg.Go(func() (err error) {
-		blockRes, err = tn.Client.BlockResults(ctx, &h)
-		return err
-	})
-	eg.Go(func() (err error) {
-		block, err = tn.Client.Block(ctx, &h)
-		return err
-	})
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-	interfaceRegistry := tn.Chain.Config().EncodingConfig.InterfaceRegistry
-	txs := make([]blockdb.Tx, 0, len(block.Block.Txs)+2)
-	for i, tx := range block.Block.Txs {
-		var newTx blockdb.Tx
-		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
-
-		sdkTx, err := decodeTX(interfaceRegistry, tx)
-		if err != nil {
-			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
-			continue
-		}
-		b, err := encodeTxToJSON(interfaceRegistry, sdkTx)
-		if err != nil {
-			tn.logger().Info("Failed to marshal tx to json", zap.Int64("height", height), zap.Error(err))
-			continue
-		}
-		newTx.Data = b
-
-		rTx := blockRes.TxsResults[i]
-
-		newTx.Events = make([]blockdb.Event, len(rTx.Events))
-		for j, e := range rTx.Events {
-			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
-			for k, attr := range e.Attributes {
-				attrs[k] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
-				}
-			}
-			newTx.Events[j] = blockdb.Event{
-				Type:       e.Type,
-				Attributes: attrs,
-			}
-		}
-		txs = append(txs, newTx)
-	}
-	if len(blockRes.FinalizeBlockEvents) > 0 {
-		finalizeBlockTx := blockdb.Tx{
-			Data: []byte(`{"data":"finalize_block","note":"this is a transaction artificially created for debugging purposes"}`),
-		}
-		finalizeBlockTx.Events = make([]blockdb.Event, len(blockRes.FinalizeBlockEvents))
-		for i, e := range blockRes.FinalizeBlockEvents {
-			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
-			for j, attr := range e.Attributes {
-				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
-				}
-			}
-			finalizeBlockTx.Events[i] = blockdb.Event{
-				Type:       e.Type,
-				Attributes: attrs,
-			}
-		}
-		txs = append(txs, finalizeBlockTx)
-	}
-	return txs, nil
 }
 
 // TxCommand is a helper to retrieve a full command for broadcasting a tx

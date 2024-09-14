@@ -26,7 +26,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -1118,14 +1117,6 @@ func (c *Thorchain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTim
 		}
 	}
 	return ibcTimeouts, nil
-}
-
-// FindTxs implements blockdb.BlockSaver.
-func (c *Thorchain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
-	fn := c.getFullNode()
-	c.findTxMu.Lock()
-	defer c.findTxMu.Unlock()
-	return fn.FindTxs(ctx, height)
 }
 
 // StopAllNodes stops and removes all long running containers (validators and full nodes)

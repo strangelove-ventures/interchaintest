@@ -82,7 +82,6 @@ func TestICTestMiscellaneous(t *testing.T) {
 	testBuildDependencies(ctx, t, chain)
 	testWalletKeys(ctx, t, chain)
 	testSendingTokens(ctx, t, chain, users)
-	testFindTxs(ctx, t, chain, users) // not supported with CometMock
 	testPollForBalance(ctx, t, chain, users)
 	testRangeBlockMessages(ctx, t, chain, users)
 	testBroadcaster(ctx, t, chain, users)
@@ -206,18 +205,6 @@ func testSendingTokens(ctx context.Context, t *testing.T, chain *cosmos.CosmosCh
 	require.NoError(t, err)
 
 	require.Equal(t, b2.Add(math.NewInt(sendAmt)), b2New)
-}
-
-func testFindTxs(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
-	height, _ := chain.Height(ctx)
-
-	_, err := sendTokens(ctx, chain, users[0], users[1], "", 1)
-	require.NoError(t, err)
-
-	txs, err := chain.FindTxs(ctx, height+1)
-	require.NoError(t, err)
-	require.NotEmpty(t, txs)
-	require.Equal(t, txs[0].Events[0].Type, "coin_spent")
 }
 
 func testPollForBalance(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, users []ibc.Wallet) {
