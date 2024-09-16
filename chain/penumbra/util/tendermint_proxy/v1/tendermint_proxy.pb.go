@@ -6,9 +6,10 @@ package tendermint_proxyv1
 import (
 	context "context"
 	fmt "fmt"
-	crypto "github.com/cometbft/cometbft/proto/tendermint/crypto"
-	p2p "github.com/cometbft/cometbft/proto/tendermint/p2p"
-	types "github.com/cometbft/cometbft/proto/tendermint/types"
+	// TODO: regen these properly
+	crypto "github.com/cometbft/cometbft/crypto"
+	p2p "github.com/cometbft/cometbft/p2p"
+	types "github.com/cometbft/cometbft/types"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
 	types1 "github.com/cosmos/gogoproto/types"
