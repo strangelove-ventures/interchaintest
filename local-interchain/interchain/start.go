@@ -181,7 +181,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error starting: %v", err)
 	}
 
 	if relayer != nil && len(ibcpaths) > 0 {

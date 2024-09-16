@@ -130,7 +130,7 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.CheckForFailedStart(ctx, time.Second*3); err != nil {
+	if err := c.CheckForFailedStart(ctx, time.Second*1); err != nil {
 		return err
 	}
 
@@ -158,6 +158,8 @@ func (c *ContainerLifecycle) CheckForFailedStart(ctx context.Context, wait time.
 	}
 
 	if err := ParseSDKPanicFromText(logs.String()); err != nil {
+		// Must use Println and not the logger as there are ascii escape codes in the logs.
+		fmt.Printf("\nContainer name: %s. logs\n%s\n", c.containerName, logs.String())
 		return fmt.Errorf("container %s failed to start: %w", c.containerName, err)
 	}
 
