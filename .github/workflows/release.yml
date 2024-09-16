@@ -1,37 +1,34 @@
-# .github/workflows/release.yml
-name: goreleaser
+name: release binary
 
 on:
-  push:
-    tags:
-      - "*"
-
-permissions:
-  contents: write
+  release:
+    types: [created]
 
 env:
   GO_VERSION: 1.21
 
 jobs:
-  goreleaser:
+  release-static-binary:
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout interchaintest
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Go
+      - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      # NOTE: make install must not be statically linked to the MakeFileInstallDirectory
+      - run: cd local-interchain && go mod tidy && IGNORE_STATIC_LINK=true make install
+
+      - run: cp $HOME/go/bin/local-ic ./local-ic
+      - run: chmod +x ./local-ic
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          token: ${{ github.token }}
+          files: |
+            local-ic
