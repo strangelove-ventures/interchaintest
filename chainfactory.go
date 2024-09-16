@@ -11,6 +11,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v9/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/penumbra"
+
 	// "github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/utxo"
@@ -155,9 +156,9 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	// 			RelayChainFlags: []string{"--execution=wasm"},
 	// 		}}
 	// 		return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
-		default:
-			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
-		}
+	// 	default:
+	// 		return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
+	// 	}
 	case "ethereum":
 		switch cfg.Bin {
 		case "anvil":

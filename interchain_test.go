@@ -408,12 +408,13 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 		msg := transfertypes.NewMsgTransfer(
 			"transfer",
 			"channel-0",
-			transferAmount,
+			sdk.NewCoins(transferAmount),
 			testUser.FormattedAddress(),
 			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
 			clienttypes.NewHeight(1, 1000),
 			0,
 			memo,
+			nil, // forwarding data
 		)
 		resp, err := cosmos.BroadcastTx(ctx, b, testUser.(*cosmos.CosmosWallet), msg)
 		require.NoError(t, err)
@@ -423,7 +424,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	t.Run("transfer success", func(t *testing.T) {
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
+		srcDenomTrace := transfertypes.NewDenom(gaia0.Config().Denom, transfertypes.NewHop("transfer", "channel-0"))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
 		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
