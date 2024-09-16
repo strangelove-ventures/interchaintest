@@ -136,7 +136,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
+	rpcClient, err := rpchttp.NewWithClient(addr, httpClient)
 	if err != nil {
 		return err
 	}
@@ -439,7 +439,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 		}
 		newTx.Data = b
 
-		rTx := blockRes.TxsResults[i]
+		rTx := blockRes.TxResults[i]
 
 		newTx.Events = make([]blockdb.Event, len(rTx.Events))
 		for j, e := range rTx.Events {
