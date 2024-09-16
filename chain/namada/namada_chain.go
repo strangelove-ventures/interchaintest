@@ -578,6 +578,11 @@ func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 		}
 	}
 
+	err = os.Remove(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to delete the release file: %v", err)
+	}
+
 	return nil
 }
 
