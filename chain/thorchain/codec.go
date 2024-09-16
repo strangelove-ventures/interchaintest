@@ -15,33 +15,37 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	transfer "github.com/cosmos/ibc-go/v9/modules/apps/transfer"
 	ibccore "github.com/cosmos/ibc-go/v9/modules/core"
 	ibctm "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint"
+
+	codectestutil "github.com/cosmos/cosmos-sdk/codec/testutil"
 )
 
+// TODO: ref sdk for this, does this work?
 func DefaultEncoding() testutil.TestEncodingConfig {
 	return testutil.MakeTestEncodingConfig(
-		auth.AppModuleBasic{},
-		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
-		bank.AppModuleBasic{},
-		staking.AppModuleBasic{},
-		mint.AppModuleBasic{},
-		distr.AppModuleBasic{},
-		params.AppModuleBasic{},
-		upgrade.AppModuleBasic{},
-		consensus.AppModuleBasic{},
-		transfer.AppModuleBasic{},
-		ibccore.AppModuleBasic{},
-		ibctm.AppModuleBasic{},
+		codectestutil.CodecOptions{},
+		auth.AppModule{},
+		// genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
+		genutil.AppModule{},
+		bank.AppModule{},
+		staking.AppModule{},
+		mint.AppModule{},
+		distr.AppModule{},
+		params.AppModule{},
+		upgrade.AppModule{},
+		consensus.AppModule{},
+		transfer.AppModule{},
+		ibccore.AppModule{},
+		ibctm.AppModule{},
 	)
 }
 
 func decodeTX(interfaceRegistry codectypes.InterfaceRegistry, txbz []byte) (sdk.Tx, error) {
 	cdc := codec.NewProtoCodec(interfaceRegistry)
-	return authTx.DefaultTxDecoder(cdc)(txbz)
+	return authTx.DefaultJSONTxDecoder(cdc)(txbz)
 }
 
 func encodeTxToJSON(interfaceRegistry codectypes.InterfaceRegistry, tx sdk.Tx) ([]byte, error) {

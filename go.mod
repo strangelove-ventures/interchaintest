@@ -94,7 +94,10 @@ require (
 	modernc.org/sqlite v1.30.1
 )
 
-require cosmossdk.io/x/authz v0.0.0-00010101000000-000000000000
+require (
+	cosmossdk.io/x/authz v0.0.0-00010101000000-000000000000
+	github.com/cometbft/cometbft/api v1.0.0-rc.1.0.20240909080621-90c99d9658b0
+)
 
 require (
 	buf.build/gen/go/cometbft/cometbft/protocolbuffers/go v1.34.2-20240701160653-fedbb9acfd2f.2 // indirect
@@ -136,7 +139,6 @@ require (
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/cometbft/cometbft-db v0.15.0 // indirect
-	github.com/cometbft/cometbft/api v1.0.0-rc.1.0.20240909080621-90c99d9658b0 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
