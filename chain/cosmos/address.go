@@ -2,8 +2,9 @@ package cosmos
 
 import (
 	"errors"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"strings"
+
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -16,11 +17,6 @@ func (c *CosmosChain) AccAddressFromBech32(address string) (addr sdk.AccAddress,
 	}
 
 	bz, err := sdk.GetFromBech32(address, c.Config().Bech32Prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sdk.VerifyAddressFormat(bz)
 	if err != nil {
 		return nil, err
 	}

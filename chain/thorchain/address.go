@@ -21,11 +21,6 @@ func (c *Thorchain) AccAddressFromBech32(address string) (addr sdk.AccAddress, e
 		return nil, err
 	}
 
-	err = sdk.VerifyAddressFormat(bz)
-	if err != nil {
-		return nil, err
-	}
-
 	return sdk.AccAddress(bz), nil
 }
 
