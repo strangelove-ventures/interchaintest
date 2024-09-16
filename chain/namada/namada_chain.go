@@ -205,23 +205,23 @@ func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, er
 
 // RPC address
 func (c *NamadaChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.FullNodes[0].HostName())
+	return fmt.Sprintf("http://%s:26657", c.Validators[0].HostName())
 }
 
 // gRPC address
 func (c *NamadaChain) GetGRPCAddress() string {
 	// Returns a dummy address because Namada doesn't support gRPC
-	return fmt.Sprintf("http://%s:9090", c.FullNodes[0].HostName())
+	return fmt.Sprintf("http://%s:9090", c.Validators[0].HostName())
 }
 
 // Host RPC
 func (c *NamadaChain) GetHostRPCAddress() string {
-	return "http://" + c.FullNodes[0].hostRPCPort
+	return "http://" + c.Validators[0].hostRPCPort
 }
 
 // Host peer address
 func (c *NamadaChain) GetHostPeerAddress() string {
-	return c.FullNodes[0].hostP2PPort
+	return c.Validators[0].hostP2PPort
 }
 
 // Host gRPC address
@@ -517,6 +517,7 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 }
 
 func (c *NamadaChain) downloadWasms(ctx context.Context) error {
+	// TODO replace when releasing Namada v0.44.0
 	//url := fmt.Sprintf("https://github.com/anoma/namada/releases/download/%s/namada-%s-Linux-x86_64.tar.gz", c.Config().Images[0].Version, c.Config().Images[0].Version)
 	url := "https://github.com/anoma/namada/releases/download/v0.43.0/namada-v0.43.0-Linux-x86_64.tar.gz"
 

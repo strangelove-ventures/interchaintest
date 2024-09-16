@@ -27,9 +27,8 @@ func TestNamadaNetwork(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 1
-	// at least 1 full node is required for now
-	fn := 1
+	nv := 2
+	fn := 0
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v19.2.0", ChainConfig: ibc.ChainConfig{
