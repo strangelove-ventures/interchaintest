@@ -47,14 +47,9 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		select {
 		case <-c:
 			fmt.Println("\nReceived signal to stop local-ic...")
-			removed := dockerutil.KillAllInterchaintestContainers(ctx)
-			for _, r := range removed {
-				fmt.Println("  - ", r)
-			}
-			cancel()
-			os.Exit(1)
+			killContainer(ctx)
 		case <-ctx.Done():
-			fmt.Println("Context is done")
+			killContainer(ctx)
 		}
 	}()
 
@@ -186,10 +181,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		// calls the KillAllInterchaintestContainers(...) above
-		<-ctx.Done()
-
-		logger.Fatal("ic.Build", zap.Error(err))
+		panic(err)
 	}
 
 	if relayer != nil && len(ibcpaths) > 0 {
@@ -298,4 +290,12 @@ func GetTestName(chainCfgFile string) string {
 	}
 
 	return name + "ic"
+}
+
+func killContainer(ctx context.Context) {
+	removed := dockerutil.KillAllInterchaintestContainers(ctx)
+	for _, r := range removed {
+		fmt.Println("  - ", r)
+	}
+	os.Exit(1)
 }

@@ -130,7 +130,7 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.CheckForFailedStart(ctx, time.Second*1); err != nil {
+	if err := c.CheckForFailedStart(ctx, time.Second*3); err != nil {
 		return err
 	}
 
