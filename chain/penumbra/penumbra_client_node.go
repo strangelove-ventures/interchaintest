@@ -12,7 +12,6 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
-	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	transactionv1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/transaction/v1"
 
 	//nolint:staticcheck
@@ -636,9 +635,9 @@ func ibcTransferTimeouts(options ibc.TransferOptions) (clienttypes.Height, uint6
 // based timeouts.
 // see: https://github.com/cosmos/ibc-go/blob/0364aae96f0326651c411ed0f3486be570280e5c/modules/apps/transfer/types/packet.go#L22-L33
 func defaultTransferTimeouts() (clienttypes.Height, uint64) {
-	t, err := clienttypes.ParseHeight(transfertypes.DefaultRelativePacketTimeoutHeight)
+	t, err := clienttypes.ParseHeight("0-1000")
 	if err != nil {
 		panic(fmt.Errorf("cannot parse packet timeout height string when retrieving default value: %w", err))
 	}
-	return t, transfertypes.DefaultRelativePacketTimeoutTimestamp
+	return t, uint64((time.Duration(10) * time.Minute).Nanoseconds())
 }

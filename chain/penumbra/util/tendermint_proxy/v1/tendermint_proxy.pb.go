@@ -7,9 +7,9 @@ import (
 	context "context"
 	fmt "fmt"
 	// TODO: regen these properly
-	crypto "github.com/cometbft/cometbft/crypto"
-	p2p "github.com/cometbft/cometbft/p2p"
-	types "github.com/cometbft/cometbft/types"
+	crypto "github.com/cometbft/cometbft/api/cometbft/crypto/v1"
+	p2p "github.com/cometbft/cometbft/api/cometbft/p2p/v1"
+	types "github.com/cometbft/cometbft/api/cometbft/types/v1"
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
 	types1 "github.com/cosmos/gogoproto/types"
