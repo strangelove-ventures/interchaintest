@@ -37,8 +37,9 @@ replace (
 	github.com/cometbft/cometbft => github.com/cometbft/cometbft v1.0.0-rc1.0.20240916064027-be087bf4fbd7
 	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-alpha.1.0.20240909082436-01c0e9ba3581
 
-	// marko/gomod_change - 26d765eed2f7221f5fadc1866e971dab097e595e - SDK v52 work
-	github.com/cosmos/ibc-go/v9 => github.com/cosmos/ibc-go/v9 v9.0.0-20240909163231-26d765eed2f7
+	// marko/gomod_change - github.com/cosmos/ibc-go/v9@2ee55486da3dc1378e3e25262e1858367e3a1c42 - SDK v52 work
+	// 69863a144e6bbfbf98d7d50de6b9e3736950ede2 - cleans up ctx -> gomod_change
+	github.com/cosmos/ibc-go/v9 => github.com/cosmos/ibc-go/v9 v9.0.0-20240906130908-69863a144e6b
 
 // TODO: wasmd sdk v52
 )
@@ -64,8 +65,8 @@ require (
 	github.com/cosmos/cosmos-sdk v0.53.0
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gogoproto v1.7.0
-	// github.com/cosmos/ibc-go/modules/capability v1.0.0 // TODO: looks like it is removed
-	github.com/cosmos/ibc-go/v9 v9.0.0-20240715123524-9afef18c9082
+	github.com/cosmos/ibc-go/modules/capability v1.0.1 // indirect; TODO: remove me?
+	github.com/cosmos/ibc-go/v9 v9.0.0-20240906130908-69863a144e6b
 	// github.com/cosmos/interchain-security/v5 v5.0.0-alpha1.0.20240424193412-7cd900ad2a74 // TODO:
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/docker v24.0.9+incompatible
@@ -95,7 +96,9 @@ require (
 )
 
 require (
+	cosmossdk.io/core v1.0.0
 	cosmossdk.io/x/authz v0.0.0-00010101000000-000000000000
+	cosmossdk.io/x/tx v0.13.4
 	github.com/cometbft/cometbft/api v1.0.0-rc.1.0.20240909080621-90c99d9658b0
 )
 
@@ -110,14 +113,12 @@ require (
 	cloud.google.com/go/storage v1.42.0 // indirect
 	cosmossdk.io/api v0.8.0 // indirect
 	cosmossdk.io/collections v0.4.1-0.20240802064046-23fac2f1b8ab // indirect
-	cosmossdk.io/core v1.0.0 // indirect
 	cosmossdk.io/depinject v1.0.0 // indirect
 	cosmossdk.io/errors v1.0.1 // indirect
 	cosmossdk.io/log v1.4.1 // indirect
 	cosmossdk.io/schema v0.2.0 // indirect
 	cosmossdk.io/x/epochs v0.0.0-20240522060652-a1ae4c3e0337 // indirect
 	cosmossdk.io/x/protocolpool v0.0.0-20230925135524-a1bc045b3190 // indirect
-	cosmossdk.io/x/tx v0.13.4 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
@@ -147,13 +148,12 @@ require (
 	github.com/cosmos/crypto v0.1.2 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
 	github.com/cosmos/iavl v1.3.0 // indirect
-	github.com/cosmos/ibc-go/modules/capability v1.0.1 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.13.3 // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
 	github.com/danieljoos/wincred v1.2.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect; indifrect
 	github.com/dgraph-io/badger/v4 v4.3.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.2-0.20240116140435-c67e07994f91 // indirect
 	github.com/distribution/reference v0.6.0 // indirect

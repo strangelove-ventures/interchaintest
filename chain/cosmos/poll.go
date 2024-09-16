@@ -7,7 +7,11 @@ import (
 
 	govv1 "cosmossdk.io/x/gov/types/v1"
 	govv1beta1 "cosmossdk.io/x/gov/types/v1beta1"
+	"cosmossdk.io/x/tx/decode"
+	baseapptestutil "github.com/cosmos/cosmos-sdk/baseapp/testutil"
+	codectestutil "github.com/cosmos/cosmos-sdk/codec/testutil"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"github.com/strangelove-ventures/interchaintest/v9/testutil"
@@ -63,7 +67,24 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 			return zero, err
 		}
 		for _, tx := range block.Block.Txs {
-			sdkTx, err := decodeTX(registry, tx)
+
+			// TODO: move this to the root
+			cdc := codectestutil.CodecOptions{}.NewCodec()
+			baseapptestutil.RegisterInterfaces(cdc.InterfaceRegistry())
+			signingCtx := cdc.InterfaceRegistry().SigningContext()
+			ac := signingCtx.AddressCodec()
+			// txCfg := authTx.NewTxConfig(cdc, signingCtx.AddressCodec(), signingCtx.ValidatorAddressCodec(), authTx.DefaultSignModes)
+
+			dec, err := decode.NewDecoder(decode.Options{
+				SigningContext: signingCtx,
+				ProtoCodec:     cdc,
+			})
+			if err != nil {
+				zap.L().Error("failed to create decoder", zap.Error(err))
+				continue
+			}
+
+			sdkTx, err := decodeTX(ac, registry, dec, tx)
 			if err != nil {
 				return zero, err
 			}

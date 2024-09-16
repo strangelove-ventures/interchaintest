@@ -1,12 +1,14 @@
 package thorchain
 
 import (
+	"cosmossdk.io/core/address"
 	"cosmossdk.io/x/bank"
 	"cosmossdk.io/x/consensus"
 	distr "cosmossdk.io/x/distribution"
 	"cosmossdk.io/x/mint"
 	"cosmossdk.io/x/params"
 	"cosmossdk.io/x/staking"
+	"cosmossdk.io/x/tx/decode"
 	"cosmossdk.io/x/upgrade"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -43,11 +45,10 @@ func DefaultEncoding() testutil.TestEncodingConfig {
 	)
 }
 
-func decodeTX(interfaceRegistry codectypes.InterfaceRegistry, txbz []byte) (sdk.Tx, error) {
+func decodeTX(ac address.Codec, interfaceRegistry codectypes.InterfaceRegistry, txDecoder *decode.Decoder, txbz []byte) (sdk.Tx, error) {
 	cdc := codec.NewProtoCodec(interfaceRegistry)
-	return authTx.DefaultJSONTxDecoder(cdc)(txbz)
+	return authTx.DefaultJSONTxDecoder(ac, cdc, txDecoder)(txbz)
 }
-
 func encodeTxToJSON(interfaceRegistry codectypes.InterfaceRegistry, tx sdk.Tx) ([]byte, error) {
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 	return authTx.DefaultJSONTxEncoder(cdc)(tx)

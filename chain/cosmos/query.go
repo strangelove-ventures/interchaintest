@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"cosmossdk.io/x/tx/decode"
 	tmtypes "github.com/cometbft/cometbft/rpc/core/types"
+	baseapptestutil "github.com/cosmos/cosmos-sdk/baseapp/testutil"
+	codectestutil "github.com/cosmos/cosmos-sdk/codec/testutil"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"go.uber.org/zap"
 )
 
 type blockClient interface {
@@ -22,7 +26,23 @@ func RangeBlockMessages(ctx context.Context, interfaceRegistry codectypes.Interf
 		return fmt.Errorf("tendermint rpc get block: %w", err)
 	}
 	for _, txbz := range block.Block.Txs {
-		tx, err := decodeTX(interfaceRegistry, txbz)
+		// TODO: move this to the root
+		cdc := codectestutil.CodecOptions{}.NewCodec()
+		baseapptestutil.RegisterInterfaces(cdc.InterfaceRegistry())
+		signingCtx := cdc.InterfaceRegistry().SigningContext()
+		ac := signingCtx.AddressCodec()
+		// txCfg := authTx.NewTxConfig(cdc, signingCtx.AddressCodec(), signingCtx.ValidatorAddressCodec(), authTx.DefaultSignModes)
+
+		dec, err := decode.NewDecoder(decode.Options{
+			SigningContext: signingCtx,
+			ProtoCodec:     cdc,
+		})
+		if err != nil {
+			zap.L().Error("failed to create decoder", zap.Error(err))
+			continue
+		}
+
+		tx, err := decodeTX(ac, interfaceRegistry, dec, txbz)
 		if err != nil {
 			return fmt.Errorf("decode tendermint tx: %w", err)
 		}

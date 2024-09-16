@@ -2,6 +2,7 @@ package cosmos_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ func TestJunoStateExport(t *testing.T) {
 	chains := interchaintest.CreateChainWithConfig(t, numValsOne, numFullNodesZero, "juno", "v19.0.0-alpha.3", ibc.ChainConfig{})
 	chain := chains[0].(*cosmos.CosmosChain)
 
+	fmt.Println("Starting Juno chain")
 	enableBlockDB := false
 	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 

@@ -22,7 +22,7 @@ func RangeBlockMessages(ctx context.Context, interfaceRegistry codectypes.Interf
 		return fmt.Errorf("tendermint rpc get block: %w", err)
 	}
 	for _, txbz := range block.Block.Txs {
-		tx, err := decodeTX(interfaceRegistry, txbz)
+		tx, err := decodeTX(nil, interfaceRegistry, nil, txbz) // TODO: fix me!
 		if err != nil {
 			return fmt.Errorf("decode tendermint tx: %w", err)
 		}

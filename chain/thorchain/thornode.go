@@ -427,7 +427,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 		var newTx blockdb.Tx
 		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
 
-		sdkTx, err := decodeTX(interfaceRegistry, tx)
+		sdkTx, err := decodeTX(nil, interfaceRegistry, nil, tx)
 		if err != nil {
 			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
 			continue

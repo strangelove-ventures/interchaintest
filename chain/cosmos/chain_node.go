@@ -17,8 +17,11 @@ import (
 	"sync"
 	"time"
 
+	"cosmossdk.io/core/address"
 	banktypes "cosmossdk.io/x/bank/types"
 	stakingtypes "cosmossdk.io/x/staking/types"
+	"cosmossdk.io/x/tx/decode"
+	"cosmossdk.io/x/tx/signing"
 	"github.com/avast/retry-go/v4"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/p2p"
@@ -26,8 +29,10 @@ import (
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+	baseapptestutil "github.com/cosmos/cosmos-sdk/baseapp/testutil"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectestutil "github.com/cosmos/cosmos-sdk/codec/testutil"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -76,9 +81,32 @@ type ChainNode struct {
 	hostGRPCPort  string
 	hostP2PPort   string
 	cometHostname string
+
+	// new things sdk v0.52
+	// TODO: fix in thorchain once done as well
+	ProtoCodec        *codec.ProtoCodec
+	InterfaceRegistry codectypes.InterfaceRegistry
+	SingingCtx        *signing.Context
+	AddressCdc        address.Codec
+	Decoder           *decode.Decoder
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
+	// TODO: move this to the root of the chainNode on init?
+	cdc := codectestutil.CodecOptions{}.NewCodec()
+	baseapptestutil.RegisterInterfaces(cdc.InterfaceRegistry())
+	signingCtx := cdc.InterfaceRegistry().SigningContext()
+	ac := signingCtx.AddressCodec()
+	// txCfg := authTx.NewTxConfig(cdc, signingCtx.AddressCodec(), signingCtx.ValidatorAddressCodec(), authTx.DefaultSignModes)
+
+	dec, err := decode.NewDecoder(decode.Options{
+		SigningContext: signingCtx,
+		ProtoCodec:     cdc,
+	})
+	if err != nil {
+		log.Error("failed to create decoder", zap.Error(err))
+	}
+
 	tn := &ChainNode{
 		log: log.With(
 			zap.Bool("validator", validator),
@@ -93,6 +121,14 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+
+		// TODO: if chain is sdk v0.52, set these? else don't ?
+		// SDK v0.52
+		ProtoCodec:        cdc,
+		InterfaceRegistry: cdc.InterfaceRegistry(),
+		SingingCtx:        signingCtx,
+		AddressCdc:        ac,
+		Decoder:           dec,
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -449,7 +485,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 		var newTx blockdb.Tx
 		newTx.Data = []byte(fmt.Sprintf(`{"data":"%s"}`, hex.EncodeToString(tx)))
 
-		sdkTx, err := decodeTX(interfaceRegistry, tx)
+		sdkTx, err := decodeTX(tn.AddressCdc, interfaceRegistry, tn.Decoder, tx)
 		if err != nil {
 			tn.logger().Info("Failed to decode tx", zap.Int64("height", height), zap.Error(err))
 			continue

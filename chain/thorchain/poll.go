@@ -25,7 +25,7 @@ func PollForMessage[T any](ctx context.Context, chain *Thorchain, registry codec
 			return zero, err
 		}
 		for _, tx := range block.Block.Txs {
-			sdkTx, err := decodeTX(registry, tx)
+			sdkTx, err := decodeTX(nil, registry, nil, tx) // TODO: fix me
 			if err != nil {
 				return zero, err
 			}
