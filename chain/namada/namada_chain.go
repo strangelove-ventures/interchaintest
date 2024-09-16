@@ -1,11 +1,14 @@
 package namada
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,7 +16,6 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -31,7 +33,6 @@ type NamadaChain struct {
 	Validators    NamadaNodes
 	FullNodes     NamadaNodes
 
-	baseDir   string
 	isRunning bool
 
 	mutex sync.Mutex
@@ -98,7 +99,6 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 	defer os.RemoveAll(tempBaseDir)
 
 	fmt.Println("Temporary base directory:", tempBaseDir)
-	c.baseDir = tempBaseDir
 	c.isRunning = false
 
 	return nil
@@ -106,26 +106,31 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 
 // Start to set up
 func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	baseDir := c.HomeDir()
-	c.copyTemplates(baseDir)
-	c.copyWasms(baseDir)
+	err := c.downloadTemplates(ctx)
+	if err != nil {
+		return fmt.Errorf("Downloading template files failed: %v", err)
+	}
+	err = c.downloadWasms(ctx)
+	if err != nil {
+		return fmt.Errorf("Downloading wasm files failed: %v", err)
+	}
 
-	err := c.setValidators(baseDir)
+	err = c.setValidators(ctx)
 	if err != nil {
 		return fmt.Errorf("Setting validators failed: %v", err)
 	}
 
-	err = c.initAccounts(ctx, baseDir, additionalGenesisWallets...)
+	err = c.initAccounts(ctx, additionalGenesisWallets...)
 	if err != nil {
 		return fmt.Errorf("Initializing accounts failed: %v", err)
 	}
 
-	err = c.updateParameters(baseDir)
+	err = c.updateParameters(ctx)
 	if err != nil {
 		return fmt.Errorf("Updating parameters failed: %v", err)
 	}
 
-	err = c.initNetwork(baseDir)
+	err = c.initNetwork(ctx)
 	if err != nil {
 		return fmt.Errorf("init-network failed: %v", err)
 	}
@@ -135,7 +140,8 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 		n := n
 
 		eg.Go(func() error {
-			return n.CreateContainer(egCtx, baseDir)
+			c.copyGenesisFiles(egCtx, n)
+			return n.CreateContainer(egCtx)
 		})
 	}
 
@@ -143,7 +149,8 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 		n := n
 
 		eg.Go(func() error {
-			return n.CreateContainer(egCtx, baseDir)
+			c.copyGenesisFiles(egCtx, n)
+			return n.CreateContainer(egCtx)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -188,7 +195,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 
 // Execut a command
 func (c *NamadaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.FullNodes[0].Exec(ctx, cmd, env)
+	return c.Validators[0].Exec(ctx, cmd, env)
 }
 
 // / Exports the chain state at the specific height
@@ -224,30 +231,25 @@ func (c *NamadaChain) GetHostGRPCAddress() string {
 
 // Host Namada home directory
 func (c *NamadaChain) HomeDir() string {
-	return c.baseDir
-}
-
-func (c *NamadaChain) nodeHomeDir() string {
-	return c.FullNodes[0].HomeDir()
+	return c.Validators[0].HomeDir()
 }
 
 // Create a test key
 func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
 	var err error
-	args := []string{
+	cmd := []string{
+		"namadaw",
+		"--base-dir",
+		c.HomeDir(),
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
 	}
-	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
-		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
-	} else {
-		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
-		cmd := exec.Command("namadaw", args...)
-		_, err = cmd.CombinedOutput()
+	if !c.isRunning {
+		cmd = append(cmd, "--pre-genesis")
 	}
+	_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 
 	return err
 }
@@ -260,7 +262,7 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 		"|",
 		"namadaw",
 		"--base-dir",
-		c.nodeHomeDir(),
+		c.HomeDir(),
 		"derive",
 		"--alias",
 		keyName,
@@ -273,21 +275,18 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 
 // Get the Namada address
 func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
-	var output []byte
-	var err error
-	args := []string{
+	cmd := []string{
+		"namadaw",
+		"--base-dir",
+		c.HomeDir(),
 		"find",
 		"--alias",
 		keyName,
 	}
-	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
-		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
-	} else {
-		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
-		cmd := exec.Command("namadaw", args...)
-		output, err = cmd.CombinedOutput()
+	if !c.isRunning {
+		cmd = append(cmd, "--pre-genesis")
 	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
 		return nil, fmt.Errorf("Getting an address failed with name %q: %w", keyName, err)
 	}
@@ -307,7 +306,7 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.nodeHomeDir(),
+		c.HomeDir(),
 		"transparent-transfer",
 		"--source",
 		keyName,
@@ -330,7 +329,7 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.nodeHomeDir(),
+		c.HomeDir(),
 		"transparent-transfer",
 		"--source",
 		keyName,
@@ -355,7 +354,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.nodeHomeDir(),
+		c.HomeDir(),
 		"ibc-transfer",
 		"--source",
 		keyName,
@@ -383,7 +382,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 	cmd := []string{
 		"namadac",
 		"--base-dir",
-		c.nodeHomeDir(),
+		c.HomeDir(),
 		"balance",
 		"--token",
 		denom,
@@ -458,22 +457,19 @@ func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (i
 }
 
 func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	var output []byte
-	var err error
-	args := []string{
+	cmd := []string{
+		"namadaw",
+		"--base-dir",
+		c.HomeDir(),
 		"gen",
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
 	}
-	if c.isRunning {
-		cmd := append([]string{"namadaw", "--base-dir", c.nodeHomeDir()}, args...)
-		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
-	} else {
-		args = append([]string{"--base-dir", c.HomeDir(), "--pre-genesis"}, args...)
-		cmd := exec.Command("namadaw", args...)
-		output, err = cmd.CombinedOutput()
+	if !c.isRunning {
+		cmd = append(cmd, "--pre-genesis")
 	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	outputStr := string(output)
 	re := regexp.MustCompile(`[a-z]+(?:\s+[a-z]+){23}`)
 	mnemonic := re.FindString(outputStr)
@@ -486,123 +482,150 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 }
 
-func (c *NamadaChain) copyTemplates(baseDir string) error {
-	namadaRepo := os.Getenv("ENV_NAMADA_REPO")
-	if namadaRepo == "" {
-		return fmt.Errorf("ENV_NAMADA_REPO is empty")
+func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
+	baseURL := fmt.Sprintf("https://raw.githubusercontent.com/anoma/namada/%s/genesis/localnet", c.Config().Images[0].Version)
+	files := []string{
+		"parameters.toml",
+		"tokens.toml",
+		"validity-predicates.toml",
 	}
-	sourceDir := filepath.Join(namadaRepo, "genesis", "localnet")
+	destDir := "templates"
 
-	destDir := filepath.Join(baseDir, "templates")
-	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
-		fmt.Println("Making template directory failed: %v", err)
-		return err
-	}
-
-	err := filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+	for _, file := range files {
+		url := fmt.Sprintf("%s/%s", baseURL, file)
+		resp, err := http.Get(url)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to download the file %s: %w", file, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to download the file %s: %d", file, resp.StatusCode)
 		}
 
-		if path != sourceDir && info.IsDir() {
-			return filepath.SkipDir
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, resp.Body); err != nil {
+			return fmt.Errorf("failed to read the file: %w", err)
+		}
+		err = c.Validators[0].writeFile(ctx, filepath.Join(destDir, file), buf.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to write the file %s: %w", file, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *NamadaChain) downloadWasms(ctx context.Context) error {
+	//url := fmt.Sprintf("https://github.com/anoma/namada/releases/download/%s/namada-%s-Linux-x86_64.tar.gz", c.Config().Images[0].Version, c.Config().Images[0].Version)
+	url := "https://github.com/anoma/namada/releases/download/v0.43.0/namada-v0.43.0-Linux-x86_64.tar.gz"
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to download the release file: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download the release file: %d", resp.StatusCode)
+	}
+	filePath := "release.tar.gz"
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open the release file: %w", err)
+	}
+	defer file.Close()
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to write the release file: %w", err)
+	}
+
+	file, err = os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open the release file: %w", err)
+	}
+	defer file.Close()
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	destDir := "wasm"
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar file: %w", err)
 		}
 
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".toml") {
-			destPath := filepath.Join(destDir, info.Name())
-
-			err := copyFile(path, destPath)
-			if err != nil {
-				return err
+		switch header.Typeflag {
+		case tar.TypeReg:
+			if strings.HasSuffix(header.Name, ".wasm") || strings.HasSuffix(header.Name, ".json") {
+				var buf bytes.Buffer
+				if _, err := io.Copy(&buf, tr); err != nil {
+					return fmt.Errorf("failed to read the file: %w", err)
+				}
+				fileName := filepath.Base(header.Name)
+				err = c.Validators[0].writeFile(ctx, filepath.Join(destDir, fileName), buf.Bytes())
+				if err != nil {
+					return fmt.Errorf("failed to write the file: %w", err)
+				}
 			}
 		}
-		return nil
-	})
+	}
 
-	return err
+	return nil
 }
 
-func (c *NamadaChain) copyWasms(baseDir string) error {
-	namadaRepo := os.Getenv("ENV_NAMADA_REPO")
-	if namadaRepo == "" {
-		return fmt.Errorf("ENV_NAMADA_REPO isn't specified")
+func (c *NamadaChain) setValidators(ctx context.Context) error {
+	transactionPath := filepath.Join(c.HomeDir(), "transactions.toml")
+	destTransactionsPath := filepath.Join(c.HomeDir(), "templates", "transactions.toml")
+	cmd := []string{
+		"touch",
+		destTransactionsPath,
 	}
-	sourceDir := filepath.Join(namadaRepo, "wasm")
-
-	destDir := filepath.Join(baseDir, "wasm")
-	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
-		return fmt.Errorf("Making wasm directory failed: %v", err)
-	}
-
-	err := filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".wasm") {
-			destPath := filepath.Join(destDir, info.Name())
-
-			err := copyFile(path, destPath)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return err
+		return fmt.Errorf("Making transactions.toml failed: %v", err)
 	}
-
-	srcPath := filepath.Join(sourceDir, "checksums.json")
-	destPath := filepath.Join(destDir, "checksums.json")
-	return copyFile(srcPath, destPath)
-}
-
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	return destFile.Sync()
-}
-
-func (c *NamadaChain) setValidators(baseDir string) error {
-	transactionPath := filepath.Join(baseDir, "transactions.toml")
-	destTransactionsPath := filepath.Join(baseDir, "templates", "transactions.toml")
-	transactionsFile, err := os.Create(destTransactionsPath)
-	if err != nil {
-		return err
-	}
-	defer transactionsFile.Close()
-	encoder := toml.NewEncoder(transactionsFile)
 
 	for i := 0; i < c.NumValidators; i++ {
 		alias := fmt.Sprintf("validator-%d-balance-key", i)
 		validatorAlias := fmt.Sprintf("validator-%d", i)
 
 		// Generate a validator key
-		cmd := exec.Command("namadaw", "--base-dir", baseDir, "--pre-genesis", "gen", "--alias", alias, "--unsafe-dont-encrypt")
-		output, err := cmd.CombinedOutput()
+		cmd := []string{
+			"namadaw",
+			"--base-dir",
+			c.HomeDir(),
+			"--pre-genesis",
+			"gen",
+			"--alias",
+			alias,
+			"--unsafe-dont-encrypt",
+		}
+		output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
 			return fmt.Errorf("Validator key couldn't be generated: %v", err)
 		}
 
 		// Initialize an established account of the validator
-		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "init-genesis-established-account", "--aliases", alias, "--path", transactionPath)
-		output, err = cmd.CombinedOutput()
+		cmd = []string{
+			"namadac",
+			"--base-dir",
+			c.HomeDir(),
+			"utils",
+			"init-genesis-established-account",
+			"--aliases",
+			alias,
+			"--path",
+			transactionPath,
+		}
+		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
 			return fmt.Errorf("Initializing a validator account failed: %v", err)
 		}
@@ -618,50 +641,97 @@ func (c *NamadaChain) setValidators(baseDir string) error {
 		validatorAddress := matches[1]
 
 		// Add the validator address
-		cmd = exec.Command("namadaw", "--base-dir", baseDir, "--pre-genesis", "add", "--alias", validatorAlias, "--value", validatorAddress)
-		output, err = cmd.CombinedOutput()
+		cmd = []string{
+			"namadaw",
+			"--base-dir",
+			c.HomeDir(),
+			"--pre-genesis",
+			"add",
+			"--alias",
+			validatorAlias,
+			"--value",
+			validatorAddress,
+		}
+		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
 			return fmt.Errorf("Validator address couldn't be added: %v", err)
 		}
 
 		// Initialize a genesis validator
-		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "init-genesis-validator", "--alias", validatorAlias, "--address", validatorAddress, "--path", transactionPath, "--net-address", c.Validators[i].netAddress(), "--commission-rate", "0.05", "--max-commission-rate-change", "0.01", "--email", "null@null.net", "--self-bond-amount", "100000", "--unsafe-dont-encrypt")
-		output, err = cmd.CombinedOutput()
+		cmd = []string{
+			"namadac",
+			"--base-dir",
+			c.HomeDir(),
+			"utils",
+			"init-genesis-validator",
+			"--alias",
+			validatorAlias,
+			"--address",
+			validatorAddress,
+			"--path",
+			transactionPath,
+			"--net-address",
+			c.Validators[i].netAddress(),
+			"--commission-rate",
+			"0.05",
+			"--max-commission-rate-change",
+			"0.01",
+			"--email",
+			"null@null.net",
+			"--self-bond-amount",
+			"100000",
+			"--unsafe-dont-encrypt",
+		}
+		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
 			return fmt.Errorf("Initializing a genesis validator failed: %v, %s", err, output)
 		}
 
-		cmd = exec.Command("namadac", "--base-dir", baseDir, "utils", "sign-genesis-txs", "--alias", validatorAlias, "--path", transactionPath, "--output", transactionPath)
-		_, err = cmd.CombinedOutput()
+		cmd = []string{
+			"namadac",
+			"--base-dir",
+			c.HomeDir(),
+			"utils",
+			"sign-genesis-txs",
+			"--alias",
+			validatorAlias,
+			"--path",
+			transactionPath,
+			"--output",
+			transactionPath,
+		}
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
 			return fmt.Errorf("Signing genesis transactions failed: %v", err)
 		}
 
-		var data map[string]interface{}
-		if _, err := toml.DecodeFile(transactionPath, &data); err != nil {
-			return err
+		cmd = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(`cat %s >> %s`, transactionPath, destTransactionsPath),
 		}
-		if err := encoder.Encode(data); err != nil {
-			return err
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
+		if err != nil {
+			return fmt.Errorf("Appending the transaction failed: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func (c *NamadaChain) initAccounts(ctx context.Context, baseDir string, additionalGenesisWallets ...ibc.WalletAmount) error {
-	templateDir := filepath.Join(baseDir, "templates")
+func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
+	templateDir := filepath.Join(c.HomeDir(), "templates")
 	balancePath := filepath.Join(templateDir, "balances.toml")
 
 	// Initialize balances.toml
-	balanceFile, err := os.Create(balancePath)
-	if err != nil {
-		return err
+	cmd := []string{
+		"sh",
+		"-c",
+		fmt.Sprintf(`echo [token.NAM] > %s`, balancePath),
 	}
-	defer balanceFile.Close()
-	_, err = balanceFile.WriteString("[token.NAM]\n")
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return err
+		return fmt.Errorf("Initializing balances.toml failed: %v", err)
 	}
 
 	// for validators
@@ -670,72 +740,67 @@ func (c *NamadaChain) initAccounts(ctx context.Context, baseDir string, addition
 		if err != nil {
 			return err
 		}
-		line := fmt.Sprintf("%s = \"2000000\"\n", string(addr))
-		_, err = balanceFile.WriteString(line)
+		line := fmt.Sprintf(`%s = "2000000"`, string(addr))
+		cmd := []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(`echo '%s' >> %s`, line, balancePath),
+		}
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return err
+			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
 		}
 	}
 
 	for _, wallet := range additionalGenesisWallets {
-		line := fmt.Sprintf("%s = \"%s\"\n", wallet.Address, wallet.Amount)
-		_, err := balanceFile.WriteString(line)
+		line := fmt.Sprintf(`%s = "%s"`, wallet.Address, wallet.Amount)
+		cmd := []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(`echo '%s' >> %s`, line, balancePath),
+		}
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return err
+			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func (c *NamadaChain) updateParameters(baseDir string) error {
-	templateDir := filepath.Join(baseDir, "templates")
+func (c *NamadaChain) updateParameters(ctx context.Context) error {
+	templateDir := filepath.Join(c.HomeDir(), "templates")
 	paramPath := filepath.Join(templateDir, "parameters.toml")
 
-	var data map[string]interface{}
-	if _, err := toml.DecodeFile(paramPath, &data); err != nil {
-		return err
+	cmd := []string{
+		"sed",
+		"-i",
+		// for enough trusting period
+		"-e",
+		"s/epochs_per_year = [0-9_]\\+/epochs_per_year = 31_536/",
+		// delete steward addresses
+		"-e",
+		"s/\"tnam.*//",
+		// IBC mint limit
+		"-e",
+		"s/default_mint_limit = \"[0-9]\\+\"/default_mint_limit = \"1000000000000\"/",
+		// IBC throughput limit
+		"-e",
+		"s/default_per_epoch_throughput_limit = \"[0-9]\\+\"/default_per_epoch_throughput_limit = \"1000000000000\"/",
+		paramPath,
 	}
-
-	params, ok := data["parameters"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("No parameters")
-	}
-	// for enough trusting period
-	params["epochs_per_year"] = 31536
-
-	pgfParams, ok := data["pgf_params"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("No pgf_params")
-	}
-	pgfParams["stewards"] = []string{}
-
-	// Update IBC rate limits
-	ibcParams, ok := data["ibc_params"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("No IBC parameters")
-	}
-	ibcParams["default_mint_limit"] = "1000000000000"
-	ibcParams["default_per_epoch_throughput_limit"] = "1000000000000"
-
-	file, err := os.Create(paramPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := toml.NewEncoder(file)
-	return encoder.Encode(data)
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	return err
 }
 
-func (c *NamadaChain) initNetwork(baseDir string) error {
-	templatesDir := filepath.Join(baseDir, "templates")
-	wasmDir := filepath.Join(baseDir, "wasm")
+func (c *NamadaChain) initNetwork(ctx context.Context) error {
+	templatesDir := filepath.Join(c.HomeDir(), "templates")
+	wasmDir := filepath.Join(c.HomeDir(), "wasm")
 	checksumsPath := filepath.Join(wasmDir, "checksums.json")
-	cmd := exec.Command(
+	cmd := []string{
 		"namadac",
 		"--base-dir",
-		baseDir,
+		c.HomeDir(),
 		"utils",
 		"init-network",
 		"--templates-path",
@@ -749,11 +814,11 @@ func (c *NamadaChain) initNetwork(baseDir string) error {
 		"--genesis-time",
 		"2023-08-30T00:00:00.000000000+00:00",
 		"--archive-dir",
-		baseDir,
-	)
-	output, err := cmd.CombinedOutput()
+		c.HomeDir(),
+	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return fmt.Errorf("init-network failed: %s", output)
+		return fmt.Errorf("init-network failed: %v", err)
 	}
 	outputStr := string(output)
 
@@ -764,5 +829,43 @@ func (c *NamadaChain) initNetwork(baseDir string) error {
 	}
 	c.cfg.ChainID = matches[1]
 
-	return err
+	return nil
+}
+
+func (c *NamadaChain) copyGenesisFiles(ctx context.Context, n *NamadaNode) error {
+	archivePath := fmt.Sprintf("%s.tar.gz", c.Config().ChainID)
+	content, err := c.Validators[0].ReadFile(ctx, archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to read the archive file: %w", err)
+	}
+
+	n.writeFile(ctx, archivePath, content)
+	if err != nil {
+		return fmt.Errorf("failed to write the archive file: %w", err)
+	}
+
+	walletPath := filepath.Join("pre-genesis", "wallet.toml")
+	content, err = c.Validators[0].ReadFile(ctx, walletPath)
+	if err != nil {
+		return fmt.Errorf("failed to read the wallet file: %w", err)
+	}
+	err = n.writeFile(ctx, "wallet.toml", content)
+	if err != nil {
+		return fmt.Errorf("failed to write the wallet file: %w", err)
+	}
+
+	if n.Validator {
+		validatorAlias := fmt.Sprintf("validator-%d", n.Index)
+		validatorWalletPath := filepath.Join("pre-genesis", validatorAlias, "validator-wallet.toml")
+		content, err = c.Validators[0].ReadFile(ctx, validatorWalletPath)
+		if err != nil {
+			return fmt.Errorf("failed to read the validator wallet file: %w", err)
+		}
+		err = n.writeFile(ctx, validatorWalletPath, content)
+		if err != nil {
+			return fmt.Errorf("failed to write the validator wallet file: %w", err)
+		}
+	}
+
+	return nil
 }

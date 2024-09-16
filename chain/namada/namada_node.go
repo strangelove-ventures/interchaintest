@@ -172,29 +172,7 @@ func (n *NamadaNode) Height(ctx context.Context) (int64, error) {
 	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
-func (n *NamadaNode) CreateContainer(ctx context.Context, hostBaseDir string) error {
-	archiveFile := fmt.Sprintf("%s.tar.gz", n.Chain.Config().ChainID)
-	err := n.copyFile(ctx, archiveFile, hostBaseDir, ".")
-	if err != nil {
-		return err
-	}
-
-	srcDir := filepath.Join(hostBaseDir, "pre-genesis")
-	err = n.copyFile(ctx, "wallet.toml", srcDir, ".")
-	if err != nil {
-		return err
-	}
-
-	if n.Validator {
-		validatorAlias := fmt.Sprintf("validator-%d", n.Index)
-		destDir := filepath.Join("pre-genesis", validatorAlias)
-		validatorWalletPath := filepath.Join(hostBaseDir, destDir)
-		err = n.copyFile(ctx, "validator-wallet.toml", validatorWalletPath, destDir)
-		if err != nil {
-			return err
-		}
-	}
-
+func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 	setConfigDir := fmt.Sprintf("NAMADA_NETWORK_CONFIGS_DIR=%s", n.HomeDir())
 
 	joinNetworkCmd := fmt.Sprintf(`%s namadac --base-dir %s utils join-network --add-persistent-peers --chain-id %s --allow-duplicate-ip`, setConfigDir, n.HomeDir(), n.Chain.Config().ChainID)
@@ -294,5 +272,19 @@ func (n *NamadaNode) copyFile(ctx context.Context, fileName, srcDir, destDir str
 	}
 	fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
 	destPath := filepath.Join(destDir, fileName)
+	return fw.WriteFile(ctx, n.VolumeName, destPath, file)
+}
+
+func (n *NamadaNode) ReadFile(ctx context.Context, relPath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(n.logger(), n.DockerClient, n.TestName)
+	gen, err := fr.SingleFileContent(ctx, n.VolumeName, relPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file at %s: %w", relPath, err)
+	}
+	return gen, nil
+}
+
+func (n *NamadaNode) writeFile(ctx context.Context, destPath string, file []byte) error {
+	fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
 	return fw.WriteFile(ctx, n.VolumeName, destPath, file)
 }

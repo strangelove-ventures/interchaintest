@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 
 	"github.com/docker/docker/client"
@@ -14,6 +13,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -649,8 +649,8 @@ func (ic *Interchain) configureRelayerKeys(ctx context.Context, rep *testreporte
 
 			if c.Config().Type == "namada" {
 				// Copy Namada wallet to the relayer container
-				walletPath := filepath.Join(c.HomeDir(), "pre-genesis", "wallet.toml")
-				wallet, err := os.ReadFile(walletPath)
+				walletPath := filepath.Join("pre-genesis", "wallet.toml")
+				wallet, err := c.(*namada.NamadaChain).Validators[0].ReadFile(ctx, walletPath)
 				if err != nil {
 					return err
 				}
