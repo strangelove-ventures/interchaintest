@@ -7,7 +7,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"github.com/strangelove-ventures/interchaintest/v9/relayer"
 	"github.com/strangelove-ventures/interchaintest/v9/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v9/relayer/hyperspace"
+
+	// "github.com/strangelove-ventures/interchaintest/v9/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v9/relayer/rly"
 	"go.uber.org/zap"
 )
@@ -64,14 +65,14 @@ func (f *builtinRelayerFactory) Build(
 		)
 		f.setRelayerVersion(r.ContainerImage())
 		return r
-	case ibc.Hyperspace:
-		return hyperspace.NewHyperspaceRelayer(
-			f.log,
-			t.Name(),
-			cli,
-			networkID,
-			f.options...,
-		)
+	// case ibc.Hyperspace:
+	// 	return hyperspace.NewHyperspaceRelayer(
+	// 		f.log,
+	// 		t.Name(),
+	// 		cli,
+	// 		networkID,
+	// 		f.options...,
+	// 	)
 	case ibc.Hermes:
 		r := hermes.NewHermesRelayer(f.log, t.Name(), cli, networkID, f.options...)
 		f.setRelayerVersion(r.ContainerImage())

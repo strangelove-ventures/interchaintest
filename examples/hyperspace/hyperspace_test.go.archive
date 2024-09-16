@@ -17,7 +17,7 @@ import (
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v9"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
+	// "github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"github.com/strangelove-ventures/interchaintest/v9/relayer"
 	"github.com/strangelove-ventures/interchaintest/v9/testreporter"
