@@ -21,7 +21,7 @@ import (
 	govv1 "cosmossdk.io/x/gov/types/v1"
 	stakingtypes "cosmossdk.io/x/staking/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
+	// vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli" // TODO: re-add me with the module depending on the new account structure
 )
 
 var (
@@ -731,33 +731,34 @@ func testVesting(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, a
 		chain.AuthPrintAccountInfo(chain, res)
 	})
 
-	t.Run("periodic account", func(t *testing.T) {
-		acc = "cosmos1hkar47a0ysml3fhw2jgyrnrvwq9z8tk7zpw3jz"
+	// TODO: .
+	// t.Run("periodic account", func(t *testing.T) {
+	// 	acc = "cosmos1hkar47a0ysml3fhw2jgyrnrvwq9z8tk7zpw3jz"
 
-		err = node.VestingCreatePeriodicAccount(ctx, admin.KeyName(), acc, vestingcli.VestingData{
-			StartTime: currentUnixSeconds,
-			Periods: []vestingcli.InputPeriod{
-				{
-					Coins:  "100token",
-					Length: 30, // 30 seconds
-				},
-				{
-					Coins:  "101token",
-					Length: 30, // 30 seconds
-				},
-				{
-					Coins:  "102token",
-					Length: 30, // 30 seconds
-				},
-			},
-		})
-		require.NoError(t, err)
+	// 	err = node.VestingCreatePeriodicAccount(ctx, admin.KeyName(), acc, vestingcli.VestingData{
+	// 		StartTime: currentUnixSeconds,
+	// 		Periods: []vestingcli.InputPeriod{
+	// 			{
+	// 				Coins:  "100token",
+	// 				Length: 30, // 30 seconds
+	// 			},
+	// 			{
+	// 				Coins:  "101token",
+	// 				Length: 30, // 30 seconds
+	// 			},
+	// 			{
+	// 				Coins:  "102token",
+	// 				Length: 30, // 30 seconds
+	// 			},
+	// 		},
+	// 	})
+	// 	require.NoError(t, err)
 
-		res, err := chain.AuthQueryAccount(ctx, acc)
-		require.NoError(t, err)
-		require.EqualValues(t, "/cosmos.vesting.v1beta1.PeriodicVestingAccount", res.TypeUrl)
-		chain.AuthPrintAccountInfo(chain, res)
-	})
+	// 	res, err := chain.AuthQueryAccount(ctx, acc)
+	// 	require.NoError(t, err)
+	// 	require.EqualValues(t, "/cosmos.vesting.v1beta1.PeriodicVestingAccount", res.TypeUrl)
+	// 	chain.AuthPrintAccountInfo(chain, res)
+	// })
 
 	t.Run("Base Account", func(t *testing.T) {
 		res, err := chain.AuthQueryAccount(ctx, admin.FormattedAddress())
