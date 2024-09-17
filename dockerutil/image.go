@@ -224,7 +224,7 @@ func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptio
 		return nil, image.WrapErr(fmt.Errorf("create container %s: %w", containerName, err))
 	}
 
-	logger.Info("About to start container")
+	logger.Info("Running")
 
 	err = StartContainer(ctx, image.client, cID)
 	if err != nil {

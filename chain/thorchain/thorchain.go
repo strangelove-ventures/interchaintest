@@ -464,6 +464,19 @@ func (c *Thorchain) pullImages(ctx context.Context, cli *client.Client) {
 	}
 }
 
+func (c *Thorchain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
+	c.cfg.Images[0].Version = version
+	for _, n := range c.Validators {
+		n.Image.Version = version
+		n.Image.Repository = containerRepo
+	}
+	for _, n := range c.FullNodes {
+		n.Image.Version = version
+		n.Image.Repository = containerRepo
+	}
+	c.pullImages(ctx, cli)
+}
+
 // NewChainNode constructs a new cosmos chain node with a docker volume.
 func (c *Thorchain) NewChainNode(
 	ctx context.Context,
