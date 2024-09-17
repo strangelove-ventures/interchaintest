@@ -200,7 +200,7 @@ func TestThorchainBankMsgSend(t *testing.T) {
 	}
 
 	// No error verifies that the route is enabled for a normal bank send
-	err = thorchain.CosmosBankSendWithNote(ctx, thorUsr1.KeyName(), amount, "")
+	err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amount, "")
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 1, thorchain)
@@ -227,7 +227,7 @@ func TestThorchainBankMsgSend(t *testing.T) {
 	usr1ExpectedBal := usr1BalAfterFirstTx.Sub(amountDeposit.Amount).Sub(usr1TxFee)
 
 	// Perform a MsgDeposit to the RUNEpool using MsgSend with an embedded memo
-	err = thorchain.CosmosBankSendWithNote(ctx, thorUsr1.KeyName(), amountDeposit, "pool+")
+	err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amountDeposit, "pool+")
 	require.NoError(t, err)
 
 	// Verify the RUNE tokens are taken away from the user's bank balance
@@ -311,6 +311,9 @@ func TestThorchainMsgSend(t *testing.T) {
 		Amount:  sendableAmount,
 	}
 
+	thorAcc := sdk.AccAddress(crypto.AddressHash([]byte("thorchain")))
+	thorAccAddr := sdk.MustBech32ifyAddressBytes("tthor", thorAcc)
+
 	// No error verifies that the route is enabled for a normal bank send
 	_, err = thorchain.SendFundsWithNote(ctx, thorUsr1.KeyName(), amount, "")
 	require.NoError(t, err)
@@ -329,14 +332,28 @@ func TestThorchainMsgSend(t *testing.T) {
 
 	usr1TxFee := usr1BalBefore.Sub(amount.Amount).Sub(usr1BalAfterFirstTx)
 
-	thorAcc := sdk.AccAddress(crypto.AddressHash([]byte("thorchain")))
-	thorAddr := sdk.MustBech32ifyAddressBytes("tthor", thorAcc)
+	disallowedSendToThorModuleAddr := ibc.WalletAmount{
+		Address: thorAccAddr,
+		Denom:   thorchain.Config().Denom,
+		Amount:  sendableAmount,
+	}
+
+	// Error verifies that sending tokens to the thor module address is disallowed
+	_, err = thorchain.SendFundsWithNote(ctx, thorUsr1.KeyName(), disallowedSendToThorModuleAddr, "")
+	require.Error(t, err)
+	fmt.Printf("err: %+v\n", err)
+
+	usr1BalAfterDeniedSend, err := thorchain.GetBalance(ctx, thorUsr1.FormattedAddress(), thorchain.Config().Denom)
+	require.NoError(t, err)
+	expectedBal := usr1BalAfterFirstTx.Sub(usr1TxFee)
+	require.Equal(t, expectedBal.String(), usr1BalAfterDeniedSend.String())
+
 	amountDeposit := ibc.WalletAmount{
-		Address: thorAddr,
+		Address: thorAccAddr,
 		Denom:   thorchain.Config().Denom,
 		Amount:  sendableAmount.Mul(math.NewInt(2)),
 	}
-	usr1ExpectedBal := usr1BalAfterFirstTx.Sub(amountDeposit.Amount).Sub(usr1TxFee)
+	usr1ExpectedBal := usr1BalAfterFirstTx.Sub(amountDeposit.Amount).Sub(usr1TxFee).Sub(usr1TxFee)
 
 	// Perform a MsgDeposit to the RUNEpool using MsgSend with an embedded memo
 	_, err = thorchain.SendFundsWithNote(ctx, thorUsr1.KeyName(), amountDeposit, "pool+")

@@ -19,7 +19,7 @@ func (tn *ChainNode) BankSend(ctx context.Context, keyName string, amount ibc.Wa
 }
 
 // CosmosBankSend sends tokens from one account to another with a cosmos bank module send.
-func (c *Thorchain) CosmosBankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) error {
+func (c *Thorchain) BankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) error {
 	_, err := c.getFullNode().ExecTx(ctx,
 		keyName, "bank", "send", keyName,
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom), "--note", "\""+note+"\"",
@@ -28,7 +28,7 @@ func (c *Thorchain) CosmosBankSendWithNote(ctx context.Context, keyName string, 
 }
 
 // BankSendWithNote sends tokens from one account to another with a note/memo.
-func (tn *ChainNode) BankSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+func (tn *ChainNode) ThorMsgSendWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	return tn.ExecTx(ctx,
 		keyName, "thorchain", "send",
 		amount.Address, fmt.Sprintf("%s%s", amount.Amount.String(), amount.Denom),
