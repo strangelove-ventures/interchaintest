@@ -1,7 +1,4 @@
-package blockdb_test
-
-// This test is in a separate file, so it can be in the blockdb_test package,
-// so it can import interchaintest without creating an import cycle.
+package cosmos_test
 
 import (
 	"context"
@@ -20,7 +17,7 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestMessagesView(t *testing.T) {
+func TestBlockDBMessagesView(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
