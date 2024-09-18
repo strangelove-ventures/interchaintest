@@ -27,7 +27,7 @@ func TestNamadaNetwork(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 2
+	nv := 1
 	fn := 0
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -116,7 +116,7 @@ func TestNamadaNetwork(t *testing.T) {
 	require.NoError(t, err)
 	namadaChannelID := namadaChannelInfo[0].ChannelID
 
-	// Send Transaction
+	// Send Transaction from Gaia to Namada
 	amountToSend := math.NewInt(1)
 	dstAddress := namadaUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
@@ -142,4 +142,34 @@ func TestNamadaNetwork(t *testing.T) {
 	namadaUserBalNew, err := namada.GetBalance(ctx, namadaUser.FormattedAddress(), dstIbcTrace)
 	require.NoError(t, err)
 	require.True(t, namadaUserBalNew.Equal(amountToSend))
+
+	// Send Transaction from Namada to Gaia
+	amountToSend = math.NewInt(1)
+	dstAddress = gaiaUser.FormattedAddress()
+	transfer = ibc.WalletAmount{
+		Address: dstAddress,
+		Denom:   namada.Config().Denom,
+		Amount:  amountToSend,
+	}
+	tx, err = namada.SendIBCTransfer(ctx, namadaChannelID, namadaUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())
+
+	// relay MsgRecvPacket to namada, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, namadaChannelID))
+
+	// test source wallet has decreased funds
+	expectedBal = namadaUserBalInitial.Sub(amountToSend).Sub(math.NewInt(tx.GasSpent))
+	namadaUserBalNew, err = namada.GetBalance(ctx, namadaUser.FormattedAddress(), namada.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, namadaUserBalNew.Equal(amountToSend))
+
+	// Test destination wallet has increased funds
+	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, namada.Config().Denom))
+	dstIbcDenom := srcDenomTrace.IBCDenom()
+	expectedBal = gaiaUserBalInitial.Add(amountToSend.Mul(math.NewInt(1000000)))
+	gaiaUserBalNew, err = gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), dstIbcDenom)
+	require.NoError(t, err)
+	require.True(t, gaiaUserBalNew.Equal(expectedBal))
+
 }

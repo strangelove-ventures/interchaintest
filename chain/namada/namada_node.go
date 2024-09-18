@@ -10,14 +10,15 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	// using a legacy tendermint client
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
+	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
 )
 
@@ -222,6 +223,11 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 	n.hostP2PPort, n.hostRPCPort = hostPorts[0], hostPorts[1]
 
 	time.Sleep(5 * time.Second)
+	err = n.WaitMaspFileDownload(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to download MASP files: %v", err)
+	}
+
 	return retry.Do(func() error {
 		stat, err := n.Client.Status(ctx)
 		if err != nil {
@@ -235,7 +241,7 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 	}, retry.Context(ctx), retry.DelayType(retry.BackOffDelay))
 }
 
-func (n *NamadaNode) CheckMaspFiles(ctx context.Context) error {
+func (n *NamadaNode) WaitMaspFileDownload(ctx context.Context) error {
 	maspDir := ".masp-params"
 	requiredFiles := []string{
 		"masp-spend.params",
@@ -246,8 +252,26 @@ func (n *NamadaNode) CheckMaspFiles(ctx context.Context) error {
 	fr := dockerutil.NewFileRetriever(n.logger(), n.DockerClient, n.TestName)
 	for _, file := range requiredFiles {
 		relPath := filepath.Join(maspDir, file)
-		if _, err := fr.SingleFileContent(ctx, n.VolumeName, relPath); err != nil {
-			return err
+		timeout := 5 * time.Minute
+		timeoutChan := time.After(timeout)
+		size := -1
+    completed := false
+		for !completed {
+			select {
+			case <-timeoutChan:
+				return fmt.Errorf("Downloading masp files isn't completed")
+			default:
+				f, err := fr.SingleFileContent(ctx, n.VolumeName, relPath)
+				if err != nil {
+					return fmt.Errorf("failed to read %s", file)
+				}
+				if size != len(f) {
+					size = len(f)
+					time.Sleep(2 * time.Second)
+					continue
+				}
+				completed = true
+			}
 		}
 	}
 

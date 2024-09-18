@@ -5,19 +5,23 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"cosmossdk.io/math"
+	cometbft "github.com/cometbft/cometbft/abci/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
@@ -174,13 +178,6 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	if err := testutil.WaitForBlocksUtil(10, func(i int) error {
-		time.Sleep(5 * time.Second)
-		return c.Validators[0].CheckMaspFiles(ctx)
-	}); err != nil {
 		return err
 	}
 
@@ -358,18 +355,114 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		"ibc-transfer",
 		"--source",
 		keyName,
-		"--target",
+		"--receiver",
 		amount.Address,
 		"--token",
 		amount.Denom,
 		"--amount",
 		amount.Amount.String(),
+		"--channel-id",
+		channelID,
 		"--node",
 		c.GetRPCAddress(),
 	}
-	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 
-	return ibc.Tx{}, err
+	if options.Port != "" {
+		cmd = append(cmd, "--port-id", options.Port)
+	}
+
+	if options.Memo != "" {
+		cmd = append(cmd, "--ibc-memo", options.Memo)
+	}
+
+	// TODO timeout
+
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	outputStr := string(output)
+	fmt.Println("DEBUG:", outputStr)
+
+	re := regexp.MustCompile(`Transaction hash: ([0-9A-F]+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	var txHash string
+	if len(matches) > 1 {
+		txHash = matches[1]
+	} else {
+		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s", outputStr)
+	}
+
+	re = regexp.MustCompile(`Transaction ([0-9A-F]+) was successfully applied at height (\d+), consuming (\d+) gas units`)
+	matchesAll := re.FindAllStringSubmatch(outputStr, -1)
+	if len(matches) == 0 {
+		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s", outputStr)
+	}
+
+	var txHashes []string
+	var height int64
+	var gas int64
+	for _, match := range matchesAll {
+		if len(match) == 4 {
+			txHashes = append(txHashes, match[1])
+			// it is ok to overwrite them of the last transaction
+			height, _ = strconv.ParseInt(match[2], 10, 64)
+			gas, _ = strconv.ParseInt(match[3], 10, 64)
+		}
+	}
+
+	tx := ibc.Tx{
+		TxHash:   txHash,
+		Height:   height,
+		GasSpent: gas,
+	}
+
+	results, err := c.Validators[0].Client.BlockResults(ctx, &height)
+	if err != nil {
+		return ibc.Tx{}, fmt.Errorf("Checking the events failed: %v", err)
+	}
+	tendermintEvents := results.EndBlockEvents
+	jsonEvents, err := json.Marshal(tendermintEvents)
+	if err != nil {
+		return ibc.Tx{}, fmt.Errorf("Converting events failed: %v", err)
+	}
+	var events []cometbft.Event
+	json.Unmarshal(jsonEvents, events)
+
+	const evType = "send_packet"
+	fmt.Println("DEBUG:", events)
+	var (
+		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
+		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
+		srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
+		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
+		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
+		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
+		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
+	)
+	tx.Packet.SourcePort = srcPort
+	tx.Packet.SourceChannel = srcChan
+	tx.Packet.DestPort = dstPort
+	tx.Packet.DestChannel = dstChan
+	tx.Packet.TimeoutHeight = timeoutHeight
+
+	data, err := hex.DecodeString(dataHex)
+	if err != nil {
+		return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
+	}
+	tx.Packet.Data = data
+
+	seqNum, err := strconv.ParseUint(seq, 10, 64)
+	if err != nil {
+		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
+	}
+	tx.Packet.Sequence = seqNum
+
+	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
+	if err != nil {
+		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
+	}
+	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
+
+	return tx, err
 }
 
 // Current block height
@@ -434,6 +527,7 @@ func (c *NamadaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketT
 }
 
 // Namada wallet
+// Generates a spending key when the keyName prefixed with "shielded"
 func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -447,16 +541,16 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 
 		return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
 	} else {
-		return c.createKeyAndMnemonic(ctx, keyName)
+		return c.createKeyAndMnemonic(ctx, keyName, strings.HasPrefix(keyName, "shielded"))
 	}
 }
 
 // Namada wallet for a relayer
 func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	return c.createKeyAndMnemonic(ctx, keyName)
+	return c.createKeyAndMnemonic(ctx, keyName, false)
 }
 
-func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) (ibc.Wallet, error) {
+func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, isShielded bool) (ibc.Wallet, error) {
 	cmd := []string{
 		"namadaw",
 		"--base-dir",
@@ -465,6 +559,9 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string) 
 		"--alias",
 		keyName,
 		"--unsafe-dont-encrypt",
+	}
+	if isShielded {
+		cmd = append(cmd, "--shielded")
 	}
 	if !c.isRunning {
 		cmd = append(cmd, "--pre-genesis")
