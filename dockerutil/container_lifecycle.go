@@ -3,8 +3,11 @@ package dockerutil
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"regexp"
 	"strings"
+	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,6 +20,9 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
+
+// Example Go/Cosmos-SDK panic format is `panic: bad Duration: time: invalid duration "bad"\n`
+var panicRe = regexp.MustCompile(`panic:.*\n`)
 
 type ContainerLifecycle struct {
 	log               *zap.Logger
@@ -124,7 +130,55 @@ func (c *ContainerLifecycle) StartContainer(ctx context.Context) error {
 		return err
 	}
 
+	if err := c.CheckForFailedStart(ctx, time.Second*1); err != nil {
+		return err
+	}
+
 	c.log.Info("Container started", zap.String("container", c.containerName))
+	return nil
+}
+
+// CheckForFailedStart checks the logs of the container for a
+// panic message after a wait period to allow the container to start.
+func (c *ContainerLifecycle) CheckForFailedStart(ctx context.Context, wait time.Duration) error {
+	time.Sleep(wait)
+	containerLogs, err := c.client.ContainerLogs(ctx, c.id, dockertypes.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to read logs from container %s: %w", c.containerName, err)
+	}
+	defer containerLogs.Close()
+
+	logs := new(strings.Builder)
+	_, err = io.Copy(logs, containerLogs)
+	if err != nil {
+		return fmt.Errorf("failed to read logs from container %s: %w", c.containerName, err)
+	}
+
+	if err := ParseSDKPanicFromText(logs.String()); err != nil {
+		// Must use Println and not the logger as there are ascii escape codes in the logs.
+		fmt.Printf("\nContainer name: %s.\nerror: %s.\nlogs\n%s\n", c.containerName, err.Error(), logs.String())
+		return fmt.Errorf("container %s failed to start: %w", c.containerName, err)
+	}
+
+	return nil
+}
+
+// ParsePanicFromText returns a panic line if it exists in the logs so
+// that it can be returned to the user in a proper error message instead of
+// hanging.
+func ParseSDKPanicFromText(text string) error {
+	if !strings.Contains(text, "panic: ") {
+		return nil
+	}
+
+	match := panicRe.FindString(text)
+	if match != "" {
+		panicMessage := strings.TrimSpace(match)
+		return fmt.Errorf("%s", panicMessage)
+	}
 
 	return nil
 }
