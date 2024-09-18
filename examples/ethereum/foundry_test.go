@@ -18,7 +18,6 @@ import (
 )
 
 func TestFoundry(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip()
 	}

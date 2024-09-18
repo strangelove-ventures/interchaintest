@@ -16,6 +16,10 @@ import (
 )
 
 func TestCodeCoverage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
 	t.Parallel()
 
 	var (

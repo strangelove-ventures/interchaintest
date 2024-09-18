@@ -19,7 +19,6 @@ import (
 )
 
 func TestGeth(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip()
 	}
