@@ -20,8 +20,6 @@ import (
 
 var (
 	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0"}
-	vals            = 2
-	fNodes          = 0
 	providerChainID = "provider-1"
 )
 
@@ -67,12 +65,12 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name: "ics-provider", Version: version,
-			NumValidators: &vals, NumFullNodes: &fNodes,
+			NumValidators: &numVals, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID, TrustingPeriod: "336h"},
 		},
 		{
 			Name: "ics-consumer", Version: version,
-			NumValidators: &vals, NumFullNodes: &fNodes,
+			NumValidators: &numVals, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix, InterchainSecurityConfig: ibc.ICSConfig{
 				ConsumerCopyProviderKey: func(i int) bool {
 					return i == 0

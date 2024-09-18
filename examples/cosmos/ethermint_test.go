@@ -145,7 +145,7 @@ func TestEthermintChain(t *testing.T) {
 	require.Equal(t, "10000000000", balance.String())
 
 	// verify access to port exposed via ExposeAdditionalPorts
-	evmJsonRpcUrl, err := chain.FullNodes[0].GetHostAddress(ctx, "8545/tcp")
+	evmJsonRpcUrl, err := chain.GetNode().GetHostAddress(ctx, "8545/tcp")
 	require.NoError(t, err)
 
 	data := []byte(`{"jsonrpc":"2.0","id":1,"method":"eth_getBlockByNumber","params":["0x1", null]}`)
