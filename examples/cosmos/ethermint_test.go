@@ -111,6 +111,8 @@ func TestEthermintChain(t *testing.T) {
 				ExposeAdditionalPorts: []string{"8545/tcp"},
 				ConfigFileOverrides:   map[string]any{"config/app.toml": appTomlOverrides},
 			},
+			NumValidators: &numValsOne,
+			NumFullNodes:  &numFullNodesZero,
 		},
 	})
 

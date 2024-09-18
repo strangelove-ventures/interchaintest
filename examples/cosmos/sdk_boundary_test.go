@@ -34,9 +34,11 @@ func TestSDKBoundaries(t *testing.T) {
 			chainSpecs: []*interchaintest.ChainSpec{
 				{
 					Name: "gaia", ChainName: "gaia", Version: "v7.0.3", //sdk 0.45.6
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 				{
 					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", //sdk 0.50 alpha
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
 			relayerVersion: "colin-event-fix",
@@ -46,9 +48,11 @@ func TestSDKBoundaries(t *testing.T) {
 			chainSpecs: []*interchaintest.ChainSpec{
 				{
 					Name: "ibc-go-simd", ChainName: "simd-47", Version: "v7.2.0", //sdk 0.47.3
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 				{
 					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", //sdk 0.50 alpha
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
 			relayerVersion: "colin-event-fix",

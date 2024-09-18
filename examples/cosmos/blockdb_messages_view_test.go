@@ -29,8 +29,8 @@ func TestBlockDBMessagesView(t *testing.T) {
 	const gaia0ChainID = "g0"
 	const gaia1ChainID = "g1"
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia0ChainID}},
-		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia1ChainID}},
+		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia0ChainID}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
+		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia1ChainID}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
 	})
 
 	chains, err := cf.Chains(t.Name())
