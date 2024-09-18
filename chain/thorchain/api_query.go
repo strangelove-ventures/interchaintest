@@ -57,6 +57,17 @@ func (c *Thorchain) ApiGetRuneProviders() ([]RUNEProvider, error) {
 	return prov, err
 }
 
+func (c *Thorchain) ApiGetInboundAddresses() ([]InboundAddress, error) {
+	url := fmt.Sprintf("%s/thorchain/inbound_addresses", c.GetAPIAddress())
+	var inboundAddresses []InboundAddress
+	err := get(url, &inboundAddresses)
+	if err != nil {
+		return nil, err
+	}
+
+	return inboundAddresses, nil
+}
+
 func (c *Thorchain) ApiGetInboundAddress(chain string) (address string, router *string, err error) {
 	url := fmt.Sprintf("%s/thorchain/inbound_addresses", c.GetAPIAddress())
 	var inboundAddresses []InboundAddress

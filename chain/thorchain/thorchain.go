@@ -341,7 +341,8 @@ func (c *Thorchain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc
 
 // Implements Chain interface
 func (c *Thorchain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return c.getFullNode().BankSend(ctx, keyName, amount)
+	_, err := c.getFullNode().BankSend(ctx, keyName, amount)
+	return err
 }
 
 // Implements Chain interface

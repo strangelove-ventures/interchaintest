@@ -200,7 +200,7 @@ func TestThorchainBankMsgSend(t *testing.T) {
 	}
 
 	// No error verifies that the route is enabled for a normal bank send
-	err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amount, "")
+	_, err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amount, "")
 	require.NoError(t, err)
 
 	err = testutil.WaitForBlocks(ctx, 1, thorchain)
@@ -227,7 +227,7 @@ func TestThorchainBankMsgSend(t *testing.T) {
 	usr1ExpectedBal := usr1BalAfterFirstTx.Sub(amountDeposit.Amount).Sub(usr1TxFee)
 
 	// Perform a MsgDeposit to the RUNEpool using MsgSend with an embedded memo
-	err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amountDeposit, "pool+")
+	_, err = thorchain.BankSendWithNote(ctx, thorUsr1.KeyName(), amountDeposit, "pool+")
 	require.NoError(t, err)
 
 	// Verify the RUNE tokens are taken away from the user's bank balance
@@ -296,6 +296,16 @@ func TestThorchainMsgSend(t *testing.T) {
 	users2, err := features.GetAndFundTestUsers(t, ctx, "thorusr2", thorchain)
 	require.NoError(t, err)
 	thorUsr2 := users2[0]
+
+	addrs, err := thorchain.ApiGetInboundAddresses()
+	require.NoError(t, err)
+	for _, addr := range addrs {
+		fmt.Printf("Chain: %s\n", *addr.Chain)
+		fmt.Printf("Address: %s\n", *addr.Address)
+		fmt.Printf("Halted: %t\n", addr.Halted)
+		fmt.Printf("GlobalTradingPaused: %t\n", *addr.GlobalTradingPaused)
+		fmt.Printf("OutboundFee: %s\n", *addr.OutboundFee)
+	}
 
 	usr1BalBefore, err := thorchain.GetBalance(ctx, thorUsr1.FormattedAddress(), thorchain.Config().Denom)
 	require.NoError(t, err)

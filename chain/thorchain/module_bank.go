@@ -13,7 +13,8 @@ import (
 
 // Deprecated: use BankSend instead
 func (tn *ChainNode) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-	return tn.BankSend(ctx, keyName, amount)
+	_, err := tn.BankSend(ctx, keyName, amount)
+	return err
 }
 
 // GetBalance fetches the current balance for a specific account address and denom.
