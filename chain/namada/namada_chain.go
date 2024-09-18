@@ -298,6 +298,34 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	return []byte(address), nil
 }
 
+// Get the key alias
+func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, error) {
+	cmd := []string{
+		"namadaw",
+		"--base-dir",
+		c.HomeDir(),
+		"find",
+		"--address",
+		address,
+	}
+	if !c.isRunning {
+		cmd = append(cmd, "--pre-genesis")
+	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("Getting the alias failed with address %s: %w", address, err)
+	}
+	outputStr := string(output)
+	re := regexp.MustCompile(`Found alias (\S+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("No alias found: %s", outputStr)
+	}
+	alias := matches[1]
+
+	return alias, nil
+}
+
 // Send funds to a wallet from a user account
 func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	cmd := []string{
@@ -540,6 +568,8 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 		}
 
 		return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	} else if !c.isRunning {
+		return c.createGenesisKey(ctx, keyName)
 	} else {
 		return c.createKeyAndMnemonic(ctx, keyName, strings.HasPrefix(keyName, "shielded"))
 	}
@@ -548,6 +578,27 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 // Namada wallet for a relayer
 func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	return c.createKeyAndMnemonic(ctx, keyName, false)
+}
+
+// Create an established account key for genesis
+func (c *NamadaChain) createGenesisKey(ctx context.Context, keyName string) (ibc.Wallet, error) {
+	alias := fmt.Sprintf("%s-key", keyName)
+	_, err := c.createKeyAndMnemonic(ctx, alias, false)
+	if err != nil {
+		return &NamadaWallet{}, err
+	}
+
+	transactionPath := filepath.Join(c.HomeDir(), fmt.Sprintf("established-account-tx-%s.toml", keyName))
+	address, err := c.initGenesisEstablishedAccount(ctx, alias, transactionPath)
+	if err != nil {
+		return &NamadaWallet{}, err
+	}
+
+	if err := c.addAddress(ctx, keyName, address); err != nil {
+		return &NamadaWallet{}, err
+	}
+
+	return NewWallet(keyName, []byte(address), "", c.cfg), nil
 }
 
 func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, isShielded bool) (ibc.Wallet, error) {
@@ -577,6 +628,28 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 	}
 
 	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+}
+
+func (c *NamadaChain) addAddress(ctx context.Context, keyName, address string) error {
+	cmd := []string{
+		"namadaw",
+		"--base-dir",
+		c.HomeDir(),
+		"add",
+		"--alias",
+		keyName,
+		"--value",
+		address,
+	}
+	if !c.isRunning {
+		cmd = append(cmd, "--pre-genesis")
+	}
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return fmt.Errorf("Address couldn't be added: %v", err)
+	}
+
+	return nil
 }
 
 func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
@@ -717,46 +790,13 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 		}
 
 		// Initialize an established account of the validator
-		cmd = []string{
-			"namadac",
-			"--base-dir",
-			c.HomeDir(),
-			"utils",
-			"init-genesis-established-account",
-			"--aliases",
-			alias,
-			"--path",
-			transactionPath,
-		}
-		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
+		validatorAddress, err := c.initGenesisEstablishedAccount(ctx, alias, transactionPath)
 		if err != nil {
-			return fmt.Errorf("Initializing a validator account failed: %v", err)
+			return err
 		}
-		outputStr := string(output)
-		// Trim ANSI escape sequence
-		ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*m`)
-		outputStr = ansiRegex.ReplaceAllString(outputStr, "")
-		re := regexp.MustCompile(`Derived established account address: (\S+)`)
-		matches := re.FindStringSubmatch(outputStr)
-		if len(matches) < 2 {
-			return fmt.Errorf("No established account adrress found: %s", outputStr)
-		}
-		validatorAddress := matches[1]
 
 		// Add the validator address
-		cmd = []string{
-			"namadaw",
-			"--base-dir",
-			c.HomeDir(),
-			"--pre-genesis",
-			"add",
-			"--alias",
-			validatorAlias,
-			"--value",
-			validatorAddress,
-		}
-		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
-		if err != nil {
+		if err := c.addAddress(ctx, validatorAlias, validatorAddress); err != nil {
 			return fmt.Errorf("Validator address couldn't be added: %v", err)
 		}
 
@@ -866,9 +906,69 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 		if err != nil {
 			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
 		}
+		// Add the key balance
+		alias, err := c.getAlias(ctx, wallet.Address)
+		if err != nil {
+			return err
+		}
+		keyAddress, err := c.GetAddress(ctx, fmt.Sprintf("%s-key", alias))
+		if err != nil {
+			// skip when the account is implicit
+			continue
+		}
+		line = fmt.Sprintf(`%s = "%s"`, keyAddress, wallet.Amount)
+		cmd = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(`echo '%s' >> %s`, line, balancePath),
+		}
+		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
+		if err != nil {
+			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
+		}
+	}
+	destTransactionsPath := filepath.Join(templateDir, "transactions.toml")
+	cmd = []string{
+		"sh",
+		"-c",
+		fmt.Sprintf("find %s -name 'established-account-tx-*.toml' -exec cat {} + >> %s", c.HomeDir(), destTransactionsPath),
+	}
+	_, _, err = c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return fmt.Errorf("Appending establish account tx: %w", err)
 	}
 
 	return nil
+}
+
+func (c *NamadaChain) initGenesisEstablishedAccount(ctx context.Context, keyName, transactionPath string) (string, error) {
+	cmd := []string{
+		"namadac",
+		"--base-dir",
+		c.HomeDir(),
+		"utils",
+		"init-genesis-established-account",
+		"--aliases",
+		keyName,
+		"--path",
+		transactionPath,
+	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("Initializing a validator account failed: %v", err)
+	}
+	outputStr := string(output)
+	// Trim ANSI escape sequence
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	outputStr = ansiRegex.ReplaceAllString(outputStr, "")
+	re := regexp.MustCompile(`Derived established account address: (\S+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("No established account adrress found: %s", outputStr)
+	}
+	addr := matches[1]
+
+	return addr, nil
 }
 
 func (c *NamadaChain) updateParameters(ctx context.Context) error {

@@ -255,7 +255,7 @@ func (n *NamadaNode) WaitMaspFileDownload(ctx context.Context) error {
 		timeout := 5 * time.Minute
 		timeoutChan := time.After(timeout)
 		size := -1
-    completed := false
+		completed := false
 		for !completed {
 			select {
 			case <-timeoutChan:
@@ -263,7 +263,8 @@ func (n *NamadaNode) WaitMaspFileDownload(ctx context.Context) error {
 			default:
 				f, err := fr.SingleFileContent(ctx, n.VolumeName, relPath)
 				if err != nil {
-					return fmt.Errorf("failed to read %s", file)
+					time.Sleep(2 * time.Second)
+					continue
 				}
 				if size != len(f) {
 					size = len(f)
