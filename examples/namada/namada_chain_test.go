@@ -171,5 +171,4 @@ func TestNamadaNetwork(t *testing.T) {
 	gaiaUserBalNew, err = gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
 	require.True(t, gaiaUserBalNew.Equal(expectedBal))
-
 }
