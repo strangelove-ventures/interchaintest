@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"cosmossdk.io/math"
 	cometbft "github.com/cometbft/cometbft/abci/types"
@@ -406,7 +407,21 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		cmd = append(cmd, "--ibc-memo", options.Memo)
 	}
 
-	// TODO timeout
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			timestamp := time.Unix(0, int64(options.Timeout.NanoSeconds))
+			currentTime := time.Now()
+			if currentTime.After(timestamp) {
+				return ibc.Tx{}, fmt.Errorf("invalid timeout timestamp: %d", options.Timeout.NanoSeconds)
+			}
+			offset := int64(timestamp.Sub(currentTime).Seconds())
+			cmd = append(cmd, "--timeout-sec-offset", strconv.FormatInt(offset, 10))
+		}
+
+		if options.Timeout.Height > 0 {
+			cmd = append(cmd, "--timeout-height", strconv.FormatInt(options.Timeout.Height, 10))
+		}
+	}
 
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	outputStr := string(output)
@@ -449,9 +464,13 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if err != nil {
 		return ibc.Tx{}, fmt.Errorf("Checking the events failed: %v", err)
 	}
+	const evType = "send_packet"
 	tendermintEvents := results.EndBlockEvents
 	var events []cometbft.Event
 	for _, event := range tendermintEvents {
+		if event.Type != evType {
+			continue
+		}
 		jsonEvent, err := json.Marshal(event)
 		if err != nil {
 			return ibc.Tx{}, fmt.Errorf("Converting an events failed: %v", err)
@@ -464,7 +483,6 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		events = append(events, event)
 	}
 
-	const evType = "send_packet"
 	var (
 		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
 		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
