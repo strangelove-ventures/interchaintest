@@ -3,6 +3,8 @@ package namada_test
 import (
 	"context"
 	"fmt"
+	stdmath "math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -30,6 +32,7 @@ func TestNamadaNetwork(t *testing.T) {
 	nv := 1
 	fn := 0
 
+	coinDecimals := int64(6)
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v19.2.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "1uatom",
@@ -38,8 +41,10 @@ func TestNamadaNetwork(t *testing.T) {
 			Name:    "namada",
 			Version: "main",
 			ChainConfig: ibc.ChainConfig{
-				ChainID: "namada-test",
-				Denom:   "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e",
+				ChainID:      "namada-test",
+				Denom:        "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e",
+				Gas:          "250000",
+				CoinDecimals: &coinDecimals,
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &fn,
@@ -96,6 +101,12 @@ func TestNamadaNetwork(t *testing.T) {
 	})
 
 	initBalance := math.NewInt(1_000_000)
+
+	gasSpent, _ := strconv.ParseInt(namada.Config().Gas, 10, 64)
+	namadaGasSpent := math.NewInt(gasSpent)
+	tokenDenom := math.NewInt(int64(stdmath.Pow(10, float64(*namada.Config().CoinDecimals))))
+	namadaInitBalance := initBalance.Mul(tokenDenom)
+
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, gaia, namada)
 	gaiaUser := users[0]
 	namadaUser := users[1]
@@ -106,7 +117,7 @@ func TestNamadaNetwork(t *testing.T) {
 
 	namadaUserBalInitial, err := namada.GetBalance(ctx, namadaUser.KeyName(), namada.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, namadaUserBalInitial.Equal(initBalance))
+	require.True(t, namadaUserBalInitial.Equal(namadaInitBalance))
 
 	// Get Channel ID
 	gaiaChannelInfo, err := r.GetChannels(ctx, eRep, gaia.Config().ChainID)
@@ -139,9 +150,9 @@ func TestNamadaNetwork(t *testing.T) {
 
 	// Test destination wallet has increased funds
 	dstIbcTrace := transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
-	namadaUserBalNew, err := namada.GetBalance(ctx, namadaUser.FormattedAddress(), dstIbcTrace)
+	namadaUserBalNew, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace)
 	require.NoError(t, err)
-	require.True(t, namadaUserBalNew.Equal(amountToSend))
+	require.True(t, namadaUserBalNew.Equal(amountToSend.Mul(tokenDenom)))
 
 	// Send Transaction from Namada to Gaia
 	amountToSend = math.NewInt(1)
@@ -159,16 +170,15 @@ func TestNamadaNetwork(t *testing.T) {
 	require.NoError(t, r.Flush(ctx, eRep, ibcPath, namadaChannelID))
 
 	// test source wallet has decreased funds
-	expectedBal = namadaUserBalInitial.Sub(amountToSend).Sub(math.NewInt(tx.GasSpent))
-	namadaUserBalNew, err = namada.GetBalance(ctx, namadaUser.FormattedAddress(), namada.Config().Denom)
+	expectedBal = namadaUserBalInitial.Sub(amountToSend.Mul(tokenDenom)).Sub(namadaGasSpent)
+	namadaUserBalNew, err = namada.GetBalance(ctx, namadaUser.KeyName(), namada.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, namadaUserBalNew.Equal(amountToSend))
+	require.True(t, namadaUserBalNew.Equal(expectedBal))
 
 	// Test destination wallet has increased funds
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, namada.Config().Denom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
-	expectedBal = gaiaUserBalInitial.Add(amountToSend.Mul(math.NewInt(1000000)))
 	gaiaUserBalNew, err = gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
-	require.True(t, gaiaUserBalNew.Equal(expectedBal))
+	require.True(t, gaiaUserBalNew.Equal(amountToSend.Mul(tokenDenom)))
 }

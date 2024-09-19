@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	stdmath "math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -409,7 +410,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	outputStr := string(output)
-	fmt.Println("DEBUG:", outputStr)
+	c.log.Log(zap.InfoLevel, outputStr)
 
 	re := regexp.MustCompile(`Transaction hash: ([0-9A-F]+)`)
 	matches := re.FindStringSubmatch(outputStr)
@@ -449,15 +450,21 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return ibc.Tx{}, fmt.Errorf("Checking the events failed: %v", err)
 	}
 	tendermintEvents := results.EndBlockEvents
-	jsonEvents, err := json.Marshal(tendermintEvents)
-	if err != nil {
-		return ibc.Tx{}, fmt.Errorf("Converting events failed: %v", err)
-	}
 	var events []cometbft.Event
-	json.Unmarshal(jsonEvents, events)
+	for _, event := range tendermintEvents {
+		jsonEvent, err := json.Marshal(event)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("Converting an events failed: %v", err)
+		}
+		var event cometbft.Event
+		err = json.Unmarshal(jsonEvent, &event)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("Converting an event failed: %v", err)
+		}
+		events = append(events, event)
+	}
 
 	const evType = "send_packet"
-	fmt.Println("DEBUG:", events)
 	var (
 		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
 		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
@@ -520,9 +527,9 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 	}
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	re := regexp.MustCompile(`:\s*(\d+)$`)
+	re := regexp.MustCompile(`:\s*(\d+(\.\d+)?)$`)
 
-	var ret math.Int
+	ret := math.NewInt(0)
 	for _, line := range lines {
 		if strings.Contains(line, "Last committed masp epoch") {
 			continue
@@ -530,11 +537,13 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 
 		matches := re.FindStringSubmatch(line)
 		if len(matches) > 1 {
-			amount, ok := math.NewIntFromString(matches[1])
-			if !ok {
+			amount, err := strconv.ParseFloat(matches[1], 64)
+			if err != nil {
 				return math.NewInt(0), fmt.Errorf("Parsing the amount failed: %s", outputStr)
 			}
-			ret = amount
+			multiplier := stdmath.Pow(10, float64(*c.Config().CoinDecimals))
+			// the result should be an integer
+			ret = math.NewInt(int64(amount * multiplier))
 		}
 	}
 
