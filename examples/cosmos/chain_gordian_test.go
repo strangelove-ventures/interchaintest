@@ -2,6 +2,7 @@ package cosmos_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -13,7 +14,13 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
+// go test -timeout 3000s -run ^TestChainGordian$ github.com/strangelove-ventures/interchaintest/v8/examples/cosmos -v
 func TestChainGordian(t *testing.T) {
+	// TODO: this test is only local for now. Will add CI in the future
+	if os.Getenv("IS_LOCAL_TESTING_GORDIAN") == "" {
+		t.Skip("skipping test; set IS_LOCAL_TESTING_GORDIAN to run this test")
+	}
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
