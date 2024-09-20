@@ -61,6 +61,7 @@ type ChainNode struct {
 	ConsensusClient consensus.Client
 	TestName        string
 	Image           ibc.DockerImage
+	GRPCClient      *grpc.ClientConn
 	preStartNode    func(*ChainNode)
 
 	// Additional processes that need to be run on a per-validator basis.
@@ -143,14 +144,14 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 	httpClient.Timeout = 10 * time.Second
 
-	grpcConn, err := grpc.NewClient(
+	tn.GRPCClient, err = grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		return fmt.Errorf("grpc dial: %w", err)
 	}
 
-	tn.ConsensusClient = consensus.NewClientFactory(addr, httpClient, grpcConn)
+	tn.ConsensusClient = consensus.NewClientFactory(addr, httpClient)
 	tn.log.Info("created new consensus client", zap.String("name", tn.ConsensusClient.Name()))
 
 	return nil
@@ -205,7 +206,7 @@ func (tn *ChainNode) CliContext() client.Context {
 
 	cliCtx := client.Context{
 		// Client:            tn.Client,
-		// GRPCClient:        tn.GrpcConn,
+		GRPCClient:        tn.GRPCClient,
 		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
@@ -219,7 +220,6 @@ func (tn *ChainNode) CliContext() client.Context {
 		// resolves 'no RPC client is defined in offline mode' for direct broadcast
 		// using `cosmos.NewBroadcaster`
 		cliCtx.Client = tn.ConsensusClient.(*consensus.CometBFTClient).Client
-		cliCtx.GRPCClient = tn.ConsensusClient.(*consensus.CometBFTClient).GrpcConn
 	}
 
 	return cliCtx

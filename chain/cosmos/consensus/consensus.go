@@ -7,7 +7,6 @@ import (
 
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"google.golang.org/grpc"
 )
 
 type Client interface {
@@ -20,8 +19,6 @@ type Client interface {
 	BlockResults(ctx context.Context, height *int64) (*ctypes.ResultBlockResults, error)
 	Block(ctx context.Context, height *int64) (*ctypes.ResultBlock, error)
 	Height(ctx context.Context) (int64, error)
-
-	GrpcClient() *grpc.ClientConn
 }
 
 // GetBlankClientByName returns a blank client so non state logic (like startup params) can be used.
@@ -41,8 +38,8 @@ func NewBlankClient(ctx context.Context, img *dockerutil.Image, bin string) Clie
 	return &CometBFTClient{}
 }
 
-func NewClientFactory(remote string, client *http.Client, grpcConn *grpc.ClientConn) Client {
-	cbftClient, err := NewCometBFTClient(remote, client, grpcConn)
+func NewClientFactory(remote string, client *http.Client) Client {
+	cbftClient, err := NewCometBFTClient(remote, client)
 	if err != nil {
 		panic(err)
 	}

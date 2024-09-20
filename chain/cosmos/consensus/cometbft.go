@@ -10,18 +10,16 @@ import (
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/cli"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"google.golang.org/grpc"
 )
 
 var _ Client = (*CometBFTClient)(nil)
 
 type CometBFTClient struct {
-	Client   rpcclient.Client
-	GrpcConn *grpc.ClientConn
+	Client rpcclient.Client
 }
 
 // NewCometBFTClient creates a new CometBFTClient.
-func NewCometBFTClient(remote string, client *http.Client, grpcConn *grpc.ClientConn) (*CometBFTClient, error) {
+func NewCometBFTClient(remote string, client *http.Client) (*CometBFTClient, error) {
 	rpcClient, err := rpchttp.NewWithClient(remote, "/websocket", client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CometBFT client: %w", err)
@@ -32,8 +30,7 @@ func NewCometBFTClient(remote string, client *http.Client, grpcConn *grpc.Client
 	}
 
 	return &CometBFTClient{
-		Client:   rpcClient,
-		GrpcConn: grpcConn,
+		Client: rpcClient,
 	}, nil
 }
 
@@ -75,11 +72,6 @@ func (c *CometBFTClient) Height(ctx context.Context) (int64, error) {
 	}
 
 	return s.SyncInfo.LatestBlockHeight, nil
-}
-
-// GrpcClient implements Client.
-func (c *CometBFTClient) GrpcClient() *grpc.ClientConn {
-	return c.GrpcConn
 }
 
 // Block implements Client.

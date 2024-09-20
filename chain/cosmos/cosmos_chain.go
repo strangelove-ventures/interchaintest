@@ -218,7 +218,7 @@ func (c *CosmosChain) GetNode() *ChainNode {
 }
 
 func (c *CosmosChain) GetNodeGRPC() *grpc.ClientConn {
-	return c.GetNode().ConsensusClient.GrpcClient()
+	return c.GetNode().GRPCClient
 }
 
 // Exec implements ibc.Chain.
