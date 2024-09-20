@@ -170,7 +170,7 @@ func (c *CosmosChain) BuildProposal(messages []ProtoMessage, title, summary, met
 
 // GovQueryProposal returns the state and details of a v1beta1 governance proposal.
 func (c *CosmosChain) GovQueryProposal(ctx context.Context, proposalID uint64) (*govv1beta1.Proposal, error) {
-	res, err := govv1beta1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1beta1.QueryProposalRequest{ProposalId: proposalID})
+	res, err := govv1beta1.NewQueryClient(c.GetNodeGRPC()).Proposal(ctx, &govv1beta1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (c *CosmosChain) GovQueryProposal(ctx context.Context, proposalID uint64) (
 
 // GovQueryProposalV1 returns the state and details of a v1 governance proposal.
 func (c *CosmosChain) GovQueryProposalV1(ctx context.Context, proposalID uint64) (*govv1.Proposal, error) {
-	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Proposal(ctx, &govv1.QueryProposalRequest{ProposalId: proposalID})
+	res, err := govv1.NewQueryClient(c.GetNodeGRPC()).Proposal(ctx, &govv1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (c *CosmosChain) GovQueryProposalV1(ctx context.Context, proposalID uint64)
 
 // GovQueryProposalsV1 returns all proposals with a given status.
 func (c *CosmosChain) GovQueryProposalsV1(ctx context.Context, status govv1.ProposalStatus) ([]*govv1.Proposal, error) {
-	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Proposals(ctx, &govv1.QueryProposalsRequest{
+	res, err := govv1.NewQueryClient(c.GetNodeGRPC()).Proposals(ctx, &govv1.QueryProposalsRequest{
 		ProposalStatus: status,
 	})
 	if err != nil {
@@ -202,7 +202,7 @@ func (c *CosmosChain) GovQueryProposalsV1(ctx context.Context, status govv1.Prop
 
 // GovQueryVote returns the vote for a proposal from a specific voter.
 func (c *CosmosChain) GovQueryVote(ctx context.Context, proposalID uint64, voter string) (*govv1.Vote, error) {
-	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Vote(ctx, &govv1.QueryVoteRequest{
+	res, err := govv1.NewQueryClient(c.GetNodeGRPC()).Vote(ctx, &govv1.QueryVoteRequest{
 		ProposalId: proposalID,
 		Voter:      voter,
 	})
@@ -215,7 +215,7 @@ func (c *CosmosChain) GovQueryVote(ctx context.Context, proposalID uint64, voter
 
 // GovQueryVotes returns all votes for a proposal.
 func (c *CosmosChain) GovQueryVotes(ctx context.Context, proposalID uint64) ([]*govv1.Vote, error) {
-	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Votes(ctx, &govv1.QueryVotesRequest{
+	res, err := govv1.NewQueryClient(c.GetNodeGRPC()).Votes(ctx, &govv1.QueryVotesRequest{
 		ProposalId: proposalID,
 	})
 	if err != nil {
@@ -227,7 +227,7 @@ func (c *CosmosChain) GovQueryVotes(ctx context.Context, proposalID uint64) ([]*
 
 // GovQueryParams returns the current governance parameters.
 func (c *CosmosChain) GovQueryParams(ctx context.Context, paramsType string) (*govv1.Params, error) {
-	res, err := govv1.NewQueryClient(c.GetNode().GrpcConn).Params(ctx, &govv1.QueryParamsRequest{
+	res, err := govv1.NewQueryClient(c.GetNodeGRPC()).Params(ctx, &govv1.QueryParamsRequest{
 		ParamsType: paramsType,
 	})
 	if err != nil {

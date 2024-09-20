@@ -20,8 +20,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/p2p"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -44,6 +43,7 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/consensus"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -51,17 +51,16 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	VolumeName   string
-	Index        int
-	Chain        ibc.Chain
-	Validator    bool
-	NetworkID    string
-	DockerClient *dockerclient.Client
-	Client       rpcclient.Client
-	GrpcConn     *grpc.ClientConn
-	TestName     string
-	Image        ibc.DockerImage
-	preStartNode func(*ChainNode)
+	VolumeName      string
+	Index           int
+	Chain           ibc.Chain
+	Validator       bool
+	NetworkID       string
+	DockerClient    *dockerclient.Client
+	ConsensusClient consensus.Client
+	TestName        string
+	Image           ibc.DockerImage
+	preStartNode    func(*ChainNode)
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -138,14 +137,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 	if err != nil {
 		return err
 	}
-
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
-	if err != nil {
-		return err
-	}
-
-	tn.Client = rpcClient
 
 	grpcConn, err := grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -153,7 +145,8 @@ func (tn *ChainNode) NewClient(addr string) error {
 	if err != nil {
 		return fmt.Errorf("grpc dial: %w", err)
 	}
-	tn.GrpcConn = grpcConn
+
+	tn.ConsensusClient = consensus.NewClientFactory(addr, httpClient, grpcConn)
 
 	return nil
 }
@@ -205,8 +198,8 @@ func (tn *ChainNode) NewSidecarProcess(
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
-		Client:            tn.Client,
-		GRPCClient:        tn.GrpcConn,
+		// Client:            tn.Client,
+		// GRPCClient:        tn.GrpcConn,
 		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
@@ -419,12 +412,7 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
-	res, err := tn.Client.Status(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
-	}
-	height := res.SyncInfo.LatestBlockHeight
-	return height, nil
+	return tn.ConsensusClient.Height(ctx)
 }
 
 // FindTxs implements blockdb.BlockSaver.
@@ -434,11 +422,11 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 	var blockRes *coretypes.ResultBlockResults
 	var block *coretypes.ResultBlock
 	eg.Go(func() (err error) {
-		blockRes, err = tn.Client.BlockResults(ctx, &h)
+		blockRes, err = tn.ConsensusClient.BlockResults(ctx, &h)
 		return err
 	})
 	eg.Go(func() (err error) {
-		block, err = tn.Client.Block(ctx, &h)
+		block, err = tn.ConsensusClient.Block(ctx, &h)
 		return err
 	})
 	if err := eg.Wait(); err != nil {
@@ -1105,13 +1093,13 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	var cmd []string
 	if chainCfg.NoHostMount {
-		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt %s", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir(), tn.ConsensusClient.StartFlags())
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
 	} else {
-		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), tn.ConsensusClient.StartFlags()}
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
 		}
@@ -1239,17 +1227,8 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
-		stat, err := tn.Client.Status(ctx)
-		if err != nil {
-			return err
-		}
-		// TODO: re-enable this check, having trouble with it for some reason
-		if stat != nil && stat.SyncInfo.CatchingUp {
-			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
-				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
-		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+		return tn.ConsensusClient.IsSynced(ctx)
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {

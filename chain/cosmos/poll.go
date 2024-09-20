@@ -58,7 +58,7 @@ func PollForMessage[T any](ctx context.Context, chain *CosmosChain, registry cod
 	}
 	doPoll := func(ctx context.Context, height int64) (T, error) {
 		h := int64(height)
-		block, err := chain.getFullNode().Client.Block(ctx, &h)
+		block, err := chain.getFullNode().ConsensusClient.Block(ctx, &h)
 		if err != nil {
 			return zero, err
 		}
