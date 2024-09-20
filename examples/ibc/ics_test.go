@@ -68,15 +68,17 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 		consumerBechPrefix = "consumer"
 	}
 
+	validators := 2
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name: "ics-provider", Version: version,
-			NumValidators: &numVals, NumFullNodes: &numFullNodes,
+			NumValidators: &validators, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID, TrustingPeriod: "336h"},
 		},
 		{
 			Name: "ics-consumer", Version: version,
-			NumValidators: &numVals, NumFullNodes: &numFullNodes,
+			NumValidators: &validators, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix, InterchainSecurityConfig: ibc.ICSConfig{
 				ConsumerCopyProviderKey: func(i int) bool {
 					return i == 0
@@ -124,6 +126,8 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 	require.NoError(t, err, "failed to build interchain")
 
 	// ------------------ ICS Setup ------------------
+
+	require.Greater(t, len(provider.Validators), 2)
 
 	// Finish the ICS provider chain initialization.
 	// - Restarts the relayer to connect ics20-1 transfer channel
