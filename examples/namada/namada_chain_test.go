@@ -227,7 +227,36 @@ func TestNamadaNetwork(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, namadaShieldedUserIbcBalAfter3.Equal(amountToSend))
 
-	// 4. Unshielding transfer (Namada's shielded account -> Gaia) test
+	// 4. Shielded transfer (Shielded account 1 -> Shielded account 2) on Namada
+	// generate another shielded account
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "shielded", initBalance, namada)
+	namadaShieldedUser2 := users[0].(*namadachain.NamadaWallet)
+	namadaShieldedUser2BalInitial, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), namada.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUser2BalInitial.Equal(namadaInitBalance))
+
+	amountToSend = math.NewInt(1)
+	transfer = ibc.WalletAmount{
+		Address: namadaShieldedUser2.FormattedAddress(),
+		Denom:   dstIbcTrace,
+		Amount:  amountToSend,
+	}
+	err = namada.ShieldedTransfer(ctx, namadaShieldedUser.KeyName(), transfer)
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())
+
+	// test source wallet has decreased funds
+	expectedBal = namadaShieldedUserIbcBalAfter3.Sub(amountToSend)
+	namadaShieldedUserBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUserBalAfter4.Equal(expectedBal))
+
+	// test destination wallet has increased funds
+	namadaShieldedUser2IbcBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUser2IbcBalAfter4.Equal(amountToSend))
+
+	// 5. Unshielding transfer (Namada's shielded account 2 -> Gaia) test
 	amountToSend = math.NewInt(1)
 	dstAddress = gaiaUser.FormattedAddress()
 	transfer = ibc.WalletAmount{
@@ -235,7 +264,7 @@ func TestNamadaNetwork(t *testing.T) {
 		Denom:   dstIbcTrace,
 		Amount:  amountToSend,
 	}
-	tx, err = namada.SendIBCTransfer(ctx, namadaChannelID, namadaShieldedUser.KeyName(), transfer, ibc.TransferOptions{})
+	tx, err = namada.SendIBCTransfer(ctx, namadaChannelID, namadaShieldedUser2.KeyName(), transfer, ibc.TransferOptions{})
 	require.NoError(t, err)
 	require.NoError(t, tx.Validate())
 
@@ -243,10 +272,10 @@ func TestNamadaNetwork(t *testing.T) {
 	require.NoError(t, r.Flush(ctx, eRep, ibcPath, namadaChannelID))
 
 	// test source wallet has decreased funds
-	expectedBal = namadaShieldedUserIbcBalAfter3.Sub(amountToSend)
-	namadaShieldedUserBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	expectedBal = namadaShieldedUser2IbcBalAfter4.Sub(amountToSend)
+	namadaShieldedUser2BalAfter5, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace)
 	require.NoError(t, err)
-	require.True(t, namadaShieldedUserBalAfter4.Equal(expectedBal))
+	require.True(t, namadaShieldedUser2BalAfter5.Equal(expectedBal))
 
 	// test destination wallet has increased funds
 	expectedBal = gaiaUserBalAfter3.Add(amountToSend)

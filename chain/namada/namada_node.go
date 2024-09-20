@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -33,8 +32,7 @@ type NamadaNode struct {
 	VolumeName   string
 	NetworkID    string
 
-	lock sync.Mutex
-	log  *zap.Logger
+	log *zap.Logger
 
 	containerLifecycle *dockerutil.ContainerLifecycle
 

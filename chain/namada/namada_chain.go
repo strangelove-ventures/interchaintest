@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"cosmossdk.io/math"
@@ -47,8 +46,6 @@ type NamadaChain struct {
 	FullNodes     NamadaNodes
 
 	isRunning bool
-
-	mutex sync.Mutex
 }
 
 // New instance of NamadaChain
@@ -552,6 +549,31 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return tx, err
+}
+
+// Shielded transfer (shielded account to shielded account) on Namada
+func (c *NamadaChain) ShieldedTransfer(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	cmd := []string{
+		"namadac",
+		"--base-dir",
+		c.HomeDir(),
+		"transfer",
+		"--source",
+		keyName,
+		"--target",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--gas-payer",
+		gasPayerAlias,
+		"--node",
+		c.GetRPCAddress(),
+	}
+	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+
+	return err
 }
 
 func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID string, amount ibc.WalletAmount, options ibc.TransferOptions) (string, error) {
