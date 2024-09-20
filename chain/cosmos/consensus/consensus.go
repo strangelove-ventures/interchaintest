@@ -37,7 +37,8 @@ func NewBlankClient(ctx context.Context, img *dockerutil.Image, bin string) Clie
 		}
 	}
 
-	panic("NewBlankClient: No client found")
+	fmt.Printf("NewBlankClient: No client found. Defaulting to CometBFT\n")
+	return &CometBFTClient{}
 }
 
 func NewClientFactory(remote string, client *http.Client, grpcConn *grpc.ClientConn) Client {
