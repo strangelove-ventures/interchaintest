@@ -63,6 +63,7 @@ type ChainNode struct {
 	Image           ibc.DockerImage
 	GRPCClient      *grpc.ClientConn
 	preStartNode    func(*ChainNode)
+	consensus       consensus.ClientType
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -85,7 +86,7 @@ type ChainNode struct {
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
 	tn := &ChainNode{
 		log: log.With(
-			zap.Bool("validator", validator),
+			zap.Bool("is_val", validator),
 			zap.Int("i", index),
 		),
 
@@ -151,8 +152,8 @@ func (tn *ChainNode) NewClient(addr string) error {
 		return fmt.Errorf("grpc dial: %w", err)
 	}
 
-	tn.ConsensusClient = consensus.NewClientFactory(addr, httpClient)
-	tn.log.Info("created new consensus client", zap.String("name", tn.ConsensusClient.Name()))
+	tn.ConsensusClient = consensus.NewClientFactory(tn.consensus, addr, httpClient)
+	tn.log.Info("created new consensus client", zap.String("name", string(tn.ConsensusClient.ClientType())), zap.String("addr", addr))
 
 	return nil
 }
@@ -216,7 +217,7 @@ func (tn *ChainNode) CliContext() client.Context {
 		TxConfig:          cfg.EncodingConfig.TxConfig,
 	}
 
-	if tn.ConsensusClient.Name() == "cometbft" {
+	if tn.ConsensusClient.ClientType() == consensus.CometBFT {
 		// resolves 'no RPC client is defined in offline mode' for direct broadcast
 		// using `cosmos.NewBroadcaster`
 		cliCtx.Client = tn.ConsensusClient.(*consensus.CometBFTClient).Client
@@ -1107,7 +1108,9 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	// A new tmp image is created to verify the subcommands to grab the consensus state.
 	// We can not query endpoints yet as the node is not running, so we must depend on a new BlankClient to get startup flags.
 	img := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
-	blankCC := consensus.NewBlankClient(ctx, img, chainCfg.Bin)
+	blankCC := consensus.NewBlankClient(ctx, tn.log, img, chainCfg.Bin)
+
+	tn.consensus = blankCC.ClientType()
 
 	var cmd []string
 	if chainCfg.NoHostMount {

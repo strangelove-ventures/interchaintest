@@ -34,15 +34,15 @@ func NewCometBFTClient(remote string, client *http.Client) (*CometBFTClient, err
 	}, nil
 }
 
+// ClientType implements Client.
+func (c *CometBFTClient) ClientType() ClientType {
+	return CometBFT
+}
+
 // IsClient implements Client.
 func (c *CometBFTClient) IsClient(ctx context.Context, img *dockerutil.Image, bin string) bool {
 	res := img.Run(ctx, []string{bin, "cometbft"}, dockerutil.ContainerOptions{})
 	return cli.HasCommand(res.Err)
-}
-
-// Name implements Client.
-func (c *CometBFTClient) Name() string {
-	return "cometbft"
 }
 
 // IsSynced implements Client.
