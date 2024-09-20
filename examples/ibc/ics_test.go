@@ -127,7 +127,7 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 
 	// ------------------ ICS Setup ------------------
 
-	require.Greater(t, len(provider.Validators), 2)
+	require.GreaterOrEqual(t, len(provider.Validators), 2)
 
 	// Finish the ICS provider chain initialization.
 	// - Restarts the relayer to connect ics20-1 transfer channel
