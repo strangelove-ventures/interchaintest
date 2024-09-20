@@ -154,7 +154,7 @@ func TestNamadaNetwork(t *testing.T) {
 	dstIbcTrace := transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
 	namadaUserIbcBalAfter1, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace)
 	require.NoError(t, err)
-	require.True(t, namadaUserIbcBalAfter1.Equal(amountToSend.Mul(tokenDenom)))
+	require.True(t, namadaUserIbcBalAfter1.Equal(amountToSend))
 
 	// 2. Send Transaction from Namada to Gaia
 	amountToSend = math.NewInt(1)
@@ -225,5 +225,32 @@ func TestNamadaNetwork(t *testing.T) {
 	dstIbcTrace = transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
 	namadaShieldedUserIbcBalAfter3, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
 	require.NoError(t, err)
-	require.True(t, namadaShieldedUserIbcBalAfter3.Equal(amountToSend.Mul(tokenDenom)))
+	require.True(t, namadaShieldedUserIbcBalAfter3.Equal(amountToSend))
+
+	// 4. Unshielding transfer (Namada's shielded account -> Gaia) test
+	amountToSend = math.NewInt(1)
+	dstAddress = gaiaUser.FormattedAddress()
+	transfer = ibc.WalletAmount{
+		Address: dstAddress,
+		Denom:   dstIbcTrace,
+		Amount:  amountToSend,
+	}
+	tx, err = namada.SendIBCTransfer(ctx, namadaChannelID, namadaShieldedUser.KeyName(), transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())
+
+	// relay MsgRecvPacket to namada, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, namadaChannelID))
+
+	// test source wallet has decreased funds
+	expectedBal = namadaShieldedUserIbcBalAfter3.Sub(amountToSend)
+	namadaShieldedUserBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUserBalAfter4.Equal(expectedBal))
+
+	// test destination wallet has increased funds
+	expectedBal = gaiaUserBalAfter3.Add(amountToSend)
+	gaiaUserIbcBalAfter4, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaUserIbcBalAfter4.Equal(expectedBal))
 }

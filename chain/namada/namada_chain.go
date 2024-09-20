@@ -30,9 +30,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const NamAddress = "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e"
-const NamTokenDenom = int64(6)
-const MaspAddress = "tnam1pcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzmefah"
+const (
+	NamAddress    = "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e"
+	NamTokenDenom = int64(6)
+	MaspAddress   = "tnam1pcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzmefah"
+	gasPayerAlias = "gas-payer"
+)
 
 type NamadaChain struct {
 	log           *zap.Logger
@@ -447,7 +450,14 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		}
 	}
 
+	if strings.HasPrefix(keyName, "shielded") {
+		cmd = append(cmd, "--gas-payer", gasPayerAlias)
+	}
+
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s, %v", output, err)
+	}
 	outputStr := string(output)
 	c.log.Log(zap.InfoLevel, outputStr)
 
@@ -648,7 +658,13 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 			if err != nil {
 				return math.NewInt(0), fmt.Errorf("Parsing the amount failed: %s", outputStr)
 			}
-			multiplier := stdmath.Pow(10, float64(*c.Config().CoinDecimals))
+			var multiplier float64
+			if denom == c.Config().Denom {
+				multiplier = stdmath.Pow(10, float64(*c.Config().CoinDecimals))
+			} else {
+				// IBC token denom is always zero
+				multiplier = 1.0
+			}
 			// the result should be an integer
 			ret = math.NewInt(int64(amount * multiplier))
 		}
@@ -1092,6 +1108,18 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
 		}
 	}
+
+	// for a gas payer
+	gasPayer, err := c.createKeyAndMnemonic(ctx, gasPayerAlias, false)
+	if err != nil {
+		return err
+	}
+	gasPayerAmount := ibc.WalletAmount{
+		Address: gasPayer.FormattedAddress(),
+		Denom:   c.Config().Denom,
+		Amount:  math.NewInt(1000000000),
+	}
+	additionalGenesisWallets = append(additionalGenesisWallets, gasPayerAmount)
 
 	for _, wallet := range additionalGenesisWallets {
 		line := fmt.Sprintf(`%s = "%s"`, wallet.Address, wallet.Amount)
