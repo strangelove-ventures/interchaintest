@@ -12,6 +12,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
+	namadachain "github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -32,7 +33,7 @@ func TestNamadaNetwork(t *testing.T) {
 	nv := 1
 	fn := 0
 
-	coinDecimals := int64(6)
+	coinDecimals := namadachain.NamTokenDenom
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "gaia", Version: "v19.2.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "1uatom",
@@ -42,7 +43,7 @@ func TestNamadaNetwork(t *testing.T) {
 			Version: "main",
 			ChainConfig: ibc.ChainConfig{
 				ChainID:      "namada-test",
-				Denom:        "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e",
+				Denom:        namadachain.NamAddress,
 				Gas:          "250000",
 				CoinDecimals: &coinDecimals,
 			},
@@ -52,7 +53,8 @@ func TestNamadaNetwork(t *testing.T) {
 	},
 	).Chains(t.Name())
 	require.NoError(t, err, "failed to get namada chain")
-	gaia, namada := chains[0], chains[1]
+	gaia := chains[0]
+	namada := chains[1].(*namadachain.NamadaChain)
 
 	// Relayer Factory
 	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t),
@@ -127,7 +129,7 @@ func TestNamadaNetwork(t *testing.T) {
 	require.NoError(t, err)
 	namadaChannelID := namadaChannelInfo[0].ChannelID
 
-	// Send Transaction from Gaia to Namada
+	// 1. Send Transaction from Gaia to Namada
 	amountToSend := math.NewInt(1)
 	dstAddress := namadaUser.FormattedAddress()
 	transfer := ibc.WalletAmount{
@@ -144,17 +146,17 @@ func TestNamadaNetwork(t *testing.T) {
 
 	// test source wallet has decreased funds
 	expectedBal := gaiaUserBalInitial.Sub(amountToSend).Sub(math.NewInt(tx.GasSpent))
-	gaiaUserBalNew, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
+	gaiaUserBalAfter1, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, gaiaUserBalNew.Equal(expectedBal))
+	require.True(t, gaiaUserBalAfter1.Equal(expectedBal))
 
 	// Test destination wallet has increased funds
 	dstIbcTrace := transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
-	namadaUserBalNew, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace)
+	namadaUserIbcBalAfter1, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace)
 	require.NoError(t, err)
-	require.True(t, namadaUserBalNew.Equal(amountToSend.Mul(tokenDenom)))
+	require.True(t, namadaUserIbcBalAfter1.Equal(amountToSend.Mul(tokenDenom)))
 
-	// Send Transaction from Namada to Gaia
+	// 2. Send Transaction from Namada to Gaia
 	amountToSend = math.NewInt(1)
 	dstAddress = gaiaUser.FormattedAddress()
 	transfer = ibc.WalletAmount{
@@ -171,14 +173,57 @@ func TestNamadaNetwork(t *testing.T) {
 
 	// test source wallet has decreased funds
 	expectedBal = namadaUserBalInitial.Sub(amountToSend.Mul(tokenDenom)).Sub(namadaGasSpent)
-	namadaUserBalNew, err = namada.GetBalance(ctx, namadaUser.KeyName(), namada.Config().Denom)
+	namadaUserBalAfter2, err := namada.GetBalance(ctx, namadaUser.KeyName(), namada.Config().Denom)
 	require.NoError(t, err)
-	require.True(t, namadaUserBalNew.Equal(expectedBal))
+	require.True(t, namadaUserBalAfter2.Equal(expectedBal))
 
-	// Test destination wallet has increased funds
+	// test destination wallet has increased funds
 	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", gaiaChannelID, namada.Config().Denom))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
-	gaiaUserBalNew, err = gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), dstIbcDenom)
+	gaiaUserIbcBalAfter2, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
-	require.True(t, gaiaUserBalNew.Equal(amountToSend.Mul(tokenDenom)))
+	require.True(t, gaiaUserIbcBalAfter2.Equal(amountToSend.Mul(tokenDenom)))
+
+	// 3. Shielding transfer (Gaia -> Namada's shielded account) test
+	// generate a shielded account
+	users = interchaintest.GetAndFundTestUsers(t, ctx, "shielded", initBalance, namada)
+	namadaShieldedUser := users[0].(*namadachain.NamadaWallet)
+	namadaShieldedUserBalInitial, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), namada.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUserBalInitial.Equal(namadaInitBalance))
+
+	amountToSend = math.NewInt(1)
+	destAddress, err := namada.GetAddress(ctx, namadaShieldedUser.PaymentAddressKeyName())
+	require.NoError(t, err)
+	transfer = ibc.WalletAmount{
+		Address: string(destAddress),
+		Denom:   gaia.Config().Denom,
+		Amount:  amountToSend,
+	}
+	// generate the IBC shielding transfer from the destination Namada
+	shieldedTransfer, err := namada.GenIbcShieldingTransfer(ctx, namadaChannelID, transfer, ibc.TransferOptions{})
+	require.NoError(t, err)
+
+	// replace the destination address with the MASP address because the destination payment address has been already set in the IBC shielding transfer
+	transfer.Address = namadachain.MaspAddress
+	tx, err = gaia.SendIBCTransfer(ctx, gaiaChannelID, gaiaUser.KeyName(), transfer, ibc.TransferOptions{
+		Memo: shieldedTransfer,
+	})
+	require.NoError(t, err)
+	require.NoError(t, tx.Validate())
+
+	// relay MsgRecvPacket to namada, then MsgAcknowledgement back to gaia
+	require.NoError(t, r.Flush(ctx, eRep, ibcPath, gaiaChannelID))
+
+	// test source wallet has decreased funds
+	expectedBal = gaiaUserBalAfter1.Sub(amountToSend).Sub(math.NewInt(tx.GasSpent))
+	gaiaUserBalAfter3, err := gaia.GetBalance(ctx, gaiaUser.FormattedAddress(), gaia.Config().Denom)
+	require.NoError(t, err)
+	require.True(t, gaiaUserBalAfter3.Equal(expectedBal))
+
+	// test destination wallet has increased funds
+	dstIbcTrace = transfertypes.GetPrefixedDenom("transfer", namadaChannelID, gaia.Config().Denom)
+	namadaShieldedUserIbcBalAfter3, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	require.NoError(t, err)
+	require.True(t, namadaShieldedUserIbcBalAfter3.Equal(amountToSend.Mul(tokenDenom)))
 }

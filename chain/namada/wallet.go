@@ -1,6 +1,8 @@
 package namada
 
 import (
+	"fmt"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -30,6 +32,7 @@ func (w *NamadaWallet) KeyName() string {
 }
 
 // FormattedAddress returns the formatted address associated with a NamadaWallet instance.
+// If the account is shielded, it returns the payment address
 func (w *NamadaWallet) FormattedAddress() string {
 	return string(w.address)
 }
@@ -49,4 +52,8 @@ func (w *NamadaWallet) Address() []byte {
 // It takes the address stored in the NamadaWallet instance and converts it to a string.
 func (w *NamadaWallet) FormattedAddressWithPrefix(prefix string) string {
 	return string(w.address)
+}
+
+func (w *NamadaWallet) PaymentAddressKeyName() string {
+	return fmt.Sprintf("%s-payment", w.keyName)
 }

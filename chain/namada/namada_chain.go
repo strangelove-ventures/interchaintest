@@ -30,6 +30,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const NamAddress = "tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e"
+const NamTokenDenom = int64(6)
+const MaspAddress = "tnam1pcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzmefah"
+
 type NamadaChain struct {
 	log           *zap.Logger
 	testName      string
@@ -292,7 +296,7 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 		return nil, fmt.Errorf("Getting an address failed with name %q: %w", keyName, err)
 	}
 	outputStr := string(output)
-	re := regexp.MustCompile(`tnam[0-9a-z]+`)
+	re := regexp.MustCompile(`(tnam|znam|zvknam)[0-9a-z]+`)
 	address := re.FindString(outputStr)
 
 	if address == "" {
@@ -332,11 +336,17 @@ func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, err
 
 // Send funds to a wallet from a user account
 func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	var transferCmd string
+	if strings.HasPrefix(amount.Address, "znam") {
+		transferCmd = "shield"
+	} else {
+		transferCmd = "transparent-transfer"
+	}
 	cmd := []string{
 		"namadac",
 		"--base-dir",
 		c.HomeDir(),
-		"transparent-transfer",
+		transferCmd,
 		"--source",
 		keyName,
 		"--target",
@@ -355,11 +365,17 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 
 // Send funds to a wallet from a user account with a memo
 func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	var transferCmd string
+	if strings.HasPrefix(amount.Address, "znam") {
+		transferCmd = "shield"
+	} else {
+		transferCmd = "transparent-transfer"
+	}
 	cmd := []string{
 		"namadac",
 		"--base-dir",
 		c.HomeDir(),
-		"transparent-transfer",
+		transferCmd,
 		"--source",
 		keyName,
 		"--target",
@@ -397,6 +413,14 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		channelID,
 		"--node",
 		c.GetRPCAddress(),
+	}
+
+	if c.Config().Gas != "" {
+		_, err := strconv.ParseInt(c.Config().Gas, 10, 64)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("invalid gas limit: %s", c.Config().Gas)
+		}
+		cmd = append(cmd, "--gas-limit", c.Config().Gas)
 	}
 
 	if options.Port != "" {
@@ -520,13 +544,78 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	return tx, err
 }
 
+func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID string, amount ibc.WalletAmount, options ibc.TransferOptions) (string, error) {
+	var portID string
+	if options.Port == "" {
+		portID = "transfer"
+	} else {
+		portID = options.Port
+	}
+
+	cmd := []string{
+		"namadac",
+		"--base-dir",
+		c.HomeDir(),
+		"ibc-gen-shielding",
+		"--output-folder-path",
+		c.HomeDir(),
+		"--target",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--port-id",
+		portID,
+		"--channel-id",
+		channelID,
+		"--node",
+		c.GetRPCAddress(),
+	}
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return "", fmt.Errorf("faield to generate the IBC shielding transfer")
+	}
+	outputStr := string(output)
+
+	re := regexp.MustCompile(`Output IBC shielding transfer for ([^\s]+) to (.+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	var path string
+	if len(matches) > 2 {
+		path = matches[2]
+	} else {
+		return "", fmt.Errorf("failed to get the file path of the IBC shielding transfer")
+	}
+	relPath, _ := filepath.Rel(c.HomeDir(), path)
+	shieldingTransfer, err := c.Validators[0].ReadFile(ctx, relPath)
+
+	return string(shieldingTransfer), nil
+}
+
 // Current block height
 func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
 	return c.Validators[0].Height(ctx)
 }
 
-// Get the balance
-func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
+// Get the balance with the key alias, not the address
+func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
+	if strings.HasPrefix(keyName, "shielded") {
+		cmd := []string{
+			"namadac",
+			"--base-dir",
+			c.HomeDir(),
+			"shielded-sync",
+			"--viewing-keys",
+			keyName,
+			"--node",
+			c.GetRPCAddress(),
+		}
+		output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+		if err != nil {
+			return math.NewInt(0), fmt.Errorf("shielded-sync failed: error %s, output %s", err, output)
+		}
+	}
+
 	cmd := []string{
 		"namadac",
 		"--base-dir",
@@ -535,7 +624,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, address string, denom stri
 		"--token",
 		denom,
 		"--owner",
-		address,
+		keyName,
 		"--node",
 		c.GetRPCAddress(),
 	}
@@ -640,6 +729,9 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 		keyName,
 		"--unsafe-dont-encrypt",
 	}
+	if isShielded && !c.isRunning {
+		return nil, fmt.Errorf("Generating a shielded account in pre-genesis is not allowed in this test")
+	}
 	if isShielded {
 		cmd = append(cmd, "--shielded")
 	}
@@ -656,7 +748,37 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 		return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
 	}
 
-	return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
+	wallet := NewWallet(keyName, addrBytes, mnemonic, c.Config())
+
+	// Generate a payment address
+	if isShielded {
+		cmd = []string{
+			"namadaw",
+			"--base-dir",
+			c.HomeDir(),
+			"gen-payment-addr",
+			"--alias",
+			wallet.PaymentAddressKeyName(),
+			"--key",
+			keyName,
+		}
+		if !c.isRunning {
+			cmd = append(cmd, "--pre-genesis")
+		}
+		_, _, err := c.Exec(ctx, cmd, c.Config().Env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate a payment address for key %q on chain %s: %w", keyName, c.Config().Name, err)
+		}
+
+		addrBytes, err := c.GetAddress(ctx, wallet.PaymentAddressKeyName())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get account address for key %q on chain %s: %w", keyName, c.cfg.Name, err)
+		}
+		// replace the address with the payment address
+		wallet = NewWallet(keyName, addrBytes, mnemonic, c.Config())
+	}
+
+	return wallet, nil
 }
 
 func (c *NamadaChain) addAddress(ctx context.Context, keyName, address string) error {
