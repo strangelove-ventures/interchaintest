@@ -8,6 +8,8 @@ import (
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/cli"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"google.golang.org/grpc"
 )
 
@@ -35,6 +37,17 @@ func NewCometBFTClient(remote string, client *http.Client, grpcConn *grpc.Client
 	}, nil
 }
 
+// IsClient implements Client.
+func (c *CometBFTClient) IsClient(ctx context.Context, img *dockerutil.Image, bin string) bool {
+	res := img.Run(ctx, []string{bin, "cometbft"}, dockerutil.ContainerOptions{})
+	return cli.HasCommand(res.Err)
+}
+
+// Name implements Client.
+func (c *CometBFTClient) Name() string {
+	return "cometbft"
+}
+
 // IsSynced implements Client.
 func (c *CometBFTClient) IsSynced(ctx context.Context) error {
 	stat, err := c.Client.Status(ctx)
@@ -50,7 +63,7 @@ func (c *CometBFTClient) IsSynced(ctx context.Context) error {
 }
 
 // StartupFlags implements Client.
-func (c *CometBFTClient) StartFlags() string {
+func (c *CometBFTClient) StartFlags(context.Context) string {
 	return "--x-crisis-skip-assert-invariants"
 }
 
@@ -62,11 +75,6 @@ func (c *CometBFTClient) Height(ctx context.Context) (int64, error) {
 	}
 
 	return s.SyncInfo.LatestBlockHeight, nil
-}
-
-// Name implements Client.
-func (c *CometBFTClient) Name() string {
-	return "cometbft"
 }
 
 // GrpcClient implements Client.

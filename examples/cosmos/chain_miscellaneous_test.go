@@ -251,7 +251,7 @@ func testRangeBlockMessages(ctx context.Context, t *testing.T, chain *cosmos.Cos
 	require.NoError(t, err)
 
 	var bankMsgs []*banktypes.MsgSend
-	err = cosmos.RangeBlockMessages(ctx, chain.Config().EncodingConfig.InterfaceRegistry, chain.Validators[0].Client, height+1, func(msg sdk.Msg) bool {
+	err = cosmos.RangeBlockMessages(ctx, chain.Config().EncodingConfig.InterfaceRegistry, chain.Validators[0].ConsensusClient, height+1, func(msg sdk.Msg) bool {
 		found, ok := msg.(*banktypes.MsgSend)
 		if ok {
 			bankMsgs = append(bankMsgs, found)

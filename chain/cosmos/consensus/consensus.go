@@ -6,13 +6,15 @@ import (
 	"net/http"
 
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"google.golang.org/grpc"
 )
 
 type Client interface {
 	Name() string
-	StartFlags() string
+	StartFlags(context.Context) string
 	IsSynced(ctx context.Context) error
+	IsClient(ctx context.Context, img *dockerutil.Image, bin string) bool
 
 	Status(ctx context.Context) (*ctypes.ResultStatus, error)
 	BlockResults(ctx context.Context, height *int64) (*ctypes.ResultBlockResults, error)
@@ -22,6 +24,22 @@ type Client interface {
 	GrpcClient() *grpc.ClientConn
 }
 
+// GetBlankClientByName returns a blank client so non state logic (like startup params) can be used.
+func NewBlankClient(ctx context.Context, img *dockerutil.Image, bin string) Client {
+	clients := []Client{
+		&CometBFTClient{},
+	}
+
+	for _, client := range clients {
+		if client.IsClient(ctx, img, bin) {
+			fmt.Printf("NewBlankClient: Found client %s\n", client.Name())
+			return client
+		}
+	}
+
+	panic("NewBlankClient: No client found")
+}
+
 func NewClientFactory(remote string, client *http.Client, grpcConn *grpc.ClientConn) Client {
 	cbftClient, err := NewCometBFTClient(remote, client, grpcConn)
 	if err != nil {
@@ -29,7 +47,6 @@ func NewClientFactory(remote string, client *http.Client, grpcConn *grpc.ClientC
 	}
 
 	if cbftClient != nil {
-		fmt.Println("Using CometBFT client") // TODO: logger
 		return cbftClient
 	}
 

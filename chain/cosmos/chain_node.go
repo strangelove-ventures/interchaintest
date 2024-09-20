@@ -43,6 +43,7 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	cli "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/cli"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/consensus"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -70,6 +71,8 @@ type ChainNode struct {
 
 	containerLifecycle *dockerutil.ContainerLifecycle
 
+	Cache map[string]interface{}
+
 	// Ports set during StartContainer.
 	hostRPCPort   string
 	hostAPIPort   string
@@ -93,6 +96,7 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+		Cache:        make(map[string]interface{}),
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -147,6 +151,7 @@ func (tn *ChainNode) NewClient(addr string) error {
 	}
 
 	tn.ConsensusClient = consensus.NewClientFactory(addr, httpClient, grpcConn)
+	tn.log.Info("created new consensus client", zap.String("name", tn.ConsensusClient.Name()))
 
 	return nil
 }
@@ -197,7 +202,8 @@ func (tn *ChainNode) NewSidecarProcess(
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
-	return client.Context{
+
+	cliCtx := client.Context{
 		// Client:            tn.Client,
 		// GRPCClient:        tn.GrpcConn,
 		ChainID:           cfg.ChainID,
@@ -208,6 +214,15 @@ func (tn *ChainNode) CliContext() client.Context {
 		LegacyAmino:       cfg.EncodingConfig.Amino,
 		TxConfig:          cfg.EncodingConfig.TxConfig,
 	}
+
+	if tn.ConsensusClient.Name() == "cometbft" {
+		// resolves 'no RPC client is defined in offline mode' for direct broadcast
+		// using `cosmos.NewBroadcaster`
+		cliCtx.Client = tn.ConsensusClient.(*consensus.CometBFTClient).Client
+		cliCtx.GRPCClient = tn.ConsensusClient.(*consensus.CometBFTClient).GrpcConn
+	}
+
+	return cliCtx
 }
 
 // Name of the test node container
@@ -735,7 +750,14 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
-	return tn.HasCommand(ctx, "genesis")
+	key := "IsAboveSDK47"
+	if tn.Cache[key] != nil {
+		return tn.Cache[key].(bool)
+	}
+
+	hasGenesisSubCmd := tn.HasCommand(ctx, "genesis")
+	tn.Cache[key] = hasGenesisSubCmd
+	return hasGenesisSubCmd
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
@@ -915,16 +937,7 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 		return true
 	}
 
-	if strings.Contains(string(err.Error()), "Error: unknown command") {
-		return false
-	}
-
-	// cmd just needed more arguments, but it is a valid command (ex: appd tx bank send)
-	if strings.Contains(string(err.Error()), "Error: accepts") {
-		return true
-	}
-
-	return false
+	return cli.HasCommand(err)
 }
 
 // GetBuildInformation returns the build information and dependencies for the chain binary.
@@ -1091,15 +1104,20 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
 
+	// A new tmp image is created to verify the subcommands to grab the consensus state.
+	// We can not query endpoints yet as the node is not running, so we must depend on a new BlankClient to get startup flags.
+	img := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	blankCC := consensus.NewBlankClient(ctx, img, chainCfg.Bin)
+
 	var cmd []string
 	if chainCfg.NoHostMount {
-		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt %s", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir(), tn.ConsensusClient.StartFlags())
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt %s", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir(), blankCC.StartFlags(ctx))
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
 	} else {
-		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), tn.ConsensusClient.StartFlags()}
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), blankCC.StartFlags(ctx)}
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
 		}
