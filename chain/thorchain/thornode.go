@@ -23,6 +23,7 @@ import (
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -357,7 +358,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	// Enable public REST API
 	api["enable"] = true
-	api["swagger"] = false
+	api["swagger"] = true
 	api["address"] = "tcp://0.0.0.0:1317"
 	api["enabled-unsafe-cors"] = true
 
@@ -721,13 +722,13 @@ EOF
 
 	stdout, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	if err != nil {
-		return err
+		return fmt.Errorf("create key sdtout:\n%s\n, error: %w", string(stdout), err)
 	}
 
 	if tn.Validator && tn.ValidatorMnemonic == "" {
 		var createKeyOutput map[string]string
 		if err := json.Unmarshal(stdout, &createKeyOutput); err != nil {
-			return err
+			return fmt.Errorf("unmarshal create key sdtout:\n%s\n, error: %w", string(stdout), err)
 		}
 
 		tn.ValidatorMnemonic = createKeyOutput["mnemonic"]
@@ -1026,6 +1027,8 @@ type Balance struct {
 	Coins   []CoinBalance `json:"coins"`
 }
 
+type Supply []CoinBalance
+
 func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 	genbz, err := tn.GenesisFileContent(ctx)
 	if err != nil {
@@ -1071,7 +1074,7 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		Coins: []CoinBalance{
 			{
 				Denom:  "rune",
-				Amount: fmt.Sprintf("%d0000000000000", tn.Chain.(*Thorchain).NumValidators),
+				Amount: fmt.Sprintf("%d00000000", tn.Chain.(*Thorchain).NumValidators),
 			},
 		},
 	}
@@ -1092,6 +1095,45 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		newBondBalance.Value = []Balance{bondBalance}
 		if err := dyno.Set(g, newBondBalance.Value, path...); err != nil {
 			return fmt.Errorf("failed to set key '%s' as '%+v' in genesis json: %w", newBondBalance.Key, newBondBalance.Value, err)
+		}
+	}
+
+	// Now update bank's supply with new balance if on v50
+	if tn.IsAboveSDK47(ctx) {
+		bankSupplyPath := "app_state.bank.supply"
+		splitPath = strings.Split(bankSupplyPath, ".")
+		path = make([]interface{}, len(splitPath))
+		for i, component := range splitPath {
+			if v, err := strconv.Atoi(component); err == nil {
+				path[i] = v
+			} else {
+				path[i] = component
+			}
+		}
+		supplyI, err := dyno.GetSlice(g, path...)
+		if err != nil {
+			return fmt.Errorf("failed to get key %s in genesis json", bankSupplyPath)
+		}
+
+		for i, coinI := range supplyI {
+			coin := coinI.(map[string]interface{})
+			if coin["denom"].(string) == "rune" {
+				originalAmount, ok := sdkmath.NewIntFromString(coin["amount"].(string))
+				if !ok {
+					return fmt.Errorf("failed to convert bank's supply of rune to sdk Int from string")
+				}
+				addAmount, ok := sdkmath.NewIntFromString(bondBalance.Coins[0].Amount)
+				if !ok {
+					return fmt.Errorf("failed to convert bond amount of rune to sdk Int from string")
+				}
+				coin["amount"] = originalAmount.Add(addAmount).String()
+				supplyI[i] = coin
+				break
+			}
+		}
+
+		if err := dyno.Set(g, supplyI, path...); err != nil {
+			return fmt.Errorf("failed to set bank's new supply")
 		}
 	}
 
