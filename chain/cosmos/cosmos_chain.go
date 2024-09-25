@@ -38,6 +38,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	grpc "google.golang.org/grpc"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -214,6 +215,10 @@ func (c *CosmosChain) getFullNode() *ChainNode {
 
 func (c *CosmosChain) GetNode() *ChainNode {
 	return c.Validators[0]
+}
+
+func (c *CosmosChain) GetNodeGRPC() *grpc.ClientConn {
+	return c.GetNode().GRPCClient
 }
 
 // Exec implements ibc.Chain.
@@ -1077,7 +1082,7 @@ func (c *CosmosChain) Height(ctx context.Context) (int64, error) {
 // Acknowledgements implements ibc.Chain, returning all acknowledgments in block at height
 func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	var acks []*chanTypes.MsgAcknowledgement
-	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().ConsensusClient, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgAcknowledgement)
 		if ok {
 			acks = append(acks, found)
@@ -1110,7 +1115,7 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc
 // Timeouts implements ibc.Chain, returning all timeouts in block at height
 func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	var timeouts []*chanTypes.MsgTimeout
-	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().Client, height, func(msg types.Msg) bool {
+	err := RangeBlockMessages(ctx, c.cfg.EncodingConfig.InterfaceRegistry, c.getFullNode().ConsensusClient, height, func(msg types.Msg) bool {
 		found, ok := msg.(*chanTypes.MsgTimeout)
 		if ok {
 			timeouts = append(timeouts, found)

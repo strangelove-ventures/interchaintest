@@ -16,7 +16,7 @@ func (tn *ChainNode) SlashingUnJail(ctx context.Context, keyName string) error {
 
 // SlashingGetParams returns slashing params
 func (c *CosmosChain) SlashingQueryParams(ctx context.Context) (*slashingtypes.Params, error) {
-	res, err := slashingtypes.NewQueryClient(c.GetNode().GrpcConn).
+	res, err := slashingtypes.NewQueryClient(c.GetNodeGRPC()).
 		Params(ctx, &slashingtypes.QueryParamsRequest{})
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (c *CosmosChain) SlashingQueryParams(ctx context.Context) (*slashingtypes.P
 
 // SlashingSigningInfo returns signing info for a validator
 func (c *CosmosChain) SlashingQuerySigningInfo(ctx context.Context, consAddress string) (*slashingtypes.ValidatorSigningInfo, error) {
-	res, err := slashingtypes.NewQueryClient(c.GetNode().GrpcConn).
+	res, err := slashingtypes.NewQueryClient(c.GetNodeGRPC()).
 		SigningInfo(ctx, &slashingtypes.QuerySigningInfoRequest{ConsAddress: consAddress})
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (c *CosmosChain) SlashingQuerySigningInfo(ctx context.Context, consAddress 
 
 // SlashingSigningInfos returns all signing infos
 func (c *CosmosChain) SlashingQuerySigningInfos(ctx context.Context) ([]slashingtypes.ValidatorSigningInfo, error) {
-	res, err := slashingtypes.NewQueryClient(c.GetNode().GrpcConn).
+	res, err := slashingtypes.NewQueryClient(c.GetNodeGRPC()).
 		SigningInfos(ctx, &slashingtypes.QuerySigningInfosRequest{})
 	if err != nil {
 		return nil, err

@@ -39,13 +39,13 @@ func (tn *ChainNode) UpgradeCancel(ctx context.Context, keyName string, extraFla
 
 // UpgradeQueryPlan queries the current upgrade plan.
 func (c *CosmosChain) UpgradeQueryPlan(ctx context.Context) (*upgradetypes.Plan, error) {
-	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).CurrentPlan(ctx, &upgradetypes.QueryCurrentPlanRequest{})
+	res, err := upgradetypes.NewQueryClient(c.GetNodeGRPC()).CurrentPlan(ctx, &upgradetypes.QueryCurrentPlanRequest{})
 	return res.Plan, err
 }
 
 // UpgradeQueryAppliedPlan queries a previously applied upgrade plan by its name.
 func (c *CosmosChain) UpgradeQueryAppliedPlan(ctx context.Context, name string) (*upgradetypes.QueryAppliedPlanResponse, error) {
-	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).AppliedPlan(ctx, &upgradetypes.QueryAppliedPlanRequest{
+	res, err := upgradetypes.NewQueryClient(c.GetNodeGRPC()).AppliedPlan(ctx, &upgradetypes.QueryAppliedPlanRequest{
 		Name: name,
 	})
 	return res, err
@@ -54,19 +54,19 @@ func (c *CosmosChain) UpgradeQueryAppliedPlan(ctx context.Context, name string) 
 
 // UpgradeQueryAuthority returns the account with authority to conduct upgrades
 func (c *CosmosChain) UpgradeQueryAuthority(ctx context.Context) (string, error) {
-	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).Authority(ctx, &upgradetypes.QueryAuthorityRequest{})
+	res, err := upgradetypes.NewQueryClient(c.GetNodeGRPC()).Authority(ctx, &upgradetypes.QueryAuthorityRequest{})
 	return res.Address, err
 }
 
 // UpgradeQueryAllModuleVersions queries the list of module versions from state.
 func (c *CosmosChain) UpgradeQueryAllModuleVersions(ctx context.Context) ([]*upgradetypes.ModuleVersion, error) {
-	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).ModuleVersions(ctx, &upgradetypes.QueryModuleVersionsRequest{})
+	res, err := upgradetypes.NewQueryClient(c.GetNodeGRPC()).ModuleVersions(ctx, &upgradetypes.QueryModuleVersionsRequest{})
 	return res.ModuleVersions, err
 }
 
 // UpgradeQueryModuleVersion queries a specific module version from state.
 func (c *CosmosChain) UpgradeQueryModuleVersion(ctx context.Context, module string) (*upgradetypes.ModuleVersion, error) {
-	res, err := upgradetypes.NewQueryClient(c.GetNode().GrpcConn).ModuleVersions(ctx, &upgradetypes.QueryModuleVersionsRequest{
+	res, err := upgradetypes.NewQueryClient(c.GetNodeGRPC()).ModuleVersions(ctx, &upgradetypes.QueryModuleVersionsRequest{
 		ModuleName: module,
 	})
 	if err != nil {

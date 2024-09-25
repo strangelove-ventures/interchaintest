@@ -20,8 +20,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/p2p"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -44,6 +43,8 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	cli "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/cli"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/consensus"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
@@ -51,17 +52,18 @@ import (
 
 // ChainNode represents a node in the test network that is being created
 type ChainNode struct {
-	VolumeName   string
-	Index        int
-	Chain        ibc.Chain
-	Validator    bool
-	NetworkID    string
-	DockerClient *dockerclient.Client
-	Client       rpcclient.Client
-	GrpcConn     *grpc.ClientConn
-	TestName     string
-	Image        ibc.DockerImage
-	preStartNode func(*ChainNode)
+	VolumeName      string
+	Index           int
+	Chain           ibc.Chain
+	Validator       bool
+	NetworkID       string
+	DockerClient    *dockerclient.Client
+	ConsensusClient consensus.Client
+	TestName        string
+	Image           ibc.DockerImage
+	GRPCClient      *grpc.ClientConn
+	preStartNode    func(*ChainNode)
+	consensus       consensus.ClientType
 
 	// Additional processes that need to be run on a per-validator basis.
 	Sidecars SidecarProcesses
@@ -70,6 +72,8 @@ type ChainNode struct {
 	log  *zap.Logger
 
 	containerLifecycle *dockerutil.ContainerLifecycle
+
+	Cache map[string]interface{}
 
 	// Ports set during StartContainer.
 	hostRPCPort   string
@@ -82,7 +86,7 @@ type ChainNode struct {
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
 	tn := &ChainNode{
 		log: log.With(
-			zap.Bool("validator", validator),
+			zap.Bool("is_val", validator),
 			zap.Int("i", index),
 		),
 
@@ -94,6 +98,7 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+		Cache:        make(map[string]interface{}),
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -138,22 +143,17 @@ func (tn *ChainNode) NewClient(addr string) error {
 	if err != nil {
 		return err
 	}
-
 	httpClient.Timeout = 10 * time.Second
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
-	if err != nil {
-		return err
-	}
 
-	tn.Client = rpcClient
-
-	grpcConn, err := grpc.NewClient(
+	tn.GRPCClient, err = grpc.NewClient(
 		tn.hostGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		return fmt.Errorf("grpc dial: %w", err)
 	}
-	tn.GrpcConn = grpcConn
+
+	tn.ConsensusClient = consensus.NewClientFactory(tn.consensus, addr, httpClient)
+	tn.log.Info("created new consensus client", zap.String("name", string(tn.ConsensusClient.ClientType())), zap.String("addr", addr))
 
 	return nil
 }
@@ -204,9 +204,10 @@ func (tn *ChainNode) NewSidecarProcess(
 // CliContext creates a new Cosmos SDK client context
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
-	return client.Context{
-		Client:            tn.Client,
-		GRPCClient:        tn.GrpcConn,
+
+	cliCtx := client.Context{
+		// Client:            tn.Client,
+		GRPCClient:        tn.GRPCClient,
 		ChainID:           cfg.ChainID,
 		InterfaceRegistry: cfg.EncodingConfig.InterfaceRegistry,
 		Input:             os.Stdin,
@@ -215,6 +216,14 @@ func (tn *ChainNode) CliContext() client.Context {
 		LegacyAmino:       cfg.EncodingConfig.Amino,
 		TxConfig:          cfg.EncodingConfig.TxConfig,
 	}
+
+	if tn.ConsensusClient.ClientType() == consensus.CometBFT {
+		// resolves 'no RPC client is defined in offline mode' for direct broadcast
+		// using `cosmos.NewBroadcaster`
+		cliCtx.Client = tn.ConsensusClient.(*consensus.CometBFTClient).Client
+	}
+
+	return cliCtx
 }
 
 // Name of the test node container
@@ -419,12 +428,7 @@ func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 }
 
 func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
-	res, err := tn.Client.Status(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("tendermint rpc client status: %w", err)
-	}
-	height := res.SyncInfo.LatestBlockHeight
-	return height, nil
+	return tn.ConsensusClient.Height(ctx)
 }
 
 // FindTxs implements blockdb.BlockSaver.
@@ -434,11 +438,11 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 	var blockRes *coretypes.ResultBlockResults
 	var block *coretypes.ResultBlock
 	eg.Go(func() (err error) {
-		blockRes, err = tn.Client.BlockResults(ctx, &h)
+		blockRes, err = tn.ConsensusClient.BlockResults(ctx, &h)
 		return err
 	})
 	eg.Go(func() (err error) {
-		block, err = tn.Client.Block(ctx, &h)
+		block, err = tn.ConsensusClient.Block(ctx, &h)
 		return err
 	})
 	if err := eg.Wait(); err != nil {
@@ -747,7 +751,14 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
-	return tn.HasCommand(ctx, "genesis")
+	key := "IsAboveSDK47"
+	if tn.Cache[key] != nil {
+		return tn.Cache[key].(bool)
+	}
+
+	hasGenesisSubCmd := tn.HasCommand(ctx, "genesis")
+	tn.Cache[key] = hasGenesisSubCmd
+	return hasGenesisSubCmd
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
@@ -927,16 +938,7 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 		return true
 	}
 
-	if strings.Contains(string(err.Error()), "Error: unknown command") {
-		return false
-	}
-
-	// cmd just needed more arguments, but it is a valid command (ex: appd tx bank send)
-	if strings.Contains(string(err.Error()), "Error: accepts") {
-		return true
-	}
-
-	return false
+	return cli.HasCommand(err)
 }
 
 // GetBuildInformation returns the build information and dependencies for the chain binary.
@@ -1103,15 +1105,22 @@ func (tn *ChainNode) UnsafeResetAll(ctx context.Context) error {
 func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 	chainCfg := tn.Chain.Config()
 
+	// A new tmp image is created to verify the subcommands to grab the consensus state.
+	// We can not query endpoints yet as the node is not running, so we must depend on a new BlankClient to get startup flags.
+	img := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	blankCC := consensus.NewBlankClient(ctx, tn.log, img, chainCfg.Bin)
+
+	tn.consensus = blankCC.ClientType()
+
 	var cmd []string
 	if chainCfg.NoHostMount {
-		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt --x-crisis-skip-assert-invariants", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir())
+		startCmd := fmt.Sprintf("cp -r %s %s_nomnt && %s start --home %s_nomnt %s", tn.HomeDir(), tn.HomeDir(), chainCfg.Bin, tn.HomeDir(), blankCC.StartFlags(ctx))
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			startCmd = fmt.Sprintf("%s %s", startCmd, chainCfg.AdditionalStartArgs)
 		}
 		cmd = []string{"sh", "-c", startCmd}
 	} else {
-		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), "--x-crisis-skip-assert-invariants"}
+		cmd = []string{chainCfg.Bin, "start", "--home", tn.HomeDir(), blankCC.StartFlags(ctx)}
 		if len(chainCfg.AdditionalStartArgs) > 0 {
 			cmd = append(cmd, chainCfg.AdditionalStartArgs...)
 		}
@@ -1239,17 +1248,8 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 
 	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
-		stat, err := tn.Client.Status(ctx)
-		if err != nil {
-			return err
-		}
-		// TODO: re-enable this check, having trouble with it for some reason
-		if stat != nil && stat.SyncInfo.CatchingUp {
-			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
-				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
-		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+		return tn.ConsensusClient.IsSynced(ctx)
+	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {

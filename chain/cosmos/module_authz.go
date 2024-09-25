@@ -83,7 +83,7 @@ func (tn *ChainNode) AuthzRevoke(ctx context.Context, granter ibc.Wallet, grante
 
 // AuthzQueryGrants queries all grants for a given granter and grantee.
 func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, grantee string, msgType string, extraFlags ...string) ([]*authz.Grant, error) {
-	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).Grants(ctx, &authz.QueryGrantsRequest{
+	res, err := authz.NewQueryClient(c.GetNodeGRPC()).Grants(ctx, &authz.QueryGrantsRequest{
 		Granter:    granter,
 		Grantee:    grantee,
 		MsgTypeUrl: msgType,
@@ -93,7 +93,7 @@ func (c *CosmosChain) AuthzQueryGrants(ctx context.Context, granter string, gran
 
 // AuthzQueryGrantsByGrantee queries all grants for a given grantee.
 func (c *CosmosChain) AuthzQueryGrantsByGrantee(ctx context.Context, grantee string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
-	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranteeGrants(ctx, &authz.QueryGranteeGrantsRequest{
+	res, err := authz.NewQueryClient(c.GetNodeGRPC()).GranteeGrants(ctx, &authz.QueryGranteeGrantsRequest{
 		Grantee: grantee,
 	})
 	return res.Grants, err
@@ -101,7 +101,7 @@ func (c *CosmosChain) AuthzQueryGrantsByGrantee(ctx context.Context, grantee str
 
 // AuthzQueryGrantsByGranter returns all grants for a granter.
 func (c *CosmosChain) AuthzQueryGrantsByGranter(ctx context.Context, granter string, extraFlags ...string) ([]*authz.GrantAuthorization, error) {
-	res, err := authz.NewQueryClient(c.GetNode().GrpcConn).GranterGrants(ctx, &authz.QueryGranterGrantsRequest{
+	res, err := authz.NewQueryClient(c.GetNodeGRPC()).GranterGrants(ctx, &authz.QueryGranterGrantsRequest{
 		Granter: granter,
 	})
 	return res.Grants, err

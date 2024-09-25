@@ -12,7 +12,7 @@ import (
 
 // AuthQueryAccount performs a query to get the account details of the specified address
 func (c *CosmosChain) AuthQueryAccount(ctx context.Context, addr string) (*cdctypes.Any, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Account(ctx, &authtypes.QueryAccountRequest{
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).Account(ctx, &authtypes.QueryAccountRequest{
 		Address: addr,
 	})
 	return res.Account, err
@@ -20,13 +20,13 @@ func (c *CosmosChain) AuthQueryAccount(ctx context.Context, addr string) (*cdcty
 
 // AuthQueryParams performs a query to get the auth module parameters
 func (c *CosmosChain) AuthQueryParams(ctx context.Context) (*authtypes.Params, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Params(ctx, &authtypes.QueryParamsRequest{})
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).Params(ctx, &authtypes.QueryParamsRequest{})
 	return &res.Params, err
 }
 
 // AuthQueryModuleAccounts performs a query to get the account details of all the chain modules
 func (c *CosmosChain) AuthQueryModuleAccounts(ctx context.Context) ([]authtypes.ModuleAccount, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccounts(ctx, &authtypes.QueryModuleAccountsRequest{})
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).ModuleAccounts(ctx, &authtypes.QueryModuleAccountsRequest{})
 
 	maccs := make([]authtypes.ModuleAccount, len(res.Accounts))
 
@@ -44,7 +44,7 @@ func (c *CosmosChain) AuthQueryModuleAccounts(ctx context.Context) ([]authtypes.
 
 // AuthGetModuleAccount performs a query to get the account details of the specified chain module
 func (c *CosmosChain) AuthQueryModuleAccount(ctx context.Context, moduleName string) (authtypes.ModuleAccount, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).ModuleAccountByName(ctx, &authtypes.QueryModuleAccountByNameRequest{
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).ModuleAccountByName(ctx, &authtypes.QueryModuleAccountByNameRequest{
 		Name: moduleName,
 	})
 	if err != nil {
@@ -78,13 +78,13 @@ func (c *CosmosChain) GetGovernanceAddress(ctx context.Context) (string, error) 
 }
 
 func (c *CosmosChain) AuthQueryBech32Prefix(ctx context.Context) (string, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).Bech32Prefix(ctx, &authtypes.Bech32PrefixRequest{})
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).Bech32Prefix(ctx, &authtypes.Bech32PrefixRequest{})
 	return res.Bech32Prefix, err
 }
 
 // AddressBytesToString converts a byte array address to a string
 func (c *CosmosChain) AuthAddressBytesToString(ctx context.Context, addrBz []byte) (string, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).AddressBytesToString(ctx, &authtypes.AddressBytesToStringRequest{
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).AddressBytesToString(ctx, &authtypes.AddressBytesToStringRequest{
 		AddressBytes: addrBz,
 	})
 	return res.AddressString, err
@@ -92,7 +92,7 @@ func (c *CosmosChain) AuthAddressBytesToString(ctx context.Context, addrBz []byt
 
 // AddressStringToBytes converts a string address to a byte array
 func (c *CosmosChain) AuthAddressStringToBytes(ctx context.Context, addr string) ([]byte, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).AddressStringToBytes(ctx, &authtypes.AddressStringToBytesRequest{
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).AddressStringToBytes(ctx, &authtypes.AddressStringToBytesRequest{
 		AddressString: addr,
 	})
 	return res.AddressBytes, err
@@ -100,7 +100,7 @@ func (c *CosmosChain) AuthAddressStringToBytes(ctx context.Context, addr string)
 
 // AccountInfo queries the account information of the given address
 func (c *CosmosChain) AuthQueryAccountInfo(ctx context.Context, addr string) (*authtypes.BaseAccount, error) {
-	res, err := authtypes.NewQueryClient(c.GetNode().GrpcConn).AccountInfo(ctx, &authtypes.QueryAccountInfoRequest{
+	res, err := authtypes.NewQueryClient(c.GetNodeGRPC()).AccountInfo(ctx, &authtypes.QueryAccountInfoRequest{
 		Address: addr,
 	})
 	return res.Info, err
