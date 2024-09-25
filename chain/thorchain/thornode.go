@@ -1027,8 +1027,6 @@ type Balance struct {
 	Coins   []CoinBalance `json:"coins"`
 }
 
-type Supply []CoinBalance
-
 func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 	genbz, err := tn.GenesisFileContent(ctx)
 	if err != nil {
