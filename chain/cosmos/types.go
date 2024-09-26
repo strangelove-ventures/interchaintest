@@ -226,3 +226,24 @@ type ContractInfoResponse struct {
 		Extension any    `json:"extension"`
 	} `json:"contract_info"`
 }
+
+type ConsensusParamsResponse struct {
+	Params struct {
+		Block struct {
+			MaxBytes string `json:"max_bytes"`
+			MaxGas   string `json:"max_gas"`
+		} `json:"block"`
+		Evidence struct {
+			MaxAgeNumBlocks string `json:"max_age_num_blocks"`
+			MaxAgeDuration  string `json:"max_age_duration"`
+			MaxBytes        string `json:"max_bytes"`
+		} `json:"evidence"`
+		Validator struct {
+			PubKeyTypes []string `json:"pub_key_types"`
+		} `json:"validator"`
+		Version struct {
+		} `json:"version"`
+		Abci struct {
+		} `json:"abci"`
+	} `json:"params"`
+}
