@@ -3,7 +3,6 @@ package interchain
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -88,7 +87,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	}
 
 	if err := VerifyIBCPaths(ibcpaths); err != nil {
-		log.Fatal("VerifyIBCPaths", err)
+		logger.Fatal("VerifyIBCPaths", zap.Error(err))
 	}
 
 	// Create chain factory for all the chains
@@ -98,7 +97,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	chains, err := cf.Chains(testName)
 	if err != nil {
-		log.Fatal("cf.Chains", err)
+		logger.Fatal("cf.Chains", zap.Error(err))
 	}
 
 	for _, chain := range chains {
@@ -181,7 +180,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		log.Fatalf("ic.Build: %v", err)
+		logger.Fatal("ic.Build", zap.Error(err))
 	}
 
 	if relayer != nil && len(ibcpaths) > 0 {
@@ -191,12 +190,12 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		}
 
 		if err := relayer.StartRelayer(ctx, eRep, paths...); err != nil {
-			log.Fatal("relayer.StartRelayer", err)
+			logger.Fatal("relayer.StartRelayer", zap.Error(err))
 		}
 
 		defer func() {
 			if err := relayer.StopRelayer(ctx, eRep); err != nil {
-				log.Fatal("relayer.StopRelayer", err)
+				logger.Error("relayer.StopRelayer", zap.Error(err))
 			}
 		}()
 	}
@@ -215,7 +214,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		for ibcPath, chain := range icsProviderPaths {
 			if provider, ok := chain.(*cosmos.CosmosChain); ok {
 				if err := provider.FinishICSProviderSetup(ctx, relayer, eRep, ibcPath); err != nil {
-					log.Fatal("FinishICSProviderSetup", err)
+					logger.Error("FinishICSProviderSetup", zap.Error(err))
 				}
 			}
 		}
@@ -256,7 +255,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		)
 
 		if err := http.ListenAndServe(serverAddr, corsHandler(r)); err != nil {
-			log.Default().Println(err)
+			logger.Error("http.ListenAndServe", zap.Error(err))
 		}
 	}()
 
@@ -270,7 +269,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Save to logs.json file for runtime chain information.
 	DumpChainsInfoToLogs(installDir, config, chains, connections)
 
-	log.Println("\nLocal-IC API is running on ", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port))
+	logger.Info("Local-IC API is running on ", zap.String("url", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port)))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		// when the network is stopped / killed (ctrl + c), ignore error
