@@ -74,21 +74,27 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 }
 
 // == Zap Logger ==
-func getLoggerConfig() zap.Config {
-	config := zap.NewDevelopmentConfig()
+func InitLogger(logFile *os.File) (*zap.Logger, error) {
+	// 	config := zap.NewDevelopmentConfig()
+	// 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	// 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	// logger, err := config.Build()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	// Production logger that saves logs to file and console.
+	pe := zap.NewProductionEncoderConfig()
 
-	return config
-}
+	fileEncoder := zapcore.NewJSONEncoder(pe)
+	consoleEncoder := zapcore.NewConsoleEncoder(pe)
 
-func InitLogger() (*zap.Logger, error) {
-	config := getLoggerConfig()
-	logger, err := config.Build()
-	if err != nil {
-		return nil, err
-	}
+	level := zap.InfoLevel
 
-	return logger, nil
+	core := zapcore.NewTee(
+		zapcore.NewCore(fileEncoder, zapcore.AddSync(logFile), level),
+		zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), level),
+	)
+
+	return zap.New(core), nil
 }
