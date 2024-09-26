@@ -2,6 +2,7 @@ package interchaintest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -12,6 +13,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -37,7 +40,7 @@ func CreateChainWithConfig(t *testing.T, numVals, numFull int, name, version str
 		}
 	}
 
-	cf := NewBuiltinChainFactory(zaptest.NewLogger(t), []*ChainSpec{
+	return CreateChainsWithChainSpecs(t, []*ChainSpec{
 		{
 			Name:          name,
 			ChainName:     name,
@@ -47,16 +50,21 @@ func CreateChainWithConfig(t *testing.T, numVals, numFull int, name, version str
 			NumFullNodes:  &numFull,
 		},
 	})
-
-	chains, err := cf.Chains(t.Name())
-	require.NoError(t, err)
-
-	return chains
 }
 
 // CreateChainsWithChainSpecs builds multiple chains from the given chain specs.
 func CreateChainsWithChainSpecs(t *testing.T, chainSpecs []*ChainSpec) []ibc.Chain {
-	cf := NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	config.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	config.DisableCaller = true
+
+	logger, err := config.Build()
+	if err != nil {
+		panic(fmt.Sprintf("BUG: failed to create logger: %s", err))
+	}
+
+	cf := NewBuiltinChainFactory(logger, chainSpecs)
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)

@@ -26,7 +26,6 @@ import (
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -509,15 +508,6 @@ func (c *CosmosChain) QueryBankMetadata(ctx context.Context, denom string) (*Ban
 	return c.getFullNode().QueryBankMetadata(ctx, denom)
 }
 
-// ConsumerAdditionProposal submits a legacy governance proposal to add a consumer to the chain.
-func (c *CosmosChain) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (tx TxProposal, _ error) {
-	txHash, err := c.getFullNode().ConsumerAdditionProposal(ctx, keyName, prop)
-	if err != nil {
-		return tx, fmt.Errorf("failed to submit consumer addition proposal: %w", err)
-	}
-	return c.txProposal(txHash)
-}
-
 func (c *CosmosChain) txProposal(txHash string) (tx TxProposal, _ error) {
 	txResp, err := c.GetTransaction(txHash)
 	if err != nil {
@@ -875,7 +865,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,
@@ -907,7 +897,7 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 			for configFile, modifiedConfig := range configFileOverrides {
 				modifiedToml, ok := modifiedConfig.(testutil.Toml)
 				if !ok {
-					return fmt.Errorf("Provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
 				}
 				if err := testutil.ModifyTomlConfigFile(
 					ctx,

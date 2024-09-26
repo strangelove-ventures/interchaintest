@@ -2,11 +2,15 @@
 
 - `CONTAINER_LOG_TAIL`: Specifies the number of lines to display from container logs. Defaults to 50 lines.
 
+- `ICTEST_BLOCK_TIME`: override the default 500ms block times. Input is in time format (500ms, 2s, etc.)
+
 - `ICTEST_CONFIGURED_CHAINS`: override the default configuredChains.yaml embeded config.
 
 - `ICTEST_DEBUG`: extra debugging information for test execution.
 
 - `ICTEST_HOME`: The folder to use as the home / working directory.
+
+- `ICTEST_RELAYER_LOOP_DURATION`: Override the default 50ms relayer loop check duration. Input is in time format (20ms, 1s, etc.). Extremely fast chains may require as low as 5-10ms.
 
 - `ICTEST_SKIP_FAILURE_CLEANUP`: skip cleanup of the temporary directory on a test failure.
 

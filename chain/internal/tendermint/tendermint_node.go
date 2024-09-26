@@ -85,9 +85,6 @@ func NewTendermintNode(
 type TendermintNodes []*TendermintNode
 
 const (
-	// BlockTimeSeconds (in seconds) is approx time to create a block
-	BlockTimeSeconds = 2
-
 	p2pPort     = "26656/tcp"
 	rpcPort     = "26657/tcp"
 	grpcPort    = "9090/tcp"
@@ -96,6 +93,9 @@ const (
 )
 
 var (
+	// BlockTime is approx time to create a block
+	BlockTime = dockerutil.GetTimeFromEnv("ICTEST_BLOCK_TIME", "500ms")
+
 	sentryPorts = nat.PortMap{
 		nat.Port(p2pPort):     {},
 		nat.Port(rpcPort):     {},
@@ -203,7 +203,7 @@ func (tn *TendermintNode) SetConfigAndPeers(ctx context.Context, peers string) e
 
 	consensus := make(testutil.Toml)
 
-	blockT := (time.Duration(BlockTimeSeconds) * time.Second).String()
+	blockT := BlockTime.String()
 	consensus[fmt.Sprintf("timeout%scommit", sep)] = blockT
 	consensus[fmt.Sprintf("timeout%spropose", sep)] = blockT
 
@@ -295,7 +295,6 @@ func (tn *TendermintNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
 		if err != nil {

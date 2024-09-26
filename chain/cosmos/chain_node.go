@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,7 +41,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -77,6 +75,10 @@ type ChainNode struct {
 	hostGRPCPort  string
 	hostP2PPort   string
 	cometHostname string
+
+	isAboveSDKv47Cache bool
+	addressCache       map[string]cosmosWalletExported
+	execContainerCache *dockerutil.Image
 }
 
 func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerClient *dockerclient.Client, networkID string, testName string, image ibc.DockerImage, index int) *ChainNode {
@@ -94,6 +96,10 @@ func NewChainNode(log *zap.Logger, validator bool, chain *CosmosChain, dockerCli
 		TestName:     testName,
 		Image:        image,
 		Index:        index,
+
+		isAboveSDKv47Cache: false,
+		addressCache:       make(map[string]cosmosWalletExported),
+		execContainerCache: nil,
 	}
 
 	tn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, tn.Name())
@@ -110,15 +116,15 @@ func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode 
 // ChainNodes is a collection of ChainNode
 type ChainNodes []*ChainNode
 
-const (
-	valKey      = "validator"
-	blockTime   = 2 // seconds
-	p2pPort     = "26656/tcp"
-	rpcPort     = "26657/tcp"
-	grpcPort    = "9090/tcp"
-	apiPort     = "1317/tcp"
-	privValPort = "1234/tcp"
+var blockTime = dockerutil.GetTimeFromEnv("ICTEST_BLOCK_TIME", "500ms")
 
+const (
+	valKey           = "validator"
+	p2pPort          = "26656/tcp"
+	rpcPort          = "26657/tcp"
+	grpcPort         = "9090/tcp"
+	apiPort          = "1317/tcp"
+	privValPort      = "1234/tcp"
 	cometMockRawPort = "22331"
 )
 
@@ -338,7 +344,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 
 	consensus := make(testutil.Toml)
 
-	blockT := (time.Duration(blockTime) * time.Second).String()
+	blockT := blockTime.String()
 	consensus["timeout_commit"] = blockT
 	consensus["timeout_propose"] = blockT
 
@@ -557,11 +563,29 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 	if output.Code != 0 {
 		return output.TxHash, fmt.Errorf("transaction failed with code %d: %s", output.Code, output.RawLog)
 	}
-	if err := testutil.WaitForBlocks(ctx, 2, tn); err != nil {
+
+	var txHash string
+	err = retry.Do(
+		func() error {
+			txHash, err = tn.queryForTxHash(ctx, output)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		retry.Delay(blockTime/4),
+		retry.Attempts(8), // 2 blocks, 8 polls
+	)
+	if err != nil {
 		return "", err
 	}
+
+	return txHash, nil
+}
+
+func (tn *ChainNode) queryForTxHash(ctx context.Context, output CosmosTx) (string, error) {
 	// The transaction can at first appear to succeed, but then fail when it's actually included in a block.
-	stdout, _, err = tn.ExecQuery(ctx, "tx", output.TxHash)
+	stdout, _, err := tn.ExecQuery(ctx, "tx", output.TxHash)
 	if err != nil {
 		return "", err
 	}
@@ -675,9 +699,8 @@ func CondenseMoniker(m string) string {
 
 // InitHomeFolder initializes a home folder for the given node
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
-
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 	_, _, err := tn.ExecBin(ctx,
 		"init", CondenseMoniker(tn.Name()),
 		"--chain-id", tn.Chain.Config().ChainID,
@@ -717,14 +740,24 @@ func (tn *ChainNode) ReadFile(ctx context.Context, relPath string) ([]byte, erro
 
 // CreateKey creates a key in the keyring backend test for the given node
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
-	_, _, err := tn.ExecBin(ctx,
+	stdout, _, err := tn.ExecBin(ctx,
 		"keys", "add", name,
 		"--coin-type", tn.Chain.Config().CoinType,
 		"--keyring-backend", keyring.BackendTest,
+		"--output", "json",
 	)
+
+	k := cosmosWalletExported{}
+	if err := json.Unmarshal(stdout, &k); err != nil {
+		// we do not care for older versions, sdk v47+ works fine
+		fmt.Println("CreateKey err: ", err.Error())
+	} else {
+		tn.addressCache[name] = k
+	}
+
 	return err
 }
 
@@ -736,8 +769,8 @@ func (tn *ChainNode) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 		fmt.Sprintf(`echo %q | %s keys add %s --recover --keyring-backend %s --coin-type %s --home %s --output json`, mnemonic, tn.Chain.Config().Bin, keyName, keyring.BackendTest, tn.Chain.Config().CoinType, tn.HomeDir()),
 	}
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
@@ -747,7 +780,12 @@ func (tn *ChainNode) IsAboveSDK47(ctx context.Context) bool {
 	// In SDK v47, a new genesis core command was added. This spec has many state breaking features
 	// so we use this to switch between new and legacy SDK logic.
 	// https://github.com/cosmos/cosmos-sdk/pull/14149
-	return tn.HasCommand(ctx, "genesis")
+	if tn.isAboveSDKv47Cache {
+		return true
+	}
+
+	tn.isAboveSDKv47Cache = tn.HasCommand(ctx, "genesis")
+	return tn.isAboveSDKv47Cache
 }
 
 // ICSVersion returns the version of interchain-security the binary was built with.
@@ -778,8 +816,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 		amount += fmt.Sprintf("%s%s", coin.Amount.String(), coin.Denom)
 	}
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	// Adding a genesis account should complete instantly,
 	// so use a 1-minute timeout to more quickly detect if Docker has locked up.
@@ -804,8 +842,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 
 // Gentx generates the gentx for a given node
 func (tn *ChainNode) Gentx(ctx context.Context, name string, genesisSelfDelegation sdk.Coin) error {
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	var command []string
 	if tn.IsAboveSDK47(ctx) {
@@ -832,8 +870,9 @@ func (tn *ChainNode) CollectGentxs(ctx context.Context) error {
 
 	command = append(command, "collect-gentxs", "--home", tn.HomeDir())
 
-	tn.lock.Lock()
-	defer tn.lock.Unlock()
+	// TODO: prob re-enable this
+	// tn.lock.Lock()
+	// defer tn.lock.Unlock()
 
 	_, _, err := tn.Exec(ctx, command, tn.Chain.Config().Env)
 	return err
@@ -882,27 +921,6 @@ func (tn *ChainNode) SendIBCTransfer(
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
-	propBz, err := json.Marshal(prop)
-	if err != nil {
-		return "", err
-	}
-
-	fileName := "proposal_" + dockerutil.RandLowerCaseLetterString(4) + ".json"
-
-	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, fileName, propBz); err != nil {
-		return "", fmt.Errorf("failure writing proposal json: %w", err)
-	}
-
-	filePath := filepath.Join(tn.HomeDir(), fileName)
-
-	return tn.ExecTx(ctx, keyName,
-		"gov", "submit-legacy-proposal", "consumer-addition", filePath,
-		"--gas", "auto",
-	)
-}
-
 func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*sdk.TxResponse, error) {
 	// Retry because sometimes the tx is not committed to state yet.
 	var txResp *sdk.TxResponse
@@ -912,8 +930,8 @@ func (tn *ChainNode) GetTransaction(clientCtx client.Context, txHash string) (*s
 		return err
 	},
 		// retry for total of 3 seconds
-		retry.Attempts(15),
-		retry.Delay(200*time.Millisecond),
+		retry.Attempts(10*3),
+		retry.Delay(100*time.Millisecond),
 		retry.DelayType(retry.FixedDelay),
 		retry.LastErrorOnly(true),
 	)
@@ -1237,7 +1255,6 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 
-	time.Sleep(5 * time.Second)
 	return retry.Do(func() error {
 		stat, err := tn.Client.Status(ctx)
 		if err != nil {
@@ -1249,7 +1266,7 @@ func (tn *ChainNode) StartContainer(ctx context.Context) error {
 				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(40), retry.Delay(3*time.Second), retry.DelayType(retry.FixedDelay))
+	}, retry.Context(ctx), retry.Attempts(5*40), retry.Delay(200*time.Millisecond), retry.DelayType(retry.FixedDelay))
 }
 
 func (tn *ChainNode) PauseContainer(ctx context.Context) error {
@@ -1337,6 +1354,10 @@ func (tn *ChainNode) NodeID(ctx context.Context) (string, error) {
 // KeyBech32 retrieves the named key's address in bech32 format from the node.
 // bech is the bech32 prefix (acc|val|cons). If empty, defaults to the account key (same as "acc").
 func (tn *ChainNode) KeyBech32(ctx context.Context, name string, bech string) (string, error) {
+	if k, ok := tn.addressCache[name]; ok && bech == "" {
+		return k.Address, nil
+	}
+
 	command := []string{tn.Chain.Config().Bin, "keys", "show", "--address", name,
 		"--home", tn.HomeDir(),
 		"--keyring-backend", keyring.BackendTest,
@@ -1402,12 +1423,14 @@ func (nodes ChainNodes) logger() *zap.Logger {
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {
-	job := dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	if tn.execContainerCache == nil {
+		tn.execContainerCache = dockerutil.NewImage(tn.logger(), tn.DockerClient, tn.NetworkID, tn.TestName, tn.Image.Repository, tn.Image.Version)
+	}
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
 		Binds: tn.Bind(),
 	}
-	res := job.Run(ctx, cmd, opts)
+	res := tn.execContainerCache.Run(ctx, cmd, opts)
 	return res.Stdout, res.Stderr, res.Err
 }
 
