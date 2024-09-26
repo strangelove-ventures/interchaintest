@@ -11,7 +11,9 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/router"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
@@ -52,11 +54,27 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		}
 	}()
 
-	// Logger for ICTest functions only.
-	logger, err := InitLogger()
+	// very unique file to ensure if multiple start at the same time.
+	logFile, err := interchaintest.CreateLogFile(fmt.Sprintf("%d-%s.json", time.Now().Unix(), uuid.New()))
 	if err != nil {
 		panic(err)
 	}
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			fmt.Println("Error closing log file: ", err)
+		}
+
+		if err := os.Remove(logFile.Name()); err != nil {
+			fmt.Println("Error deleting log file: ", err)
+		}
+	}()
+
+	// Logger for ICTest functions only.
+	logger, err := InitLogger(logFile)
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("Log file created", zap.String("file", logFile.Name()))
 
 	config := ac.Cfg
 
@@ -110,7 +128,8 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	}
 
 	// Base setup
-	rep := testreporter.NewNopReporter()
+
+	rep := testreporter.NewReporter(logFile)
 	eRep = rep.RelayerExecReporter(&fakeT)
 
 	client, network := interchaintest.DockerSetup(fakeT)
@@ -229,7 +248,17 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			}
 		}
 
-		r := router.NewRouter(ctx, ic, config, cosmosChains, vals, relayer, ac.AuthKey, eRep, installDir)
+		r := router.NewRouter(ctx, ic, &router.RouterConfig{
+			RelayerExecReporter: eRep,
+			Config:              config,
+			CosmosChains:        cosmosChains,
+			Vals:                vals,
+			Relayer:             relayer,
+			AuthKey:             ac.AuthKey,
+			InstallDir:          installDir,
+			LogFile:             logFile.Name(),
+			Logger:              logger,
+		})
 
 		config.Server = types.RestServer{
 			Host: ac.Address,
