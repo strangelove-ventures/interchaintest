@@ -189,15 +189,23 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	}
 
 	if c.cfg.HostPortOverride != nil {
+		var fields []zap.Field
+
+		i := 0
 		for intP, extP := range c.cfg.HostPortOverride {
-			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+			port := nat.Port(fmt.Sprintf("%d/tcp", intP))
+
+			usingPorts[port] = []nat.PortBinding{
 				{
 					HostPort: fmt.Sprintf("%d", extP),
 				},
 			}
+
+			fields = append(fields, zap.String(fmt.Sprintf("port_overrides_%d", i), fmt.Sprintf("%s:%d", port, extP)))
+			i++
 		}
 
-		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
+		c.log.Info("Port overrides", fields...)
 	}
 
 	env := []string{}

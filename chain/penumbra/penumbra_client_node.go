@@ -299,9 +299,15 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	if os.Getenv("ICTEST_DEBUG") != "" {
-		fmt.Printf("Timeout timestamp: %+v \n", timeoutTimestamp)
-		fmt.Printf("Timeout: %+v \n", timeoutHeight)
-		fmt.Printf("Withdrawal: %+v \n", withdrawal)
+		p.log.Info("Ics20 withdrawal info",
+			zap.String("denom", withdrawal.Denom.Denom),
+			zap.String("amount", amount.Amount.String()),
+			zap.String("destination_chain_address", withdrawal.DestinationChainAddress),
+			zap.String("return_address", withdrawal.ReturnAddress.String()),
+			zap.String("channel_id", channelID),
+			zap.String("timeout_height", withdrawal.TimeoutHeight.String()),
+			zap.Uint64("timeout_timestamp", timeoutTimestamp),
+		)
 	}
 
 	// Generate a transaction plan sending ics_20 transfer

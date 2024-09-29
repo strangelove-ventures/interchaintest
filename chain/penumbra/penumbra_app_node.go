@@ -313,7 +313,8 @@ func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64
 		return 0, err
 	}
 
-	fmt.Printf("STDOUT BAL: '%s'\n", string(stdout))
+	p.log.Info("Balance query result", zap.String("key_name", keyName), zap.String("output", string(stdout)))
+
 	return 0, nil
 }
 

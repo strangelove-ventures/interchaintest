@@ -137,11 +137,14 @@ func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.Relayer
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
-	fmt.Println(string(res.Stdout))
+
+	fmt.Println(string(res.Stdout)) //nolint:forbidigo
+
 	return nil
 }
 
@@ -153,11 +156,14 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
-	fmt.Println(string(res.Stdout))
+
+	fmt.Println(string(res.Stdout)) //nolint:forbidigo
+
 	return nil
 }
 

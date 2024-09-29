@@ -2,10 +2,9 @@ package polkadot_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -59,10 +58,6 @@ func TestWalletMethods(t *testing.T) {
 
 	address, err := chain.GetAddress(ctx, relayKeyName)
 	require.NoError(t, err, "Error getting relay address")
-	fmt.Println("Relay wallet mnemonic: ", relayWallet.Mnemonic())
-	fmt.Println("Relay wallet keyname: ", relayWallet.KeyName())
-	fmt.Println("Relay wallet address: ", relayWallet.FormattedAddress())
-	fmt.Println("Address: ", address)
 	require.Equal(t, relayWallet.FormattedAddress(), string(address), "Relay addresses not equal")
 
 	// BuildWallet test
@@ -72,10 +67,6 @@ func TestWalletMethods(t *testing.T) {
 
 	address, err = chain.GetAddress(ctx, userKeyName)
 	require.NoError(t, err, "Error getting user address")
-	fmt.Println("Wallet mnemonic: ", userWallet.Mnemonic())
-	fmt.Println("Wallet keyname: ", userWallet.KeyName())
-	fmt.Println("Wallet address: ", userWallet.FormattedAddress())
-	fmt.Println("Address: ", address)
 	require.Equal(t, userWallet.FormattedAddress(), string(address), "User addresses not equal")
 
 	// RecoverKey test

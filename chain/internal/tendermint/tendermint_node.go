@@ -348,15 +348,18 @@ func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) 
 			// don't peer with ourself
 			continue
 		}
+
 		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?
 			break
 		}
+
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
+		n.Log.Info("Peering", zap.String("hostname", hostName), zap.String("peer_string", ps))
+
 		addrs[i] = ps
 	}
 	return strings.Join(addrs, ",")

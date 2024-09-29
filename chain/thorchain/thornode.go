@@ -556,7 +556,11 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
 	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
 	if err != nil {
-		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+		tn.log.Info("TxHashToResponse returned an error",
+			zap.String("tx_hash", txHash),
+			zap.Error(err),
+			zap.String("stderr", string(stderr)),
+		)
 	}
 
 	i := &sdk.TxResponse{}
@@ -1405,15 +1409,23 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
 	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		var fields []zap.Field
+
+		i := 0
 		for intP, extP := range chainCfg.HostPortOverride {
-			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+			port := nat.Port(fmt.Sprintf("%d/tcp", intP))
+
+			usingPorts[port] = []nat.PortBinding{
 				{
 					HostPort: fmt.Sprintf("%d", extP),
 				},
 			}
+
+			fields = append(fields, zap.String(fmt.Sprintf("port_overrides_%d", i), fmt.Sprintf("%s:%d", port, extP)))
+			i++
 		}
 
-		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+		tn.log.Info("Port overrides", fields...)
 	}
 
 	env := chainCfg.Env
