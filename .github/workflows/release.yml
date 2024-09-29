@@ -5,7 +5,7 @@ on:
     types: [created]
 
 env:
-    GO_VERSION: 1.21
+  GO_VERSION: 1.21
 
 jobs:
   release-static-binary:
@@ -18,7 +18,7 @@ jobs:
       - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
         with:
-            go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
 
       # NOTE: make install must not be statically linked to the MakeFileInstallDirectory
       - run: cd local-interchain && go mod tidy && IGNORE_STATIC_LINK=true make install

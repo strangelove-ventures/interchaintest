@@ -17,32 +17,33 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	tmjson "github.com/cometbft/cometbft/libs/json"
-	"github.com/cometbft/cometbft/p2p"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
-	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/icza/dyno"
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 )
 
 type ChainNode struct {
@@ -98,13 +99,13 @@ func NewChainNode(log *zap.Logger, validator bool, chain *Thorchain, dockerClien
 	return tn
 }
 
-// WithPreStartNode sets the preStartNode function for the ChainNode
+// WithPreStartNode sets the preStartNode function for the ChainNode.
 func (tn *ChainNode) WithPreStartNode(preStartNode func(*ChainNode)) *ChainNode {
 	tn.preStartNode = preStartNode
 	return tn
 }
 
-// ChainNodes is a collection of ChainNode
+// ChainNodes is a collection of ChainNode.
 type ChainNodes []*ChainNode
 
 const (
@@ -119,17 +120,15 @@ const (
 	cometMockRawPort = "22331"
 )
 
-var (
-	sentryPorts = nat.PortMap{
-		nat.Port(p2pPort):     {},
-		nat.Port(rpcPort):     {},
-		nat.Port(grpcPort):    {},
-		nat.Port(apiPort):     {},
-		nat.Port(privValPort): {},
-	}
-)
+var sentryPorts = nat.PortMap{
+	nat.Port(p2pPort):     {},
+	nat.Port(rpcPort):     {},
+	nat.Port(grpcPort):    {},
+	nat.Port(apiPort):     {},
+	nat.Port(privValPort): {},
+}
 
-// NewClient creates and assigns a new Tendermint RPC client to the ChainNode
+// NewClient creates and assigns a new Tendermint RPC client to the ChainNode.
 func (tn *ChainNode) NewClient(addr string) error {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
@@ -198,7 +197,7 @@ func (tn *ChainNode) NewSidecarProcess(
 	return nil
 }
 
-// CliContext creates a new Cosmos SDK client context
+// CliContext creates a new Cosmos SDK client context.
 func (tn *ChainNode) CliContext() client.Context {
 	cfg := tn.Chain.Config()
 	return client.Context{
@@ -214,7 +213,7 @@ func (tn *ChainNode) CliContext() client.Context {
 	}
 }
 
-// Name of the test node container
+// Name of the test node container.
 func (tn *ChainNode) Name() string {
 	return fmt.Sprintf("%s-%s-%d-%s", tn.Chain.Config().ChainID, tn.NodeType(), tn.Index, dockerutil.SanitizeContainerName(tn.TestName))
 }
@@ -231,12 +230,12 @@ func (tn *ChainNode) ContainerID() string {
 	return tn.containerLifecycle.ContainerID()
 }
 
-// hostname of the test node container
+// hostname of the test node container.
 func (tn *ChainNode) HostName() string {
 	return dockerutil.CondenseHostName(tn.Name())
 }
 
-// hostname of the comet mock container
+// hostname of the comet mock container.
 func (tn *ChainNode) HostnameCometMock() string {
 	return tn.cometHostname
 }
@@ -288,7 +287,7 @@ type PrivValidatorKeyFile struct {
 	PrivKey PrivValidatorKey `json:"priv_key"`
 }
 
-// Bind returns the home folder bind point for running the node
+// Bind returns the home folder bind point for running the node.
 func (tn *ChainNode) Bind() []string {
 	return []string{fmt.Sprintf("%s:%s", tn.VolumeName, tn.HomeDir())}
 }
@@ -375,7 +374,7 @@ func (tn *ChainNode) SetTestConfig(ctx context.Context) error {
 	)
 }
 
-// SetPeers modifies the config persistent_peers for a node
+// SetPeers modifies the config persistent_peers for a node.
 func (tn *ChainNode) SetPeers(ctx context.Context, peers string) error {
 	c := make(testutil.Toml)
 	p2p := make(testutil.Toml)
@@ -485,7 +484,7 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 // with the chain node binary.
 func (tn *ChainNode) TxCommand(keyName string, command ...string) []string {
 	command = append([]string{"tx"}, command...)
-	var gasPriceFound, gasAdjustmentFound, feesFound = false, false, false
+	gasPriceFound, gasAdjustmentFound, feesFound := false, false, false
 	for i := 0; i < len(command); i++ {
 		if command[i] == "--gas-prices" {
 			gasPriceFound = true
@@ -663,7 +662,7 @@ func CondenseMoniker(m string) string {
 	return m[:keepLen] + "..." + m[len(m)-keepLen:] + suffix
 }
 
-// InitHomeFolder initializes a home folder for the given node
+// InitHomeFolder initializes a home folder for the given node.
 func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -677,7 +676,7 @@ func (tn *ChainNode) InitHomeFolder(ctx context.Context) error {
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
 // the docker filesystem. relPath describes the location of the file in the
-// docker volume relative to the home directory
+// docker volume relative to the home directory.
 func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath string) error {
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
 	return fw.WriteFile(ctx, tn.VolumeName, relPath, content)
@@ -685,7 +684,7 @@ func (tn *ChainNode) WriteFile(ctx context.Context, content []byte, relPath stri
 
 // CopyFile adds a file from the host filesystem to the docker filesystem
 // relPath describes the location of the file in the docker volume relative to
-// the home directory
+// the home directory.
 func (tn *ChainNode) CopyFile(ctx context.Context, srcPath, dstPath string) error {
 	content, err := os.ReadFile(srcPath)
 	if err != nil {
@@ -705,7 +704,7 @@ func (tn *ChainNode) ReadFile(ctx context.Context, relPath string) ([]byte, erro
 	return gen, nil
 }
 
-// CreateKey creates a key in the keyring backend test for the given node
+// CreateKey creates a key in the keyring backend test for the given node.
 func (tn *ChainNode) CreateKey(ctx context.Context, name string) error {
 	tn.lock.Lock()
 	defer tn.lock.Unlock()
@@ -782,7 +781,7 @@ func (tn *ChainNode) ICSVersion(ctx context.Context) string {
 	return ""
 }
 
-// AddGenesisAccount adds a genesis account for each key
+// AddGenesisAccount adds a genesis account for each key.
 func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, genesisAmount []sdk.Coin) error {
 	amount := ""
 	for i, coin := range genesisAmount {
@@ -817,7 +816,8 @@ func (tn *ChainNode) AddGenesisAccount(ctx context.Context, address string, gene
 }
 
 func (tn *ChainNode) Version(ctx context.Context) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "query", "thorchain", "version", "--output", "json",
+	command := []string{
+		tn.Chain.Config().Bin, "query", "thorchain", "version", "--output", "json",
 		"--home", tn.HomeDir(),
 	}
 
@@ -835,7 +835,8 @@ func (tn *ChainNode) Version(ctx context.Context) (string, error) {
 }
 
 func (tn *ChainNode) GetValidatorConsPubKey(ctx context.Context) (string, error) {
-	command := []string{tn.Chain.Config().Bin, "tendermint", "show-validator",
+	command := []string{
+		tn.Chain.Config().Bin, "tendermint", "show-validator",
 		"--home", tn.HomeDir(),
 	}
 
@@ -1236,7 +1237,6 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 				Replacement:        r,
 				ReplacementVersion: rV,
 			}
-
 		} else {
 			// Ex: "github.com/aaa/bbb@v0.0.0-20191008050251-8e49817e8af4"
 			parent, version := getRepoAndVersion(dep)
@@ -1534,14 +1534,14 @@ func (tn *ChainNode) RemoveContainer(ctx context.Context) error {
 	return tn.containerLifecycle.RemoveContainer(ctx)
 }
 
-// InitValidatorFiles creates the node files and signs a genesis transaction
+// InitValidatorFiles creates the node files and signs a genesis transaction.
 func (tn *ChainNode) InitValidatorGenTx(
 	ctx context.Context,
 	chainType *ibc.ChainConfig,
 	genesisAmounts []sdk.Coin,
 	genesisSelfDelegation sdk.Coin,
 ) error {
-	//if err := tn.CreateKey(ctx, valKey); err != nil {
+	// if err := tn.CreateKey(ctx, valKey); err != nil {
 	//	return err
 	//}
 	// Thorchain will only start with 1 validator
@@ -1557,7 +1557,7 @@ func (tn *ChainNode) InitValidatorGenTx(
 		return err
 	}
 	return nil
-	//return tn.Gentx(ctx, valKey, genesisSelfDelegation)
+	// return tn.Gentx(ctx, valKey, genesisSelfDelegation)
 }
 
 func (tn *ChainNode) InitFullNodeFiles(ctx context.Context) error {
@@ -1610,7 +1610,7 @@ func (tn *ChainNode) AccountKeyBech32(ctx context.Context, name string) (string,
 	return tn.KeyBech32(ctx, name, "")
 }
 
-// PeerString returns the string for connecting the nodes passed in
+// PeerString returns the string for connecting the nodes passed in.
 func (nodes ChainNodes) PeerString(ctx context.Context) string {
 	addrs := make([]string, len(nodes))
 	for i, n := range nodes {
@@ -1644,7 +1644,7 @@ func (nodes ChainNodes) SidecarBifrostPeers() string {
 	return strings.Join(addrs, ",")
 }
 
-// LogGenesisHashes logs the genesis hashes for the various nodes
+// LogGenesisHashes logs the genesis hashes for the various nodes.
 func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
 	for _, n := range nodes {
 		gen, err := n.GenesisFileContent(ctx)
@@ -1701,7 +1701,7 @@ func (tn *ChainNode) QueryICA(ctx context.Context, connectionID, address string)
 }
 
 // GetHostAddress returns the host-accessible url for a port in the container.
-// This is useful for finding the url & random host port for ports exposed via ChainConfig.ExposeAdditionalPorts
+// This is useful for finding the url & random host port for ports exposed via ChainConfig.ExposeAdditionalPorts.
 func (tn *ChainNode) GetHostAddress(ctx context.Context, portID string) (string, error) {
 	ports, err := tn.containerLifecycle.GetHostPorts(ctx, portID)
 	if err != nil {

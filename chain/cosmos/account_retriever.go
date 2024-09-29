@@ -3,7 +3,6 @@ package cosmos
 import (
 	"context"
 	"fmt"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"strconv"
 
 	grpc "google.golang.org/grpc"
@@ -12,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 var (

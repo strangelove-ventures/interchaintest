@@ -13,11 +13,10 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"go.uber.org/zap"
-
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"go.uber.org/zap"
 )
 
 const (
@@ -148,7 +147,7 @@ func (r *DockerRelayer) ReadFileFromHomeDir(ctx context.Context, relativePath st
 	return bytes, nil
 }
 
-// Modify a toml config file in relayer home directory
+// Modify a toml config file in relayer home directory.
 func (r *DockerRelayer) ModifyTomlConfigFile(ctx context.Context, relativePath string, modification testutil.Toml) error {
 	return testutil.ModifyTomlConfigFile(ctx, r.log, r.client, r.testName, r.volumeName, relativePath, modification)
 }

@@ -85,7 +85,7 @@ type DenomAuthorityMetadata struct {
 
 // thorchain openapi types
 
-// InboundAddress struct for InboundAddress
+// InboundAddress struct for InboundAddress.
 type InboundAddress struct {
 	Chain   *string `json:"chain,omitempty"`
 	PubKey  *string `json:"pub_key,omitempty"`
@@ -111,7 +111,7 @@ type InboundAddress struct {
 	DustThreshold *string `json:"dust_threshold,omitempty"`
 }
 
-// LiquidityProvider struct for LiquidityProvider
+// LiquidityProvider struct for LiquidityProvider.
 type LiquidityProvider struct {
 	Asset              string  `json:"asset"`
 	RuneAddress        *string `json:"rune_address,omitempty"`
@@ -131,7 +131,7 @@ type LiquidityProvider struct {
 	LuviGrowthPct      *string `json:"luvi_growth_pct,omitempty"`
 }
 
-// Saver struct for Saver
+// Saver struct for Saver.
 type Saver struct {
 	Asset              string `json:"asset"`
 	AssetAddress       string `json:"asset_address"`
@@ -143,7 +143,7 @@ type Saver struct {
 	GrowthPct          string `json:"growth_pct"`
 }
 
-// Pool struct for Pool
+// Pool struct for Pool.
 type Pool struct {
 	Asset               string  `json:"asset"`
 	ShortCode           *string `json:"short_code,omitempty"`
@@ -185,7 +185,7 @@ type Pool struct {
 	DerivedDepthBps string `json:"derived_depth_bps"`
 }
 
-// QuoteFees struct for QuoteFees
+// QuoteFees struct for QuoteFees.
 type QuoteFees struct {
 	// the target asset used for all fees
 	Asset string `json:"asset"`
@@ -203,7 +203,7 @@ type QuoteFees struct {
 	TotalBps int64 `json:"total_bps"`
 }
 
-// QuoteSwapResponse struct for QuoteSwapResponse
+// QuoteSwapResponse struct for QuoteSwapResponse.
 type QuoteSwapResponse struct {
 	// the inbound address for the transaction on the source chain
 	InboundAddress *string `json:"inbound_address,omitempty"`
@@ -246,7 +246,7 @@ type QuoteSwapResponse struct {
 	TotalSwapSeconds *int64 `json:"total_swap_seconds,omitempty"`
 }
 
-// QuoteSaverDepositResponse struct for QuoteSaverDepositResponse
+// QuoteSaverDepositResponse struct for QuoteSaverDepositResponse.
 type QuoteSaverDepositResponse struct {
 	// the inbound address for the transaction on the source chain
 	InboundAddress string `json:"inbound_address"`
@@ -283,7 +283,7 @@ type QuoteSaverDepositResponse struct {
 	ExpectedAmountDeposit string `json:"expected_amount_deposit"`
 }
 
-// InboundObservedStage struct for InboundObservedStage
+// InboundObservedStage struct for InboundObservedStage.
 type InboundObservedStage struct {
 	// returns true if any nodes have observed the transaction (to be deprecated in favour of counts)
 	Started *bool `json:"started,omitempty"`
@@ -295,7 +295,7 @@ type InboundObservedStage struct {
 	Completed bool `json:"completed"`
 }
 
-// InboundConfirmationCountedStage struct for InboundConfirmationCountedStage
+// InboundConfirmationCountedStage struct for InboundConfirmationCountedStage.
 type InboundConfirmationCountedStage struct {
 	// the THORChain block height when confirmation counting began
 	CountingStartHeight *int64 `json:"counting_start_height,omitempty"`
@@ -311,13 +311,13 @@ type InboundConfirmationCountedStage struct {
 	Completed bool `json:"completed"`
 }
 
-// InboundFinalisedStage struct for InboundFinalisedStage
+// InboundFinalisedStage struct for InboundFinalisedStage.
 type InboundFinalisedStage struct {
 	// returns true if the inbound transaction has been finalised (THORChain agreeing it exists)
 	Completed bool `json:"completed"`
 }
 
-// StreamingStatus struct for StreamingStatus
+// StreamingStatus struct for StreamingStatus.
 type StreamingStatus struct {
 	// how often each swap is made, in blocks
 	Interval int64 `json:"interval"`
@@ -327,20 +327,20 @@ type StreamingStatus struct {
 	Count int64 `json:"count"`
 }
 
-// SwapStatus struct for SwapStatus
+// SwapStatus struct for SwapStatus.
 type SwapStatus struct {
 	// true when awaiting a swap
 	Pending   bool             `json:"pending"`
 	Streaming *StreamingStatus `json:"streaming,omitempty"`
 }
 
-// SwapFinalisedStage struct for SwapFinalisedStage
+// SwapFinalisedStage struct for SwapFinalisedStage.
 type SwapFinalisedStage struct {
 	// (to be deprecated in favor of swap_status) returns true if an inbound transaction's swap (successful or refunded) is no longer pending
 	Completed bool `json:"completed"`
 }
 
-// OutboundDelayStage struct for OutboundDelayStage
+// OutboundDelayStage struct for OutboundDelayStage.
 type OutboundDelayStage struct {
 	// the number of remaining THORChain blocks the outbound will be delayed
 	RemainingDelayBlocks *int64 `json:"remaining_delay_blocks,omitempty"`
@@ -350,7 +350,7 @@ type OutboundDelayStage struct {
 	Completed bool `json:"completed"`
 }
 
-// OutboundSignedStage struct for OutboundSignedStage
+// OutboundSignedStage struct for OutboundSignedStage.
 type OutboundSignedStage struct {
 	// THORChain height for which the external outbound is scheduled
 	ScheduledOutboundHeight *int64 `json:"scheduled_outbound_height,omitempty"`
@@ -360,7 +360,7 @@ type OutboundSignedStage struct {
 	Completed bool `json:"completed"`
 }
 
-// TxStagesResponse struct for TxStagesResponse
+// TxStagesResponse struct for TxStagesResponse.
 type TxStagesResponse struct {
 	InboundObserved            InboundObservedStage             `json:"inbound_observed"`
 	InboundConfirmationCounted *InboundConfirmationCountedStage `json:"inbound_confirmation_counted,omitempty"`
@@ -371,14 +371,14 @@ type TxStagesResponse struct {
 	OutboundSigned             *OutboundSignedStage             `json:"outbound_signed,omitempty"`
 }
 
-// Coin struct for Coin
+// Coin struct for Coin.
 type Coin struct {
 	Asset    string `json:"asset"`
 	Amount   string `json:"amount"`
 	Decimals *int64 `json:"decimals,omitempty"`
 }
 
-// Tx struct for Tx
+// Tx struct for Tx.
 type Tx struct {
 	Id          *string `json:"id,omitempty"`
 	Chain       *string `json:"chain,omitempty"`
@@ -389,7 +389,7 @@ type Tx struct {
 	Memo        *string `json:"memo,omitempty"`
 }
 
-// ObservedTx struct for ObservedTx
+// ObservedTx struct for ObservedTx.
 type ObservedTx struct {
 	Tx             Tx      `json:"tx"`
 	ObservedPubKey *string `json:"observed_pub_key,omitempty"`
@@ -409,7 +409,7 @@ type ObservedTx struct {
 	Status                *string  `json:"status,omitempty"`
 }
 
-// TxOutItem struct for TxOutItem
+// TxOutItem struct for TxOutItem.
 type TxOutItem struct {
 	Chain       string  `json:"chain"`
 	ToAddress   string  `json:"to_address"`
@@ -425,7 +425,7 @@ type TxOutItem struct {
 	CloutSpent *string `json:"clout_spent,omitempty"`
 }
 
-// TxDetailsResponse struct for TxDetailsResponse
+// TxDetailsResponse struct for TxDetailsResponse.
 type TxDetailsResponse struct {
 	TxId    *string      `json:"tx_id,omitempty"`
 	Tx      ObservedTx   `json:"tx"`

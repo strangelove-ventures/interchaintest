@@ -41,7 +41,7 @@ func DockerSetup(t dockerutil.DockerSetupTestingT) (*client.Client, string) {
 // creates wallets in the relayer for src and dst chain
 // funds relayer src and dst wallets on respective chain in genesis
 // creates a faucet account on the both chains (separate fullnode)
-// funds faucet accounts in genesis
+// funds faucet accounts in genesis.
 func StartChainPair(
 	t *testing.T,
 	ctx context.Context,

@@ -1,7 +1,6 @@
 package interchaintest
 
 import (
-	_ "embed"
 	"fmt"
 	"os"
 	"strings"
@@ -17,6 +16,8 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
+
+	_ "embed"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -49,7 +50,7 @@ var embeddedConfiguredChains []byte
 
 var logConfiguredChainsSourceOnce sync.Once
 
-// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains
+// initBuiltinChainConfig returns an ibc.ChainConfig mapping all configured chains.
 func initBuiltinChainConfig(log *zap.Logger) (map[string]ibc.ChainConfig, error) {
 	var dat []byte
 	var err error
@@ -144,10 +145,10 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		switch {
 		case strings.Contains(cfg.Name, "composable"):
 			parachains := []polkadot.ParachainConfig{{
-				//Bin:             "composable",
+				// Bin:             "composable",
 				Bin:     "parachain-node",
 				ChainID: "dev-2000",
-				//ChainID:         "dali-dev",
+				// ChainID:         "dali-dev",
 				Image:           cfg.Images[1],
 				NumNodes:        nf,
 				Flags:           []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},

@@ -10,13 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
-	"github.com/cosmos/cosmos-sdk/codec"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
@@ -25,6 +19,14 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/math"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
 type PenumbraChain struct {
@@ -130,7 +132,7 @@ func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetHostPeerAddress() string {
 	panic("NOT IMPLEMENTED")
 }
@@ -235,7 +237,7 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 }
 
 // SendFundsWithNote will initiate a local transfer from the account associated with the specified keyName,
-// amount, token denom, and recipient are specified in the amount and attach a note/memo
+// amount, token denom, and recipient are specified in the amount and attach a note/memo.
 func (c *PenumbraChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	panic("Penumbrachain: SendFundsWithNote unimplemented")
 }

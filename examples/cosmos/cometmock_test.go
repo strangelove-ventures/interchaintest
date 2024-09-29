@@ -94,5 +94,4 @@ func TestCometMock(t *testing.T) {
 	endBal, err := chain.GetBalance(ctx, user.FormattedAddress(), "ujuno")
 	require.NoError(t, err)
 	require.EqualValues(t, initBal, endBal)
-
 }

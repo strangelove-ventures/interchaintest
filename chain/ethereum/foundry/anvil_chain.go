@@ -37,7 +37,8 @@ func (c *AnvilChain) KeystoreDir() string {
 }
 
 func (c *AnvilChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	cmd := []string{c.Config().Bin,
+	cmd := []string{
+		c.Config().Bin,
 		"--host", "0.0.0.0", // Anyone can call
 		"--no-cors",
 		"--gas-price", c.Config().GasPrices,
@@ -127,7 +128,7 @@ func (c *AnvilChain) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	return nil
 }
 
-// Get address of account, cast to a string to use
+// Get address of account, cast to a string to use.
 func (c *AnvilChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	account, ok := c.keystoreMap[keyName]
 	if !ok {

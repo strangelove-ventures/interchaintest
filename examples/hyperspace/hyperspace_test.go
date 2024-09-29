@@ -329,7 +329,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
 	require.NoError(t, err)
-	err = os.WriteFile("exported_state.json", []byte(exportedState), 0644)
+	err = os.WriteFile("exported_state.json", []byte(exportedState), 0o644)
 	require.NoError(t, err)
 }
 

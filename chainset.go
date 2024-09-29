@@ -56,7 +56,6 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 		c := c
 		cs.log.Info("Initializing chain", zap.String("chain_id", c.Config().ChainID))
 		eg.Go(func() error {
-
 			if err := c.Initialize(ctx, testName, cli, networkID); err != nil {
 				return fmt.Errorf("failed to initialize chain %s: %w", c.Config().Name, err)
 			}

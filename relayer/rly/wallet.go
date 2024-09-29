@@ -33,12 +33,12 @@ func (w *RlyWallet) FormattedAddress() string {
 	return w.address
 }
 
-// Get mnemonic, only used for relayer wallets
+// Get mnemonic, only used for relayer wallets.
 func (w *RlyWallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-// Get Address
+// Get Address.
 func (w *RlyWallet) Address() []byte {
 	return []byte(w.address)
 }

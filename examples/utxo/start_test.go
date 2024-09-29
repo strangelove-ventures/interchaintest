@@ -18,7 +18,6 @@ import (
 )
 
 func TestUtxo(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip()
 	}

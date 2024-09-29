@@ -198,7 +198,6 @@ func testAuth(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {
 	accInfo, err := chain.AuthQueryAccountInfo(ctx, govAddr)
 	require.NoError(t, err)
 	require.EqualValues(t, govAddr, accInfo.Address)
-
 }
 
 // testUpgrade test the queries for upgrade information. Actual upgrades take place in other test.
@@ -625,7 +624,6 @@ func testStaking(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain, u
 		require.NoError(t, err)
 		require.NotEmpty(t, delVals)
 		require.True(t, delVals[0].OperatorAddress == val)
-
 	})
 
 	t.Run("misc", func(t *testing.T) {

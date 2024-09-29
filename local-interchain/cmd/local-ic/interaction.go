@@ -37,7 +37,6 @@ var interactCmd = &cobra.Command{
 		return GetFiles(), cobra.ShellCompDirectiveNoFileComp
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-
 		ah := &handlers.ActionHandler{
 			ChainId: args[0],
 			Action:  args[1],

@@ -73,7 +73,8 @@ func TestLearn(t *testing.T) {
 		NetworkID: network,
 		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
-		SkipPathCreation: false},
+		SkipPathCreation: false,
+	},
 	),
 	)
 

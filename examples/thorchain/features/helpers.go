@@ -100,7 +100,6 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 			if strings.EqualFold(saver.AssetAddress, exoUser.FormattedAddress()) {
 				return saver, nil
 			}
-
 		}
 		time.Sleep(time.Second) // rate limit
 		return tc.Saver{}, fmt.Errorf("saver took longer than %d blocks to show", deltaBlocks)
@@ -128,7 +127,6 @@ func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBloc
 				time.Sleep(time.Second) // rate limit
 				return saver, fmt.Errorf("saver took longer than %d blocks to eject", deltaBlocks)
 			}
-
 		}
 		return tc.Saver{}, nil
 	}

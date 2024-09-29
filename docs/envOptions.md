@@ -2,7 +2,7 @@
 
 - `CONTAINER_LOG_TAIL`: Specifies the number of lines to display from container logs. Defaults to 50 lines.
 
-- `ICTEST_CONFIGURED_CHAINS`: override the default configuredChains.yaml embeded config.
+- `ICTEST_CONFIGURED_CHAINS`: override the default configuredChains.yaml embedded config.
 
 - `ICTEST_DEBUG`: extra debugging information for test execution.
 

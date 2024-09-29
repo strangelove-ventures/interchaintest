@@ -9,11 +9,8 @@ import (
 	"io"
 	"strings"
 
-	"cosmossdk.io/math"
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/go-bip39"
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -27,9 +24,15 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/math"
+
+	"github.com/cosmos/go-bip39"
+
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
-// Increase polkadot wallet amount due to their additional precision
+// Increase polkadot wallet amount due to their additional precision.
 const polkadotScaling = int64(1_000)
 
 // PolkadotChain implements the ibc.Chain interface for substrate chains.
@@ -74,8 +77,10 @@ type ParachainConfig struct {
 }
 
 // IndexedName is a slice of the substrate dev key names used for key derivation.
-var IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-var IndexedUri = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+var (
+	IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
+	IndexedUri  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+)
 
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
 func NewPolkadotChain(log *zap.Logger, testName string, chainConfig ibc.ChainConfig, numRelayChainNodes int, parachains []ParachainConfig) *PolkadotChain {
@@ -510,7 +515,7 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 				if err := fw.WriteFile(ctx, n.VolumeName, n.RawRelayChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
 					return fmt.Errorf("error writing raw chain spec: %w", err)
 				}
-				//fmt.Print(string(rawChainSpecBytes))
+				// fmt.Print(string(rawChainSpecBytes))
 				c.logger().Info("Creating container", zap.String("name", n.Name()))
 				if err := n.CreateNodeContainer(ctx); err != nil {
 					return err
@@ -542,7 +547,7 @@ func (c *PolkadotChain) GetRPCAddress() string {
 
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		parachainHostName = c.ParachainNodes[0][0].HostName()
-		//return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
+		// return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
 	} else {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
@@ -550,7 +555,7 @@ func (c *PolkadotChain) GetRPCAddress() string {
 	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
 	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
 	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
-	//return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
+	// return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
@@ -562,7 +567,7 @@ func (c *PolkadotChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(wsPort, "/")[0])
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PolkadotChain) GetHostPeerAddress() string {
 	panic("NOT IMPLEMENTED")
 }
@@ -720,7 +725,7 @@ func (c *PolkadotChain) GetPublicKey(keyName string) ([]byte, error) {
 
 // BuildWallet will return a Polkadot wallet
 // If mnemonic != "", it will restore using that mnemonic
-// If mnemonic == "", it will create a new key
+// If mnemonic == "", it will create a new key.
 func (c *PolkadotChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -799,7 +804,7 @@ func (c *PolkadotChain) GetBalance(ctx context.Context, address string, denom st
 	return c.ParachainNodes[0][0].GetBalance(ctx, address, denom)
 }
 
-// AccountInfo contains information of an account
+// AccountInfo contains information of an account.
 type AccountInfo struct {
 	Nonce       gstypes.U32
 	Consumers   gstypes.U32
@@ -831,7 +836,7 @@ func (c *PolkadotChain) Timeouts(ctx context.Context, height int64) ([]ibc.Packe
 	panic("[Timeouts] not implemented yet")
 }
 
-// GetKeyringPair returns the keyring pair from the keyring using keyName
+// GetKeyringPair returns the keyring pair from the keyring using keyName.
 func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, error) {
 	kp := signature.KeyringPair{}
 	krItem, err := c.keyring.Get(keyName)
@@ -847,17 +852,17 @@ func (c *PolkadotChain) GetKeyringPair(keyName string) (signature.KeyringPair, e
 	return kp, nil
 }
 
-// FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit)
+// FindTxs implements blockdb.BlockSaver (Not implemented yet for polkadot, but we don't want to exit).
 func (c *PolkadotChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
 	return []blockdb.Tx{}, nil
 }
 
-// GetIbcBalance returns the Coins type of ibc coins in account
+// GetIbcBalance returns the Coins type of ibc coins in account.
 func (c *PolkadotChain) GetIbcBalance(ctx context.Context, address string, denom uint64) (sdktypes.Coin, error) {
 	return c.ParachainNodes[0][0].GetIbcBalance(ctx, address, denom)
 }
 
-// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset.
 func (c *PolkadotChain) MintFunds(keyName string, amount ibc.WalletAmount) error {
 	return c.ParachainNodes[0][0].MintFunds(keyName, amount)
 }

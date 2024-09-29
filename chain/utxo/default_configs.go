@@ -125,8 +125,8 @@ func DefaultDogecoinChainConfig(
 			{
 				Repository: "registry.gitlab.com/thorchain/devops/node-launcher",
 				Version:    "dogecoin-daemon-1.14.7",
-				//Repository: "coinmetrics/dogecoin",
-				//Version:    "1.14.7",
+				// Repository: "coinmetrics/dogecoin",
+				// Version:    "1.14.7",
 				UidGid: "1000:1000",
 			},
 		},

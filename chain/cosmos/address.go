@@ -2,10 +2,10 @@ package cosmos
 
 import (
 	"errors"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 )
 
 // AccAddressFromBech32 creates an AccAddress from a Bech32 string.

@@ -53,8 +53,10 @@ func NewPenumbraAppNode(
 	networkID string,
 	image ibc.DockerImage,
 ) (*PenumbraAppNode, error) {
-	pn := &PenumbraAppNode{log: log, Index: index, Chain: chain,
-		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image}
+	pn := &PenumbraAppNode{
+		log: log, Index: index, Chain: chain,
+		DockerClient: dockerClient, NetworkID: networkID, TestName: testName, Image: image,
+	}
 
 	pn.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, pn.Name())
 
@@ -301,7 +303,7 @@ func (p *PenumbraAppNode) GetAddress(ctx context.Context, keyName string) ([]byt
 }
 
 // GetBalance attempts to query the token balances for a specified key name via an instance of pcli.
-// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout
+// TODO we need to change the func sig to take a denom then filter out the target denom bal from stdout.
 func (p *PenumbraAppNode) GetBalance(ctx context.Context, keyName string) (int64, error) {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
 	cmd := []string{"pcli", "--home", keyPath, "view", "balance"}
@@ -398,7 +400,8 @@ func (p *PenumbraAppNode) SendIBCTransfer(ctx context.Context, channelID, keyNam
 	parts := strings.Split(channelID, "-")
 	chanNum := parts[1]
 
-	cmd := []string{"pcli", "--home", keyPath, "tx", "withdraw",
+	cmd := []string{
+		"pcli", "--home", keyPath, "tx", "withdraw",
 		"--to", amount.Address,
 		"--channel", chanNum,
 		"--timeout-height", fmt.Sprintf("0-%d", opts.Timeout.Height),

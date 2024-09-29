@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	sdkmath "cosmossdk.io/math"
-
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
+
+	sdkmath "cosmossdk.io/math"
 )
 
 func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
