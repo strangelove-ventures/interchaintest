@@ -76,11 +76,11 @@ func TestReporter_TrackPassingSingleTest(t *testing.T) {
 	requireTimeInRange(t, beginSuiteMsg.StartedAt, beforeStartSuite, afterStartSuite)
 
 	beginTestMsg := msgs[1].(testreporter.BeginTestMessage)
-	require.Equal(t, beginTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", beginTestMsg.Name)
 	requireTimeInRange(t, beginTestMsg.StartedAt, beforeStartTest, afterStartTest)
 
 	finishTestMsg := msgs[2].(testreporter.FinishTestMessage)
-	require.Equal(t, finishTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", finishTestMsg.Name)
 	require.False(t, finishTestMsg.Failed)
 	require.False(t, finishTestMsg.Skipped)
 	requireTimeInRange(t, finishTestMsg.FinishedAt, beforeFinishTest, afterFinishTest)
@@ -116,13 +116,13 @@ func TestReporter_TrackFailingSingleTest(t *testing.T) {
 	require.Len(t, msgs, 5)
 
 	testErrorMsg := msgs[2].(testreporter.TestErrorMessage)
-	require.Equal(t, testErrorMsg.Name, "my_test")
+	require.Equal(t, "my_test", testErrorMsg.Name)
 	// require.Fail adds some detail to the error message that complicates a plain string equality check.
 	require.Contains(t, testErrorMsg.Message, "forced failure")
 	requireTimeInRange(t, testErrorMsg.When, beforeFailure, afterFailure)
 
 	finishTestMsg := msgs[3].(testreporter.FinishTestMessage)
-	require.Equal(t, finishTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", finishTestMsg.Name)
 	require.True(t, finishTestMsg.Failed)
 	require.False(t, finishTestMsg.Skipped)
 }

@@ -57,7 +57,7 @@ func TestChainSpec_Config(t *testing.T) {
 				// Skip Name, as that is intended to be inherited from ChainName.
 				ChainID: "mychain-123",
 				Images: []ibc.DockerImage{
-					{Repository: "docker.example.com", Version: "latest", UidGid: "1:1"},
+					{Repository: "docker.example.com", Version: "latest", UIDGID: "1:1"},
 				},
 				Bin:            "/bin/true",
 				Bech32Prefix:   "foo",

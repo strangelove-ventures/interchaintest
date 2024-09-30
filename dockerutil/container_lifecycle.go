@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Example Go/Cosmos-SDK panic format is `panic: bad Duration: time: invalid duration "bad"\n`
+// Example Go/Cosmos-SDK panic format is `panic: bad Duration: time: invalid duration "bad"\n`.
 var panicRe = regexp.MustCompile(`panic:.*\n`)
 
 type ContainerLifecycle struct {

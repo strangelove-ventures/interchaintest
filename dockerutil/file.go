@@ -41,8 +41,8 @@ func CopyFile(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
-func CopyCoverageFromContainer(ctx context.Context, t *testing.T, client *client.Client, containerId string, internalGoCoverDir string, extHostGoCoverDir string) {
-	r, _, err := client.CopyFromContainer(ctx, containerId, internalGoCoverDir)
+func CopyCoverageFromContainer(ctx context.Context, t *testing.T, client *client.Client, containerID string, internalGoCoverDir string, extHostGoCoverDir string) {
+	r, _, err := client.CopyFromContainer(ctx, containerID, internalGoCoverDir)
 	require.NoError(t, err)
 	defer r.Close()
 
@@ -58,7 +58,7 @@ func CopyCoverageFromContainer(ctx context.Context, t *testing.T, client *client
 		require.NoError(t, err)
 
 		var fileBuff bytes.Buffer
-		_, err = io.Copy(&fileBuff, tr)
+		_, err = io.Copy(&fileBuff, tr) //nolint: gosec
 		require.NoError(t, err)
 
 		name := hdr.Name
@@ -74,7 +74,7 @@ func CopyCoverageFromContainer(ctx context.Context, t *testing.T, client *client
 		}
 
 		filePath := filepath.Join(extHostGoCoverDir, extractedFileName)
-		err = os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm)
+		err = os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm) //nolint: gosec
 		require.NoError(t, err)
 	}
 }

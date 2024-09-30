@@ -79,7 +79,7 @@ func NewPenumbraAppNode(
 		VolumeName: pn.VolumeName,
 		ImageRef:   pn.Image.Ref(),
 		TestName:   pn.TestName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set penumbra volume owner: %w", err)
 	}
@@ -124,8 +124,8 @@ func (p *PenumbraAppNode) HomeDir() string {
 // CreateKey attempts to initialize a new pcli config file with a newly generated FullViewingKey and CustodyKey.
 func (p *PenumbraAppNode) CreateKey(ctx context.Context, keyName string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
-	pdUrl := fmt.Sprintf("http://%s:8080", p.HostName())
-	cmd := []string{"pcli", "--home", keyPath, "init", "--grpc-url", pdUrl, "soft-kms", "generate"}
+	pdURL := fmt.Sprintf("http://%s:8080", p.HostName())
+	cmd := []string{"pcli", "--home", keyPath, "init", "--grpc-url", pdURL, "soft-kms", "generate"}
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
 
@@ -248,13 +248,13 @@ func (p *PenumbraAppNode) GenerateGenesisFile(
 	validators []PenumbraValidatorDefinition,
 	allocations []PenumbraGenesisAppStateAllocation,
 ) error {
-	validatorsJson, err := json.Marshal(validators)
+	validatorsJSON, err := json.Marshal(validators)
 	if err != nil {
 		return fmt.Errorf("error marshalling validators to json: %w", err)
 	}
 
 	fw := dockerutil.NewFileWriter(p.log, p.DockerClient, p.TestName)
-	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJson); err != nil {
+	if err := fw.WriteFile(ctx, p.VolumeName, "validators.json", validatorsJSON); err != nil {
 		return fmt.Errorf("error writing validators to file: %w", err)
 	}
 
@@ -387,7 +387,7 @@ func (p *PenumbraAppNode) Exec(ctx context.Context, cmd []string, env []string) 
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGID,
 	}
 
 	res := job.Run(ctx, cmd, opts)

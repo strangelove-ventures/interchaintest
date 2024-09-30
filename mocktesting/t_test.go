@@ -10,7 +10,7 @@ import (
 
 func TestT_Name(t *testing.T) {
 	mt := mocktesting.NewT("foo")
-	require.Equal(t, mt.Name(), "foo")
+	require.Equal(t, "foo", mt.Name())
 
 	require.Panics(t, func() {
 		_ = mocktesting.NewT("")

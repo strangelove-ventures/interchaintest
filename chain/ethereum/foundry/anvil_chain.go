@@ -52,16 +52,16 @@ func (c *AnvilChain) Start(testName string, ctx context.Context, additionalGenes
 		if err != nil {
 			return err
 		}
-		localJsonFile := filepath.Join(pwd, loadState)
-		dockerJsonFile := path.Join(c.HomeDir(), path.Base(loadState))
+		localJSONFile := filepath.Join(pwd, loadState)
+		dockerJSONFile := path.Join(c.HomeDir(), path.Base(loadState))
 		mounts = []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: localJsonFile,
-				Target: dockerJsonFile,
+				Source: localJSONFile,
+				Target: dockerJSONFile,
 			},
 		}
-		cmd = append(cmd, "--load-state", dockerJsonFile)
+		cmd = append(cmd, "--load-state", dockerJSONFile)
 	}
 
 	return c.EthereumChain.Start(ctx, cmd, mounts)
@@ -201,7 +201,7 @@ func (c *AnvilChain) BuildWallet(ctx context.Context, keyName string, mnemonic s
 	} else {
 		// Use the genesis account
 		if keyName == "faucet" {
-			mnemonic = "test test test test test test test test test test test junk"
+			mnemonic = "test test test test test test test test test test test junk" //nolint: dupword
 			err := c.RecoverKey(ctx, keyName, mnemonic)
 			if err != nil {
 				return nil, err

@@ -180,7 +180,7 @@ func (pn *ParachainNode) ParachainID(ctx context.Context) (int, error) {
 		return -1, res.Err
 	}
 	out := GetParachainIDResponse{}
-	if err := json.Unmarshal([]byte(res.Stdout), &out); err != nil {
+	if err := json.Unmarshal(res.Stdout, &out); err != nil {
 		return -1, err
 	}
 	return out.ParachainID, nil
@@ -302,7 +302,7 @@ func (pn *ParachainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: pn.Bind(),
 		Env:   env,
-		User:  pn.Image.UidGid,
+		User:  pn.Image.UIDGID,
 	}
 	return job.Run(ctx, cmd, opts)
 }

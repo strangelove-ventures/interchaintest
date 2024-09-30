@@ -37,6 +37,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -83,6 +85,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 	})
 
 	t.Run("limit", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -99,6 +103,8 @@ func TestQuery_RecentTestCases(t *testing.T) {
 	})
 
 	t.Run("no test cases", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -174,6 +180,8 @@ func TestQuery_Transactions(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -201,6 +209,8 @@ func TestQuery_Transactions(t *testing.T) {
 	})
 
 	t.Run("no txs", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -212,6 +222,6 @@ func TestQuery_Transactions(t *testing.T) {
 		results, err := NewQuery(db).Transactions(ctx, chain.id)
 		require.NoError(t, err)
 
-		require.Len(t, results, 0)
+		require.Empty(t, results)
 	})
 }

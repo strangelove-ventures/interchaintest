@@ -80,7 +80,7 @@ func NewThorchainHeighlinerChainConfig(
 		Images: []ibc.DockerImage{
 			{
 				Repository: "ghcr.io/strangelove-ventures/heighliner/thorchain",
-				UidGid:     dockerutil.GetHeighlinerUserString(),
+				UIDGID:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: binary,
@@ -506,7 +506,7 @@ func (c *Thorchain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -569,7 +569,7 @@ func (c *Thorchain) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}

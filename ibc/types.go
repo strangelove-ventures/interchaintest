@@ -294,7 +294,7 @@ type SidecarConfig struct {
 type DockerImage struct {
 	Repository string `json:"repository" yaml:"repository"`
 	Version    string `json:"version" yaml:"version"`
-	UidGid     string `json:"uid-gid" yaml:"uid-gid"`
+	UIDGID     string `json:"uid-gid" yaml:"uid-gid"`
 }
 
 type CometMockConfig struct {
@@ -306,7 +306,7 @@ func NewDockerImage(repository, version, uidGid string) DockerImage {
 	return DockerImage{
 		Repository: repository,
 		Version:    version,
-		UidGid:     uidGid,
+		UIDGID:     uidGid,
 	}
 }
 
@@ -325,7 +325,7 @@ func (i DockerImage) Validate() error {
 	if i.Repository == "" {
 		missing = append(missing, "Repository")
 	}
-	if i.UidGid == "" {
+	if i.UIDGID == "" {
 		missing = append(missing, "UidGid")
 	}
 

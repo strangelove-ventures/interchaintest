@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"os"
 	"strings"
@@ -29,7 +30,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"cosmossdk.io/math"
+	sdkmath "cosmossdk.io/math"
 
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	//nolint:staticcheck
@@ -109,7 +110,7 @@ func NewClientNode(
 		VolumeName: p.VolumeName,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set pclientd volume owner: %w", err)
 	}
@@ -405,9 +406,18 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		}
 	}
 
+	if confirmed == nil {
+		return ibc.Tx{}, fmt.Errorf("confirmed transaction is nil")
+	}
+
+	h, err := safeConvertUint64ToInt64(confirmed.DetectionHeight)
+	if err != nil {
+		return ibc.Tx{}, err
+	}
+
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
-		Height:   int64(confirmed.DetectionHeight),
+		Height:   h,
 		TxHash:   string(confirmed.Id.Inner),
 		GasSpent: 0,
 		Packet: ibc.Packet{
@@ -423,16 +433,30 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}, nil
 }
 
+func safeConvertUint64ToInt64(i uint64) (int64, error) {
+	if i > math.MaxInt64 {
+		return 0, fmt.Errorf("cannot safely convert uint64 of value %d to int64 due to overflow", i)
+	}
+	return int64(i), nil
+}
+
+func safeConvertInt64ToUint64(i int64) (uint64, error) {
+	if i < 0 {
+		return 0, fmt.Errorf("cannot safely convert int64 of value %d to uint64 because the value is negative", i)
+	}
+	return uint64(i), nil
+}
+
 // GetBalance retrieves the balance of a specific denom for the PenumbraClientNode.
 //
 // It creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
 // A Balances stream response is obtained from the server.
 // The balances are collected in a slice until the stream is done, or an error occurs.
-// Otherwise, the first balance in the slice is used to construct a math.Int value and returned.
+// Otherwise, the first balance in the slice is used to construct a sdkmath.Int value and returned.
 // Returns:
-// - math.Int: The balance of the specified denom.
+// - sdkmath.Int: The balance of the specified denom.
 // - error: An error if any occurred during the balance retrieval.
-func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
+func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (sdkmath.Int, error) {
 	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
 	balanceRequest := &view.BalancesRequest{
@@ -448,7 +472,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 	// zero-or-more balances, including denom and amount info per balance.
 	balanceStream, err := viewClient.Balances(ctx, balanceRequest)
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 
 	var balances []*view.BalancesResponse
@@ -459,14 +483,14 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 			if err == io.EOF {
 				break
 			} else {
-				return math.Int{}, err
+				return sdkmath.Int{}, err
 			}
 		}
 		balances = append(balances, balance)
 	}
 
-	if len(balances) <= 0 {
-		return math.ZeroInt(), nil
+	if len(balances) == 0 {
+		return sdkmath.ZeroInt(), nil
 	}
 
 	balance := balances[0]
@@ -480,7 +504,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 //
 // Since Go does not support native uint128 we make use of the big.Int type.
 // see: https://github.com/penumbra-zone/penumbra/blob/4d175986f385e00638328c64d729091d45eb042a/crates/core/crypto/src/asset/amount.rs#L220-L240
-func translateHiAndLo(hi, lo uint64) math.Int {
+func translateHiAndLo(hi, lo uint64) sdkmath.Int {
 	hiBig := big.NewInt(0).SetUint64(hi)
 	loBig := big.NewInt(0).SetUint64(lo)
 
@@ -489,11 +513,11 @@ func translateHiAndLo(hi, lo uint64) math.Int {
 
 	// Add the lower order bytes
 	i := big.NewInt(0).Add(hiBig, loBig)
-	return math.NewIntFromBigInt(i)
+	return sdkmath.NewIntFromBigInt(i)
 }
 
 // translateBigInt converts a Cosmos SDK Int, which is a wrapper around Go's big.Int, into two uint64 values.
-func translateBigInt(i math.Int) (uint64, uint64) {
+func translateBigInt(i sdkmath.Int) (uint64, uint64) {
 	bz := i.BigInt().Bytes()
 
 	// Pad the byte slice with leading zeros to ensure it's 16 bytes long
@@ -602,7 +626,7 @@ func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []strin
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGID,
 	}
 
 	res := job.Run(ctx, cmd, opts)

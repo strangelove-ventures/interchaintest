@@ -25,12 +25,12 @@ func TestWalletMethods(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-polkadot",
 						Version:    "v0.9.27",
-						UidGid:     "1025:1025",
+						UIDGID:     "1025:1025",
 					},
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						UidGid:     "1025:1025",
+						UIDGID:     "1025:1025",
 					},
 				},
 				Bin:            "polkadot",

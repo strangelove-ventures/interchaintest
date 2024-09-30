@@ -112,7 +112,7 @@ func TestDB_Concurrency(t *testing.T) {
 			for {
 				if ctx.Err() != nil {
 					// Context was canceled; querying is finished.
-					return nil
+					return nil //nolint: nilerr
 				}
 
 				// Deliberately using context.Background() here so that

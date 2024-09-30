@@ -21,7 +21,7 @@ func CustomDockerImage(repository string, version string, uidGid string) Relayer
 	return DockerImage(&ibc.DockerImage{
 		Repository: repository,
 		Version:    version,
-		UidGid:     uidGid,
+		UIDGID:     uidGid,
 	})
 }
 
