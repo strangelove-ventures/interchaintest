@@ -19,7 +19,19 @@ interchaintest: gen ## Build interchaintest binary into ./bin
 
 .PHONY: test
 test: ## Run unit tests
-	@go test -cover -short -race -timeout=60s ./...
+	@go test -cover -short -race -timeout=30m -failfast -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+
+.PHONY: test-conformance
+test-conformance: ## Run e2e conformance tests
+	@go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest
+
+.PHONY: test-ibc-examples
+test-ibc-examples: ## Run e2e ibc example tests
+	@go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
+
+.PHONY: test-cosmos-examples
+test-cosmos-examples: ## Run e2e cosmos example tests
+	@go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
 
 .PHONY: docker-reset
 docker-reset: ## Attempt to delete all running containers. Useful if interchaintest does not exit cleanly.
