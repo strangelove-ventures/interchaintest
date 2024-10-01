@@ -2,7 +2,6 @@ package polkadot
 
 import (
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"strconv"
 
@@ -81,13 +80,7 @@ func SendIbcFundsTx(
 
 	raw := gstypes.NewU8(1)
 
-	s := len(amount.Address) * 4
-
-	if s < 0 {
-		return hash, fmt.Errorf("cannot safely convert int value %d to uint8 due to negative value", s)
-	}
-
-	size := gstypes.NewU8(uint8(s))
+	size := gstypes.NewU8(uint8(len(amount.Address) * 4))
 	to := gstypes.NewStorageDataRaw([]byte(amount.Address))
 	channel := gstypes.NewU64(0) // Parse channel number from string
 	timeout := gstypes.NewU8(1)
