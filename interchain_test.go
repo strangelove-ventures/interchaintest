@@ -151,8 +151,6 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	)
 
 	t.Run("Chain one wallet is returned", func(t *testing.T) {
-		t.Parallel()
-
 		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
 		require.True(t, walletFound)
 		require.NotEmpty(t, g1Wallet.Address())
@@ -160,8 +158,6 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	})
 
 	t.Run("Chain two wallet is returned", func(t *testing.T) {
-		t.Parallel()
-
 		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
 		require.True(t, walletFound)
 		require.NotEmpty(t, g2Wallet.Address())
@@ -169,15 +165,11 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	})
 
 	t.Run("Different wallets are returned", func(t *testing.T) {
-		t.Parallel()
-
 		require.NotEqual(t, g1Wallet.Address(), g2Wallet.Address())
 		require.NotEqual(t, g1Wallet.Mnemonic(), g2Wallet.Mnemonic())
 	})
 
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
-		t.Parallel()
-
 		_, ok := r.GetWallet("cosmoshub-does-not-exist")
 		require.False(t, ok)
 	})
@@ -413,13 +405,10 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	sendAmount := math.NewInt(10_000)
 
 	t.Run("relayer starts", func(t *testing.T) {
-		t.Parallel()
 		require.NoError(t, r.StartRelayer(ctx, eRep, pathName))
 	})
 
 	t.Run("broadcast success", func(t *testing.T) {
-		t.Parallel()
-
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
 		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sendAmount}
 		memo := ""
@@ -440,8 +429,6 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		t.Parallel()
-
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
