@@ -21,7 +21,6 @@ func Arb(
 	thorchain *tc.Thorchain,
 	exoChains ...ibc.Chain,
 ) (users []ibc.Wallet, err error) {
-	fmt.Println("#### Arb")
 	chains := append(exoChains, thorchain)
 	users, err = GetAndFundTestUsers(t, ctx, "arb", chains...)
 	if err != nil {
@@ -33,7 +32,7 @@ func Arb(
 		return users, err
 	}
 
-	mimirs, err := thorchain.ApiGetMimirs()
+	mimirs, err := thorchain.APIGetMimirs(ctx)
 	if err != nil {
 		return users, err
 	}
@@ -49,8 +48,6 @@ func Arb(
 
 	var eg errgroup.Group
 	for i, exoChain := range exoChains {
-		i := i
-		exoChain := exoChain
 		eg.Go(func() error {
 			exoChainType, err := common.NewChain(exoChain.Config().Name)
 			if err != nil {
@@ -65,7 +62,7 @@ func Arb(
 			}
 
 			memo := fmt.Sprintf("trade+:%s", thorUser.FormattedAddress())
-			exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
+			exoInboundAddr, _, err := thorchain.APIGetInboundAddress(ctx, exoChainType.String())
 			if err != nil {
 				return err
 			}
@@ -91,7 +88,7 @@ func Arb(
 		maxBasisPts := uint64(10_000)
 
 		for {
-			pools, err := thorchain.ApiGetPools()
+			pools, err := thorchain.APIGetPools(ctx)
 			if err != nil {
 				fmt.Println("Error getting arb api pools", err)
 				time.Sleep(time.Second * 2)

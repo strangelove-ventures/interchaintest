@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/mount"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 

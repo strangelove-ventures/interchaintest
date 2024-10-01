@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"math/big"
 	"os"
 	"strings"
@@ -15,6 +14,16 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	sdkmath "cosmossdk.io/math"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	//nolint:staticcheck
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+
 	asset "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1"
 	ibcv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1"
 	pool "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1"
@@ -26,15 +35,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	sdkmath "cosmossdk.io/math"
-
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	//nolint:staticcheck
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 )
 
 // PenumbraClientNode represents an instance of pclientd.
@@ -110,7 +110,7 @@ func NewClientNode(
 		VolumeName: p.VolumeName,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UIDGID,
+		UIDGID:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set pclientd volume owner: %w", err)
 	}
@@ -410,14 +410,9 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		return ibc.Tx{}, fmt.Errorf("confirmed transaction is nil")
 	}
 
-	h, err := safeConvertUint64ToInt64(confirmed.DetectionHeight)
-	if err != nil {
-		return ibc.Tx{}, err
-	}
-
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
-		Height:   h,
+		Height:   int64(confirmed.DetectionHeight),
 		TxHash:   string(confirmed.Id.Inner),
 		GasSpent: 0,
 		Packet: ibc.Packet{
@@ -431,20 +426,6 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 			TimeoutTimestamp: 0,
 		},
 	}, nil
-}
-
-func safeConvertUint64ToInt64(i uint64) (int64, error) {
-	if i > math.MaxInt64 {
-		return 0, fmt.Errorf("cannot safely convert uint64 of value %d to int64 due to overflow", i)
-	}
-	return int64(i), nil
-}
-
-func safeConvertInt64ToUint64(i int64) (uint64, error) {
-	if i < 0 {
-		return 0, fmt.Errorf("cannot safely convert int64 of value %d to uint64 because the value is negative", i)
-	}
-	return uint64(i), nil
 }
 
 // GetBalance retrieves the balance of a specific denom for the PenumbraClientNode.
@@ -542,10 +523,10 @@ func translateBigInt(i sdkmath.Int) (uint64, uint64) {
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
-func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *asset.AssetId) (*asset.Metadata, error) {
+func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetID *asset.AssetId) (*asset.Metadata, error) {
 	queryClient := pool.NewQueryServiceClient(p.GRPCConn)
 	req := &pool.AssetMetadataByIdRequest{
-		AssetId: assetId,
+		AssetId: assetID,
 	}
 
 	resp, err := queryClient.AssetMetadataById(ctx, req)

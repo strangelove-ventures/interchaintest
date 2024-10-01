@@ -69,7 +69,7 @@ func TestImage_Run(t *testing.T) {
 echo -n hi from stderr >> /dev/stderr
 `
 		tmpDir := t.TempDir()
-		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0o777) //nolint: gosec
+		err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte(scriptBody), 0o777)
 		require.NoError(t, err)
 
 		opts := ContainerOptions{

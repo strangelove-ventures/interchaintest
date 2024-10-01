@@ -16,7 +16,7 @@ func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, 
 	var err error
 
 	if keyName == "" {
-		cmd := append(c.BaseCli, "getwalletinfo") //nolint: gocritic
+		cmd := append(c.BaseCli, "getwalletinfo")
 		stdout, _, err = c.Exec(ctx, cmd, nil)
 		if err != nil {
 			return 0, err
@@ -26,7 +26,7 @@ func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, 
 			return 0, err
 		}
 
-		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getwalletinfo") //nolint: gocritic
+		cmd := append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getwalletinfo")
 		stdout, _, err = c.Exec(ctx, cmd, nil)
 		if err != nil {
 			return 0, err
@@ -64,7 +64,7 @@ func (c *UtxoChain) LoadWallet(ctx context.Context, keyName string) error {
 		wallet.mu.Lock()
 		defer wallet.mu.Unlock()
 		if wallet.loadCount == 0 {
-			cmd := append(c.BaseCli, "loadwallet", keyName) //nolint: gocritic
+			cmd := append(c.BaseCli, "loadwallet", keyName)
 			_, _, err = c.Exec(ctx, cmd, nil)
 			if err != nil {
 				return err
@@ -88,7 +88,7 @@ func (c *UtxoChain) UnloadWallet(ctx context.Context, keyName string) error {
 		wallet.mu.Lock()
 		defer wallet.mu.Unlock()
 		if wallet.loadCount == 1 {
-			cmd := append(c.BaseCli, "unloadwallet", keyName) //nolint: gocritic
+			cmd := append(c.BaseCli, "unloadwallet", keyName)
 			_, _, err = c.Exec(ctx, cmd, nil)
 			if err != nil {
 				return err
@@ -103,7 +103,7 @@ func (c *UtxoChain) UnloadWallet(ctx context.Context, keyName string) error {
 
 func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 	if c.WalletVersion == 0 || c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd := append(c.BaseCli, "createwallet", keyName) //nolint: gocritic
+		cmd := append(c.BaseCli, "createwallet", keyName)
 		_, _, err := c.Exec(ctx, cmd, nil)
 		if err != nil {
 			return err
@@ -130,9 +130,9 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 
 	var cmd []string
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
-		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress") //nolint: gocritic
+		cmd = append(c.BaseCli, fmt.Sprintf("-rpcwallet=%s", keyName), "getnewaddress")
 	} else {
-		cmd = append(c.BaseCli, "getnewaddress") //nolint: gocritic
+		cmd = append(c.BaseCli, "getnewaddress")
 	}
 
 	if mweb {
@@ -389,11 +389,12 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 
 func (c *UtxoChain) SendRawTransaction(ctx context.Context, signedRawTxHex string) (string, error) {
 	var cmd []string
-	if c.WalletVersion >= namedFixWalletVersion {
+	switch {
+	case c.WalletVersion >= namedFixWalletVersion:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
-	} else if c.WalletVersion > noDefaultKeyWalletVersion {
+	case c.WalletVersion > noDefaultKeyWalletVersion:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0")
-	} else {
+	default:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
 	}
 	stdout, _, err := c.Exec(ctx, cmd, nil)

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 )
 
 // PollForMessage searches every transaction for a message. Must pass a coded registry capable of decoding the cosmos transaction.
@@ -19,7 +19,7 @@ func PollForMessage[T any](ctx context.Context, chain *Thorchain, registry codec
 		fn = func(T) bool { return true }
 	}
 	doPoll := func(ctx context.Context, height int64) (T, error) {
-		h := int64(height)
+		h := height
 		block, err := chain.getFullNode().Client.Block(ctx, &h)
 		if err != nil {
 			return zero, err

@@ -2,7 +2,6 @@ package ethereum_test
 
 import (
 	"context"
-
 	"fmt"
 	"strings"
 	"testing"
@@ -19,7 +18,6 @@ import (
 )
 
 func TestGeth(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip()
 	}

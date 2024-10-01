@@ -12,7 +12,7 @@ type NodeAccountPubKeySet struct {
 type NodeAccount struct {
 	NodeAddress         string               `json:"node_address"`
 	Version             string               `json:"version"`
-	IpAddress           string               `json:"ip_address"`
+	IPAddress           string               `json:"ip_address"`
 	Status              string               `json:"status"`
 	Bond                string               `json:"bond"`
 	BondUInt            uint64               `json:"-"`
@@ -121,7 +121,7 @@ type LiquidityProvider struct {
 	Units              string  `json:"units"`
 	PendingRune        string  `json:"pending_rune"`
 	PendingAsset       string  `json:"pending_asset"`
-	PendingTxId        *string `json:"pending_tx_id,omitempty"`
+	PendingTxID        *string `json:"pending_tx_id,omitempty"`
 	RuneDepositValue   string  `json:"rune_deposit_value"`
 	AssetDepositValue  string  `json:"asset_deposit_value"`
 	RuneRedeemValue    *string `json:"rune_redeem_value,omitempty"`
@@ -380,7 +380,7 @@ type Coin struct {
 
 // Tx struct for Tx.
 type Tx struct {
-	Id          *string `json:"id,omitempty"`
+	ID          *string `json:"id,omitempty"`
 	Chain       *string `json:"chain,omitempty"`
 	FromAddress *string `json:"from_address,omitempty"`
 	ToAddress   *string `json:"to_address,omitempty"`
@@ -427,7 +427,7 @@ type TxOutItem struct {
 
 // TxDetailsResponse struct for TxDetailsResponse.
 type TxDetailsResponse struct {
-	TxId    *string      `json:"tx_id,omitempty"`
+	TxID    *string      `json:"tx_id,omitempty"`
 	Tx      ObservedTx   `json:"tx"`
 	Txs     []ObservedTx `json:"txs"`
 	Actions []TxOutItem  `json:"actions"`

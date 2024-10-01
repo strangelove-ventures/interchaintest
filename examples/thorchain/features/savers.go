@@ -32,14 +32,14 @@ func Saver(
 	}
 	exoAsset := exoChainType.GetGasAsset()
 
-	pool, err := thorchain.ApiGetPool(exoAsset)
+	pool, err := thorchain.APIGetPool(nil, exoAsset)
 	if err != nil {
 		return exoUser, err
 	}
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
 		MulUint64(500).QuoUint64(10_000)
 
-	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
+	saverQuote, err := thorchain.APIGetSaverDepositQuote(nil, exoAsset, saveAmount)
 	if err != nil {
 		return exoUser, err
 	}
@@ -60,7 +60,7 @@ func Saver(
 		memo = fmt.Sprintf("+:%s", exoAsset.GetSyntheticAsset())
 	}
 
-	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
+	exoInboundAddr, _, err := thorchain.APIGetInboundAddress(ctx, exoChainType.String())
 	if err != nil {
 		return exoUser, err
 	}

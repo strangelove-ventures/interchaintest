@@ -7,9 +7,10 @@ import (
 
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/errdefs"
+	"github.com/stretchr/testify/require"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDockerSetup_KeepVolumes(t *testing.T) {
@@ -36,7 +37,6 @@ func TestDockerSetup_KeepVolumes(t *testing.T) {
 		{keep: false, passed: true, volumeKept: false},
 		{keep: true, passed: true, volumeKept: false},
 	} {
-		tc := tc
 		state := "failed"
 		if tc.passed {
 			state = "passed"

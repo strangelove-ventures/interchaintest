@@ -10,10 +10,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-
 	"github.com/cosmos/cosmos-sdk/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type InstantiateContractAttribute struct {
@@ -69,7 +68,7 @@ func (tn *ChainNode) StoreContract(ctx context.Context, keyName string, fileName
 	}
 
 	res := CodeInfosResponse{}
-	if err := json.Unmarshal([]byte(stdout), &res); err != nil {
+	if err := json.Unmarshal(stdout, &res); err != nil {
 		return "", err
 	}
 
@@ -102,7 +101,7 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 	}
 
 	contactsRes := QueryContractResponse{}
-	if err := json.Unmarshal([]byte(stdout), &contactsRes); err != nil {
+	if err := json.Unmarshal(stdout, &contactsRes); err != nil {
 		return "", err
 	}
 
@@ -111,18 +110,18 @@ func (tn *ChainNode) InstantiateContract(ctx context.Context, keyName string, co
 }
 
 // ExecuteContract executes a contract transaction with a message using it's address.
-func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *sdk.TxResponse, err error) {
+func (tn *ChainNode) ExecuteContract(ctx context.Context, keyName string, contractAddress string, message string, extraExecTxArgs ...string) (res *types.TxResponse, err error) {
 	cmd := []string{"wasm", "execute", contractAddress, message}
 	cmd = append(cmd, extraExecTxArgs...)
 
 	txHash, err := tn.ExecTx(ctx, keyName, cmd...)
 	if err != nil {
-		return &sdk.TxResponse{}, err
+		return &types.TxResponse{}, err
 	}
 
 	txResp, err := tn.GetTransaction(tn.CliContext(), txHash)
 	if err != nil {
-		return &sdk.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
+		return &types.TxResponse{}, fmt.Errorf("failed to get transaction %s: %w", txHash, err)
 	}
 
 	if txResp.Code != 0 {
@@ -158,7 +157,7 @@ func (tn *ChainNode) QueryContract(ctx context.Context, contractAddress string, 
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal([]byte(stdout), response)
+	err = json.Unmarshal(stdout, response)
 	return err
 }
 
@@ -221,7 +220,7 @@ func (tn *ChainNode) DumpContractState(ctx context.Context, contractAddress stri
 	}
 
 	res := new(DumpContractStateResponse)
-	if err := json.Unmarshal([]byte(stdout), res); err != nil {
+	if err := json.Unmarshal(stdout, res); err != nil {
 		return nil, err
 	}
 	return res, nil

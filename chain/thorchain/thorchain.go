@@ -17,10 +17,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -35,6 +31,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type Thorchain struct {
@@ -155,7 +156,6 @@ func (c *Thorchain) AddFullNodes(ctx context.Context, configFileOverrides map[st
 
 	var eg errgroup.Group
 	for i := prevCount; i < c.numFullNodes; i++ {
-		i := i
 		eg.Go(func() error {
 			fn := c.FullNodes[i]
 			if err := fn.InitFullNodeFiles(ctx); err != nil {
@@ -506,7 +506,7 @@ func (c *Thorchain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UIDGID,
+		UIDGID:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -569,7 +569,7 @@ func (c *Thorchain) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UIDGID,
+		UIDGID:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}
@@ -597,7 +597,6 @@ func (c *Thorchain) initializeChainNodes(
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i := len(c.Validators); i < c.NumValidators; i++ {
-		i := i
 		eg.Go(func() error {
 			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true, i)
 			if err != nil {
@@ -608,7 +607,6 @@ func (c *Thorchain) initializeChainNodes(
 		})
 	}
 	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
-		i := i
 		eg.Go(func() error {
 			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false, i)
 			if err != nil {
@@ -642,9 +640,6 @@ func (c *Thorchain) initializeSidecars(
 ) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, cfg := range c.cfg.SidecarConfigs {
-		i := i
-		cfg := cfg
-
 		if cfg.ValidatorProcess {
 			continue
 		}
@@ -689,8 +684,6 @@ func (c *Thorchain) prepNodes(ctx context.Context, genesisAmounts [][]types.Coin
 	eg, egCtx := errgroup.WithContext(ctx)
 	// Initialize config and sign gentx for each validator.
 	for i, v := range c.Validators {
-		v := v
-		i := i
 		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(egCtx); err != nil {
@@ -752,7 +745,6 @@ func (c *Thorchain) prepNodes(ctx context.Context, genesisAmounts [][]types.Coin
 
 	// Initialize config for each full node.
 	for _, n := range c.FullNodes {
-		n := n
 		n.Validator = false
 		eg.Go(func() error {
 			if err := n.InitFullNodeFiles(egCtx); err != nil {
@@ -941,7 +933,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 				break
 			}
 			v := c.Validators[i]
-			validator := validator
 			c.log.Info(
 				"Will emulate validator",
 				zap.String("bond_address", validator.BondAddress),
@@ -999,8 +990,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 	// Start any sidecar processes that should be running before the chain starts
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, s := range c.Sidecars {
-		s := s
-
 		err = s.containerLifecycle.Running(ctx)
 		if s.preStart && err != nil {
 			eg.Go(func() error {
@@ -1022,7 +1011,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer(egCtx)
 		})
@@ -1035,7 +1023,6 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			if err := n.SetPeers(egCtx, peers); err != nil {
@@ -1072,7 +1059,6 @@ func (c *Thorchain) Acknowledgements(ctx context.Context, height int64) ([]ibc.P
 	}
 	ibcAcks := make([]ibc.PacketAcknowledgement, len(acks))
 	for i, ack := range acks {
-		ack := ack
 		ibcAcks[i] = ibc.PacketAcknowledgement{
 			Acknowledgement: ack.Acknowledgement,
 			Packet: ibc.Packet{
@@ -1105,7 +1091,6 @@ func (c *Thorchain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTim
 	}
 	ibcTimeouts := make([]ibc.PacketTimeout, len(timeouts))
 	for i, ack := range timeouts {
-		ack := ack
 		ibcTimeouts[i] = ibc.PacketTimeout{
 			Packet: ibc.Packet{
 				Sequence:         ack.Packet.Sequence,
@@ -1134,7 +1119,6 @@ func (c *Thorchain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, er
 func (c *Thorchain) StopAllNodes(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
-		n := n
 		eg.Go(func() error {
 			if err := n.StopContainer(ctx); err != nil {
 				return err
@@ -1149,7 +1133,6 @@ func (c *Thorchain) StopAllNodes(ctx context.Context) error {
 func (c *Thorchain) StopAllSidecars(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, s := range c.Sidecars {
-		s := s
 		eg.Go(func() error {
 			if err := s.StopContainer(ctx); err != nil {
 				return err
@@ -1168,7 +1151,6 @@ func (c *Thorchain) StartAllNodes(ctx context.Context) error {
 	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
-		n := n
 		eg.Go(func() error {
 			if err := n.CreateNodeContainer(ctx); err != nil {
 				return err
@@ -1187,8 +1169,6 @@ func (c *Thorchain) StartAllSidecars(ctx context.Context) error {
 	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, s := range c.Sidecars {
-		s := s
-
 		err := s.containerLifecycle.Running(ctx)
 		if err == nil {
 			continue
@@ -1213,10 +1193,7 @@ func (c *Thorchain) StartAllValSidecars(ctx context.Context) error {
 	var eg errgroup.Group
 
 	for _, v := range c.Validators {
-		v := v
 		for _, s := range v.Sidecars {
-			s := s
-
 			err := s.containerLifecycle.Running(ctx)
 			if err == nil {
 				continue

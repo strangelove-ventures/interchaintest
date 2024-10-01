@@ -51,7 +51,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 		}
 
 		filePath := filepath.Join(localDirectory, "keyring-test", extractedFileName)
-		if err := os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm); err != nil { //nolint: gosec
+		if err := os.WriteFile(filePath, fileBuff.Bytes(), os.ModePerm); err != nil {
 			return nil, err
 		}
 	}

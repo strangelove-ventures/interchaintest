@@ -4,10 +4,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 
 	"cosmossdk.io/math"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // TestBigIntDecoding tests the decoding of big integers.

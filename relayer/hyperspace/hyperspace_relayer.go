@@ -9,9 +9,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}
@@ -121,8 +122,8 @@ func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.R
 	if err != nil {
 		return err
 	}
-	switch chainType {
-	case "cosmos":
+
+	if chainType == ibc.Cosmos {
 		config.(*HyperspaceRelayerCosmosChainConfig).WasmChecksum = hash
 	}
 

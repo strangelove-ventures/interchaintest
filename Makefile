@@ -3,9 +3,9 @@ protoVer=0.13.2
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
 protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 golangci_lint_cmd=golangci-lint
-golangci_version=v1.57.2
+golangci_version=v1.61.0
 gofumpt_cmd=gofumpt
-gofumpt_version=v0.6.0
+gofumpt_version=v0.7.0
 
 default: help
 

@@ -13,10 +13,11 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
 )
 
 const (
@@ -104,7 +105,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		VolumeName: r.volumeName,
 		ImageRef:   containerImage.Ref(),
 		TestName:   testName,
-		UidGid:     containerImage.UIDGID,
+		UIDGID:     containerImage.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}

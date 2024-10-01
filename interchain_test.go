@@ -6,12 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -27,6 +21,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
@@ -38,6 +39,8 @@ func TestInterchain_DuplicateChain_HermesRelayer(t *testing.T) {
 }
 
 func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -94,6 +97,8 @@ func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) {
 }
 
 func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -146,6 +151,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	)
 
 	t.Run("Chain one wallet is returned", func(t *testing.T) {
+		t.Parallel()
+
 		g1Wallet, walletFound = r.GetWallet(chains[0].Config().ChainID)
 		require.True(t, walletFound)
 		require.NotEmpty(t, g1Wallet.Address())
@@ -153,6 +160,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	})
 
 	t.Run("Chain two wallet is returned", func(t *testing.T) {
+		t.Parallel()
+
 		g2Wallet, walletFound = r.GetWallet(chains[1].Config().ChainID)
 		require.True(t, walletFound)
 		require.NotEmpty(t, g2Wallet.Address())
@@ -160,11 +169,15 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	})
 
 	t.Run("Different wallets are returned", func(t *testing.T) {
+		t.Parallel()
+
 		require.NotEqual(t, g1Wallet.Address(), g2Wallet.Address())
 		require.NotEqual(t, g1Wallet.Mnemonic(), g2Wallet.Mnemonic())
 	})
 
 	t.Run("Wallet for different chain does not exist", func(t *testing.T) {
+		t.Parallel()
+
 		_, ok := r.GetWallet("cosmoshub-does-not-exist")
 		require.False(t, ok)
 	})
@@ -284,7 +297,6 @@ func TestInterchain_ConcurrentRelayerOps(t *testing.T) {
 	numValidators := 1
 
 	for _, rly := range relayers {
-		rly := rly
 		t.Run(rly.name, func(t *testing.T) {
 			client, network := interchaintest.DockerSetup(t)
 			f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
@@ -349,6 +361,8 @@ func getIBCPath(chainA, chainB ibc.Chain) string {
 }
 
 func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -399,10 +413,13 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	sendAmount := math.NewInt(10_000)
 
 	t.Run("relayer starts", func(t *testing.T) {
+		t.Parallel()
 		require.NoError(t, r.StartRelayer(ctx, eRep, pathName))
 	})
 
 	t.Run("broadcast success", func(t *testing.T) {
+		t.Parallel()
+
 		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
 		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sendAmount}
 		memo := ""
@@ -423,6 +440,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
+		t.Parallel()
+
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
 
 		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
@@ -546,6 +565,8 @@ func TestInterchain_AddNil(t *testing.T) {
 }
 
 func assertTransactionIsValid(t *testing.T, resp sdk.TxResponse) {
+	t.Helper()
+
 	require.NotNil(t, resp)
 	require.NotEqual(t, 0, resp.GasUsed)
 	require.NotEqual(t, 0, resp.GasWanted)

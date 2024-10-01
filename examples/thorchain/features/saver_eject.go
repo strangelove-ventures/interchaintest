@@ -36,7 +36,7 @@ func SaverEject(
 
 	// Reset mimirs
 	mimirLock.Lock()
-	mimirs, err := thorchain.ApiGetMimirs()
+	mimirs, err := thorchain.APIGetMimirs(nil)
 	if err != nil {
 		mimirLock.Unlock()
 		return exoUser, err
@@ -65,7 +65,7 @@ func SaverEject(
 	}
 	exoAsset := exoChainType.GetGasAsset()
 
-	pool, err := thorchain.ApiGetPool(exoAsset)
+	pool, err := thorchain.APIGetPool(nil, exoAsset)
 	if err != nil {
 		mimirLock.Unlock()
 		return exoUser, err
@@ -73,7 +73,7 @@ func SaverEject(
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
 		MulUint64(2000).QuoUint64(10_000)
 
-	saverQuote, err := thorchain.ApiGetSaverDepositQuote(exoAsset, saveAmount)
+	saverQuote, err := thorchain.APIGetSaverDepositQuote(nil, exoAsset, saveAmount)
 	if err != nil {
 		mimirLock.Unlock()
 		return exoUser, err
@@ -95,7 +95,7 @@ func SaverEject(
 		memo = fmt.Sprintf("+:%s", exoAsset.GetSyntheticAsset())
 	}
 
-	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
+	exoInboundAddr, _, err := thorchain.APIGetInboundAddress(ctx, exoChainType.String())
 	if err != nil {
 		mimirLock.Unlock()
 		return exoUser, err
@@ -150,7 +150,7 @@ func SaverEject(
 		}
 	}
 
-	mimirs, err = thorchain.ApiGetMimirs()
+	mimirs, err = thorchain.APIGetMimirs(nil)
 	if err != nil {
 		mimirLock.Unlock()
 		return exoUser, err

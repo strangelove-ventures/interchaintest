@@ -12,9 +12,10 @@ import (
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
 )
 
 var _ ibc.Chain = &AnvilChain{}

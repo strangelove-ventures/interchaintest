@@ -3,10 +3,11 @@ package cosmos
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	"go.uber.org/zap"
 )
 
 // AuthQueryAccount performs a query to get the account details of the specified address.

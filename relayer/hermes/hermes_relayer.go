@@ -11,9 +11,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 	defaultContainerImage   = "ghcr.io/informalsystems/hermes"
 	DefaultContainerVersion = "1.8.2"
 
-	hermesDefaultUidGid = "1000:1000"
+	hermesDefaultUIDGID = "1000:1000"
 	hermesHome          = "/home/hermes"
 	hermesConfigPath    = ".hermes/config.toml"
 )
@@ -208,11 +209,11 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 		return res.Err
 	}
 
-	chainAClientId, err := GetClientIdFromStdout(res.Stdout)
+	chainAClientID, err := GetClientIDFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
-	pathConfig.chainA.clientID = chainAClientId
+	pathConfig.chainA.clientID = chainAClientID
 
 	chainBCreateClientCmd := []string{hermes, "--json", "create", "client", "--host-chain", pathConfig.chainB.chainID, "--reference-chain", pathConfig.chainA.chainID}
 	if opts.TrustingPeriod != "" {
@@ -226,11 +227,11 @@ func (r *Relayer) CreateClients(ctx context.Context, rep ibc.RelayerExecReporter
 		return res.Err
 	}
 
-	chainBClientId, err := GetClientIdFromStdout(res.Stdout)
+	chainBClientID, err := GetClientIDFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
-	pathConfig.chainB.clientID = chainBClientId
+	pathConfig.chainB.clientID = chainBClientID
 
 	return res.Err
 }
@@ -254,16 +255,17 @@ func (r *Relayer) CreateClient(ctx context.Context, rep ibc.RelayerExecReporter,
 		return res.Err
 	}
 
-	clientId, err := GetClientIdFromStdout(res.Stdout)
+	clientID, err := GetClientIDFromStdout(res.Stdout)
 	if err != nil {
 		return err
 	}
 
-	if pathConfig.chainA.chainID == srcChainID {
-		pathConfig.chainA.chainID = clientId
-	} else if pathConfig.chainB.chainID == srcChainID {
-		pathConfig.chainB.chainID = clientId
-	} else {
+	switch {
+	case pathConfig.chainA.chainID == srcChainID:
+		pathConfig.chainA.chainID = clientID
+	case pathConfig.chainB.chainID == srcChainID:
+		pathConfig.chainB.chainID = clientID
+	default:
 		return fmt.Errorf("%s not found in path config", srcChainID)
 	}
 
@@ -397,8 +399,8 @@ func (r *Relayer) validateConfig(ctx context.Context, rep ibc.RelayerExecReporte
 	return nil
 }
 
-// extractJsonResult extracts the json result for the hermes query.
-func extractJsonResult(stdout []byte) []byte {
+// extractJSONResult extracts the json result for the hermes query.
+func extractJSONResult(stdout []byte) []byte {
 	stdoutLines := strings.Split(string(stdout), "\n")
 	var jsonOutput string
 	for _, line := range stdoutLines {
@@ -429,10 +431,10 @@ func (r *Relayer) getAndLockPath(pathName string) (*pathConfiguration, func(), e
 	return path, unlock, nil
 }
 
-// GetClientIdFromStdout extracts the client ID from stdout.
-func GetClientIdFromStdout(stdout []byte) (string, error) {
+// GetClientIDFromStdout extracts the client ID from stdout.
+func GetClientIDFromStdout(stdout []byte) (string, error) {
 	var clientCreationResult ClientCreationResponse
-	if err := json.Unmarshal(extractJsonResult(stdout), &clientCreationResult); err != nil {
+	if err := json.Unmarshal(extractJSONResult(stdout), &clientCreationResult); err != nil {
 		return "", err
 	}
 	return clientCreationResult.Result.CreateClient.ClientID, nil
@@ -441,7 +443,7 @@ func GetClientIdFromStdout(stdout []byte) (string, error) {
 // GetConnectionIDsFromStdout extracts the connectionIDs on both ends from the stdout.
 func GetConnectionIDsFromStdout(stdout []byte) (string, string, error) {
 	var connectionResponse ConnectionResponse
-	if err := json.Unmarshal(extractJsonResult(stdout), &connectionResponse); err != nil {
+	if err := json.Unmarshal(extractJSONResult(stdout), &connectionResponse); err != nil {
 		return "", "", err
 	}
 	return connectionResponse.Result.ASide.ConnectionID, connectionResponse.Result.BSide.ConnectionID, nil
@@ -450,7 +452,7 @@ func GetConnectionIDsFromStdout(stdout []byte) (string, string, error) {
 // GetChannelIDsFromStdout extracts the channelIDs on both ends from stdout.
 func GetChannelIDsFromStdout(stdout []byte) (string, string, error) {
 	var channelResponse ChannelCreationResponse
-	if err := json.Unmarshal(extractJsonResult(stdout), &channelResponse); err != nil {
+	if err := json.Unmarshal(extractJSONResult(stdout), &channelResponse); err != nil {
 		return "", "", err
 	}
 	return channelResponse.Result.ASide.ChannelID, channelResponse.Result.BSide.ChannelID, nil

@@ -11,11 +11,11 @@ import (
 	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
 )
 
 // PenumbraAppNode represents an instance of pcli.
@@ -49,7 +49,7 @@ func NewPenumbraAppNode(
 	chain *PenumbraChain,
 	index int,
 	testName string,
-	dockerClient *dockerclient.Client,
+	dockerClient *client.Client,
 	networkID string,
 	image ibc.DockerImage,
 ) (*PenumbraAppNode, error) {
@@ -79,7 +79,7 @@ func NewPenumbraAppNode(
 		VolumeName: pn.VolumeName,
 		ImageRef:   pn.Image.Ref(),
 		TestName:   pn.TestName,
-		UidGid:     image.UIDGID,
+		UIDGID:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set penumbra volume owner: %w", err)
 	}

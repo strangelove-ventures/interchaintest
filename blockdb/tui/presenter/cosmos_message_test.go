@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 )
 
 func TestCosmosMessage(t *testing.T) {

@@ -40,6 +40,8 @@ func TestWaitForBlocks(t *testing.T) {
 	t.Parallel()
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		var (
 			startHeight1 int64 = 10
 			chain1             = mockChainHeighter{CurHeight: startHeight1}
@@ -57,12 +59,16 @@ func TestWaitForBlocks(t *testing.T) {
 	})
 
 	t.Run("no chains", func(t *testing.T) {
+		t.Parallel()
+
 		require.Panics(t, func() {
 			_ = WaitForBlocks(context.Background(), 100)
 		})
 	})
 
 	t.Run("error", func(t *testing.T) {
+		t.Parallel()
+
 		errMock := mockChainHeighter{Err: errors.New("boom")}
 		const delta = 1
 		err := WaitForBlocks(context.Background(), delta, &mockChainHeighter{}, &errMock)
@@ -72,6 +78,8 @@ func TestWaitForBlocks(t *testing.T) {
 	})
 
 	t.Run("0 height", func(t *testing.T) {
+		t.Parallel()
+
 		const delta = 1
 		// Set height to -1 because the mock chain auto-increments the height resulting in starting height of 0.
 		chain := &mockChainHeighter{CurHeight: -1}
@@ -121,6 +129,8 @@ func TestWaitForInSync(t *testing.T) {
 	t.Parallel()
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		var (
 			startHeightChain int64 = 10
 			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}
@@ -138,6 +148,8 @@ func TestWaitForInSync(t *testing.T) {
 	})
 
 	t.Run("no nodes", func(t *testing.T) {
+		t.Parallel()
+
 		var (
 			startHeightChain int64 = 10
 			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}
@@ -148,6 +160,8 @@ func TestWaitForInSync(t *testing.T) {
 	})
 
 	t.Run("timeout", func(t *testing.T) {
+		t.Parallel()
+
 		var (
 			startHeightChain int64 = 10
 			chain                  = mockChainHeighterFixed{CurHeight: startHeightChain}

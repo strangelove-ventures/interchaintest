@@ -14,13 +14,14 @@ import (
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 
 	"cosmossdk.io/math"
 
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // Increase parachain wallet amount due to their additional precision.
@@ -47,7 +48,7 @@ type ParachainNode struct {
 
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
-	hostRpcPort string
+	hostRPCPort string
 }
 
 type ParachainNodes []*ParachainNode
@@ -108,11 +109,11 @@ func (pn *ParachainNode) PeerID() (string, error) {
 
 // MultiAddress returns the p2p multiaddr of the node.
 func (pn *ParachainNode) MultiAddress() (string, error) {
-	peerId, err := pn.PeerID()
+	peerID, err := pn.PeerID()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", pn.HostName(), strings.Split(nodePort, "/")[0], peerID), nil
 }
 
 type GetParachainIDResponse struct {
@@ -278,11 +279,11 @@ func (pn *ParachainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	pn.hostWsPort, pn.hostRpcPort = hostPorts[0], hostPorts[1]
+	pn.hostWsPort, pn.hostRPCPort = hostPorts[0], hostPorts[1]
 
-	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+	explorerURL := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(pn.hostWsPort, "localhost", "127.0.0.1", 1))
-	pn.log.Info(explorerUrl, zap.String("container", pn.Name()))
+	pn.log.Info(explorerURL, zap.String("container", pn.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error

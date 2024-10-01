@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/stretchr/testify/require"
 )
 
 // nopCloser wraps an io.Writer to provide a Close method that always returns nil.
@@ -151,18 +152,18 @@ func TestReporter_TrackParallel(t *testing.T) {
 	require.Len(t, msgs, 6)
 
 	beginTestMsg := msgs[1].(testreporter.BeginTestMessage)
-	require.Equal(t, beginTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", beginTestMsg.Name)
 
 	pauseTestMsg := msgs[2].(testreporter.PauseTestMessage)
-	require.Equal(t, pauseTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", pauseTestMsg.Name)
 	requireTimeInRange(t, pauseTestMsg.When, beforeParallel, beforeParallel.Add(parallelDelay))
 
 	continueTestMsg := msgs[3].(testreporter.ContinueTestMessage)
-	require.Equal(t, continueTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", continueTestMsg.Name)
 	requireTimeInRange(t, continueTestMsg.When, afterParallel.Add(-parallelDelay), afterParallel)
 
 	finishTestMsg := msgs[4].(testreporter.FinishTestMessage)
-	require.Equal(t, finishTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", finishTestMsg.Name)
 }
 
 // Check that TrackSkip skips the underlying test.
@@ -189,16 +190,16 @@ func TestReporter_TrackSkip(t *testing.T) {
 	require.Len(t, msgs, 5)
 
 	testSkipMsg := msgs[2].(testreporter.TestSkipMessage)
-	require.Equal(t, testSkipMsg.Name, "my_test")
-	require.Equal(t, testSkipMsg.Message, "skipping for reasons")
+	require.Equal(t, "my_test", testSkipMsg.Name)
+	require.Equal(t, "skipping for reasons", testSkipMsg.Message)
 	requireTimeInRange(t, testSkipMsg.When, beforeSkip, afterSkip)
 
 	finishTestMsg := msgs[3].(testreporter.FinishTestMessage)
-	require.Equal(t, finishTestMsg.Name, "my_test")
+	require.Equal(t, "my_test", finishTestMsg.Name)
 	require.False(t, finishTestMsg.Failed)
 	require.True(t, finishTestMsg.Skipped)
 
-	require.Equal(t, mt.Skips, []string{"skipping for reasons"})
+	require.Equal(t, []string{"skipping for reasons"}, mt.Skips)
 	require.True(t, mt.Skipped())
 }
 
@@ -214,7 +215,7 @@ func TestReporter_Errorf(t *testing.T) {
 	mt.RunCleanups()
 	require.NoError(t, r.Close())
 
-	require.Equal(t, mt.Errors, []string{"failed? true"})
+	require.Equal(t, []string{"failed? true"}, mt.Errors)
 }
 
 func TestReporter_RelayerExec(t *testing.T) {

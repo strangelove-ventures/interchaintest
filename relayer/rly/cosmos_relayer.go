@@ -8,15 +8,16 @@ import (
 	"strings"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 )
 
 const (
-	RlyDefaultUidGid = "100:1000"
+	RlyDefaultUIDGID = "100:1000"
 )
 
 // CosmosRelayer is the ibc.Relayer implementation for github.com/cosmos/relayer.
@@ -111,7 +112,7 @@ func (commander) Name() string {
 }
 
 func (commander) DockerUser() string {
-	return RlyDefaultUidGid // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
+	return RlyDefaultUIDGID // docker run -it --rm --entrypoint echo ghcr.io/cosmos/relayer "$(id -u):$(id -g)"
 }
 
 func (commander) AddChainConfiguration(containerFilePath, homeDir string) []string {
