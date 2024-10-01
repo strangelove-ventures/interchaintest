@@ -88,11 +88,11 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	_ = ic.Close()
 }
 
-func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) {
+func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) { //nolint:tparallel
 	getRelayerWalletsTest(t, ibc.CosmosRly)
 }
 
-func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) {
+func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) { //nolint:tparallel
 	getRelayerWalletsTest(t, ibc.Hermes)
 }
 
@@ -255,11 +255,11 @@ func TestInterchain_CreateUser(t *testing.T) {
 	})
 }
 
-func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) {
+func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) { //nolint:tparallel
 	broadcastTxCosmosChainTest(t, ibc.CosmosRly)
 }
 
-func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) {
+func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) { //nolint:tparallel
 	broadcastTxCosmosChainTest(t, ibc.Hermes)
 }
 
