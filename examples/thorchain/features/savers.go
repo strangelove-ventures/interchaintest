@@ -32,14 +32,14 @@ func Saver(
 	}
 	exoAsset := exoChainType.GetGasAsset()
 
-	pool, err := thorchain.APIGetPool(nil, exoAsset)
+	pool, err := thorchain.APIGetPool(ctx, exoAsset)
 	if err != nil {
 		return exoUser, err
 	}
 	saveAmount := sdkmath.NewUintFromString(pool.BalanceAsset).
 		MulUint64(500).QuoUint64(10_000)
 
-	saverQuote, err := thorchain.APIGetSaverDepositQuote(nil, exoAsset, saveAmount)
+	saverQuote, err := thorchain.APIGetSaverDepositQuote(ctx, exoAsset, saveAmount)
 	if err != nil {
 		return exoUser, err
 	}
