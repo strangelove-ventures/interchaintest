@@ -120,9 +120,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	if err != nil {
 		return fmt.Errorf("Downloading template files failed: %v", err)
 	}
-	// TODO replace when releasing Namada v0.44.0
-	//err = c.downloadWasms(ctx)
-	err = c.copyLocalWasms(ctx)
+	err = c.downloadWasms(ctx)
 	if err != nil {
 		return fmt.Errorf("Downloading wasm files failed: %v", err)
 	}
@@ -939,55 +937,6 @@ func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 	err = os.Remove(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to delete the release file: %v", err)
-	}
-
-	return nil
-}
-
-func (c *NamadaChain) copyLocalWasms(ctx context.Context) error {
-	namadaRepo := os.Getenv("ENV_NAMADA_REPO")
-	if namadaRepo == "" {
-		return fmt.Errorf("ENV_NAMADA_REPO isn't specified")
-	}
-	sourceDir := filepath.Join(namadaRepo, "wasm")
-
-	destDir := "wasm"
-	err := filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".wasm") {
-			err := c.copyFile(ctx, path, destDir)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	srcPath := filepath.Join(sourceDir, "checksums.json")
-	return c.copyFile(ctx, srcPath, destDir)
-}
-
-func (c *NamadaChain) copyFile(ctx context.Context, srcPath, destDir string) error {
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, srcFile); err != nil {
-		return fmt.Errorf("failed to read the file: %w", err)
-	}
-	fileName := filepath.Base(srcPath)
-	err = c.Validators[0].writeFile(ctx, filepath.Join(destDir, fileName), buf.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to write the file %s: %w", fileName, err)
 	}
 
 	return nil

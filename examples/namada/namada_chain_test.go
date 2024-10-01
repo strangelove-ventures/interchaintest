@@ -40,7 +40,7 @@ func TestNamadaNetwork(t *testing.T) {
 		}},
 		{
 			Name:    "namada",
-			Version: "main",
+			Version: "v0.44.0",
 			ChainConfig: ibc.ChainConfig{
 				ChainID:      "namada-test",
 				Denom:        namadachain.NamAddress,
