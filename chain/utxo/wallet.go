@@ -50,6 +50,8 @@ type NodeWallet struct {
 }
 
 func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		if !found {
@@ -75,6 +77,8 @@ func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) 
 }
 
 func (c *UtxoChain) getWalletForSetAccount(keyName string, addr string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if !found {
 		return nil, fmt.Errorf("Wallet keyname (%s) not found, get new address not called", keyName)
@@ -100,6 +104,8 @@ func (c *UtxoChain) getWalletForUse(keyName string) (*NodeWallet, error) {
 }
 
 func (c *UtxoChain) getWallet(keyName string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if !found {
 		return nil, fmt.Errorf("Wallet keyname (%s) not found", keyName)
