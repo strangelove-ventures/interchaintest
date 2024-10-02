@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
@@ -168,17 +169,17 @@ func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.M
 
 	c.hostRPCPort = hostPorts[0]
 
-	// wait for rpc to come up
-	time.Sleep(time.Second * 2)
-
-	// dial the rpc host
-	c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
+	c.rpcClient, err = ethclient.Dial(c.GetRPCAddress())
 	if err != nil {
-		time.Sleep(time.Second * 2)
-		c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
-		if err != nil {
-			return fmt.Errorf("failed to dial ETH rpc host(%s): %w", c.GetHostRPCAddress(), err)
-		}
+		return fmt.Errorf("failed to dial ETH rpc: %w", err)
+	}
+
+	// Wait for RPC to be available
+	if err := retry.Do(func() error {
+		_, err := c.rpcClient.ChainID(ctx)
+		return err
+	}, retry.Attempts(10), retry.Delay(time.Second*2)); err != nil {
+		return fmt.Errorf("rpc unreachable after max attempts (%s): %w", c.GetHostRPCAddress(), err)
 	}
 
 	return testutil.WaitForBlocks(ctx, 2, c)
