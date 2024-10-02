@@ -109,10 +109,12 @@ func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 			return err
 		}
 
+		c.MapAccess.Lock()
 		c.KeyNameToWalletMap[keyName] = &NodeWallet{
 			keyName:   keyName,
 			loadCount: 1,
 		}
+		c.MapAccess.Unlock()
 	}
 
 	return c.UnloadWallet(ctx, keyName)
@@ -151,12 +153,14 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 		addr = splitAddr[1]
 	}
 
+	c.MapAccess.Lock()
 	wallet.address = addr
 	c.AddrToKeyNameMap[addr] = keyName
 
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		wallet.ready = true
 	}
+	c.MapAccess.Unlock()
 
 	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return "", err
