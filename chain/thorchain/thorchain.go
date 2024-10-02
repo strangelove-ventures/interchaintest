@@ -800,8 +800,8 @@ func (c *Thorchain) Start(testName string, ctx context.Context, additionalGenesi
 		decimalPow := int64(math.Pow10(int(*chainCfg.CoinDecimals)))
 
 		for i := range c.Validators {
-			genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}}
-			genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(1).MulRaw(decimalPow), Denom: chainCfg.Denom}
+			genesisAmounts[i] = []types.Coin{{Amount: sdkmath.NewInt(1000).MulRaw(decimalPow), Denom: chainCfg.Denom}}
+			genesisSelfDelegation[i] = types.Coin{Amount: sdkmath.NewInt(1000).MulRaw(decimalPow), Denom: chainCfg.Denom}
 			if chainCfg.ModifyGenesisAmounts != nil {
 				amount, selfDelegation := chainCfg.ModifyGenesisAmounts(i)
 				genesisAmounts[i] = []types.Coin{amount}

@@ -35,6 +35,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	authTx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
@@ -943,10 +944,10 @@ func (tn *ChainNode) GetNodeAccount(ctx context.Context) error {
 		Version:             version,
 		IpAddress:           "192.168.0.10", // TODO: may need to populate real ip after chain start
 		Status:              "Active",
-		Bond:                "100000000", // 1 rune
+		Bond:                "100000000000", // 1 rune
 		ActiveBlockHeight:   "0",
 		BondAddress:         bech32NodeAddr,
-		SignerMembership:    []string{},
+		SignerMembership:    []string{nodePubKey},
 		ValidatorConsPubKey: validator,
 		PubKeySet: NodeAccountPubKeySet{
 			Secp256k1: nodePubKey,
@@ -1034,11 +1035,20 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 		return err
 	}
 
+	b32pfx := tn.Chain.Config().Bech32Prefix
+
+	_, bondAccountBz, err := bech32.DecodeAndConvert("tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff")
+	if err != nil {
+		return fmt.Errorf("failed to decode bond account address: %w", err)
+	}
+
+	bondAccount := sdk.MustBech32ifyAddressBytes(b32pfx, bondAccountBz)
+
 	bondModule := ModuleAccount{
 		Type: "/cosmos.auth.v1beta1.ModuleAccount",
 		BaseAccount: BaseAccount{
 			AccountNumber: "0",
-			Address:       "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+			Address:       bondAccount,
 			PubKey:        nil,
 			Sequence:      "0",
 		},
@@ -1069,11 +1079,11 @@ func (tn *ChainNode) AddBondModule(ctx context.Context) error {
 	}
 
 	bondBalance := Balance{
-		Address: "tthor17gw75axcnr8747pkanye45pnrwk7p9c3uhzgff",
+		Address: bondAccount,
 		Coins: []CoinBalance{
 			{
 				Denom:  "rune",
-				Amount: fmt.Sprintf("%d00000000", tn.Chain.(*Thorchain).NumValidators),
+				Amount: fmt.Sprintf("%d00000000000", tn.Chain.(*Thorchain).NumValidators),
 			},
 		},
 	}

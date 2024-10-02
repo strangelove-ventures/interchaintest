@@ -191,6 +191,9 @@ func (c *ContainerLifecycle) UnpauseContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
+	if c.id == "" {
+		return nil
+	}
 	var timeout container.StopOptions
 	timeoutSec := 30
 	timeout.Timeout = &timeoutSec
@@ -199,6 +202,9 @@ func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) RemoveContainer(ctx context.Context) error {
+	if c.id == "" {
+		return nil
+	}
 	err := c.client.ContainerRemove(ctx, c.id, dockertypes.ContainerRemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,

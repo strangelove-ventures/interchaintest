@@ -31,7 +31,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 	chainImage := ibc.NewDockerImage("thorchain", "local", "1025:1025")
 	genesisKVMods := []thorchain.GenesisKV{
 		thorchain.NewGenesisKV("app_state.bank.params.default_send_enabled", true), // disable bank module transfers
-		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"),  // mint to reserve for mocknet (220M)
+		thorchain.NewGenesisKV("app_state.thorchain.reserve", "22000000000000000"), // mint to reserve for mocknet (220M)
 		thorchain.NewGenesisKV("app_state.thorchain.chain_contracts", []ChainContract{
 			{
 				Chain:  "ETH",
@@ -94,7 +94,7 @@ func ThorchainDefaultChainSpec(testName string, numVals int, numFn int, ethRoute
 				ProcessName: "bifrost",
 				Image:       chainImage,
 				HomeDir:     "/var/data/bifrost",
-				Ports:       []string{"5040", "6040", "9000"},
+				Ports:       []string{"5040/tcp", "6040/tcp", "9000/tcp"},
 				//StartCmd: []string{"bifrost", "-p"},
 				StartCmd:         []string{"bifrost", "-p", "-l", "debug"},
 				Env:              bifrostEnv,

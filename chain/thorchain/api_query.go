@@ -17,6 +17,21 @@ import (
 	sdkmath "cosmossdk.io/math"
 )
 
+// Generic query for routes not yet supported here
+func (c *Thorchain) ApiQuery(path string, args ...string) (any, error) {
+	url := fmt.Sprintf("%s/%s", c.GetAPIAddress(), path)
+	var res any
+	err := get(url, &res)
+	return res, err
+}
+
+func (c *Thorchain) ApiGetNodes() ([]NodeAccount, error) {
+	url := fmt.Sprintf("%s/thorchain/nodes", c.GetAPIAddress())
+	var nodes []NodeAccount
+	err := get(url, &nodes)
+	return nodes, err
+}
+
 func (c *Thorchain) ApiGetBalances(addr string) (common.Coins, error) {
 	url := fmt.Sprintf("%s/cosmos/bank/v1beta1/balances/%s", c.GetAPIAddress(), addr)
 	var balances struct {
