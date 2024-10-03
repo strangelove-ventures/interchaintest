@@ -146,7 +146,7 @@ func NewChainsConfig(chains ...*Chain) ChainsConfig {
 
 // SaveJSON saves the chains config to a file.
 func (cfg ChainsConfig) SaveJSON(file string) error {
-	if err := os.MkdirAll(filepath.Dir(file), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), 0o777); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -155,7 +155,7 @@ func (cfg ChainsConfig) SaveJSON(file string) error {
 		return fmt.Errorf("failed to marshal chains config: %w", err)
 	}
 
-	return os.WriteFile(file, bz, 0777)
+	return os.WriteFile(file, bz, 0o777)
 }
 
 // SaveYAML saves the chains config to a file.
@@ -165,7 +165,7 @@ func (cfg ChainsConfig) SaveYAML(file string) error {
 		return fmt.Errorf("failed to marshal chains config: %w", err)
 	}
 
-	return os.WriteFile(file, bz, 0777)
+	return os.WriteFile(file, bz, 0o777)
 }
 
 // MainLogs is the main runtime log file of the application.

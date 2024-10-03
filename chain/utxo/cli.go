@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Depending on the wallet version, getwalletinfo may require a created wallet name
+// Depending on the wallet version, getwalletinfo may require a created wallet name.
 func (c *UtxoChain) GetWalletVersion(ctx context.Context, keyName string) (int, error) {
 	var walletInfo WalletInfo
 	var stdout []byte
@@ -183,7 +183,7 @@ func (c *UtxoChain) SetAccount(ctx context.Context, addr string, keyName string)
 }
 
 // sendToMwebAddress is used for creating the mweb transaction needed at block 431
-// no other use case is currently supported
+// no other use case is currently supported.
 func (c *UtxoChain) sendToMwebAddress(ctx context.Context, keyName string, addr string, amount float64) error {
 	wallet, err := c.getWalletForUse(keyName)
 	if err != nil {

@@ -99,7 +99,6 @@ func getAllMethods(r mux.Router) []Route {
 		})
 		return nil
 	})
-
 	if err != nil {
 		panic(err)
 	}

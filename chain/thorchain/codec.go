@@ -2,6 +2,12 @@ package thorchain
 
 import (
 	"cosmossdk.io/x/upgrade"
+
+	"github.com/cosmos/ibc-go/modules/capability"
+	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
+	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -16,11 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/ibc-go/modules/capability"
-
-	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
-	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
 )
 
 func DefaultEncoding() testutil.TestEncodingConfig {

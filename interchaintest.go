@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 )
 
-// CreateLogFile creates a file with name in dir $HOME/.interchaintest/logs/
+// CreateLogFile creates a file with name in dir $HOME/.interchaintest/logs/.
 func CreateLogFile(name string) (*os.File, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("user home dir: %w", err)
 	}
 	fpath := filepath.Join(home, ".interchaintest", "logs")
-	err = os.MkdirAll(fpath, 0755)
+	err = os.MkdirAll(fpath, 0o755)
 	if err != nil {
 		return nil, fmt.Errorf("mkdirall: %w", err)
 	}

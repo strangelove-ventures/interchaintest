@@ -25,17 +25,17 @@ func (w *UtxoWallet) KeyName() string {
 	return w.keyName
 }
 
-// Get formatted address, passing in a prefix
+// Get formatted address, passing in a prefix.
 func (w *UtxoWallet) FormattedAddress() string {
 	return w.address
 }
 
-// Get mnemonic, only used for relayer wallets
+// Get mnemonic, only used for relayer wallets.
 func (w *UtxoWallet) Mnemonic() string {
 	return ""
 }
 
-// Get Address with chain's prefix
+// Get Address with chain's prefix.
 func (w *UtxoWallet) Address() []byte {
 	return []byte(w.address)
 }

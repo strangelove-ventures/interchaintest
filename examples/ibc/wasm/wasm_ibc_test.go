@@ -229,7 +229,6 @@ func TestWasmIbc(t *testing.T) {
 	err = juno2Chain.QueryContract(ctx, juno2ContractAddr, queryJuno2CountMsg, &juno2PreIncrementedCountResponse)
 	require.NoError(t, err)
 	require.Equal(t, 1, juno2PreIncrementedCountResponse.Data.Count)
-
 }
 
 // cw_ibc_example response data

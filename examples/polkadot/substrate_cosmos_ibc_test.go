@@ -38,8 +38,8 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	// Get both chains
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
-			//Name:    "composable",
-			//Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
+			// Name:    "composable",
+			// Version: "seunlanlege/centauri-polkadot:v0.9.27,seunlanlege/centauri-parachain:v0.9.27",
 			ChainConfig: ibc.ChainConfig{
 				Type:    "polkadot",
 				Name:    "composable",
@@ -84,9 +84,9 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 				GasPrices:      "0.00stake",
 				GasAdjustment:  1.3,
 				TrustingPeriod: "504h",
-				//EncodingConfig: WasmClientEncoding(),
+				// EncodingConfig: WasmClientEncoding(),
 				NoHostMount: true,
-				//ConfigFileOverrides: configFileOverrides,
+				// ConfigFileOverrides: configFileOverrides,
 			},
 			/*
 				ChainName: "gaia",
@@ -106,9 +106,9 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 		zaptest.NewLogger(t),
 		relayer.StartupFlags("-b", "100"),
 		// These two fields are used to pass in a custom Docker image built locally
-		//relayer.ImagePull(false),
+		// relayer.ImagePull(false),
 		relayer.CustomDockerImage("ghcr.io/composablefi/relayer", "sub-create-client", "100:1000"),
-		//relayer.CustomDockerImage("go-relayer", "local", "100:1000"),
+		// relayer.CustomDockerImage("go-relayer", "local", "100:1000"),
 	).Build(t, client, network)
 
 	// Build the network; spin up the chains and configure the relayer
@@ -135,9 +135,9 @@ func TestSubstrateToCosmosIBC(t *testing.T) {
 	}))
 
 	// If necessary you can wait for x number of blocks to pass before taking some action
-	//blocksToWait := 10
-	//err = testutil.WaitForBlocks(ctx, blocksToWait, composable)
-	//require.NoError(t, err)
+	// blocksToWait := 10
+	// err = testutil.WaitForBlocks(ctx, blocksToWait, composable)
+	// require.NoError(t, err)
 	err = testutil.WaitForBlocks(ctx, 2000, simd)
 	require.NoError(t, err)
 	// Generate a new IBC path between the chains

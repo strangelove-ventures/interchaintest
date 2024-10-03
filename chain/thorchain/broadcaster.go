@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -15,8 +18,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -216,13 +217,11 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 	err = testutil.WaitForCondition(time.Second*30, time.Second*5, func() (bool, error) {
 		var err error
 		txBytes, err = broadcaster.GetTxResponseBytes(ctx, broadcastingUser)
-
 		if err != nil {
 			return false, nil
 		}
 		return true, nil
 	})
-
 	if err != nil {
 		return sdk.TxResponse{}, err
 	}

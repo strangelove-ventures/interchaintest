@@ -10,14 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
-
-	//nolint:staticcheck
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -26,6 +19,7 @@ import (
 	pool "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1"
 	keys "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1"
 	num "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"
+	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
 	custody "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1"
 	view "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
@@ -34,6 +28,12 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"cosmossdk.io/math"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	//nolint:staticcheck
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 )
 
 // PenumbraClientNode represents an instance of pclientd.
@@ -263,7 +263,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 // SendIBCTransfer sends an IBC transfer from the current PenumbraClientNode to a specified destination address on a specified channel.
 // The function validates the address string on the current PenumbraClientNode instance. If the address string is empty, it returns an error.
-// It translates the amount to a big integer and creates an `ibcv1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
+// It translates the amount to a big integer and creates an `ibcv1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp.
 func (p *PenumbraClientNode) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,

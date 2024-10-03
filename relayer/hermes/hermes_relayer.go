@@ -29,7 +29,7 @@ const (
 var (
 	_ ibc.Relayer = &Relayer{}
 	// parseRestoreKeyOutputPattern extracts the address from the hermes output.
-	// SUCCESS Restored key 'g2-2' (cosmos1czklnpzwaq3hfxtv6ne4vas2p9m5q3p3fgkz8e) on chain g2-2
+	// SUCCESS Restored key 'g2-2' (cosmos1czklnpzwaq3hfxtv6ne4vas2p9m5q3p3fgkz8e) on chain g2-2.
 	parseRestoreKeyOutputPattern = regexp.MustCompile(`\((.*)\)`)
 )
 
