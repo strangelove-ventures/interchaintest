@@ -216,6 +216,8 @@ type CreateChannelOptions struct {
 	Order Order
 
 	Version string
+
+	Override bool // only implemented on Go Relayer
 }
 
 // DefaultChannelOpts returns the default settings for creating an ics20 fungible token transfer channel.
@@ -279,6 +281,7 @@ type CreateClientOptions struct {
 	TrustingPeriod           string
 	TrustingPeriodPercentage int64 // only available for Go Relayer
 	MaxClockDrift            string
+	Override                 bool // only available for Go Relayer
 }
 
 // DefaultClientOpts returns the default settings for creating clients.

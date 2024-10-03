@@ -134,7 +134,7 @@ func (commander) AddKey(chainID, keyName, coinType, signingAlgorithm, homeDir st
 }
 
 func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	return []string{
+	cmd := []string{
 		"rly", "tx", "channel", pathName,
 		"--src-port", opts.SourcePortName,
 		"--dst-port", opts.DestPortName,
@@ -143,6 +143,10 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 
 		"--home", homeDir,
 	}
+	if opts.Override {
+		cmd = append(cmd, "--override")
+	}
+	return cmd
 }
 
 func createClientOptsHelper(opts ibc.CreateClientOptions) []string {
@@ -155,6 +159,9 @@ func createClientOptsHelper(opts ibc.CreateClientOptions) []string {
 	}
 	if opts.MaxClockDrift != "" {
 		clientOptions = append(clientOptions, "--max-clock-drift", opts.MaxClockDrift)
+	}
+	if opts.Override {
+		clientOptions = append(clientOptions, "--override")
 	}
 
 	return clientOptions

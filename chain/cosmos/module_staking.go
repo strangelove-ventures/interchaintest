@@ -109,8 +109,8 @@ func (c *CosmosChain) StakingQueryDelegationsTo(ctx context.Context, validator s
 	}
 
 	var delegations []*stakingtypes.DelegationResponse
-	for _, d := range res.DelegationResponses {
-		delegations = append(delegations, &d)
+	for i := range res.DelegationResponses {
+		delegations = append(delegations, &res.DelegationResponses[i])
 	}
 
 	return delegations, nil
