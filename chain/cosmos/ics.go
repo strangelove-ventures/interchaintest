@@ -127,7 +127,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 		return fmt.Errorf("failed to add proposer key: %s", err)
 	}
 
-	proposerAddr, err := c.getFullNode().AccountKeyBech32(ctx, proposerKeyName)
+	proposerAddr, err := c.GetFullNode().AccountKeyBech32(ctx, proposerKeyName)
 	if err != nil {
 		return fmt.Errorf("failed to get proposer key: %s", err)
 	}
@@ -406,7 +406,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	}
 
 	// Wait for 5 blocks before considering the chains "started"
-	return testutil.WaitForBlocks(ctx, 5, c.getFullNode())
+	return testutil.WaitForBlocks(ctx, 5, c.GetFullNode())
 }
 
 func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, consumerVersion, providerVersion string, icsCfg ibc.ICSConfig) ([]byte, error) {
