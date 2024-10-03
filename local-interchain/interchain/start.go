@@ -146,14 +146,14 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		for provider, consumers := range icsPair {
 			var p ibc.Chain
 
-			allConsumers := make([]ibc.Chain, len(consumers))
-			for idx, consumer := range consumers {
+			allConsumers := []ibc.Chain{}
+			for _, consumer := range consumers {
 				for _, chain := range chains {
 					if chain.Config().ChainID == provider {
 						p = chain
 					}
 					if chain.Config().ChainID == consumer {
-						allConsumers[idx] = chain
+						allConsumers = append(allConsumers, chain)
 					}
 				}
 			}
