@@ -31,7 +31,7 @@ func DefaultEthereumGethChainConfig(
 			"--verbosity", "4", // Level = debug
 			"--networkid", "15",
 			"--rpc.txfeecap", "50.0", // 50 eth
-			"--rpc.gascap", "30000000", //30M
+			"--rpc.gascap", "30000000", // 30M
 			"--gpo.percentile", "150", // default 60
 			"--gpo.ignoreprice", "1000000000", // 1gwei, default 2
 			"--dev.gaslimit", "30000000", // 30M, default 11.5M
@@ -58,7 +58,7 @@ func DefaultBscChainConfig(
 			{
 				Repository: "ghcr.io/bnb-chain/bsc",
 				Version:    "1.2.13", // same version as other sim tests
-				//Version:    "1.4.13", // this version does not work in dev mode (1.3.x+)
+				// Version:    "1.4.13", // this version does not work in dev mode (1.3.x+)
 				UidGid: "1000:1000",
 			},
 		},
@@ -69,7 +69,7 @@ func DefaultBscChainConfig(
 			"--verbosity", "4", // Level = debug
 			"--networkid", "15",
 			"--rpc.txfeecap", "50.0", // 50 eth
-			"--rpc.gascap", "30000000", //30M
+			"--rpc.gascap", "30000000", // 30M
 			"--gpo.percentile", "150", // default 60
 			"--gpo.ignoreprice", "1000000000", // 1gwei, default 2
 			"--dev.gaslimit", "30000000", // 30M, default 11.5M

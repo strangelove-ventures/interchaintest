@@ -28,7 +28,7 @@ func TestSDKBoundaries(t *testing.T) {
 
 	t.Parallel()
 
-	var tests = []boundarySpecs{
+	tests := []boundarySpecs{
 		{
 			name: "sdk 45 <-> 50",
 			chainSpecs: []*interchaintest.ChainSpec{
@@ -117,8 +117,6 @@ func TestSDKBoundaries(t *testing.T) {
 
 			// test IBC conformance
 			conformance.TestChainPair(t, ctx, client, network, chain, counterpartyChain, rf, rep, r, path)
-
 		})
 	}
-
 }

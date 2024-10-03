@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-// compile will compile the specified repo using the specified docker image and version
+// compile will compile the specified repo using the specified docker image and version.
 func compile(image string, optVersion string, repoPath string) (string, error) {
 	// Set the image to pull/use
 	arch := ""

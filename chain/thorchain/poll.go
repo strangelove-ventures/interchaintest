@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 )
 
 // PollForMessage searches every transaction for a message. Must pass a coded registry capable of decoding the cosmos transaction.
@@ -44,7 +44,7 @@ func PollForMessage[T any](ctx context.Context, chain *Thorchain, registry codec
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
-// PollForBalance polls until the balance matches
+// PollForBalance polls until the balance matches.
 func PollForBalance(ctx context.Context, chain *Thorchain, deltaBlocks int64, balance ibc.WalletAmount) error {
 	h, err := chain.Height(ctx)
 	if err != nil {

@@ -16,7 +16,7 @@ type Contract struct {
 }
 
 // NewContract return a contract struct, populated with defaults and its relative path
-// relativePath is the relative path to the contract on local machine
+// relativePath is the relative path to the contract on local machine.
 func NewContract(relativePath string) *Contract {
 	return &Contract{
 		DockerImage:  "cosmwasm/rust-optimizer",
@@ -25,13 +25,13 @@ func NewContract(relativePath string) *Contract {
 	}
 }
 
-// WithDockerImage sets a custom docker image to use
+// WithDockerImage sets a custom docker image to use.
 func (c *Contract) WithDockerImage(image string) *Contract {
 	c.DockerImage = image
 	return c
 }
 
-// WithVersion sets a custom version to use
+// WithVersion sets a custom version to use.
 func (c *Contract) WithVersion(version string) *Contract {
 	c.Version = version
 	return c
@@ -75,7 +75,7 @@ func (c *Contract) Compile() *Contract {
 }
 
 // WaitForCompile will wait until compilation is complete, this can be called after chain setup
-// Successful compilation will return the binary location in a channel
+// Successful compilation will return the binary location in a channel.
 func (c *Contract) WaitForCompile() (string, error) {
 	contractBinary := ""
 	select {

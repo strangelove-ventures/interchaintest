@@ -64,7 +64,7 @@ func CopyCoverageFromContainer(ctx context.Context, t *testing.T, client *client
 		name := hdr.Name
 		extractedFileName := path.Base(name)
 
-		//Only extract coverage files
+		// Only extract coverage files
 		if !strings.HasPrefix(extractedFileName, "cov") {
 			continue
 		}

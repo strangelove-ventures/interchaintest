@@ -49,7 +49,6 @@ func TestICS(t *testing.T) {
 			})
 		}
 	}
-
 }
 
 func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {

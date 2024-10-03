@@ -178,7 +178,7 @@ func (c *Chain) SaveJSON(filePath string) error {
 		return err
 	}
 
-	return os.WriteFile(filePath, bz, 0777)
+	return os.WriteFile(filePath, bz, 0o777)
 }
 
 func (c *Chain) SaveYAML(filePath string) error {
@@ -190,7 +190,7 @@ func (c *Chain) SaveYAML(filePath string) error {
 		return err
 	}
 
-	return os.WriteFile(filePath, bz, 0777)
+	return os.WriteFile(filePath, bz, 0o777)
 }
 
 func BaseHostPortOverride() map[string]string {

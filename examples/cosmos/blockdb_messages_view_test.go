@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
@@ -15,6 +13,10 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	"cosmossdk.io/math"
+
+	"github.com/cosmos/cosmos-sdk/types"
 )
 
 func TestBlockDBMessagesView(t *testing.T) {

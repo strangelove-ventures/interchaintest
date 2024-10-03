@@ -3,8 +3,9 @@ package ibc
 import (
 	"testing"
 
-	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	"github.com/stretchr/testify/require"
+
+	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 )
 
 func TestChannelOptsConfigured(t *testing.T) {

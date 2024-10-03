@@ -99,7 +99,7 @@ func (c *CosmosChain) TokenFactoryQueryAdmin(ctx context.Context, fullDenom stri
 	return res, nil
 }
 
-// Deprecated: use TokenFactoryQueryAdmin instead
+// Deprecated: use TokenFactoryQueryAdmin instead.
 func TokenFactoryGetAdmin(c *CosmosChain, ctx context.Context, fullDenom string) (*QueryDenomAuthorityMetadataResponse, error) {
 	return c.TokenFactoryQueryAdmin(ctx, fullDenom)
 }

@@ -2,19 +2,18 @@ package blockdb
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	_ "embed"
 )
 
-var (
-	//go:embed testdata/sample_txs.json
-	txsFixture []byte
-)
+//go:embed testdata/sample_txs.json
+var txsFixture []byte
 
 func TestQuery_CurrentSchemaVersion(t *testing.T) {
 	t.Parallel()

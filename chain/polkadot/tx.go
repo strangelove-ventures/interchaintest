@@ -11,7 +11,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
-// SendFundsTx sends funds to a wallet using the SubstrateAPI
+// SendFundsTx sends funds to a wallet using the SubstrateAPI.
 func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, amount ibc.WalletAmount) (gstypes.Hash, error) {
 	hash := gstypes.Hash{}
 	meta, err := api.RPC.State.GetMetadataLatest()
@@ -37,7 +37,7 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// Turns on sending and receiving ibc transfers
+// Turns on sending and receiving ibc transfers.
 func EnableIbc(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair) (gstypes.Hash, error) {
 	hash := gstypes.Hash{}
 	meta, err := api.RPC.State.GetMetadataLatest()
@@ -58,7 +58,7 @@ func EnableIbc(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair) (gs
 	return CreateSignSubmitExt(api, meta, senderKeypair, sc)
 }
 
-// SendIbcFundsTx sends funds to a wallet using the SubstrateAPI
+// SendIbcFundsTx sends funds to a wallet using the SubstrateAPI.
 func SendIbcFundsTx(
 	api *gsrpc.SubstrateAPI,
 	senderKeypair signature.KeyringPair,
@@ -96,7 +96,7 @@ func SendIbcFundsTx(
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset.
 func MintFundsTx(
 	api *gsrpc.SubstrateAPI,
 	senderKeypair signature.KeyringPair,
@@ -134,7 +134,7 @@ func MintFundsTx(
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// Common tx function to create an extrinsic and sign/submit it
+// Common tx function to create an extrinsic and sign/submit it.
 func CreateSignSubmitExt(
 	api *gsrpc.SubstrateAPI,
 	meta *gstypes.Metadata,

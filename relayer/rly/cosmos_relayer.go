@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/docker/docker/client"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 )
 
 const (
@@ -130,7 +131,7 @@ func (commander) AddKey(chainID, keyName, coinType, signingAlgorithm, homeDir st
 }
 
 func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	return []string{
+	cmd := []string{
 		"rly", "tx", "channel", pathName,
 		"--src-port", opts.SourcePortName,
 		"--dst-port", opts.DestPortName,
@@ -139,6 +140,10 @@ func (commander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, h
 
 		"--home", homeDir,
 	}
+	if opts.Override {
+		cmd = append(cmd, "--override")
+	}
+	return cmd
 }
 
 func createClientOptsHelper(opts ibc.CreateClientOptions) []string {
