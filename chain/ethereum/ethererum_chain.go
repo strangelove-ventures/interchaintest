@@ -169,7 +169,7 @@ func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.M
 
 	c.hostRPCPort = hostPorts[0]
 
-	c.rpcClient, err = ethclient.Dial(c.GetRPCAddress())
+	c.rpcClient, err = ethclient.Dial(c.GetHostRPCAddress())
 	if err != nil {
 		return fmt.Errorf("failed to dial ETH rpc: %w", err)
 	}
@@ -177,8 +177,12 @@ func (c *EthereumChain) Start(ctx context.Context, cmd []string, mount []mount.M
 	// Wait for RPC to be available
 	if err := retry.Do(func() error {
 		_, err := c.rpcClient.ChainID(ctx)
+		c.log.Warn("Waiting for RPC to be available", zap.String("chain_id", c.cfg.ChainID), zap.String("rpc_address", c.GetHostRPCAddress()), zap.Error(err))
 		return err
-	}, retry.Attempts(10), retry.Delay(time.Second*2)); err != nil {
+	}, retry.Attempts(15),
+		retry.Delay(2*time.Second),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true)); err != nil {
 		return fmt.Errorf("rpc unreachable after max attempts (%s): %w", c.GetHostRPCAddress(), err)
 	}
 
