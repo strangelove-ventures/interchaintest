@@ -3,7 +3,6 @@ package ibc_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -38,13 +37,6 @@ func TestICS(t *testing.T) {
 		name string
 	}
 	relayers := []relayerTypes{{rly: ibc.CosmosRly, name: "rly"}}
-
-	// t / true
-	if strings.HasPrefix(os.Getenv("ICT_WITH_HERMES"), "t") {
-		// reduces test flakeyness in CI, no need to verify with Hermes
-		// we just need to confirm the ICS works as expected with respect to migrations.
-		relayers = append(relayers, relayerTypes{rly: ibc.Hermes, name: "hermes"})
-	}
 
 	for _, version := range icsVersions {
 		version := version
