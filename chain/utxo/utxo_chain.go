@@ -37,9 +37,9 @@ var natPorts = nat.PortMap{
 }
 
 type UtxoChain struct {
-	testName     string
-	cfg          ibc.ChainConfig
-	cancel       context.CancelFunc
+	testName string
+	cfg      ibc.ChainConfig
+	cancel   context.CancelFunc
 
 	log *zap.Logger
 
@@ -240,7 +240,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 		return err
 	}
 
-	c.hostRPCPort = strings.Split(hostPorts[0], ":")[1]
+	c.hostRPCPort = hostPorts[0]
 
 	c.BaseCli = []string{
 		c.BinCli,
@@ -276,7 +276,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	if err := c.SetAccount(ctx, addr, keyName); err != nil {
 		return err
 	}
-	
+
 	go func() {
 		// Don't use ctx from Start(), it gets cancelled soon after returning.
 		goRoutineCtx := context.Background()
@@ -290,7 +290,7 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 
 		c.MapAccess.Lock()
 		faucetWallet, found := c.KeyNameToWalletMap["faucet"]
-		if !found  || !faucetWallet.ready {
+		if !found || !faucetWallet.ready {
 			c.logger().Error("faucet wallet not found or not ready")
 			c.MapAccess.Unlock()
 			return
@@ -377,11 +377,11 @@ func (c *UtxoChain) GetWSAddress() string {
 }
 
 func (c *UtxoChain) GetHostRPCAddress() string {
-	return "http://0.0.0.0:" + c.hostRPCPort
+	return "http://" + c.hostRPCPort
 }
 
 func (c *UtxoChain) GetHostWSAddress() string {
-	return "ws://0.0.0.0:" + c.hostRPCPort
+	return "ws://" + c.hostRPCPort
 }
 
 func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {

@@ -7,9 +7,9 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/go-connections/nat"
 )
 
 const (
@@ -23,12 +23,14 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 		return ""
 	}
 
-	m, ok := cont.NetworkSettings.Ports[nat.Port(portID)]
-	if !ok || len(m) == 0 {
-		return ""
+	port := strings.Split(portID, "/")[0]
+
+	// only one network. if there are more than one, we will just return the first one.
+	for _, network := range cont.NetworkSettings.Networks {
+		return net.JoinHostPort(network.IPAddress, port)
 	}
 
-	return net.JoinHostPort(m[0].HostIP, m[0].HostPort)
+	return ""
 }
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")
