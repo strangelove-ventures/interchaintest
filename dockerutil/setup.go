@@ -75,17 +75,23 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	// e.g. if the test was interrupted.
 	DockerCleanup(t, cli)()
 
-	name := fmt.Sprintf("%s-%s", ICTDockerPrefix, RandLowerCaseLetterString(8))
-	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
-		CheckDuplicate: true,
+	envNetworkID := os.Getenv("NETWORK_ID")
+	if envNetworkID != "" {
+		return cli, envNetworkID
+	} else {
+		name := fmt.Sprintf("%s-%s", ICTDockerPrefix, RandLowerCaseLetterString(8))
+		network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
+			CheckDuplicate: true,
 
-		Labels: map[string]string{CleanupLabel: t.Name()},
-	})
-	if err != nil {
-		panic(fmt.Errorf("failed to create docker network: %v", err))
+			Labels: map[string]string{CleanupLabel: t.Name()},
+		})
+		if err != nil {
+			panic(fmt.Errorf("failed to create docker network: %v", err))
+		}
+
+		return cli, network.ID
 	}
 
-	return cli, network.ID
 }
 
 // DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing.
