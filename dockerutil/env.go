@@ -7,14 +7,10 @@ import (
 )
 
 // GetTimeFromEnv gets a time.Duration from a given environment variable key, or returns the fallback value if the key is not set.
-func GetTimeFromEnv(key, fallback string) time.Duration {
+func GetTimeFromEnv(key string, fallback time.Duration) time.Duration {
 	value, ok := os.LookupEnv(key)
 	if !ok {
-		v, err := time.ParseDuration(fallback)
-		if err != nil {
-			panic(fmt.Sprintf("BUG: failed to parse fallback %s: %s", fallback, err))
-		}
-		return v
+		return fallback
 	}
 
 	v, err := time.ParseDuration(value)
