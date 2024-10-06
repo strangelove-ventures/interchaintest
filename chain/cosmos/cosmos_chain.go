@@ -673,7 +673,7 @@ func (c *CosmosChain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -730,7 +730,7 @@ func (c *CosmosChain) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}

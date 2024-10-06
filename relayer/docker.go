@@ -105,7 +105,7 @@ func NewDockerRelayer(ctx context.Context, log *zap.Logger, testName string, cli
 		VolumeName: r.volumeName,
 		ImageRef:   containerImage.Ref(),
 		TestName:   testName,
-		UIDGID:     containerImage.UIDGID,
+		UidGid:     containerImage.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}

@@ -178,7 +178,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -233,7 +233,7 @@ func (c *PolkadotChain) NewParachainNode(
 		VolumeName: v.Name,
 		ImageRef:   parachainConfig.Image.Ref(),
 		TestName:   testName,
-		UIDGID:     parachainConfig.Image.UIDGID,
+		UidGid:     parachainConfig.Image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}

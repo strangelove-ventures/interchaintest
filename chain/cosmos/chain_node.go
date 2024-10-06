@@ -192,7 +192,7 @@ func (tn *ChainNode) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   tn.TestName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}

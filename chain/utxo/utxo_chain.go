@@ -130,7 +130,7 @@ func (c *UtxoChain) Initialize(ctx context.Context, testName string, cli *docker
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}

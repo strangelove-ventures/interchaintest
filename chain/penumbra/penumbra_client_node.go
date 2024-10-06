@@ -110,7 +110,7 @@ func NewClientNode(
 		VolumeName: p.VolumeName,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set pclientd volume owner: %w", err)
 	}

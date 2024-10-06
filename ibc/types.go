@@ -338,7 +338,7 @@ func (i DockerImage) Validate() error {
 		missing = append(missing, "Repository")
 	}
 	if i.UIDGID == "" {
-		missing = append(missing, "UIDGID")
+		missing = append(missing, "UidGid")
 	}
 
 	if len(missing) > 0 {

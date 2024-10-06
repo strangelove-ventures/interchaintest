@@ -77,7 +77,7 @@ func NewTendermintNode(
 		VolumeName: tn.VolumeName,
 		ImageRef:   tn.Image.Ref(),
 		TestName:   tn.TestName,
-		UIDGID:     tn.Image.UIDGID,
+		UidGid:     tn.Image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set tendermint volume owner: %w", err)
 	}

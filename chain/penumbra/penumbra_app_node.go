@@ -79,7 +79,7 @@ func NewPenumbraAppNode(
 		VolumeName: pn.VolumeName,
 		ImageRef:   pn.Image.Ref(),
 		TestName:   pn.TestName,
-		UIDGID:     image.UIDGID,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set penumbra volume owner: %w", err)
 	}
