@@ -9,9 +9,10 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"go.uber.org/zap"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}
@@ -121,8 +122,8 @@ func (r *HyperspaceRelayer) SetClientContractHash(ctx context.Context, rep ibc.R
 	if err != nil {
 		return err
 	}
-	switch chainType {
-	case "cosmos":
+
+	if chainType == ibc.Cosmos {
 		config.(*HyperspaceRelayerCosmosChainConfig).WasmChecksum = hash
 	}
 
@@ -137,11 +138,14 @@ func (r *HyperspaceRelayer) PrintCoreConfig(ctx context.Context, rep ibc.Relayer
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
-	fmt.Println(string(res.Stdout))
+
+	fmt.Println(string(res.Stdout)) //nolint:forbidigo
+
 	return nil
 }
 
@@ -153,11 +157,14 @@ func (r *HyperspaceRelayer) PrintConfigs(ctx context.Context, rep ibc.RelayerExe
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
 	res := r.Exec(ctx, rep, cmd, nil)
 	if res.Err != nil {
 		return res.Err
 	}
-	fmt.Println(string(res.Stdout))
+
+	fmt.Println(string(res.Stdout)) //nolint:forbidigo
+
 	return nil
 }
 

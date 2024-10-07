@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
 	"cosmossdk.io/math"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // GetAndFundTestUserWithMnemonic restores a user using the given mnemonic
@@ -58,11 +59,11 @@ func GetAndFundTestUsers(
 	amount math.Int,
 	chains ...ibc.Chain,
 ) []ibc.Wallet {
+	t.Helper()
+
 	users := make([]ibc.Wallet, len(chains))
 	var eg errgroup.Group
 	for i, chain := range chains {
-		i := i
-		chain := chain
 		eg.Go(func() error {
 			user, err := GetAndFundTestUserWithMnemonic(ctx, keyNamePrefix, "", amount, chain)
 			if err != nil {

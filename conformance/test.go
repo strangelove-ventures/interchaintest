@@ -36,6 +36,13 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/math"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
@@ -43,12 +50,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
-
-	"cosmossdk.io/math"
-
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 )
 
 var (
@@ -84,24 +85,24 @@ type RelayerTestCaseConfig struct {
 var relayerTestCaseConfigs = [...]RelayerTestCaseConfig{
 	{
 		Name:            "relay packet",
-		PreRelayerStart: preRelayerStart_RelayPacket,
+		PreRelayerStart: preRelayerStartRelayPacket,
 		Test:            testPacketRelaySuccess,
 	},
 	{
 		Name:            "no timeout",
-		PreRelayerStart: preRelayerStart_NoTimeout,
+		PreRelayerStart: preRelayerStartNoTimeout,
 		Test:            testPacketRelaySuccess,
 	},
 	{
 		Name:                        "height timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.HeightTimeout},
-		PreRelayerStart:             preRelayerStart_HeightTimeout,
+		PreRelayerStart:             preRelayerStartHeightTimeout,
 		Test:                        testPacketRelayFail,
 	},
 	{
 		Name:                        "timestamp timeout",
 		RequiredRelayerCapabilities: []relayer.Capability{relayer.TimestampTimeout},
-		PreRelayerStart:             preRelayerStart_TimestampTimeout,
+		PreRelayerStart:             preRelayerStartTimestampTimeout,
 		Test:                        testPacketRelayFail,
 	},
 }
@@ -137,6 +138,8 @@ func sendIBCTransfersFromBothChainsWithTimeout(
 	channels []ibc.ChannelOutput,
 	timeout *ibc.IBCTimeout,
 ) {
+	t.Helper()
+
 	srcChainCfg := srcChain.Config()
 	srcUser := testCase.Users[0]
 
@@ -225,15 +228,12 @@ func Test(t *testing.T, ctx context.Context, cfs []interchaintest.ChainFactory, 
 	if counts[2] {
 		t.Run("chain pairs", func(t *testing.T) {
 			for _, cf := range cfs {
-				cf := cf
 				if cf.Count() != 2 {
 					continue
 				}
 
 				t.Run(cf.Name(), func(t *testing.T) {
 					for _, rf := range rfs {
-						rf := rf
-
 						t.Run(rf.Name(), func(t *testing.T) {
 							// Record the labels for this nested test.
 							rep.TrackTest(t)
@@ -348,7 +348,6 @@ func TestChainPair(
 
 	t.Run("post_relayer_start", func(t *testing.T) {
 		for _, testCase := range testCases {
-			testCase := testCase
 			t.Run(testCase.Config.Name, func(t *testing.T) {
 				rep.TrackTest(t)
 				requireCapabilities(t, rep, rf, testCase.Config.RequiredRelayerCapabilities...)
@@ -361,25 +360,29 @@ func TestChainPair(
 
 // PreRelayerStart methods for the RelayerTestCases
 
-func preRelayerStart_RelayPacket(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+func preRelayerStartRelayPacket(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+	t.Helper()
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, nil)
 }
 
-func preRelayerStart_NoTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+func preRelayerStartNoTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+	t.Helper()
 	ibcTimeoutDisabled := ibc.IBCTimeout{Height: 0, NanoSeconds: 0}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutDisabled)
 	// TODO should we wait here to make sure it successfully relays a packet beyond the default timeout period?
 	// would need to shorten the chain default timeouts somehow to make that a feasible test
 }
 
-func preRelayerStart_HeightTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+func preRelayerStartHeightTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+	t.Helper()
 	ibcTimeoutHeight := ibc.IBCTimeout{Height: 10}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutHeight)
 	// wait for both chains to produce 15 blocks to expire timeout
 	require.NoError(t, testutil.WaitForBlocks(ctx, 15, srcChain, dstChain), "failed to wait for blocks")
 }
 
-func preRelayerStart_TimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+func preRelayerStartTimestampTimeout(ctx context.Context, t *testing.T, testCase *RelayerTestCase, srcChain ibc.Chain, dstChain ibc.Chain, channels []ibc.ChannelOutput) {
+	t.Helper()
 	ibcTimeoutTimestamp := ibc.IBCTimeout{NanoSeconds: uint64((1 * time.Second).Nanoseconds())}
 	sendIBCTransfersFromBothChainsWithTimeout(ctx, t, testCase, srcChain, dstChain, channels, &ibcTimeoutTimestamp)
 	// wait for 15 seconds to expire timeout
@@ -396,6 +399,8 @@ func testPacketRelaySuccess(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	t.Helper()
+
 	req := require.New(rep.TestifyT(t))
 
 	srcChainCfg := srcChain.Config()
@@ -480,6 +485,8 @@ func testPacketRelayFail(
 	dstChain ibc.Chain,
 	channels []ibc.ChannelOutput,
 ) {
+	t.Helper()
+
 	req := require.New(rep.TestifyT(t))
 
 	srcChainCfg := srcChain.Config()

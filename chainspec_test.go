@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 func TestChainSpec_Config(t *testing.T) {
@@ -57,7 +58,7 @@ func TestChainSpec_Config(t *testing.T) {
 				// Skip Name, as that is intended to be inherited from ChainName.
 				ChainID: "mychain-123",
 				Images: []ibc.DockerImage{
-					{Repository: "docker.example.com", Version: "latest", UidGid: "1:1"},
+					{Repository: "docker.example.com", Version: "latest", UIDGID: "1:1"},
 				},
 				Bin:            "/bin/true",
 				Bech32Prefix:   "foo",

@@ -8,8 +8,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
 // Toml is used for holding the decoded state of a toml config file.

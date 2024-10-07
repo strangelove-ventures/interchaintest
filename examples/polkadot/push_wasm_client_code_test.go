@@ -74,7 +74,7 @@ func TestPushWasmClientCode(t *testing.T) {
 					{
 						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
 						Version:    "feat-wasm-clients",
-						UidGid:     "1025:1025",
+						UIDGID:     "1025:1025",
 					},
 				},
 				Bin:            "simd",

@@ -2,7 +2,8 @@ package cosmos
 
 import (
 	"context"
-	"fmt"
+
+	"go.uber.org/zap"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -112,7 +113,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &modAcc); err != nil {
 			return err
 		}
-		fmt.Printf("ModuleAccount: %+v\n", modAcc)
+		c.log.Info("Account info for ModuleAccount", zap.String("account", modAcc.String()))
 		return nil
 
 	case "/cosmos.vesting.v1beta1.VestingAccount":
@@ -120,7 +121,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
 			return err
 		}
-		fmt.Printf("BaseVestingAccount: %+v\n", vestingAcc)
+		c.log.Info("Account info for BaseVestingAccount", zap.String("account", vestingAcc.String()))
 		return nil
 
 	case "/cosmos.vesting.v1beta1.PeriodicVestingAccount":
@@ -128,7 +129,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
 			return err
 		}
-		fmt.Printf("PeriodicVestingAccount: %+v\n", vestingAcc)
+		c.log.Info("Account info for PeriodicVestingAccount", zap.String("account", vestingAcc.String()))
 		return nil
 
 	case "/cosmos.vesting.v1beta1.ContinuousVestingAccount":
@@ -136,7 +137,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
 			return err
 		}
-		fmt.Printf("ContinuousVestingAccount: %+v\n", vestingAcc)
+		c.log.Info("Account info for ContinuousVestingAccount", zap.String("account", vestingAcc.String()))
 		return nil
 
 	case "/cosmos.vesting.v1beta1.DelayedVestingAccount":
@@ -144,7 +145,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
 			return err
 		}
-		fmt.Printf("DelayedVestingAccount: %+v\n", vestingAcc)
+		c.log.Info("Account info for DelayedVestingAccount", zap.String("account", vestingAcc.String()))
 		return nil
 
 	case "/cosmos.vesting.v1beta1.PermanentLockedAccount":
@@ -152,7 +153,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &vestingAcc); err != nil {
 			return err
 		}
-		fmt.Printf("PermanentLockedAccount: %+v\n", vestingAcc)
+		c.log.Info("Account info for PermanentLockedAccount", zap.String("account", vestingAcc.String()))
 		return nil
 
 	default:
@@ -160,7 +161,7 @@ func (c *CosmosChain) AuthPrintAccountInfo(chain *CosmosChain, res *cdctypes.Any
 		if err := chain.GetCodec().Unmarshal(res.Value, &baseAcc); err != nil {
 			return err
 		}
-		fmt.Printf("BaseAccount: %+v\n", baseAcc)
+		c.log.Info("Account info for BaseAccount", zap.String("account", baseAcc.String()))
 		return nil
 	}
 }

@@ -6,9 +6,10 @@ import (
 	"sync"
 
 	dockerclient "github.com/docker/docker/client"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
 )
 
 // PenumbraNode reporesents a node in the Penumbra network which consists of one instance of Tendermint,

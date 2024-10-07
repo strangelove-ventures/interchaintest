@@ -86,8 +86,8 @@ func (chain *Chain) SetChainDefaults() {
 		chain.CoinType = 118
 	}
 
-	if chain.DockerImage.UidGid == "" {
-		chain.DockerImage.UidGid = "1025:1025"
+	if chain.DockerImage.UIDGID == "" {
+		chain.DockerImage.UIDGID = "1025:1025"
 	}
 
 	if chain.NumberVals == 0 {
