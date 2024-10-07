@@ -600,6 +600,10 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(math.Ceil(fees))
 }
 
+func (c *CosmosChain) ChangeBinary(ctx context.Context, binary string) {
+	c.cfg.Bin = binary
+}
+
 func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
 	c.cfg.Images[0].Version = version
 	for _, n := range c.Validators {
