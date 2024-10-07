@@ -1,8 +1,6 @@
 package cosmos
 
 import (
-	ibcwasm "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
-
 	"cosmossdk.io/x/upgrade"
 
 	"github.com/cosmos/ibc-go/modules/capability"
@@ -29,6 +27,8 @@ import (
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+
+	ibcwasm "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
 )
 
 func DefaultEncoding() testutil.TestEncodingConfig {

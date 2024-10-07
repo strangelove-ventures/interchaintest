@@ -22,7 +22,7 @@ func DefaultEthereumAnvilChainConfig(
 			{
 				Repository: "ghcr.io/foundry-rs/foundry",
 				Version:    "latest",
-				UidGid:     "1000:1000",
+				UIDGID:     "1000:1000",
 			},
 		},
 		Bin: "anvil",

@@ -29,7 +29,7 @@ func Ragnarok(
 	}
 	exoAsset := exoChainType.GetGasAsset()
 
-	_, err = thorchain.ApiGetPool(exoAsset)
+	_, err = thorchain.APIGetPool(ctx, exoAsset)
 	if err != nil {
 		return fmt.Errorf("pool (%s) not found to ragnarok, %w", exoChain.Config().Name, err)
 	}

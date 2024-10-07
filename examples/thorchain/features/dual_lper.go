@@ -44,7 +44,7 @@ func DualLp(
 		return thorUser, exoUser, fmt.Errorf("duallp, exo balance (%s), %w", exoChain.Config().Name, err)
 	}
 	memo = fmt.Sprintf("+:%s:%s", exoAsset, thorUser.FormattedAddress())
-	exoInboundAddr, _, err := thorchain.ApiGetInboundAddress(exoChainType.String())
+	exoInboundAddr, _, err := thorchain.APIGetInboundAddress(ctx, exoChainType.String())
 	if err != nil {
 		return thorUser, exoUser, fmt.Errorf("duallp, inbound addr (%s), %w", exoChain.Config().Name, err)
 	}

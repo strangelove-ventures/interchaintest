@@ -6,6 +6,11 @@ import (
 	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+
+	_ "embed"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
@@ -14,10 +19,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
-
-	_ "embed"
 )
 
 // ChainFactory describes how to get chains for tests.
@@ -134,11 +135,11 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 	}
 
 	switch cfg.Type {
-	case "cosmos":
+	case ibc.Cosmos:
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
-	case "penumbra":
+	case ibc.Penumbra:
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
-	case "polkadot":
+	case ibc.Polkadot:
 		// TODO Clean this up. RelayChain config should only reference cfg.Images[0] and parachains should iterate through the remaining
 		// Maybe just pass everything in like NewCosmosChain and NewPenumbraChain, let NewPolkadotChain figure it out
 		// Or parachains and ICS consumer chains maybe should be their own chain
@@ -158,7 +159,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		default:
 			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
 		}
-	case "ethereum":
+	case ibc.Ethereum:
 		switch cfg.Bin {
 		case "anvil":
 			return foundry.NewAnvilChain(testName, cfg, log), nil
@@ -167,9 +168,9 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		default:
 			return nil, fmt.Errorf("unknown binary: %s for ethereum chain type, must be anvil or geth", cfg.Bin)
 		}
-	case "thorchain":
+	case ibc.Thorchain:
 		return thorchain.NewThorchain(testName, cfg, nv, nf, log), nil
-	case "utxo":
+	case ibc.UTXO:
 		return utxo.NewUtxoChain(testName, cfg, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 type mockChain struct {

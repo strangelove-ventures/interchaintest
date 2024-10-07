@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 

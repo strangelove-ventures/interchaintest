@@ -8,8 +8,9 @@ import (
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 )
 
 func TestNodeKeyPeerID(t *testing.T) {
@@ -22,8 +23,8 @@ func TestNodeKeyPeerID(t *testing.T) {
 
 	id, err := peer.IDFromPrivateKey(privKey)
 	require.NoError(t, err, "error getting peer id from private key")
-	peerId := id.String()
-	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerId)
+	peerID := id.String()
+	require.Equal(t, "12D3KooWCqDbuUHRNWPAuHpVnzZGCkkMwgEx7Xd6xgszqtVpH56c", peerID)
 }
 
 func Test_DeriveEd25519FromName(t *testing.T) {

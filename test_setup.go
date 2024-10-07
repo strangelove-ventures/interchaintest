@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
@@ -52,6 +53,8 @@ func StartChainPair(
 	f RelayerFactory,
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 ) (ibc.Relayer, error) {
+	t.Helper()
+
 	relayerImpl := f.Build(t, cli, networkID)
 
 	ic := NewInterchain().
@@ -97,6 +100,8 @@ func StopStartRelayerWithPreStartFuncs(
 	preRelayerStartFuncs []func([]ibc.ChannelOutput),
 	pathNames ...string,
 ) ([]ibc.ChannelOutput, error) {
+	t.Helper()
+
 	if err := relayerImpl.StopRelayer(ctx, eRep); err != nil {
 		t.Logf("error stopping relayer: %v", err)
 	}
@@ -113,7 +118,6 @@ func StopStartRelayerWithPreStartFuncs(
 		if preRelayerStart == nil {
 			continue
 		}
-		preRelayerStart := preRelayerStart
 		wg.Add(1)
 		go func() {
 			preRelayerStart(channels)

@@ -26,7 +26,7 @@ func DefaultBitcoinChainConfig(
 			{
 				Repository: "bitcoin/bitcoin",
 				Version:    "26.2",
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			},
 		},
 		Bin: "bitcoind,bitcoin-cli",
@@ -59,7 +59,7 @@ func DefaultBitcoinCashChainConfig(
 			{
 				Repository: "zquestz/bitcoin-cash-node",
 				Version:    "27.1.0",
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			},
 		},
 		Bin: "bitcoind,bitcoin-cli",
@@ -92,7 +92,7 @@ func DefaultLitecoinChainConfig(
 			{
 				Repository: "uphold/litecoin-core",
 				Version:    "0.21",
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			},
 		},
 		Bin: "litecoind,litecoin-cli",
@@ -127,7 +127,7 @@ func DefaultDogecoinChainConfig(
 				Version:    "dogecoin-daemon-1.14.7",
 				// Repository: "coinmetrics/dogecoin",
 				// Version:    "1.14.7",
-				UidGid: "1000:1000",
+				UIDGID: "1000:1000",
 			},
 		},
 		Bin: "dogecoind,dogecoin-cli",

@@ -3,9 +3,9 @@ protoVer=0.13.2
 protoImageName=ghcr.io/cosmos/proto-builder:$(protoVer)
 protoImage=$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace $(protoImageName)
 golangci_lint_cmd=golangci-lint
-golangci_version=v1.57.2
+golangci_version=v1.61.0
 gofumpt_cmd=gofumpt
-gofumpt_version=v0.6.0
+gofumpt_version=v0.7.0
 
 default: help
 
@@ -19,7 +19,19 @@ interchaintest: gen ## Build interchaintest binary into ./bin
 
 .PHONY: test
 test: ## Run unit tests
-	@go test -cover -short -race -timeout=60s ./...
+	@go test -cover -short -race -timeout=30m -failfast -p 2 $(go list ./... | grep -v /cmd | grep -v /examples)
+
+.PHONY: test-conformance
+test-conformance: ## Run e2e conformance tests
+	@go test -race -timeout 30m -failfast -v -p 2 ./cmd/interchaintest
+
+.PHONY: test-ibc-examples
+test-ibc-examples: ## Run e2e ibc example tests
+	@go test -race -timeout 30m -failfast -v -p 2 ./examples/ibc
+
+.PHONY: test-cosmos-examples
+test-cosmos-examples: ## Run e2e cosmos example tests
+	@go test -race -failfast -timeout 30m -v -p 2 ./examples/cosmos
 
 .PHONY: docker-reset
 docker-reset: ## Attempt to delete all running containers. Useful if interchaintest does not exit cleanly.

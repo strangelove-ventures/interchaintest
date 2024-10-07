@@ -34,7 +34,7 @@ import (
 func StartExoChains(t *testing.T, ctx context.Context, client *client.Client, network string) ExoChains {
 	chainSpecs := []*interchaintest.ChainSpec{
 		EthChainSpec("geth"), // only use this chain spec for eth or the one below
-		//EthChainSpec("anvil"),
+		// EthChainSpec("anvil"),
 		GaiaChainSpec(),
 		BtcChainSpec(),
 		BchChainSpec(),
@@ -164,7 +164,7 @@ func SetupContracts(ctx context.Context, ethExoChain *ExoChain, bscExoChain *Exo
 		if ethExoChain.chain.Config().Bin == "geth" {
 			ethContractAddr, err = SetupGethContracts(egCtx, ethExoChain)
 		} else {
-			ethContractAddr, err = SetupAnvilContracts(egCtx, ethExoChain) 
+			ethContractAddr, err = SetupAnvilContracts(egCtx, ethExoChain)
 		}
 		return err
 	})
@@ -173,7 +173,7 @@ func SetupContracts(ctx context.Context, ethExoChain *ExoChain, bscExoChain *Exo
 		bscContractAddr, err = SetupGethContracts(egCtx, bscExoChain)
 		return err
 	})
-		
+
 	return ethContractAddr, bscContractAddr, eg.Wait()
 }
 

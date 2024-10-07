@@ -5,15 +5,17 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	types23 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
@@ -43,7 +45,11 @@ func (hyperspaceCommander) DockerUser() string {
 }
 
 func (c *hyperspaceCommander) AddChainConfiguration(containerFilePath, homeDir string) []string {
-	fmt.Println("[hyperspace] AddChainConfiguration ", containerFilePath, homeDir)
+	c.log.Info("Hyperspace AddChainConfiguration",
+		zap.String("container_file_path", containerFilePath),
+		zap.String("home_dir", homeDir),
+	)
+
 	// c.chainConfigPaths = append(c.chainConfigPaths, containerFilePath)
 	return []string{
 		"hyperspace",
@@ -57,7 +63,11 @@ func (hyperspaceCommander) AddKey(chainID, keyName, coinType, signingAlgorithm, 
 }
 
 func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChannelOptions, homeDir string) []string {
-	fmt.Println("[hyperspace] CreateChannel", pathName, homeDir)
+	c.log.Info("Hyperspace CreateChannel",
+		zap.String("path_name", pathName),
+		zap.String("home_dir", homeDir),
+	)
+
 	_, ok := c.paths[pathName]
 	if !ok {
 		panic(fmt.Sprintf("path %s not found", pathName))
@@ -81,7 +91,15 @@ func (c *hyperspaceCommander) CreateChannel(pathName string, opts ibc.CreateChan
 }
 
 func (c *hyperspaceCommander) CreateClients(pathName string, opts ibc.CreateClientOptions, homeDir string) []string {
-	fmt.Println("[hyperspace] CreateClients", pathName, opts, homeDir)
+	c.log.Info("Hyperspace CreateClients",
+		zap.String("path_name", pathName),
+		zap.String("home_dir", homeDir),
+		zap.String("trusting_period", opts.TrustingPeriod),
+		zap.Int64("trusting_period_percentage", opts.TrustingPeriodPercentage),
+		zap.String("max_clock_drift", opts.MaxClockDrift),
+		zap.Bool("override", opts.Override),
+	)
+
 	_, ok := c.paths[pathName]
 	if !ok {
 		panic(fmt.Sprintf("path %s not found", pathName))
@@ -108,7 +126,11 @@ func (hyperspaceCommander) CreateClient(srcChainID, dstChainID, pathName string,
 }
 
 func (c *hyperspaceCommander) CreateConnections(pathName, homeDir string) []string {
-	fmt.Println("[hyperspace] CreateConnections", pathName, homeDir)
+	c.log.Info("Hyperspace CreateConnections",
+		zap.String("path_name", pathName),
+		zap.String("home_dir", homeDir),
+	)
+
 	_, ok := c.paths[pathName]
 	if !ok {
 		panic(fmt.Sprintf("path %s not found", pathName))
@@ -160,8 +182,12 @@ func (hyperspaceCommander) UpdatePath(pathName, homeDir string, opts ibc.PathUpd
 
 // Prints chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output.
-func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
-	fmt.Println("[hyperspace] Get Channels")
+func (c hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
+	c.log.Info("Hyperspace GetChannels",
+		zap.String("chain_id", chainID),
+		zap.String("home_dir", homeDir),
+	)
+
 	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"cat",
@@ -171,8 +197,12 @@ func (hyperspaceCommander) GetChannels(chainID, homeDir string) []string {
 
 // Prints chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output.
-func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
-	fmt.Println("[hyperspace] Get Connections")
+func (c hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
+	c.log.Info("Hyperspace GetConnections",
+		zap.String("chain_id", chainID),
+		zap.String("home_dir", homeDir),
+	)
+
 	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"cat",
@@ -182,8 +212,12 @@ func (hyperspaceCommander) GetConnections(chainID, homeDir string) []string {
 
 // Prints chain config which is populated by hyperspace
 // Ideally, there should be a command from hyperspace to get this output.
-func (hyperspaceCommander) GetClients(chainID, homeDir string) []string {
-	fmt.Println("[hyperspace] Get Clients")
+func (c hyperspaceCommander) GetClients(chainID, homeDir string) []string {
+	c.log.Info("Hyperspace GetClients",
+		zap.String("chain_id", chainID),
+		zap.String("home_dir", homeDir),
+	)
+
 	configFilePath := path.Join(homeDir, chainID+".config")
 	return []string{
 		"cat",
@@ -204,7 +238,10 @@ func (hyperspaceCommander) RestoreKey(chainID, bech32Prefix, coinType, signingAl
 
 // hyperspace can only start 1 path.
 func (c *hyperspaceCommander) StartRelayer(homeDir string, pathNames ...string) []string {
-	fmt.Println("[hyperspace] StartRelayer", homeDir, pathNames)
+	fields := []zap.Field{zap.String("home_dir", homeDir), zap.String("path_names", strings.Join(pathNames, ","))}
+
+	c.log.Info("HyperSpace StartRelayer", fields...)
+
 	if len(pathNames) != 1 {
 		panic("Hyperspace's StartRelayer list of paths can only have 1 path")
 	}
@@ -230,8 +267,13 @@ func (hyperspaceCommander) UpdateClients(pathName, homeDir string) []string {
 	panic("[UpdateClients] Do not use me")
 }
 
-func (hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
-	fmt.Println("[hyperspace] ConfigContent", cfg, keyName, rpcAddr, grpcAddr)
+func (c hyperspaceCommander) ConfigContent(ctx context.Context, cfg ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) ([]byte, error) {
+	c.log.Info("Hyperspace ConfigContent",
+		zap.String("rpc_addr", rpcAddr),
+		zap.String("grpc_addr", grpcAddr),
+		zap.String("key_name", keyName),
+	)
+
 	HyperspaceRelayerChainConfig := ChainConfigToHyperspaceRelayerChainConfig(cfg, keyName, rpcAddr, grpcAddr)
 	bytes, err := toml.Marshal(HyperspaceRelayerChainConfig)
 	if err != nil {
@@ -354,8 +396,9 @@ func (hyperspaceCommander) ParseGetClientsOutput(stdout, stderr string) (ibc.Cli
 	}, nil
 }
 
-func (hyperspaceCommander) Init(homeDir string) []string {
-	fmt.Println("[hyperspace] Init", homeDir)
+func (c hyperspaceCommander) Init(homeDir string) []string {
+	c.log.Info("Hyperspace Init", zap.String("home_dir", homeDir))
+
 	// Return hyperspace help to ensure hyperspace binary is accessible
 	return []string{
 		"hyperspace",

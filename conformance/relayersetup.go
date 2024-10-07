@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
 	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // TestRelayerSetup contains a series of subtests that configure a relayer step-by-step.
@@ -103,7 +104,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		req.True(len(conns0) == 1 || len(conns0) == 2)
 		if len(conns0) == 2 {
 			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
-			req.Equal(conns0[1].ID, exported.LocalhostConnectionID)
+			req.Equal(exported.LocalhostConnectionID, conns0[1].ID)
 		}
 		conn0 := conns0[0]
 		req.NotEmpty(conn0.ID)
@@ -116,7 +117,7 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		req.True(len(conns1) == 1 || len(conns1) == 2)
 		if len(conns1) == 2 {
 			// Chain might have a localhost connection. Connection IDs are sorted, so this would be at position [1].
-			req.Equal(conns1[1].ID, exported.LocalhostConnectionID)
+			req.Equal(exported.LocalhostConnectionID, conns1[1].ID)
 		}
 		conn1 := conns1[0]
 		req.NotEmpty(conn1.ID)
@@ -172,14 +173,14 @@ func TestRelayerSetup(t *testing.T, ctx context.Context, cf interchaintest.Chain
 		// Not asserting against ConnectionHops or ChannelID.
 		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch0.State})
 		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch0.Ordering})
-		req.Equal(ch0.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID})
-		req.Equal(ch0.Version, "ics20-1")
-		req.Equal(ch0.PortID, "transfer")
+		req.Equal(ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch1.ChannelID}, ch0.Counterparty)
+		req.Equal("ics20-1", ch0.Version)
+		req.Equal("transfer", ch0.PortID)
 
 		req.Subset([]string{"STATE_OPEN", "Open"}, []string{ch1.State})
 		req.Subset([]string{"ORDER_UNORDERED", "Unordered"}, []string{ch1.Ordering})
-		req.Equal(ch1.Counterparty, ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID})
-		req.Equal(ch1.Version, "ics20-1")
-		req.Equal(ch1.PortID, "transfer")
+		req.Equal(ibc.ChannelCounterparty{PortID: "transfer", ChannelID: ch0.ChannelID}, ch1.Counterparty)
+		req.Equal("ics20-1", ch1.Version)
+		req.Equal("transfer", ch1.PortID)
 	})
 }

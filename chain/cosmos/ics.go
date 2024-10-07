@@ -12,10 +12,6 @@ import (
 	"time"
 
 	"github.com/icza/dyno"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/tidwall/gjson"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
@@ -29,6 +25,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	stakingttypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 const (
@@ -216,7 +217,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	eg := new(errgroup.Group)
 	// Initialize validators and fullnodes.
 	for _, v := range c.Nodes() {
-		v := v
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
 				return err
@@ -249,8 +249,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
-		i := i
-		val := val
 		eg.Go(func() error {
 			copy := c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey != nil && c.cfg.InterchainSecurityConfig.ConsumerCopyProviderKey(i)
 			if copy {
@@ -330,16 +328,16 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return fmt.Errorf("failed to unmarshal ccv state json: %w", err)
 	}
 
-	var genesisJson interface{}
-	if err := json.Unmarshal(genbz, &genesisJson); err != nil {
+	var genesisJSON interface{}
+	if err := json.Unmarshal(genbz, &genesisJSON); err != nil {
 		return fmt.Errorf("failed to unmarshal genesis json: %w", err)
 	}
 
-	if err := dyno.Set(genesisJson, ccvStateUnmarshaled, "app_state", "ccvconsumer"); err != nil {
+	if err := dyno.Set(genesisJSON, ccvStateUnmarshaled, "app_state", "ccvconsumer"); err != nil {
 		return fmt.Errorf("failed to populate ccvconsumer genesis state: %w", err)
 	}
 
-	if genbz, err = json.Marshal(genesisJson); err != nil {
+	if genbz, err = json.Marshal(genesisJSON); err != nil {
 		return fmt.Errorf("failed to marshal genesis bytes to json: %w", err)
 	}
 
@@ -381,7 +379,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer(egCtx)
 		})
@@ -394,7 +391,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			if err := n.SetPeers(egCtx, peers); err != nil {

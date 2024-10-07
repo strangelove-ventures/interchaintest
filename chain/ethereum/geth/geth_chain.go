@@ -10,12 +10,13 @@ import (
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 var _ ibc.Chain = &GethChain{}
