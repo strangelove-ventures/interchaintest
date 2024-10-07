@@ -21,10 +21,6 @@ import (
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -49,6 +45,11 @@ import (
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // ChainNode represents a node in the test network that is being created.
@@ -191,7 +192,7 @@ func (tn *ChainNode) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   tn.TestName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}
@@ -429,7 +430,7 @@ func (tn *ChainNode) Height(ctx context.Context) (int64, error) {
 
 // FindTxs implements blockdb.BlockSaver.
 func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, error) {
-	h := int64(height)
+	h := height
 	var eg errgroup.Group
 	var blockRes *coretypes.ResultBlockResults
 	var block *coretypes.ResultBlock
@@ -469,8 +470,8 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for k, attr := range e.Attributes {
 				attrs[k] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
+					Key:   attr.Key,
+					Value: attr.Value,
 				}
 			}
 			newTx.Events[j] = blockdb.Event{
@@ -489,8 +490,8 @@ func (tn *ChainNode) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, e
 			attrs := make([]blockdb.EventAttribute, len(e.Attributes))
 			for j, attr := range e.Attributes {
 				attrs[j] = blockdb.EventAttribute{
-					Key:   string(attr.Key),
-					Value: string(attr.Value),
+					Key:   attr.Key,
+					Value: attr.Value,
 				}
 			}
 			finalizeBlockTx.Events[i] = blockdb.Event{
@@ -550,7 +551,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 		return "", err
 	}
 	output := CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
+	err = json.Unmarshal(stdout, &output)
 	if err != nil {
 		return "", err
 	}
@@ -566,7 +567,7 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 		return "", err
 	}
 	output = CosmosTx{}
-	err = json.Unmarshal([]byte(stdout), &output)
+	err = json.Unmarshal(stdout, &output)
 	if err != nil {
 		return "", err
 	}
@@ -580,7 +581,11 @@ func (tn *ChainNode) ExecTx(ctx context.Context, keyName string, command ...stri
 func (tn *ChainNode) TxHashToResponse(ctx context.Context, txHash string) (*sdk.TxResponse, error) {
 	stdout, stderr, err := tn.ExecQuery(ctx, "tx", txHash)
 	if err != nil {
-		fmt.Println("TxHashToResponse err: ", err.Error()+" "+string(stderr))
+		tn.log.Info("TxHashToResponse returned an error",
+			zap.String("tx_hash", txHash),
+			zap.Error(err),
+			zap.String("stderr", string(stderr)),
+		)
 	}
 
 	i := &sdk.TxResponse{}
@@ -927,12 +932,12 @@ func (tn *ChainNode) HasCommand(ctx context.Context, command ...string) bool {
 		return true
 	}
 
-	if strings.Contains(string(err.Error()), "Error: unknown command") {
+	if strings.Contains(err.Error(), "Error: unknown command") {
 		return false
 	}
 
 	// cmd just needed more arguments, but it is a valid command (ex: appd tx bank send)
-	if strings.Contains(string(err.Error()), "Error: accepts") {
+	if strings.Contains(err.Error(), "Error: accepts") {
 		return true
 	}
 
@@ -958,7 +963,7 @@ func (tn *ChainNode) GetBuildInformation(ctx context.Context) *BinaryBuildInform
 	}
 
 	var deps tempBuildDeps
-	if err := json.Unmarshal([]byte(stdout), &deps); err != nil {
+	if err := json.Unmarshal(stdout, &deps); err != nil {
 		return nil
 	}
 
@@ -1020,7 +1025,7 @@ func (tn *ChainNode) QueryClientContractCode(ctx context.Context, codeHash strin
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal([]byte(stdout), response)
+	err = json.Unmarshal(stdout, response)
 	return err
 }
 
@@ -1164,15 +1169,23 @@ func (tn *ChainNode) CreateNodeContainer(ctx context.Context) error {
 
 	// to prevent port binding conflicts, host port overrides are only exposed on the first validator node.
 	if tn.Validator && tn.Index == 0 && chainCfg.HostPortOverride != nil {
+		var fields []zap.Field
+
+		i := 0
 		for intP, extP := range chainCfg.HostPortOverride {
-			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+			port := nat.Port(fmt.Sprintf("%d/tcp", intP))
+
+			usingPorts[port] = []nat.PortBinding{
 				{
 					HostPort: fmt.Sprintf("%d", extP),
 				},
 			}
+
+			fields = append(fields, zap.String(fmt.Sprintf("port_overrides_%d", i), fmt.Sprintf("%s:%d", port, extP)))
+			i++
 		}
 
-		fmt.Printf("Port Overrides: %v. Using: %v\n", chainCfg.HostPortOverride, usingPorts)
+		tn.log.Info("Port overrides", fields...)
 	}
 
 	return tn.containerLifecycle.CreateContainer(ctx, tn.TestName, tn.NetworkID, tn.Image, usingPorts, tn.Bind(), nil, tn.HostName(), cmd, chainCfg.Env, []string{})

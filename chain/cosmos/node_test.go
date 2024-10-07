@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/stretchr/testify/require"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 )
 
 func TestCondenseMoniker_MiddleDetail(t *testing.T) {

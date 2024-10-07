@@ -51,7 +51,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	wasmImage := ibc.DockerImage{
 		Repository: "ghcr.io/strangelove-ventures/heighliner/wasmd",
 		Version:    "v0.0.1",
-		UidGid:     dockerutil.GetHeighlinerUserString(),
+		UIDGID:     dockerutil.GetHeighlinerUserString(),
 	}
 
 	genesisAllowICQ := map[string]interface{}{

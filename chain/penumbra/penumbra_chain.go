@@ -13,10 +13,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -27,6 +23,11 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type PenumbraChain struct {
@@ -369,9 +370,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
-		v := v
-		i := i
-
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 		eg.Go(func() error {
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
@@ -461,7 +459,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 	}
 
 	for _, n := range fullnodes {
-		n := n
 		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(egCtx) })
 	}
 
@@ -477,8 +474,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 	// penumbra generate-testnet right now overwrites new validator keys
 	eg, egCtx = errgroup.WithContext(ctx)
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
-		i := i
-		val := val
 		// Use an errgroup to save some time doing many concurrent copies inside containers.
 		eg.Go(func() error {
 			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/cometbft/config/priv_validator_key.json", i)
@@ -529,8 +524,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
-		n := n
-
 		sep, err := n.TendermintNode.GetConfigSeparator()
 		if err != nil {
 			return err
@@ -555,8 +548,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
-		n := n
-
 		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(egCtx, n.TendermintNode)
@@ -581,9 +572,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
-		val := val
-		i := i
-
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 
 		eg.Go(func() error {

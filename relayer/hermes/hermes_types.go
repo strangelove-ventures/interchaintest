@@ -57,10 +57,10 @@ type ChannelEnd struct {
 	Ordering       string           `json:"ordering"`
 	State          string           `json:"state"`
 	Version        string           `json:"version"`
-	Remote         ChannelAndPortId `json:"remote"`
+	Remote         ChannelAndPortID `json:"remote"`
 }
 
-type ChannelAndPortId struct {
+type ChannelAndPortID struct {
 	ChannelID string `json:"channel_id"`
 	PortID    string `json:"port_id"`
 }

@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
 )
 
 func TestTempDir_Cleanup(t *testing.T) {
@@ -59,7 +60,6 @@ func TestTempDir_Cleanup(t *testing.T) {
 			"test passed": false,
 			"test failed": true,
 		} {
-			failed := failed
 			t.Run(name, func(t *testing.T) {
 				mt := mocktesting.NewT("t")
 

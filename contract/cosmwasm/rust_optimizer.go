@@ -77,7 +77,7 @@ func (c *Contract) Compile() *Contract {
 // WaitForCompile will wait until compilation is complete, this can be called after chain setup
 // Successful compilation will return the binary location in a channel.
 func (c *Contract) WaitForCompile() (string, error) {
-	contractBinary := ""
+	var contractBinary string
 	select {
 	case err := <-c.errChan:
 		return "", err

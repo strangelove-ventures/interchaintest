@@ -12,14 +12,15 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"go.uber.org/zap"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	blockdbtui "github.com/strangelove-ventures/interchaintest/v8/blockdb/tui"
 	"github.com/strangelove-ventures/interchaintest/v8/conformance"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -250,8 +251,7 @@ func addFlags() {
 
 func parseFlags() {
 	flag.Parse()
-	switch subcommand() {
-	case "debug":
+	if subcommand() == "debug" {
 		// Ignore errors because configured with flag.ExitOnError.
 		_ = debugFlagSet.Parse(os.Args[2:])
 	}

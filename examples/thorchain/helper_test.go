@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"time"
-	
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -31,7 +31,7 @@ func NiceWaitForBlocks(ctx context.Context, delta int64, chain ibc.Chain) error 
 	}
 
 	currentHeight := startingHeight
-	for ; currentHeight < startingHeight + delta; {
+	for currentHeight < startingHeight+delta {
 		time.Sleep(time.Millisecond * 200)
 		currentHeight, err = chain.Height(ctx)
 		if err != nil {

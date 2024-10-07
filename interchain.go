@@ -6,13 +6,14 @@ import (
 	"math"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	sdkmath "cosmossdk.io/math"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
 // Interchain represents a full IBC network, encompassing a collection of
@@ -366,8 +367,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 
 	// For every relayer link, teach the relayer about the link and create the link.
 	for rp, link := range ic.links {
-		rp := rp
-		link := link
 		c0 := link.chains[0]
 		c1 := link.chains[1]
 
@@ -381,8 +380,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 
 	// For every provider consumer link, teach the relayer about the link and create the link.
 	for rp, link := range ic.providerConsumerLinks {
-		rp := rp
-		link := link
 		p := link.provider
 		c := link.consumer
 
@@ -399,8 +396,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	// Now link the paths in parallel
 	// Creates clients, connections, and channels for each link/path.
 	for rp, link := range ic.providerConsumerLinks {
-		rp := rp
-		link := link
 		p := link.provider
 		c := link.consumer
 		eg.Go(func() error {
@@ -509,8 +504,6 @@ func (ic *Interchain) Build(ctx context.Context, rep *testreporter.RelayerExecRe
 	// Now link the paths in parallel
 	// Creates clients, connections, and channels for each link/path.
 	for rp, link := range ic.links {
-		rp := rp
-		link := link
 		c0 := link.chains[0]
 		c1 := link.chains[1]
 		eg.Go(func() error {
