@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/go-connections/nat"
 )
 
 const (
@@ -23,14 +24,22 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 		return ""
 	}
 
-	port := strings.Split(portID, "/")[0]
+	p, ok := cont.NetworkSettings.Ports[nat.Port(portID)]
+	if !ok {
+		// Connect to docker container directly by it's IP address.
+		// NOTE: only works if the host is in the same network as the container.
+		// Does not work on macOS https://stackoverflow.com/questions/40334508/how-can-i-access-a-docker-container-via-ip-address#answer-40334646
+		port := strings.Split(portID, "/")[0]
 
-	// only one network. if there are more than one, we will just return the first one.
-	for _, network := range cont.NetworkSettings.Networks {
-		return net.JoinHostPort(network.IPAddress, port)
+		// only one network. if there are more than one, we will just return the first one.
+		for _, network := range cont.NetworkSettings.Networks {
+			return net.JoinHostPort(network.IPAddress, port)
+		}
+
+		return ""
 	}
 
-	return ""
+	return net.JoinHostPort(p[0].HostIP, p[0].HostPort)
 }
 
 var chars = []byte("abcdefghijklmnopqrstuvwxyz")
