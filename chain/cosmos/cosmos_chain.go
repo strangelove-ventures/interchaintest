@@ -212,10 +212,6 @@ func (c *CosmosChain) Initialize(ctx context.Context, testName string, cli *clie
 }
 
 func (c *CosmosChain) GetFullNode() *ChainNode {
-	if len(c.FullNodes) > 0 {
-		return c.FullNodes[0]
-	}
-
 	return c.GetNode()
 }
 
