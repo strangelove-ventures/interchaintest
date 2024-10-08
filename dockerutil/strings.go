@@ -39,6 +39,12 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 		return ""
 	}
 
+	dockerHost := os.Getenv("DOCKER_HOST")
+
+	if dockerHost != "" {
+		return net.JoinHostPort(dockerHost, p[0].HostPort)
+	}
+
 	return net.JoinHostPort(p[0].HostIP, p[0].HostPort)
 }
 
