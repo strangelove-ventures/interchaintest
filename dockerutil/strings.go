@@ -20,7 +20,7 @@ const (
 var overrideDockerHost string
 
 func init() {
-	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerHost := os.Getenv("DOCKER_HOST_OVERRIDE")
 	if dockerHost != "" {
 		ip, err := net.LookupIP(dockerHost)
 		if err != nil || len(ip) == 0 {
