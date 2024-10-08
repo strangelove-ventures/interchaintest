@@ -8,9 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -18,6 +15,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type ClientContextOpt func(clientContext client.Context) client.Context
@@ -50,6 +50,8 @@ type Broadcaster struct {
 // NewBroadcaster returns a instance of Broadcaster which can be used with broadcast.Tx to
 // broadcast messages sdk messages.
 func NewBroadcaster(t *testing.T, chain *CosmosChain) *Broadcaster {
+	t.Helper()
+
 	return &Broadcaster{
 		t:        t,
 		chain:    chain,

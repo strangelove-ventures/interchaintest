@@ -8,6 +8,7 @@ import (
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -78,17 +79,18 @@ func SendIbcFundsTx(
 	}
 
 	raw := gstypes.NewU8(1)
+
 	size := gstypes.NewU8(uint8(len(amount.Address) * 4))
 	to := gstypes.NewStorageDataRaw([]byte(amount.Address))
 	channel := gstypes.NewU64(0) // Parse channel number from string
 	timeout := gstypes.NewU8(1)
 	timestamp := gstypes.NewOptionU64(gstypes.NewU64(0))
 	height := gstypes.NewOptionU64(gstypes.NewU64(3000)) // Must set timestamp or height
-	assetId := gstypes.NewU128(*big.NewInt(assetNum))
+	assetID := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewU128(*amount.Amount.BigInt())
 	memo := gstypes.NewU8(0)
 
-	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetId, amount2, memo)
+	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetID, amount2, memo)
 	if err != nil {
 		return hash, err
 	}
@@ -123,10 +125,10 @@ func MintFundsTx(
 		return hash, err
 	}
 
-	assetId := gstypes.NewU128(*big.NewInt(assetNum))
+	assetID := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewUCompact(amount.Amount.BigInt())
 
-	call, err := gstypes.NewCall(meta, "Assets.mint", assetId, receiver, amount2)
+	call, err := gstypes.NewCall(meta, "Assets.mint", assetID, receiver, amount2)
 	if err != nil {
 		return hash, err
 	}

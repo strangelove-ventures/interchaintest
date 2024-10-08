@@ -3,12 +3,12 @@ package thorchain
 import (
 	"context"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-
 	sdkmath "cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // Deprecated: use BankSend instead.

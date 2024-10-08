@@ -72,17 +72,17 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	require.Equal(t, tcID, tc.id)
 	require.GreaterOrEqual(t, tcCreatedAt, beforeTestCaseCreate)
 	require.LessOrEqual(t, tcCreatedAt, beforeBlocksCreated)
-	require.Equal(t, tcName, "mytest")
+	require.Equal(t, "mytest", tcName)
 
 	require.Equal(t, chainKeyID, chain.id)
-	require.Equal(t, chainID, "chain1")
-	require.Equal(t, chainType, "cosmos")
+	require.Equal(t, "chain1", chainID)
+	require.Equal(t, "cosmos", chainType)
 
 	require.GreaterOrEqual(t, blockCreatedAt, beforeBlocksCreated)
 	require.LessOrEqual(t, blockCreatedAt, afterBlocksCreated)
-	require.Equal(t, blockHeight, 1)
+	require.Equal(t, 1, blockHeight)
 
-	require.Equal(t, tx, "tx1.0")
+	require.Equal(t, "tx1.0", tx)
 
 	// Save some state gathered from the first row.
 	firstBlockCreatedAt := blockCreatedAt
@@ -104,11 +104,11 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	// New block height.
 	require.GreaterOrEqual(t, blockCreatedAt, firstBlockCreatedAt)
 	require.LessOrEqual(t, blockCreatedAt, afterBlocksCreated)
-	require.Equal(t, blockHeight, 2)
+	require.Equal(t, 2, blockHeight)
 
 	// Next transaction.
 	require.Greater(t, txID, firstTxID)
-	require.Equal(t, tx, "tx2.0")
+	require.Equal(t, "tx2.0", tx)
 
 	secondTxID := txID
 
@@ -126,11 +126,11 @@ ORDER BY test_case_id, chain_kid, block_id, tx_id
 	require.Equal(t, chainKeyID, chain.id)
 
 	// Same block height.
-	require.Equal(t, blockHeight, 2)
+	require.Equal(t, 2, blockHeight)
 
 	// Next transaction.
 	require.Greater(t, txID, secondTxID)
-	require.Equal(t, tx, "tx2.1")
+	require.Equal(t, "tx2.1", tx)
 
 	// No more rows.
 	require.False(t, rows.Next())

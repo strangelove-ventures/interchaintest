@@ -171,11 +171,13 @@ func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter,
 
 	var srcChan *ChannelOutput
 	for _, channel := range srcChannels {
-		if len(channel.ConnectionHops) == 1 && channel.ConnectionHops[0] == srcConnectionID && channel.PortID == "transfer" {
+		ch := channel
+
+		if len(ch.ConnectionHops) == 1 && ch.ConnectionHops[0] == srcConnectionID && ch.PortID == "transfer" {
 			if srcChan != nil {
 				return nil, fmt.Errorf("found multiple transfer channels on %s for connection %s", srcChainID, srcConnectionID)
 			}
-			srcChan = &channel
+			srcChan = &ch
 		}
 	}
 
@@ -261,6 +263,8 @@ func (o Order) String() string {
 		return "unordered"
 	case Ordered:
 		return "ordered"
+	case Invalid:
+		return "invalid"
 	default:
 		return "invalid"
 	}

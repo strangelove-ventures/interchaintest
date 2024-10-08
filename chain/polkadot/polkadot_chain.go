@@ -3,7 +3,6 @@ package polkadot
 import (
 	"context"
 	"crypto/rand"
-	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,14 +13,10 @@ import (
 	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -30,6 +25,10 @@ import (
 	"github.com/cosmos/go-bip39"
 
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // Increase polkadot wallet amount due to their additional precision.
@@ -79,7 +78,7 @@ type ParachainConfig struct {
 // IndexedName is a slice of the substrate dev key names used for key derivation.
 var (
 	IndexedName = []string{"alice", "bob", "charlie", "dave", "ferdie"}
-	IndexedUri  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
+	IndexedURI  = []string{"//Alice", "//Bob", "//Charlie", "//Dave", "//Ferdie"}
 )
 
 // NewPolkadotChain returns an uninitialized PolkadotChain, which implements the ibc.Chain interface.
@@ -104,7 +103,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 	ctx context.Context,
 	i int,
 	chain *PolkadotChain,
-	dockerClient *dockerclient.Client,
+	dockerClient *client.Client,
 	networkID string,
 	testName string,
 	image ibc.DockerImage,
@@ -114,7 +113,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 		return nil, err
 	}
 
-	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("error generating node key: %w", err)
 	}
@@ -127,15 +126,15 @@ func (c *PolkadotChain) NewRelayChainNode(
 	}
 
 	accountKeyName := IndexedName[i]
-	accountKeyUri := IndexedUri[i]
+	accountKeyURI := IndexedURI[i]
 	stashKeyName := accountKeyName + "stash"
-	stashKeyUri := accountKeyUri + "//stash"
+	stashKeyURI := accountKeyURI + "//stash"
 
-	if err := c.RecoverKey(ctx, accountKeyName, accountKeyUri); err != nil {
+	if err := c.RecoverKey(ctx, accountKeyName, accountKeyURI); err != nil {
 		return nil, err
 	}
 
-	if err := c.RecoverKey(ctx, stashKeyName, stashKeyUri); err != nil {
+	if err := c.RecoverKey(ctx, stashKeyName, stashKeyURI); err != nil {
 		return nil, err
 	}
 
@@ -179,7 +178,7 @@ func (c *PolkadotChain) NewRelayChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -190,12 +189,12 @@ func (c *PolkadotChain) NewRelayChainNode(
 func (c *PolkadotChain) NewParachainNode(
 	ctx context.Context,
 	i int,
-	dockerClient *dockerclient.Client,
+	dockerClient *client.Client,
 	networkID string,
 	testName string,
 	parachainConfig ParachainConfig,
 ) (*ParachainNode, error) {
-	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(crand.Reader)
+	nodeKey, _, err := p2pcrypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("error generating node key: %w", err)
 	}
@@ -234,7 +233,7 @@ func (c *PolkadotChain) NewParachainNode(
 		VolumeName: v.Name,
 		ImageRef:   parachainConfig.Image.Ref(),
 		TestName:   testName,
-		UidGid:     parachainConfig.Image.UidGid,
+		UidGid:     parachainConfig.Image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -431,7 +430,6 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 			return fmt.Errorf("error generating parachain genesis file: %w", err)
 		}
 		for _, n := range parachainNodes {
-			n := n
 			eg.Go(func() error {
 				c.logger().Info("Copying parachain chain spec", zap.String("container", n.Name()))
 				fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
@@ -486,8 +484,6 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 	}
 
 	for i, n := range c.RelayChainNodes {
-		n := n
-		i := i
 		eg.Go(func() error {
 			if i != 0 {
 				c.logger().Info("Copying raw chain spec", zap.String("container", n.Name()))
@@ -507,9 +503,7 @@ func (c *PolkadotChain) Start(testName string, ctx context.Context, additionalGe
 		return err
 	}
 	for _, nodes := range c.ParachainNodes {
-		nodes := nodes
 		for _, n := range nodes {
-			n := n
 			eg.Go(func() error {
 				c.logger().Info("Copying raw chain spec", zap.String("container", n.Name()))
 				if err := fw.WriteFile(ctx, n.VolumeName, n.RawRelayChainSpecFilePathRelative(), rawChainSpecBytes); err != nil {
@@ -547,15 +541,13 @@ func (c *PolkadotChain) GetRPCAddress() string {
 
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
 		parachainHostName = c.ParachainNodes[0][0].HostName()
-		// return fmt.Sprintf("%s:%s", c.ParachainNodes[0][0].HostName(), strings.Split(rpcPort, "/")[0])
 	} else {
 		parachainHostName = c.RelayChainNodes[0].HostName()
 	}
 	relaychainHostName := c.RelayChainNodes[0].HostName()
-	parachainUrl := fmt.Sprintf("http://%s:%s", parachainHostName, port)
-	relaychainUrl := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
-	return fmt.Sprintf("%s,%s", parachainUrl, relaychainUrl)
-	// return fmt.Sprintf("%s:%s", c.RelayChainNodes[0].HostName(), strings.Split(rpcPort, "/")[0])
+	parachainURL := fmt.Sprintf("http://%s:%s", parachainHostName, port)
+	relaychainURL := fmt.Sprintf("http://%s:%s", relaychainHostName, port)
+	return fmt.Sprintf("%s,%s", parachainURL, relaychainURL)
 }
 
 // GetGRPCAddress retrieves the grpc address that can be reached by other containers in the docker network.
@@ -577,9 +569,9 @@ func (c *PolkadotChain) GetHostPeerAddress() string {
 // Implements Chain interface.
 func (c *PolkadotChain) GetHostRPCAddress() string {
 	if len(c.ParachainNodes) > 0 && len(c.ParachainNodes[0]) > 0 {
-		return c.ParachainNodes[0][0].hostRpcPort
+		return c.ParachainNodes[0][0].hostRPCPort
 	}
-	return c.RelayChainNodes[0].hostRpcPort
+	return c.RelayChainNodes[0].hostRPCPort
 }
 
 // GetHostGRPCAddress returns the grpc address that can be reached by processes on the host machine.
@@ -641,7 +633,7 @@ func NewMnemonic() (string, error) {
 func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	mnemonic, err := NewMnemonic()
@@ -671,7 +663,7 @@ func (c *PolkadotChain) CreateKey(ctx context.Context, keyName string) error {
 func (c *PolkadotChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	_, err := c.keyring.Get(keyName)
 	if err == nil {
-		return fmt.Errorf("Key already exists: %s", keyName)
+		return fmt.Errorf("key already exists: %s", keyName)
 	}
 
 	kp, err := signature.KeyringPairFromSecret(mnemonic, Ss58Format)

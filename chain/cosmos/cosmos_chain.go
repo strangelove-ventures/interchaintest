@@ -16,12 +16,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -41,6 +35,13 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // CosmosChain is a local docker testnet for a Cosmos SDK chain.
@@ -89,7 +90,7 @@ func NewCosmosHeighlinerChainConfig(name string,
 		Images: []ibc.DockerImage{
 			{
 				Repository: fmt.Sprintf("ghcr.io/strangelove-ventures/heighliner/%s", name),
-				UidGid:     dockerutil.GetHeighlinerUserString(),
+				UIDGID:     dockerutil.GetHeighlinerUserString(),
 			},
 		},
 		Bin: binary,
@@ -161,7 +162,6 @@ func (c *CosmosChain) AddFullNodes(ctx context.Context, configFileOverrides map[
 
 	var eg errgroup.Group
 	for i := prevCount; i < c.numFullNodes; i++ {
-		i := i
 		eg.Go(func() error {
 			fn := c.FullNodes[i]
 			if err := fn.InitFullNodeFiles(ctx); err != nil {
@@ -391,7 +391,7 @@ func (c *CosmosChain) SendIBCTransfer(
 		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
 		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
 		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
-		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		timeoutTS, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
 		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
 	)
 	tx.Packet.SourcePort = srcPort
@@ -412,9 +412,9 @@ func (c *CosmosChain) SendIBCTransfer(
 	}
 	tx.Packet.Sequence = seqNum
 
-	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
+	timeoutNano, err := strconv.ParseUint(timeoutTS, 10, 64)
 	if err != nil {
-		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
+		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTS, err)
 	}
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
@@ -678,7 +678,7 @@ func (c *CosmosChain) NewChainNode(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set volume owner: %w", err)
 	}
@@ -735,7 +735,7 @@ func (c *CosmosChain) NewSidecarProcess(
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}
@@ -763,7 +763,6 @@ func (c *CosmosChain) initializeChainNodes(
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i := len(c.Validators); i < c.NumValidators; i++ {
-		i := i
 		eg.Go(func() error {
 			val, err := c.NewChainNode(egCtx, testName, cli, networkID, image, true, i)
 			if err != nil {
@@ -774,7 +773,6 @@ func (c *CosmosChain) initializeChainNodes(
 		})
 	}
 	for i := len(c.FullNodes); i < c.numFullNodes; i++ {
-		i := i
 		eg.Go(func() error {
 			fn, err := c.NewChainNode(egCtx, testName, cli, networkID, image, false, i)
 			if err != nil {
@@ -803,9 +801,6 @@ func (c *CosmosChain) initializeSidecars(
 ) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, cfg := range c.cfg.SidecarConfigs {
-		i := i
-		cfg := cfg
-
 		if cfg.ValidatorProcess {
 			continue
 		}
@@ -872,8 +867,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	eg := new(errgroup.Group)
 	// Initialize config and sign gentx for each validator.
 	for i, v := range c.Validators {
-		v := v
-		i := i
 		v.Validator = true
 		eg.Go(func() error {
 			if err := v.InitFullNodeFiles(ctx); err != nil {
@@ -905,7 +898,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	// Initialize config for each full node.
 	for _, n := range c.FullNodes {
-		n := n
 		n.Validator = false
 		eg.Go(func() error {
 			if err := n.InitFullNodeFiles(ctx); err != nil {
@@ -1022,8 +1014,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 	// Start any sidecar processes that should be running before the chain starts
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, s := range c.Sidecars {
-		s := s
-
 		err = s.containerLifecycle.Running(ctx)
 		if s.preStart && err != nil {
 			eg.Go(func() error {
@@ -1045,7 +1035,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		eg.Go(func() error {
 			return n.CreateNodeContainer(egCtx)
 		})
@@ -1058,7 +1047,6 @@ func (c *CosmosChain) Start(testName string, ctx context.Context, additionalGene
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range chainNodes {
-		n := n
 		c.log.Info("Starting container", zap.String("container", n.Name()))
 		eg.Go(func() error {
 			if err := n.SetPeers(egCtx, peers); err != nil {
@@ -1095,7 +1083,6 @@ func (c *CosmosChain) Acknowledgements(ctx context.Context, height int64) ([]ibc
 	}
 	ibcAcks := make([]ibc.PacketAcknowledgement, len(acks))
 	for i, ack := range acks {
-		ack := ack
 		ibcAcks[i] = ibc.PacketAcknowledgement{
 			Acknowledgement: ack.Acknowledgement,
 			Packet: ibc.Packet{
@@ -1128,7 +1115,6 @@ func (c *CosmosChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketT
 	}
 	ibcTimeouts := make([]ibc.PacketTimeout, len(timeouts))
 	for i, ack := range timeouts {
-		ack := ack
 		ibcTimeouts[i] = ibc.PacketTimeout{
 			Packet: ibc.Packet{
 				Sequence:         ack.Packet.Sequence,
@@ -1157,7 +1143,6 @@ func (c *CosmosChain) FindTxs(ctx context.Context, height int64) ([]blockdb.Tx, 
 func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
-		n := n
 		eg.Go(func() error {
 			if err := n.StopContainer(ctx); err != nil {
 				return err
@@ -1172,7 +1157,6 @@ func (c *CosmosChain) StopAllNodes(ctx context.Context) error {
 func (c *CosmosChain) StopAllSidecars(ctx context.Context) error {
 	var eg errgroup.Group
 	for _, s := range c.Sidecars {
-		s := s
 		eg.Go(func() error {
 			if err := s.StopContainer(ctx); err != nil {
 				return err
@@ -1191,7 +1175,6 @@ func (c *CosmosChain) StartAllNodes(ctx context.Context) error {
 	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
-		n := n
 		eg.Go(func() error {
 			if err := n.CreateNodeContainer(ctx); err != nil {
 				return err
@@ -1210,8 +1193,6 @@ func (c *CosmosChain) StartAllSidecars(ctx context.Context) error {
 	defer c.findTxMu.Unlock()
 	var eg errgroup.Group
 	for _, s := range c.Sidecars {
-		s := s
-
 		err := s.containerLifecycle.Running(ctx)
 		if err == nil {
 			continue
@@ -1237,8 +1218,6 @@ func (c *CosmosChain) StartAllValSidecars(ctx context.Context) error {
 
 	for _, v := range c.Validators {
 		for _, s := range v.Sidecars {
-			s := s
-
 			err := s.containerLifecycle.Running(ctx)
 			if err == nil {
 				continue
@@ -1260,7 +1239,6 @@ func (c *CosmosChain) VoteOnProposalAllValidators(ctx context.Context, proposalI
 	var eg errgroup.Group
 	for _, n := range c.Nodes() {
 		if n.Validator {
-			n := n
 			eg.Go(func() error {
 				return n.VoteOnProposal(ctx, valKey, proposalID, vote)
 			})

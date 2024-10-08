@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/conformance"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -83,7 +83,7 @@ func TestSDKBoundaries(t *testing.T) {
 				relayer.CustomDockerImage(
 					rly.DefaultContainerImage,
 					tt.relayerVersion,
-					rly.RlyDefaultUidGid,
+					rly.RlyDefaultUIDGID,
 				),
 			)
 

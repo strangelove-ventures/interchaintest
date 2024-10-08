@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-
 	"cosmossdk.io/math"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // BankSend sends tokens from one account to another.

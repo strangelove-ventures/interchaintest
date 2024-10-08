@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
 func TestFileWriter(t *testing.T) {
@@ -48,7 +49,7 @@ func TestFileWriter(t *testing.T) {
 		)
 		require.NoError(t, res.Err)
 
-		require.Equal(t, string(res.Stdout), "hello world")
+		require.Equal(t, "hello world", string(res.Stdout))
 	})
 
 	t.Run("create nested file", func(t *testing.T) {
@@ -63,6 +64,6 @@ func TestFileWriter(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		require.Equal(t, string(res.Stdout), ":D")
+		require.Equal(t, ":D", string(res.Stdout))
 	})
 }

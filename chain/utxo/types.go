@@ -14,7 +14,7 @@ type TransactionReceipt struct {
 type ListUtxo []Utxo
 
 type Utxo struct {
-	TxId          string  `json:"txid,omitempty"`
+	TxID          string  `json:"txid,omitempty"`
 	Vout          int     `json:"vout,omitempty"`
 	Address       string  `json:"address,omitempty"`
 	Label         string  `json:"label,omitempty"`
@@ -30,7 +30,7 @@ type Utxo struct {
 type SendInputs []SendInput
 
 type SendInput struct {
-	TxId string `json:"txid"` // hex
+	TxID string `json:"txid"` // hex
 	Vout int    `json:"vout"`
 }
 

@@ -5,15 +5,16 @@ import (
 	"testing"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 )
 
 type codecRegistry func(registry codectypes.InterfaceRegistry)
@@ -29,6 +30,8 @@ func RegisterInterfaces(codecIR ...codecRegistry) *testutil.TestEncodingConfig {
 
 // CreateChainWithConfig builds a single chain from the given ibc config.
 func CreateChainWithConfig(t *testing.T, numVals, numFull int, name, version string, config ibc.ChainConfig) []ibc.Chain {
+	t.Helper()
+
 	if version == "" {
 		if len(config.Images) == 0 {
 			version = "latest"
@@ -57,6 +60,8 @@ func CreateChainWithConfig(t *testing.T, numVals, numFull int, name, version str
 
 // CreateChainsWithChainSpecs builds multiple chains from the given chain specs.
 func CreateChainsWithChainSpecs(t *testing.T, chainSpecs []*ChainSpec) []ibc.Chain {
+	t.Helper()
+
 	cf := NewBuiltinChainFactory(zaptest.NewLogger(t), chainSpecs)
 
 	chains, err := cf.Chains(t.Name())
@@ -74,6 +79,8 @@ func BuildInitialChainWithRelayer(
 	links []InterchainLink,
 	skipPathCreations bool,
 ) (context.Context, *Interchain, ibc.Relayer, *testreporter.Reporter, *testreporter.RelayerExecReporter, *client.Client, string) {
+	t.Helper()
+
 	ctx := context.Background()
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
@@ -128,6 +135,7 @@ func BuildInitialChainWithRelayer(
 }
 
 func BuildInitialChain(t *testing.T, chains []ibc.Chain, enableBlockDB bool) (context.Context, *Interchain, *client.Client, string) {
+	t.Helper()
 	ctx, ic, _, _, _, client, network := BuildInitialChainWithRelayer(t, chains, enableBlockDB, 0, nil, nil, true)
 	return ctx, ic, client, network
 }

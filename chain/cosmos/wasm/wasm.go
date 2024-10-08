@@ -2,10 +2,11 @@ package wasm
 
 import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	// simappparams "github.com/cosmos/cosmos-sdk/simapp/params".
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+
+	// simappparams "github.com/cosmos/cosmos-sdk/simapp/params".
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 )
 
 func WasmEncoding() *testutil.TestEncodingConfig {

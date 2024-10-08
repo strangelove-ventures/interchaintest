@@ -13,9 +13,6 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-version"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"go.uber.org/zap"
 
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -23,6 +20,10 @@ import (
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 // TendermintNode represents a node in the test network that is being created.
@@ -76,7 +77,7 @@ func NewTendermintNode(
 		VolumeName: tn.VolumeName,
 		ImageRef:   tn.Image.Ref(),
 		TestName:   tn.TestName,
-		UidGid:     tn.Image.UidGid,
+		UidGid:     tn.Image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set tendermint volume owner: %w", err)
 	}
@@ -348,15 +349,18 @@ func (tn TendermintNodes) PeerString(ctx context.Context, node *TendermintNode) 
 			// don't peer with ourself
 			continue
 		}
+
 		id, err := n.NodeID(ctx)
 		if err != nil {
 			// TODO: would this be better to panic?
 			// When would NodeId return an error?
 			break
 		}
+
 		hostName := n.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		fmt.Printf("{%s} peering (%s)\n", hostName, ps)
+		n.Log.Info("Peering", zap.String("hostname", hostName), zap.String("peer_string", ps))
+
 		addrs[i] = ps
 	}
 	return strings.Join(addrs, ",")

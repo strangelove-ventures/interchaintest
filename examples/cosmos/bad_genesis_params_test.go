@@ -11,11 +11,9 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-var (
-	badGenesis = []cosmos.GenesisKV{
-		cosmos.NewGenesisKV("app_state.gov.params.voting_period", "bad"),
-	}
-)
+var badGenesis = []cosmos.GenesisKV{
+	cosmos.NewGenesisKV("app_state.gov.params.voting_period", "bad"),
+}
 
 func TestBadInputParams(t *testing.T) {
 	if testing.Short() {

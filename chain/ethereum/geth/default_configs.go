@@ -22,7 +22,7 @@ func DefaultEthereumGethChainConfig(
 			{
 				Repository: "ethereum/client-go",
 				Version:    "v1.14.7",
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			},
 		},
 		Bin: "geth",
@@ -59,7 +59,7 @@ func DefaultBscChainConfig(
 				Repository: "ghcr.io/bnb-chain/bsc",
 				Version:    "1.2.13", // same version as other sim tests
 				// Version:    "1.4.13", // this version does not work in dev mode (1.3.x+)
-				UidGid: "1000:1000",
+				UIDGID: "1000:1000",
 			},
 		},
 		Bin: "geth",

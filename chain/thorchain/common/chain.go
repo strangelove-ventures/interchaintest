@@ -81,6 +81,8 @@ func (c Chain) GetGasAsset() Asset {
 		return AVAXAsset
 	case GAIAChain:
 		return ATOMAsset
+	case EmptyChain:
+		return EmptyAsset
 	default:
 		return EmptyAsset
 	}

@@ -10,6 +10,7 @@ linters:
   - asciicheck
   - bidichk
   - bodyclose
+  - copyloopvar
   - decorder
   - dupl
   - dupword
@@ -17,7 +18,6 @@ linters:
   - errchkjson
   - errname
   - exhaustive
-  - exportloopref
   - forbidigo
   - gci
   - goconst
@@ -32,8 +32,8 @@ linters:
   - ineffassign
   - loggercheck
   - misspell
-  - nilerr
-  - nilnil
+  # - nilerr disabled because we return nil when there are errors in places that need to keep running e.g. polling/waiting for a condition
+  # - nilnil disabled because we return nil, nil when polling but waiting for a conditional
   - noctx
   - staticcheck
   - stylecheck
@@ -64,6 +64,11 @@ linters-settings:
   gosec:
     excludes:
       - G404 # disables checks on insecure random number source
+      - G115 # disables checks on type conversions between signed and unsigned integers
+      - G306 # disables checks on WriteFile perms. Not an issue since we are writing configs/logs in a local test env
+  gocritic:
+    disabled-checks:
+      - appendAssign # we use append to build cmds from a config and always assign to a new slice to not overwrite cfg
 
 issues:
   max-issues-per-linter: 0

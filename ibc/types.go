@@ -21,6 +21,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 )
 
+// Chain type constant values, used to determine if a ChainConfig is of a certain type.
+const (
+	Polkadot   = "polkadot"
+	Parachain  = "parachain"
+	RelayChain = "relaychain"
+	Cosmos     = "cosmos"
+	Penumbra   = "penumbra"
+	Ethereum   = "ethereum"
+	Thorchain  = "thorchain"
+	UTXO       = "utxo"
+)
+
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.
 type ChainConfig struct {
 	// Chain type, e.g. cosmos.
@@ -294,7 +306,7 @@ type SidecarConfig struct {
 type DockerImage struct {
 	Repository string `json:"repository" yaml:"repository"`
 	Version    string `json:"version" yaml:"version"`
-	UidGid     string `json:"uid-gid" yaml:"uid-gid"`
+	UIDGID     string `json:"uid-gid" yaml:"uid-gid"`
 }
 
 type CometMockConfig struct {
@@ -302,11 +314,11 @@ type CometMockConfig struct {
 	BlockTimeMs int         `yaml:"block-time"`
 }
 
-func NewDockerImage(repository, version, uidGid string) DockerImage {
+func NewDockerImage(repository, version, uidGID string) DockerImage {
 	return DockerImage{
 		Repository: repository,
 		Version:    version,
-		UidGid:     uidGid,
+		UIDGID:     uidGID,
 	}
 }
 
@@ -325,7 +337,7 @@ func (i DockerImage) Validate() error {
 	if i.Repository == "" {
 		missing = append(missing, "Repository")
 	}
-	if i.UidGid == "" {
+	if i.UIDGID == "" {
 		missing = append(missing, "UidGid")
 	}
 

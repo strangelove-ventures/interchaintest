@@ -20,7 +20,7 @@ type VolumeOwnerOptions struct {
 	VolumeName string
 	ImageRef   string
 	TestName   string
-	UidGid     string
+	UidGid     string //nolint: stylecheck
 }
 
 // SetVolumeOwner configures the owner of a volume to match the default user in the supplied image reference.

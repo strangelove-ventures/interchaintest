@@ -109,10 +109,12 @@ func (c *UtxoChain) CreateWallet(ctx context.Context, keyName string) error {
 			return err
 		}
 
+		c.MapAccess.Lock()
 		c.KeyNameToWalletMap[keyName] = &NodeWallet{
 			keyName:   keyName,
 			loadCount: 1,
 		}
+		c.MapAccess.Unlock()
 	}
 
 	return c.UnloadWallet(ctx, keyName)
@@ -151,12 +153,14 @@ func (c *UtxoChain) GetNewAddress(ctx context.Context, keyName string, mweb bool
 		addr = splitAddr[1]
 	}
 
+	c.MapAccess.Lock()
 	wallet.address = addr
 	c.AddrToKeyNameMap[addr] = keyName
 
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		wallet.ready = true
 	}
+	c.MapAccess.Unlock()
 
 	if err := c.UnloadWallet(ctx, keyName); err != nil {
 		return "", err
@@ -256,11 +260,11 @@ func (c *UtxoChain) CreateRawTransaction(ctx context.Context, keyName string, li
 	if err != nil {
 		return "", err
 	}
-	fees = fees * c.cfg.GasAdjustment
+	fees *= c.cfg.GasAdjustment
 	for _, utxo := range listUtxo {
 		if wallet.address == utxo.Address || strings.Contains(utxo.Address, wallet.address) {
 			sendInputs = append(sendInputs, SendInput{
-				TxId: utxo.TxId,
+				TxID: utxo.TxID,
 				Vout: utxo.Vout,
 			})
 			utxoTotal += utxo.Amount
@@ -377,11 +381,11 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 	}
 
 	if !signRawTxOutput.Complete {
-		c.logger().Error(fmt.Sprintf("Signing transaction did not complete, (%d) errors", len(signRawTxOutput.Errors)))
+		c.logger().Error(fmt.Sprintf("signing transaction did not complete, (%d) errors", len(signRawTxOutput.Errors)))
 		for i, sErr := range signRawTxOutput.Errors {
 			c.logger().Error(fmt.Sprintf("Signing error %d: %s", i, sErr.Error))
 		}
-		return "", fmt.Errorf("Sign transaction error on %s", c.cfg.Name)
+		return "", fmt.Errorf("sign transaction error on %s", c.cfg.Name)
 	}
 
 	return signRawTxOutput.Hex, nil
@@ -389,11 +393,12 @@ func (c *UtxoChain) SignRawTransaction(ctx context.Context, keyName string, rawT
 
 func (c *UtxoChain) SendRawTransaction(ctx context.Context, signedRawTxHex string) (string, error) {
 	var cmd []string
-	if c.WalletVersion >= namedFixWalletVersion {
+	switch {
+	case c.WalletVersion >= namedFixWalletVersion:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
-	} else if c.WalletVersion > noDefaultKeyWalletVersion {
+	case c.WalletVersion > noDefaultKeyWalletVersion:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex, "0")
-	} else {
+	default:
 		cmd = append(c.BaseCli, "sendrawtransaction", signedRawTxHex)
 	}
 	stdout, _, err := c.Exec(ctx, cmd, nil)

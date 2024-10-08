@@ -97,7 +97,7 @@ func TestEthermintChain(t *testing.T) {
 			ChainConfig: ibc.ChainConfig{
 				Type:           "cosmos",
 				ChainID:        "dymension_100-1",
-				Images:         []ibc.DockerImage{{Repository: "ghcr.io/strangelove-ventures/heighliner/dymension", Version: "854ef84", UidGid: "1025:1025"}},
+				Images:         []ibc.DockerImage{{Repository: "ghcr.io/strangelove-ventures/heighliner/dymension", Version: "854ef84", UIDGID: "1025:1025"}},
 				Bin:            "dymd",
 				Bech32Prefix:   wallet,
 				Denom:          denom,

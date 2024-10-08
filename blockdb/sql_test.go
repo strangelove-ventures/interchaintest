@@ -63,8 +63,6 @@ func TestDB_Concurrency(t *testing.T) {
 	// and a shared context so all fail if one fails.
 	egWrites, egCtx := errgroup.WithContext(ctx)
 	for i := 0; i < nWriters; i++ {
-		i := i
-
 		// Connecting to the database in the main goroutine
 		// because concurrently connecting to the same database
 		// causes a data race inside sqlite.
@@ -98,8 +96,6 @@ func TestDB_Concurrency(t *testing.T) {
 	// Separate errgroup for the queriers.
 	var egQueries errgroup.Group
 	for i := 0; i < nQueriers; i++ {
-		i := i
-
 		db, err := ConnectDB(ctx, dbPath)
 		require.NoErrorf(t, err, "failed to connect to db for querier %d: %v", i, err)
 		defer db.Close()

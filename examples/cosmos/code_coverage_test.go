@@ -36,7 +36,7 @@ func TestCodeCoverage(t *testing.T) {
 			{
 				Repository: "ghcr.io/liftedinit/manifest-ledger",
 				Version:    "v0.0.1-alpha.10",
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			},
 		},
 		Bin:            "manifestd",

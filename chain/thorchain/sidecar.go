@@ -7,9 +7,10 @@ import (
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"go.uber.org/zap"
 )
 
 type SidecarProcesses []*SidecarProcess
@@ -70,6 +71,10 @@ func NewSidecar(
 		homeDir = "/home/sidecar"
 	}
 
+	// Give each sidecard their own env copy for runtime changes
+	envCopy := make([]string, len(env))
+	copy(envCopy, env)
+
 	s := &SidecarProcess{
 		log:              log,
 		Index:            index,
@@ -84,7 +89,7 @@ func NewSidecar(
 		homeDir:          homeDir,
 		ports:            processPorts,
 		startCmd:         startCmd,
-		env:              env,
+		env:              envCopy,
 	}
 	s.containerLifecycle = dockerutil.NewContainerLifecycle(log, dockerClient, s.Name())
 

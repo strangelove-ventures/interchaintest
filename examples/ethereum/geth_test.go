@@ -2,7 +2,6 @@ package ethereum_test
 
 import (
 	"context"
-
 	"fmt"
 	"strings"
 	"testing"

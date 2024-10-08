@@ -5,14 +5,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 )
 
 func TestTestCase(t *testing.T) {
 	t.Parallel()
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		result := blockdb.TestCaseResult{
 			ID:          321,
 			Name:        "My Test",
@@ -36,6 +39,8 @@ func TestTestCase(t *testing.T) {
 	})
 
 	t.Run("zero state", func(t *testing.T) {
+		t.Parallel()
+
 		var pres TestCase
 
 		require.Empty(t, pres.Height())

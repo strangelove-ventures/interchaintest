@@ -63,7 +63,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	i := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/relayer",
 		Version:    "justin-pen-0.77",
-		UidGid:     "1025:1025",
+		UIDGID:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,
@@ -280,7 +280,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	image := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/ibc-go-simd",
 		Version:    "v8.3.2",
-		UidGid:     "100:1000",
+		UIDGID:     "100:1000",
 	}
 
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -323,7 +323,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	i := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/relayer",
 		Version:    "justin-proto-update",
-		UidGid:     "1025:1025",
+		UIDGID:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(
 		ibc.CosmosRly,

@@ -50,19 +50,21 @@ type NodeWallet struct {
 }
 
 func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		if !found {
-			return nil, fmt.Errorf("Wallet keyname (%s) not found, has it been created?", keyName)
+			return nil, fmt.Errorf("wallet keyname (%s) not found, has it been created?", keyName)
 		}
 		if wallet.address != "" {
-			return nil, fmt.Errorf("Wallet keyname (%s) already has an address", keyName)
+			return nil, fmt.Errorf("wallet keyname (%s) already has an address", keyName)
 		}
 	}
 
 	if c.WalletVersion < noDefaultKeyWalletVersion {
 		if found {
-			return nil, fmt.Errorf("Wallet keyname (%s) already has an address", keyName)
+			return nil, fmt.Errorf("wallet keyname (%s) already has an address", keyName)
 		} else {
 			wallet = &NodeWallet{
 				keyName: keyName,
@@ -75,12 +77,14 @@ func (c *UtxoChain) getWalletForNewAddress(keyName string) (*NodeWallet, error) 
 }
 
 func (c *UtxoChain) getWalletForSetAccount(keyName string, addr string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if !found {
-		return nil, fmt.Errorf("Wallet keyname (%s) not found, get new address not called", keyName)
+		return nil, fmt.Errorf("wallet keyname (%s) not found, get new address not called", keyName)
 	}
 	if wallet.address != addr {
-		return nil, fmt.Errorf("Wallet keyname (%s) is associated with address (%s), not (%s)", keyName, wallet.address, addr)
+		return nil, fmt.Errorf("wallet keyname (%s) is associated with address (%s), not (%s)", keyName, wallet.address, addr)
 	}
 	return wallet, nil
 }
@@ -94,15 +98,17 @@ func (c *UtxoChain) getWalletForUse(keyName string) (*NodeWallet, error) {
 	// For chain without wallet support, GetNewAddress() and SetAccount() must be called.
 	// For chains with wallet support, CreateWallet() and GetNewAddress() must be called.
 	if !wallet.ready {
-		return nil, fmt.Errorf("Wallet keyname (%s) is not ready for use, check creation steps", keyName)
+		return nil, fmt.Errorf("wallet keyname (%s) is not ready for use, check creation steps", keyName)
 	}
 	return wallet, nil
 }
 
 func (c *UtxoChain) getWallet(keyName string) (*NodeWallet, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, found := c.KeyNameToWalletMap[keyName]
 	if !found {
-		return nil, fmt.Errorf("Wallet keyname (%s) not found", keyName)
+		return nil, fmt.Errorf("wallet keyname (%s) not found", keyName)
 	}
 	return wallet, nil
 }

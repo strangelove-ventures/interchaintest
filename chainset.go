@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // chainSet is an unordered collection of ibc.Chain,
@@ -53,7 +54,6 @@ func (cs *chainSet) Initialize(ctx context.Context, testName string, cli *client
 	var eg errgroup.Group
 
 	for c := range cs.chains {
-		c := c
 		cs.log.Info("Initializing chain", zap.String("chain_id", c.Config().ChainID))
 		eg.Go(func() error {
 			if err := c.Initialize(ctx, testName, cli, networkID); err != nil {
@@ -82,7 +82,6 @@ func (cs *chainSet) CreateCommonAccount(ctx context.Context, keyName string) (fa
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for c := range cs.chains {
-		c := c
 		eg.Go(func() error {
 			wallet, err := c.BuildWallet(egCtx, keyName, "")
 			if err != nil {
@@ -109,7 +108,6 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for c := range cs.chains {
-		c := c
 		if cosmosChain, ok := c.(*cosmos.CosmosChain); ok && cosmosChain.Provider != nil {
 			// wait for provider chains to be started up first
 			continue
@@ -142,7 +140,6 @@ func (cs *chainSet) Start(ctx context.Context, testName string, additionalGenesi
 
 	// Now startup any consumer chains
 	for c := range cs.chains {
-		c := c
 		if cosmosChain, ok := c.(*cosmos.CosmosChain); ok && cosmosChain.Provider != nil {
 			eg.Go(func() error {
 				// this is a consumer chain
@@ -193,7 +190,6 @@ func (cs chainSet) TrackBlocks(ctx context.Context, testName, dbPath, gitSha str
 	cs.collectors = make([]*blockdb.Collector, len(cs.chains))
 	i := 0
 	for c := range cs.chains {
-		c := c
 		id := c.Config().ChainID
 		finder, ok := c.(blockdb.TxFinder)
 		if !ok {

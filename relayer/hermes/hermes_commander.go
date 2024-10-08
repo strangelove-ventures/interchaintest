@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"go.uber.org/zap"
 
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	"github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 )
 
 var _ relayer.RelayerCommander = &commander{}
@@ -33,11 +34,11 @@ func (c commander) DefaultContainerVersion() string {
 }
 
 func (c commander) DockerUser() string {
-	return hermesDefaultUidGid
+	return hermesDefaultUIDGID
 }
 
 func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelOutput, error) {
-	jsonBz := extractJsonResult([]byte(stdout))
+	jsonBz := extractJSONResult([]byte(stdout))
 	var result ChannelOutputResult
 	if err := json.Unmarshal(jsonBz, &result); err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (c commander) ParseGetChannelsOutput(stdout, stderr string) ([]ibc.ChannelO
 }
 
 func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.ConnectionOutputs, error) {
-	jsonBz := extractJsonResult([]byte(stdout))
+	jsonBz := extractJSONResult([]byte(stdout))
 	var queryResult ConnectionQueryResult
 	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
 		return ibc.ConnectionOutputs{}, err
@@ -97,7 +98,7 @@ func (c commander) ParseGetConnectionsOutput(stdout, stderr string) (ibc.Connect
 }
 
 func (c commander) ParseGetClientsOutput(stdout, stderr string) (ibc.ClientOutputs, error) {
-	jsonBz := extractJsonResult([]byte(stdout))
+	jsonBz := extractJSONResult([]byte(stdout))
 	var queryResult ClientQueryResult
 	if err := json.Unmarshal(jsonBz, &queryResult); err != nil {
 		return ibc.ClientOutputs{}, err
