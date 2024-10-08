@@ -17,6 +17,20 @@ const (
 	ICTDockerPrefix = "interchaintest"
 )
 
+var overrideDockerHost string
+
+func init() {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	if dockerHost != "" {
+		ip, err := net.LookupIP(dockerHost)
+		if err != nil || len(ip) == 0 {
+			overrideDockerHost = dockerHost
+		} else {
+			overrideDockerHost = ip[0].String()
+		}
+	}
+}
+
 // GetHostPort returns a resource's published port with an address.
 // cont is the type returned by the Docker client's ContainerInspect method.
 func GetHostPort(cont types.ContainerJSON, portID string) string {
@@ -39,10 +53,8 @@ func GetHostPort(cont types.ContainerJSON, portID string) string {
 		return ""
 	}
 
-	dockerHost := os.Getenv("DOCKER_HOST")
-
-	if dockerHost != "" {
-		return net.JoinHostPort(dockerHost, p[0].HostPort)
+	if overrideDockerHost != "" {
+		return net.JoinHostPort(overrideDockerHost, p[0].HostPort)
 	}
 
 	return net.JoinHostPort(p[0].HostIP, p[0].HostPort)
