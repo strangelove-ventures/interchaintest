@@ -16,14 +16,16 @@ import (
 )
 
 func TestCodeCoverage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
 	t.Parallel()
 
 	var (
 		ctx                = context.Background()
 		ExternalGoCoverDir = "/tmp/interchaintest-app-coverage"
 		Denom              = "umfx"
-		vals               = 1
-		fullNodes          = 0
 	)
 
 	cfgA := ibc.ChainConfig{
@@ -53,8 +55,8 @@ func TestCodeCoverage(t *testing.T) {
 			Name:          "manifest",
 			Version:       cfgA.Images[0].Version,
 			ChainName:     cfgA.Name,
-			NumValidators: &vals,
-			NumFullNodes:  &fullNodes,
+			NumValidators: &numVals,
+			NumFullNodes:  &numFullNodesZero,
 			ChainConfig:   cfgA,
 		},
 	})

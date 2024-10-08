@@ -26,9 +26,6 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 
 	t.Parallel()
 
-	numVals := 1
-	numFullNodes := 1
-
 	// SDK v45 params for Juno genesis
 	shortVoteGenesis := []cosmos.GenesisKV{
 		cosmos.NewGenesisKV("app_state.gov.voting_params.voting_period", votingPeriod),
@@ -41,7 +38,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 		ModifyGenesis: cosmos.ModifyGenesis(shortVoteGenesis),
 	}
 
-	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodes, name, version, cfg)
+	chains := interchaintest.CreateChainWithConfig(t, numVals, numFullNodesZero, name, version, cfg)
 	chain := chains[0].(*cosmos.CosmosChain)
 
 	enableBlockDB := false

@@ -58,7 +58,7 @@ Before you start contributing, make sure you have the following prerequisites in
 
 - [Go](https://golang.org/dl/)
 - [Docker](https://www.docker.com/get-started)
-- [VSCode (recommended editor)](https://code.visualstudio.com/)
+- [VSCode (recommended editor)](https://code.visualstudio.com/) <!-- markdown-link-check-disable-line -->
 
 To get started, follow these steps:
 
@@ -76,7 +76,7 @@ To get started, follow these steps:
     git checkout -b name/broad-description-of-feature
     ```
 
-4. Make your changes and commit them with descriptive commit messages. 
+4. Make your changes and commit them with descriptive commit messages.
 
 5. Test your changes locally with `go test ./...`, or by running the specific test affecting your feature or fix.
 

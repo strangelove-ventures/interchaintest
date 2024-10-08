@@ -103,7 +103,7 @@ func (b *Broadcaster) GetFactory(ctx context.Context, user User) (tx.Factory, er
 // client.Context.
 func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.Context, error) {
 	chain := b.chain
-	cn := chain.getFullNode()
+	cn := chain.GetFullNode()
 
 	_, ok := b.keyrings[user]
 	if !ok {
@@ -160,7 +160,7 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 	// initialize a clean buffer each time
 	b.buf.Reset()
 	kr := b.keyrings[fromUser]
-	cn := b.chain.getFullNode()
+	cn := b.chain.GetFullNode()
 	return cn.CliContext().
 		WithOutput(b.buf).
 		WithFrom(fromUser.FormattedAddress()).
