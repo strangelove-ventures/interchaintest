@@ -128,7 +128,7 @@ func TailFile(logger *zap.Logger, logFile string, lines uint64) []string {
 	reader := bufio.NewReader(file)
 
 	var logs []string
-	for i := 0; i < int(totalLines)-int(lines); i++ {
+	for i := 0; uint64(i) < totalLines-lines; i++ {
 		_, _, err := reader.ReadLine()
 		if err != nil {
 			logger.Fatal("error reading log file", zap.Error(err))
@@ -146,14 +146,14 @@ func TailFile(logger *zap.Logger, logFile string, lines uint64) []string {
 	return logs
 }
 
-func lineCounter(r io.Reader) (int, error) {
+func lineCounter(r io.Reader) (uint64, error) {
 	buf := make([]byte, 32*1024)
-	count := 0
+	var count uint64 = 0
 	lineSep := []byte{'\n'}
 
 	for {
 		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
+		count += uint64(bytes.Count(buf[:c], lineSep))
 
 		switch {
 		case err == io.EOF:
