@@ -10,11 +10,12 @@ import (
 	"unicode"
 
 	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"go.uber.org/zap"
 )
+
+var removeColorRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 type ContainerStream struct {
 	ctx      context.Context
@@ -22,15 +23,25 @@ type ContainerStream struct {
 	cli      *dockerclient.Client
 	authKey  string
 	testName string
+
+	nameToID map[string]string
 }
 
-func NewContainerSteam(ctx context.Context, logger *zap.Logger, cli *dockerclient.Client, authKey, testName string) *ContainerStream {
+func NewContainerSteam(ctx context.Context, logger *zap.Logger, cli *dockerclient.Client, authKey, testName string, vals map[string][]*cosmos.ChainNode) *ContainerStream {
+	nameToID := make(map[string]string)
+	for _, nodes := range vals {
+		for _, node := range nodes {
+			nameToID[node.Name()] = node.ContainerID()
+		}
+	}
+
 	return &ContainerStream{
 		ctx:      ctx,
 		authKey:  authKey,
 		cli:      cli,
 		logger:   logger,
 		testName: testName,
+		nameToID: nameToID,
 	}
 }
 
@@ -41,28 +52,37 @@ func (cs *ContainerStream) StreamContainer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	containerID := r.URL.Query().Get("id") // TODO: get from chain ID as well? (map chain ID to container ID somehow)
+	containerID := r.URL.Query().Get("id")
 	if containerID == "" {
+		// TODO: use this for other sidecar containers that are made? (need to test)
 		// returns containers only for this testnet. other containers are not shown on this endpoint
-		c, err := cs.cli.ContainerList(cs.ctx, dockertypes.ContainerListOptions{
-			Filters: filters.NewArgs(filters.Arg("label", dockerutil.CleanupLabel+"="+cs.testName)),
-		})
-		if err != nil {
-			http.Error(w, "Unable to get container list", http.StatusInternalServerError)
-			return
-		}
-
-		availableContainers := []string{}
-		for _, container := range c {
-			availableContainers = append(availableContainers, container.ID)
-		}
+		// c, err := cs.cli.ContainerList(cs.ctx, dockertypes.ContainerListOptions{
+		// 	Filters: filters.NewArgs(filters.Arg("label", dockerutil.CleanupLabel+"="+cs.testName)),
+		// })
+		// if err != nil {
+		// 	http.Error(w, "Unable to get container list", http.StatusInternalServerError)
+		// 	return
+		// }
+		// availableContainers := []string{}
+		// for _, container := range c {
+		// 	availableContainers = append(availableContainers, container.ID)
+		// }
 
 		output := "No container ID provided. Available containers:\n"
-		for _, container := range availableContainers {
-			output += fmt.Sprintf("- %s\n", container)
+		for name, id := range cs.nameToID {
+			output += fmt.Sprintf("- %s: %s\n", name, id)
 		}
 
 		fmt.Fprint(w, output)
+		fmt.Fprint(w, "Provide a container ID with ?id=<containerID>")
+		return
+	}
+
+	// if container id is in the cs.nameToID map, use the mapped container ID
+	if id, ok := cs.nameToID[containerID]; ok {
+		containerID = id
+	} else {
+		fmt.Fprintf(w, "Container ID %s not found\n", containerID)
 		return
 	}
 
@@ -130,12 +150,7 @@ func tailLinesParam(tailInput string) uint64 {
 }
 
 func removeAnsiColorCodesFromText(text string) (string, error) {
-	r, err := regexp.Compile("\x1b\\[[0-9;]*m")
-	if err != nil {
-		return "", err
-	}
-
-	return r.ReplaceAllString(text, ""), nil
+	return removeColorRegex.ReplaceAllString(text, ""), nil
 }
 
 func cleanSpecialChars(text string) string {

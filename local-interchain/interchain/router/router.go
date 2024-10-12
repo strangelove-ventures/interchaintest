@@ -55,8 +55,8 @@ func NewRouter(
 	r.HandleFunc("/logs", logStream.StreamLogs).Methods(http.MethodGet)
 	r.HandleFunc("/logs_tail", logStream.TailLogs).Methods(http.MethodGet) // ?lines=
 
-	containerStream := handlers.NewContainerSteam(ctx, rc.Logger, rc.DockerClient, rc.AuthKey, rc.TestName)
-	r.HandleFunc("/container_logs", containerStream.StreamContainer).Methods(http.MethodGet) // ?container=<id>
+	containerStream := handlers.NewContainerSteam(ctx, rc.Logger, rc.DockerClient, rc.AuthKey, rc.TestName, rc.Vals)
+	r.HandleFunc("/container_logs", containerStream.StreamContainer).Methods(http.MethodGet) // ?container=<id>&colored=true&lines=10000
 
 	wd, err := os.Getwd()
 	if err != nil {
