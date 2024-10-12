@@ -47,8 +47,10 @@ func NewRouter(
 	infoH := handlers.NewInfo(rc.Config, rc.InstallDir, ctx, ic, rc.CosmosChains, rc.Vals, rc.Relayer, rc.RelayerExecReporter)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
 
+	// interaction logs
 	logStream := handlers.NewLogSteam(rc.Logger, rc.LogFile, rc.AuthKey)
 	r.HandleFunc("/logs", logStream.StreamLogs).Methods(http.MethodGet)
+	r.HandleFunc("/logs_tail", logStream.TailLogs).Methods(http.MethodGet)
 
 	wd, err := os.Getwd()
 	if err != nil {
