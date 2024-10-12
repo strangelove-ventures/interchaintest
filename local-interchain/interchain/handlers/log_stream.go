@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultTailLines = 25
+const defaultTailLines = 50
 
 type LogStream struct {
 	fName   string
