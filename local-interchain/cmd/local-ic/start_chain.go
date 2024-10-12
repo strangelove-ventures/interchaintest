@@ -36,7 +36,11 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		configPath := args[0]
-		parentDir := GetDirectory()
+		isURL := strings.HasPrefix(configPath, "http")
+
+		var parentDir string
+		var config *types.Config
+		var err error
 
 		if path.IsAbs(configPath) {
 			dir, err := filepath.Abs(configPath)
@@ -48,10 +52,7 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 			configPath = filepath.Base(configPath)
 		}
 
-		var config *types.Config
-		var err error
-
-		if strings.HasPrefix(configPath, "http") {
+		if isURL {
 			config, err = interchain.LoadConfigFromURL(configPath)
 			if err != nil {
 				panic(err)
@@ -60,6 +61,8 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 			// last part of the URL to be the test name
 			configPath = configPath[strings.LastIndex(configPath, "/")+1:]
 		} else {
+			parentDir = GetDirectory()
+
 			configPath, err = GetConfigWithExtension(parentDir, configPath)
 			if err != nil {
 				panic(err)
