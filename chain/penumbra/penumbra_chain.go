@@ -10,21 +10,24 @@ import (
 	"strings"
 	"sync"
 
-	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 type PenumbraChain struct {
@@ -130,7 +133,7 @@ func (c *PenumbraChain) GetGRPCAddress() string {
 	return fmt.Sprintf("%s:9090", c.getFullNode().TendermintNode.HostName())
 }
 
-// Implements Chain interface
+// Implements Chain interface.
 func (c *PenumbraChain) GetHostPeerAddress() string {
 	panic("NOT IMPLEMENTED")
 }
@@ -235,7 +238,7 @@ func (c *PenumbraChain) SendFunds(ctx context.Context, keyName string, amount ib
 }
 
 // SendFundsWithNote will initiate a local transfer from the account associated with the specified keyName,
-// amount, token denom, and recipient are specified in the amount and attach a note/memo
+// amount, token denom, and recipient are specified in the amount and attach a note/memo.
 func (c *PenumbraChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	panic("Penumbrachain: SendFundsWithNote unimplemented")
 }
@@ -367,9 +370,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for i, v := range validators {
-		v := v
-		i := i
-
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 		eg.Go(func() error {
 			if err := v.TendermintNode.InitValidatorFiles(egCtx); err != nil {
@@ -459,7 +459,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 	}
 
 	for _, n := range fullnodes {
-		n := n
 		eg.Go(func() error { return n.TendermintNode.InitFullNodeFiles(egCtx) })
 	}
 
@@ -475,8 +474,6 @@ func (c *PenumbraChain) Start(_ string, ctx context.Context, additionalGenesisWa
 	// penumbra generate-testnet right now overwrites new validator keys
 	eg, egCtx = errgroup.WithContext(ctx)
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
-		i := i
-		val := val
 		// Use an errgroup to save some time doing many concurrent copies inside containers.
 		eg.Go(func() error {
 			firstValPrivKeyRelPath := fmt.Sprintf(".penumbra/testnet_data/node%d/cometbft/config/priv_validator_key.json", i)
@@ -527,8 +524,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
-		n := n
-
 		sep, err := n.TendermintNode.GetConfigSeparator()
 		if err != nil {
 			return err
@@ -553,8 +548,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.PenumbraNodes {
-		n := n
-
 		c.log.Info("Starting tendermint container", zap.String("container", n.TendermintNode.Name()))
 		eg.Go(func() error {
 			peers := tmNodes.PeerString(egCtx, n.TendermintNode)
@@ -579,9 +572,6 @@ func (c *PenumbraChain) start(ctx context.Context) error {
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for i, val := range c.PenumbraNodes[:c.numValidators] {
-		val := val
-		i := i
-
 		keyName := fmt.Sprintf("%s-%d", valKey, i)
 
 		eg.Go(func() error {

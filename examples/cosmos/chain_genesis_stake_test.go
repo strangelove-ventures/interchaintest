@@ -95,5 +95,4 @@ func TestChainGenesisUnequalStake(t *testing.T) {
 		require.Equal(t, val1_stake, tokens1Int)
 		require.Equal(t, val2_stake, tokens2Int)
 	}
-
 }

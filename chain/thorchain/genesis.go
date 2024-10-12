@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/icza/dyno"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 

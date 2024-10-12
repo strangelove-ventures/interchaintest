@@ -150,7 +150,7 @@ func (s *SidecarProcess) GetHostPorts(ctx context.Context, portIDs ...string) ([
 
 // WriteFile accepts file contents in a byte slice and writes the contents to
 // the docker filesystem. relPath describes the location of the file in the
-// docker volume relative to the home directory
+// docker volume relative to the home directory.
 func (s *SidecarProcess) WriteFile(ctx context.Context, content []byte, relPath string) error {
 	fw := dockerutil.NewFileWriter(s.logger(), s.DockerClient, s.TestName)
 	return fw.WriteFile(ctx, s.VolumeName, relPath, content)
@@ -158,7 +158,7 @@ func (s *SidecarProcess) WriteFile(ctx context.Context, content []byte, relPath 
 
 // CopyFile adds a file from the host filesystem to the docker filesystem
 // relPath describes the location of the file in the docker volume relative to
-// the home directory
+// the home directory.
 func (s *SidecarProcess) CopyFile(ctx context.Context, srcPath, dstPath string) error {
 	content, err := os.ReadFile(srcPath)
 	if err != nil {

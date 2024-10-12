@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 )
 
-// GzipIt compresses the input ([]byte)
+// GzipIt compresses the input ([]byte).
 func GzipIt(input []byte) ([]byte, error) {
 	// Create gzip writer.
 	var b bytes.Buffer

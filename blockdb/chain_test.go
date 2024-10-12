@@ -47,6 +47,8 @@ func TestChain_SaveBlock(t *testing.T) {
 	)
 
 	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -98,20 +100,20 @@ ORDER BY tendermint_event_attr.id`)
 		for i = 0; rows.Next(); i++ {
 			var gotData, gotType, gotKey, gotValue string
 			require.NoError(t, rows.Scan(&gotData, &gotType, &gotKey, &gotValue))
-			require.Equal(t, gotData, `{"test":1}`)
+			require.Equal(t, `{"test":1}`, gotData)
 			switch i {
 			case 0:
-				require.Equal(t, gotType, "e1")
-				require.Equal(t, gotKey, "k1")
-				require.Equal(t, gotValue, "v1")
+				require.Equal(t, "e1", gotType)
+				require.Equal(t, "k1", gotKey)
+				require.Equal(t, "v1", gotValue)
 			case 1:
-				require.Equal(t, gotType, "e2")
-				require.Equal(t, gotKey, "k2")
-				require.Equal(t, gotValue, "v2")
+				require.Equal(t, "e2", gotType)
+				require.Equal(t, "k2", gotKey)
+				require.Equal(t, "v2", gotValue)
 			case 2:
-				require.Equal(t, gotType, "e2")
-				require.Equal(t, gotKey, "k3")
-				require.Equal(t, gotValue, "v3")
+				require.Equal(t, "e2", gotType)
+				require.Equal(t, "k3", gotKey)
+				require.Equal(t, "v3", gotValue)
 			default:
 				t.Fatalf("expected 3 results, got i=%d", i)
 			}
@@ -119,6 +121,8 @@ ORDER BY tendermint_event_attr.id`)
 	})
 
 	t.Run("idempotent", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 
@@ -152,6 +156,8 @@ ORDER BY tendermint_event_attr.id`)
 	})
 
 	t.Run("zero state", func(t *testing.T) {
+		t.Parallel()
+
 		db := migratedDB()
 		defer db.Close()
 

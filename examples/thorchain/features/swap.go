@@ -71,13 +71,13 @@ func singleSwap(
 
 	srcChainAsset := srcChainType.GetGasAsset()
 	destChainAsset := destChainType.GetGasAsset()
-	pool, err := thorchain.ApiGetPool(srcChainAsset)
+	pool, err := thorchain.APIGetPool(ctx, srcChainAsset)
 	if err != nil {
 		return fmt.Errorf("getting srcChain pool, %w", err)
 	}
 
 	swapAmount := sdkmath.NewUintFromString(pool.BalanceAsset).QuoUint64(200)
-	swapQuote, err := thorchain.ApiGetSwapQuote(srcChainAsset, destChainAsset, swapAmount)
+	swapQuote, err := thorchain.APIGetSwapQuote(ctx, srcChainAsset, destChainAsset, swapAmount)
 	if err != nil {
 		return fmt.Errorf("get swap quote, %w", err)
 	}
@@ -104,7 +104,7 @@ func singleSwap(
 		return err
 	}
 
-	srcChainInboundAddr, _, err := thorchain.ApiGetInboundAddress(srcChainType.String())
+	srcChainInboundAddr, _, err := thorchain.APIGetInboundAddress(ctx, srcChainType.String())
 	if err != nil {
 		return fmt.Errorf("get srcChain inbound address: %w", err)
 	}
@@ -138,7 +138,7 @@ func singleSwap(
 		}
 	}
 
-	details, err := thorchain.ApiGetTxDetails(txHash)
+	details, err := thorchain.APIGetTxDetails(ctx, txHash)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func singleSwap(
 		outAmountPlusMaxGas = outAmountPlusMaxGas.Add(sdkmath.NewUintFromString(maxGas.Amount))
 	} else { // shouldn't enter here for atom -> rune
 		var maxGasAssetValue sdkmath.Uint
-		maxGasAssetValue, err = thorchain.ConvertAssetAmount(maxGas, destChainAsset.String())
+		maxGasAssetValue, err = thorchain.ConvertAssetAmount(ctx, maxGas, destChainAsset.String())
 		if err != nil {
 			return fmt.Errorf("failed to convert asset, %w", err)
 		}

@@ -17,11 +17,11 @@ func DockerImage(image *ibc.DockerImage) RelayerOpt {
 // CustomDockerImage overrides the default relayer docker image.
 // uidGid is the uid:gid format owner that should be used within the container.
 // If uidGid is empty, root user will be assumed.
-func CustomDockerImage(repository string, version string, uidGid string) RelayerOpt {
+func CustomDockerImage(repository string, version string, uidGID string) RelayerOpt {
 	return DockerImage(&ibc.DockerImage{
 		Repository: repository,
 		Version:    version,
-		UidGid:     uidGid,
+		UIDGID:     uidGID,
 	})
 }
 

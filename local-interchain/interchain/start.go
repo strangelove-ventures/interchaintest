@@ -145,7 +145,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			interchaintestrelayer.CustomDockerImage(
 				rlyCfg.DockerImage.Repository,
 				rlyCfg.DockerImage.Version,
-				rlyCfg.DockerImage.UidGid,
+				rlyCfg.DockerImage.UIDGID,
 			),
 			interchaintestrelayer.StartupFlags(rlyCfg.StartupFlags...),
 		)

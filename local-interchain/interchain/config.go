@@ -212,7 +212,7 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 			{
 				Repository: cfg.DockerImage.Repository,
 				Version:    cfg.DockerImage.Version,
-				UidGid:     cfg.DockerImage.UidGid,
+				UIDGID:     cfg.DockerImage.UIDGID,
 			},
 		}
 	}

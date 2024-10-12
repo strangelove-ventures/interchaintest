@@ -57,36 +57,37 @@ func TestPushWasmClientCode(t *testing.T) {
 	rpcOverrides["max_header_bytes"] = 2_100_000
 	configTomlOverrides["rpc"] = rpcOverrides
 
-	//mempoolOverrides := make(testutil.Toml)
-	//mempoolOverrides["max_tx_bytes"] = 6000000
-	//configTomlOverrides["mempool"] = mempoolOverrides
+	// mempoolOverrides := make(testutil.Toml)
+	// mempoolOverrides["max_tx_bytes"] = 6000000
+	// configTomlOverrides["mempool"] = mempoolOverrides
 
 	configFileOverrides["config/app.toml"] = appTomlOverrides
 	configFileOverrides["config/config.toml"] = configTomlOverrides
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{ChainConfig: ibc.ChainConfig{
-			Type:    "cosmos",
-			Name:    "ibc-go-simd",
-			ChainID: "simd",
-			Images: []ibc.DockerImage{
-				{
-					Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
-					Version:    "feat-wasm-clients",
-					UidGid:     "1025:1025",
+		{
+			ChainConfig: ibc.ChainConfig{
+				Type:    "cosmos",
+				Name:    "ibc-go-simd",
+				ChainID: "simd",
+				Images: []ibc.DockerImage{
+					{
+						Repository: "ghcr.io/strangelove-ventures/heighliner/ibc-go-simd",
+						Version:    "feat-wasm-clients",
+						UIDGID:     "1025:1025",
+					},
 				},
+				Bin:            "simd",
+				Bech32Prefix:   "cosmos",
+				Denom:          "stake",
+				GasPrices:      "0.00stake",
+				GasAdjustment:  1.3,
+				TrustingPeriod: "504h",
+				// EncodingConfig: WasmClientEncoding(),
+				NoHostMount:         true,
+				ConfigFileOverrides: configFileOverrides,
+				ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
 			},
-			Bin:            "simd",
-			Bech32Prefix:   "cosmos",
-			Denom:          "stake",
-			GasPrices:      "0.00stake",
-			GasAdjustment:  1.3,
-			TrustingPeriod: "504h",
-			//EncodingConfig: WasmClientEncoding(),
-			NoHostMount:         true,
-			ConfigFileOverrides: configFileOverrides,
-			ModifyGenesis:       modifyGenesisShortProposals(votingPeriod, maxDepositPeriod),
-		},
 		},
 	})
 

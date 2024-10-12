@@ -26,7 +26,6 @@ func AddGenesisKeysToKeyring(ctx context.Context, config *types.Config, chains [
 		default:
 			continue
 		}
-
 	}
 }
 
@@ -54,7 +53,6 @@ func PostStartupCommands(ctx context.Context, config *types.Config, chains []ibc
 				log.Println("Startup command output", chainObj.Config().ChainID, cmd, string(output))
 			}
 		}
-
 	}
 }
 
@@ -83,7 +81,6 @@ func SetupGenesisWallets(config *types.Config, chains []ibc.Chain) map[ibc.Chain
 		default:
 			continue
 		}
-
 	}
 	return additionalWallets
 }

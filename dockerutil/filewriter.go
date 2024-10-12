@@ -90,7 +90,7 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		Name: relPath,
 
 		Size: int64(len(content)),
-		Mode: 0600,
+		Mode: 0o600,
 		// Not setting uname because the container will chown it anyway.
 
 		ModTime: time.Now(),

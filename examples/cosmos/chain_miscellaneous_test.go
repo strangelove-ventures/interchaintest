@@ -414,7 +414,6 @@ func testTokenFactory(ctx context.Context, t *testing.T, chain *cosmos.CosmosCha
 	_, err = node.TokenFactoryBurnDenomFrom(ctx, user2.KeyName(), tfDenom, 1, user.FormattedAddress())
 	require.NoError(t, err)
 	validateBalance(ctx, t, chain, user, tfDenom, 0)
-
 }
 
 func testGetGovernanceAddress(ctx context.Context, t *testing.T, chain *cosmos.CosmosChain) {

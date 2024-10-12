@@ -88,7 +88,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	return cli, network.ID
 }
 
-// DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing
+// DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing.
 func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 	return func() {
 		showContainerLogs := os.Getenv("SHOW_CONTAINER_LOGS")
@@ -198,7 +198,6 @@ func PruneVolumesWithRetry(ctx context.Context, t DockerSetupTestingT, cli *clie
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune volumes during docker cleanup: %v", err)
 		return
@@ -232,7 +231,6 @@ func PruneNetworksWithRetry(ctx context.Context, t DockerSetupTestingT, cli *cli
 		retry.Context(ctx),
 		retry.DelayType(retry.FixedDelay),
 	)
-
 	if err != nil {
 		t.Logf("Failed to prune networks during docker cleanup: %v", err)
 		return

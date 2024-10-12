@@ -2,25 +2,26 @@ package utxo
 
 import (
 	"context"
-
 	"fmt"
 	"io"
 	"math"
-	"time"
-
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
-	sdkmath "cosmossdk.io/math"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+
+	sdkmath "cosmossdk.io/math"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
 )
 
 var _ ibc.Chain = &UtxoChain{}
@@ -30,6 +31,7 @@ const (
 	rpcPort                   = "18443/tcp"
 	noDefaultKeyWalletVersion = 159_900
 	namedFixWalletVersion     = 169_901
+	faucetKeyName             = "faucet"
 )
 
 var natPorts = nat.PortMap{
@@ -39,6 +41,7 @@ var natPorts = nat.PortMap{
 type UtxoChain struct {
 	testName string
 	cfg      ibc.ChainConfig
+	cancel   context.CancelFunc
 
 	log *zap.Logger
 
@@ -53,11 +56,14 @@ type UtxoChain struct {
 	// cli arguments
 	BinDaemon          string
 	BinCli             string
-	RpcUser            string
-	RpcPassword        string
+	RPCUser            string
+	RPCPassword        string
 	BaseCli            []string
 	AddrToKeyNameMap   map[string]string
 	KeyNameToWalletMap map[string]*NodeWallet
+
+	// Mutex for reading/writing AddrToKeyNameMap and KeyNameToWalletMap
+	MapAccess sync.Mutex
 
 	WalletVersion        int
 	unloadWalletAfterUse bool
@@ -88,8 +94,8 @@ func NewUtxoChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger)
 		log:                  log,
 		BinDaemon:            bins[0],
 		BinCli:               bins[1],
-		RpcUser:              rpcUser,
-		RpcPassword:          rpcPassword,
+		RPCUser:              rpcUser,
+		RPCPassword:          rpcPassword,
 		AddrToKeyNameMap:     make(map[string]string),
 		KeyNameToWalletMap:   make(map[string]*NodeWallet),
 		unloadWalletAfterUse: false,
@@ -129,7 +135,7 @@ func (c *UtxoChain) Initialize(ctx context.Context, testName string, cli *docker
 		VolumeName: v.Name,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return fmt.Errorf("set volume owner: %w", err)
 	}
@@ -170,7 +176,8 @@ func (c *UtxoChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
 }
 
 func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	cmd := []string{c.BinDaemon,
+	cmd := []string{
+		c.BinDaemon,
 		"--regtest",
 		"-printtoconsole",
 		"-regtest=1",
@@ -189,26 +196,34 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	}
 
 	if c.cfg.HostPortOverride != nil {
+		var fields []zap.Field
+
+		i := 0
 		for intP, extP := range c.cfg.HostPortOverride {
-			usingPorts[nat.Port(fmt.Sprintf("%d/tcp", intP))] = []nat.PortBinding{
+			port := nat.Port(fmt.Sprintf("%d/tcp", intP))
+
+			usingPorts[port] = []nat.PortBinding{
 				{
 					HostPort: fmt.Sprintf("%d", extP),
 				},
 			}
+
+			fields = append(fields, zap.String(fmt.Sprintf("port_overrides_%d", i), fmt.Sprintf("%s:%d", port, extP)))
+			i++
 		}
 
-		fmt.Printf("Port Overrides: %v. Using: %v\n", c.cfg.HostPortOverride, usingPorts)
+		c.log.Info("Port overrides", fields...)
 	}
 
 	env := []string{}
-	if c.cfg.Images[0].UidGid != "" {
-		uidGid := strings.Split(c.cfg.Images[0].UidGid, ":")
-		if len(uidGid) != 2 {
+	if c.cfg.Images[0].UIDGID != "" {
+		uidGID := strings.Split(c.cfg.Images[0].UIDGID, ":")
+		if len(uidGID) != 2 {
 			panic(fmt.Sprintf("%s chain does not have valid UidGid", c.cfg.Name))
 		}
 		env = []string{
-			fmt.Sprintf("UID=%s", uidGid[0]),
-			fmt.Sprintf("GID=%s", uidGid[1]),
+			fmt.Sprintf("UID=%s", uidGID[0]),
+			fmt.Sprintf("GID=%s", uidGID[1]),
 		}
 	}
 
@@ -240,8 +255,8 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	c.BaseCli = []string{
 		c.BinCli,
 		"-regtest",
-		c.RpcUser,
-		c.RpcPassword,
+		c.RPCUser,
+		c.RPCPassword,
 		fmt.Sprintf("-rpcconnect=%s", c.HostName()),
 		"-rpcport=18443",
 	}
@@ -249,74 +264,84 @@ func (c *UtxoChain) Start(testName string, ctx context.Context, additionalGenesi
 	// Wait for rpc to come up
 	time.Sleep(time.Second * 5)
 
+	c.WalletVersion, _ = c.GetWalletVersion(ctx, "")
+
+	if err := c.CreateWallet(ctx, faucetKeyName); err != nil {
+		return err
+	}
+
+	if c.WalletVersion == 0 {
+		c.WalletVersion, err = c.GetWalletVersion(ctx, faucetKeyName)
+		if err != nil {
+			return err
+		}
+	}
+
+	addr, err := c.GetNewAddress(ctx, faucetKeyName, false)
+	if err != nil {
+		return err
+	}
+
+	if err := c.SetAccount(ctx, addr, faucetKeyName); err != nil {
+		return err
+	}
+
 	go func() {
-		ctx := context.Background()
+		// Don't use ctx from Start(), it gets cancelled soon after returning.
+		goRoutineCtx := context.Background()
+		goRoutineCtx, c.cancel = context.WithCancel(goRoutineCtx)
 		amount := "100"
 		nextBlockHeight := 100
 		if c.cfg.CoinType == "3" {
 			amount = "1000" // Dogecoin needs more blocks for more coins
 			nextBlockHeight = 1000
 		}
-		for {
-			faucetWallet, found := c.KeyNameToWalletMap["faucet"]
-			if !found || !faucetWallet.ready {
-				time.Sleep(time.Second)
-				continue
-			}
 
-			// If faucet exists, chain is up and running. Any future error should return from this go routine.
-			// If the chain stops, we will then error and return from this go routine
-			// Don't use ctx from Start(), it gets cancelled soon after returning.
-			cmd = append(c.BaseCli, "generatetoaddress", amount, faucetWallet.address)
-			_, _, err = c.Exec(ctx, cmd, nil)
-			if err != nil {
-				c.logger().Error("generatetoaddress error", zap.Error(err))
+		c.MapAccess.Lock()
+		faucetWallet, found := c.KeyNameToWalletMap[faucetKeyName]
+		if !found || !faucetWallet.ready {
+			c.logger().Error("faucet wallet not found or not ready")
+			c.MapAccess.Unlock()
+			return
+		}
+		c.MapAccess.Unlock()
+
+		utxoBlockTime := time.Second * 2
+		timer := time.NewTimer(utxoBlockTime)
+		defer timer.Stop()
+		for {
+			select {
+			case <-goRoutineCtx.Done():
 				return
-			}
-			amount = "1"
-			if nextBlockHeight == 431 && c.cfg.CoinType == "2" {
-				keyName := "mweb"
-				if err := c.CreateWallet(ctx, keyName); err != nil {
-					c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
-					return
-				}
-				addr, err := c.GetNewAddress(ctx, keyName, true)
+			case <-timer.C:
+				cmd = append(c.BaseCli, "generatetoaddress", amount, faucetWallet.address)
+				_, _, err := c.Exec(goRoutineCtx, cmd, nil)
 				if err != nil {
-					c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+					c.logger().Error("generatetoaddress error", zap.Error(err))
 					return
 				}
-				if err := c.sendToMwebAddress(ctx, "faucet", addr, 1); err != nil {
-					c.logger().Error("error sending to mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
-					return
+				amount = "1"
+				if nextBlockHeight == 431 && c.cfg.CoinType == "2" {
+					keyName := "mweb"
+					if err := c.CreateWallet(goRoutineCtx, keyName); err != nil {
+						c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+						return
+					}
+					addr, err := c.GetNewAddress(goRoutineCtx, keyName, true)
+					if err != nil {
+						c.logger().Error("error creating mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+						return
+					}
+					if err := c.sendToMwebAddress(goRoutineCtx, faucetKeyName, addr, 1); err != nil {
+						c.logger().Error("error sending to mweb wallet at block 431", zap.String("chain", c.cfg.ChainID), zap.Error(err))
+						return
+					}
 				}
+				nextBlockHeight++
+				timer.Reset(utxoBlockTime)
 			}
-			nextBlockHeight++
-			time.Sleep(time.Second * 2)
 		}
 	}()
-
-	c.WalletVersion, _ = c.GetWalletVersion(ctx, "")
-
-	keyName := "faucet"
-	if err := c.CreateWallet(ctx, keyName); err != nil {
-		return err
-	}
-
-	if c.WalletVersion == 0 {
-		c.WalletVersion, err = c.GetWalletVersion(ctx, keyName)
-		if err != nil {
-			return err
-		}
-	}
-
-	addr, err := c.GetNewAddress(ctx, keyName, false)
-	if err != nil {
-		return err
-	}
-
-	if err := c.SetAccount(ctx, addr, keyName); err != nil {
-		return err
-	}
 
 	// Wait for 100 blocks to be created, coins mature after 100 blocks and the faucet starts getting 50 spendable coins/block onwards
 	// Then wait the standard 2 blocks which also gives the faucet a starting balance of 100 coins
@@ -386,8 +411,10 @@ func (c *UtxoChain) CreateKey(ctx context.Context, keyName string) error {
 	return c.SetAccount(ctx, addr, keyName)
 }
 
-// Get address of account, cast to a string to use
+// Get address of account, cast to a string to use.
 func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	wallet, ok := c.KeyNameToWalletMap[keyName]
 	if ok {
 		return []byte(wallet.address), nil
@@ -398,7 +425,7 @@ func (c *UtxoChain) GetAddress(ctx context.Context, keyName string) ([]byte, err
 		return []byte(keyName), nil
 	}
 
-	return nil, fmt.Errorf("Keyname: %s's address not found", keyName)
+	return nil, fmt.Errorf("keyname: %s's address not found", keyName)
 }
 
 func (c *UtxoChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
@@ -465,12 +492,13 @@ func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
 }
 
 func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
+	c.MapAccess.Lock()
 	keyName, ok := c.AddrToKeyNameMap[address]
 	if !ok {
 		return sdkmath.Int{}, fmt.Errorf("wallet not found for address: %s", address)
 	}
+	c.MapAccess.Unlock()
 
-	balance := ""
 	var coinsWithDecimal float64
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
 		if err := c.LoadWallet(ctx, keyName); err != nil {
@@ -484,7 +512,7 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 		if err := c.UnloadWallet(ctx, keyName); err != nil {
 			return sdkmath.Int{}, err
 		}
-		balance = strings.TrimSpace(string(stdout))
+		balance := strings.TrimSpace(string(stdout))
 		coinsWithDecimal, err = strconv.ParseFloat(balance, 64)
 		if err != nil {
 			return sdkmath.Int{}, err
@@ -525,4 +553,8 @@ func (c *UtxoChain) BuildWallet(ctx context.Context, keyName string, mnemonic st
 		return nil, err
 	}
 	return NewWallet(keyName, string(address)), nil
+}
+
+func (c *UtxoChain) Stop() {
+	c.cancel()
 }

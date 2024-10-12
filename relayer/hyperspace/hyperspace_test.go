@@ -3,8 +3,9 @@ package hyperspace_test
 import (
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
 )
 
 func TestKeys(t *testing.T) {

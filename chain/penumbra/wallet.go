@@ -14,7 +14,7 @@ type PenumbraWallet struct {
 	chainCfg ibc.ChainConfig
 }
 
-// NewWallet creates a new instance of PenumbraWallet with the provided parameters
+// NewWallet creates a new instance of PenumbraWallet with the provided parameters.
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *PenumbraWallet {
 	return &PenumbraWallet{
 		mnemonic: mnemonic,

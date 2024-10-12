@@ -53,7 +53,7 @@ func (tn *ChainNode) DistributionWithdrawValidatorRewards(ctx context.Context, k
 	return err
 }
 
-// DistributionCommission returns the validator's commission
+// DistributionCommission returns the validator's commission.
 func (c *CosmosChain) DistributionQueryCommission(ctx context.Context, valAddr string) (*distrtypes.ValidatorAccumulatedCommission, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorCommission(ctx, &distrtypes.QueryValidatorCommissionRequest{
@@ -62,42 +62,42 @@ func (c *CosmosChain) DistributionQueryCommission(ctx context.Context, valAddr s
 	return &res.Commission, err
 }
 
-// DistributionCommunityPool returns the community pool
+// DistributionCommunityPool returns the community pool.
 func (c *CosmosChain) DistributionQueryCommunityPool(ctx context.Context) (*sdk.DecCoins, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		CommunityPool(ctx, &distrtypes.QueryCommunityPoolRequest{})
 	return &res.Pool, err
 }
 
-// DistributionDelegationTotalRewards returns the delegator's total rewards
+// DistributionDelegationTotalRewards returns the delegator's total rewards.
 func (c *CosmosChain) DistributionQueryDelegationTotalRewards(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegationTotalRewardsResponse, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegationTotalRewards(ctx, &distrtypes.QueryDelegationTotalRewardsRequest{DelegatorAddress: delegatorAddr})
 	return res, err
 }
 
-// DistributionDelegatorValidators returns the delegator's validators
+// DistributionDelegatorValidators returns the delegator's validators.
 func (c *CosmosChain) DistributionQueryDelegatorValidators(ctx context.Context, delegatorAddr string) (*distrtypes.QueryDelegatorValidatorsResponse, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegatorValidators(ctx, &distrtypes.QueryDelegatorValidatorsRequest{DelegatorAddress: delegatorAddr})
 	return res, err
 }
 
-// DistributionDelegatorWithdrawAddress returns the delegator's withdraw address
+// DistributionDelegatorWithdrawAddress returns the delegator's withdraw address.
 func (c *CosmosChain) DistributionQueryDelegatorWithdrawAddress(ctx context.Context, delegatorAddr string) (string, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegatorWithdrawAddress(ctx, &distrtypes.QueryDelegatorWithdrawAddressRequest{DelegatorAddress: delegatorAddr})
 	return res.WithdrawAddress, err
 }
 
-// DistributionParams returns the distribution params
+// DistributionParams returns the distribution params.
 func (c *CosmosChain) DistributionQueryParams(ctx context.Context) (*distrtypes.Params, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		Params(ctx, &distrtypes.QueryParamsRequest{})
 	return &res.Params, err
 }
 
-// DistributionRewards returns the delegator's rewards
+// DistributionRewards returns the delegator's rewards.
 func (c *CosmosChain) DistributionQueryRewards(ctx context.Context, delegatorAddr, valAddr string) (sdk.DecCoins, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		DelegationRewards(ctx, &distrtypes.QueryDelegationRewardsRequest{
@@ -107,21 +107,21 @@ func (c *CosmosChain) DistributionQueryRewards(ctx context.Context, delegatorAdd
 	return res.Rewards, err
 }
 
-// DistributionValidatorSlashes returns the validator's slashes
+// DistributionValidatorSlashes returns the validator's slashes.
 func (c *CosmosChain) DistributionQueryValidatorSlashes(ctx context.Context, valAddr string) ([]distrtypes.ValidatorSlashEvent, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorSlashes(ctx, &distrtypes.QueryValidatorSlashesRequest{ValidatorAddress: valAddr})
 	return res.Slashes, err
 }
 
-// DistributionValidatorDistributionInfo returns the validator's distribution info
+// DistributionValidatorDistributionInfo returns the validator's distribution info.
 func (c *CosmosChain) DistributionQueryValidatorDistributionInfo(ctx context.Context, valAddr string) (*distrtypes.QueryValidatorDistributionInfoResponse, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorDistributionInfo(ctx, &distrtypes.QueryValidatorDistributionInfoRequest{ValidatorAddress: valAddr})
 	return res, err
 }
 
-// DistributionValidatorOutstandingRewards returns the validator's outstanding rewards
+// DistributionValidatorOutstandingRewards returns the validator's outstanding rewards.
 func (c *CosmosChain) DistributionQueryValidatorOutstandingRewards(ctx context.Context, valAddr string) (*distrtypes.ValidatorOutstandingRewards, error) {
 	res, err := distrtypes.NewQueryClient(c.GetNode().GrpcConn).
 		ValidatorOutstandingRewards(ctx, &distrtypes.QueryValidatorOutstandingRewardsRequest{ValidatorAddress: valAddr})

@@ -8,10 +8,11 @@ import (
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
-// SendFundsTx sends funds to a wallet using the SubstrateAPI
+// SendFundsTx sends funds to a wallet using the SubstrateAPI.
 func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, amount ibc.WalletAmount) (gstypes.Hash, error) {
 	hash := gstypes.Hash{}
 	meta, err := api.RPC.State.GetMetadataLatest()
@@ -37,7 +38,7 @@ func SendFundsTx(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair, a
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// Turns on sending and receiving ibc transfers
+// Turns on sending and receiving ibc transfers.
 func EnableIbc(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair) (gstypes.Hash, error) {
 	hash := gstypes.Hash{}
 	meta, err := api.RPC.State.GetMetadataLatest()
@@ -58,7 +59,7 @@ func EnableIbc(api *gsrpc.SubstrateAPI, senderKeypair signature.KeyringPair) (gs
 	return CreateSignSubmitExt(api, meta, senderKeypair, sc)
 }
 
-// SendIbcFundsTx sends funds to a wallet using the SubstrateAPI
+// SendIbcFundsTx sends funds to a wallet using the SubstrateAPI.
 func SendIbcFundsTx(
 	api *gsrpc.SubstrateAPI,
 	senderKeypair signature.KeyringPair,
@@ -78,17 +79,18 @@ func SendIbcFundsTx(
 	}
 
 	raw := gstypes.NewU8(1)
+
 	size := gstypes.NewU8(uint8(len(amount.Address) * 4))
 	to := gstypes.NewStorageDataRaw([]byte(amount.Address))
 	channel := gstypes.NewU64(0) // Parse channel number from string
 	timeout := gstypes.NewU8(1)
 	timestamp := gstypes.NewOptionU64(gstypes.NewU64(0))
 	height := gstypes.NewOptionU64(gstypes.NewU64(3000)) // Must set timestamp or height
-	assetId := gstypes.NewU128(*big.NewInt(assetNum))
+	assetID := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewU128(*amount.Amount.BigInt())
 	memo := gstypes.NewU8(0)
 
-	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetId, amount2, memo)
+	call, err := gstypes.NewCall(meta, "Ibc.transfer", raw, size, to, channel, timeout, timestamp, height, assetID, amount2, memo)
 	if err != nil {
 		return hash, err
 	}
@@ -96,7 +98,7 @@ func SendIbcFundsTx(
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset
+// MintFunds mints an asset for a user on parachain, keyName must be the owner of the asset.
 func MintFundsTx(
 	api *gsrpc.SubstrateAPI,
 	senderKeypair signature.KeyringPair,
@@ -123,10 +125,10 @@ func MintFundsTx(
 		return hash, err
 	}
 
-	assetId := gstypes.NewU128(*big.NewInt(assetNum))
+	assetID := gstypes.NewU128(*big.NewInt(assetNum))
 	amount2 := gstypes.NewUCompact(amount.Amount.BigInt())
 
-	call, err := gstypes.NewCall(meta, "Assets.mint", assetId, receiver, amount2)
+	call, err := gstypes.NewCall(meta, "Assets.mint", assetID, receiver, amount2)
 	if err != nil {
 		return hash, err
 	}
@@ -134,7 +136,7 @@ func MintFundsTx(
 	return CreateSignSubmitExt(api, meta, senderKeypair, call)
 }
 
-// Common tx function to create an extrinsic and sign/submit it
+// Common tx function to create an extrinsic and sign/submit it.
 func CreateSignSubmitExt(
 	api *gsrpc.SubstrateAPI,
 	meta *gstypes.Metadata,

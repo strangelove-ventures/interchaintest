@@ -47,7 +47,7 @@ func CosmosChainParamChangeTest(t *testing.T, name, version string) {
 	enableBlockDB := false
 	ctx, _, _, _ := interchaintest.BuildInitialChain(t, chains, enableBlockDB)
 
-	var userFunds = math.NewInt(10_000_000_000)
+	userFunds := math.NewInt(10_000_000_000)
 	users := interchaintest.GetAndFundTestUsers(t, ctx, t.Name(), userFunds, chain)
 	chainUser := users[0]
 

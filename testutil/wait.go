@@ -54,8 +54,6 @@ func NodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter
 		return err
 	})
 	for i, n := range nodes {
-		i := i
-		n := n
 		eg.Go(func() (err error) {
 			nodeHeights[i], err = n.Height(egCtx)
 			return err
@@ -66,7 +64,7 @@ func NodesInSync(ctx context.Context, chain ChainHeighter, nodes []ChainHeighter
 	}
 	for _, h := range nodeHeights {
 		if h < chainHeight {
-			return fmt.Errorf("Node is not yet in sync: %d < %d", h, chainHeight)
+			return fmt.Errorf("node is not yet in sync: %d < %d", h, chainHeight)
 		}
 	}
 	// all nodes >= chainHeight

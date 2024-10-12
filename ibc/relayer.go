@@ -171,11 +171,13 @@ func GetTransferChannel(ctx context.Context, r Relayer, rep RelayerExecReporter,
 
 	var srcChan *ChannelOutput
 	for _, channel := range srcChannels {
-		if len(channel.ConnectionHops) == 1 && channel.ConnectionHops[0] == srcConnectionID && channel.PortID == "transfer" {
+		ch := channel
+
+		if len(ch.ConnectionHops) == 1 && ch.ConnectionHops[0] == srcConnectionID && ch.PortID == "transfer" {
 			if srcChan != nil {
 				return nil, fmt.Errorf("found multiple transfer channels on %s for connection %s", srcChainID, srcConnectionID)
 			}
-			srcChan = &channel
+			srcChan = &ch
 		}
 	}
 
@@ -261,6 +263,8 @@ func (o Order) String() string {
 		return "unordered"
 	case Ordered:
 		return "ordered"
+	case Invalid:
+		return "invalid"
 	default:
 		return "invalid"
 	}
@@ -276,7 +280,7 @@ func (o Order) Validate() error {
 
 // CreateClientOptions contains the configuration for creating a client.
 
-// a zero value is the same as not specifying the flag and will use the relayer defaults
+// a zero value is the same as not specifying the flag and will use the relayer defaults.
 type CreateClientOptions struct {
 	TrustingPeriod           string
 	TrustingPeriodPercentage int64 // only available for Go Relayer
@@ -286,7 +290,7 @@ type CreateClientOptions struct {
 
 // DefaultClientOpts returns the default settings for creating clients.
 
-// empty values will use the relayer defaults
+// empty values will use the relayer defaults.
 func DefaultClientOpts() CreateClientOptions {
 	return CreateClientOptions{}
 }

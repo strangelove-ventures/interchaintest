@@ -8,17 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
 	"github.com/avast/retry-go/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
-
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
+	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
 	"go.uber.org/zap"
 
-	"github.com/decred/dcrd/dcrec/secp256k1/v2"
+	"cosmossdk.io/math"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
@@ -44,14 +44,14 @@ type RelayChainNode struct {
 
 	api         *gsrpc.SubstrateAPI
 	hostWsPort  string
-	hostRpcPort string
+	hostRPCPort string
 }
 
 type RelayChainNodes []*RelayChainNode
 
 const (
 	wsPort = "27451/tcp"
-	//rpcPort        = "27452/tcp"
+	// rpcPort        = "27452/tcp".
 	nodePort       = "27452/tcp"
 	rpcPort        = "9933/tcp"
 	prometheusPort = "27453/tcp"
@@ -124,17 +124,17 @@ func (p *RelayChainNode) EcdsaAddress() (string, error) {
 
 // MultiAddress returns the p2p multiaddr of the node.
 func (p *RelayChainNode) MultiAddress() (string, error) {
-	peerId, err := p.PeerID()
+	peerID, err := p.PeerID()
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerId), nil
+	return fmt.Sprintf("/dns4/%s/tcp/%s/p2p/%s", p.HostName(), strings.Split(nodePort, "/")[0], peerID), nil
 }
 
-func (c *RelayChainNode) logger() *zap.Logger {
-	return c.log.With(
-		zap.String("chain_id", c.Chain.Config().ChainID),
-		zap.String("test", c.TestName),
+func (p *RelayChainNode) logger() *zap.Logger {
+	return p.log.With(
+		zap.String("chain_id", p.Chain.Config().ChainID),
+		zap.String("test", p.TestName),
 	)
 }
 
@@ -244,12 +244,12 @@ func (p *RelayChainNode) StartContainer(ctx context.Context) error {
 	}
 
 	// Set the host ports once since they will not change after the container has started.
-	p.hostWsPort, p.hostRpcPort = hostPorts[0], hostPorts[1]
+	p.hostWsPort, p.hostRPCPort = hostPorts[0], hostPorts[1]
 
 	p.logger().Info("Waiting for RPC endpoint to be available", zap.String("container", p.Name()))
-	explorerUrl := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
+	explorerURL := fmt.Sprintf("\033[4;34mhttps://polkadot.js.org/apps?rpc=ws://%s#/explorer\033[0m",
 		strings.Replace(p.hostWsPort, "localhost", "127.0.0.1", 1))
-	p.log.Info(explorerUrl, zap.String("container", p.Name()))
+	p.log.Info(explorerURL, zap.String("container", p.Name()))
 	var api *gsrpc.SubstrateAPI
 	if err = retry.Do(func() error {
 		var err error
@@ -271,7 +271,7 @@ func (p *RelayChainNode) Exec(ctx context.Context, cmd []string, env []string) d
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGID,
 	}
 	return job.Run(ctx, cmd, opts)
 }

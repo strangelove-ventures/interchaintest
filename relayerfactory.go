@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
-	"go.uber.org/zap"
 )
 
 type TestName interface {
@@ -97,6 +98,11 @@ func (f *builtinRelayerFactory) Name() string {
 			return "hermes@" + f.version
 		}
 		return "hermes@" + hermes.DefaultContainerVersion
+	case ibc.Hyperspace:
+		if f.version == "" {
+			return "hyperspace@" + f.version
+		}
+		return "hyperspace@" + hyperspace.HyperspaceDefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -111,6 +117,8 @@ func (f builtinRelayerFactory) Capabilities() map[relayer.Capability]bool {
 	case ibc.Hermes:
 		// TODO: specify capability for hermes.
 		return rly.Capabilities()
+	case ibc.Hyperspace:
+		panic("capabilities are not defined for Hyperspace relayer.")
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

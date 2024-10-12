@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	volumetypes "github.com/docker/docker/api/types/volume"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/strangelove-ventures/interchaintest/v8"
+	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
 func TestFileRetriever(t *testing.T) {
@@ -58,12 +59,12 @@ func TestFileRetriever(t *testing.T) {
 	t.Run("top-level file", func(t *testing.T) {
 		b, err := fr.SingleFileContent(ctx, v.Name, "hello.txt")
 		require.NoError(t, err)
-		require.Equal(t, string(b), "hello world")
+		require.Equal(t, "hello world", string(b))
 	})
 
 	t.Run("nested file", func(t *testing.T) {
 		b, err := fr.SingleFileContent(ctx, v.Name, "foo/bar/baz.txt")
 		require.NoError(t, err)
-		require.Equal(t, string(b), "test")
+		require.Equal(t, "test", string(b))
 	})
 }

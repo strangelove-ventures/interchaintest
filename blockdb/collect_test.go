@@ -59,7 +59,7 @@ func TestCollector_Collect(t *testing.T) {
 				savedHeights = append(savedHeights, int(height))
 				savedTxs = append(savedTxs, txs)
 			}
-			atomic.SwapInt64(&currentHeight, int64(height))
+			atomic.SwapInt64(&currentHeight, height)
 			return nil
 		})
 

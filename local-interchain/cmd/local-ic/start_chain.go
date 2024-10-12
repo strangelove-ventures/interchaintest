@@ -88,7 +88,7 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 				DockerImage: ibc.DockerImage{
 					Repository: relayerImg,
 					Version:    relayerVer,
-					UidGid:     relayerUidGid,
+					UIDGID:     relayerUidGid,
 				},
 				StartupFlags: relayerFlags,
 			},

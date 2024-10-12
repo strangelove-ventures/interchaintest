@@ -124,6 +124,6 @@ func TestThorchainSim(t *testing.T) {
 	}
 	require.NoError(t, eg.Wait())
 
-	//err = testutil.WaitForBlocks(ctx, 300, thorchain)
-	//require.NoError(t, err, "thorchain failed to make blocks")
+	// err = testutil.WaitForBlocks(ctx, 300, thorchain)
+	// require.NoError(t, err, "thorchain failed to make blocks")
 }

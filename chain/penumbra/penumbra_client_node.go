@@ -10,30 +10,31 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
 	"github.com/BurntSushi/toml"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
-
-	//nolint:staticcheck
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	sdkmath "cosmossdk.io/math"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	//nolint:staticcheck
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+
 	asset "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1"
 	ibcv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1"
 	pool "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1"
 	keys "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1"
 	num "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"
+	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
 	custody "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1"
 	view "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // PenumbraClientNode represents an instance of pclientd.
@@ -109,7 +110,7 @@ func NewClientNode(
 		VolumeName: p.VolumeName,
 		ImageRef:   image.Ref(),
 		TestName:   testName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set pclientd volume owner: %w", err)
 	}
@@ -263,7 +264,7 @@ func (p *PenumbraClientNode) SendFunds(ctx context.Context, amount ibc.WalletAmo
 
 // SendIBCTransfer sends an IBC transfer from the current PenumbraClientNode to a specified destination address on a specified channel.
 // The function validates the address string on the current PenumbraClientNode instance. If the address string is empty, it returns an error.
-// It translates the amount to a big integer and creates an `ibcv1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp
+// It translates the amount to a big integer and creates an `ibcv1.Ics20Withdrawal` with the amount, denom, destination address, return address, timeout height, timeout timestamp.
 func (p *PenumbraClientNode) SendIBCTransfer(
 	ctx context.Context,
 	channelID string,
@@ -299,9 +300,15 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 	}
 
 	if os.Getenv("ICTEST_DEBUG") != "" {
-		fmt.Printf("Timeout timestamp: %+v \n", timeoutTimestamp)
-		fmt.Printf("Timeout: %+v \n", timeoutHeight)
-		fmt.Printf("Withdrawal: %+v \n", withdrawal)
+		p.log.Info("Ics20 withdrawal info",
+			zap.String("denom", withdrawal.Denom.Denom),
+			zap.String("amount", amount.Amount.String()),
+			zap.String("destination_chain_address", withdrawal.DestinationChainAddress),
+			zap.String("return_address", withdrawal.ReturnAddress.String()),
+			zap.String("channel_id", channelID),
+			zap.String("timeout_height", withdrawal.TimeoutHeight.String()),
+			zap.Uint64("timeout_timestamp", timeoutTimestamp),
+		)
 	}
 
 	// Generate a transaction plan sending ics_20 transfer
@@ -399,6 +406,10 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 		}
 	}
 
+	if confirmed == nil {
+		return ibc.Tx{}, fmt.Errorf("confirmed transaction is nil")
+	}
+
 	// TODO: fill in rest of tx details
 	return ibc.Tx{
 		Height:   int64(confirmed.DetectionHeight),
@@ -422,11 +433,11 @@ func (p *PenumbraClientNode) SendIBCTransfer(
 // It creates a client for the ViewProtocolService and constructs a BalancesRequest with an AccountFilter and AssetIdFilter.
 // A Balances stream response is obtained from the server.
 // The balances are collected in a slice until the stream is done, or an error occurs.
-// Otherwise, the first balance in the slice is used to construct a math.Int value and returned.
+// Otherwise, the first balance in the slice is used to construct a sdkmath.Int value and returned.
 // Returns:
-// - math.Int: The balance of the specified denom.
+// - sdkmath.Int: The balance of the specified denom.
 // - error: An error if any occurred during the balance retrieval.
-func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math.Int, error) {
+func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (sdkmath.Int, error) {
 	viewClient := view.NewViewServiceClient(p.GRPCConn)
 
 	balanceRequest := &view.BalancesRequest{
@@ -442,7 +453,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 	// zero-or-more balances, including denom and amount info per balance.
 	balanceStream, err := viewClient.Balances(ctx, balanceRequest)
 	if err != nil {
-		return math.Int{}, err
+		return sdkmath.Int{}, err
 	}
 
 	var balances []*view.BalancesResponse
@@ -453,14 +464,14 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 			if err == io.EOF {
 				break
 			} else {
-				return math.Int{}, err
+				return sdkmath.Int{}, err
 			}
 		}
 		balances = append(balances, balance)
 	}
 
-	if len(balances) <= 0 {
-		return math.ZeroInt(), nil
+	if len(balances) == 0 {
+		return sdkmath.ZeroInt(), nil
 	}
 
 	balance := balances[0]
@@ -474,7 +485,7 @@ func (p *PenumbraClientNode) GetBalance(ctx context.Context, denom string) (math
 //
 // Since Go does not support native uint128 we make use of the big.Int type.
 // see: https://github.com/penumbra-zone/penumbra/blob/4d175986f385e00638328c64d729091d45eb042a/crates/core/crypto/src/asset/amount.rs#L220-L240
-func translateHiAndLo(hi, lo uint64) math.Int {
+func translateHiAndLo(hi, lo uint64) sdkmath.Int {
 	hiBig := big.NewInt(0).SetUint64(hi)
 	loBig := big.NewInt(0).SetUint64(lo)
 
@@ -483,11 +494,11 @@ func translateHiAndLo(hi, lo uint64) math.Int {
 
 	// Add the lower order bytes
 	i := big.NewInt(0).Add(hiBig, loBig)
-	return math.NewIntFromBigInt(i)
+	return sdkmath.NewIntFromBigInt(i)
 }
 
 // translateBigInt converts a Cosmos SDK Int, which is a wrapper around Go's big.Int, into two uint64 values.
-func translateBigInt(i math.Int) (uint64, uint64) {
+func translateBigInt(i sdkmath.Int) (uint64, uint64) {
 	bz := i.BigInt().Bytes()
 
 	// Pad the byte slice with leading zeros to ensure it's 16 bytes long
@@ -512,10 +523,10 @@ func translateBigInt(i math.Int) (uint64, uint64) {
 }
 
 // GetDenomMetadata invokes a gRPC request to obtain the DenomMetadata for a specified asset ID.
-func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetId *asset.AssetId) (*asset.Metadata, error) {
+func (p *PenumbraClientNode) GetDenomMetadata(ctx context.Context, assetID *asset.AssetId) (*asset.Metadata, error) {
 	queryClient := pool.NewQueryServiceClient(p.GRPCConn)
 	req := &pool.AssetMetadataByIdRequest{
-		AssetId: assetId,
+		AssetId: assetID,
 	}
 
 	resp, err := queryClient.AssetMetadataById(ctx, req)
@@ -596,7 +607,7 @@ func (p *PenumbraClientNode) Exec(ctx context.Context, cmd []string, env []strin
 	opts := dockerutil.ContainerOptions{
 		Binds: p.Bind(),
 		Env:   env,
-		User:  p.Image.UidGid,
+		User:  p.Image.UIDGID,
 	}
 
 	res := job.Run(ctx, cmd, opts)

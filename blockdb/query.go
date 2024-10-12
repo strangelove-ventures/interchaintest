@@ -21,7 +21,7 @@ func timeToLocal(timeStr string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("time.Parse RFC3339: %w", err)
 	}
-	return t.In(time.Local), nil
+	return t.In(time.Local), nil //nolint: gosmopolitan
 }
 
 type SchemaVersionResult struct {
