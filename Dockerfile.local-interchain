@@ -21,8 +21,16 @@ RUN cd local-interchain && make build
 
 RUN mv ./bin/local-ic /go/bin
 
-# Reduces the size of the final image from 7GB -> 0.1GB
-FROM busybox:1.35.0 AS final
+# Final stage
+FROM debian:bookworm-slim AS final
+
+# Install certificates and required libraries
+RUN apt-get update && \
+    apt-get install -y ca-certificates libc6 && \
+    update-ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /usr/local/bin
 COPY --from=builder /go/bin/local-ic /usr/local/bin/local-ic
 
