@@ -277,7 +277,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		// Where ORIGIN_ALLOWED is like `scheme://dns[:port]`, or `*` (insecure)
 		corsHandler := handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
-			handlers.AllowedHeaders([]string{"*"}),
+			handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "Accept"}),
 			handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"}),
 			handlers.AllowCredentials(),
 			handlers.ExposedHeaders([]string{"*"}),
