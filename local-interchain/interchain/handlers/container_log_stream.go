@@ -54,20 +54,6 @@ func (cs *ContainerStream) StreamContainer(w http.ResponseWriter, r *http.Reques
 
 	containerID := r.URL.Query().Get("id")
 	if containerID == "" {
-		// TODO: use this for other sidecar containers that are made? (need to test)
-		// returns containers only for this testnet. other containers are not shown on this endpoint
-		// c, err := cs.cli.ContainerList(cs.ctx, dockertypes.ContainerListOptions{
-		// 	Filters: filters.NewArgs(filters.Arg("label", dockerutil.CleanupLabel+"="+cs.testName)),
-		// })
-		// if err != nil {
-		// 	http.Error(w, "Unable to get container list", http.StatusInternalServerError)
-		// 	return
-		// }
-		// availableContainers := []string{}
-		// for _, container := range c {
-		// 	availableContainers = append(availableContainers, container.ID)
-		// }
-
 		output := "No container ID provided. Available containers:\n"
 		for name, id := range cs.nameToID {
 			output += fmt.Sprintf("- %s: %s\n", name, id)
@@ -116,7 +102,7 @@ func (cs *ContainerStream) StreamContainer(w http.ResponseWriter, r *http.Reques
 	}
 
 	for {
-		buf := make([]byte, 1024)
+		buf := make([]byte, 8*1024)
 		n, err := rr.Read(buf)
 		if err != nil {
 			break
