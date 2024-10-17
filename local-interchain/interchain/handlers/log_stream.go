@@ -73,7 +73,7 @@ func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
 			line, err := reader.ReadString('\n')
 			if err == nil {
 				// Send the log line to the client
-				fmt.Fprintf(w, "%s\n", line)
+				fmt.Fprintf(w, "data: %s\n\n", line)
 				flusher.Flush() // Send to client immediately
 			} else {
 				// If no new log is available, wait for a short period before retrying
