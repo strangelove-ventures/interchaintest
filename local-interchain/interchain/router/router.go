@@ -8,12 +8,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/docker/docker/client"
 	"github.com/gorilla/mux"
 	ictypes "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/handlers"
 )
@@ -23,21 +25,38 @@ type Route struct {
 	Methods []string `json:"methods" yaml:"methods"`
 }
 
+type RouterConfig struct {
+	ibc.RelayerExecReporter
+
+	Config       *ictypes.Config
+	CosmosChains map[string]*cosmos.CosmosChain
+	Vals         map[string][]*cosmos.ChainNode
+	Relayer      ibc.Relayer
+	AuthKey      string
+	InstallDir   string
+	LogFile      string
+	TestName     string
+	Logger       *zap.Logger
+	DockerClient *client.Client
+}
+
 func NewRouter(
 	ctx context.Context,
 	ic *interchaintest.Interchain,
-	config *ictypes.Config,
-	cosmosChains map[string]*cosmos.CosmosChain,
-	vals map[string][]*cosmos.ChainNode,
-	relayer ibc.Relayer,
-	authKey string,
-	eRep ibc.RelayerExecReporter,
-	installDir string,
+	rc *RouterConfig,
 ) *mux.Router {
 	r := mux.NewRouter()
 
-	infoH := handlers.NewInfo(config, installDir, ctx, ic, cosmosChains, vals, relayer, eRep)
+	infoH := handlers.NewInfo(rc.Config, rc.InstallDir, ctx, ic, rc.CosmosChains, rc.Vals, rc.Relayer, rc.RelayerExecReporter)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
+
+	// interaction logs
+	logStream := handlers.NewLogSteam(rc.Logger, rc.LogFile, rc.AuthKey)
+	r.HandleFunc("/logs", logStream.StreamLogs).Methods(http.MethodGet)
+	r.HandleFunc("/logs_tail", logStream.TailLogs).Methods(http.MethodGet) // ?lines=
+
+	containerStream := handlers.NewContainerSteam(ctx, rc.Logger, rc.DockerClient, rc.AuthKey, rc.TestName, rc.Vals)
+	r.HandleFunc("/container_logs", containerStream.StreamContainer).Methods(http.MethodGet) // ?container=<id>&colored=true&lines=10000
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -60,10 +79,10 @@ func NewRouter(
 		log.Printf("chain_registry_assets.json not found in %s, not exposing endpoint.", wd)
 	}
 
-	actionsH := handlers.NewActions(ctx, ic, cosmosChains, vals, relayer, eRep, authKey)
+	actionsH := handlers.NewActions(ctx, ic, rc.CosmosChains, rc.Vals, rc.Relayer, rc.RelayerExecReporter, rc.AuthKey)
 	r.HandleFunc("/", actionsH.PostActions).Methods(http.MethodPost)
 
-	uploaderH := handlers.NewUploader(ctx, vals, authKey)
+	uploaderH := handlers.NewUploader(ctx, rc.Vals, rc.AuthKey)
 	r.HandleFunc("/upload", uploaderH.PostUpload).Methods(http.MethodPost)
 
 	availableRoutes := getAllMethods(*r)
