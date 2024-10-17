@@ -32,11 +32,11 @@ func TestMessagesView(t *testing.T) {
 
 	client, network := interchaintest.DockerSetup(t)
 
-	const gaia0ChainID = "g0"
-	const gaia1ChainID = "g1"
+	const chainID0 = "c0"
+	const chainID1 = "c1"
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia0ChainID}},
-		{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: gaia1ChainID}},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID0}},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID1}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -93,7 +93,7 @@ func TestMessagesView(t *testing.T) {
 	// Generate the path.
 	// No transactions happen here.
 	const pathName = "p"
-	require.NoError(t, r.GeneratePath(ctx, eRep, gaia0ChainID, gaia1ChainID, pathName))
+	require.NoError(t, r.GeneratePath(ctx, eRep, chainID0, chainID1, pathName))
 
 	t.Run("create clients", func(t *testing.T) {
 		// Creating the clients will cause transactions.
@@ -105,11 +105,11 @@ client_chain_id
 FROM v_cosmos_messages
 WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 		var clientChainID string
-		require.NoError(t, db.QueryRow(qCreateClient, gaia0ChainID).Scan(&clientChainID))
-		require.Equal(t, gaia1ChainID, clientChainID)
+		require.NoError(t, db.QueryRow(qCreateClient, chainID0).Scan(&clientChainID))
+		require.Equal(t, chainID1, clientChainID)
 
-		require.NoError(t, db.QueryRow(qCreateClient, gaia1ChainID).Scan(&clientChainID))
-		require.Equal(t, gaia0ChainID, clientChainID)
+		require.NoError(t, db.QueryRow(qCreateClient, chainID1).Scan(&clientChainID))
+		require.Equal(t, chainID0, clientChainID)
 	})
 	if t.Failed() {
 		return
@@ -126,7 +126,7 @@ WHERE type = "/ibc.core.client.v1.MsgCreateClient" AND chain_id = ?;`
 		// Wait for another block before retrieving the connections and querying for them.
 		require.NoError(t, testutil.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
-		conns, err := r.GetConnections(ctx, eRep, gaia0ChainID)
+		conns, err := r.GetConnections(ctx, eRep, chainID0)
 		require.NoError(t, err)
 
 		// Collect the reported client IDs.
@@ -142,7 +142,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenInit" AND chain_id = ?
 `
 		var clientID, counterpartyClientID string
-		require.NoError(t, db.QueryRow(qConnectionOpenInit, gaia0ChainID).Scan(&clientID, &counterpartyClientID))
+		require.NoError(t, db.QueryRow(qConnectionOpenInit, chainID0).Scan(&clientID, &counterpartyClientID))
 		require.Equal(t, clientID, gaia0ClientID)
 		require.Equal(t, counterpartyClientID, gaia1ClientID)
 
@@ -153,7 +153,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenTry" AND chain_id = ?
 `
 		var counterpartyConnID string
-		require.NoError(t, db.QueryRow(qConnectionOpenTry, gaia1ChainID).Scan(&counterpartyClientID, &counterpartyConnID))
+		require.NoError(t, db.QueryRow(qConnectionOpenTry, chainID1).Scan(&counterpartyClientID, &counterpartyConnID))
 		require.Equal(t, counterpartyClientID, gaia0ClientID)
 		require.Equal(t, counterpartyConnID, gaia0ConnID)
 
@@ -164,7 +164,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenAck" AND chain_id = ?
 `
 		var connID string
-		require.NoError(t, db.QueryRow(qConnectionOpenAck, gaia0ChainID).Scan(&connID, &counterpartyConnID))
+		require.NoError(t, db.QueryRow(qConnectionOpenAck, chainID0).Scan(&connID, &counterpartyConnID))
 		require.Equal(t, connID, gaia0ConnID)
 		require.Equal(t, counterpartyConnID, gaia1ConnID)
 
@@ -174,7 +174,7 @@ conn_id
 FROM v_cosmos_messages
 WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 `
-		require.NoError(t, db.QueryRow(qConnectionOpenConfirm, gaia1ChainID).Scan(&connID))
+		require.NoError(t, db.QueryRow(qConnectionOpenConfirm, chainID1).Scan(&connID))
 		require.Equal(t, connID, gaia0ConnID) // Not sure if this should be connection 0 or 1, as they are typically equal during this test.
 	})
 	if t.Failed() {
@@ -194,7 +194,7 @@ WHERE type = "/ibc.core.connection.v1.MsgConnectionOpenConfirm" AND chain_id = ?
 		// Wait for another block before retrieving the channels and querying for them.
 		require.NoError(t, testutil.WaitForBlocks(ctx, 1, gaia0, gaia1))
 
-		channels, err := r.GetChannels(ctx, eRep, gaia0ChainID)
+		channels, err := r.GetChannels(ctx, eRep, chainID0)
 		require.NoError(t, err)
 		require.Len(t, channels, 1)
 
@@ -208,7 +208,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenInit" AND chain_id = ?
 `
 		var portID, counterpartyPortID string
-		require.NoError(t, db.QueryRow(qChannelOpenInit, gaia0ChainID).Scan(&portID, &counterpartyPortID))
+		require.NoError(t, db.QueryRow(qChannelOpenInit, chainID0).Scan(&portID, &counterpartyPortID))
 		require.Equal(t, gaia0Port, portID)
 		require.Equal(t, gaia1Port, counterpartyPortID)
 
@@ -219,7 +219,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenTry" AND chain_id = ?
 `
 		var counterpartyChannelID string
-		require.NoError(t, db.QueryRow(qChannelOpenTry, gaia1ChainID).Scan(&portID, &counterpartyPortID, &counterpartyChannelID))
+		require.NoError(t, db.QueryRow(qChannelOpenTry, chainID1).Scan(&portID, &counterpartyPortID, &counterpartyChannelID))
 		require.Equal(t, gaia1Port, portID)
 		require.Equal(t, gaia0Port, counterpartyPortID)
 		require.Equal(t, counterpartyChannelID, gaia0ChannelID)
@@ -231,7 +231,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenAck" AND chain_id = ?
 `
 		var channelID string
-		require.NoError(t, db.QueryRow(qChannelOpenAck, gaia0ChainID).Scan(&portID, &channelID, &counterpartyChannelID))
+		require.NoError(t, db.QueryRow(qChannelOpenAck, chainID0).Scan(&portID, &channelID, &counterpartyChannelID))
 		require.Equal(t, gaia0Port, portID)
 		require.Equal(t, channelID, gaia0ChannelID)
 		require.Equal(t, counterpartyChannelID, gaia1ChannelID)
@@ -242,7 +242,7 @@ port_id, channel_id
 FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgChannelOpenConfirm" AND chain_id = ?
 `
-		require.NoError(t, db.QueryRow(qChannelOpenConfirm, gaia1ChainID).Scan(&portID, &channelID))
+		require.NoError(t, db.QueryRow(qChannelOpenConfirm, chainID1).Scan(&portID, &channelID))
 		require.Equal(t, gaia1Port, portID)
 		require.Equal(t, channelID, gaia1ChannelID)
 	})
@@ -274,7 +274,7 @@ FROM v_cosmos_messages
 WHERE type = "/ibc.applications.transfer.v1.MsgTransfer" AND chain_id = ?
 `
 		var portID, channelID string
-		require.NoError(t, db.QueryRow(qMsgTransfer, gaia0ChainID).Scan(&portID, &channelID))
+		require.NoError(t, db.QueryRow(qMsgTransfer, chainID0).Scan(&portID, &channelID))
 		require.Equal(t, gaia0Port, portID)
 		require.Equal(t, channelID, gaia0ChannelID)
 	})
@@ -298,7 +298,7 @@ WHERE type = "/ibc.core.channel.v1.MsgRecvPacket" AND chain_id = ?
 
 		var portID, channelID, counterpartyPortID, counterpartyChannelID string
 
-		require.NoError(t, db.QueryRow(qMsgRecvPacket, gaia1ChainID).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
+		require.NoError(t, db.QueryRow(qMsgRecvPacket, chainID1).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
 
 		require.Equal(t, gaia0Port, portID)
 		require.Equal(t, channelID, gaia0ChannelID)
@@ -310,7 +310,7 @@ port_id, channel_id, counterparty_port_id, counterparty_channel_id
 FROM v_cosmos_messages
 WHERE type = "/ibc.core.channel.v1.MsgAcknowledgement" AND chain_id = ?
 `
-		require.NoError(t, db.QueryRow(qMsgAck, gaia0ChainID).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
+		require.NoError(t, db.QueryRow(qMsgAck, chainID0).Scan(&portID, &channelID, &counterpartyPortID, &counterpartyChannelID))
 
 		require.Equal(t, gaia0Port, portID)
 		require.Equal(t, channelID, gaia0ChannelID)

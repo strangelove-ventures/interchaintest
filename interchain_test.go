@@ -51,8 +51,8 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1"},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1"},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -109,8 +109,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -187,8 +187,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -301,9 +300,9 @@ func TestInterchain_ConcurrentRelayerOps(t *testing.T) {
 			chainSpecs := make([]*interchaintest.ChainSpec, chains)
 			for i := 0; i < chains; i++ {
 				chainSpecs[i] = &interchaintest.ChainSpec{
-					Name:          "gaia",
+					Name:          testutil.TestSimd,
 					ChainName:     fmt.Sprintf("g%d", i+1),
-					Version:       "v7.0.1",
+					Version:       testutil.SimdVerion,
 					NumValidators: &numValidators,
 					NumFullNodes:  &numFullNodes,
 					ChainConfig: ibc.ChainConfig{
@@ -365,8 +364,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -452,7 +451,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.1"},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -480,7 +479,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("duplicate chain", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
-			{Name: "gaia", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+			{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
 		})
 
 		chains, err := cf.Chains(t.Name())
@@ -496,8 +495,8 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("chain name", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Different ChainID, but explicit ChainName used twice.
-			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-			{Name: "gaia", ChainName: "g", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
 		})
 
 		chains, err := cf.Chains(t.Name())
@@ -511,8 +510,8 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("chain ID", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Valid ChainName but duplicate ChainID.
-			{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-			{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+			{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+			{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
 		})
 
 		chains, err := cf.Chains(t.Name())
