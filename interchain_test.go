@@ -63,19 +63,19 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia0, gaia1 := chains[0], chains[1]
+	chain0, chain1 := chains[0], chains[1]
 
 	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
 	ic := interchaintest.NewInterchain().
-		AddChain(gaia0).
-		AddChain(gaia1).
+		AddChain(chain0).
+		AddChain(chain1).
 		AddRelayer(r, "r").
 		AddLink(interchaintest.InterchainLink{
-			Chain1:  gaia0,
-			Chain2:  gaia1,
+			Chain1:  chain0,
+			Chain2:  chain1,
 			Relayer: r,
 		})
 
@@ -121,19 +121,19 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia0, gaia1 := chains[0], chains[1]
+	chain0, chain1 := chains[0], chains[1]
 
 	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
 	)
 
 	ic := interchaintest.NewInterchain().
-		AddChain(gaia0).
-		AddChain(gaia1).
+		AddChain(chain0).
+		AddChain(chain1).
 		AddRelayer(r, "r").
 		AddLink(interchaintest.InterchainLink{
-			Chain1:  gaia0,
-			Chain2:  gaia1,
+			Chain1:  chain0,
+			Chain2:  chain1,
 			Relayer: r,
 		})
 
@@ -199,9 +199,9 @@ func TestInterchain_CreateUser(t *testing.T) {
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia0 := chains[0]
+	chain0 := chains[0]
 
-	ic := interchaintest.NewInterchain().AddChain(gaia0)
+	ic := interchaintest.NewInterchain().AddChain(chain0)
 	defer ic.Close()
 
 	rep := testreporter.NewNopReporter()
@@ -235,26 +235,26 @@ func TestInterchain_CreateUser(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, mnemonic)
 
-		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, initBal, gaia0)
+		user, err := interchaintest.GetAndFundTestUserWithMnemonic(ctx, keyName, mnemonic, initBal, chain0)
 		require.NoError(t, err)
-		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, chain0))
 		require.NotEmpty(t, user.Address())
 		require.NotEmpty(t, user.KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, user.FormattedAddress(), gaia0.Config().Denom)
+		actualBalance, err := chain0.GetBalance(ctx, user.FormattedAddress(), chain0.Config().Denom)
 		require.NoError(t, err)
 		require.True(t, actualBalance.Equal(initBal))
 	})
 
 	t.Run("without mnemonic", func(t *testing.T) {
 		keyName := "regular-user-name"
-		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, initBal, gaia0)
-		require.NoError(t, testutil.WaitForBlocks(ctx, 2, gaia0))
+		users := interchaintest.GetAndFundTestUsers(t, ctx, keyName, initBal, chain0)
+		require.NoError(t, testutil.WaitForBlocks(ctx, 2, chain0))
 		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].Address())
 		require.NotEmpty(t, users[0].KeyName())
 
-		actualBalance, err := gaia0.GetBalance(ctx, users[0].FormattedAddress(), gaia0.Config().Denom)
+		actualBalance, err := chain0.GetBalance(ctx, users[0].FormattedAddress(), chain0.Config().Denom)
 		require.NoError(t, err)
 		require.True(t, actualBalance.Equal(initBal))
 	})
@@ -377,7 +377,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
 
-	gaia0, gaia1 := chains[0], chains[1]
+	chain0, chain1 := chains[0], chains[1]
 
 	r := interchaintest.NewBuiltinRelayerFactory(relayerImpl, zaptest.NewLogger(t)).Build(
 		t, client, network,
@@ -385,12 +385,12 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	pathName := "p"
 	ic := interchaintest.NewInterchain().
-		AddChain(gaia0).
-		AddChain(gaia1).
+		AddChain(chain0).
+		AddChain(chain1).
 		AddRelayer(r, "r").
 		AddLink(interchaintest.InterchainLink{
-			Chain1:  gaia0,
-			Chain2:  gaia1,
+			Chain1:  chain0,
+			Chain2:  chain1,
 			Relayer: r,
 			Path:    pathName,
 		})
@@ -405,7 +405,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 		NetworkID: network,
 	}))
 
-	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "gaia-user-1", math.NewInt(10_000_000), gaia0)[0]
+	testUser := interchaintest.GetAndFundTestUsers(t, ctx, "chain-user-1", math.NewInt(10_000_000), chain0)[0]
 
 	sendAmount := math.NewInt(10_000)
 
@@ -414,8 +414,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	})
 
 	t.Run("broadcast success", func(t *testing.T) {
-		b := cosmos.NewBroadcaster(t, gaia0.(*cosmos.CosmosChain))
-		transferAmount := sdk.Coin{Denom: gaia0.Config().Denom, Amount: sendAmount}
+		b := cosmos.NewBroadcaster(t, chain0.(*cosmos.CosmosChain))
+		transferAmount := sdk.Coin{Denom: chain0.Config().Denom, Amount: sendAmount}
 		memo := ""
 
 		msg := transfertypes.NewMsgTransfer(
@@ -423,7 +423,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 			"channel-0",
 			transferAmount,
 			testUser.FormattedAddress(),
-			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix),
+			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix),
 			clienttypes.NewHeight(1, 1000),
 			0,
 			memo,
@@ -434,12 +434,12 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	})
 
 	t.Run("transfer success", func(t *testing.T) {
-		require.NoError(t, testutil.WaitForBlocks(ctx, 5, gaia0, gaia1))
+		require.NoError(t, testutil.WaitForBlocks(ctx, 5, chain0, chain1))
 
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", gaia0.Config().Denom))
+		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", chain0.Config().Denom))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
-		dstFinalBalance, err := gaia1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(gaia1.Config().Bech32Prefix), dstIbcDenom)
+		dstFinalBalance, err := chain1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.True(t, dstFinalBalance.Equal(sendAmount))
 	})
@@ -462,10 +462,10 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 
 	chains, err := cf.Chains(t.Name())
 	require.NoError(t, err)
-	gaia := chains[0]
+	chain := chains[0]
 
 	ic := interchaintest.NewInterchain().
-		AddChain(gaia)
+		AddChain(chain)
 
 	rep := testreporter.NewNopReporter()
 	eRep := rep.RelayerExecReporter(t)
