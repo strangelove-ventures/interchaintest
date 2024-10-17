@@ -1,7 +1,4 @@
-package blockdb_test
-
-// This test is in a separate file, so it can be in the blockdb_test package,
-// so it can import interchaintest without creating an import cycle.
+package cosmos_test
 
 import (
 	"context"
@@ -23,7 +20,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
-func TestMessagesView(t *testing.T) {
+func TestBlockDBMessagesView(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -35,8 +32,8 @@ func TestMessagesView(t *testing.T) {
 	const chainID0 = "c0"
 	const chainID1 = "c1"
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID0}},
-		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID1}},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID0}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID1}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
 	})
 
 	chains, err := cf.Chains(t.Name())

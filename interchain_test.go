@@ -30,6 +30,11 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
+var (
+	numVals          = 1
+	numFullNodesZero = 0
+)
+
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
 	duplicateChainTest(t, ibc.CosmosRly)
 }
@@ -109,8 +114,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
-		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-2"}},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -187,7 +192,8 @@ func TestInterchain_CreateUser(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+		// Two otherwise identical chains that only differ by ChainID.
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -364,8 +370,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
-		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: "chain-2"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -451,7 +457,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: testutil.TestSimd, Version: testutil.SimdVerion},
+		{Name: testutil.TestSimd, Version: testutil.SimdVerion, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())

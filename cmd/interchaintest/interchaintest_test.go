@@ -102,11 +102,14 @@ func setUpTestMatrix() error {
 	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
+		numValsOne := 1
+		numFullNodesZero := 0
+
 		testMatrix.Relayers = []string{"rly", "hermes"}
 		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
-				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c1"},
-				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c2"},
+				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c1", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
+				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c2", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
 			},
 		}
 
