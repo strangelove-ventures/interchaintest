@@ -502,7 +502,7 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 		chains, err := cf.Chains(t.Name())
 		require.NoError(t, err)
 
-		require.PanicsWithError(t, "a chain with name g already exists", func() {
+		require.PanicsWithError(t, "a chain with name c already exists", func() {
 			_ = interchaintest.NewInterchain().AddChain(chains[0]).AddChain(chains[1])
 		})
 	})
