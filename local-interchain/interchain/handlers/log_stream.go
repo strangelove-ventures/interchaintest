@@ -8,12 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-const tailLines = 25
+const defaultTailLines = 50
 
 type LogStream struct {
 	fName   string
@@ -30,16 +31,16 @@ func NewLogSteam(logger *zap.Logger, file string, authKey string) *LogStream {
 }
 
 func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
+	// ensure ?auth_key=<authKey> is provided
+	if ls.authKey != "" && r.URL.Query().Get("auth_key") != ls.authKey {
+		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
+		return
+	}
+
 	// Set headers to keep the connection open for SSE (Server-Sent Events)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-
-	// ensure ?auth_key=<authKey> is provided
-	if r.URL.Query().Get("auth_key") != ls.authKey {
-		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
-		return
-	}
 
 	// Flush ensures data is sent to the client immediately
 	flusher, ok := w.(http.Flusher)
@@ -62,13 +63,6 @@ func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
 	// Read new lines from the log file
 	reader := bufio.NewReader(file)
 
-	// print last out to the user on request (i.e. new connections)
-	tail := TailFile(ls.logger, ls.fName, tailLines)
-	for _, line := range tail {
-		fmt.Fprintf(w, "data: %s\n\n", line)
-	}
-	flusher.Flush()
-
 	for {
 		select {
 		// In case client closes the connection, break out of loop
@@ -86,6 +80,30 @@ func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
+	}
+}
+
+func (ls *LogStream) TailLogs(w http.ResponseWriter, r *http.Request) {
+	// ensure ?auth_key=<authKey> is provided
+	if ls.authKey != "" && r.URL.Query().Get("auth_key") != ls.authKey {
+		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
+		return
+	}
+
+	var linesToTail uint64 = defaultTailLines
+	tailInput := r.URL.Query().Get("lines")
+	if tailInput != "" {
+		tailLines, err := strconv.ParseUint(tailInput, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid lines input", http.StatusBadRequest)
+			return
+		}
+		linesToTail = tailLines
+	}
+
+	logs := TailFile(ls.logger, ls.fName, linesToTail)
+	for _, log := range logs {
+		fmt.Fprintf(w, "%s\n", log)
 	}
 }
 
@@ -110,7 +128,7 @@ func TailFile(logger *zap.Logger, logFile string, lines uint64) []string {
 	reader := bufio.NewReader(file)
 
 	var logs []string
-	for i := 0; i < int(totalLines)-int(lines); i++ {
+	for i := 0; uint64(i) < totalLines-lines; i++ {
 		_, _, err := reader.ReadLine()
 		if err != nil {
 			logger.Fatal("error reading log file", zap.Error(err))
@@ -128,14 +146,14 @@ func TailFile(logger *zap.Logger, logFile string, lines uint64) []string {
 	return logs
 }
 
-func lineCounter(r io.Reader) (int, error) {
+func lineCounter(r io.Reader) (uint64, error) {
 	buf := make([]byte, 32*1024)
-	count := 0
+	var count uint64 = 0
 	lineSep := []byte{'\n'}
 
 	for {
 		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
+		count += uint64(bytes.Count(buf[:c], lineSep))
 
 		switch {
 		case err == io.EOF:

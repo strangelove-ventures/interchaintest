@@ -21,7 +21,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
-// Example Go/Cosmos-SDK panic format is `panic: bad Duration: time: invalid duration "bad"\n`
+// Example Go/Cosmos-SDK panic format is `panic: bad Duration: time: invalid duration "bad"\n`.
 var panicRe = regexp.MustCompile(`panic:.*\n`)
 
 type ContainerLifecycle struct {
@@ -159,7 +159,7 @@ func (c *ContainerLifecycle) CheckForFailedStart(ctx context.Context, wait time.
 
 	if err := ParseSDKPanicFromText(logs.String()); err != nil {
 		// Must use Println and not the logger as there are ascii escape codes in the logs.
-		fmt.Printf("\nContainer name: %s.\nerror: %s.\nlogs\n%s\n", c.containerName, err.Error(), logs.String())
+		fmt.Printf("\nContainer name: %s.\nerror: %s.\nlogs\n%s\n", c.containerName, err.Error(), logs.String()) //nolint: forbidigo
 		return fmt.Errorf("container %s failed to start: %w", c.containerName, err)
 	}
 

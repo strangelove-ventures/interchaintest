@@ -3,8 +3,9 @@ package ibc
 import (
 	"context"
 
-	"cosmossdk.io/math"
 	"github.com/docker/docker/client"
+
+	"cosmossdk.io/math"
 )
 
 type Chain interface {

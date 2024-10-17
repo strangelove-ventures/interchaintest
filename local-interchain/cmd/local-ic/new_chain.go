@@ -56,7 +56,7 @@ var newChainCmd = &cobra.Command{
 			c.SetDockerImage(ibc.DockerImage{
 				Repository: getOrDefault("Docker Repo", "ghcr.io/strangelove-ventures/heighliner/gaia"),
 				Version:    getOrDefault("Docker Tag / Branch Version", "v16.0.0"),
-				UidGid:     "1025:1025",
+				UIDGID:     "1025:1025",
 			})
 			if i == 0 {
 				c.SetHostPortOverride(types.BaseHostPortOverride())

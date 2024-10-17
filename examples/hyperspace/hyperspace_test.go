@@ -114,12 +114,12 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "polkadot-node",
 						Version:    "local", // Set your locally built version
-						UidGid:     "1000:1000",
+						UIDGID:     "1000:1000",
 					},
 					{
 						Repository: "parachain-node",
 						Version:    "latest", // Set your locally built version
-						UidGid:     "1000:1000",
+						UIDGID:     "1000:1000",
 					},
 				},
 				Bin:            "polkadot",
@@ -143,7 +143,7 @@ func TestHyperspace(t *testing.T) {
 					{
 						Repository: "ibc-go-simd",
 						Version:    "local", // Set your locally built version
-						UidGid:     "1025:1025",
+						UIDGID:     "1025:1025",
 					},
 				},
 				Bin:                 "simd",
@@ -329,7 +329,7 @@ func TestHyperspace(t *testing.T) {
 	require.NoError(t, err)
 	exportedState, err := cosmosChain.ExportState(ctx, int64(exportStateHeight))
 	require.NoError(t, err)
-	err = os.WriteFile("exported_state.json", []byte(exportedState), 0644)
+	err = os.WriteFile("exported_state.json", []byte(exportedState), 0o644)
 	require.NoError(t, err)
 }
 

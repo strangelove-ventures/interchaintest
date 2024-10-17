@@ -18,7 +18,6 @@ import (
 )
 
 func TestFoundry(t *testing.T) {
-
 	if testing.Short() {
 		t.Skip()
 	}
@@ -124,5 +123,4 @@ func TestFoundry(t *testing.T) {
 
 	// Sleep for an additional testing
 	time.Sleep(10 * time.Second)
-
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/docker/docker/client"
 	"github.com/gorilla/mux"
 	ictypes "github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
@@ -34,7 +35,9 @@ type RouterConfig struct {
 	AuthKey      string
 	InstallDir   string
 	LogFile      string
+	TestName     string
 	Logger       *zap.Logger
+	DockerClient *client.Client
 }
 
 func NewRouter(
@@ -47,8 +50,13 @@ func NewRouter(
 	infoH := handlers.NewInfo(rc.Config, rc.InstallDir, ctx, ic, rc.CosmosChains, rc.Vals, rc.Relayer, rc.RelayerExecReporter)
 	r.HandleFunc("/info", infoH.GetInfo).Methods(http.MethodGet)
 
+	// interaction logs
 	logStream := handlers.NewLogSteam(rc.Logger, rc.LogFile, rc.AuthKey)
 	r.HandleFunc("/logs", logStream.StreamLogs).Methods(http.MethodGet)
+	r.HandleFunc("/logs_tail", logStream.TailLogs).Methods(http.MethodGet) // ?lines=
+
+	containerStream := handlers.NewContainerSteam(ctx, rc.Logger, rc.DockerClient, rc.AuthKey, rc.TestName, rc.Vals)
+	r.HandleFunc("/container_logs", containerStream.StreamContainer).Methods(http.MethodGet) // ?container=<id>&colored=true&lines=10000
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -110,7 +118,6 @@ func getAllMethods(r mux.Router) []Route {
 		})
 		return nil
 	})
-
 	if err != nil {
 		panic(err)
 	}

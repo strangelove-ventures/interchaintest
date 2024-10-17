@@ -6,25 +6,28 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
+
 	"cosmossdk.io/math"
+
+	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
-
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 )
 
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
@@ -36,6 +39,8 @@ func TestInterchain_DuplicateChain_HermesRelayer(t *testing.T) {
 }
 
 func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -83,15 +88,17 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 	_ = ic.Close()
 }
 
-func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) {
+func TestInterchain_GetRelayerWallets_CosmosRly(t *testing.T) { //nolint:tparallel
 	getRelayerWalletsTest(t, ibc.CosmosRly)
 }
 
-func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) {
+func TestInterchain_GetRelayerWallets_HermesRelayer(t *testing.T) { //nolint:tparallel
 	getRelayerWalletsTest(t, ibc.Hermes)
 }
 
 func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -248,11 +255,11 @@ func TestInterchain_CreateUser(t *testing.T) {
 	})
 }
 
-func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) {
+func TestCosmosChain_BroadcastTx_CosmosRly(t *testing.T) { //nolint:tparallel
 	broadcastTxCosmosChainTest(t, ibc.CosmosRly)
 }
 
-func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) {
+func TestCosmosChain_BroadcastTx_HermesRelayer(t *testing.T) { //nolint:tparallel
 	broadcastTxCosmosChainTest(t, ibc.Hermes)
 }
 
@@ -282,7 +289,6 @@ func TestInterchain_ConcurrentRelayerOps(t *testing.T) {
 	numValidators := 1
 
 	for _, rly := range relayers {
-		rly := rly
 		t.Run(rly.name, func(t *testing.T) {
 			client, network := interchaintest.DockerSetup(t)
 			f, err := interchaintest.CreateLogFile(fmt.Sprintf("%d.json", time.Now().Unix()))
@@ -347,6 +353,8 @@ func getIBCPath(chainA, chainB ibc.Chain) string {
 }
 
 func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -544,6 +552,8 @@ func TestInterchain_AddNil(t *testing.T) {
 }
 
 func assertTransactionIsValid(t *testing.T, resp sdk.TxResponse) {
+	t.Helper()
+
 	require.NotNil(t, resp)
 	require.NotEqual(t, 0, resp.GasUsed)
 	require.NotEqual(t, 0, resp.GasWanted)

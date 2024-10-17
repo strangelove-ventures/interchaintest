@@ -19,7 +19,7 @@ func PollForMessage[T any](ctx context.Context, chain *Thorchain, registry codec
 		fn = func(T) bool { return true }
 	}
 	doPoll := func(ctx context.Context, height int64) (T, error) {
-		h := int64(height)
+		h := height
 		block, err := chain.getFullNode().Client.Block(ctx, &h)
 		if err != nil {
 			return zero, err
@@ -44,7 +44,7 @@ func PollForMessage[T any](ctx context.Context, chain *Thorchain, registry codec
 	return bp.DoPoll(ctx, startHeight, maxHeight)
 }
 
-// PollForBalance polls until the balance matches
+// PollForBalance polls until the balance matches.
 func PollForBalance(ctx context.Context, chain *Thorchain, deltaBlocks int64, balance ibc.WalletAmount) error {
 	h, err := chain.Height(ctx)
 	if err != nil {

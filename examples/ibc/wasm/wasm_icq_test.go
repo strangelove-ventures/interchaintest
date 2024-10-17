@@ -28,11 +28,11 @@ import (
 // On the sender chain, CosmWasm capability is required to instantiate/execute the smart contract. On the receiver chain,
 // the ICQ module is required to be present in order to receive interchain queries.
 func TestInterchainQueriesWASM(t *testing.T) {
-	//TODO (1): force relayer to use specific versions of the chains configured in the file.
-	//os.Setenv("ICTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
+	// TODO (1): force relayer to use specific versions of the chains configured in the file.
+	// os.Setenv("ICTEST_CONFIGURED_CHAINS", "./icq_wasm_configured_chains.yaml")
 
-	//TODO (2): use Juno as sender "ghcr.io/strangelove-ventures/heighliner/juno:v10.1.0"
-	//and Strangelove's icqd (or another chain with ICQ module present) as receiver.
+	// TODO (2): use Juno as sender "ghcr.io/strangelove-ventures/heighliner/juno:v10.1.0"
+	// and Strangelove's icqd (or another chain with ICQ module present) as receiver.
 
 	logger := zaptest.NewLogger(t)
 
@@ -46,12 +46,12 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	rep := testreporter.NewReporter(f)
 	eRep := rep.RelayerExecReporter(t)
 	ctx := context.Background()
-	contractFilePath := "sample_contracts/icq.wasm" //Contract that will be initialized on chain
+	contractFilePath := "sample_contracts/icq.wasm" // Contract that will be initialized on chain
 
 	wasmImage := ibc.DockerImage{
 		Repository: "ghcr.io/strangelove-ventures/heighliner/wasmd",
 		Version:    "v0.0.1",
-		UidGid:     dockerutil.GetHeighlinerUserString(),
+		UIDGID:     dockerutil.GetHeighlinerUserString(),
 	}
 
 	genesisAllowICQ := map[string]interface{}{
@@ -82,7 +82,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 				GasAdjustment:  1.1,
 				EncodingConfig: wasm.WasmEncoding(),
 				ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-			}},
+			},
+		},
 		{
 			ChainName:     "receiver",
 			NumValidators: &minVal,
@@ -99,7 +100,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 				GasAdjustment:  1.1,
 				EncodingConfig: wasm.WasmEncoding(),
 				ModifyGenesis:  modifyGenesisAtPath(genesisAllowICQ, "app_state"),
-			}},
+			},
+		},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -175,7 +177,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 5, chain1, chain2)
 	require.NoError(t, err)
 
-	//Instantiate the smart contract on the test chain, facilitating testing of ICQ WASM functionality
+	// Instantiate the smart contract on the test chain, facilitating testing of ICQ WASM functionality
 	contractAddr, err := chain1CChain.InstantiateContract(ctx, chain1User.KeyName(), wasmIcqCodeId, initMessage, true)
 	require.NoError(t, err)
 	logger.Info("icq contract deployed", zap.String("contractAddr", contractAddr))
@@ -227,13 +229,14 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 	logger.Info("channel", zap.String("info", fmt.Sprintf("Channel Port: %s, Channel ID: %s, Counterparty Channel ID: %s", channel.PortID, channel.ChannelID, channel.Counterparty.ChannelID)))
 
-	//Query for the balances of an account on the counterparty chain using interchain queries.
-	//Get the base64 encoded chain2 user address in the format required by the AllBalances query
+	// Query for the balances of an account on the counterparty chain using interchain queries.
+	// Get the base64 encoded chain2 user address in the format required by the AllBalances query
 	chain2UserAddrQuery := fmt.Sprintf(`{"address":"%s"}`, chain2UserAddress)
 	chain2UserAddrQueryB64 := base64.StdEncoding.EncodeToString([]byte(chain2UserAddrQuery))
 
 	// Get current block height for chain 2
-	cmd := []string{chain2.Config().Bin, "status",
+	cmd := []string{
+		chain2.Config().Bin, "status",
 		"--node", chain2.GetRPCAddress(),
 		"--home", chain2.HomeDir(),
 	}
@@ -243,9 +246,10 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	err = json.Unmarshal(stdout, blockHeightC2)
 	require.NoError(t, err)
 
-	//and chain 1
+	// and chain 1
 	// Get current block height
-	cmd = []string{chain1.Config().Bin, "status",
+	cmd = []string{
+		chain1.Config().Bin, "status",
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
 	}
@@ -261,7 +265,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 		Query: msgQuery{
 			Timeout: 1000,
 			Channel: channel.ChannelID,
-			Requests: []RequestQuery{ //can't use abci.RequestQuery since Height/Prove JSON fields are omitted which causes contract errors
+			Requests: []RequestQuery{ // can't use abci.RequestQuery since Height/Prove JSON fields are omitted which causes contract errors
 				{
 					Height: 0,
 					Prove:  false,
@@ -277,7 +281,7 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	msg := string(b)
 	logger.Info("Executing msg ->", zap.String("msg", msg))
 
-	//Query the contract on chain 1. The contract makes an interchain query to chain 2 to get the chain 2 user's balance.
+	// Query the contract on chain 1. The contract makes an interchain query to chain 2 to get the chain 2 user's balance.
 	resp, err := chain1CChain.ExecuteContract(ctx, chain1User.KeyName(), contractAddr, msg)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -287,7 +291,8 @@ func TestInterchainQueriesWASM(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check the results from the interchain query above.
-	cmd = []string{chain1.Config().Bin, "query", "wasm", "contract-state", "all", contractAddr,
+	cmd = []string{
+		chain1.Config().Bin, "query", "wasm", "contract-state", "all", contractAddr,
 		"--node", chain1.GetRPCAddress(),
 		"--home", chain1.HomeDir(),
 		"--chain-id", chain1.Config().ChainID,
@@ -329,8 +334,8 @@ func FirstWithPort(channels []ibc.ChannelOutput, port string) *ibc.ChannelOutput
 type RequestQuery struct {
 	Data   []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 	Path   string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	Height int64  `protobuf:"varint,3,opt,name=height,proto3" json:"height"` //do NOT 'omitempty' for JSON field or contract queries will error
-	Prove  bool   `protobuf:"varint,4,opt,name=prove,proto3" json:"prove"`   //do NOT 'omitempty' for JSON field or contract queries will error
+	Height int64  `protobuf:"varint,3,opt,name=height,proto3" json:"height"` // do NOT 'omitempty' for JSON field or contract queries will error
+	Prove  bool   `protobuf:"varint,4,opt,name=prove,proto3" json:"prove"`   // do NOT 'omitempty' for JSON field or contract queries will error
 }
 
 type msgQuery struct {
@@ -365,7 +370,7 @@ func modifyGenesisAtPath(insertedBlock map[string]interface{}, key string) func(
 			return nil, fmt.Errorf("failed to unmarshal genesis file: %w", err)
 		}
 
-		//Get the section of the genesis file under the given key (e.g. "app_state")
+		// Get the section of the genesis file under the given key (e.g. "app_state")
 		genesisBlockI, ok := g[key]
 		if !ok {
 			return nil, fmt.Errorf("genesis json does not have top level key: %s", key)

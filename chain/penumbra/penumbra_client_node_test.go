@@ -4,9 +4,11 @@ import (
 	"math/big"
 	"testing"
 
-	"cosmossdk.io/math"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/stretchr/testify/require"
+
+	"cosmossdk.io/math"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // TestBigIntDecoding tests the decoding of big integers.
@@ -30,7 +32,7 @@ func TestBigIntDecoding(t *testing.T) {
 // Scenario 2: options has nil timeout value - return default timeout values
 // Scenario 3: both timeout values equal non-zero values - use specified timeout values
 // Scenario 4: only nanoseconds equals non-zero value - use specified value for timestamp and zero for height
-// Scenario 5: only height equals non-zero value - use specified value for height and zero for timestamp
+// Scenario 5: only height equals non-zero value - use specified value for height and zero for timestamp.
 func TestIbcTransferTimeout(t *testing.T) {
 	defaultHeight, defaultTimestamp := defaultTransferTimeouts()
 	zero := uint64(0)

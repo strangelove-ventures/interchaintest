@@ -59,5 +59,5 @@ func (c *UtxoChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTim
 
 func (c *UtxoChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	PanicFunctionName()
-	return nil, nil
+	return &UtxoWallet{}, nil
 }

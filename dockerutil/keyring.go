@@ -9,17 +9,18 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/docker/docker/client"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/docker/docker/client"
 )
 
 // NewLocalKeyringFromDockerContainer copies the contents of the given container directory into a specified local directory.
 // This allows test hosts to sign transactions on behalf of test users.
-func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, localDirectory, containerKeyringDir, containerId string) (keyring.Keyring, error) {
-	reader, _, err := dc.CopyFromContainer(ctx, containerId, containerKeyringDir)
+func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, localDirectory, containerKeyringDir, containerID string) (keyring.Keyring, error) {
+	reader, _, err := dc.CopyFromContainer(ctx, containerID, containerKeyringDir)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func NewLocalKeyringFromDockerContainer(ctx context.Context, dc *client.Client, 
 		}
 
 		var fileBuff bytes.Buffer
-		if _, err := io.Copy(&fileBuff, tr); err != nil {
+		if _, err := io.Copy(&fileBuff, tr); err != nil { //nolint: gosec
 			return nil, err
 		}
 

@@ -4,14 +4,17 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 )
 
 func TestTx(t *testing.T) {
 	t.Parallel()
 
 	t.Run("json", func(t *testing.T) {
+		t.Parallel()
+
 		tx := blockdb.TxResult{
 			Height: 13,
 			Tx:     []byte(`{"json":{"foo":true}}`),
@@ -30,6 +33,8 @@ func TestTx(t *testing.T) {
 	})
 
 	t.Run("non-json", func(t *testing.T) {
+		t.Parallel()
+
 		tx := blockdb.TxResult{
 			Tx: []byte(`some data`),
 		}

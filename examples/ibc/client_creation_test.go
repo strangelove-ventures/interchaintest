@@ -29,7 +29,7 @@ func TestCreatClient(t *testing.T) {
 
 	t.Parallel()
 
-	var tests = []relayerImp{
+	tests := []relayerImp{
 		{
 			name:       "Cosmos Relayer",
 			relayerImp: ibc.CosmosRly,
@@ -135,9 +135,7 @@ func TestCreatClient(t *testing.T) {
 
 			// createClients should only create a client on source, NOT destination chain
 			require.Equal(t, len(destClientInfoBefore), len(destClientInfoAfter), "a client was created on the destination chain")
-
 		})
 
 	}
-
 }

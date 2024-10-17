@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/mount"
+
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 )
 
@@ -21,7 +22,7 @@ type ForgeScriptOpts struct {
 	RawOptions       []string // optional, appends additional options to command
 }
 
-// Add private-key or keystore to cmd
+// Add private-key or keystore to cmd.
 func (c *AnvilChain) AddKey(cmd []string, keyName string) []string {
 	account, ok := c.keystoreMap[keyName]
 	if !ok {
@@ -34,7 +35,7 @@ func (c *AnvilChain) AddKey(cmd []string, keyName string) []string {
 	return cmd
 }
 
-// Add signature function to cmd, if present
+// Add signature function to cmd, if present.
 func AddSignature(cmd []string, signature string) []string {
 	if signature != "" {
 		cmd = append(cmd, "--sig", signature)
@@ -46,7 +47,7 @@ func GetConfigFilePath(configFile, localContractRootDir, solidityContractDir str
 	return filepath.Join(localContractRootDir, solidityContractDir, configFile)
 }
 
-// ReadAndAppendConfigFile, returns the cmd, configFileBz
+// ReadAndAppendConfigFile, returns the cmd, configFileBz.
 func ReadAndAppendConfigFile(cmd []string, configFile, localContractRootDir, solidityContractDir string) ([]string, []byte, error) {
 	// if config file is present, read the file and add it to cmd, after running, overwrite the results
 	if configFile != "" {
@@ -61,11 +62,11 @@ func ReadAndAppendConfigFile(cmd []string, configFile, localContractRootDir, sol
 	return cmd, nil, nil
 }
 
-// WriteConfigFile - if config file is present, we need to overwrite what forge changed
+// WriteConfigFile - if config file is present, we need to overwrite what forge changed.
 func WriteConfigFile(configFile string, localContractRootDir string, solidityContractDir string, configFileBz []byte) error {
 	if configFile != "" {
 		configFilePath := GetConfigFilePath(configFile, localContractRootDir, solidityContractDir)
-		err := os.WriteFile(configFilePath, configFileBz, 0644)
+		err := os.WriteFile(configFilePath, configFileBz, 0o644)
 		if err != nil {
 			return err
 		}

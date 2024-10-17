@@ -42,12 +42,12 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 					{
 						Repository: "seunlanlege/centauri-polkadot",
 						Version:    "v0.9.27",
-						UidGid:     "1000:1000",
+						UIDGID:     "1000:1000",
 					},
 					{
 						Repository: "seunlanlege/centauri-parachain",
 						Version:    "v0.9.27",
-						UidGid:     "1025:1025",
+						UIDGID:     "1025:1025",
 					},
 				},
 				Bin:            "polkadot",
@@ -87,7 +87,7 @@ func TestPolkadotComposableChainStart(t *testing.T) {
 	PARACHAIN_DEFAULT_AMOUNT := math.NewInt(1_152_921_504_606_847_000)
 	RELAYCHAIN_DEFAULT_AMOUNT := math.NewInt(1_100_000_000_000_000_000)
 	FAUCET_AMOUNT := math.NewInt(100_000_000_000_000_000) // set in interchain.go/global
-	//RELAYER_AMOUNT :=                   1_000_000_000_000 // set in interchain.go/global
+	// RELAYER_AMOUNT :=                   1_000_000_000_000 // set in interchain.go/global
 
 	// Check the faucet amounts
 	polkadotFaucetAddress, err := polkadotChain.GetAddress(ctx, "faucet")

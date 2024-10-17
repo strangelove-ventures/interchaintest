@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
@@ -29,13 +30,13 @@ func (tn *ChainNode) VoteOnProposal(ctx context.Context, keyName string, proposa
 // SubmitProposal submits a gov v1 proposal to the chain.
 func (tn *ChainNode) SubmitProposal(ctx context.Context, keyName string, prop TxProposalv1) (string, error) {
 	file := "proposal.json"
-	propJson, err := json.MarshalIndent(prop, "", " ")
+	propJSON, err := json.MarshalIndent(prop, "", " ")
 	if err != nil {
 		return "", err
 	}
 
 	fw := dockerutil.NewFileWriter(tn.logger(), tn.DockerClient, tn.TestName)
-	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJson); err != nil {
+	if err := fw.WriteFile(ctx, tn.VolumeName, file, propJSON); err != nil {
 		return "", fmt.Errorf("writing contract file to docker volume: %w", err)
 	}
 

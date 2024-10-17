@@ -22,10 +22,10 @@ const (
 
 type Chain string
 
-// Chains represent a slice of Chain
+// Chains represent a slice of Chain.
 type Chains []Chain
 
-// Valid validates chain format, should consist only of uppercase letters
+// Valid validates chain format, should consist only of uppercase letters.
 func (c Chain) Valid() error {
 	if len(c) < 3 {
 		return errors.New("chain id len is less than 3")
@@ -41,7 +41,7 @@ func (c Chain) Valid() error {
 	return nil
 }
 
-// NewChain create a new Chain and default the siging_algo to Secp256k1
+// NewChain create a new Chain and default the siging_algo to Secp256k1.
 func NewChain(chainID string) (Chain, error) {
 	chain := Chain(strings.ToUpper(chainID))
 	if err := chain.Valid(); err != nil {
@@ -50,13 +50,13 @@ func NewChain(chainID string) (Chain, error) {
 	return chain, nil
 }
 
-// String implement fmt.Stringer
+// String implement fmt.Stringer.
 func (c Chain) String() string {
 	// convert it to upper case again just in case someone created a ticker via Chain("rune")
 	return strings.ToUpper(string(c))
 }
 
-// GetGasAsset chain's base asset
+// GetGasAsset chain's base asset.
 func (c Chain) GetGasAsset() Asset {
 	switch c {
 	case THORChain:
@@ -81,6 +81,8 @@ func (c Chain) GetGasAsset() Asset {
 		return AVAXAsset
 	case GAIAChain:
 		return ATOMAsset
+	case EmptyChain:
+		return EmptyAsset
 	default:
 		return EmptyAsset
 	}

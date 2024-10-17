@@ -6,6 +6,7 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/rivo/tview"
+
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 )
 

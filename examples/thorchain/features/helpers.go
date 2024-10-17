@@ -66,7 +66,7 @@ func PollForPool(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int64
 		return fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (any, error) {
-		pool, err := thorchain.ApiGetPool(asset)
+		pool, err := thorchain.APIGetPool(ctx, asset)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return nil, err
@@ -91,7 +91,7 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
-		savers, err := thorchain.ApiGetSavers(asset)
+		savers, err := thorchain.APIGetSavers(ctx, asset)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return tc.Saver{}, err
@@ -100,7 +100,6 @@ func PollForSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks int6
 			if strings.EqualFold(saver.AssetAddress, exoUser.FormattedAddress()) {
 				return saver, nil
 			}
-
 		}
 		time.Sleep(time.Second) // rate limit
 		return tc.Saver{}, fmt.Errorf("saver took longer than %d blocks to show", deltaBlocks)
@@ -118,7 +117,7 @@ func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBloc
 		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (tc.Saver, error) {
-		savers, err := thorchain.ApiGetSavers(asset)
+		savers, err := thorchain.APIGetSavers(ctx, asset)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return tc.Saver{}, err
@@ -128,7 +127,6 @@ func PollForEjectedSaver(ctx context.Context, thorchain *tc.Thorchain, deltaBloc
 				time.Sleep(time.Second) // rate limit
 				return saver, fmt.Errorf("saver took longer than %d blocks to eject", deltaBlocks)
 			}
-
 		}
 		return tc.Saver{}, nil
 	}
@@ -145,7 +143,7 @@ func PollSwapCompleted(ctx context.Context, thorchain *tc.Thorchain, deltaBlocks
 		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (any, error) {
-		stages, err := thorchain.ApiGetTxStages(txHash)
+		stages, err := thorchain.APIGetTxStages(ctx, txHash)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return nil, err
@@ -169,7 +167,7 @@ func PollOutboundSigned(ctx context.Context, thorchain *tc.Thorchain, deltaBlock
 		return tc.Saver{}, fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (any, error) {
-		stages, err := thorchain.ApiGetTxStages(txHash)
+		stages, err := thorchain.APIGetTxStages(ctx, txHash)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return nil, err
@@ -217,7 +215,7 @@ func PollForPoolSuspended(ctx context.Context, thorchain *tc.Thorchain, deltaBlo
 		return fmt.Errorf("failed to get height: %w", err)
 	}
 	doPoll := func(ctx context.Context, height int64) (any, error) {
-		pool, err := thorchain.ApiGetPool(exoAsset)
+		pool, err := thorchain.APIGetPool(ctx, exoAsset)
 		if err != nil {
 			time.Sleep(time.Second) // rate limit
 			return nil, err

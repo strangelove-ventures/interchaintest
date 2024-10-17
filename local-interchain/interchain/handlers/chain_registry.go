@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// If the chain_registry.json file is found within the current running directory, show it as an enpoint.
+// If the chain_registry.json file is found within the current running directory, show it as an endpoint.
 // Used in: spawn
 
 type chainRegistry struct {
@@ -30,5 +30,4 @@ func (cr chainRegistry) GetChainRegistry(w http.ResponseWriter, r *http.Request)
 	if _, err := w.Write(cr.DataJSON); err != nil {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
 	}
-
 }

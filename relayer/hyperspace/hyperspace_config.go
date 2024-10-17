@@ -5,13 +5,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
+
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	bip32 "github.com/tyler-smith/go-bip32"
-	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 type HyperspaceRelayerCoreConfig struct {
@@ -45,7 +47,7 @@ type HyperspaceRelayerCosmosChainConfig struct {
 	Name             string   `toml:"name"`
 	RPCUrl           string   `toml:"rpc_url"`
 	GRPCUrl          string   `toml:"grpc_url"`
-	WebsocketUrl     string   `toml:"websocket_url"`
+	WebsocketURL     string   `toml:"websocket_url"`
 	ChainID          string   `toml:"chain_id"`
 	AccountPrefix    string   `toml:"account_prefix"`
 	FeeDenom         string   `toml:"fee_denom"`
@@ -97,33 +99,35 @@ func GenKeyEntry(bech32Prefix, coinType, mnemonic string) KeyEntry {
 		Address:    address.Bytes(),                     // i.e. [9, 13, 32, 191, 206, 194, 159, 239, 250, 89, 193, 7, 23, 99, 96, 46, 7, 74, 172, 14]
 	}
 }
+
 func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyName, rpcAddr, grpcAddr string) interface{} {
 	chainType := chainConfig.Type
-	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
-		chainType = "parachain"
+	if chainType == ibc.Polkadot || chainType == ibc.Parachain || chainType == ibc.RelayChain {
+		chainType = ibc.Parachain
 	}
 
-	if chainType == "parachain" {
+	switch {
+	case chainType == ibc.Parachain:
 		addrs := strings.Split(rpcAddr, ",")
-		paraRpcAddr := rpcAddr
-		relayRpcAddr := grpcAddr
+		paraRPCAddr := rpcAddr
+		relayRPCAddr := grpcAddr
 		if len(addrs) > 1 {
-			paraRpcAddr, relayRpcAddr = addrs[0], addrs[1]
+			paraRPCAddr, relayRPCAddr = addrs[0], addrs[1]
 		}
 		return HyperspaceRelayerSubstrateChainConfig{
 			Type:             chainType,
 			Name:             chainConfig.Name,
 			ParaID:           2000,
-			ParachainRPCURL:  strings.Replace(strings.Replace(paraRpcAddr, "http", "ws", 1), "9933", "27451", 1),
-			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1), "9933", "27451", 1),
+			ParachainRPCURL:  strings.Replace(strings.Replace(paraRPCAddr, "http", "ws", 1), "9933", "27451", 1),
+			RelayChainRPCURL: strings.Replace(strings.Replace(relayRPCAddr, "http", "ws", 1), "9933", "27451", 1),
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
 			SS58Version:      polkadot.Ss58Format,
 			KeyType:          "sr25519",
 			FinalityProtocol: "Grandpa",
 		}
-	} else if chainType == "cosmos" {
-		wsUrl := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
+	case chainType == ibc.Cosmos:
+		wsURL := strings.Replace(rpcAddr, "http", "ws", 1) + "/websocket"
 		return HyperspaceRelayerCosmosChainConfig{
 			Type:          chainType,
 			Name:          chainConfig.Name,
@@ -136,9 +140,9 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RPCUrl:        rpcAddr,
 			StorePrefix:   "ibc",
 			MaxTxSize:     200000,
-			WebsocketUrl:  wsUrl,
+			WebsocketURL:  wsURL,
 		}
-	} else {
+	default:
 		panic(fmt.Sprintf("unsupported chain type %s", chainType))
 	}
 }

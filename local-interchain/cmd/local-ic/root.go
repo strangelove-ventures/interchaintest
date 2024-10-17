@@ -9,10 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// This must be global for the Makefile to build properly (ldflags).
-	MakeFileInstallDirectory string
-)
+// This must be global for the Makefile to build properly (ldflags).
+var MakeFileInstallDirectory string
 
 var rootCmd = &cobra.Command{
 	Use:   "local-ic",

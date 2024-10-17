@@ -145,7 +145,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			interchaintestrelayer.CustomDockerImage(
 				rlyCfg.DockerImage.Repository,
 				rlyCfg.DockerImage.Version,
-				rlyCfg.DockerImage.UidGid,
+				rlyCfg.DockerImage.UIDGID,
 			),
 			interchaintestrelayer.StartupFlags(rlyCfg.StartupFlags...),
 		)
@@ -249,15 +249,17 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		}
 
 		r := router.NewRouter(ctx, ic, &router.RouterConfig{
+			Logger:              logger,
 			RelayerExecReporter: eRep,
 			Config:              config,
 			CosmosChains:        cosmosChains,
+			DockerClient:        client,
 			Vals:                vals,
 			Relayer:             relayer,
 			AuthKey:             ac.AuthKey,
 			InstallDir:          installDir,
 			LogFile:             logFile.Name(),
-			Logger:              logger,
+			TestName:            testName,
 		})
 
 		config.Server = types.RestServer{
