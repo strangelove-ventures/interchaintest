@@ -30,6 +30,11 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
+var (
+	numVals          = 1
+	numFullNodesZero = 0
+)
+
 func TestInterchain_DuplicateChain_CosmosRly(t *testing.T) {
 	duplicateChainTest(t, ibc.CosmosRly)
 }
@@ -51,8 +56,8 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1"},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1"},
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -109,8 +114,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -188,7 +193,7 @@ func TestInterchain_CreateUser(t *testing.T) {
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -365,8 +370,8 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}},
-		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}},
+		{Name: "gaia", ChainName: "g1", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: "gaia", ChainName: "g2", Version: "v7.0.1", ChainConfig: ibc.ChainConfig{ChainID: "cosmoshub-1"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -452,7 +457,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: "gaia", Version: "v7.0.1"},
+		{Name: "gaia", Version: "v7.0.1", NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
