@@ -418,13 +418,16 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 		transferAmount := sdk.Coin{Denom: chain0.Config().Denom, Amount: sendAmount}
 		memo := ""
 
+		h, err := chain0.Height(ctx)
+		require.NoError(t, err)
+
 		msg := transfertypes.NewMsgTransfer(
 			"transfer",
 			"channel-0",
 			transferAmount,
 			testUser.FormattedAddress(),
 			testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix),
-			clienttypes.NewHeight(1, 1000),
+			clienttypes.NewHeight(2, uint64(h)+100),
 			0,
 			memo,
 		)

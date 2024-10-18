@@ -41,7 +41,7 @@ func TestSDKBoundaries(t *testing.T) {
 					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
-			relayerVersion: "v2.5.2",
+			relayerVersion: rly.DefaultContainerVersion,
 		},
 		{
 			name: "sdk 47 <-> 50",
@@ -55,7 +55,7 @@ func TestSDKBoundaries(t *testing.T) {
 					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
-			relayerVersion: "v2.5.2",
+			relayerVersion: rly.DefaultContainerVersion,
 		},
 	}
 
