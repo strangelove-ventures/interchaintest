@@ -60,7 +60,7 @@ After installation, open a new cmd or shell, and you will be able to run `go ver
 ### 4. Downloading Make
 Make is a tool which controls the generation of executables and other non-source files of a program from the source files. It is necessary for building *`makefiles`*.
 
-Make does not come with Windows, so we need to download the make binary which you can find provided by GNU [here](https://gnuwin32.sourceforge.net/packages/make.htm) and download the Binaries zip, or go to [this link](https://gnuwin32.sourceforge.net/downlinks/make-bin-zip.php) directly and begin downloading.
+Make does not come with Windows, so we need to download the make binary which you can find provided by GNU [here](https://www.gnu.org/software/make/) and download the Binaries zip, or go to [this link](https://sourceforge.net/projects/gnuwin32/files/make/3.81/make-3.81-bin.zip/download?use_mirror=kent&download=) directly and begin downloading.
 
 1. Extract the downloaded zip file
 2. Go to the *`bin`*  folder, copy *`make.exe`*
