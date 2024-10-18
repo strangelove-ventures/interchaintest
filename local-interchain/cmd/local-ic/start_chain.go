@@ -38,9 +38,11 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 		configPath := args[0]
 		isURL := strings.HasPrefix(configPath, "http")
 
-		var parentDir string
-		var config *types.Config
-		var err error
+		var (
+		    parentDir string
+		    config *types.Config
+		    err error
+	         )
 
 		if path.IsAbs(configPath) {
 			dir, err := filepath.Abs(configPath)
