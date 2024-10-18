@@ -2,9 +2,23 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
+
+func VerifyAuthKey(expected string, r *http.Request) error {
+	if expected == "" {
+		return nil
+	}
+
+	if r.URL.Query().Get("auth_key") == expected {
+		return nil
+	}
+
+	return fmt.Errorf("unauthorized, incorrect or no ?auth_key= provided")
+}
 
 type IbcChainConfigAlias struct {
 	Type           string  `json:"type" yaml:"type"`
