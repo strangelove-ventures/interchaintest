@@ -34,6 +34,7 @@ func TestChainGenesisUnequalStake(t *testing.T) {
 			ChainName:     "gaia",
 			Version:       "v15.1.0",
 			NumValidators: &validators,
+			NumFullNodes:  &numFullNodesZero,
 			ChainConfig: ibc.ChainConfig{
 				Denom: denom,
 				ModifyGenesisAmounts: func(i int) (sdk.Coin, sdk.Coin) {

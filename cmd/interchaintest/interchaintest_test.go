@@ -21,6 +21,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 func init() {
@@ -101,11 +102,14 @@ func setUpTestMatrix() error {
 	if extraFlags.MatrixFile == "" {
 		fmt.Fprintln(os.Stderr, "No matrix file provided, falling back to rly with gaia and osmosis")
 
+		numValsOne := 1
+		numFullNodesZero := 0
+
 		testMatrix.Relayers = []string{"rly", "hermes"}
 		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
-				{Name: "gaia", Version: "v7.0.1"},
-				{Name: "osmosis", Version: "v7.2.0"},
+				{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainName: "c1", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
+				{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainName: "c2", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
 			},
 		}
 

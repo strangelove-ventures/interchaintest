@@ -33,25 +33,29 @@ func TestSDKBoundaries(t *testing.T) {
 			name: "sdk 45 <-> 50",
 			chainSpecs: []*interchaintest.ChainSpec{
 				{
-					Name: "gaia", ChainName: "gaia", Version: "v7.0.3", // sdk 0.45.6
+					Name: "gaia", ChainName: "gaia", Version: "v7.0.3", //sdk 0.45.6
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 				{
-					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", // sdk 0.50 alpha
+					Name: "ibc-go-simd", ChainName: "simd-50", Version: "v8.5.1", // sdk v0.50.10
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
-			relayerVersion: "colin-event-fix",
+			relayerVersion: rly.DefaultContainerVersion,
 		},
 		{
 			name: "sdk 47 <-> 50",
 			chainSpecs: []*interchaintest.ChainSpec{
 				{
-					Name: "ibc-go-simd", ChainName: "simd-47", Version: "v7.2.0", // sdk 0.47.3
+					Name: "ibc-go-simd", ChainName: "simd-47", Version: "v7.2.0", //sdk 0.47.3
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 				{
-					Name: "ibc-go-simd", ChainName: "simd-50", Version: "feat-upgrade-sdk-v0.50", // sdk 0.50 alpha
+					Name: "ibc-go-simd", ChainName: "simd-50", Version: "v8.5.1", // sdk v0.50.10
+					NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero,
 				},
 			},
-			relayerVersion: "colin-event-fix",
+			relayerVersion: rly.DefaultContainerVersion,
 		},
 	}
 

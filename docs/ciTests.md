@@ -18,7 +18,7 @@ Seamlessly build and test current iterations of your chain both locally and with
 
 We recommend creating a separate directory in your chain's repo and importing Interchaintest as its own module. This will allow you to keep the extra imports needed for `interchaintest` separate from your chain.
 
-See [`noble`](https://github.com/strangelove-ventures/noble) chains `interchaintest` [folder](https://github.com/strangelove-ventures/noble/tree/main/interchaintest) as an example.
+See [`noble`](https://github.com/noble-assets/noble) chains `interchaintest e2e` [folder](https://github.com/noble-assets/noble/tree/main/e2e) as an example.
 
 Nobles' CI workflow is a great example to follow along with throughout this guide.
 
