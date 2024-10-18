@@ -74,7 +74,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("Log file created", zap.String("file", logFile.Name()))
+	logger.Debug("Log file created", zap.String("file", logFile.Name()))
 
 	config := ac.Cfg
 
@@ -115,7 +115,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	chains, err := cf.Chains(testName)
 	if err != nil {
-		logger.Fatal("cf.Chains", zap.Error(err))
+		logger.Fatal("ChainFactory chains", zap.Error(err))
 	}
 
 	for _, chain := range chains {
@@ -199,7 +199,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		SkipPathCreation: false,
 	})
 	if err != nil {
-		logger.Fatal("ic.Build", zap.Error(err))
+		logger.Fatal("Interchain Build", zap.Error(err))
 	}
 
 	if relayer != nil && len(ibcpaths) > 0 {
@@ -209,12 +209,12 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		}
 
 		if err := relayer.StartRelayer(ctx, eRep, paths...); err != nil {
-			logger.Fatal("relayer.StartRelayer", zap.Error(err))
+			logger.Fatal("Relayer StartRelayer", zap.Error(err))
 		}
 
 		defer func() {
 			if err := relayer.StopRelayer(ctx, eRep); err != nil {
-				logger.Error("relayer.StopRelayer", zap.Error(err))
+				logger.Error("Relayer StopRelayer", zap.Error(err))
 			}
 		}()
 	}
@@ -286,7 +286,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 		)
 
 		if err := http.ListenAndServe(serverAddr, corsHandler(r)); err != nil {
-			logger.Error("http.ListenAndServe", zap.Error(err))
+			logger.Error("HTTP ListenAndServe", zap.Error(err))
 		}
 	}()
 

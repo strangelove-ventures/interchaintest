@@ -131,7 +131,7 @@ func TailFile(logger *zap.Logger, logFile string, lines uint64) []string {
 	for i := 0; uint64(i) < totalLines-lines; i++ {
 		_, _, err := reader.ReadLine()
 		if err != nil {
-			logger.Fatal("error reading log file", zap.Error(err))
+			logger.Fatal("Error reading log file", zap.Error(err))
 		}
 	}
 
