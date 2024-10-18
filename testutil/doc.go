@@ -2,6 +2,6 @@
 package testutil
 
 const (
-	TestSimd   = "ibc-go-simd"
-	SimdVerion = "v8.5.1"
+	TestSimd    = "ibc-go-simd"
+	SimdVersion = "v8.5.1"
 )

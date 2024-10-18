@@ -32,8 +32,8 @@ func TestBlockDBMessagesView(t *testing.T) {
 	const chainID0 = "c0"
 	const chainID1 = "c1"
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
-		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID0}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
-		{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainConfig: ibc.ChainConfig{ChainID: chainID1}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
+		{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: chainID0}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
+		{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: chainID1}, NumValidators: &numVals, NumFullNodes: &numFullNodes},
 	})
 
 	chains, err := cf.Chains(t.Name())

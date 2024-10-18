@@ -108,8 +108,8 @@ func setUpTestMatrix() error {
 		testMatrix.Relayers = []string{"rly", "hermes"}
 		testMatrix.ChainSets = [][]*interchaintest.ChainSpec{
 			{
-				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c1", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
-				{Name: testutil.TestSimd, Version: testutil.SimdVerion, ChainName: "c2", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
+				{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainName: "c1", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
+				{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainName: "c2", NumValidators: &numValsOne, NumFullNodes: &numFullNodesZero},
 			},
 		}
 
