@@ -46,9 +46,8 @@ func NewContainerSteam(ctx context.Context, logger *zap.Logger, cli *dockerclien
 }
 
 func (cs *ContainerStream) StreamContainer(w http.ResponseWriter, r *http.Request) {
-	// ensure ?auth_key=<authKey> is provided
-	if cs.authKey != "" && r.URL.Query().Get("auth_key") != cs.authKey {
-		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
+	if err := VerifyAuthKey(cs.authKey, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 

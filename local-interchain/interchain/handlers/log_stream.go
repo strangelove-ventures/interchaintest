@@ -31,9 +31,8 @@ func NewLogSteam(logger *zap.Logger, file string, authKey string) *LogStream {
 }
 
 func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
-	// ensure ?auth_key=<authKey> is provided
-	if ls.authKey != "" && r.URL.Query().Get("auth_key") != ls.authKey {
-		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
+	if err := VerifyAuthKey(ls.authKey, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -84,9 +83,8 @@ func (ls *LogStream) StreamLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ls *LogStream) TailLogs(w http.ResponseWriter, r *http.Request) {
-	// ensure ?auth_key=<authKey> is provided
-	if ls.authKey != "" && r.URL.Query().Get("auth_key") != ls.authKey {
-		http.Error(w, "Unauthorized, incorrect or no ?auth_key= provided", http.StatusUnauthorized)
+	if err := VerifyAuthKey(ls.authKey, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
