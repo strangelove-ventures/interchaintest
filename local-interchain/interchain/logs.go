@@ -76,6 +76,7 @@ func DumpChainsInfoToLogs(configDir string, config *types.Config, chains []ibc.C
 func InitLogger(logFile *os.File) (*zap.Logger, error) {
 	// Production logger that saves logs to file and console.
 	pe := zap.NewProductionEncoderConfig()
+	pe.EncodeTime = zapcore.TimeEncoderOfLayout(time.TimeOnly)
 
 	fileEncoder := zapcore.NewJSONEncoder(pe)
 	consoleEncoder := zapcore.NewConsoleEncoder(pe)
