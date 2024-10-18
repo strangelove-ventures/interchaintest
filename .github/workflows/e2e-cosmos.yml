@@ -1,4 +1,4 @@
-name: Conformance End-To-End Tests
+name: Cosmos End-To-End Tests
 
 on:
   pull_request:
