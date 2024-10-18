@@ -300,7 +300,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// Save to logs.json file for runtime chain information.
 	DumpChainsInfoToLogs(installDir, config, chains, connections)
 
-	logger.Info("Local-IC API is running on ", zap.String("url", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port)))
+	logger.Info("Local-IC API is running", zap.String("url", fmt.Sprintf("http://%s:%s", config.Server.Host, config.Server.Port)))
 
 	if err = testutil.WaitForBlocks(ctx, math.MaxInt, chains[0]); err != nil {
 		// when the network is stopped / killed (ctrl + c), ignore error
