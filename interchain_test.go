@@ -56,8 +56,8 @@ func duplicateChainTest(t *testing.T, relayerImpl ibc.RelayerImplementation) {
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion},
-		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -114,8 +114,8 @@ func getRelayerWalletsTest(t *testing.T, relayerImpl ibc.RelayerImplementation) 
 
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		// Two otherwise identical chains that only differ by ChainID.
-		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
-		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-2"}},
+		{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+		{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-2"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -488,7 +488,7 @@ func TestInterchain_OmitGitSHA(t *testing.T) {
 func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("duplicate chain", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
-			{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+			{Name: testutil.TestSimd, Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 		})
 
 		chains, err := cf.Chains(t.Name())
@@ -504,8 +504,8 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("chain name", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Different ChainID, but explicit ChainName used twice.
-			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
-			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}},
+			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+			{Name: testutil.TestSimd, ChainName: "c", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-1"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 		})
 
 		chains, err := cf.Chains(t.Name())
@@ -519,8 +519,8 @@ func TestInterchain_ConflictRejection(t *testing.T) {
 	t.Run("chain ID", func(t *testing.T) {
 		cf := interchaintest.NewBuiltinChainFactory(zap.NewNop(), []*interchaintest.ChainSpec{
 			// Valid ChainName but duplicate ChainID.
-			{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
-			{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}},
+			{Name: testutil.TestSimd, ChainName: "c1", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
+			{Name: testutil.TestSimd, ChainName: "c2", Version: testutil.SimdVersion, ChainConfig: ibc.ChainConfig{ChainID: "chain-0"}, NumValidators: &numVals, NumFullNodes: &numFullNodesZero},
 		})
 
 		chains, err := cf.Chains(t.Name())
