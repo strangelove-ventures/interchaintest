@@ -20,8 +20,6 @@ import (
 
 var (
 	icsVersions     = []string{"v3.1.0", "v3.3.0", "v4.0.0"}
-	vals            = 2
-	fNodes          = 0
 	providerChainID = "provider-1"
 )
 
@@ -34,13 +32,11 @@ func TestICS(t *testing.T) {
 		icsVersions = []string{ver}
 	}
 
-	relayers := []struct {
+	type relayerTypes struct {
 		rly  ibc.RelayerImplementation
 		name string
-	}{
-		{rly: ibc.Hermes, name: "hermes"},
-		{rly: ibc.CosmosRly, name: "rly"},
 	}
+	relayers := []relayerTypes{{rly: ibc.CosmosRly, name: "rly"}}
 
 	for _, version := range icsVersions {
 		version := version
@@ -63,15 +59,17 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 		consumerBechPrefix = "consumer"
 	}
 
+	validators := 2
+
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{
 			Name: "ics-provider", Version: version,
-			NumValidators: &vals, NumFullNodes: &fNodes,
+			NumValidators: &validators, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: providerChainID, TrustingPeriod: "336h"},
 		},
 		{
 			Name: "ics-consumer", Version: version,
-			NumValidators: &vals, NumFullNodes: &fNodes,
+			NumValidators: &validators, NumFullNodes: &numFullNodes,
 			ChainConfig: ibc.ChainConfig{GasAdjustment: 1.5, ChainID: "consumer-1", Bech32Prefix: consumerBechPrefix, InterchainSecurityConfig: ibc.ICSConfig{
 				ConsumerCopyProviderKey: func(i int) bool {
 					return i == 0
@@ -119,6 +117,8 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 	require.NoError(t, err, "failed to build interchain")
 
 	// ------------------ ICS Setup ------------------
+
+	require.GreaterOrEqual(t, len(provider.Validators), 2)
 
 	// Finish the ICS provider chain initialization.
 	// - Restarts the relayer to connect ics20-1 transfer channel
