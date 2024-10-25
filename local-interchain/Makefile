@@ -14,7 +14,11 @@ endif
 
 # if env IGNORE_STATIC_LINK=true, then only set the main version in ldflags
 # required so releasing the binary does not set the main directory incorrectly
-ldflags = -X main.MakeFileInstallDirectory=$(CWD) -X main.Version=$(VERSION)
+# -
+# Stripping the debug info with -s -w fixes this so the binary
+# is properly signed (MacOS sequoia + XCode 16 causes the binary to instantly die)
+# ref: https://github.com/rollchains/spawn/issues/248
+ldflags = -X main.MakeFileInstallDirectory=$(CWD) -X main.Version=$(VERSION) -s -w
 ifeq ($(IGNORE_STATIC_LINK),true)
   ldflags = -X main.Version=$(VERSION)
 endif
