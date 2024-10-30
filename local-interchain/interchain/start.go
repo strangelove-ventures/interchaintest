@@ -177,7 +177,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 			}
 
 			if p == nil {
-				log.Fatalf("provider %s not found in chains on Start", provider)
+				logger.Fatal("provider not found in chains on Start", zap.String("provider", provider))
 			}
 
 			for _, c := range allConsumers {
@@ -186,7 +186,7 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 				logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
 
 				if _, ok := icsProviderPaths[pathName]; ok {
-					log.Fatalf("pathName %s already exists in icsProviderPaths. Update the consumers ChainID to be unique", pathName)
+					logger.Fatal("pathName already exists in icsProviderPaths. Update the consumers ChainID to be unique", zap.String("pathName", pathName))
 				}
 
 				icsProviderPaths[pathName] = p
