@@ -56,6 +56,12 @@ func TestUtxo(t *testing.T) {
 	}))
 	t.Cleanup(func() {
 		_ = ic.Close()
+		for _, chain := range chains {
+			utxoChain, ok := chain.(*utxo.UtxoChain)
+			if ok {
+				utxoChain.Stop()
+			}
+		}
 	})
 
 	// Create and fund a user using GetAndFundTestUsers
