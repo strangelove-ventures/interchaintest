@@ -86,7 +86,7 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	}
 
 	var err error
-	var loopDuration = time.Millisecond * 50
+	loopDuration := time.Millisecond * 50
 	for _, env := range chainConfig.Env {
 		if strings.Contains(env, "ICTEST_RELAYER_LOOP_DURATION") {
 			e := strings.Split(env, "=")
