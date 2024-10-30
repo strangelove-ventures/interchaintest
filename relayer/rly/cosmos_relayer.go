@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -44,18 +45,19 @@ func NewCosmosRelayer(log *zap.Logger, testName string, cli *client.Client, netw
 }
 
 type CosmosRelayerChainConfigValue struct {
-	AccountPrefix  string  `json:"account-prefix"`
-	ChainID        string  `json:"chain-id"`
-	Debug          bool    `json:"debug"`
-	GRPCAddr       string  `json:"grpc-addr"`
-	GasAdjustment  float64 `json:"gas-adjustment"`
-	GasPrices      string  `json:"gas-prices"`
-	Key            string  `json:"key"`
-	KeyringBackend string  `json:"keyring-backend"`
-	OutputFormat   string  `json:"output-format"`
-	RPCAddr        string  `json:"rpc-addr"`
-	SignMode       string  `json:"sign-mode"`
-	Timeout        string  `json:"timeout"`
+	AccountPrefix   string        `json:"account-prefix"`
+	ChainID         string        `json:"chain-id"`
+	Debug           bool          `json:"debug"`
+	GRPCAddr        string        `json:"grpc-addr"`
+	GasAdjustment   float64       `json:"gas-adjustment"`
+	GasPrices       string        `json:"gas-prices"`
+	Key             string        `json:"key"`
+	KeyringBackend  string        `json:"keyring-backend"`
+	OutputFormat    string        `json:"output-format"`
+	RPCAddr         string        `json:"rpc-addr"`
+	SignMode        string        `json:"sign-mode"`
+	Timeout         string        `json:"timeout"`
+	MinLoopDuration time.Duration `json:"min-loop-duration"`
 }
 
 type CosmosRelayerChainConfig struct {
@@ -82,21 +84,39 @@ func ChainConfigToCosmosRelayerChainConfig(chainConfig ibc.ChainConfig, keyName,
 	if chainType == "polkadot" || chainType == "parachain" || chainType == "relaychain" {
 		chainType = "substrate"
 	}
+
+	var err error
+	loopDuration := time.Millisecond * 50
+	for _, env := range chainConfig.Env {
+		if strings.Contains(env, "ICTEST_RELAYER_LOOP_DURATION") {
+			e := strings.Split(env, "=")
+			if len(e) != 2 {
+				panic(fmt.Sprintf("BUG: failed to parse %s", env))
+			}
+
+			loopDuration, err = time.ParseDuration(e[1])
+			if err != nil {
+				panic(fmt.Sprintf("BUG: failed to parse %s: %s", e[1], err))
+			}
+		}
+	}
+
 	return CosmosRelayerChainConfig{
 		Type: chainType,
 		Value: CosmosRelayerChainConfigValue{
-			Key:            keyName,
-			ChainID:        chainConfig.ChainID,
-			RPCAddr:        rpcAddr,
-			GRPCAddr:       gprcAddr,
-			AccountPrefix:  chainConfig.Bech32Prefix,
-			KeyringBackend: keyring.BackendTest,
-			GasAdjustment:  chainConfig.GasAdjustment,
-			GasPrices:      chainConfig.GasPrices,
-			Debug:          true,
-			Timeout:        "10s",
-			OutputFormat:   "json",
-			SignMode:       "direct",
+			Key:             keyName,
+			ChainID:         chainConfig.ChainID,
+			RPCAddr:         rpcAddr,
+			GRPCAddr:        gprcAddr,
+			AccountPrefix:   chainConfig.Bech32Prefix,
+			KeyringBackend:  keyring.BackendTest,
+			GasAdjustment:   chainConfig.GasAdjustment,
+			GasPrices:       chainConfig.GasPrices,
+			Debug:           true,
+			Timeout:         "10s",
+			OutputFormat:    "json",
+			SignMode:        "direct",
+			MinLoopDuration: loopDuration,
 		},
 	}
 }

@@ -52,15 +52,15 @@
         },
         {
             "name": "ics-consumer",
-            "chain_id": "localneutron-1",
-            "denom": "untrn",
-            "binary": "neutrond",
-            "bech32_prefix": "neutron",
+            "chain_id": "localstride-1",
+            "denom": "ustrd",
+            "binary": "strided",
+            "bech32_prefix": "stride",
             "docker_image": {
-                "version": "v3.0.4",
-                "repository": "ghcr.io/strangelove-ventures/heighliner/neutron"
+                "version": "v23.0.0",
+                "repository": "ghcr.io/strangelove-ventures/heighliner/stride"
             },
-            "gas_prices": "0.0untrn,0.0uatom",
+            "gas_prices": "0.0ustride,0.0uatom",
             "chain_type": "cosmos",
             "coin_type": 118,
             "trusting_period": "336h",
@@ -83,6 +83,59 @@
                     {
                         "key": "app_state.ccvconsumer.params.reward_denoms",
                         "value": [
+                            "ustrd"
+                        ]
+                    },
+                    {
+                        "key": "app_state.ccvconsumer.params.provider_reward_denoms",
+                        "value": [
+                            "uatom"
+                        ]
+                    }
+                ],
+                "accounts": [
+                    {
+                        "name": "acc0",
+                        "address": "stride1hj5fveer5cjtn4wd6wstzugjfdxzl0xp98jwc0",
+                        "amount": "10000000000%DENOM%",
+                        "mnemonic": "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "ics-consumer",
+            "chain_id": "localneutron-1",
+            "denom": "untrn",
+            "binary": "neutrond",
+            "bech32_prefix": "neutron",
+            "docker_image": {
+                "version": "latest",
+                "repository": "neutron-node"
+            },
+            "ics_version_override": {
+                "provider": "v3.3.x",
+                "consumer": "v4.x"
+            },
+            "gas_prices": "0.025untrn,0.0uatom",
+            "chain_type": "cosmos",
+            "coin_type": 118,
+            "trusting_period": "336h",
+            "gas_adjustment": 1.3,
+            "number_vals": 1,
+            "number_node": 0,
+            "ics_consumer_link": "localcosmos-1",
+            "debugging": true,
+            "block_time": "1s",
+            "genesis": {
+                "modify": [
+                    {
+                        "key": "consensus.params.block.max_gas",
+                        "value": "100000000"
+                    },
+                    {
+                        "key": "app_state.ccvconsumer.params.reward_denoms",
+                        "value": [
                             "untrn"
                         ]
                     },
@@ -93,10 +146,6 @@
                         ]
                     },
                     {
-                        "key": "consensus_params.block.max_gas",
-                        "value": "1000000000"
-                    },
-                    {
                         "key": "app_state.globalfee.params.minimum_gas_prices",
                         "value": [
                             {
@@ -104,6 +153,10 @@
                                 "amount": "0"
                             }
                         ]
+                    },
+                    {
+                        "key": "app_state.feemarket.params.enabled",
+                        "value": false
                     },
                     {
                         "key": "app_state.feeburner.params.treasury_address",

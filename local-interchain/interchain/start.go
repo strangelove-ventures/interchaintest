@@ -162,32 +162,42 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	icsProviderPaths := make(map[string]ibc.Chain)
 	if len(icsPair) > 0 {
 		for provider, consumers := range icsPair {
-			var p, c ibc.Chain
+			var p ibc.Chain
 
-			// a provider can have multiple consumers
+			allConsumers := []ibc.Chain{}
 			for _, consumer := range consumers {
 				for _, chain := range chains {
 					if chain.Config().ChainID == provider {
 						p = chain
 					}
 					if chain.Config().ChainID == consumer {
-						c = chain
+						allConsumers = append(allConsumers, chain)
 					}
 				}
 			}
 
-			pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
+			if p == nil {
+				logger.Fatal("provider not found in chains on Start", zap.String("provider", provider))
+			}
 
-			logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
+			for _, c := range allConsumers {
+				pathName := fmt.Sprintf("%s-%s", p.Config().ChainID, c.Config().ChainID)
 
-			icsProviderPaths[pathName] = p
+				logger.Info("Adding ICS pair", zap.String("provider", p.Config().ChainID), zap.String("consumer", c.Config().ChainID), zap.String("path", pathName))
 
-			ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
-				Provider: p,
-				Consumer: c,
-				Relayer:  relayer,
-				Path:     pathName,
-			})
+				if _, ok := icsProviderPaths[pathName]; ok {
+					logger.Fatal("pathName already exists in icsProviderPaths. Update the consumers ChainID to be unique", zap.String("pathName", pathName))
+				}
+
+				icsProviderPaths[pathName] = p
+
+				ic = ic.AddProviderConsumerLink(interchaintest.ProviderConsumerLink{
+					Provider: p,
+					Consumer: c,
+					Relayer:  relayer,
+					Path:     pathName,
+				})
+			}
 		}
 	}
 
