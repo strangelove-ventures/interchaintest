@@ -48,7 +48,7 @@ type NamadaChain struct {
 	isRunning bool
 }
 
-// New instance of NamadaChain
+// New instance of NamadaChain.
 func NewNamadaChain(testName string, chainConfig ibc.ChainConfig, numValidators int, numFullNodes int, log *zap.Logger) *NamadaChain {
 	return &NamadaChain{
 		log:           log,
@@ -59,12 +59,12 @@ func NewNamadaChain(testName string, chainConfig ibc.ChainConfig, numValidators 
 	}
 }
 
-// Chain config
+// Chain config.
 func (c *NamadaChain) Config() ibc.ChainConfig {
 	return c.cfg
 }
 
-// Initialize the chain
+// Initialize the chain.
 func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	chainCfg := c.Config()
 	for _, image := range chainCfg.Images {
@@ -108,7 +108,9 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 	}
 	defer os.RemoveAll(tempBaseDir)
 
-	fmt.Println("Temporary base directory:", tempBaseDir)
+	c.log.Debug("Temporary base directory",
+		zap.String("path", tempBaseDir),
+	)
 	c.isRunning = false
 
 	return nil
@@ -118,26 +120,26 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	err := c.downloadTemplates(ctx)
 	if err != nil {
-		return fmt.Errorf("Downloading template files failed: %v", err)
+		return fmt.Errorf("downloading template files failed: %v", err)
 	}
 	err = c.downloadWasms(ctx)
 	if err != nil {
-		return fmt.Errorf("Downloading wasm files failed: %v", err)
+		return fmt.Errorf("downloading wasm files failed: %v", err)
 	}
 
 	err = c.setValidators(ctx)
 	if err != nil {
-		return fmt.Errorf("Setting validators failed: %v", err)
+		return fmt.Errorf("setting validators failed: %v", err)
 	}
 
 	err = c.initAccounts(ctx, additionalGenesisWallets...)
 	if err != nil {
-		return fmt.Errorf("Initializing accounts failed: %v", err)
+		return fmt.Errorf("initializing accounts failed: %v", err)
 	}
 
 	err = c.updateParameters(ctx)
 	if err != nil {
-		return fmt.Errorf("Updating parameters failed: %v", err)
+		return fmt.Errorf("updating parameters failed: %v", err)
 	}
 
 	err = c.initNetwork(ctx)
@@ -147,19 +149,19 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	for _, n := range c.Validators {
-		n := n
-
 		eg.Go(func() error {
-			c.copyGenesisFiles(egCtx, n)
+			if err := c.copyGenesisFiles(egCtx, n); err != nil {
+				return err
+			}
 			return n.CreateContainer(egCtx)
 		})
 	}
 
 	for _, n := range c.FullNodes {
-		n := n
-
 		eg.Go(func() error {
-			c.copyGenesisFiles(egCtx, n)
+			if err := c.copyGenesisFiles(egCtx, n); err != nil {
+				return err
+			}
 			return n.CreateContainer(egCtx)
 		})
 	}
@@ -169,8 +171,6 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 
 	eg, egCtx = errgroup.WithContext(ctx)
 	for _, n := range c.Validators {
-		n := n
-
 		eg.Go(func() error {
 			return n.StartContainer(egCtx)
 		})
@@ -196,7 +196,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	return nil
 }
 
-// Execut a command
+// Execute a command
 func (c *NamadaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.Validators[0].Exec(ctx, cmd, env)
 }
@@ -471,12 +471,10 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s", outputStr)
 	}
 
-	var txHashes []string
 	var height int64
 	var gas int64
 	for _, match := range matchesAll {
 		if len(match) == 4 {
-			txHashes = append(txHashes, match[1])
 			// it is ok to overwrite them of the last transaction
 			height, _ = strconv.ParseInt(match[2], 10, 64)
 			gas, _ = strconv.ParseInt(match[3], 10, 64)
@@ -519,7 +517,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
 		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
 		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
-		timeoutTs, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		timeoutTS, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
 		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
 	)
 	tx.Packet.SourcePort = srcPort
@@ -540,9 +538,9 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	}
 	tx.Packet.Sequence = seqNum
 
-	timeoutNano, err := strconv.ParseUint(timeoutTs, 10, 64)
+	timeoutNano, err := strconv.ParseUint(timeoutTS, 10, 64)
 	if err != nil {
-		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTs, err)
+		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTS, err)
 	}
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
@@ -604,7 +602,7 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return "", fmt.Errorf("faield to generate the IBC shielding transfer")
+		return "", fmt.Errorf("failed to generate the IBC shielding transfer: %v", err)
 	}
 	outputStr := string(output)
 
@@ -618,6 +616,9 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 	}
 	relPath, _ := filepath.Rel(c.HomeDir(), path)
 	shieldingTransfer, err := c.Validators[0].ReadFile(ctx, relPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read the IBC shielding transfer file: %v", err)
+	}
 
 	return string(shieldingTransfer), nil
 }
@@ -722,7 +723,9 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 		}
 
 		return NewWallet(keyName, addrBytes, mnemonic, c.cfg), nil
-	} else if !c.isRunning {
+	}
+
+	if !c.isRunning {
 		return c.createGenesisKey(ctx, keyName)
 	} else {
 		return c.createKeyAndMnemonic(ctx, keyName, strings.HasPrefix(keyName, "shielded"))
@@ -775,6 +778,9 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 		cmd = append(cmd, "--pre-genesis")
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate an account for key %q on chain %s: %w", keyName, c.cfg.Name, err)
+	}
 	outputStr := string(output)
 	re := regexp.MustCompile(`[a-z]+(?:\s+[a-z]+){23}`)
 	mnemonic := re.FindString(outputStr)
@@ -918,8 +924,7 @@ func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 			return fmt.Errorf("failed to read tar file: %w", err)
 		}
 
-		switch header.Typeflag {
-		case tar.TypeReg:
+		if header.Typeflag == tar.TypeReg {
 			if strings.HasSuffix(header.Name, ".wasm") || strings.HasSuffix(header.Name, ".json") {
 				var buf bytes.Buffer
 				if _, err := io.Copy(&buf, tr); err != nil {
@@ -1166,7 +1171,7 @@ func (c *NamadaChain) initGenesisEstablishedAccount(ctx context.Context, keyName
 	re := regexp.MustCompile(`Derived established account address: (\S+)`)
 	matches := re.FindStringSubmatch(outputStr)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("No established account adrress found: %s", outputStr)
+		return "", fmt.Errorf("No established account address found: %s", outputStr)
 	}
 	addr := matches[1]
 
@@ -1244,7 +1249,7 @@ func (c *NamadaChain) copyGenesisFiles(ctx context.Context, n *NamadaNode) error
 		return fmt.Errorf("failed to read the archive file: %w", err)
 	}
 
-	n.writeFile(ctx, archivePath, content)
+	err = n.writeFile(ctx, archivePath, content)
 	if err != nil {
 		return fmt.Errorf("failed to write the archive file: %w", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -149,7 +148,7 @@ func (n *NamadaNode) NodeType() string {
 	return nodeType
 }
 
-func (n *NamadaNode) NewRpcClient(addr string) error {
+func (n *NamadaNode) NewRPCClient(addr string) error {
 	httpClient, err := libclient.DefaultHTTPClient(addr)
 	if err != nil {
 		return err
@@ -219,7 +218,7 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 		return err
 	}
 	rpcPort := hostPorts[1]
-	err = n.NewRpcClient(fmt.Sprintf("tcp://%s", rpcPort))
+	err = n.NewRPCClient(fmt.Sprintf("tcp://%s", rpcPort))
 	if err != nil {
 		return err
 	}
@@ -317,17 +316,6 @@ func (n *NamadaNode) netAddress(ctx context.Context) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to get the net address")
-}
-
-func (n *NamadaNode) copyFile(ctx context.Context, fileName, srcDir, destDir string) error {
-	path := filepath.Join(srcDir, fileName)
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	fw := dockerutil.NewFileWriter(n.logger(), n.DockerClient, n.TestName)
-	destPath := filepath.Join(destDir, fileName)
-	return fw.WriteFile(ctx, n.VolumeName, destPath, file)
 }
 
 func (n *NamadaNode) ReadFile(ctx context.Context, relPath string) ([]byte, error) {

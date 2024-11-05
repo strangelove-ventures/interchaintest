@@ -173,7 +173,7 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return thorchain.NewThorchain(testName, cfg, nv, nf, log), nil
 	case ibc.UTXO:
 		return utxo.NewUtxoChain(testName, cfg, log), nil
-	case "namada":
+	case ibc.Namada:
 		return namada.NewNamadaChain(testName, cfg, nv, nf, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
