@@ -13,6 +13,7 @@ A simple way to config and run IBC local chain testing environments with any lan
 ## Installing Locally
 
 **Install on Mac / Linux**
+
 ```bash
 git clone https://github.com/strangelove-ventures/interchaintest.git
 
@@ -22,6 +23,7 @@ cd interchaintest/local-interchain
 # If you rename the folder or move it, you need to `make install` the binary again.
 make install
 ```
+
 **Install on Windows**
 
 Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for installing Local Interchain.
@@ -39,6 +41,7 @@ Follow [this guide](./docs/WINDOWS.md) to setup the Windows OS environment for i
 *(Ending the config file with `_ignored.json` or `_ignore.json` will ignore it from git)*
 
 ### Optional Start Flags
+
     --api-address string             override the default API address (default "127.0.0.1")
     --api-port uint16                override the default API port (default 8080)
     --auth-key string                require an auth key to use the internal API
@@ -129,6 +132,12 @@ Here is a base chain template with every feature the configuration accepts. Acco
         "1317": "1317",
         "9090": "9090"
     },
+    "additional_start_args": [
+         "--keyring-backend","test"
+    ],
+    "env": [
+                "ETH_RPC_URL=https://sepolia.infura.io/v3/key"
+    ],
     "config_file_overrides": [
         {
             "file": "config/config.toml",

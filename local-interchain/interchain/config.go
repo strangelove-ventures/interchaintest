@@ -201,6 +201,8 @@ func CreateChainConfigs(cfg types.Chain) (ibc.ChainConfig, *interchaintest.Chain
 		EncodingConfig:      nil,
 
 		InterchainSecurityConfig: cfg.ICSVersionOverride,
+		AdditionalStartArgs:      cfg.AdditionalStartArgs,
+		Env:                      cfg.Env,
 	}
 
 	if cfg.DockerImage.Version == "" {
