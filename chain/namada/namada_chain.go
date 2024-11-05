@@ -985,6 +985,11 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 			return fmt.Errorf("Validator address couldn't be added: %v", err)
 		}
 
+		netAddress, err := c.Validators[i].netAddress(ctx)
+		if err != nil {
+			return err
+		}
+
 		// Initialize a genesis validator
 		cmd = []string{
 			"namadac",
@@ -999,7 +1004,7 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 			"--path",
 			transactionPath,
 			"--net-address",
-			c.Validators[i].netAddress(),
+			netAddress,
 			"--commission-rate",
 			"0.05",
 			"--max-commission-rate-change",

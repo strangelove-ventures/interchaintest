@@ -3,12 +3,14 @@ package namada
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -96,7 +98,7 @@ func NewNamadaNode(
 		VolumeName: nn.VolumeName,
 		ImageRef:   nn.Image.Ref(),
 		TestName:   nn.TestName,
-		UidGid:     image.UidGid,
+		UidGid:     image.UIDGID,
 	}); err != nil {
 		return nil, fmt.Errorf("set namada volume owner: %w", err)
 	}
@@ -199,7 +201,11 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 		nat.Port(rpcPort): {},
 	}
 
-	ipAddr := strings.Split(n.netAddress(), ":")[0]
+	netAddr, err := n.netAddress(ctx)
+	if err != nil {
+		return err
+	}
+	ipAddr := strings.Split(netAddr, ":")[0]
 	return n.containerLifecycle.CreateContainer(ctx, n.TestName, n.NetworkID, n.Image, exposedPorts, ipAddr, n.Bind(), nil, n.HostName(), cmd, n.Chain.Config().Env, []string{})
 }
 
@@ -277,14 +283,40 @@ func (n *NamadaNode) WaitMaspFileDownload(ctx context.Context) error {
 	return nil
 }
 
-func (n *NamadaNode) netAddress() string {
+func (n *NamadaNode) netAddress(ctx context.Context) (string, error) {
 	var index int
 	if n.Validator {
 		index = n.Index + 128
 	} else {
 		index = n.Index + 192
 	}
-	return fmt.Sprintf("172.18.0.%d:%s", index, strings.Split(p2pPort, "/")[0])
+	networkResource, err := n.DockerClient.NetworkInspect(ctx, n.NetworkID, types.NetworkInspectOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get the network resource: %v", err)
+	}
+	for _, config := range networkResource.IPAM.Config {
+		if config.Subnet != "" {
+			ip, ipNet, err := net.ParseCIDR(config.Subnet)
+			if err != nil {
+				return "", fmt.Errorf("failed to parse the subnet: %v", err)
+			}
+
+			ip = ip.To4()
+			if ip == nil {
+				return "", fmt.Errorf("subnet is not IPv4")
+			}
+
+			ones, bits := ipNet.Mask.Size()
+			if index < 0 || index >= 1<<uint(bits-ones) {
+				return "", fmt.Errorf("index is invalid: %d", index)
+			}
+
+			ip[3] += byte(index)
+			return fmt.Sprintf("%s:%s", ip, strings.Split(p2pPort, "/")[0]), nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to get the net address")
 }
 
 func (n *NamadaNode) copyFile(ctx context.Context, fileName, srcDir, destDir string) error {
