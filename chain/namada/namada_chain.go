@@ -116,7 +116,7 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 	return nil
 }
 
-// Start to set up
+// Start to set up.
 func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
 	err := c.downloadTemplates(ctx)
 	if err != nil {
@@ -177,8 +177,6 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	}
 
 	for _, n := range c.FullNodes {
-		n := n
-
 		eg.Go(func() error {
 			return n.StartContainer(egCtx)
 		})
@@ -196,12 +194,12 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	return nil
 }
 
-// Execute a command
+// Execute a command.
 func (c *NamadaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	return c.Validators[0].Exec(ctx, cmd, env)
 }
 
-// / Exports the chain state at the specific height
+// Exports the chain state at the specific height.
 func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, error) {
 	panic("implement me")
 }
@@ -291,14 +289,14 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return nil, fmt.Errorf("Getting an address failed with name %q: %w", keyName, err)
+		return nil, fmt.Errorf("getting an address failed with name %q: %w", keyName, err)
 	}
 	outputStr := string(output)
 	re := regexp.MustCompile(`(tnam|znam|zvknam)[0-9a-z]+`)
 	address := re.FindString(outputStr)
 
 	if address == "" {
-		return nil, fmt.Errorf("No address with name %q: %w", keyName, err)
+		return nil, fmt.Errorf("no address with name %q: %w", keyName, err)
 	}
 
 	return []byte(address), nil
@@ -319,13 +317,13 @@ func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, err
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return "", fmt.Errorf("Getting the alias failed with address %s: %w", address, err)
+		return "", fmt.Errorf("getting the alias failed with address %s: %w", address, err)
 	}
 	outputStr := string(output)
 	re := regexp.MustCompile(`Found alias (\S+)`)
 	matches := re.FindStringSubmatch(outputStr)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("No alias found: %s", outputStr)
+		return "", fmt.Errorf("no alias found: %s", outputStr)
 	}
 	alias := matches[1]
 
@@ -451,7 +449,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s, %v", output, err)
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s, %v", output, err)
 	}
 	outputStr := string(output)
 	c.log.Log(zap.InfoLevel, outputStr)
@@ -462,13 +460,13 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	if len(matches) > 1 {
 		txHash = matches[1]
 	} else {
-		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s", outputStr)
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
 	}
 
 	re = regexp.MustCompile(`Transaction ([0-9A-F]+) was successfully applied at height (\d+), consuming (\d+) gas units`)
 	matchesAll := re.FindAllStringSubmatch(outputStr, -1)
 	if len(matches) == 0 {
-		return ibc.Tx{}, fmt.Errorf("The transaction failed: %s", outputStr)
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
 	}
 
 	var height int64
@@ -489,7 +487,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 
 	results, err := c.Validators[0].Client.BlockResults(ctx, &height)
 	if err != nil {
-		return ibc.Tx{}, fmt.Errorf("Checking the events failed: %v", err)
+		return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
 	}
 	const evType = "send_packet"
 	tendermintEvents := results.EndBlockEvents
@@ -500,12 +498,12 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		}
 		jsonEvent, err := json.Marshal(event)
 		if err != nil {
-			return ibc.Tx{}, fmt.Errorf("Converting an events failed: %v", err)
+			return ibc.Tx{}, fmt.Errorf("converting an events failed: %v", err)
 		}
 		var event cometbft.Event
 		err = json.Unmarshal(jsonEvent, &event)
 		if err != nil {
-			return ibc.Tx{}, fmt.Errorf("Converting an event failed: %v", err)
+			return ibc.Tx{}, fmt.Errorf("converting an event failed: %v", err)
 		}
 		events = append(events, event)
 	}
@@ -661,7 +659,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return math.NewInt(0), fmt.Errorf("GetBalance failed: error %s, output %s", err, output)
+		return math.NewInt(0), fmt.Errorf("getting the balance failed: error %s, output %s", err, output)
 	}
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
@@ -677,7 +675,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 		if len(matches) > 1 {
 			amount, err := strconv.ParseFloat(matches[1], 64)
 			if err != nil {
-				return math.NewInt(0), fmt.Errorf("Parsing the amount failed: %s", outputStr)
+				return math.NewInt(0), fmt.Errorf("parsing the amount failed: %s", outputStr)
 			}
 			var multiplier float64
 			if denom == c.Config().Denom {
@@ -839,7 +837,7 @@ func (c *NamadaChain) addAddress(ctx context.Context, keyName, address string) e
 	}
 	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return fmt.Errorf("Address couldn't be added: %v", err)
+		return fmt.Errorf("address couldn't be added: %v", err)
 	}
 
 	return nil
@@ -856,7 +854,11 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 
 	for _, file := range files {
 		url := fmt.Sprintf("%s/%s", baseURL, file)
-		resp, err := http.Get(url)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("failed to download the file %s: %w", file, err)
+		}
+		resp, err := (&http.Client{}).Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to download the file %s: %w", file, err)
 		}
@@ -882,7 +884,11 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 	url := fmt.Sprintf("https://github.com/anoma/namada/releases/download/%s/namada-%s-Linux-x86_64.tar.gz", c.Config().Images[0].Version, c.Config().Images[0].Version)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to download the release file: %w", err)
+	}
+	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download the release file: %w", err)
 	}
@@ -927,7 +933,8 @@ func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 		if header.Typeflag == tar.TypeReg {
 			if strings.HasSuffix(header.Name, ".wasm") || strings.HasSuffix(header.Name, ".json") {
 				var buf bytes.Buffer
-				if _, err := io.Copy(&buf, tr); err != nil {
+				limitedReader := io.LimitReader(tr, 10*1024*1024)
+				if _, err := io.Copy(&buf, limitedReader); err != nil {
 					return fmt.Errorf("failed to read the file: %w", err)
 				}
 				fileName := filepath.Base(header.Name)
@@ -956,7 +963,7 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 	}
 	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return fmt.Errorf("Making transactions.toml failed: %v", err)
+		return fmt.Errorf("making transactions.toml failed: %v", err)
 	}
 
 	for i := 0; i < c.NumValidators; i++ {
@@ -974,9 +981,9 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 			alias,
 			"--unsafe-dont-encrypt",
 		}
-		output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+		_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Validator key couldn't be generated: %v", err)
+			return fmt.Errorf("validator key couldn't be generated: %v", err)
 		}
 
 		// Initialize an established account of the validator
@@ -987,7 +994,7 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 
 		// Add the validator address
 		if err := c.addAddress(ctx, validatorAlias, validatorAddress); err != nil {
-			return fmt.Errorf("Validator address couldn't be added: %v", err)
+			return fmt.Errorf("validator address couldn't be added: %v", err)
 		}
 
 		netAddress, err := c.Validators[i].netAddress(ctx)
@@ -1020,9 +1027,9 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 			"100000",
 			"--unsafe-dont-encrypt",
 		}
-		output, _, err = c.Exec(ctx, cmd, c.Config().Env)
+		output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Initializing a genesis validator failed: %v, %s", err, output)
+			return fmt.Errorf("initializing a genesis validator failed: %v, %s", err, output)
 		}
 
 		cmd = []string{
@@ -1040,7 +1047,7 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 		}
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Signing genesis transactions failed: %v", err)
+			return fmt.Errorf("signing genesis transactions failed: %v", err)
 		}
 
 		cmd = []string{
@@ -1050,7 +1057,7 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 		}
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Appending the transaction failed: %v", err)
+			return fmt.Errorf("appending the transaction failed: %v", err)
 		}
 	}
 
@@ -1069,7 +1076,7 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 	}
 	_, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return fmt.Errorf("Initializing balances.toml failed: %v", err)
+		return fmt.Errorf("initializing balances.toml failed: %v", err)
 	}
 
 	// for validators
@@ -1086,7 +1093,7 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 		}
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
+			return fmt.Errorf("appending the balance to balances.toml failed: %v", err)
 		}
 	}
 
@@ -1111,7 +1118,7 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 		}
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
+			return fmt.Errorf("appending the balance to balances.toml failed: %v", err)
 		}
 		// Add the key balance
 		alias, err := c.getAlias(ctx, wallet.Address)
@@ -1131,7 +1138,7 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 		}
 		_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 		if err != nil {
-			return fmt.Errorf("Appending the balance to balances.toml failed: %v", err)
+			return fmt.Errorf("appending the balance to balances.toml failed: %v", err)
 		}
 	}
 	destTransactionsPath := filepath.Join(templateDir, "transactions.toml")
@@ -1142,7 +1149,7 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 	}
 	_, _, err = c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return fmt.Errorf("Appending establish account tx: %w", err)
+		return fmt.Errorf("appending establish account tx: %w", err)
 	}
 
 	return nil
@@ -1162,7 +1169,7 @@ func (c *NamadaChain) initGenesisEstablishedAccount(ctx context.Context, keyName
 	}
 	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
 	if err != nil {
-		return "", fmt.Errorf("Initializing a validator account failed: %v", err)
+		return "", fmt.Errorf("initializing a validator account failed: %v", err)
 	}
 	outputStr := string(output)
 	// Trim ANSI escape sequence
@@ -1171,7 +1178,7 @@ func (c *NamadaChain) initGenesisEstablishedAccount(ctx context.Context, keyName
 	re := regexp.MustCompile(`Derived established account address: (\S+)`)
 	matches := re.FindStringSubmatch(outputStr)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("No established account address found: %s", outputStr)
+		return "", fmt.Errorf("no established account address found: %s", outputStr)
 	}
 	addr := matches[1]
 
@@ -1235,7 +1242,7 @@ func (c *NamadaChain) initNetwork(ctx context.Context) error {
 	re := regexp.MustCompile(`Derived chain ID: (\S+)`)
 	matches := re.FindStringSubmatch(outputStr)
 	if len(matches) < 2 {
-		return fmt.Errorf("No chain ID: %s", outputStr)
+		return fmt.Errorf("no chain ID: %s", outputStr)
 	}
 	c.cfg.ChainID = matches[1]
 

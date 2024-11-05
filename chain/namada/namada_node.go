@@ -262,7 +262,7 @@ func (n *NamadaNode) WaitMaspFileDownload(ctx context.Context) error {
 		for !completed {
 			select {
 			case <-timeoutChan:
-				return fmt.Errorf("Downloading masp files isn't completed")
+				return fmt.Errorf("downloading masp files isn't completed")
 			default:
 				f, err := fr.SingleFileContent(ctx, n.VolumeName, relPath)
 				if err != nil {

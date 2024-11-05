@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"strings"
@@ -78,7 +79,8 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	DockerCleanup(t, cli)()
 
 	name := fmt.Sprintf("%s-%s", ICTDockerPrefix, RandLowerCaseLetterString(8))
-	baseSubnet := "172.18.0.0/16"
+	octet := uint8(rand.Intn(256))
+	baseSubnet := fmt.Sprintf("172.%d.0.0/16", octet)
 	usedSubnets, err := getUsedSubnets(cli)
 	if err != nil {
 		panic(fmt.Errorf("failed to get used subnets: %v", err))
