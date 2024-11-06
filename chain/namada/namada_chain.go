@@ -18,15 +18,18 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
-	cometbft "github.com/cometbft/cometbft/abci/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/math"
+
+	cometbft "github.com/cometbft/cometbft/abci/types"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
