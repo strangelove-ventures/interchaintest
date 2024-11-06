@@ -20,8 +20,6 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// Need to set the Namada directory before running this test
-// `export ENV_NAMADA_REPO=/path/to/namada`
 func TestNamadaNetwork(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -60,7 +58,7 @@ func TestNamadaNetwork(t *testing.T) {
 	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t),
 		relayer.CustomDockerImage(
 			"ghcr.io/heliaxdev/hermes",
-      "v1.10.4-namada-beta17-rc2@sha256:a95ede57f63ebb4c70aa4ca0bfb7871a5d43cd76d17b1ad62f5d31a9465d65af",
+			"v1.10.4-namada-beta17-rc2@sha256:a95ede57f63ebb4c70aa4ca0bfb7871a5d43cd76d17b1ad62f5d31a9465d65af",
 			"2000:2000",
 		)).
 		Build(t, client, network)
