@@ -15,7 +15,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	// using a legacy tendermint client
+	// To use a legacy tendermint client.
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
@@ -42,7 +42,7 @@ type NamadaNode struct {
 	hostRPCPort string
 }
 
-// Collection of NamadaNode
+// Collection of NamadaNode.
 type NamadaNodes []*NamadaNode
 
 const (

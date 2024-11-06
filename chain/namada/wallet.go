@@ -16,7 +16,7 @@ type NamadaWallet struct {
 	chainCfg ibc.ChainConfig
 }
 
-// NewWallet creates a new instance of NamadaWallet with the provided parameters
+// NewWallet creates a new instance of NamadaWallet with the provided parameters.
 func NewWallet(keyname string, address []byte, mnemonic string, chainCfg ibc.ChainConfig) *NamadaWallet {
 	return &NamadaWallet{
 		mnemonic: mnemonic,
@@ -32,7 +32,7 @@ func (w *NamadaWallet) KeyName() string {
 }
 
 // FormattedAddress returns the formatted address associated with a NamadaWallet instance.
-// If the account is shielded, it returns the payment address
+// If the account is shielded, it returns the payment address.
 func (w *NamadaWallet) FormattedAddress() string {
 	return string(w.address)
 }
