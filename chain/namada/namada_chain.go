@@ -204,38 +204,38 @@ func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, er
 	panic("implement me")
 }
 
-// RPC address
+// Get the RPC address.
 func (c *NamadaChain) GetRPCAddress() string {
 	return fmt.Sprintf("http://%s:26657", c.Validators[0].HostName())
 }
 
-// gRPC address
+// Get the gRPC address. This isn't used for Namada.
 func (c *NamadaChain) GetGRPCAddress() string {
 	// Returns a dummy address because Namada doesn't support gRPC
 	return fmt.Sprintf("http://%s:9090", c.Validators[0].HostName())
 }
 
-// Host RPC
+// Get the host RPC address.
 func (c *NamadaChain) GetHostRPCAddress() string {
 	return "http://" + c.Validators[0].hostRPCPort
 }
 
-// Host peer address
+// Get the host peer address.
 func (c *NamadaChain) GetHostPeerAddress() string {
 	return c.Validators[0].hostP2PPort
 }
 
-// Host gRPC address
+// Get the host gRPC address.
 func (c *NamadaChain) GetHostGRPCAddress() string {
 	panic("No gRPC address for Namada")
 }
 
-// Host Namada home directory
+// Get Namada home directory.
 func (c *NamadaChain) HomeDir() string {
 	return c.Validators[0].HomeDir()
 }
 
-// Create a test key
+// Create a test key.
 func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
 	var err error
 	cmd := []string{
@@ -255,7 +255,7 @@ func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
 	return err
 }
 
-// Recovery a test key
+// Recovery a test key.
 func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	cmd := []string{
 		"echo",
@@ -274,7 +274,7 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 	return err
 }
 
-// Get the Namada address
+// Get the Namada address.
 func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	cmd := []string{
 		"namadaw",
@@ -302,7 +302,7 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 	return []byte(address), nil
 }
 
-// Get the key alias
+// Get the key alias.
 func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, error) {
 	cmd := []string{
 		"namadaw",
@@ -330,7 +330,7 @@ func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, err
 	return alias, nil
 }
 
-// Send funds to a wallet from a user account
+// Send funds to a wallet from a user account.
 func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	var transferCmd string
 	if strings.HasPrefix(amount.Address, "znam") {
@@ -359,7 +359,7 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 	return err
 }
 
-// Send funds to a wallet from a user account with a memo
+// Send funds to a wallet from a user account with a memo.
 func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	var transferCmd string
 	if strings.HasPrefix(amount.Address, "znam") {
@@ -390,7 +390,7 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 	return note, err
 }
 
-// Send on IBC transfer
+// Send on IBC transfer.
 func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
 	cmd := []string{
 		"namadac",
@@ -545,7 +545,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	return tx, err
 }
 
-// Shielded transfer (shielded account to shielded account) on Namada
+// Shielded transfer (shielded account to shielded account) on Namada.
 func (c *NamadaChain) ShieldedTransfer(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	cmd := []string{
 		"namadac",
@@ -570,6 +570,7 @@ func (c *NamadaChain) ShieldedTransfer(ctx context.Context, keyName string, amou
 	return err
 }
 
+// Generate an IBC shielding transfer for the following shielding transfer via IBC.
 func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID string, amount ibc.WalletAmount, options ibc.TransferOptions) (string, error) {
 	var portID string
 	if options.Port == "" {
@@ -621,12 +622,12 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 	return string(shieldingTransfer), nil
 }
 
-// Current block height
+// Get the current block height.
 func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
 	return c.Validators[0].Height(ctx)
 }
 
-// Get the balance with the key alias, not the address
+// Get the balance with the key alias, not the address.
 func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
 	if strings.HasPrefix(keyName, "shielded") {
 		cmd := []string{
@@ -692,23 +693,22 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 	return ret, err
 }
 
-// Get the gas fees
+// Get the gas fees.
 func (c *NamadaChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	panic("implement me")
 }
 
-// All acks at the height
+// All acks at the height.
 func (c *NamadaChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
 	panic("implement me")
 }
 
-// All timeouts at the height
+// All timeouts at the height.
 func (c *NamadaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
 	panic("implement me")
 }
 
-// Namada wallet
-// Generates a spending key when the keyName prefixed with "shielded"
+// Build a Namada wallet. Generates a spending key when the keyName prefixed with "shielded".
 func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
 	if mnemonic != "" {
 		if err := c.RecoverKey(ctx, keyName, mnemonic); err != nil {
@@ -730,12 +730,12 @@ func (c *NamadaChain) BuildWallet(ctx context.Context, keyName string, mnemonic 
 	}
 }
 
-// Namada wallet for a relayer
+// Build a Namada wallet for a relayer.
 func (c *NamadaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	return c.createKeyAndMnemonic(ctx, keyName, false)
 }
 
-// Create an established account key for genesis
+// Create an established account key for genesis.
 func (c *NamadaChain) createGenesisKey(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	alias := fmt.Sprintf("%s-key", keyName)
 	_, err := c.createKeyAndMnemonic(ctx, alias, false)
@@ -767,7 +767,7 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 		"--unsafe-dont-encrypt",
 	}
 	if isShielded && !c.isRunning {
-		return nil, fmt.Errorf("Generating a shielded account in pre-genesis is not allowed in this test")
+		return nil, fmt.Errorf("generating a shielded account in pre-genesis is not allowed in this test")
 	}
 	if isShielded {
 		cmd = append(cmd, "--shielded")
@@ -854,7 +854,7 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 
 	for _, file := range files {
 		url := fmt.Sprintf("%s/%s", baseURL, file)
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return fmt.Errorf("failed to download the file %s: %w", file, err)
 		}
@@ -884,7 +884,7 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 	url := fmt.Sprintf("https://github.com/anoma/namada/releases/download/%s/namada-%s-Linux-x86_64.tar.gz", c.Config().Images[0].Version, c.Config().Images[0].Version)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to download the release file: %w", err)
 	}
