@@ -287,7 +287,7 @@ pub fn get_contract_address(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<S
 }
 
 fn get_contract(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<String, LocalError> {
-    let res = rb.query_tx_hash(tx_hash);
+    let mut res = rb.query_tx_hash(tx_hash);
 
     let code = res["code"].as_i64().unwrap_or_default();
     if code != 0 {
@@ -298,7 +298,13 @@ fn get_contract(rb: &ChainRequestBuilder, tx_hash: &str) -> Result<String, Local
         });
     }
 
-    for event in res["logs"][0]["events"].as_array().iter() {
+    let mut tx_logs = res["logs"].take();
+    let events = tx_logs
+        .as_array_mut()
+        .and_then(|logs| logs.first_mut())
+        .map_or_else(|| res["events"].take(), |log| log["events"].take());
+
+    for event in events.as_array().into_iter() {
         for attr in event.iter() {
             for attr_values in attr["attributes"].as_array().iter() {
                 for attr in attr_values.iter() {
