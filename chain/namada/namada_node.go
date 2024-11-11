@@ -187,7 +187,10 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 	p2p := make(testutil.Toml)
 	p2p["laddr"] = "0.0.0.0:26657"
 	c["ledger.cometbft.p2p"] = p2p
-	testutil.ModifyTomlConfigFile(ctx, n.logger(), n.DockerClient, n.TestName, n.VolumeName, configPath, c)
+	err := testutil.ModifyTomlConfigFile(ctx, n.logger(), n.DockerClient, n.TestName, n.VolumeName, configPath, c)
+	if err != nil {
+		return err
+	}
 
 	mvCmd := "echo 'starting a validator node'"
 	if !n.Validator {
