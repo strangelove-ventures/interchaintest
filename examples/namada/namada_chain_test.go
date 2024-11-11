@@ -44,6 +44,7 @@ func TestNamadaNetwork(t *testing.T) {
 				Denom:        namadachain.NamAddress,
 				Gas:          "250000",
 				CoinDecimals: &coinDecimals,
+				Bin:          "namada",
 			},
 			NumValidators: &nv,
 			NumFullNodes:  &fn,

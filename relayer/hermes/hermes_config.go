@@ -27,7 +27,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		case ibc.Namada:
 			chainType = Namada
 			accountPrefix = ""
-			trustingPeriod = "1000s"
+			trustingPeriod = "1day"
 		default:
 			chainType = Cosmos
 			accountPrefix = chainCfg.Bech32Prefix

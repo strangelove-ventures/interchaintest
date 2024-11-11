@@ -177,7 +177,7 @@ func (n *NamadaNode) Height(ctx context.Context) (int64, error) {
 func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 	setConfigDir := fmt.Sprintf("NAMADA_NETWORK_CONFIGS_DIR=%s", n.HomeDir())
 
-	joinNetworkCmd := fmt.Sprintf(`%s namadac --base-dir %s utils join-network --add-persistent-peers --chain-id %s --allow-duplicate-ip`, setConfigDir, n.HomeDir(), n.Chain.Config().ChainID)
+	joinNetworkCmd := fmt.Sprintf(`%s %s client --base-dir %s utils join-network --add-persistent-peers --chain-id %s --allow-duplicate-ip`, setConfigDir, n.Chain.Config().Bin, n.HomeDir(), n.Chain.Config().ChainID)
 	if n.Validator {
 		joinNetworkCmd += " --genesis-validator " + fmt.Sprintf("validator-%d", n.Index)
 	}
@@ -194,7 +194,7 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 		mvCmd = fmt.Sprintf(`mv %s/wallet.toml %s/%s`, n.HomeDir(), n.HomeDir(), n.Chain.Config().ChainID)
 	}
 
-	ledgerCmd := fmt.Sprintf(`namadan --base-dir %s ledger`, n.HomeDir())
+	ledgerCmd := fmt.Sprintf(`%s node --base-dir %s ledger`, n.Chain.Config().Bin, n.HomeDir())
 
 	cmd := []string{
 		"sh",

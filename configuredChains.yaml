@@ -566,7 +566,7 @@ namada:
   denom: nam
   gas-prices: 0.000001tnam1qxgfw7myv4dh0qna4hq0xdg6lx77fzl7dcem8h7e
   gas-adjustment: 1.1
-  trusting-period: 2000s
+  trusting-period: 48h
   images:
     - repository: ghcr.io/anoma/namada
       uid-gid: 1000:1000

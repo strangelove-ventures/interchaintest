@@ -246,7 +246,8 @@ func (c *NamadaChain) HomeDir() string {
 func (c *NamadaChain) CreateKey(ctx context.Context, keyName string) error {
 	var err error
 	cmd := []string{
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"gen",
@@ -268,7 +269,8 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 		"echo",
 		mnemonic,
 		"|",
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"derive",
@@ -284,7 +286,8 @@ func (c *NamadaChain) RecoverKey(ctx context.Context, keyName, mnemonic string) 
 // Get the Namada address.
 func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	cmd := []string{
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"find",
@@ -312,7 +315,8 @@ func (c *NamadaChain) GetAddress(ctx context.Context, keyName string) ([]byte, e
 // Get the key alias.
 func (c *NamadaChain) getAlias(ctx context.Context, address string) (string, error) {
 	cmd := []string{
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"find",
@@ -346,7 +350,8 @@ func (c *NamadaChain) SendFunds(ctx context.Context, keyName string, amount ibc.
 		transferCmd = "transparent-transfer"
 	}
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		transferCmd,
@@ -375,7 +380,8 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 		transferCmd = "transparent-transfer"
 	}
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		transferCmd,
@@ -400,7 +406,8 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 // Send on IBC transfer.
 func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"ibc-transfer",
@@ -555,7 +562,8 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 // Shielded transfer (shielded account to shielded account) on Namada.
 func (c *NamadaChain) ShieldedTransfer(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"transfer",
@@ -587,7 +595,8 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 	}
 
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"ibc-gen-shielding",
@@ -638,7 +647,8 @@ func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
 func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom string) (math.Int, error) {
 	if strings.HasPrefix(keyName, "shielded") {
 		cmd := []string{
-			"namadac",
+			c.cfg.Bin,
+			"client",
 			"--base-dir",
 			c.HomeDir(),
 			"shielded-sync",
@@ -654,7 +664,8 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 	}
 
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"balance",
@@ -766,7 +777,8 @@ func (c *NamadaChain) createGenesisKey(ctx context.Context, keyName string) (ibc
 
 func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, isShielded bool) (ibc.Wallet, error) {
 	cmd := []string{
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"gen",
@@ -801,7 +813,8 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 	// Generate a payment address
 	if isShielded {
 		cmd = []string{
-			"namadaw",
+			c.cfg.Bin,
+			"wallet",
 			"--base-dir",
 			c.HomeDir(),
 			"gen-payment-addr",
@@ -831,7 +844,8 @@ func (c *NamadaChain) createKeyAndMnemonic(ctx context.Context, keyName string, 
 
 func (c *NamadaChain) addAddress(ctx context.Context, keyName, address string) error {
 	cmd := []string{
-		"namadaw",
+		c.cfg.Bin,
+		"wallet",
 		"--base-dir",
 		c.HomeDir(),
 		"add",
@@ -980,7 +994,8 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 
 		// Generate a validator key
 		cmd := []string{
-			"namadaw",
+			c.cfg.Bin,
+			"wallet",
 			"--base-dir",
 			c.HomeDir(),
 			"--pre-genesis",
@@ -1012,7 +1027,8 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 
 		// Initialize a genesis validator
 		cmd = []string{
-			"namadac",
+			c.cfg.Bin,
+			"client",
 			"--base-dir",
 			c.HomeDir(),
 			"utils",
@@ -1041,7 +1057,8 @@ func (c *NamadaChain) setValidators(ctx context.Context) error {
 		}
 
 		cmd = []string{
-			"namadac",
+			c.cfg.Bin,
+			"client",
 			"--base-dir",
 			c.HomeDir(),
 			"utils",
@@ -1165,7 +1182,8 @@ func (c *NamadaChain) initAccounts(ctx context.Context, additionalGenesisWallets
 
 func (c *NamadaChain) initGenesisEstablishedAccount(ctx context.Context, keyName, transactionPath string) (string, error) {
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"utils",
@@ -1202,7 +1220,7 @@ func (c *NamadaChain) updateParameters(ctx context.Context) error {
 		"-i",
 		// for enough trusting period
 		"-e",
-		"s/epochs_per_year = [0-9_]\\+/epochs_per_year = 31_536/",
+		"s/epochs_per_year = [0-9_]\\+/epochs_per_year = 365/",
 		// delete steward addresses
 		"-e",
 		"s/\"tnam.*//",
@@ -1224,7 +1242,8 @@ func (c *NamadaChain) initNetwork(ctx context.Context) error {
 	checksumsPath := filepath.Join(wasmDir, "checksums.json")
 	genesisTime := time.Now().UTC().Format("2006-01-02T15:04:05.000000000-07:00")
 	cmd := []string{
-		"namadac",
+		c.cfg.Bin,
+		"client",
 		"--base-dir",
 		c.HomeDir(),
 		"utils",
