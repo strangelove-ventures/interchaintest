@@ -21,6 +21,7 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type NamadaNode struct {
@@ -181,7 +182,12 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 		joinNetworkCmd += " --genesis-validator " + fmt.Sprintf("validator-%d", n.Index)
 	}
 
-	updateCmd := fmt.Sprintf(`sed -i s/127.0.0.1:26657/0.0.0.0:26657/g %s/%s/config.toml`, n.HomeDir(), n.Chain.Config().ChainID)
+	configPath := fmt.Sprintf("%s/%s/config.toml", n.HomeDir(), n.Chain.Config().ChainID)
+	c := make(testutil.Toml)
+	p2p := make(testutil.Toml)
+	p2p["laddr"] = "0.0.0.0:26657"
+	c["ledger.cometbft.p2p"] = p2p
+	testutil.ModifyTomlConfigFile(ctx, n.logger(), n.DockerClient, n.TestName, n.VolumeName, configPath, c)
 
 	mvCmd := "echo 'starting a validator node'"
 	if !n.Validator {
@@ -193,7 +199,7 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 	cmd := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`%s && %s && %s && %s`, joinNetworkCmd, updateCmd, mvCmd, ledgerCmd),
+		fmt.Sprintf(`%s && %s && %s`, joinNetworkCmd, mvCmd, ledgerCmd),
 	}
 
 	exposedPorts := nat.PortMap{

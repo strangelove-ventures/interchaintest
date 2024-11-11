@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // NewConfig returns a hermes Config with an entry for each of the provided ChainConfigs.
@@ -22,12 +24,12 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		var accountPrefix string
 		var trustingPeriod string
 		switch chainCfg.Type {
-		case "namada":
-			chainType = "Namada"
+		case ibc.Namada:
+			chainType = Namada
 			accountPrefix = ""
 			trustingPeriod = "1000s"
 		default:
-			chainType = "CosmosSdk"
+			chainType = Cosmos
 			accountPrefix = chainCfg.Bech32Prefix
 			trustingPeriod = "14days"
 		}
@@ -105,6 +107,12 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		Chains: chains,
 	}
 }
+
+// Chain type for Hermes, currently only `CosmosSdk` or `Namada` is supported.
+const (
+	Cosmos = "CosmosSdk"
+	Namada = "Namada"
+)
 
 type Config struct {
 	Global        Global        `toml:"global"`

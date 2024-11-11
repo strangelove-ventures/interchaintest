@@ -188,7 +188,7 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 		return err
 	}
 
-	if err := testutil.WaitForBlocks(ctx, 2, c.Validators[0]); err != nil {
+	if err := testutil.WaitForBlocks(ctx, 2, c.getNode()); err != nil {
 		return err
 	}
 
@@ -197,9 +197,13 @@ func (c *NamadaChain) Start(testName string, ctx context.Context, additionalGene
 	return nil
 }
 
+func (c *NamadaChain) getNode() *NamadaNode {
+	return c.Validators[0]
+}
+
 // Execute a command.
 func (c *NamadaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	return c.Validators[0].Exec(ctx, cmd, env)
+	return c.getNode().Exec(ctx, cmd, env)
 }
 
 // Exports the chain state at the specific height.
@@ -209,23 +213,23 @@ func (c *NamadaChain) ExportState(ctx context.Context, height int64) (string, er
 
 // Get the RPC address.
 func (c *NamadaChain) GetRPCAddress() string {
-	return fmt.Sprintf("http://%s:26657", c.Validators[0].HostName())
+	return fmt.Sprintf("http://%s:26657", c.getNode().HostName())
 }
 
 // Get the gRPC address. This isn't used for Namada.
 func (c *NamadaChain) GetGRPCAddress() string {
 	// Returns a dummy address because Namada doesn't support gRPC
-	return fmt.Sprintf("http://%s:9090", c.Validators[0].HostName())
+	return fmt.Sprintf("http://%s:9090", c.getNode().HostName())
 }
 
 // Get the host RPC address.
 func (c *NamadaChain) GetHostRPCAddress() string {
-	return "http://" + c.Validators[0].hostRPCPort
+	return "http://" + c.getNode().hostRPCPort
 }
 
 // Get the host peer address.
 func (c *NamadaChain) GetHostPeerAddress() string {
-	return c.Validators[0].hostP2PPort
+	return c.getNode().hostP2PPort
 }
 
 // Get the host gRPC address.
@@ -235,7 +239,7 @@ func (c *NamadaChain) GetHostGRPCAddress() string {
 
 // Get Namada home directory.
 func (c *NamadaChain) HomeDir() string {
-	return c.Validators[0].HomeDir()
+	return c.getNode().HomeDir()
 }
 
 // Create a test key.
@@ -488,7 +492,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		GasSpent: gas,
 	}
 
-	results, err := c.Validators[0].Client.BlockResults(ctx, &height)
+	results, err := c.getNode().Client.BlockResults(ctx, &height)
 	if err != nil {
 		return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
 	}
@@ -617,7 +621,7 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 		return "", fmt.Errorf("failed to get the file path of the IBC shielding transfer")
 	}
 	relPath, _ := filepath.Rel(c.HomeDir(), path)
-	shieldingTransfer, err := c.Validators[0].ReadFile(ctx, relPath)
+	shieldingTransfer, err := c.getNode().ReadFile(ctx, relPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read the IBC shielding transfer file: %v", err)
 	}
@@ -627,7 +631,7 @@ func (c *NamadaChain) GenIbcShieldingTransfer(ctx context.Context, channelID str
 
 // Get the current block height.
 func (c *NamadaChain) Height(ctx context.Context) (int64, error) {
-	return c.Validators[0].Height(ctx)
+	return c.getNode().Height(ctx)
 }
 
 // Get the balance with the key alias, not the address.
@@ -667,6 +671,7 @@ func (c *NamadaChain) GetBalance(ctx context.Context, keyName string, denom stri
 	}
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
+	// Parse the balance from the output like `nam: 1000.000000`
 	re := regexp.MustCompile(`:\s*(\d+(\.\d+)?)$`)
 
 	ret := math.NewInt(0)
@@ -875,7 +880,7 @@ func (c *NamadaChain) downloadTemplates(ctx context.Context) error {
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
 			return fmt.Errorf("failed to read the file: %w", err)
 		}
-		err = c.Validators[0].writeFile(ctx, filepath.Join(destDir, file), buf.Bytes())
+		err = c.getNode().writeFile(ctx, filepath.Join(destDir, file), buf.Bytes())
 		if err != nil {
 			return fmt.Errorf("failed to write the file %s: %w", file, err)
 		}
@@ -941,7 +946,7 @@ func (c *NamadaChain) downloadWasms(ctx context.Context) error {
 					return fmt.Errorf("failed to read the file: %w", err)
 				}
 				fileName := filepath.Base(header.Name)
-				err = c.Validators[0].writeFile(ctx, filepath.Join(destDir, fileName), buf.Bytes())
+				err = c.getNode().writeFile(ctx, filepath.Join(destDir, fileName), buf.Bytes())
 				if err != nil {
 					return fmt.Errorf("failed to write the file: %w", err)
 				}
@@ -1217,6 +1222,7 @@ func (c *NamadaChain) initNetwork(ctx context.Context) error {
 	templatesDir := filepath.Join(c.HomeDir(), "templates")
 	wasmDir := filepath.Join(c.HomeDir(), "wasm")
 	checksumsPath := filepath.Join(wasmDir, "checksums.json")
+	genesisTime := time.Now().UTC().Format("2006-01-02T15:04:05.000000000-07:00")
 	cmd := []string{
 		"namadac",
 		"--base-dir",
@@ -1232,7 +1238,7 @@ func (c *NamadaChain) initNetwork(ctx context.Context) error {
 		"--wasm-dir",
 		wasmDir,
 		"--genesis-time",
-		"2023-08-30T00:00:00.000000000+00:00",
+		genesisTime,
 		"--archive-dir",
 		c.HomeDir(),
 	}
@@ -1254,7 +1260,7 @@ func (c *NamadaChain) initNetwork(ctx context.Context) error {
 
 func (c *NamadaChain) copyGenesisFiles(ctx context.Context, n *NamadaNode) error {
 	archivePath := fmt.Sprintf("%s.tar.gz", c.Config().ChainID)
-	content, err := c.Validators[0].ReadFile(ctx, archivePath)
+	content, err := c.getNode().ReadFile(ctx, archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to read the archive file: %w", err)
 	}
@@ -1265,7 +1271,7 @@ func (c *NamadaChain) copyGenesisFiles(ctx context.Context, n *NamadaNode) error
 	}
 
 	walletPath := filepath.Join("pre-genesis", "wallet.toml")
-	content, err = c.Validators[0].ReadFile(ctx, walletPath)
+	content, err = c.getNode().ReadFile(ctx, walletPath)
 	if err != nil {
 		return fmt.Errorf("failed to read the wallet file: %w", err)
 	}
@@ -1277,7 +1283,7 @@ func (c *NamadaChain) copyGenesisFiles(ctx context.Context, n *NamadaNode) error
 	if n.Validator {
 		validatorAlias := fmt.Sprintf("validator-%d", n.Index)
 		validatorWalletPath := filepath.Join("pre-genesis", validatorAlias, "validator-wallet.toml")
-		content, err = c.Validators[0].ReadFile(ctx, validatorWalletPath)
+		content, err = c.getNode().ReadFile(ctx, validatorWalletPath)
 		if err != nil {
 			return fmt.Errorf("failed to read the validator wallet file: %w", err)
 		}
