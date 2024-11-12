@@ -158,7 +158,7 @@ This example is broken down in the steps below.
 
 Artifacts allow you to share data between jobs in a workflow. You can read more about them [here](https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts)
 
-We recommend to use the [Heighliner Action](https://github.com/strangelove-ventures/heighliner-build-action) (strangelove-ventures/heighliner-build-action@vx.x.x). This action streamlines setting up Go, checking out the repo, and building the image with the proper tags. Like the local build step above, this removes the need for a local Dockerfile.
+We recommend to use the [Heighliner Action](https://github.com/strangelove-ventures/heighliner-build-action) (strangelove-ventures/heighliner-build-action). This action streamlines setting up Go, checking out the repo, and building the image with the proper tags. Like the local build step above, this removes the need for a local Dockerfile.
 
 Note the `tar-export-path`. This is the artifact that will be uploaded and used by the other GitHub runners.
 
