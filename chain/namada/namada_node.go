@@ -21,7 +21,6 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 type NamadaNode struct {
@@ -180,16 +179,6 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 	joinNetworkCmd := fmt.Sprintf(`%s %s client --base-dir %s utils join-network --add-persistent-peers --chain-id %s --allow-duplicate-ip`, setConfigDir, n.Chain.Config().Bin, n.HomeDir(), n.Chain.Config().ChainID)
 	if n.Validator {
 		joinNetworkCmd += " --genesis-validator " + fmt.Sprintf("validator-%d", n.Index)
-	}
-
-	configPath := fmt.Sprintf("%s/%s/config.toml", n.HomeDir(), n.Chain.Config().ChainID)
-	c := make(testutil.Toml)
-	p2p := make(testutil.Toml)
-	p2p["laddr"] = "0.0.0.0:26657"
-	c["ledger.cometbft.p2p"] = p2p
-	err := testutil.ModifyTomlConfigFile(ctx, n.logger(), n.DockerClient, n.TestName, n.VolumeName, configPath, c)
-	if err != nil {
-		return err
 	}
 
 	mvCmd := "echo 'starting a validator node'"
