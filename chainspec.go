@@ -183,7 +183,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 
 	// Set the version depending on the chain type.
 	switch cfg.Type {
-	case "cosmos":
+	case "cosmos", "namada":
 		if s.Version != "" && len(cfg.Images) > 0 {
 			cfg.Images[0].Version = s.Version
 		}

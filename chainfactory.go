@@ -14,6 +14,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/foundry"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
@@ -172,6 +173,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return thorchain.NewThorchain(testName, cfg, nv, nf, log), nil
 	case ibc.UTXO:
 		return utxo.NewUtxoChain(testName, cfg, log), nil
+	case ibc.Namada:
+		return namada.NewNamadaChain(testName, cfg, nv, nf, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}

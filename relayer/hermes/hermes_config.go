@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
 // NewConfig returns a hermes Config with an entry for each of the provided ChainConfigs.
@@ -18,8 +20,22 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 			panic(err)
 		}
 
+		var chainType string
+		var accountPrefix string
+		var trustingPeriod string
+		switch chainCfg.Type {
+		case ibc.Namada:
+			chainType = Namada
+			accountPrefix = ""
+			trustingPeriod = "1day"
+		default:
+			chainType = Cosmos
+			accountPrefix = chainCfg.Bech32Prefix
+			trustingPeriod = "14days"
+		}
 		chains = append(chains, Chain{
 			ID:               chainCfg.ChainID,
+			Type:             chainType,
 			RPCAddr:          hermesCfg.rpcAddr,
 			CCVConsumerChain: false,
 			GrpcAddr:         fmt.Sprintf("http://%s", hermesCfg.grpcAddr),
@@ -29,7 +45,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 				BatchDelay: "200ms",
 			},
 			RPCTimeout:    "10s",
-			AccountPrefix: chainCfg.Bech32Prefix,
+			AccountPrefix: accountPrefix,
 			KeyName:       hermesCfg.keyName,
 			AddressType: AddressType{
 				Derivation: "cosmos",
@@ -46,7 +62,7 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 			MaxTxSize:      2097152,
 			ClockDrift:     "5s",
 			MaxBlockTime:   "30s",
-			TrustingPeriod: "14days",
+			TrustingPeriod: trustingPeriod,
 			TrustThreshold: TrustThreshold{
 				Numerator:   "1",
 				Denominator: "3",
@@ -91,6 +107,12 @@ func NewConfig(chainConfigs ...ChainConfig) Config {
 		Chains: chains,
 	}
 }
+
+// Chain type for Hermes, currently only `CosmosSdk` or `Namada` is supported.
+const (
+	Cosmos = "CosmosSdk"
+	Namada = "Namada"
+)
 
 type Config struct {
 	Global        Global        `toml:"global"`
@@ -173,6 +195,7 @@ type TrustThreshold struct {
 
 type Chain struct {
 	ID               string         `toml:"id"`
+	Type             string         `toml:"type"`
 	RPCAddr          string         `toml:"rpc_addr"`
 	GrpcAddr         string         `toml:"grpc_addr"`
 	EventSource      EventSource    `toml:"event_source"`

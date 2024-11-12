@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 )
@@ -76,8 +79,26 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	DockerCleanup(t, cli)()
 
 	name := fmt.Sprintf("%s-%s", ICTDockerPrefix, RandLowerCaseLetterString(8))
+	octet := uint8(rand.Intn(256))
+	baseSubnet := fmt.Sprintf("172.%d.0.0/16", octet)
+	usedSubnets, err := getUsedSubnets(cli)
+	if err != nil {
+		panic(fmt.Errorf("failed to get used subnets: %v", err))
+	}
+	subnet, err := findAvailableSubnet(baseSubnet, usedSubnets)
+	if err != nil {
+		panic(fmt.Errorf("failed to find an available subnet: %v", err))
+	}
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
 		CheckDuplicate: true,
+		Driver:         "bridge",
+		IPAM: &network.IPAM{
+			Config: []network.IPAMConfig{
+				{
+					Subnet: subnet,
+				},
+			},
+		},
 
 		Labels: map[string]string{CleanupLabel: t.Name()},
 	})
@@ -86,6 +107,77 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	}
 
 	return cli, network.ID
+}
+
+func getUsedSubnets(cli *client.Client) (map[string]bool, error) {
+	usedSubnets := make(map[string]bool)
+	networks, err := cli.NetworkList(context.TODO(), types.NetworkListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, net := range networks {
+		for _, config := range net.IPAM.Config {
+			if config.Subnet != "" {
+				usedSubnets[config.Subnet] = true
+			}
+		}
+	}
+	return usedSubnets, nil
+}
+
+func findAvailableSubnet(baseSubnet string, usedSubnets map[string]bool) (string, error) {
+	ip, ipNet, err := net.ParseCIDR(baseSubnet)
+	if err != nil {
+		return "", fmt.Errorf("invalid base subnet: %v", err)
+	}
+
+	for {
+		if isSubnetUsed(ipNet.String(), usedSubnets) {
+			incrementIP(ip, 2)
+			ipNet.IP = ip
+			continue
+		}
+
+		for subIP := ip.Mask(ipNet.Mask); ipNet.Contains(subIP); incrementIP(subIP, 1) {
+			subnet := fmt.Sprintf("%s/24", subIP)
+
+			if !isSubnetUsed(subnet, usedSubnets) {
+				return subnet, nil
+			}
+		}
+
+		incrementIP(ip, 2)
+		ipNet.IP = ip
+	}
+}
+
+func isSubnetUsed(subnet string, usedSubnets map[string]bool) bool {
+	_, targetNet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return true
+	}
+
+	for usedSubnet := range usedSubnets {
+		_, usedNet, err := net.ParseCIDR(usedSubnet)
+		if err != nil {
+			continue
+		}
+
+		if usedNet.Contains(targetNet.IP) || targetNet.Contains(usedNet.IP) {
+			return true
+		}
+	}
+	return false
+}
+
+func incrementIP(ip net.IP, incrementLevel int) {
+	for j := len(ip) - incrementLevel; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }
 
 // DockerCleanup will clean up Docker containers, networks, and the other various config files generated in testing.
