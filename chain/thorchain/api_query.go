@@ -19,7 +19,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
 )
 
-// Generic query for routes not yet supported here
+// Generic query for routes not yet supported here.
 func (c *Thorchain) ApiQuery(ctx context.Context, path string, args ...string) (any, error) {
 	url := fmt.Sprintf("%s/%s", c.GetAPIAddress(), path)
 	var res any

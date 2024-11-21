@@ -208,8 +208,8 @@ func (c *Thorchain) AddValidators(ctx context.Context, configFileOverrides map[s
 		// Fund validator from faucet
 		if err := c.SendFunds(ctx, "faucet", ibc.WalletAmount{
 			Address: c.Validators[i].NodeAccount.NodeAddress,
-			Amount: sdkmath.NewInt(100).MulRaw(decimalPow), // 100e8 rune
-			Denom: c.cfg.Denom,
+			Amount:  sdkmath.NewInt(100).MulRaw(decimalPow), // 100e8 rune
+			Denom:   c.cfg.Denom,
 		}); err != nil {
 			return fmt.Errorf("failed to fund val %d, %w", i, err)
 		}
@@ -245,7 +245,7 @@ func (c *Thorchain) AddValidators(ctx context.Context, configFileOverrides map[s
 	return c.StartAllValSidecars(ctx)
 }
 
-// AddDuplicateValidator spins up a duplicate validator node to test double signing
+// AddDuplicateValidator spins up a duplicate validator node to test double signing.
 func (c *Thorchain) AddDuplicateValidator(ctx context.Context, configFileOverrides map[string]any, originalVal *ChainNode) (*ChainNode, error) {
 	// Get peer string for existing nodes
 	peers := c.Nodes().PeerString(ctx)

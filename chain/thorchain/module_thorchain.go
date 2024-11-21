@@ -51,7 +51,7 @@ func (tn *ChainNode) Bond(ctx context.Context, amount math.Int) error {
 	return err
 }
 
-// Sets validator node keys, must be called by validator
+// Sets validator node keys, must be called by validator.
 func (tn *ChainNode) SetNodeKeys(ctx context.Context) error {
 	_, err := tn.ExecTx(ctx,
 		valKey, "thorchain", "set-node-keys",
@@ -60,7 +60,7 @@ func (tn *ChainNode) SetNodeKeys(ctx context.Context) error {
 	return err
 }
 
-// Sets validator ip address, must be called by validator
+// Sets validator ip address, must be called by validator.
 func (tn *ChainNode) SetIpAddress(ctx context.Context) error {
 	_, err := tn.ExecTx(ctx,
 		valKey, "thorchain", "set-ip-address", tn.NodeAccount.IPAddress,
@@ -68,7 +68,7 @@ func (tn *ChainNode) SetIpAddress(ctx context.Context) error {
 	return err
 }
 
-// Sets validator's binary version
+// Sets validator's binary version.
 func (tn *ChainNode) SetVersion(ctx context.Context) error {
 	_, err := tn.ExecTx(ctx,
 		valKey, "thorchain", "set-version",

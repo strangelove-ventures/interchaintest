@@ -24,9 +24,9 @@ type NodeAccount struct {
 }
 
 type OpenapiNode struct {
-	NodeAddress string `json:"node_address"`
-	Status string `json:"status"`
-	PubKeySet NodeAccountPubKeySet `json:"pub_key_set"`
+	NodeAddress string               `json:"node_address"`
+	Status      string               `json:"status"`
+	PubKeySet   NodeAccountPubKeySet `json:"pub_key_set"`
 	// the consensus pub key for the node
 	ValidatorConsPubKey string `json:"validator_cons_pub_key"`
 	// the P2PID (:6040/p2pid endpoint) of the node
@@ -34,26 +34,26 @@ type OpenapiNode struct {
 	// the block height at which the node became active
 	ActiveBlockHeight int64 `json:"active_block_height"`
 	// the block height of the current provided information for the node
-	StatusSince int64 `json:"status_since"`
+	StatusSince         int64  `json:"status_since"`
 	NodeOperatorAddress string `json:"node_operator_address"`
 	// current node bond
-	TotalBond string `json:"total_bond"`
+	TotalBond     string            `json:"total_bond"`
 	BondProviders NodeBondProviders `json:"bond_providers"`
 	// the set of vault public keys of which the node is a member
 	SignerMembership []string `json:"signer_membership"`
-	RequestedToLeave bool `json:"requested_to_leave"`
+	RequestedToLeave bool     `json:"requested_to_leave"`
 	// indicates whether the node has been forced to leave by the network, typically via ban
-	ForcedToLeave bool `json:"forced_to_leave"`
-	LeaveHeight int64 `json:"leave_height"`
-	IpAddress string `json:"ip_address"`
+	ForcedToLeave bool   `json:"forced_to_leave"`
+	LeaveHeight   int64  `json:"leave_height"`
+	IpAddress     string `json:"ip_address"`
 	// the currently set version of the node
 	Version string `json:"version"`
 	// the accumulated slash points, reset at churn but excessive slash points may carry over
-	SlashPoints int64 `json:"slash_points"`
-	Jail NodeJail `json:"jail"`
-	CurrentAward string `json:"current_award"`
+	SlashPoints  int64    `json:"slash_points"`
+	Jail         NodeJail `json:"jail"`
+	CurrentAward string   `json:"current_award"`
 	// the last observed heights for all chain by the node
-	ObserveChains []ChainHeight `json:"observe_chains"`
+	ObserveChains   []ChainHeight       `json:"observe_chains"`
 	PreflightStatus NodePreflightStatus `json:"preflight_status"`
 }
 
@@ -62,7 +62,7 @@ type NodePreflightStatus struct {
 	Status string `json:"status"`
 	// the reason for the transition to the next status
 	Reason string `json:"reason"`
-	Code int64 `json:"code"`
+	Code   int64  `json:"code"`
 }
 
 type NodeBondProviders struct {
@@ -74,17 +74,17 @@ type NodeBondProviders struct {
 
 type NodeBondProvider struct {
 	BondAddress *string `json:"bond_address,omitempty"`
-	Bond *string `json:"bond,omitempty"`
+	Bond        *string `json:"bond,omitempty"`
 }
 
 type NodeJail struct {
-	ReleaseHeight *int64 `json:"release_height,omitempty"`
-	Reason *string `json:"reason,omitempty"`
+	ReleaseHeight *int64  `json:"release_height,omitempty"`
+	Reason        *string `json:"reason,omitempty"`
 }
 
 type ChainHeight struct {
-	Chain string `json:"chain"`
-	Height int64 `json:"height"`
+	Chain  string `json:"chain"`
+	Height int64  `json:"height"`
 }
 
 // ProtoMessage is implemented by generated protocol buffer messages.
