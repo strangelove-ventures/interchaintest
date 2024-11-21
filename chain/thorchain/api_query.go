@@ -20,21 +20,21 @@ import (
 )
 
 // Generic query for routes not yet supported here.
-func (c *Thorchain) ApiQuery(ctx context.Context, path string, args ...string) (any, error) {
+func (c *Thorchain) APIQuery(ctx context.Context, path string, args ...string) (any, error) {
 	url := fmt.Sprintf("%s/%s", c.GetAPIAddress(), path)
 	var res any
 	err := get(ctx, url, &res)
 	return res, err
 }
 
-func (c *Thorchain) ApiGetNode(ctx context.Context, addr string) (OpenapiNode, error) {
+func (c *Thorchain) APIGetNode(ctx context.Context, addr string) (OpenapiNode, error) {
 	url := fmt.Sprintf("%s/thorchain/node/%s", c.GetAPIAddress(), addr)
 	var node OpenapiNode
 	err := get(ctx, url, &node)
 	return node, err
 }
 
-func (c *Thorchain) ApiGetNodes(ctx context.Context) ([]OpenapiNode, error) {
+func (c *Thorchain) APIGetNodes(ctx context.Context) ([]OpenapiNode, error) {
 	url := fmt.Sprintf("%s/thorchain/nodes", c.GetAPIAddress())
 	var nodes []OpenapiNode
 	err := get(ctx, url, &nodes)

@@ -30,7 +30,7 @@ type OpenapiNode struct {
 	// the consensus pub key for the node
 	ValidatorConsPubKey string `json:"validator_cons_pub_key"`
 	// the P2PID (:6040/p2pid endpoint) of the node
-	PeerId string `json:"peer_id"`
+	PeerID string `json:"peer_id"`
 	// the block height at which the node became active
 	ActiveBlockHeight int64 `json:"active_block_height"`
 	// the block height of the current provided information for the node
@@ -45,7 +45,7 @@ type OpenapiNode struct {
 	// indicates whether the node has been forced to leave by the network, typically via ban
 	ForcedToLeave bool   `json:"forced_to_leave"`
 	LeaveHeight   int64  `json:"leave_height"`
-	IpAddress     string `json:"ip_address"`
+	IPAddress     string `json:"ip_address"`
 	// the currently set version of the node
 	Version string `json:"version"`
 	// the accumulated slash points, reset at churn but excessive slash points may carry over

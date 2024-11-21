@@ -61,7 +61,7 @@ func (tn *ChainNode) SetNodeKeys(ctx context.Context) error {
 }
 
 // Sets validator ip address, must be called by validator.
-func (tn *ChainNode) SetIpAddress(ctx context.Context) error {
+func (tn *ChainNode) SetIPAddress(ctx context.Context) error {
 	_, err := tn.ExecTx(ctx,
 		valKey, "thorchain", "set-ip-address", tn.NodeAccount.IPAddress,
 	)

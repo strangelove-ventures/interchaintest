@@ -226,7 +226,7 @@ func (c *Thorchain) AddValidators(ctx context.Context, configFileOverrides map[s
 				return fmt.Errorf("failed to set val %d node keys, %w", i, err)
 			}
 			// thornode tx thorchain set-ip-address "192.168.0.10"
-			if err := val.SetIpAddress(ctx); err != nil {
+			if err := val.SetIPAddress(ctx); err != nil {
 				return fmt.Errorf("failed to set val %d ip address, %w", i, err)
 			}
 			// thornode tx thorchain set-version
