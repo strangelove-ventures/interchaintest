@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/docker/docker/api/types/image"
 	"io"
 	"math"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"sync"
 
 	sdkmath "cosmossdk.io/math"
+	govtypes "cosmossdk.io/x/gov/types"
+	paramsutils "cosmossdk.io/x/params/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -22,19 +25,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	dockertypes "github.com/docker/docker/api/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types" // nolint:staticcheck
+	chanTypes "github.com/cosmos/ibc-go/v9/modules/core/04-channel/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	wasmtypes "github.com/strangelove-ventures/interchaintest/v8/chain/cosmos/08-wasm-types"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
+	wasmtypes "github.com/strangelove-ventures/interchaintest/v9/chain/cosmos/08-wasm-types"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -573,17 +573,17 @@ func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, co
 }
 
 func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
-	for _, image := range c.Config().Images {
+	for _, img := range c.Config().Images {
 		rc, err := cli.ImagePull(
 			ctx,
-			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			img.Repository+":"+img.Version,
+			image.PullOptions{},
 		)
 		if err != nil {
-			c.log.Error("Failed to pull image",
+			c.log.Error("Failed to pull img",
 				zap.Error(err),
-				zap.String("repository", image.Repository),
-				zap.String("tag", image.Version),
+				zap.String("repository", img.Repository),
+				zap.String("tag", img.Version),
 			)
 		} else {
 			_, _ = io.Copy(io.Discard, rc)

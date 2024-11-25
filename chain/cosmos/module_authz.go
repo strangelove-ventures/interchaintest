@@ -6,9 +6,9 @@ import (
 	"path"
 	"strings"
 
+	"cosmossdk.io/x/authz"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 // AuthzGrant grants a message as a permission to an account.

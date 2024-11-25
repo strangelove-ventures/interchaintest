@@ -5,12 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/docker/docker/api/types/image"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
@@ -110,8 +110,8 @@ type ContainerExecResult struct {
 //
 // Run blocks until the command completes. Thus, Run is not suitable for daemons or servers. Use Start instead.
 // A non-zero status code returns an error.
-func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerExecResult {
-	c, err := image.Start(ctx, cmd, opts)
+func (i *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions) ContainerExecResult {
+	c, err := i.Start(ctx, cmd, opts)
 	if err != nil {
 		return ContainerExecResult{
 			Err:      err,
@@ -123,18 +123,18 @@ func (image *Image) Run(ctx context.Context, cmd []string, opts ContainerOptions
 	return c.Wait(ctx, opts.LogTail)
 }
 
-func (image *Image) imageRef() string {
-	return image.repository + ":" + image.tag
+func (i *Image) imageRef() string {
+	return i.repository + ":" + i.tag
 }
 
 // EnsurePulled can only pull public images.
-func (image *Image) EnsurePulled(ctx context.Context) error {
-	ref := image.imageRef()
-	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
+func (i *Image) EnsurePulled(ctx context.Context) error {
+	ref := i.imageRef()
+	_, _, err := i.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
-		rc, err := image.client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		rc, err := i.client.ImagePull(ctx, ref, image.PullOptions{})
 		if err != nil {
-			return fmt.Errorf("pull image %s: %w", ref, err)
+			return fmt.Errorf("pull i %s: %w", ref, err)
 		}
 		_, _ = io.Copy(io.Discard, rc)
 		_ = rc.Close()
@@ -142,11 +142,11 @@ func (image *Image) EnsurePulled(ctx context.Context) error {
 	return nil
 }
 
-func (image *Image) CreateContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (string, error) {
+func (i *Image) CreateContainer(ctx context.Context, containerName, hostName string, cmd []string, opts ContainerOptions) (string, error) {
 	// Although this shouldn't happen because the name includes randomness, in reality there seems to intermittent
 	// chances of collisions.
 
-	containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := i.client.ContainerList(ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("name", containerName)),
 	})
@@ -155,7 +155,7 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 	}
 
 	for _, c := range containers {
-		if err := image.client.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+		if err := i.client.ContainerRemove(ctx, c.ID, container.RemoveOptions{
 			RemoveVolumes: true,
 			Force:         true,
 		}); err != nil {
@@ -163,10 +163,10 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 		}
 	}
 
-	cc, err := image.client.ContainerCreate(
+	cc, err := i.client.ContainerCreate(
 		ctx,
 		&container.Config{
-			Image: image.imageRef(),
+			Image: i.imageRef(),
 
 			Entrypoint: []string{},
 			WorkingDir: opts.WorkingDir,
@@ -177,7 +177,7 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 			Hostname: hostName,
 			User:     opts.User,
 
-			Labels: map[string]string{CleanupLabel: image.testName},
+			Labels: map[string]string{CleanupLabel: i.testName},
 		},
 		&container.HostConfig{
 			Binds:           opts.Binds,
@@ -187,7 +187,7 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 		},
 		&network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
-				image.networkID: {},
+				i.networkID: {},
 			},
 		},
 		nil,
@@ -200,48 +200,48 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 }
 
 // Start pulls the image if not present, creates a container, and runs it.
-func (image *Image) Start(ctx context.Context, cmd []string, opts ContainerOptions) (*Container, error) {
+func (i *Image) Start(ctx context.Context, cmd []string, opts ContainerOptions) (*Container, error) {
 	if len(cmd) == 0 {
 		panic(errors.New("cmd cannot be empty"))
 	}
 
-	if err := image.EnsurePulled(ctx); err != nil {
-		return nil, image.WrapErr(err)
+	if err := i.EnsurePulled(ctx); err != nil {
+		return nil, i.WrapErr(err)
 	}
 
 	var (
-		containerName = SanitizeContainerName(image.testName + "-" + RandLowerCaseLetterString(6))
+		containerName = SanitizeContainerName(i.testName + "-" + RandLowerCaseLetterString(6))
 		hostName      = CondenseHostName(containerName)
-		logger        = image.log.With(
+		logger        = i.log.With(
 			zap.String("command", strings.Join(cmd, " ")),
 			zap.String("hostname", hostName),
 			zap.String("container", containerName),
 		)
 	)
 
-	cID, err := image.CreateContainer(ctx, containerName, hostName, cmd, opts)
+	cID, err := i.CreateContainer(ctx, containerName, hostName, cmd, opts)
 	if err != nil {
-		return nil, image.WrapErr(fmt.Errorf("create container %s: %w", containerName, err))
+		return nil, i.WrapErr(fmt.Errorf("create container %s: %w", containerName, err))
 	}
 
 	logger.Info("About to start container")
 
-	err = StartContainer(ctx, image.client, cID)
+	err = StartContainer(ctx, i.client, cID)
 	if err != nil {
-		return nil, image.WrapErr(fmt.Errorf("start container %s: %w", containerName, err))
+		return nil, i.WrapErr(fmt.Errorf("start container %s: %w", containerName, err))
 	}
 
 	return &Container{
 		Name:        containerName,
 		Hostname:    hostName,
 		log:         logger,
-		image:       image,
+		image:       i,
 		containerID: cID,
 	}, nil
 }
 
-func (image *Image) WrapErr(err error) error {
-	return fmt.Errorf("image %s:%s: %w", image.repository, image.tag, err)
+func (i *Image) WrapErr(err error) error {
+	return fmt.Errorf("i %s:%s: %w", i.repository, i.tag, err)
 }
 
 // Container is a docker container. Use (*Image).Start to create a new container.
@@ -294,7 +294,7 @@ func (c *Container) Wait(ctx context.Context, logTail uint64) ContainerExecResul
 		stderrBuf = new(bytes.Buffer)
 	)
 
-	logOpts := types.ContainerLogsOptions{
+	logOpts := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	}
@@ -366,7 +366,7 @@ func (c *Container) Stop(timeout time.Duration) error {
 	}
 
 	// RemoveContainerOptions duplicates (*dockertest.Resource).Prune.
-	err = c.image.client.ContainerRemove(ctx, c.containerID, types.ContainerRemoveOptions{
+	err = c.image.client.ContainerRemove(ctx, c.containerID, container.RemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})

@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	govv1 "cosmossdk.io/x/gov/types/v1"
+	govv1beta1 "cosmossdk.io/x/gov/types/v1beta1"
+	paramsutils "cosmossdk.io/x/params/client/utils"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
 )
 
 // VoteOnProposal submits a vote for the specified proposal.

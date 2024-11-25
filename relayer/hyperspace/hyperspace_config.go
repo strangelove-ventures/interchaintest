@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	//"github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	bip32 "github.com/tyler-smith/go-bip32"
 	bip39 "github.com/tyler-smith/go-bip39"
 )
@@ -118,7 +118,8 @@ func ChainConfigToHyperspaceRelayerChainConfig(chainConfig ibc.ChainConfig, keyN
 			RelayChainRPCURL: strings.Replace(strings.Replace(relayRpcAddr, "http", "ws", 1), "9933", "27451", 1),
 			CommitmentPrefix: "0x6962632f",
 			PrivateKey:       "//Alice",
-			SS58Version:      polkadot.Ss58Format,
+			//SS58Version:      polkadot.Ss58Format,
+			SS58Version:      0,
 			KeyType:          "sr25519",
 			FinalityProtocol: "Grandpa",
 		}

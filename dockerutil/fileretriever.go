@@ -8,7 +8,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -63,7 +62,7 @@ func (r *FileRetriever) SingleFileContent(ctx context.Context, volumeName, relPa
 	}
 
 	defer func() {
-		if err := r.cli.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{
+		if err := r.cli.ContainerRemove(ctx, cc.ID, container.RemoveOptions{
 			Force: true,
 		}); err != nil {
 			r.log.Warn("Failed to remove file content container", zap.String("container_id", cc.ID), zap.Error(err))

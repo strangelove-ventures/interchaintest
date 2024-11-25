@@ -6,7 +6,7 @@ package dexv1alpha1
 import (
 	fmt "fmt"
 	proto "github.com/cosmos/gogoproto/proto"
-	v1alpha1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/crypto/v1alpha1"
+	v1alpha1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/crypto/v1alpha1"
 	io "io"
 	math "math"
 	math_bits "math/bits"

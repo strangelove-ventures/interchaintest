@@ -4,14 +4,12 @@ package hyperspace
 import (
 	"context"
 	"fmt"
+	"github.com/pelletier/go-toml/v2"
 	"path"
 
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	types23 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
-	"github.com/misko9/go-substrate-rpc-client/v4/signature"
-	"github.com/pelletier/go-toml/v2"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
+	types23 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 	"go.uber.org/zap"
 )
 
@@ -364,11 +362,12 @@ func (hyperspaceCommander) Init(homeDir string) []string {
 }
 
 func (hyperspaceCommander) CreateWallet(keyName, address, mnemonic string) ibc.Wallet {
-	kp, err := signature.KeyringPairFromSecret(mnemonic, polkadot.Ss58Format)
-	if err != nil {
-		return NewWallet("", "", "")
-	}
-	return NewWallet("", kp.Address, mnemonic)
+	//kp, err := signature.KeyringPairFromSecret(mnemonic, polkadot.Ss58Format)
+	//if err != nil {
+	//	return NewWallet("", "", "")
+	//}
+	//return NewWallet("", kp.Address, mnemonic)
+	return NewWallet("", "", mnemonic)
 }
 
 func (hyperspaceCommander) Flush(pathName, channelID, homeDir string) []string {

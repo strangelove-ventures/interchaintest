@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strangelove-ventures/interchaintest/v8/mocktesting"
+	"github.com/strangelove-ventures/interchaintest/v9/mocktesting"
 	"github.com/stretchr/testify/require"
 )
 

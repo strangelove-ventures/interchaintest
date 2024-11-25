@@ -3,7 +3,7 @@ package cosmos
 import (
 	"context"
 
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	slashingtypes "cosmossdk.io/x/slashing/types"
 )
 
 // SlashingUnJail unjails a validator.

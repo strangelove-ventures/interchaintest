@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -15,7 +14,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 type ContainerLifecycle struct {
@@ -145,7 +144,7 @@ func (c *ContainerLifecycle) StopContainer(ctx context.Context) error {
 }
 
 func (c *ContainerLifecycle) RemoveContainer(ctx context.Context) error {
-	err := c.client.ContainerRemove(ctx, c.id, dockertypes.ContainerRemoveOptions{
+	err := c.client.ContainerRemove(ctx, c.id, container.RemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})

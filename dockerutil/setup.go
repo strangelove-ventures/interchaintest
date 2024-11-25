@@ -77,8 +77,6 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 
 	name := fmt.Sprintf("interchaintest-%s", RandLowerCaseLetterString(8))
 	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
-		CheckDuplicate: true,
-
 		Labels: map[string]string{CleanupLabel: t.Name()},
 	})
 	if err != nil {
@@ -97,7 +95,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 
 		ctx := context.TODO()
 		cli.NegotiateAPIVersion(ctx)
-		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
+		cs, err := cli.ContainerList(ctx, container.ListOptions{
 			All: true,
 			Filters: filters.NewArgs(
 				filters.Arg("label", CleanupLabel+"="+t.Name()),
@@ -114,7 +112,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				if containerLogTail != "" {
 					logTail = containerLogTail
 				}
-				rc, err := cli.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{
+				rc, err := cli.ContainerLogs(ctx, c.ID, container.LogsOptions{
 					ShowStdout: true,
 					ShowStderr: true,
 					Tail:       logTail,
@@ -152,7 +150,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				}
 				cancel()
 
-				if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+				if err := cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{
 					// Not removing volumes with the container, because we separately handle them conditionally.
 					Force: true,
 				}); err != nil {

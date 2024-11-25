@@ -2,13 +2,13 @@ package cosmwasm
 
 import (
 	"context"
-	"path/filepath"
 	"fmt"
-	"runtime"
+	"github.com/docker/docker/api/types/image"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
@@ -18,13 +18,13 @@ import (
 )
 
 // compile will compile the specified repo using the specified docker image and version
-func compile(image string, optVersion string, repoPath string) (string, error) {
-	// Set the image to pull/use
+func compile(img string, optVersion string, repoPath string) (string, error) {
+	// Set the img to pull/use
 	arch := ""
 	if runtime.GOARCH == "arm64" {
 		arch = "-arm64"
 	}
-	imageFull := image + arch + ":" + optVersion
+	imageFull := img + arch + ":" + optVersion
 
 	// Check if version is less than 0.13.0, if so, use old cache directory
 	cacheDir := "/target"
@@ -54,9 +54,9 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	}
 	defer cli.Close()
 
-	reader, err := cli.ImagePull(ctx, imageFull, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, imageFull, image.PullOptions{})
 	if err != nil {
-		return "", fmt.Errorf("pull image %s: %w", imageFull, err)
+		return "", fmt.Errorf("pull img %s: %w", imageFull, err)
 	}
 
 	defer reader.Close()
@@ -71,17 +71,17 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	}, &container.HostConfig{
 		Mounts: []mount.Mount{
 			{
-				Type: mount.TypeBind,
+				Type:   mount.TypeBind,
 				Source: repoPathFull,
 				Target: "/code",
 			},
 			{
-				Type: mount.TypeVolume,
-				Source: filepath.Base(repoPathFull)+"_cache",
+				Type:   mount.TypeVolume,
+				Source: filepath.Base(repoPathFull) + "_cache",
 				Target: cacheDir,
 			},
 			{
-				Type: mount.TypeVolume,
+				Type:   mount.TypeVolume,
 				Source: "registry_cache",
 				Target: "/usr/local/cargo/registry",
 			},
@@ -91,7 +91,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 		return "", fmt.Errorf("create container %s: %w", imageFull, err)
 	}
 
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		return "", fmt.Errorf("start container %s: %w", imageFull, err)
 	}
 
@@ -104,7 +104,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	case <-statusCh:
 	}
 
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	out, err := cli.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true})
 	if err != nil {
 		return "", fmt.Errorf("logs container %s: %w", imageFull, err)
 	}
@@ -122,7 +122,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 		}
 	}
 
-	err = cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{
+	err = cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})
