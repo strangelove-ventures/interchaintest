@@ -6,14 +6,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-
 	//grpc "github.com/cosmos/gogoproto/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 )
-
-var _ module.AppModuleBasic = AppModuleBasic{}
 
 // AppModuleBasic defines the basic application module used by the tendermint light client.
 // Only the RegisterInterfaces function needs to be implemented. All other function perform
