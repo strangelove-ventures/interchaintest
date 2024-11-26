@@ -122,6 +122,12 @@ func (b *Broadcaster) GetClientContext(ctx context.Context, user User) (client.C
 	for _, opt := range b.clientContextOptions {
 		clientContext = opt(clientContext)
 	}
+
+	// Address Codec must be set.
+	if clientContext.AddressCodec == nil {
+		clientContext = clientContext.WithAddressCodec(clientContext.TxConfig.SigningContext().AddressCodec())
+	}
+
 	return clientContext, nil
 }
 
@@ -168,7 +174,6 @@ func (b *Broadcaster) defaultClientContext(fromUser User, sdkAdd sdk.AccAddress)
 		WithKeyring(kr).
 		WithBroadcastMode(flags.BroadcastSync).
 		WithCodec(b.chain.cfg.EncodingConfig.Codec)
-
 	// NOTE: the returned context used to have .WithHomeDir(cn.Home),
 	// but that field no longer exists and the test against Broadcaster still passes without it.
 }
