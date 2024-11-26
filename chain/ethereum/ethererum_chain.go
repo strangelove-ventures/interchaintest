@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/docker/docker/api/types/image"
 	"io"
 	"os"
 	"path"
@@ -12,7 +13,6 @@ import (
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
@@ -148,17 +148,17 @@ func (c *EthereumChain) Bind() []string {
 }
 
 func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
-	for _, image := range c.Config().Images {
+	for _, img := range c.Config().Images {
 		rc, err := cli.ImagePull(
 			ctx,
-			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			img.Repository+":"+img.Version,
+			image.PullOptions{},
 		)
 		if err != nil {
-			c.log.Error("Failed to pull image",
+			c.log.Error("Failed to pull img",
 				zap.Error(err),
-				zap.String("repository", image.Repository),
-				zap.String("tag", image.Version),
+				zap.String("repository", img.Repository),
+				zap.String("tag", img.Version),
 			)
 		} else {
 			_, _ = io.Copy(io.Discard, rc)
