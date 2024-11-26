@@ -137,6 +137,178 @@ func (c *Thorchain) Nodes() ChainNodes {
 	return append(c.Validators, c.FullNodes...)
 }
 
+// AddValidators adds new validators to the network, peering with the existing nodes.
+func (c *Thorchain) AddValidators(ctx context.Context, configFileOverrides map[string]any, inc int) error {
+	// Get peer string for existing nodes
+	peers := c.Nodes().PeerString(ctx)
+
+	// Get genesis.json
+	genbz, err := c.Validators[0].GenesisFileContent(ctx)
+	if err != nil {
+		return err
+	}
+
+	prevCount := c.NumValidators
+	c.NumValidators += inc
+	if err := c.initializeChainNodes(ctx, c.testName, c.getFullNode().DockerClient, c.getFullNode().NetworkID); err != nil {
+		return err
+	}
+
+	// Create full node, validator keys, and start up
+	var eg errgroup.Group
+	for i := prevCount; i < c.NumValidators; i++ {
+		eg.Go(func() error {
+			val := c.Validators[i]
+			if err := val.InitFullNodeFiles(ctx); err != nil {
+				return err
+			}
+			if err := val.SetPeers(ctx, peers); err != nil {
+				return err
+			}
+			if err := val.OverwriteGenesisFile(ctx, genbz); err != nil {
+				return err
+			}
+			for configFile, modifiedConfig := range configFileOverrides {
+				modifiedToml, ok := modifiedConfig.(testutil.Toml)
+				if !ok {
+					return fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+				}
+				if err := testutil.ModifyTomlConfigFile(
+					ctx,
+					val.logger(),
+					val.DockerClient,
+					val.TestName,
+					val.VolumeName,
+					configFile,
+					modifiedToml,
+				); err != nil {
+					return err
+				}
+			}
+			if err := val.CreateKey(ctx, valKey); err != nil {
+				return fmt.Errorf("failed to create key: %w", err)
+			}
+			if err := val.GetNodeAccount(ctx); err != nil {
+				return fmt.Errorf("failed to get node account info: %w", err)
+			}
+			if err := val.CreateNodeContainer(ctx); err != nil {
+				return err
+			}
+			return val.StartContainer(ctx)
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// Fund validator address and register for next churn
+	decimalPow := int64(math.Pow10(int(*c.cfg.CoinDecimals)))
+	for i := prevCount; i < c.NumValidators; i++ {
+		// Fund validator from faucet
+		if err := c.SendFunds(ctx, "faucet", ibc.WalletAmount{
+			Address: c.Validators[i].NodeAccount.NodeAddress,
+			Amount:  sdkmath.NewInt(100).MulRaw(decimalPow), // 100e8 rune
+			Denom:   c.cfg.Denom,
+		}); err != nil {
+			return fmt.Errorf("failed to fund val %d, %w", i, err)
+		}
+
+		eg.Go(func() error {
+			val := c.Validators[i]
+			// thornode tx thorchain deposit 1e8 RUNE "bond:$NODE_ADDRESS"
+			// Bond 2 rune since the next 3 txs will deduct .02 rune/tx and we need > 1 rune bonded
+			if err := val.Bond(ctx, sdkmath.NewInt(2).MulRaw(decimalPow)); err != nil {
+				return fmt.Errorf("failed to set val %d node keys, %w", i, err)
+			}
+			// thornode tx thorchain set-node-keys "$NODE_PUB_KEY" "$NODE_PUB_KEY_ED25519" "$VALIDATOR"
+			if err := val.SetNodeKeys(ctx); err != nil {
+				return fmt.Errorf("failed to set val %d node keys, %w", i, err)
+			}
+			// thornode tx thorchain set-ip-address "192.168.0.10"
+			if err := val.SetIPAddress(ctx); err != nil {
+				return fmt.Errorf("failed to set val %d ip address, %w", i, err)
+			}
+			// thornode tx thorchain set-version
+			if err := val.SetVersion(ctx); err != nil {
+				return fmt.Errorf("failed to set val %d version, %w", i, err)
+			}
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
+	// start sidecar/bifrost
+	return c.StartAllValSidecars(ctx)
+}
+
+// AddDuplicateValidator spins up a duplicate validator node to test double signing.
+func (c *Thorchain) AddDuplicateValidator(ctx context.Context, configFileOverrides map[string]any, originalVal *ChainNode) (*ChainNode, error) {
+	// Get peer string for existing nodes
+	peers := c.Nodes().PeerString(ctx)
+
+	// Get genesis.json
+	genbz, err := c.Validators[0].GenesisFileContent(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c.NumValidators += 1
+	if err := c.initializeChainNodes(ctx, c.testName, c.getFullNode().DockerClient, c.getFullNode().NetworkID); err != nil {
+		return nil, err
+	}
+
+	// Create full node, validator keys, and start up
+	val := c.Validators[c.NumValidators-1]
+	if err := val.InitFullNodeFiles(ctx); err != nil {
+		return nil, err
+	}
+	if err := val.SetPeers(ctx, peers); err != nil {
+		return nil, err
+	}
+	if err := val.OverwriteGenesisFile(ctx, genbz); err != nil {
+		return nil, err
+	}
+	for configFile, modifiedConfig := range configFileOverrides {
+		modifiedToml, ok := modifiedConfig.(testutil.Toml)
+		if !ok {
+			return nil, fmt.Errorf("provided toml override for file %s is of type (%T). Expected (DecodedToml)", configFile, modifiedConfig)
+		}
+		if err := testutil.ModifyTomlConfigFile(
+			ctx,
+			val.logger(),
+			val.DockerClient,
+			val.TestName,
+			val.VolumeName,
+			configFile,
+			modifiedToml,
+		); err != nil {
+			return nil, err
+		}
+	}
+	privValFile, err := originalVal.PrivValFileContent(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get priv_validator_key.json, %w", err)
+	}
+	if err := val.OverwritePrivValFile(ctx, privValFile); err != nil {
+		return nil, fmt.Errorf("failed to overwrite priv_validator_key.json, %w", err)
+	}
+	if err := val.RecoverKey(ctx, valKey, originalVal.ValidatorMnemonic); err != nil {
+		return nil, fmt.Errorf("failed to create key: %w", err)
+	}
+	val.ValidatorMnemonic = originalVal.ValidatorMnemonic
+	if err := val.GetNodeAccount(ctx); err != nil {
+		return nil, fmt.Errorf("failed to get node account info: %w", err)
+	}
+	if err := val.CreateNodeContainer(ctx); err != nil {
+		return nil, err
+	}
+	return val, val.StartContainer(ctx)
+}
+
 // AddFullNodes adds new fullnodes to the network, peering with the existing nodes.
 func (c *Thorchain) AddFullNodes(ctx context.Context, configFileOverrides map[string]any, inc int) error {
 	// Get peer string for existing nodes

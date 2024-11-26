@@ -41,3 +41,37 @@ func (c *Thorchain) SetMimir(ctx context.Context, keyName string, key string, va
 	)
 	return err
 }
+
+func (tn *ChainNode) Bond(ctx context.Context, amount math.Int) error {
+	_, err := tn.ExecTx(ctx,
+		valKey, "thorchain", "deposit",
+		amount.String(), tn.Chain.Config().Denom,
+		fmt.Sprintf("bond:%s", tn.NodeAccount.NodeAddress),
+	)
+	return err
+}
+
+// Sets validator node keys, must be called by validator.
+func (tn *ChainNode) SetNodeKeys(ctx context.Context) error {
+	_, err := tn.ExecTx(ctx,
+		valKey, "thorchain", "set-node-keys",
+		tn.NodeAccount.PubKeySet.Secp256k1, tn.NodeAccount.PubKeySet.Ed25519, tn.NodeAccount.ValidatorConsPubKey,
+	)
+	return err
+}
+
+// Sets validator ip address, must be called by validator.
+func (tn *ChainNode) SetIPAddress(ctx context.Context) error {
+	_, err := tn.ExecTx(ctx,
+		valKey, "thorchain", "set-ip-address", tn.NodeAccount.IPAddress,
+	)
+	return err
+}
+
+// Sets validator's binary version.
+func (tn *ChainNode) SetVersion(ctx context.Context) error {
+	_, err := tn.ExecTx(ctx,
+		valKey, "thorchain", "set-version",
+	)
+	return err
+}

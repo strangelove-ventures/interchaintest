@@ -24,6 +24,9 @@ type AnvilChain struct {
 	*ethereum.EthereumChain
 
 	keystoreMap map[string]*NodeWallet
+
+	// Mutex for reading/writing keystoreMap (once wallet is created, it doesn't change)
+	MapAccess sync.Mutex
 }
 
 func NewAnvilChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *AnvilChain {
@@ -85,6 +88,8 @@ func (c *AnvilChain) CreateKey(ctx context.Context, keyName string) error {
 		return err
 	}
 
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	_, ok := c.keystoreMap[keyName]
 	if ok {
 		return fmt.Errorf("keyname (%s) already used", keyName)
@@ -122,6 +127,8 @@ func (c *AnvilChain) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 	}
 
 	// This is needed for CreateKey() since that keystore path does not use the keyname
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	c.keystoreMap[keyName] = &NodeWallet{
 		keystore: path.Join(c.KeystoreDir(), keyName),
 	}
@@ -131,7 +138,9 @@ func (c *AnvilChain) RecoverKey(ctx context.Context, keyName, mnemonic string) e
 
 // Get address of account, cast to a string to use.
 func (c *AnvilChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	c.MapAccess.Lock()
 	account, ok := c.keystoreMap[keyName]
+	c.MapAccess.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("keyname (%s) not found", keyName)
 	}
@@ -168,7 +177,9 @@ func (c *AnvilChain) SendFundsWithNote(ctx context.Context, keyName string, amou
 		cmd = []string{"cast", "send", amount.Address, "--value", amount.Amount.String(), "--json"}
 	}
 
+	c.MapAccess.Lock()
 	account, ok := c.keystoreMap[keyName]
+	c.MapAccess.Unlock()
 	if !ok {
 		return "", fmt.Errorf("keyname (%s) not found", keyName)
 	}

@@ -26,6 +26,9 @@ type GethChain struct {
 
 	keynameToAccountMap map[string]*NodeWallet
 	nextAcctNum         int
+
+	// Mutex for reading/writing keynameToAccountMap (once wallet is created, it doesn't change)
+	MapAccess sync.Mutex
 }
 
 func NewGethChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) *GethChain {
@@ -78,6 +81,8 @@ func (c *GethChain) JavaScriptExecTx(ctx context.Context, account *NodeWallet, j
 }
 
 func (c *GethChain) CreateKey(ctx context.Context, keyName string) error {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	_, ok := c.keynameToAccountMap[keyName]
 	if ok {
 		return fmt.Errorf("keyname (%s) already used", keyName)
@@ -106,6 +111,8 @@ EOF
 }
 
 func (c *GethChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	_, ok := c.keynameToAccountMap[keyName]
 	if ok {
 		return fmt.Errorf("keyname (%s) already used", keyName)
@@ -133,6 +140,8 @@ func (c *GethChain) RecoverKey(ctx context.Context, keyName, mnemonic string) er
 
 // Get address of account, cast to a string to use.
 func (c *GethChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
 	account, found := c.keynameToAccountMap[keyName]
 	if !found {
 		return nil, fmt.Errorf("GetAddress(): Keyname (%s) not found", keyName)
@@ -182,7 +191,9 @@ func (c *GethChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wa
 }
 
 func (c *GethChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	c.MapAccess.Lock()
 	account, found := c.keynameToAccountMap[keyName]
+	c.MapAccess.Unlock()
 	if !found {
 		return "", fmt.Errorf("keyname (%s) not found", keyName)
 	}
@@ -205,7 +216,9 @@ func (c *GethChain) SendFundsWithNote(ctx context.Context, keyName string, amoun
 // DeployContract creates a new contract on-chain, returning the contract address
 // Constructor params are appended to the byteCode.
 func (c *GethChain) DeployContract(ctx context.Context, keyName string, abi []byte, byteCode []byte) (string, error) {
+	c.MapAccess.Lock()
 	account, found := c.keynameToAccountMap[keyName]
+	c.MapAccess.Unlock()
 	if !found {
 		return "", fmt.Errorf("SendFundsWithNote(): Keyname (%s) not found", keyName)
 	}

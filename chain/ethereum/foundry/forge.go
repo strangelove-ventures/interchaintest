@@ -24,7 +24,9 @@ type ForgeScriptOpts struct {
 
 // Add private-key or keystore to cmd.
 func (c *AnvilChain) AddKey(cmd []string, keyName string) []string {
+	c.MapAccess.Lock()
 	account, ok := c.keystoreMap[keyName]
+	c.MapAccess.Unlock()
 	if !ok {
 		panic(fmt.Sprintf("Keyname (%s) not found", keyName))
 	}
@@ -77,7 +79,9 @@ func WriteConfigFile(configFile string, localContractRootDir string, solidityCon
 // Run "forge script"
 // see: https://book.getfoundry.sh/reference/forge/forge-script
 func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts ForgeScriptOpts) (stdout, stderr []byte, err error) {
+	c.MapAccess.Lock()
 	account, ok := c.keystoreMap[keyName]
+	c.MapAccess.Unlock()
 	if !ok {
 		return nil, nil, fmt.Errorf("keyname (%s) not found", keyName)
 	}
