@@ -141,9 +141,9 @@ func (b *Broadcaster) GetTxResponseBytes(ctx context.Context, user User) ([]byte
 
 // UnmarshalTxResponseBytes accepts the sdk.TxResponse bytes and unmarshalls them into an
 // instance of sdk.TxResponse.
-func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, bytes []byte) (sdk.TxResponse, error) {
+func (b *Broadcaster) UnmarshalTxResponseBytes(ctx context.Context, cc client.Context, bytes []byte) (sdk.TxResponse, error) {
 	resp := sdk.TxResponse{}
-	if err := b.chain.cfg.EncodingConfig.Codec.UnmarshalJSON(bytes, &resp); err != nil {
+	if err := cc.Codec.UnmarshalJSON(bytes, &resp); err != nil {
 		return sdk.TxResponse{}, err
 	}
 
@@ -232,7 +232,7 @@ func BroadcastTx(ctx context.Context, broadcaster *Broadcaster, broadcastingUser
 		return sdk.TxResponse{}, err
 	}
 
-	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, txBytes)
+	respWithTxHash, err := broadcaster.UnmarshalTxResponseBytes(ctx, cc, txBytes)
 	if err != nil {
 		return sdk.TxResponse{}, err
 	}
