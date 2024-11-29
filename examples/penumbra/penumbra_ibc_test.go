@@ -322,7 +322,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	i := ibc.DockerImage{
 		Repository: "ghcr.io/cosmos/relayer",
-		Version:    "justin-proto-update",
+		Version:    "main",
 		UIDGID:     "1025:1025",
 	}
 	r := interchaintest.NewBuiltinRelayerFactory(

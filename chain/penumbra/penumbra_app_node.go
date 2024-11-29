@@ -179,10 +179,11 @@ func (p *PenumbraAppNode) FullViewingKey(ctx context.Context, keyName string) (s
 // RecoverKey restores a key from a given mnemonic.
 func (p *PenumbraAppNode) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
 	keyPath := filepath.Join(p.HomeDir(), "keys", keyName)
+
 	cmd := []string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`echo %q | pcli --home %s init soft-kms import-phrase`, mnemonic, keyPath),
+		fmt.Sprintf(`echo %q | pcli --home %s init --grpc-url tcp://%s soft-kms import-phrase`, mnemonic, keyPath, p.Chain.GetGRPCAddress()),
 	}
 
 	_, stderr, err := p.Exec(ctx, cmd, nil)
