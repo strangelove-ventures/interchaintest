@@ -12,10 +12,11 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	abci "github.com/cometbft/cometbft/abci/types" // nolint:staticcheck
 	"github.com/cosmos/cosmos-sdk/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	ccvclient "github.com/cosmos/interchain-security/v6/x/ccv/provider/client"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	providertypes "github.com/cosmos/interchain-security/v6/x/ccv/provider/types"
 	"github.com/icza/dyno"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -148,7 +149,6 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	if err != nil {
 		return fmt.Errorf("failed to parse trusting period in 'StartProvider': %w", err)
 	}
-
 	spawnTimeWait := os.Getenv("ICS_SPAWN_TIME_WAIT")
 	if spawnTimeWait == "" {
 		spawnTimeWait = "45s"
@@ -157,24 +157,47 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 	if err != nil {
 		return fmt.Errorf("invalid ICS_SPAWN_TIME_WAIT %s: %w", spawnTimeWait, err)
 	}
-	for _, consumer := range c.Consumers {
-		prop := ccvclient.ConsumerAdditionProposalJSON{
-			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
-			Summary:       "Proposal to add new consumer chain",
-			ChainId:       consumer.cfg.ChainID,
-			InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
-			GenesisHash:   []byte("gen_hash"),
-			BinaryHash:    []byte("bin_hash"),
-			SpawnTime:     time.Now().Add(spawnTimeWaitDuration),
 
-			// TODO fetch or default variables
-			BlocksPerDistributionTransmission: 1000,
-			CcvTimeoutPeriod:                  trustingPeriod * 2,
-			TransferTimeoutPeriod:             trustingPeriod,
-			ConsumerRedistributionFraction:    "0.75",
-			HistoricalEntries:                 10000,
-			UnbondingPeriod:                   trustingPeriod,
-			Deposit:                           "100000000" + c.cfg.Denom,
+	for _, consumer := range c.Consumers {
+		prop := providertypes.MsgCreateConsumer{
+			// Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
+			// Summary:       "Proposal to add new consumer chain",
+			// ChainId:       consumer.cfg.ChainID,
+			// InitialHeight: clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
+			// GenesisHash:   []byte("gen_hash"),
+			// BinaryHash:    []byte("bin_hash"),
+			// SpawnTime:     time.Now().Add(spawnTimeWaitDuration),
+
+			// // TODO fetch or default variables
+			// BlocksPerDistributionTransmission: 1000,
+			// CcvTimeoutPeriod:                  trustingPeriod * 2,
+			// TransferTimeoutPeriod:             trustingPeriod,
+			// ConsumerRedistributionFraction:    "0.75",
+			// HistoricalEntries:                 10000,
+			// UnbondingPeriod:                   trustingPeriod,
+			// Deposit:                           "100000000" + c.cfg.Denom,
+			Submitter: proposerAddr,
+			ChainId:   consumer.cfg.ChainID,
+			Metadata: providertypes.ConsumerMetadata{
+				Name:        consumer.cfg.Name,
+				Description: fmt.Sprintf("Consumer chain %s", consumer.cfg.Name),
+				Metadata:    "metadata",
+			},
+			InitializationParameters: &providertypes.ConsumerInitializationParameters{
+				InitialHeight:                     clienttypes.Height{RevisionNumber: clienttypes.ParseChainID(consumer.cfg.ChainID), RevisionHeight: 1},
+				GenesisHash:                       []byte("gen_hash"),
+				BinaryHash:                        []byte("bin_hash"),
+				SpawnTime:                         time.Now().Add(spawnTimeWaitDuration),
+				UnbondingPeriod:                   trustingPeriod,
+				CcvTimeoutPeriod:                  trustingPeriod * 2,
+				TransferTimeoutPeriod:             trustingPeriod,
+				ConsumerRedistributionFraction:    "0.75",
+				BlocksPerDistributionTransmission: 1000,
+				HistoricalEntries:                 10000,
+				DistributionTransmissionChannel:   "distribution",
+			},
+			PowerShapingParameters:  nil,
+			AllowlistedRewardDenoms: nil,
 		}
 
 		height, err := c.Height(ctx)
@@ -182,7 +205,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 			return fmt.Errorf("failed to query provider height before consumer addition proposal: %w", err)
 		}
 
-		propTx, err := c.ConsumerAdditionProposal(ctx, proposerKeyName, prop)
+		propTx, err := c.CreateConsumerAction(ctx, proposerKeyName, prop, "")
 		if err != nil {
 			return err
 		}
@@ -478,4 +501,19 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 		return nil, fmt.Errorf("failed to transform ccv state: %w", res.Err)
 	}
 	return res.Stdout, nil
+}
+
+// https://github.com/cosmos/interchain-security/blob/deea6fb8a98bbce447a1b2dfd6a60806141efbfe/tests/interchain/chainsuite/chain.go#L442
+func getEvtAttribute(events []abci.Event, evtType string, key string) (string, bool) {
+	for _, evt := range events {
+		if evt.GetType() == evtType {
+			for _, attr := range evt.Attributes {
+				if attr.Key == key {
+					return attr.Value, true
+				}
+			}
+		}
+	}
+
+	return "", false
 }
