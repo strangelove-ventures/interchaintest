@@ -28,8 +28,8 @@ func TestNamadaNetwork(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 1
-	fn := 0
+	nv := 2
+	fn := 1
 
 	coinDecimals := namadachain.NamTokenDenom
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
