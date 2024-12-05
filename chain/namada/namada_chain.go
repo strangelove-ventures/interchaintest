@@ -477,7 +477,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
 	}
 
-	re = regexp.MustCompile(`Transaction ([0-9A-F]+) was successfully applied at height (\d+), consuming (\d+) gas units`)
+	re = regexp.MustCompile(`Transaction batch ([0-9A-F]+) was applied at height (\d+), consuming (\d+) gas units`)
 	matchesAll := re.FindAllStringSubmatch(outputStr, -1)
 	if len(matches) == 0 {
 		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)

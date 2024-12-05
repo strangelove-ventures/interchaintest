@@ -183,7 +183,8 @@ func (n *NamadaNode) CreateContainer(ctx context.Context) error {
 
 	mvCmd := "echo 'starting a validator node'"
 	if !n.Validator {
-		mvCmd = fmt.Sprintf(`mv %s/wallet.toml %s/%s`, n.HomeDir(), n.HomeDir(), n.Chain.Config().ChainID)
+		baseDir := fmt.Sprintf("%s/%s", n.HomeDir(), n.Chain.Config().ChainID)
+		mvCmd = fmt.Sprintf(`mv %s/wallet.toml %s && sed -i 's/127.0.0.1:26657/0.0.0.0:26657/g' %s/config.toml`, n.HomeDir(), baseDir, baseDir)
 	}
 
 	ledgerCmd := fmt.Sprintf(`%s node --base-dir %s ledger`, n.Chain.Config().Bin, n.HomeDir())
