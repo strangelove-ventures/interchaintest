@@ -28,8 +28,8 @@ func TestNamadaNetwork(t *testing.T) {
 	t.Parallel()
 	client, network := interchaintest.DockerSetup(t)
 
-	nv := 1
-	fn := 0
+	nv := 2
+	fn := 1
 
 	coinDecimals := namadachain.NamTokenDenom
 	chains, err := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
@@ -38,11 +38,12 @@ func TestNamadaNetwork(t *testing.T) {
 		}},
 		{
 			Name:    "namada",
-			Version: "v0.44.1",
+			Version: "v1.0.0",
 			ChainConfig: ibc.ChainConfig{
 				ChainID:      "namada-test",
 				Denom:        namadachain.NamAddress,
-				Gas:          "250000",
+				Gas:          "50000",
+				GasPrices:    "0.00001",
 				CoinDecimals: &coinDecimals,
 				Bin:          "namada",
 			},
@@ -58,8 +59,8 @@ func TestNamadaNetwork(t *testing.T) {
 	// Relayer Factory
 	r := interchaintest.NewBuiltinRelayerFactory(ibc.Hermes, zaptest.NewLogger(t),
 		relayer.CustomDockerImage(
-			"ghcr.io/heliaxdev/hermes",
-			"v1.10.4-namada-beta17-rc2@sha256:a95ede57f63ebb4c70aa4ca0bfb7871a5d43cd76d17b1ad62f5d31a9465d65af",
+			"ghcr.io/informalsystems/hermes",
+			"luca_joss-test-namada-docker-action@sha256:3bae7e68fe76647d5dba19982d01d4c33e2eebef17e3506da17129f4e9483b11",
 			"2000:2000",
 		)).
 		Build(t, client, network)
@@ -103,9 +104,12 @@ func TestNamadaNetwork(t *testing.T) {
 
 	initBalance := math.NewInt(1_000_000)
 
-	gasSpent, _ := strconv.ParseInt(namada.Config().Gas, 10, 64)
-	namadaGasSpent := math.NewInt(gasSpent)
-	tokenDenom := math.NewInt(int64(stdmath.Pow(10, float64(*namada.Config().CoinDecimals))))
+	gasSpent, _ := strconv.ParseFloat(namada.Config().Gas, 64)
+	gasPrice, _ := strconv.ParseFloat(namada.Config().GasPrices, 64)
+	tokenDenomVal := stdmath.Pow(10, float64(*namada.Config().CoinDecimals))
+	// GasSpent should be an integer
+	namadaGasSpent := math.NewInt(int64(gasSpent * gasPrice * tokenDenomVal))
+	tokenDenom := math.NewInt(int64(tokenDenomVal))
 	namadaInitBalance := initBalance.Mul(tokenDenom)
 
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user", initBalance, chain, namada)
