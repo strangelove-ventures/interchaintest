@@ -2,11 +2,11 @@ package wallet
 
 import (
     //"bytes"
-    "crypto/rand"
+    //"crypto/rand"
     //"crypto/sha512"
     //"encoding/binary"
-    "encoding/hex"
-    "fmt"
+    //"encoding/hex"
+    //"fmt"
     //"math/big"
     //"sort"
 
@@ -44,38 +44,37 @@ func (w *XrpWallet) Address() []byte {
 	return []byte(w.AccountID)
 }
 
-func GenerateAccount(keyName string, keyType string) (*XrpWallet, error) {
-    keyPair, err := GenerateKeyPair(keyType)
-    if err != nil {
-        return nil, err
-    }
+// func GenerateAccount(keyName string, keyType string) (*XrpWallet, error) {
+//     keyPair, err := GenerateKeyPair(keyType)
+//     if err != nil {
+//         return nil, err
+//     }
 
-    // Generate seed
-    seed := make([]byte, 16)
-    if _, err := rand.Read(seed); err != nil {
-        return nil, fmt.Errorf("failed to generate random seed: %v", err)
-    }
+//     // Generate seed
+//     seed := make([]byte, 16)
+//     if _, err := rand.Read(seed); err != nil {
+//         return nil, fmt.Errorf("failed to generate random seed: %v", err)
+//     }
 
-    publicKeyHex := KeyPairToPubKeyHexStr(keyPair)
+//     publicKeyHex := KeyPairToPubKeyHexStr(keyPair)
     
-    account := &XrpWallet{
-        keyName:       keyName,
-        KeyType:       keyType,
-        PublicKeyHex:  publicKeyHex,
-        MasterSeedHex: hex.EncodeToString(seed),
-        Status:        "success",
-        keyPair:       keyPair,
-        AccountID:     KeyPairToAddress(keyPair),
-        //MasterKey:     masterKey,
-        //MasterSeed:    base58.Encode(seed),
-        //MasterSeedHex: seedHex,
-        //PublicKey:     base58.Encode(publicKey),
-        //PublicKeyHex:  publicKeyHex,
-        //Status:        "success",
-    }
+//     account := &XrpWallet{
+//         keyName:       keyName,
+//         KeyType:       keyType,
+//         PublicKeyHex:  publicKeyHex,
+//         MasterSeedHex: hex.EncodeToString(seed),
+//         keyPair:       keyPair,
+//         AccountID:     KeyPairToAddress(keyPair),
+//         //MasterKey:     masterKey,
+//         //MasterSeed:    base58.Encode(seed),
+//         //MasterSeedHex: seedHex,
+//         //PublicKey:     base58.Encode(publicKey),
+//         //PublicKeyHex:  publicKeyHex,
+//         //Status:        "success",
+//     }
 
-    return account, nil
-}
+//     return account, nil
+// }
 
 
 // // Generate new XRPL account
@@ -118,12 +117,12 @@ func GetRootAccount(keyName string) *XrpWallet {
 		keyName: keyName,
 		AccountID: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
 		KeyType: "secp256k1",
-		MasterKey: "I IRE BOND BOW TRIO LAID SEAT GOAL HEN IBIS IBIS DARE",
+		// MasterKey: "I IRE BOND BOW TRIO LAID SEAT GOAL HEN IBIS IBIS DARE",
 		MasterSeed: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
 		MasterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
 		PublicKey: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
 		PublicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
-		Status: "success",
+		// Status: "success",
 	}
 
 	return rootAccount

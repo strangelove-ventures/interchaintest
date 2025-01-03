@@ -116,11 +116,11 @@ func TestSeedToAccountId(t *testing.T) {
 				}()
 			}
 
-			got, pk, err := SeedToAccountId(tt.seed)
-			fmt.Println("public key:", pk)
+			wallet, err := SeedToXrpWallet(tt.seed)
+			fmt.Println("public key:", wallet.PublicKeyHex)
 			require.NoError(t, err)
-			if !tt.wantPanic && got != tt.expected {
-				t.Errorf("KeyPairToAddress() = %v, want %v", got, tt.expected)
+			if !tt.wantPanic && wallet.AccountID != tt.expected {
+				t.Errorf("KeyPairToAddress() = %v, want %v", wallet.AccountID, tt.expected)
 			}
 		})
 	}
