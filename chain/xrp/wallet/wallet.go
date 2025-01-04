@@ -1,29 +1,7 @@
 package wallet
 
 import (
-    //"bytes"
-    //"crypto/rand"
-    //"crypto/sha512"
-    //"encoding/binary"
-    //"encoding/hex"
-    //"fmt"
-    //"math/big"
-    //"sort"
-
-    //"crypto/ecdsa"
-    //"crypto/elliptic"
-    
-    //"golang.org/x/crypto/ripemd160"
 )
-
-// Base58 alphabet used by XRP
-// const alphabet = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz"
-
-// func NewWallet(keyname string) *XrpWallet {
-// 	return &XrpWallet{
-// 		keyName: keyname,
-// 	}
-// }
 
 func (w *XrpWallet) KeyName() string {
 	return w.keyName
@@ -43,74 +21,6 @@ func (w *XrpWallet) Mnemonic() string {
 func (w *XrpWallet) Address() []byte {
 	return []byte(w.AccountID)
 }
-
-// func GenerateAccount(keyName string, keyType string) (*XrpWallet, error) {
-//     keyPair, err := GenerateKeyPair(keyType)
-//     if err != nil {
-//         return nil, err
-//     }
-
-//     // Generate seed
-//     seed := make([]byte, 16)
-//     if _, err := rand.Read(seed); err != nil {
-//         return nil, fmt.Errorf("failed to generate random seed: %v", err)
-//     }
-
-//     publicKeyHex := KeyPairToPubKeyHexStr(keyPair)
-    
-//     account := &XrpWallet{
-//         keyName:       keyName,
-//         KeyType:       keyType,
-//         PublicKeyHex:  publicKeyHex,
-//         MasterSeedHex: hex.EncodeToString(seed),
-//         keyPair:       keyPair,
-//         AccountID:     KeyPairToAddress(keyPair),
-//         //MasterKey:     masterKey,
-//         //MasterSeed:    base58.Encode(seed),
-//         //MasterSeedHex: seedHex,
-//         //PublicKey:     base58.Encode(publicKey),
-//         //PublicKeyHex:  publicKeyHex,
-//         //Status:        "success",
-//     }
-
-//     return account, nil
-// }
-
-
-// // Generate new XRPL account
-// func GenerateAccount(keyName string) (*XrpWallet, error) {
-//     // Generate random seed
-//     seed := make([]byte, 16)
-//     if _, err := rand.Read(seed); err != nil {
-//         return nil, fmt.Errorf("failed to generate random seed: %v", err)
-//     }
-
-//     // Generate ED25519 keypair
-//     privateKey := ed25519.NewKeyFromSeed(seed)
-//     publicKey := privateKey.Public().(ed25519.PublicKey)
-
-//     // Convert to hex strings
-//     seedHex := hex.EncodeToString(seed)
-//     publicKeyHex := hex.EncodeToString(publicKey)
-//     masterKey := "00" + hex.EncodeToString(privateKey)
-
-//     // Generate account ID from public key
-//     accountID := publicKeyToAccountID(publicKey)
-
-//     account := &XrpWallet{
-// 		keyName:       keyName,
-//         AccountID:     accountID,
-//         KeyType:       "ed25519",
-//         MasterKey:     masterKey,
-//         MasterSeed:    base58.Encode(seed),
-//         MasterSeedHex: seedHex,
-//         PublicKey:     base58.Encode(publicKey),
-//         PublicKeyHex:  publicKeyHex,
-//         Status:        "success",
-//     }
-
-//     return account, nil
-// }
 
 func GetRootAccountSeed() string {
 	return "snoPBrXtMeMyMHUVTgbuqAfg1SUTb"

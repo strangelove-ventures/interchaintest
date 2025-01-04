@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	//"github.com/btcsuite/btcd/btcec/v2"
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet/secp256k1"
 
@@ -49,12 +48,8 @@ func signPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) 
     //     return "", fmt.Errorf("failed to marshal payment: %v", err)
     // }
 
-	txBytes := SerializePayment2(payment, false)
+	txBytes := SerializePayment(payment, false)
 
-    // Hash the transaction data
-    // hasher := sha256.New()
-    // hasher.Write(txBytes)
-    // messageHash := hasher.Sum(nil)
 	messageHashFull := sha512.Sum512(txBytes)
 	messageHash := messageHashFull[:32]
 
@@ -67,12 +62,6 @@ func signPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) 
     //     signature = ed25519.Sign(privateKey, messageHash)
 
     case "secp256k1":
-        // privateKey := wallet.Keys
-        // sig, err := privateKey.Sign(messageHash)
-        // if err != nil {
-        //     return "", fmt.Errorf("failed to sign with secp256k1: %v", err)
-        // }
-        // signature = sig.Serialize()
 		signature, err = wallet.Keys.Sign(messageHash)
 		if err != nil {
 			return "", fmt.Errorf("error sign payment: %v", err)
@@ -106,13 +95,8 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
     }
     payment.TxnSignature = signature
 
-	serializedTx := SerializePayment2(payment, true)
-	//serializedTx2 := SerializePayment2(payment, true)
+	serializedTx := SerializePayment(payment, true)
 	txBlob := hex.EncodeToString(serializedTx)
-	//txBlob2 := hex.EncodeToString(serializedTx2)
-
-	fmt.Println("txBlob2:", txBlob)
-	//fmt.Println("txBlob2:", txBlob2)
 
     // Submit the signed transaction
     params := []any{
@@ -151,8 +135,7 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
 
 // Signature verification
 func VerifySignature(wallet *xrpwallet.XrpWallet, payment *Payment, signature []byte) (bool, error) {
-    
-	txBytes := SerializePayment2(payment, false)
+	txBytes := SerializePayment(payment, false)
 
     // Hash the transaction data
 	messageHashFull := sha512.Sum512(txBytes)
@@ -183,19 +166,6 @@ func VerifySignature(wallet *xrpwallet.XrpWallet, payment *Payment, signature []
 			messageHash,
 			append(sig.R.Bytes(), sig.S.Bytes()...),
 		), nil
-		// uncompressedPubKey, err := crypto.Ecrecover(messageHash, signature)
-		// if err != nil {
-		// 	return false, fmt.Errorf("failed to recover public key: %v", err)
-		// }
-
-		// // Parse the uncompressed public key
-		// recoveredPubKey, err := crypto.UnmarshalPubkey(uncompressedPubKey)
-		// if err != nil {
-		// 	return false, fmt.Errorf("failed to unmarshal recovered public key: %v", err)
-		// }
-
-		// // Compress the recovered public key
-		// recoveredCompressedPubKey = crypto.CompressPubkey(recoveredPubKey)
 
 	default:
 		return false, fmt.Errorf("verify signature, unsupported key type")

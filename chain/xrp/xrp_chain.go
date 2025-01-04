@@ -424,51 +424,6 @@ func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wal
 	return nil
 }
 
-// func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
-// 	c.MapAccess.Lock()
-// 	srcWallet := c.KeyNameToWalletMap[keyName]
-// 	c.MapAccess.Unlock()
-
-// 	if srcWallet == nil {
-// 		return fmt.Errorf("invalid keyname")
-// 	}
-// 	//_, err := c.SendFundsWithNote(ctx, keyName, amount, "")
-// 	tx := Transaction{
-// 		TransactionType: "Payment",
-// 		Account: srcWallet.FormattedAddress(),
-// 		Destination: amount.Address,
-// 		Amount: amount.Amount.String(),
-// 	}
-// 	txJson, err := json.Marshal(tx)
-// 	if err != nil {
-// 		return fmt.Errorf("send funds error on tx marshal, %v", err)
-// 	}
-// 	cmd := []string{
-// 		c.RippledCli, "submit", "snoPBrXtMeMyMHUVTgbuqAfg1SUTb", fmt.Sprintf("'%s'", string(txJson)),
-// 	}
-// 	fmt.Println("transaction to sign:", txJson)
-// 	fmt.Println("cmd:", cmd)
-// 	stdout, _, err := c.Exec(ctx, cmd, nil)
-// 	if err != nil {
-// 		return fmt.Errorf("send funds error on exec, %v", err)
-// 	}
-// 	fmt.Println("submit output:", string(stdout))
-
-// 	var submitResponse SubmitResponse
-// 	if err := json.Unmarshal(stdout, &submitResponse); err != nil {
-// 		return fmt.Errorf("error unmarshal submit response, %v", err)
-// 	}
-// 	if submitResponse.Result.Status != "success" || submitResponse.Result.EngineResultCode != 0 {
-// 		return fmt.Errorf("send funds failed,\nengine_result: %s\nengine_result_code: %d\nengine_result_message: %s\nstatus: %s",
-// 			submitResponse.Result.EngineResult,
-// 			submitResponse.Result.EngineResultCode,
-// 			submitResponse.Result.EngineResultMessage,
-// 			submitResponse.Result.Status,
-// 		)
-// 	}
-// 	return nil
-// }
-
 func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	// partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
 	// fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))

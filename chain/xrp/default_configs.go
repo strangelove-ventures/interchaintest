@@ -29,9 +29,6 @@ func DefaultXrpChainConfig(
 			},
 		},
 		Bin: "rippled,/opt/ripple/bin/validator-keys",
-		// Env: []string{
-		// 	"ENV_ARGS=--standalone --conf /home/xrp/config/rippled.cfg",
-		// },
 		HostPortOverride: map[int]int{
 			80: 8001,
 			5005: 5005,
@@ -40,81 +37,6 @@ func DefaultXrpChainConfig(
 		},
 	}
 }
-
-// // NewDefaultRippledConfig creates a new RippledConfig with default values
-// func NewDefaultRippledConfig() *RippledConfig {
-// 	config := &RippledConfig{}
-	
-// 	// Server section
-// 	config.Server.PortRPCAdminLocal = true
-// 	config.Server.PortRPC = true
-// 	config.Server.PortWSAdminLocal = true
-// 	config.Server.PortWSPublic = true
-// 	config.Server.PortPeer = true
-// 	config.Server.Standalone = 1
-
-// 	// Port configurations
-// 	config.PortRPCAdminLocal = PortConfig{
-// 		Port:     5005,
-// 		IP:       "127.0.0.1",
-// 		Admin:    "127.0.0.1",
-// 		Protocol: "http",
-// 	}
-
-// 	config.PortWSAdminLocal = PortConfig{
-// 		Port:     6006,
-// 		IP:       "127.0.0.1",
-// 		Admin:    "127.0.0.1",
-// 		Protocol: "ws",
-// 	}
-
-// 	config.PortWSPublic = PortConfig{
-// 		Port:     80,
-// 		IP:       "0.0.0.0",
-// 		Protocol: "ws",
-// 	}
-
-// 	config.PortPeer = PortConfig{
-// 		Port:     51235,
-// 		IP:       "0.0.0.0",
-// 		Protocol: "peer",
-// 	}
-
-// 	config.PortRPC = PortConfig{
-// 		Port:     51234,
-// 		IP:       "0.0.0.0",
-// 		Admin:    "127.0.0.1",
-// 		Protocol: "https, http",
-// 	}
-
-// 	// Node configuration
-// 	config.NodeSize = "small"
-// 	config.NodeDB.Type = "NuDB"
-// 	config.NodeDB.Path = "/var/lib/rippled/db/nudb"
-// 	config.NodeDB.AdvisoryDelete = 0
-// 	config.NodeDB.OnlineDelete = 256
-
-// 	config.LedgerHistory = 256
-// 	config.DatabasePath = "/var/lib/rippled/db"
-// 	config.DebugLogfile = "/var/log/rippled/debug.log"
-	
-// 	config.SNTPServers = []string{
-// 		"time.windows.com",
-// 		"time.apple.com",
-// 		"time.nist.gov",
-// 		"pool.ntp.org",
-// 	}
-
-// 	config.ValidatorsFile = "validators.txt"
-	
-// 	config.RPCStartup = "{ \"command\": \"log_level\", \"severity\": \"warning\" }"
-
-// 	config.SSLVerify = 0
-// 	config.ValidationQuorum = 0
-// 	config.NetworkID = 1234
-
-// 	return config
-// }
 
 func NewValidatorConfig(validator string) []byte {
 	return []byte(

@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/binary"
-    "encoding/json"
     "encoding/hex"
 	"math/big"
 	"sort"
@@ -11,9 +10,6 @@ import (
     "fmt"
 
 	addresscodec "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
-    "github.com/xyield/xrpl-go/binary-codec"
-    //"github.com/xyield/xrpl-go/model/transactions"
-   // "github.com/xyield/xrpl-go/model/transactions/types"
 )
 
 // Transaction Types
@@ -54,60 +50,7 @@ type FieldSorter struct {
 	value   interface{}
 }
 
-// // Define field order priority
-// var fieldOrderPriority = map[int]int{
-//     // TypeID_FieldID : priority (lower = earlier in sort)
-//     0x12: 1,  // TransactionType
-//     0x81: 2,  // Account 
-//     0x24: 3,  // Sequence
-//     0x68: 4,  // Fee
-//     0x73: 5,  // SigningPubKey
-//     0x62: 6,  // Amount
-//     0x83: 7,  // Destination
-// }
-
-// // Define explicit field order
-// var fieldOrder = map[string]int{
-//     "TransactionType": 1,
-//     "Account": 2,
-//     "Amount": 3,
-//     "Destination": 4,
-//     "Fee": 5,
-//     "Sequence": 6,
-//     "SigningPubKey": 7,
-// }
-
-// func getFieldName(field FieldSorter) string {
-//     key := (field.typeID << 8) | field.fieldID  // Create unique key combining both IDs
-    
-//     switch key {
-//     case (ST_UINT16 << 8) | TF_TRANSACTION_TYPE:
-//         return "TransactionType"
-//     case (ST_ACCOUNT << 8) | TF_ACCOUNT:
-//         return "Account"
-//     case (ST_AMOUNT << 8) | TF_AMOUNT:
-//         return "Amount"
-//     case (ST_ACCOUNT << 8) | TF_DESTINATION:
-//         return "Destination"
-//     case (ST_AMOUNT << 8) | TF_FEE:
-//         return "Fee"
-//     case (ST_UINT32 << 8) | TF_SEQUENCE:
-//         return "Sequence"
-//     case (ST_VL << 8) | TF_SIGNINGPUB:
-//         return "SigningPubKey"
-//     default:
-//         return fmt.Sprintf("Unknown_%d_%d", field.typeID, field.fieldID)
-//     }
-// }
 var fieldOrder = map[uint16]int{
-    // (ST_UINT16 << 8) | TF_TRANSACTION_TYPE:      1,  // TransactionType
-    // (ST_ACCOUNT << 8) | TF_ACCOUNT:   3,  // Account
-    // (ST_UINT32 << 8) | TF_SEQUENCE:   4,  // Sequence
-    // (ST_AMOUNT << 8) | TF_FEE:        5,  // Fee
-    // (ST_VL << 8) | TF_SIGNINGPUB:     6,  // SigningPubKey
-    // (ST_AMOUNT << 8) | TF_AMOUNT:     7,  // Amount
-    // (ST_ACCOUNT << 8) | TF_DESTINATION: 8, // Destination
-    // (ST_VL << 8) | TF_SIGNATURE:      9,  // TxnSignature comes last
     (ST_UINT16 << 8) | TF_TRANSACTION_TYPE:      1,  // TransactionType
     (ST_ACCOUNT << 8) | TF_ACCOUNT:   10,  // Account
     (ST_UINT32 << 8) | TF_SEQUENCE:   5,  // Sequence
@@ -115,70 +58,13 @@ var fieldOrder = map[uint16]int{
     (ST_VL << 8) | TF_SIGNINGPUB:     8,  // SigningPubKey
     (ST_AMOUNT << 8) | TF_AMOUNT:     6,  // Amount
     (ST_ACCOUNT << 8) | TF_DESTINATION: 11, // Destination
-    (ST_VL << 8) | TF_SIGNATURE:      9,//9,  // TxnSignature comes last
-    (ST_UINT32 << 8) | TF_NETWORKID:      3,//9,  // TxnSignature comes last
-    (ST_UINT32 << 8) | TF_FLAGS:      4,//9,  // TxnSignature comes last
+    (ST_VL << 8) | TF_SIGNATURE:      9,
+    (ST_UINT32 << 8) | TF_NETWORKID:      3,
+    (ST_UINT32 << 8) | TF_FLAGS:      4,
 }
-
 
 // TODO: return error instead of panic
 func SerializePayment(payment *Payment, includeSig bool) []byte {
-    // payment2 := transactions.Payment{
-    //     BaseTx: transactions.BaseTx{
-    //         Account: types.Address(payment.Account),
-    //         Fee: types.XRPCurrencyAmount(10),
-    //         Sequence: uint(payment.Sequence),
-    //         SigningPubKey: payment.SigningPubKey,
-    //         TransactionType: transactions.PaymentTx,
-    //     },
-    //     Destination: types.Address(payment.Destination),
-    //     Amount: types.XRPCurrencyAmount(200000000),
-    // }
-    // if includeSig {
-    //     payment2.BaseTx.TxnSignature = payment.TxnSignature
-    // }
-
-    jsonBz, err := json.Marshal(payment)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("jsonBz:", string(jsonBz))
-
-    var jsonMap map[string]any
-    err = json.Unmarshal(jsonBz, &jsonMap)
-    if err != nil {
-        panic(err)
-    }
-
-    jsonMap["Sequence"] = payment.Sequence
-    //jsonMap["Expiration"] = 595640108
-    //jsonMap["Flags"] = 524288
-
-    // amount, err := types.XRPCurrencyAmount(200000000).MarshalJSON()
-    // if err != nil {
-    //     panic(err)
-    // }
-
-    // jsonMap["Amount"] = amount
-
-    encodedPaymentHex, err := binarycodec.EncodeForSigning(jsonMap)
-    if err != nil {
-        panic(err)
-    }
-
-    encodedPayment, err := hex.DecodeString(encodedPaymentHex)
-    if err != nil {
-        panic(err)
-    }
-    prefix := []byte{0x53, 0x54, 0x58}
-    encodedPayment = append(prefix, encodedPayment[4:]...)
-
-
-    return encodedPayment
-}
-
-// TODO: return error instead of panic
-func SerializePayment2(payment *Payment, includeSig bool) []byte {
 	fields := []FieldSorter{
 		{TF_TRANSACTION_TYPE, ST_UINT16, uint16(PAYMENT_TRANSACTION_TYPE)},
 		{TF_ACCOUNT, ST_ACCOUNT, payment.Account},
