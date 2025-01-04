@@ -4,197 +4,153 @@ import (
 	//"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
+	//"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
 	"github.com/stretchr/testify/require"
 )
 
-func TestKeyPairToAddress(t *testing.T) {
+// func TestKeyPairToAddress(t *testing.T) {
     
-    // Derive ED25519 keypair
-    // edKeyPair, err := DeriveKeypair(seed, "ed25519")
-    // if err != nil {
-    //     //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
-    //     t.Errorf("Error deriving ED25519 keypair: %v\n", err)
-    // }
-    secpKeyPair, err := DeriveKeypair("sswVV2EMPn8bcUqWnMKxQpVmZGgKT")
-    if err != nil {
-        //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
-        t.Errorf("Error deriving ED25519 keypair: %v\n", err)
-    }
-	tests := []struct {
-		name     string
-		keyPair  *KeyPair
-		expected string
-		wantPanic bool
-	}{
-		// {
-		// 	name: "Valid ED25519 KeyPair",
-		// 	keyPair: &KeyPair{
-		// 		KeyType: "ed25519",
-		// 		PublicKey: ed25519.PublicKey([]byte{
-		// 			0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-		// 			0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-		// 			0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-		// 			0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-		// 		}),
-		// 	},
-		// 	expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
-		// 	wantPanic: false,
-		// },
-		{
-			name: "Valid SECP256K1 KeyPair",
-			// keyPair: &KeyPair{
-			// 	KeyType:   "secp256k1",
-			// 	PublicKey: createTestSecp256k1PubKey(t),
-			// },
-			// expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
-			keyPair: secpKeyPair,
-			expected: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
-			wantPanic: false,
-		},
-		{
-			name: "Invalid KeyType",
-			keyPair: &KeyPair{
-				KeyType:   "invalid",
-				PublicKey: nil,
-			},
-			wantPanic: true,
-		},
-	}
+//     // Derive ED25519 keypair
+//     // edKeyPair, err := DeriveKeypair(seed, "ed25519")
+//     // if err != nil {
+//     //     //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
+//     //     t.Errorf("Error deriving ED25519 keypair: %v\n", err)
+//     // }
+//     secpKeyPair, err := secp256k1.DeriveKeypair("sswVV2EMPn8bcUqWnMKxQpVmZGgKT")
+//     if err != nil {
+//         //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
+//         t.Errorf("Error deriving ED25519 keypair: %v\n", err)
+//     }
+// 	tests := []struct {
+// 		name     string
+// 		keyPair  *KeyPair
+// 		expected string
+// 		wantPanic bool
+// 	}{
+// 		// {
+// 		// 	name: "Valid ED25519 KeyPair",
+// 		// 	keyPair: &KeyPair{
+// 		// 		KeyType: "ed25519",
+// 		// 		PublicKey: ed25519.PublicKey([]byte{
+// 		// 			0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+// 		// 			0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+// 		// 			0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+// 		// 			0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+// 		// 		}),
+// 		// 	},
+// 		// 	expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
+// 		// 	wantPanic: false,
+// 		// },
+// 		{
+// 			name: "Valid SECP256K1 KeyPair",
+// 			// keyPair: &KeyPair{
+// 			// 	KeyType:   "secp256k1",
+// 			// 	PublicKey: createTestSecp256k1PubKey(t),
+// 			// },
+// 			// expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
+// 			keyPair: secpKeyPair,
+// 			expected: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
+// 			wantPanic: false,
+// 		},
+// 		{
+// 			name: "Invalid KeyType",
+// 			keyPair: &KeyPair{
+// 				KeyType:   "invalid",
+// 				PublicKey: nil,
+// 			},
+// 			wantPanic: true,
+// 		},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.wantPanic {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Error("Expected panic but got none")
-					}
-				}()
-			}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			if tt.wantPanic {
+// 				defer func() {
+// 					if r := recover(); r == nil {
+// 						t.Error("Expected panic but got none")
+// 					}
+// 				}()
+// 			}
 
-			got := KeyPairToAddress(tt.keyPair)
-			if !tt.wantPanic && got != tt.expected {
-				t.Errorf("KeyPairToAddress() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-func TestSeedToAccountId(t *testing.T) {    
+// 			got := KeyPairToAddress(tt.keyPair)
+// 			if !tt.wantPanic && got != tt.expected {
+// 				t.Errorf("KeyPairToAddress() = %v, want %v", got, tt.expected)
+// 			}
+// 		})
+// 	}
+// }
+func TestSeedToXrpWallet(t *testing.T) {    
 	tests := []struct {
 		name     string
 		seed string
-		expected string
-		wantPanic bool
+		accountId string
+		keyType string
+		masterSeedHex string
+		publicKey string
+		publicKeyHex string
+		shouldError bool
 	}{
-		
 		{
 			name: "Valid SECP256K1 seed",
-			// keyPair: &KeyPair{
-			// 	KeyType:   "secp256k1",
-			// 	PublicKey: createTestSecp256k1PubKey(t),
-			// },
-			// expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
 			seed: "sswVV2EMPn8bcUqWnMKxQpVmZGgKT",
-			expected: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
-			wantPanic: false,
+			accountId: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
+			keyType: "secp256k1",
+        	masterSeedHex: "21A66FE3D048F8EE6071A84C6070D5DA",
+        	publicKey: "aB4PwLt3AMgsvLSUWjYyun7hdGr6tcbnbAU8TKjHgHRxjXycAwS2",
+        	publicKeyHex: "0237FEF6D393A2D209C879A344EFD39C20C01A8E2413298EBC6E6CCDECEEBAA7AD",
+			shouldError: false,
+		},
+		{
+			name: "root account SECP256K1 seed",
+			seed: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
+			accountId: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+			keyType: "secp256k1",
+        	masterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
+        	publicKey: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
+        	publicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
+			shouldError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.wantPanic {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Error("Expected panic but got none")
-					}
-				}()
-			}
-
-			wallet, err := SeedToXrpWallet(tt.seed)
-			fmt.Println("public key:", wallet.PublicKeyHex)
-			require.NoError(t, err)
-			if !tt.wantPanic && wallet.AccountID != tt.expected {
-				t.Errorf("KeyPairToAddress() = %v, want %v", wallet.AccountID, tt.expected)
-			}
-		})
-	}
-}
-
-func TestKeyPairToPubKeyHexStr(t *testing.T) {
-	secpKeyPair, err := DeriveKeypair("sswVV2EMPn8bcUqWnMKxQpVmZGgKT")
-    if err != nil {
-        //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
-        t.Errorf("Error deriving ED25519 keypair: %v\n", err)
-    }
-	tests := []struct {
-		name     string
-		keyPair  *KeyPair
-		expected string
-	}{
-		// {
-		// 	name: "ED25519 Public Key",
-		// 	keyPair: &KeyPair{
-		// 		KeyType: "ed25519",
-		// 		PublicKey: ed25519.PublicKey([]byte{
-		// 			0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-		// 			0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-		// 			0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-		// 			0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-		// 		}),
-		// 	},
-		// 	expected: "ED0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-		// },
-		{
-			name: "SECP256K1 Public Key",
-			// keyPair: &KeyPair{
-			// 	KeyType:   "secp256k1",
-			// 	PublicKey: createTestSecp256k1PubKey(t),
-			// },
-			// expected: "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", // Example compressed public key
-			keyPair: secpKeyPair,
-			expected: "0237FEF6D393A2D209C879A344EFD39C20C01A8E2413298EBC6E6CCDECEEBAA7AD",
-		},
-		{
-			name: "Invalid KeyType",
-			keyPair: &KeyPair{
-				KeyType:   "invalid",
-				PublicKey: nil,
-			},
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := KeyPairToPubKeyHexStr(tt.keyPair)
-			if strings.ToLower(got) != strings.ToLower(tt.expected) {
-				t.Errorf("KeyPairToPubKeyHexStr() = %v, want %v", got, tt.expected)
+			wallet, err := GenerateXrpWalletFromSeed(tt.name, tt.seed)
+			if tt.shouldError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, strings.ToLower(tt.accountId), strings.ToLower(wallet.AccountID))
+				require.Equal(t, strings.ToLower(tt.keyType), strings.ToLower(wallet.KeyType))
+				require.Equal(t, strings.ToLower(tt.seed), strings.ToLower(wallet.MasterSeed))
+				require.Equal(t, strings.ToLower(tt.masterSeedHex), strings.ToLower(wallet.MasterSeedHex))
+				require.Equal(t, strings.ToLower(tt.publicKey), strings.ToLower(wallet.PublicKey))
+				require.Equal(t, strings.ToLower(tt.publicKeyHex), strings.ToLower(wallet.PublicKeyHex))
+				require.Equal(t, strings.ToLower(tt.publicKeyHex), hex.EncodeToString(wallet.Keys.GetCompressedMasterPublicKey()))
 			}
 		})
 	}
 }
 
-// Helper function to create a test SECP256K1 public key
-func createTestSecp256k1PubKey(t *testing.T) *btcec.PublicKey {
-	// This is the well-known Bitcoin generator point
-	pubKeyBytes, err := hex.DecodeString("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")
-	if err != nil {
-		t.Fatalf("Failed to decode public key hex: %v", err)
-	}
+// // Helper function to create a test SECP256K1 public key
+// func createTestSecp256k1PubKey(t *testing.T) *btcec.PublicKey {
+// 	// This is the well-known Bitcoin generator point
+// 	pubKeyBytes, err := hex.DecodeString("0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798")
+// 	if err != nil {
+// 		t.Fatalf("Failed to decode public key hex: %v", err)
+// 	}
 	
-	pubKey, err := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
-	if err != nil {
-		t.Fatalf("Failed to parse public key: %v", err)
-	}
+// 	pubKey, err := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
+// 	if err != nil {
+// 		t.Fatalf("Failed to parse public key: %v", err)
+// 	}
 	
-	return pubKey
-}
+// 	return pubKey
+// }
 
 // Test PublicKey (base58) to PublicKeyHex decoding
 func TestPubKeyBase58ToPubKeyHex(t *testing.T) {

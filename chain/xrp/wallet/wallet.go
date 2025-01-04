@@ -112,22 +112,25 @@ func (w *XrpWallet) Address() []byte {
 //     return account, nil
 // }
 
-func GetRootAccount(keyName string) *XrpWallet {
-	rootAccount := &XrpWallet{
-		keyName: keyName,
-		AccountID: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
-		KeyType: "secp256k1",
-		// MasterKey: "I IRE BOND BOW TRIO LAID SEAT GOAL HEN IBIS IBIS DARE",
-		MasterSeed: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
-		MasterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
-		PublicKey: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
-		PublicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
-		// Status: "success",
-	}
-
-	return rootAccount
+func GetRootAccountSeed() string {
+	return "snoPBrXtMeMyMHUVTgbuqAfg1SUTb"
 }
 
+// func GetRootAccountSee() string {
+// 	rootAccount := &XrpWallet{
+// 		keyName: keyName,
+// 		AccountID: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+// 		KeyType: "secp256k1",
+// 		// MasterKey: "I IRE BOND BOW TRIO LAID SEAT GOAL HEN IBIS IBIS DARE",
+// 		MasterSeed: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
+// 		MasterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
+// 		PublicKey: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
+// 		PublicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
+// 		// Status: "success",
+// 	}
+
+// 	return rootAccount
+// }
 // {
 //     "result" : {
 //        "account_id" : "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",

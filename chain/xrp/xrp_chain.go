@@ -272,7 +272,7 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		}
 	}()
 	
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 2)
 	resp, err = c.xrpClient.GetServerInfo()
 	if err != nil {
 		fmt.Println("server info error:", err)
@@ -347,19 +347,23 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 		return nil
 	}
 
+	var seed string
+	var err error
 	if keyName == "faucet" {
-		rootAccount := xrpwallet.GetRootAccount(keyName)
-		c.AddrToKeyNameMap[rootAccount.AccountID] = keyName
-		c.KeyNameToWalletMap[keyName] = rootAccount
-		return nil
+		seed = xrpwallet.GetRootAccountSeed()
+	} else {
+		seed, err = xrpwallet.GenerateSeed("secp256k1")
+		if err != nil {
+			return fmt.Errorf("error create key: %v", err)
+		}
 	}
 
-	newAccount, err := xrpwallet.GenerateAccount(keyName, "ed25519")
+	wallet, err := xrpwallet.GenerateXrpWalletFromSeed(keyName, seed)
 	if err != nil {
-		return fmt.Errorf("error creating new account, %v", err)
+		return fmt.Errorf("error create key, wallet, %v", err)
 	}
-	c.AddrToKeyNameMap[newAccount.AccountID] = keyName
-	c.KeyNameToWalletMap[keyName] = newAccount
+	c.AddrToKeyNameMap[wallet.AccountID] = keyName
+	c.KeyNameToWalletMap[keyName] = wallet
 
 	return nil
 }
@@ -407,19 +411,17 @@ func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wal
         Sequence:        sequence,
         Fee:             "10",
         NetworkID:       1234,
-        SigningPubKey:   srcWallet.PublicKeyHex,
+		Flags: 0x80000000,
     }
-	fmt.Println("asdf", payment.Account)
-	panic("not implemented")
 
     // Sign and submit
-    // err = c.xrpClient.SignAndSubmitPayment(srcWallet.MasterSeedHex, payment)
-    // if err != nil {
-    //     fmt.Printf("Error submitting payment: %v\n", err)
-    //     return err
-    // }
+    err = c.xrpClient.SignAndSubmitPayment(srcWallet, payment)
+    if err != nil {
+        fmt.Printf("Error submitting payment: %v\n", err)
+        return err
+    }
 	
-	// return nil
+	return nil
 }
 
 // func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
@@ -493,7 +495,7 @@ func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 func (c *XrpChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	accountInfo, err := c.xrpClient.GetAccountInfo(address, false)
 	if err != nil {
-		return sdkmath.ZeroInt(), err
+		return sdkmath.ZeroInt(), fmt.Errorf("error get balance, get account info, %v", err)
 	}
 	// TODO: check for accountInfo errors (i.e. account not found)
 	balance, ok := sdkmath.NewIntFromString(accountInfo.AccountData.Balance)

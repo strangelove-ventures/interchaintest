@@ -147,4 +147,13 @@ type Payment struct {
     SigningPubKey   string `json:"SigningPubKey"`
     NetworkID       uint32 `json:"NetworkID"`
     TxnSignature    string `json:"TxnSignature,omitempty"`
+	Flags uint32
+}
+
+type SubmitResponse struct {
+	Error string `json:"error,omitempty"`
+	ErrorCode int `json:"error_code,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	Request any `json:"request,omitempty"`
+	Status string `json:"status,omitempty"`
 }
