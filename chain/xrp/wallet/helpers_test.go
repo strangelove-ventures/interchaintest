@@ -1,14 +1,11 @@
 package wallet
 
 import (
-	//"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcutil/base58"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,6 +56,8 @@ func TestSeedToXrpWallet(t *testing.T) {
 			name: "dart ED25519 seed",
 			seed: "sEdVkC96W1DQXBgcmNQFDcetKQqBvXw",
 			accountId: "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm", // classic address
+			// Xaddress: "XVGNvtm1P2N6A6oyQ3TWFsjyXS124KjGTNeki4i9E5DGVp1"
+			// XtestNetAddress: "TVBmLzviEX8jPD22CAUH5sV1ztQ41uPJQQcDwhnCiMVzSCn"
 			keyType: "ed25519",
         	masterSeedHex: "f7f9ff93d716eaced222a3c52a3b2a36",
         	publicKey: "akgguljomjqdlzfw65hf4anmcy6osaz2c3xf7ztxttcdgqtekegh",
@@ -101,78 +100,6 @@ func TestSeedToXrpWallet(t *testing.T) {
 	
 // 	return pubKey
 // }
-
-// Test PublicKey (base58) to PublicKeyHex decoding
-func TestPubKeyBase58ToPubKeyHex(t *testing.T) {
-	tests := []struct {
-		name     string
-		pubkeyBase58 string
-		expected string
-		xrpDecoding bool
-	}{
-		// {
-		// 	name: "ED25519 Public Key",
-		// 	keyPair: &KeyPair{
-		// 		KeyType: "ed25519",
-		// 		PublicKey: ed25519.PublicKey([]byte{
-		// 			0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-		// 			0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-		// 			0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-		// 			0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-		// 		}),
-		// 	},
-		// 	expected: "ED0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-		// },
-		{
-			name: "SECP256K1 random public key",
-			pubkeyBase58: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
-			expected: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
-			xrpDecoding: true,
-		},
-		{
-			name: "SECP256K1 root account public key",
-			pubkeyBase58: "aB4PwLt3AMgsvLSUWjYyun7hdGr6tcbnbAU8TKjHgHRxjXycAwS2",
-			expected: "0237FEF6D393A2D209C879A344EFD39C20C01A8E2413298EBC6E6CCDECEEBAA7AD",
-			xrpDecoding: true,
-		},
-		{
-			name: "SECP256K1 random public key",
-			pubkeyBase58: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
-			expected: "4b1e07506a53e0aa8d3c44a4294ffb1b164417553eac4769458862201044c95ad5",
-			xrpDecoding: false,
-		},
-		{
-			name: "SECP256K1 root account public key",
-			pubkeyBase58: "aB4PwLt3AMgsvLSUWjYyun7hdGr6tcbnbAU8TKjHgHRxjXycAwS2",
-			expected: "40e5d6845dd92dbad78eed52affdc4dac55dd88188fb264354672023f68280c5b0",
-			xrpDecoding: false,
-		},
-		// {
-		// 	name: "Invalid KeyType",
-		// 	keyPair: &KeyPair{
-		// 		KeyType:   "invalid",
-		// 		PublicKey: nil,
-		// 	},
-		// 	expected: "",
-		// },
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var pubKeyBytes []byte
-			if tt.xrpDecoding {
-				pubKeyBytes = addresscodec.DecodeBase58(tt.pubkeyBase58)
-			} else {
-				pubKeyBytes = base58.Decode(tt.pubkeyBase58)
-
-			}
-			got := hex.EncodeToString(pubKeyBytes[1:len(pubKeyBytes)-4])
-			if !strings.EqualFold(got, tt.expected) {
-				t.Errorf("KeyPairToPubKeyHexStr() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
 
 func TestMasterSeedBase58ToMasterSeedHex(t *testing.T) {
 	tests := []struct {

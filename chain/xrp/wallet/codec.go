@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
 )
 
 // Key derivation constants
@@ -38,7 +38,7 @@ func Encode(b []byte, prefix []byte) string {
 	buf = append(buf, b...)
 	cs := checksum(buf)
 	buf = append(buf, cs[:]...)	
-	return addresscodec.EncodeBase58(buf)
+	return base58.Encode(buf)
 }
 
 func EncodePublicKey(pk []byte) string {
@@ -61,7 +61,7 @@ func EncodeSeed(seed []byte, keyType string) (string, error) {
 
 // DecodeSeed extracts the seed payload and determines the intended algorithm
 func DecodeSeed(encodedSeed string) (payload []byte, keyType string, err error) {
-	decoded := addresscodec.DecodeBase58(encodedSeed)
+	decoded := base58.Decode(encodedSeed)
 	switch len(decoded) {
 	case ED25519_SEED_LENGTH:
 		if !bytes.Equal(decoded[:3], SEED_PREFIX_ED25519) {
@@ -102,5 +102,5 @@ func masterPubKeyToAccountId(compressedMasterPubKey []byte) string {
 
 	// Combine everything
 	finalAccountId := append(versionedAccountId, checksum...)
-	return addresscodec.EncodeBase58(finalAccountId)
+	return base58.Encode(finalAccountId)
 }

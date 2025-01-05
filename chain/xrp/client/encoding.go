@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	addresscodec "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
+    "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
 )
 
 // Transaction Types
@@ -227,7 +227,7 @@ func SerializePayment(payment *Payment, includeSig bool) []byte {
 				panic("invalid account address format")
 			}
 			fmt.Println("serialize addr:", addr)
-			decoded := addresscodec.DecodeBase58(addr) // Skip 'r' prefix
+			decoded := base58.Decode(addr)
 			if len(decoded) != 25 {
 				panic(fmt.Sprintf("invalid account address length, len: %d, addr: %s", len(decoded), addr))
 			}
