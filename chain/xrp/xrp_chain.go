@@ -352,7 +352,7 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 	if keyName == "faucet" {
 		seed = xrpwallet.GetRootAccountSeed()
 	} else {
-		seed, err = xrpwallet.GenerateSeed("secp256k1")
+		seed, err = xrpwallet.GenerateSeed("ed25519")
 		if err != nil {
 			return fmt.Errorf("error create key: %v", err)
 		}

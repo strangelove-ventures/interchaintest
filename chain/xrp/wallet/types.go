@@ -20,6 +20,7 @@ type XrpWallet struct {
 }
 
 type Keys interface {
-	GetCompressedMasterPublicKey() []byte
+	GetFormattedPublicKey() []byte
 	Sign(message []byte) ([]byte, error)
+	Verify(message, signature []byte) (bool, error)
 }

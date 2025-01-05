@@ -1,16 +1,11 @@
 package client
 
 import (
-	"crypto/sha512"
-	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet/secp256k1"
-
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Get account sequence number
@@ -49,27 +44,10 @@ func signPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) 
     // }
 
 	txBytes := SerializePayment(payment, false)
-
-	messageHashFull := sha512.Sum512(txBytes)
-	messageHash := messageHashFull[:32]
-
-    var signature []byte
-	var err error
-
-    switch wallet.KeyType {
-    // case "ed25519":
-    //     privateKey := keyPair.PrivateKey.(ed25519.PrivateKey)
-    //     signature = ed25519.Sign(privateKey, messageHash)
-
-    case "secp256k1":
-		signature, err = wallet.Keys.Sign(messageHash)
-		if err != nil {
-			return "", fmt.Errorf("error sign payment: %v", err)
-		}
-
-    default:
-        return "", fmt.Errorf("unsupported key type: %s", wallet.KeyType)
-    }
+	signature, err := wallet.Keys.Sign(txBytes)
+	if err != nil {
+		return "", fmt.Errorf("error sign payment: %v", err)
+	}
 
 	verified, err := VerifySignature(wallet, payment, signature)
 	if err != nil {
@@ -136,39 +114,17 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
 // Signature verification
 func VerifySignature(wallet *xrpwallet.XrpWallet, payment *Payment, signature []byte) (bool, error) {
 	txBytes := SerializePayment(payment, false)
+	return wallet.Keys.Verify(txBytes, signature)
 
-    // Hash the transaction data
-	messageHashFull := sha512.Sum512(txBytes)
-	messageHash := messageHashFull[:32]
-
-	switch wallet.KeyType {
+	// switch wallet.KeyType {
     // case "ed25519":
-    //     pubKey := publicKey.(ed25519.PublicKey)
-    //     return ed25519.Verify(pubKey, message, signature)
+    //     return wallet.Keys.Ve
 
-    case "secp256k1":
-		// Parse the DER signature
-		var sig secp256k1.ECDSASignature
-		_, err := asn1.Unmarshal(signature, &sig)
-		if err != nil {
-			return false, fmt.Errorf("failed to parse DER signature: %v", err)
-		}
-	
-		// Decode the public key from hex
-		publicKey, err := crypto.DecompressPubkey(wallet.Keys.GetCompressedMasterPublicKey())
-		if err != nil {
-			return false, fmt.Errorf("failed to parse public key: %v", err)
-		}
-	
-		// Verify the signature
-		return crypto.VerifySignature(
-			crypto.CompressPubkey(publicKey),
-			messageHash,
-			append(sig.R.Bytes(), sig.S.Bytes()...),
-		), nil
+    // case "secp256k1":
+	// 	return wallet.Keys.Verify(messageHash, signature)
 
-	default:
-		return false, fmt.Errorf("verify signature, unsupported key type")
+	// default:
+	// 	return false, fmt.Errorf("verify signature, unsupported key type")
         
-    }
+    // }
 }

@@ -7,83 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	//"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/address-codec"
 	"github.com/stretchr/testify/require"
 )
 
-// func TestKeyPairToAddress(t *testing.T) {
-    
-//     // Derive ED25519 keypair
-//     // edKeyPair, err := DeriveKeypair(seed, "ed25519")
-//     // if err != nil {
-//     //     //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
-//     //     t.Errorf("Error deriving ED25519 keypair: %v\n", err)
-//     // }
-//     secpKeyPair, err := secp256k1.DeriveKeypair("sswVV2EMPn8bcUqWnMKxQpVmZGgKT")
-//     if err != nil {
-//         //fmt.Printf("Error deriving ED25519 keypair: %v\n", err)
-//         t.Errorf("Error deriving ED25519 keypair: %v\n", err)
-//     }
-// 	tests := []struct {
-// 		name     string
-// 		keyPair  *KeyPair
-// 		expected string
-// 		wantPanic bool
-// 	}{
-// 		// {
-// 		// 	name: "Valid ED25519 KeyPair",
-// 		// 	keyPair: &KeyPair{
-// 		// 		KeyType: "ed25519",
-// 		// 		PublicKey: ed25519.PublicKey([]byte{
-// 		// 			0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-// 		// 			0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-// 		// 			0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-// 		// 			0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-// 		// 		}),
-// 		// 	},
-// 		// 	expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
-// 		// 	wantPanic: false,
-// 		// },
-// 		{
-// 			name: "Valid SECP256K1 KeyPair",
-// 			// keyPair: &KeyPair{
-// 			// 	KeyType:   "secp256k1",
-// 			// 	PublicKey: createTestSecp256k1PubKey(t),
-// 			// },
-// 			// expected:  "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh", // Replace with actual expected value
-// 			keyPair: secpKeyPair,
-// 			expected: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
-// 			wantPanic: false,
-// 		},
-// 		{
-// 			name: "Invalid KeyType",
-// 			keyPair: &KeyPair{
-// 				KeyType:   "invalid",
-// 				PublicKey: nil,
-// 			},
-// 			wantPanic: true,
-// 		},
-// 	}
-
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if tt.wantPanic {
-// 				defer func() {
-// 					if r := recover(); r == nil {
-// 						t.Error("Expected panic but got none")
-// 					}
-// 				}()
-// 			}
-
-// 			got := KeyPairToAddress(tt.keyPair)
-// 			if !tt.wantPanic && got != tt.expected {
-// 				t.Errorf("KeyPairToAddress() = %v, want %v", got, tt.expected)
-// 			}
-// 		})
-// 	}
-// }
 func TestSeedToXrpWallet(t *testing.T) {    
 	tests := []struct {
 		name     string
@@ -115,6 +43,28 @@ func TestSeedToXrpWallet(t *testing.T) {
         	publicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
 			shouldError: false,
 		},
+		{
+			name: "dart SECP256K1 seed",
+			seed: "sa9g98F1dxRtLbprVeAP5MonKgqPS",
+			accountId: "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ", // classic address
+			// Xaddress: "X72W51px1i7iPTf4EwKFY2Nygdh5tGGNkvBFfbiuXKPxEPY"
+			// XtestNetAddress: "T7Ws3yBAjFp1Fx1yWyhbSZztwhbXPqvG5a9GRHaSf1fZnqk"
+			keyType: "secp256k1",
+        	masterSeedHex: "f7f9ff93d716eaced222a3c52a3b2a36",
+        	publicKey: "ab4fw1tjaqpcd5eemppubbrggkax62of1nvtdbiwpxbsw7asudqn",
+        	publicKeyHex: "027190BF2204E1F99A9346C0717508788A73A8A3B7E5A925C349969ED1BA7FF2A0",
+			shouldError: false,
+		},
+		{
+			name: "dart ED25519 seed",
+			seed: "sEdVkC96W1DQXBgcmNQFDcetKQqBvXw",
+			accountId: "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm", // classic address
+			keyType: "ed25519",
+        	masterSeedHex: "f7f9ff93d716eaced222a3c52a3b2a36",
+        	publicKey: "akgguljomjqdlzfw65hf4anmcy6osaz2c3xf7ztxttcdgqtekegh",
+        	publicKeyHex: "EDFB7C70E528FE161ADDFDA8CB224BC19B9E6455916970F7992A356C3E77AC7EF8",
+			shouldError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -130,7 +80,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 				require.Equal(t, strings.ToLower(tt.masterSeedHex), strings.ToLower(wallet.MasterSeedHex))
 				require.Equal(t, strings.ToLower(tt.publicKey), strings.ToLower(wallet.PublicKey))
 				require.Equal(t, strings.ToLower(tt.publicKeyHex), strings.ToLower(wallet.PublicKeyHex))
-				require.Equal(t, strings.ToLower(tt.publicKeyHex), hex.EncodeToString(wallet.Keys.GetCompressedMasterPublicKey()))
+				require.Equal(t, strings.ToLower(tt.publicKeyHex), hex.EncodeToString(wallet.Keys.GetFormattedPublicKey()))
 			}
 		})
 	}

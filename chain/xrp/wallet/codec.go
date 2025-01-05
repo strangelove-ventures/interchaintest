@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 
@@ -11,16 +12,16 @@ import (
 
 // Key derivation constants
 var (
-	familySeed    = []byte("secp256k1")
-	ed25519Prefix = []byte{0xED, 0x00, 0x00, 0x00}
 	accountPrefix = []byte{0x00}
 	accountPublicKeyPrefix = []byte{0x23}
+	SEED_PREFIX_ED25519 = []byte{0x01, 0xe1, 0x4b}
 )
 
 // Seed type constants
 const (
-	SEED_PREFIX_ED25519   = 0x01
 	SEED_PREFIX_SECP256K1 = 0x21
+	SECP256K1_SEED_LENGTH = 21
+	ED25519_SEED_LENGTH   = 23
 )
 
 // checksum: first four bytes of sha256^2
@@ -48,7 +49,7 @@ func EncodeSeed(seed []byte, keyType string) (string, error) {
 	var prefix []byte
 	switch keyType {
 	case "ed25519":
-		prefix = []byte{SEED_PREFIX_ED25519}
+		prefix = SEED_PREFIX_ED25519
 	case "secp256k1":
 		prefix = []byte{SEED_PREFIX_SECP256K1}
 	default:
@@ -59,28 +60,24 @@ func EncodeSeed(seed []byte, keyType string) (string, error) {
 }
 
 // DecodeSeed extracts the seed payload and determines the intended algorithm
-func DecodeSeed(encodedSeed string) ([]byte, string, error) {
+func DecodeSeed(encodedSeed string) (payload []byte, keyType string, err error) {
 	decoded := addresscodec.DecodeBase58(encodedSeed)
-	if len(decoded) != 21 { // 1 byte prefix + 16 bytes payload + 4 bytes checksum
+	switch len(decoded) {
+	case ED25519_SEED_LENGTH:
+		if !bytes.Equal(decoded[:3], SEED_PREFIX_ED25519) {
+			return nil, "", fmt.Errorf("invalid ed25519 seed prefix: %x", decoded[:3])
+		}
+		keyType = "ed25519"
+		payload = decoded[3:19]
+	case SECP256K1_SEED_LENGTH:
+		if decoded[0] != SEED_PREFIX_SECP256K1 {
+			return nil, "", fmt.Errorf("invalid secp256k1 seed prefix: %x", decoded[0])
+		}
+		keyType = "secp256k1"
+		payload = decoded[1:17]
+	default:
 		return nil, "", fmt.Errorf("invalid seed length: %d", len(decoded))
 	}
-
-	// First byte is the prefix indicating the key type
-	prefix := decoded[0]
-	payload := decoded[1:17] // 16 bytes of actual seed data
-
-	var keyType string
-	switch prefix {
-	case SEED_PREFIX_ED25519:
-		keyType = "ed25519"
-		fmt.Println("ed25519")
-	case SEED_PREFIX_SECP256K1:
-		keyType = "secp256k1"
-		fmt.Println("secp256k1")
-	default:
-		return nil, "", fmt.Errorf("unknown seed prefix: %x", prefix)
-	}
-
 	// TODO: check checksum
 
 	return payload, keyType, nil
@@ -96,7 +93,7 @@ func masterPubKeyToAccountId(compressedMasterPubKey []byte) string {
 	accountId := ripemd160Hash.Sum(nil)
 
 	// Add version prefix (0x00)
-	versionedAccountId := append([]byte{0x00}, accountId...)
+	versionedAccountId := append(accountPrefix, accountId...)
 
 	// Generate checksum (first 4 bytes of double SHA256)
 	firstHash := sha256.Sum256(versionedAccountId)
