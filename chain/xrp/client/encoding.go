@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-    "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
 )
 
 // Transaction Types
@@ -41,6 +41,13 @@ const (
 	TF_SIGNATURE        = 4
 	TF_NETWORKID        = 1
 	TF_FLAGS            = 2
+	TF_MEMOS            = 9 // Field code for Memos array
+	TF_MEMO             = 10 // FIeld code for Memo object
+
+	// Memo field identifiers
+	TF_MEMO_TYPE   = 12
+	TF_MEMO_DATA   = 13
+	TF_MEMO_FORMAT = 14
 )
 
 // Binary serialization
@@ -51,7 +58,7 @@ type FieldSorter struct {
 }
 
 // TODO: return error instead of panic
-func SerializePayment(payment *Payment, includeSig bool) []byte {
+func SerializePayment(payment *Payment, includeSig bool) ([]byte, error) {
 	fields := []FieldSorter{
 		{TF_TRANSACTION_TYPE, ST_UINT16, uint16(PAYMENT_TRANSACTION_TYPE)},
 		{TF_ACCOUNT, ST_ACCOUNT, payment.Account},
@@ -60,7 +67,7 @@ func SerializePayment(payment *Payment, includeSig bool) []byte {
 		{TF_FEE, ST_AMOUNT, payment.Fee},
 		{TF_SEQUENCE, ST_UINT32, uint32(payment.Sequence)},
 		{TF_SIGNINGPUB, ST_VL, payment.SigningPubKey},
-		{TF_FLAGS, ST_UINT32, payment.Flags},
+		{TF_FLAGS, ST_UINT32, payment.Flags}, // TODO: remove? deprecated? No effect?
 	}
 
 	if includeSig {
@@ -78,6 +85,16 @@ func SerializePayment(payment *Payment, includeSig bool) []byte {
 			fieldID: TF_NETWORKID,
 			typeID:  ST_UINT32,
 			value:   payment.NetworkID,
+		})
+	}
+
+	// Add Memos if present
+	if len(payment.Memos) > 0 {
+		memoFields := serializeMemos(payment.Memos)
+		fields = append(fields, FieldSorter{
+			fieldID: TF_MEMOS,
+			typeID:  ST_ARRAY,
+			value:   memoFields,
 		})
 	}
 
@@ -104,144 +121,195 @@ func SerializePayment(payment *Payment, includeSig bool) []byte {
 		fmt.Printf("Field %d: TypeID=%d, FieldID=%d\n", i, field.typeID, field.fieldID)
 	}
 	// Serialize each field
-	for i, field := range fields {
-		startPos := buf.Len()
-		// Write field header
-		if field.typeID <= 15 && field.fieldID <= 15 {
-			// Case 1: Both small - single byte header
-			header := byte((field.typeID << 4) | field.fieldID)
-			buf.WriteByte(header)
-		} else if field.typeID > 15 && field.fieldID > 15 {
-			// Case 2: Both large - two bytes with special encoding
-			buf.WriteByte(0x00) // First byte is 0 to indicate both are large
-			buf.WriteByte(byte(field.typeID))
-			buf.WriteByte(byte(field.fieldID))
-		} else if field.typeID > 15 {
-			// Case 3: Large TypeID, small FieldID
-			buf.WriteByte(0x00 | byte(field.fieldID&0x0F))
-			buf.WriteByte(byte(field.typeID))
-		} else {
-			// Case 4: Small TypeID, large FieldID
-			buf.WriteByte(byte(field.typeID << 4))
-			buf.WriteByte(byte(field.fieldID))
-		}
-		// // Write field header
-		// header := (field.typeID << 4) | field.fieldID
-		// buf.WriteByte(byte(header))
-		headerBytes := buf.Bytes()[startPos:]
-		fmt.Printf("\nField %d header bytes: %s\n", i, hex.EncodeToString(headerBytes))
-		fieldStartPos := buf.Len()
+	for _, field := range fields {
+		serializeField(&buf, field)
 
-		// Write field value based on type
-		switch field.typeID {
-		case ST_UINT16:
-			binary.Write(&buf, binary.BigEndian, field.value.(uint16))
-		case ST_UINT32:
-			binary.Write(&buf, binary.BigEndian, field.value.(uint32))
-		case ST_AMOUNT:
-			amountStr := field.value.(string)
-			amount, ok := new(big.Int).SetString(amountStr, 10)
-			if !ok {
-				panic(fmt.Sprintf("invalid amount format: %s", amountStr))
-			}
-
-			// Debug the amount encoding
-			fmt.Printf("Encoding amount: %s\n", amountStr)
-
-			// Create 8-byte buffer for amount
-			amtBytes := make([]byte, 8)
-			// Convert to uint64 and use binary.BigEndian
-			amtUint := amount.Uint64()
-			binary.BigEndian.PutUint64(amtBytes, amtUint)
-
-			// Clear the top bit for XRP amount
-			amtBytes[0] &= 0x7F
-			amtBytes[0] |= 0x40
-
-			// Print encoded bytes for debugging
-			fmt.Printf("Encoded amount bytes: %x\n", amtBytes)
-
-			buf.Write(amtBytes)
-			// amountStr := field.value.(string)
-			// amt, ok := new(big.Int).SetString(amountStr, 10)
-			// if !ok {
-			// 	panic("invalid amount format")
-			// }
-
-			// // Create 8-byte buffer for XRP amount
-			// amtBytes := make([]byte, 8)
-			// // Convert to big-endian
-			// amt64 := amt.Uint64()
-			// binary.BigEndian.PutUint64(amtBytes, amt64)
-			// // Clear the top bit for XRP amounts (not issued currency)
-			// amtBytes[0] &= 0x7F
-			// buf.Write(amtBytes)
-			// // amt := new(big.Int)
-			// // amt.SetString(field.value.(string), 10)
-			// // amtBytes := amt.Bytes()
-			// // buf.Write(amtBytes)
-		case ST_VL:
-			pubKeyHex := field.value.(string)
-			// Decode hex string to bytes instead of using it as ASCII
-			pubKeyBytes, err := hex.DecodeString(pubKeyHex)
-			if err != nil {
-				panic(fmt.Sprintf("invalid hex in SigningPubKey: %v", err))
-			}
-
-			// Write length
-			if len(pubKeyBytes) <= 192 {
-				buf.WriteByte(byte(len(pubKeyBytes)))
-			} else if len(pubKeyBytes) <= 12480 {
-				length := len(pubKeyBytes) - 193
-				byte1 := byte((length >> 8) + 193)
-				byte2 := byte(length & 0xFF)
-				buf.WriteByte(byte1)
-				buf.WriteByte(byte2)
-			}
-			// Debug print
-			fmt.Printf("PublicKey length: %d bytes\n", len(pubKeyBytes))
-
-			// Write actual bytes
-			buf.Write(pubKeyBytes)
-			// data := []byte(field.value.(string))
-			// // Write variable length
-			// if len(data) <= 192 {
-			// 	buf.WriteByte(byte(len(data)))
-			// } else if len(data) <= 12480 {
-			// 	length := len(data) - 193
-			// 	byte1 := byte((length >> 8) + 193)
-			// 	byte2 := byte(length & 0xFF)
-			// 	buf.WriteByte(byte1)
-			// 	buf.WriteByte(byte2)
-			// } else {
-			// 	panic("data too long for variable length encoding")
-			// }
-			// buf.Write(data)
-			// // data := field.value.(string)
-			// // //data := field.value.([]byte)
-			// // binary.Write(&buf, binary.BigEndian, uint16(len(data)))
-			// // buf.Write([]byte(data))
-		case ST_ACCOUNT:
-			addr := field.value.(string)
-			if !strings.HasPrefix(addr, "r") {
-				panic("invalid account address format")
-			}
-			fmt.Println("serialize addr:", addr)
-			decoded := base58.Decode(addr)
-			if len(decoded) != 25 {
-				panic(fmt.Sprintf("invalid account address length, len: %d, addr: %s", len(decoded), addr))
-			}
-			buf.WriteByte(byte(0x14))
-			buf.Write(decoded[1:21])
-			// addr := field.value.(string)
-			// decoded := addresscodec.DecodeBase58(addr[1:]) // Skip 'r' prefix
-			// //decoded := base58.Decode(addr[1:]) // Skip 'r' prefix
-			// buf.Write(decoded)
-		}
-		fieldBytes := buf.Bytes()[fieldStartPos:]
-		fmt.Printf("Field %d value bytes: %s\n", i, hex.EncodeToString(fieldBytes))
 	}
 	finalBytes := buf.Bytes()
 	fmt.Printf("\nFinal tx_blob: %s\n", hex.EncodeToString(finalBytes))
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
+
+// Helper function to serialize memo fields
+func serializeMemos(memos []Memo) []FieldSorter {
+	var memoFields []FieldSorter
+
+	for _, memo := range memos {
+		var memoObjFields []FieldSorter
+
+        // Ensure at least one memo field is present
+        if memo.MemoType == "" && memo.MemoData == "" && memo.MemoFormat == "" {
+            continue // Skip empty memos
+        }
+		
+		if memo.MemoType != "" {
+			memoObjFields = append(memoObjFields, FieldSorter{
+				fieldID: TF_MEMO_TYPE,
+				typeID:  ST_VL,
+				value:   memo.MemoType,
+			})
+		}
+
+		if memo.MemoData != "" {
+			memoObjFields = append(memoObjFields, FieldSorter{
+				fieldID: TF_MEMO_DATA,
+				typeID:  ST_VL,
+				value:   memo.MemoData,
+			})
+		}
+
+		if memo.MemoFormat != "" {
+			memoObjFields = append(memoObjFields, FieldSorter{
+				fieldID: TF_MEMO_FORMAT,
+				typeID:  ST_VL,
+				value:   memo.MemoFormat,
+			})
+		}
+
+		// Add the object to the array
+		memoFields = append(memoFields, FieldSorter{
+			fieldID: TF_MEMO,
+			typeID:  ST_OBJECT,
+			value:   memoObjFields,
+		})
+	}
+
+	return memoFields
+}
+
+// Helper function to serialize a single field
+func serializeField(buf *bytes.Buffer, field FieldSorter) error {
+	//startPos := buf.Len()
+
+	// Write field header
+	if field.typeID <= 15 && field.fieldID <= 15 {
+		header := byte((field.typeID << 4) | field.fieldID)
+		buf.WriteByte(header)
+	} else if field.typeID > 15 && field.fieldID > 15 {
+		buf.WriteByte(0x00)
+		buf.WriteByte(byte(field.typeID))
+		buf.WriteByte(byte(field.fieldID))
+	} else if field.typeID > 15 {
+		buf.WriteByte(0x00 | byte(field.fieldID&0x0F))
+		buf.WriteByte(byte(field.typeID))
+	} else {
+		buf.WriteByte(byte(field.typeID << 4))
+		buf.WriteByte(byte(field.fieldID))
+	}
+
+	//headerBytes := buf.Bytes()[startPos:]
+	//fmt.Printf("\nField %d header bytes: %s\n", i, hex.EncodeToString(headerBytes))
+	//fieldStartPos := buf.Len()
+
+	// Write field value based on type
+	switch field.typeID {
+	case ST_OBJECT:
+		objFields := field.value.([]FieldSorter)
+		for _, objField := range objFields {
+			if err := serializeField(buf, objField); err != nil {
+				return err
+			}
+		}
+		buf.WriteByte(0xE1) // Object ending marker
+	case ST_UINT16:
+		binary.Write(buf, binary.BigEndian, field.value.(uint16))
+	case ST_UINT32:
+		binary.Write(buf, binary.BigEndian, field.value.(uint32))
+	case ST_AMOUNT:
+		amountStr := field.value.(string)
+		amount, ok := new(big.Int).SetString(amountStr, 10)
+		if !ok {
+			return fmt.Errorf("error amount serialize field, invalid amount format: %s", amountStr)
+		}
+
+		// Debug the amount encoding
+		//fmt.Printf("Encoding amount: %s\n", amountStr)
+
+		// Create 8-byte buffer for amount
+		amtBytes := make([]byte, 8)
+		// Convert to uint64 and use binary.BigEndian
+		amtUint := amount.Uint64()
+		binary.BigEndian.PutUint64(amtBytes, amtUint)
+
+		// Clear the top bit for XRP amount
+		amtBytes[0] &= 0x7F
+		amtBytes[0] |= 0x40
+
+		// Print encoded bytes for debugging
+		//fmt.Printf("Encoded amount bytes: %x\n", amtBytes)
+
+		buf.Write(amtBytes)
+	case ST_VL:
+		blob := field.value.(string)
+		blobBz, err := hex.DecodeString(blob)
+		if err != nil {
+			return fmt.Errorf("error serialize VL: %v", err)
+		}
+		
+		// Write length
+		if len(blobBz) <= 192 {
+			buf.WriteByte(byte(len(blobBz)))
+		} else if len(blobBz) <= 12480 {
+			length := len(blobBz) - 193
+			byte1 := byte((length >> 8) + 193)
+			byte2 := byte(length & 0xFF)
+			buf.WriteByte(byte1)
+			buf.WriteByte(byte2)
+		}
+		// Debug print
+		//fmt.Printf("PublicKey length: %d bytes\n", len(pubKeyBytes))
+
+		// Write actual bytes
+		buf.Write(blobBz)
+		
+	case ST_ACCOUNT:
+		addr := field.value.(string)
+		if !strings.HasPrefix(addr, "r") {
+			return fmt.Errorf("error serialize account, invalid account address format")
+		}
+		decoded := base58.Decode(addr)
+		if len(decoded) != 25 {
+			return fmt.Errorf("error serialize account, invalid account address length, len: %d, addr: %s", len(decoded), addr)
+		}
+		buf.WriteByte(byte(0x14))
+		buf.Write(decoded[1:21])
+	case ST_ARRAY:
+		// Handle memo array
+		memoFields := field.value.([]FieldSorter)
+		for _, memoField := range memoFields {
+			// Write each memo field using the same serialization logic
+			if err := serializeField(buf, memoField); err != nil {
+				return err
+			}
+		}
+		// Write array ending marker
+		buf.WriteByte(0xF1)
+	}
+	//fieldBytes := buf.Bytes()[fieldStartPos:]
+	//fmt.Printf("Field %d value bytes: %s\n", i, hex.EncodeToString(fieldBytes))
+	return nil
+}
+
+// f9 Array/Memos
+// e0 object
+// 7d blob/MemoData
+// 05 length
+// 48656c6c6f Hello
+// e1 // end object
+// f1 // end array
+
+// f9
+// e0
+// 7d
+// 0a
+//34383635366336633666
+// e1
+// f1
+
+// F9
+// EA
+// 7D
+// 05
+// 48656C6C6F
+// E1
+// F1

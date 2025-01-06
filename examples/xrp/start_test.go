@@ -69,15 +69,16 @@ func TestXrp(t *testing.T) {
 
 	// Send 1 coin from user1 to user2 with a note/memo
 	//memo := fmt.Sprintf("+:%s:%s", "abc.abc", "bech16sg0fxrdd0vgpl4pkcnqwzjlu5lrs6ymcqldel")
+	memo := "Hello"
 	transferAmount := sdkmath.NewInt(100_000_000)
-	// _, err = xrpChain.SendFundsWithNote(ctx, user1.KeyName(), ibc.WalletAmount{
-	// 	Address: user2.FormattedAddress(),
-	// 	Amount:  transferAmount,
-	// }, memo)
-	err = xrpChain.SendFunds(ctx, user1.KeyName(), ibc.WalletAmount{
+	txHash, err := xrpChain.SendFundsWithNote(ctx, user1.KeyName(), ibc.WalletAmount{
 		Address: user2.FormattedAddress(),
 		Amount:  transferAmount,
-	})
+	}, memo)
+	// err = xrpChain.SendFunds(ctx, user1.KeyName(), ibc.WalletAmount{
+	// 	Address: user2.FormattedAddress(),
+	// 	Amount:  transferAmount,
+	// })
 	require.NoError(t, err)
 
 	// Verify user1 balance
@@ -94,4 +95,7 @@ func TestXrp(t *testing.T) {
 	require.NoError(t, err)
 	expectedBalance = fundAmount.Add(transferAmount)
 	require.Equal(t, expectedBalance, balanceUser2, fmt.Errorf("User (%s) balance (%s) is not expected (%s) (check2)", user2.KeyName(), balanceUser2, expectedBalance))
+
+	err = xrpChain.XrpClient.GetTx(txHash)
+	require.NoError(t, err)
 }

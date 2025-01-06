@@ -2,8 +2,11 @@ package xrp
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +24,7 @@ import (
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
 
 var _ ibc.Chain = &XrpChain{}
@@ -37,10 +41,10 @@ const (
 
 var natPorts = nat.PortMap{
 	nat.Port(rpcAdminLocalPort): {},
-	nat.Port(wsAdminLocalPort): {},
-	nat.Port(wsPublicPort): {},
-	nat.Port(peerPort): {},
-	nat.Port(rpcPort): {},
+	nat.Port(wsAdminLocalPort):  {},
+	nat.Port(wsPublicPort):      {},
+	nat.Port(peerPort):          {},
+	nat.Port(rpcPort):           {},
 }
 
 type XrpChain struct {
@@ -57,9 +61,9 @@ type XrpChain struct {
 	containerLifecycle *dockerutil.ContainerLifecycle
 
 	hostRPCPort string
-	hostWSPort string
+	hostWSPort  string
 
-	xrpClient *xrpclient.XrpClient
+	XrpClient *xrpclient.XrpClient
 
 	// cli arguments
 	RippledCli         string
@@ -68,7 +72,7 @@ type XrpChain struct {
 	KeyNameToWalletMap map[string]*xrpwallet.XrpWallet
 
 	ValidatorKeyInfo *ValidatorKeyOutput
-	ValidatorToken string
+	ValidatorToken   string
 
 	// Mutex for reading/writing AddrToKeyNameMap and KeyNameToWalletMap
 	MapAccess sync.Mutex
@@ -81,13 +85,13 @@ func NewXrpChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) 
 	}
 
 	return &XrpChain{
-		testName:             testName,
-		cfg:                  chainConfig,
-		log:                  log,
-		RippledCli:           bins[0],
-		ValidatorKeysCli:     bins[1],
-		AddrToKeyNameMap:     make(map[string]string),
-		KeyNameToWalletMap:   make(map[string]*xrpwallet.XrpWallet),
+		testName:           testName,
+		cfg:                chainConfig,
+		log:                log,
+		RippledCli:         bins[0],
+		ValidatorKeysCli:   bins[1],
+		AddrToKeyNameMap:   make(map[string]string),
+		KeyNameToWalletMap: make(map[string]*xrpwallet.XrpWallet),
 	}
 }
 
@@ -104,7 +108,7 @@ func (c *XrpChain) Initialize(ctx context.Context, testName string, cli *dockerc
 
 	v, err := cli.VolumeCreate(ctx, volume.CreateOptions{
 		Labels: map[string]string{
-			dockerutil.CleanupLabel: testName,
+			dockerutil.CleanupLabel:   testName,
 			dockerutil.NodeOwnerLabel: c.Name(),
 		},
 	})
@@ -235,9 +239,9 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 
 	// Wait for rpc to come up
 	time.Sleep(time.Second * 5)
-	c.xrpClient = xrpclient.NewXrpClient(c.GetHostRPCAddress())
+	c.XrpClient = xrpclient.NewXrpClient(c.GetHostRPCAddress())
 
-	resp, err := c.xrpClient.GetServerInfo()
+	resp, err := c.XrpClient.GetServerInfo()
 	if err != nil {
 		fmt.Println("server info error:", err)
 	} else {
@@ -250,7 +254,7 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 	} else {
 		fmt.Println("height", height)
 	}
-	
+
 	go func() {
 		// Don't use ctx from Start(), it gets cancelled soon after returning.
 		goRoutineCtx := context.Background()
@@ -264,16 +268,16 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 			case <-goRoutineCtx.Done():
 				return
 			case <-timer.C:
-				if err := c.xrpClient.ForceLedgerClose(); err != nil {
+				if err := c.XrpClient.ForceLedgerClose(); err != nil {
 					fmt.Println("error force ledger close,", err)
 				}
 				timer.Reset(xrpBlockTime)
 			}
 		}
 	}()
-	
+
 	time.Sleep(time.Second * 2)
-	resp, err = c.xrpClient.GetServerInfo()
+	resp, err = c.XrpClient.GetServerInfo()
 	if err != nil {
 		fmt.Println("server info error:", err)
 	} else {
@@ -286,7 +290,7 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 	} else {
 		fmt.Println("height", height)
 	}
-	
+
 	// Then wait the standard 2 blocks which also gives the faucet a starting balance of 100 coins
 	// for height, err := c.Height(ctx); err == nil && height < int64(102); {
 	// 	time.Sleep(time.Second)
@@ -387,68 +391,71 @@ func (c *XrpChain) GetAddress(ctx context.Context, keyName string) ([]byte, erro
 }
 
 func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	_, err := c.SendFundsWithNote(ctx, keyName, amount, "")
+	return err
+}
+
+func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
 	c.MapAccess.Lock()
 	srcWallet := c.KeyNameToWalletMap[keyName]
 	c.MapAccess.Unlock()
 
 	if srcWallet == nil {
-		return fmt.Errorf("invalid keyname")
+		return "", fmt.Errorf("invalid keyname")
 	}
-	//_, err := c.SendFundsWithNote(ctx, keyName, amount, "")
+
 	// Get the next sequence number
-    sequence, err := c.xrpClient.GetAccountSequence(srcWallet.FormattedAddress())
-    if err != nil {
-        fmt.Printf("Error getting sequence: %v\n", err)
-        return err
-    }
+	sequence, err := c.XrpClient.GetAccountSequence(srcWallet.FormattedAddress())
+	if err != nil {
+		fmt.Printf("Error getting sequence: %v\n", err)
+		return "", err
+	}
 
-    // Create payment transaction
-    payment := &xrpclient.Payment{
-        TransactionType: "Payment",
-        Account:         srcWallet.FormattedAddress(),
-        Destination:     amount.Address,
-        Amount:          amount.Amount.String(),
-        Sequence:        sequence,
-        Fee:             "10",
-        NetworkID:       1234,
-		Flags: 0x80000000,
-    }
+	fees, err := strconv.ParseFloat(c.Config().GasPrices, 64)
+	if err != nil {
+		return "", err
+	}
+	feeScaled := fees * math.Pow10(int(*c.Config().CoinDecimals))
 
-    // Sign and submit
-    err = c.xrpClient.SignAndSubmitPayment(srcWallet, payment)
-    if err != nil {
-        fmt.Printf("Error submitting payment: %v\n", err)
-        return err
-    }
-	
-	return nil
-}
+	// Create payment transaction
+	payment := &xrpclient.Payment{
+		TransactionType: "Payment",
+		Account:         srcWallet.FormattedAddress(),
+		Destination:     amount.Address,
+		Amount:          amount.Amount.String(),
+		Sequence:        sequence,
+		Fee:             strconv.Itoa(int(feeScaled)),
+		NetworkID:       1234,
+		Flags:           0x80000000,
+	}
 
-func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
-	// partialCoin := amount.Amount.ModRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
-	// fullCoins := amount.Amount.Sub(partialCoin).QuoRaw(int64(math.Pow10(int(*c.Config().CoinDecimals))))
-	// sendAmountFloat := float64(fullCoins.Int64()) + float64(partialCoin.Int64())/math.Pow10(int(*c.Config().CoinDecimals))
+	if note != "" {
+		payment.Memos = []xrpclient.Memo{
+			{
+				MemoData: hex.EncodeToString([]byte(note)),
+			},
+		}
+	}
 
-	// if err := c.LoadWallet(ctx, keyName); err != nil {
-	// 	return "", err
-	// }
+	// Sign and submit
+	txHash, err := c.XrpClient.SignAndSubmitPayment(srcWallet, payment)
+	if err != nil {
+		fmt.Printf("Error submitting payment: %v\n", err)
+		return "", err
+	}
 
-	// wallet.txLock.Lock()
-	// defer wallet.txLock.Unlock()
-
-	// err = testutil.WaitForBlocks(ctx, 1, c)
-	// return txHash, err
-	return "", fmt.Errorf("SendFundsWithNote not implemented")
+	err = testutil.WaitForBlocks(ctx, 1, c)
+	return txHash, err
 }
 
 func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
-	
-	return c.xrpClient.GetCurrentLedger()
+
+	return c.XrpClient.GetCurrentLedger()
 }
 
 func (c *XrpChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	accountInfo, err := c.xrpClient.GetAccountInfo(address, false)
+	accountInfo, err := c.XrpClient.GetAccountInfo(address, false)
 	if err != nil {
 		return sdkmath.ZeroInt(), fmt.Errorf("error get balance, get account info, %v", err)
 	}

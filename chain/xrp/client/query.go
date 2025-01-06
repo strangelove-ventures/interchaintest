@@ -101,3 +101,26 @@ func (x XrpClient) GetFee(txBlob any) (int, error) {
 
 	return 10, nil
 }
+
+func (x XrpClient) GetTx(txHash string) error {
+	params := []any{
+        map[string]string{
+            "transaction": txHash,
+        },
+    }
+	response, err := makeRPCCall(x.url, "tx", params)
+    if err != nil {
+        return err
+    }
+    
+    // var result struct {
+    //     LedgerCurrent int64 `json:"ledger_current_index"`
+    // }
+    
+    // if err := json.Unmarshal(response.Result, &result); err != nil {
+    //     return 0, err
+    // }
+	fmt.Println("Response:", string(response.Result))
+    
+    return nil
+}
