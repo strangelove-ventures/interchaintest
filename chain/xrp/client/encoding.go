@@ -67,7 +67,14 @@ func SerializePayment(payment *Payment, includeSig bool) ([]byte, error) {
 		{TF_FEE, ST_AMOUNT, payment.Fee},
 		{TF_SEQUENCE, ST_UINT32, uint32(payment.Sequence)},
 		{TF_SIGNINGPUB, ST_VL, payment.SigningPubKey},
-		{TF_FLAGS, ST_UINT32, payment.Flags}, // TODO: remove? deprecated? No effect?
+	}
+
+	if payment.Flags != 0 {
+		fields = append(fields, FieldSorter{
+			fieldID: TF_FLAGS,
+			typeID: ST_UINT32,
+			value: payment.Flags,
+		})
 	}
 
 	if includeSig {
@@ -289,27 +296,3 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 	//fmt.Printf("Field %d value bytes: %s\n", i, hex.EncodeToString(fieldBytes))
 	return nil
 }
-
-// f9 Array/Memos
-// e0 object
-// 7d blob/MemoData
-// 05 length
-// 48656c6c6f Hello
-// e1 // end object
-// f1 // end array
-
-// f9
-// e0
-// 7d
-// 0a
-//34383635366336633666
-// e1
-// f1
-
-// F9
-// EA
-// 7D
-// 05
-// 48656C6C6F
-// E1
-// F1

@@ -426,7 +426,6 @@ func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 		Sequence:        sequence,
 		Fee:             strconv.Itoa(int(feeScaled)),
 		NetworkID:       1234,
-		Flags:           0x80000000,
 	}
 
 	if note != "" {
