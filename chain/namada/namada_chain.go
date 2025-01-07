@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	//"encoding/hex"
-	//"encoding/json"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	stdmath "math"
@@ -25,9 +25,9 @@ import (
 
 	"cosmossdk.io/math"
 
-	//cometbft "github.com/cometbft/cometbft/abci/types"
+	cometbft "github.com/cometbft/cometbft/abci/types"
 
-	//"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 )
@@ -405,156 +405,156 @@ func (c *NamadaChain) SendFundsWithNote(ctx context.Context, keyName string, amo
 
 // Send on IBC transfer.
 func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	// cmd := []string{
-	// 	c.cfg.Bin,
-	// 	"client",
-	// 	"--base-dir",
-	// 	c.HomeDir(),
-	// 	"ibc-transfer",
-	// 	"--source",
-	// 	keyName,
-	// 	"--receiver",
-	// 	amount.Address,
-	// 	"--token",
-	// 	amount.Denom,
-	// 	"--amount",
-	// 	amount.Amount.String(),
-	// 	"--channel-id",
-	// 	channelID,
-	// 	"--node",
-	// 	c.GetRPCAddress(),
-	// }
+	cmd := []string{
+		c.cfg.Bin,
+		"client",
+		"--base-dir",
+		c.HomeDir(),
+		"ibc-transfer",
+		"--source",
+		keyName,
+		"--receiver",
+		amount.Address,
+		"--token",
+		amount.Denom,
+		"--amount",
+		amount.Amount.String(),
+		"--channel-id",
+		channelID,
+		"--node",
+		c.GetRPCAddress(),
+	}
 
-	// if c.Config().Gas != "" {
-	// 	_, err := strconv.ParseInt(c.Config().Gas, 10, 64)
-	// 	if err != nil {
-	// 		return ibc.Tx{}, fmt.Errorf("invalid gas limit: %s", c.Config().Gas)
-	// 	}
-	// 	cmd = append(cmd, "--gas-limit", c.Config().Gas)
-	// }
+	if c.Config().Gas != "" {
+		_, err := strconv.ParseInt(c.Config().Gas, 10, 64)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("invalid gas limit: %s", c.Config().Gas)
+		}
+		cmd = append(cmd, "--gas-limit", c.Config().Gas)
+	}
 
-	// if options.Port != "" {
-	// 	cmd = append(cmd, "--port-id", options.Port)
-	// }
+	if options.Port != "" {
+		cmd = append(cmd, "--port-id", options.Port)
+	}
 
-	// if options.Memo != "" {
-	// 	cmd = append(cmd, "--ibc-memo", options.Memo)
-	// }
+	if options.Memo != "" {
+		cmd = append(cmd, "--ibc-memo", options.Memo)
+	}
 
-	// if options.Timeout != nil {
-	// 	if options.Timeout.NanoSeconds > 0 {
-	// 		timestamp := time.Unix(0, int64(options.Timeout.NanoSeconds))
-	// 		currentTime := time.Now()
-	// 		if currentTime.After(timestamp) {
-	// 			return ibc.Tx{}, fmt.Errorf("invalid timeout timestamp: %d", options.Timeout.NanoSeconds)
-	// 		}
-	// 		offset := int64(timestamp.Sub(currentTime).Seconds())
-	// 		cmd = append(cmd, "--timeout-sec-offset", strconv.FormatInt(offset, 10))
-	// 	}
+	if options.Timeout != nil {
+		if options.Timeout.NanoSeconds > 0 {
+			timestamp := time.Unix(0, int64(options.Timeout.NanoSeconds))
+			currentTime := time.Now()
+			if currentTime.After(timestamp) {
+				return ibc.Tx{}, fmt.Errorf("invalid timeout timestamp: %d", options.Timeout.NanoSeconds)
+			}
+			offset := int64(timestamp.Sub(currentTime).Seconds())
+			cmd = append(cmd, "--timeout-sec-offset", strconv.FormatInt(offset, 10))
+		}
 
-	// 	if options.Timeout.Height > 0 {
-	// 		cmd = append(cmd, "--timeout-height", strconv.FormatInt(options.Timeout.Height, 10))
-	// 	}
-	// }
+		if options.Timeout.Height > 0 {
+			cmd = append(cmd, "--timeout-height", strconv.FormatInt(options.Timeout.Height, 10))
+		}
+	}
 
-	// if strings.HasPrefix(keyName, "shielded") {
-	// 	cmd = append(cmd, "--gas-payer", gasPayerAlias)
-	// }
+	if strings.HasPrefix(keyName, "shielded") {
+		cmd = append(cmd, "--gas-payer", gasPayerAlias)
+	}
 
-	// output, _, err := c.Exec(ctx, cmd, c.Config().Env)
-	// if err != nil {
-	// 	return ibc.Tx{}, fmt.Errorf("the transaction failed: %s, %v", output, err)
-	// }
-	// outputStr := string(output)
-	// c.log.Log(zap.InfoLevel, outputStr)
+	output, _, err := c.Exec(ctx, cmd, c.Config().Env)
+	if err != nil {
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s, %v", output, err)
+	}
+	outputStr := string(output)
+	c.log.Log(zap.InfoLevel, outputStr)
 
-	// re := regexp.MustCompile(`Transaction hash: ([0-9A-F]+)`)
-	// matches := re.FindStringSubmatch(outputStr)
-	// var txHash string
-	// if len(matches) > 1 {
-	// 	txHash = matches[1]
-	// } else {
-	// 	return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
-	// }
+	re := regexp.MustCompile(`Transaction hash: ([0-9A-F]+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	var txHash string
+	if len(matches) > 1 {
+		txHash = matches[1]
+	} else {
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
+	}
 
-	// re = regexp.MustCompile(`Transaction batch ([0-9A-F]+) was applied at height (\d+), consuming (\d+) gas units`)
-	// matchesAll := re.FindAllStringSubmatch(outputStr, -1)
-	// if len(matches) == 0 {
-	// 	return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
-	// }
+	re = regexp.MustCompile(`Transaction batch ([0-9A-F]+) was applied at height (\d+), consuming (\d+) gas units`)
+	matchesAll := re.FindAllStringSubmatch(outputStr, -1)
+	if len(matches) == 0 {
+		return ibc.Tx{}, fmt.Errorf("the transaction failed: %s", outputStr)
+	}
 
-	// var height int64
-	// var gas int64
-	// for _, match := range matchesAll {
-	// 	if len(match) == 4 {
-	// 		// it is ok to overwrite them of the last transaction
-	// 		height, _ = strconv.ParseInt(match[2], 10, 64)
-	// 		gas, _ = strconv.ParseInt(match[3], 10, 64)
-	// 	}
-	// }
+	var height int64
+	var gas int64
+	for _, match := range matchesAll {
+		if len(match) == 4 {
+			// it is ok to overwrite them of the last transaction
+			height, _ = strconv.ParseInt(match[2], 10, 64)
+			gas, _ = strconv.ParseInt(match[3], 10, 64)
+		}
+	}
 
-	// tx := ibc.Tx{
-	// 	TxHash:   txHash,
-	// 	Height:   height,
-	// 	GasSpent: gas,
-	// }
+	tx := ibc.Tx{
+		TxHash:   txHash,
+		Height:   height,
+		GasSpent: gas,
+	}
 
-	// // results, err := c.getNode().Client.BlockResults(ctx, &height)
-	// // if err != nil {
-	// // 	return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
-	// // }
-	// const evType = "send_packet"
-	// tendermintEvents := results.EndBlockEvents
-	// var events []cometbft.Event
-	// for _, event := range tendermintEvents {
-	// 	if event.Type != evType {
-	// 		continue
-	// 	}
-	// 	jsonEvent, err := json.Marshal(event)
-	// 	if err != nil {
-	// 		return ibc.Tx{}, fmt.Errorf("converting an events failed: %v", err)
-	// 	}
-	// 	var event cometbft.Event
-	// 	err = json.Unmarshal(jsonEvent, &event)
-	// 	if err != nil {
-	// 		return ibc.Tx{}, fmt.Errorf("converting an event failed: %v", err)
-	// 	}
-	// 	events = append(events, event)
-	// }
+	results, err := c.getNode().Client.BlockResults(ctx, &height)
+	if err != nil {
+		return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
+	}
+	const evType = "send_packet"
+	tendermintEvents := results.EndBlockEvents
+	var events []cometbft.Event
+	for _, event := range tendermintEvents {
+		if event.Type != evType {
+			continue
+		}
+		jsonEvent, err := json.Marshal(event)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("converting an events failed: %v", err)
+		}
+		var event cometbft.Event
+		err = json.Unmarshal(jsonEvent, &event)
+		if err != nil {
+			return ibc.Tx{}, fmt.Errorf("converting an event failed: %v", err)
+		}
+		events = append(events, event)
+	}
 
-	// var (
-	// 	seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
-	// 	srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
-	// 	srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
-	// 	dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
-	// 	dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
-	// 	timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
-	// 	timeoutTS, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
-	// 	dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
-	// )
-	// tx.Packet.SourcePort = srcPort
-	// tx.Packet.SourceChannel = srcChan
-	// tx.Packet.DestPort = dstPort
-	// tx.Packet.DestChannel = dstChan
-	// tx.Packet.TimeoutHeight = timeoutHeight
+	var (
+		seq, _           = tendermint.AttributeValue(events, evType, "packet_sequence")
+		srcPort, _       = tendermint.AttributeValue(events, evType, "packet_src_port")
+		srcChan, _       = tendermint.AttributeValue(events, evType, "packet_src_channel")
+		dstPort, _       = tendermint.AttributeValue(events, evType, "packet_dst_port")
+		dstChan, _       = tendermint.AttributeValue(events, evType, "packet_dst_channel")
+		timeoutHeight, _ = tendermint.AttributeValue(events, evType, "packet_timeout_height")
+		timeoutTS, _     = tendermint.AttributeValue(events, evType, "packet_timeout_timestamp")
+		dataHex, _       = tendermint.AttributeValue(events, evType, "packet_data_hex")
+	)
+	tx.Packet.SourcePort = srcPort
+	tx.Packet.SourceChannel = srcChan
+	tx.Packet.DestPort = dstPort
+	tx.Packet.DestChannel = dstChan
+	tx.Packet.TimeoutHeight = timeoutHeight
 
-	// data, err := hex.DecodeString(dataHex)
-	// if err != nil {
-	// 	return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
-	// }
-	// tx.Packet.Data = data
+	data, err := hex.DecodeString(dataHex)
+	if err != nil {
+		return tx, fmt.Errorf("malformed data hex %s: %w", dataHex, err)
+	}
+	tx.Packet.Data = data
 
-	// seqNum, err := strconv.ParseUint(seq, 10, 64)
-	// if err != nil {
-	// 	return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
-	// }
-	// tx.Packet.Sequence = seqNum
+	seqNum, err := strconv.ParseUint(seq, 10, 64)
+	if err != nil {
+		return tx, fmt.Errorf("invalid packet sequence from events %s: %w", seq, err)
+	}
+	tx.Packet.Sequence = seqNum
 
-	// timeoutNano, err := strconv.ParseUint(timeoutTS, 10, 64)
-	// if err != nil {
-	// 	return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTS, err)
-	// }
-	// tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
+	timeoutNano, err := strconv.ParseUint(timeoutTS, 10, 64)
+	if err != nil {
+		return tx, fmt.Errorf("invalid packet timestamp timeout %s: %w", timeoutTS, err)
+	}
+	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
 	return ibc.Tx{}, nil
 }

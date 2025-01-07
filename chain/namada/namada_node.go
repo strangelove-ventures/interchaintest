@@ -14,9 +14,9 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	// To use a legacy tendermint client.
-	// rpcclient "github.com/tendermint/tendermint/rpc/client"
-	// rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	// libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
+	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
@@ -29,10 +29,10 @@ type NamadaNode struct {
 	TestName     string
 	Chain        ibc.Chain
 	DockerClient *dockerclient.Client
-	//Client       rpcclient.Client
-	Image        ibc.DockerImage
-	VolumeName   string
-	NetworkID    string
+	Client       rpcclient.Client
+	Image      ibc.DockerImage
+	VolumeName string
+	NetworkID  string
 
 	log *zap.Logger
 
@@ -150,27 +150,27 @@ func (n *NamadaNode) NodeType() string {
 }
 
 func (n *NamadaNode) NewRPCClient(addr string) error {
-	// httpClient, err := libclient.DefaultHTTPClient(addr)
-	// if err != nil {
-	// 	return err
-	// }
+	httpClient, err := libclient.DefaultHTTPClient(addr)
+	if err != nil {
+		return err
+	}
 
-	// httpClient.Timeout = 10 * time.Second
-	// rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
-	// if err != nil {
-	// 	return err
-	// }
+	httpClient.Timeout = 10 * time.Second
+	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
+	if err != nil {
+		return err
+	}
 
-	// n.Client = rpcClient
+	n.Client = rpcClient
 	return nil
 }
 
 func (n *NamadaNode) Height(ctx context.Context) (int64, error) {
-	// stat, err := n.Client.Status(ctx)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("tendermint client status: %w", err)
-	// }
-	return 0, nil
+	stat, err := n.Client.Status(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("tendermint client status: %w", err)
+	}
+	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
 func (n *NamadaNode) CreateContainer(ctx context.Context) error {
@@ -232,14 +232,14 @@ func (n *NamadaNode) StartContainer(ctx context.Context) error {
 	}
 
 	return retry.Do(func() error {
-		// stat, err := n.Client.Status(ctx)
-		// if err != nil {
-		// 	return err
-		// }
-		// if stat != nil && stat.SyncInfo.CatchingUp {
-		// 	return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
-		// 		stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
-		// }
+		stat, err := n.Client.Status(ctx)
+		if err != nil {
+			return err
+		}
+		if stat != nil && stat.SyncInfo.CatchingUp {
+			return fmt.Errorf("still catching up: height(%d) catching-up(%t)",
+				stat.SyncInfo.LatestBlockHeight, stat.SyncInfo.CatchingUp)
+		}
 		return nil
 	}, retry.Context(ctx), retry.DelayType(retry.BackOffDelay))
 }
