@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// ED25519 prefix - value is 237
+	// ED25519 prefix - value is 237.
 	ED25519Prefix = 0xED
 )
 

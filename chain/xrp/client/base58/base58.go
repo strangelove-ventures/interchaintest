@@ -100,6 +100,7 @@ func Decode(b string) []byte {
 	answer := big.NewInt(0)
 	scratch := new(big.Int)
 
+	//nolint:dupword
 	// Calculating with big.Int is slow for each iteration.
 	//    x += b58[b[i]] * j
 	//    j *= 58

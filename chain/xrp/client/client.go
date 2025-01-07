@@ -36,7 +36,7 @@ func makeRPCCall(url string, method string, params []any) (*types.RPCResponse, e
 		return nil, err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody)) //nolint:gosec,noctx
 	if err != nil {
 		return nil, err
 	}

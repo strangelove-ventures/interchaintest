@@ -46,13 +46,13 @@ func NewValidatorConfig(validator string) []byte {
 
 func NewRippledConfig(validatorTokenInput string) []byte {
 	server := "[server]\nport_rpc_admin_local\nport_rpc\nport_ws_admin_local\nport_ws_public\nport_peer\nstandalone=1\n\n"
-	portRpcAdminLocal := "[port_rpc_admin_local]\nport = 5005\nip = 0.0.0.0\nadmin = 0.0.0.0\nprotocol = http\n\n"
+	portRPCAdminLocal := "[port_rpc_admin_local]\nport = 5005\nip = 0.0.0.0\nadmin = 0.0.0.0\nprotocol = http\n\n"
 	portWsAdminLocal := "[port_ws_admin_local]\nport = 6006\nip = 0.0.0.0\nadmin = 0.0.0.0\nprotocol = ws\n\n"
 	portWsPublic := "[port_ws_public]\nport = 80\nip = 0.0.0.0\nprotocol = ws\n\n"
 	portPeer := "[port_peer]\nport = 51235\nip = 0.0.0.0\nprotocol = peer\n\n"
-	portRpc := "[port_rpc]\nport = 51234\nip = 0.0.0.0\nadmin = 127.0.0.1\nprotocol = https, http\n\n"
+	portRPC := "[port_rpc]\nport = 51234\nip = 0.0.0.0\nadmin = 127.0.0.1\nprotocol = https, http\n\n"
 	nodeSize := "[node_size]\nsmall\n\n"
-	nodeDb := "[node_db]\ntype=NuDB\npath=/var/lib/rippled/db/nudb\nadvisory_delete=0\nonline_delete=256\n\n"
+	nodeDB := "[node_db]\ntype=NuDB\npath=/var/lib/rippled/db/nudb\nadvisory_delete=0\nonline_delete=256\n\n"
 	ledgerHistory := "[ledger_history]\n256\n\n"
 	dbPath := "[database_path]\n/var/lib/rippled/db\n\n"
 	debugLogfile := "[debug_logfile]\n/var/log/rippled/debug.log\n\n"
@@ -62,7 +62,7 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 	// rpcStartup := "[rpc_startup]\n{ \"command\": \"log_level\", \"severity\": \"warning\" }\n\n"
 	sslVerify := "[ssl_verify]\n0\n\n"
 	validationQuorum := "[validation_quorum]\n0\n\n"
-	networkId := "[network_id]\n1234\n\n"
+	networkID := "[network_id]\n1234\n\n"
 	validatorToken := "[validator_token]\n"
 	ipsFixed := "[ips_fixed]\nxrp-1234-TestXrp 51235\n\n"
 
@@ -70,13 +70,13 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 		fmt.Sprintf(
 			"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
 			server,
-			portRpcAdminLocal,
+			portRPCAdminLocal,
 			portWsAdminLocal,
 			portWsPublic,
 			portPeer,
-			portRpc,
+			portRPC,
 			nodeSize,
-			nodeDb,
+			nodeDB,
 			ledgerHistory,
 			dbPath,
 			debugLogfile,
@@ -85,7 +85,7 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 			rpcStartup,
 			sslVerify,
 			validationQuorum,
-			networkId,
+			networkID,
 			ipsFixed,
 			validatorToken,
 			strings.TrimSpace(validatorTokenInput),

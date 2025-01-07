@@ -16,7 +16,7 @@ type KeyPair struct {
 	PublicKey  *ecdsa.PublicKey
 }
 
-// ECDSASignature represents the R and S components of a signature
+// ECDSASignature represents the R and S components of a signature.
 type ECDSASignature struct {
 	R, S *big.Int
 }

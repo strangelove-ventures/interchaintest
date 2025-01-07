@@ -4,19 +4,20 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha512"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func generateSecp256k1KeyPairWithCurveOrder(seed []byte, sequence uint32, curveOrder *big.Int) (*KeyPair, error) {
-	// Append sequence number to seed
+	// Append sequence number to seed.
 	seedWithSequence := append(seed, byte(sequence>>24), byte(sequence>>16), byte(sequence>>8), byte(sequence))
 
 	seedHash := sha512.Sum512(seedWithSequence)
 	privateKeyBytes := seedHash[:32]
 
-	// Convert private key bytes to big.Int
+	// Convert private key bytes to big.Int.
 	privateKeyInt := new(big.Int).SetBytes(privateKeyBytes)
 
 	// Ensure private key is within valid range (1 to N-1)
@@ -24,7 +25,7 @@ func generateSecp256k1KeyPairWithCurveOrder(seed []byte, sequence uint32, curveO
 		return nil, fmt.Errorf("invalid private key")
 	}
 
-	// Convert to ECDSA private key
+	// Convert to ECDSA private key.
 	privateKey, err := crypto.ToECDSA(privateKeyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ECDSA key: %v", err)
@@ -37,8 +38,7 @@ func generateSecp256k1KeyPairWithCurveOrder(seed []byte, sequence uint32, curveO
 }
 
 func generateSecp256k1KeyPair(seed []byte, curveOrder *big.Int) (keypair *KeyPair, err error) {
-	// for sequence := uint32(0); sequence < math.MaxUint32; sequence++ {
-	for sequence := uint32(0); sequence < uint32(100); sequence++ {
+	for sequence := uint32(0); sequence < math.MaxUint32; sequence++ {
 		keypair, err = generateSecp256k1KeyPairWithCurveOrder(seed, sequence, curveOrder)
 		if err == nil {
 			return keypair, nil
@@ -48,28 +48,28 @@ func generateSecp256k1KeyPair(seed []byte, curveOrder *big.Int) (keypair *KeyPai
 	return nil, fmt.Errorf("fail generate private key, %v", err)
 }
 
-// addPrivateKeys adds private keys modulo the curve order
+// addPrivateKeys adds private keys modulo the curve order.
 func addPrivateKeys(key1, key2 *big.Int, curveOrder *big.Int) *big.Int {
 	sum := new(big.Int).Add(key1, key2)
 	return new(big.Int).Mod(sum, curveOrder)
 }
 
-// addPublicKeys adds two public keys on the secp256k1 curve
-func addPublicKeys(key1, key2 *ecdsa.PublicKey) (*ecdsa.PublicKey, error) {
+// addPublicKeys adds two public keys on the secp256k1 curve.
+func addPublicKeys(key1, key2 *ecdsa.PublicKey) *ecdsa.PublicKey {
 	curve := crypto.S256()
 
-	// Add the points
+	// Add the points.
 	x, y := curve.Add(key1.X, key1.Y, key2.X, key2.Y)
 
 	return &ecdsa.PublicKey{
 		Curve: curve,
 		X:     x,
 		Y:     y,
-	}, nil
+	}
 }
 
 func DeriveKeysFromSeed(masterSeedBytes []byte) (k *Keys, err error) {
-	// secp256k1 curve order (N)
+	// secp256k1 curve order (N).
 	curveOrder, ok := new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
 	if !ok {
 		return nil, fmt.Errorf("curve order not okay")
@@ -93,27 +93,24 @@ func DeriveKeysFromSeed(masterSeedBytes []byte) (k *Keys, err error) {
 
 	masterPrivateKey := addPrivateKeys(rootKeyPair.PrivateKey, intermediateKeyPair.PrivateKey, curveOrder)
 
-	// Convert master private key to ECDSA format
+	// Convert master private key to ECDSA format.
 	masterPrivateKeyECDSA, err := crypto.ToECDSA(masterPrivateKey.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create master ECDSA key: %v", err)
 	}
 
-	// Get master public key from private key
+	// Get master public key from private key.
 	masterPublicKey := &masterPrivateKeyECDSA.PublicKey
 
-	// Verify by adding public keys - should match master public key
-	verificationPubKey, err := addPublicKeys(rootKeyPair.PublicKey, intermediateKeyPair.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to verify master key: %v", err)
-	}
+	// Verify by adding public keys - should match master public key.
+	verificationPubKey := addPublicKeys(rootKeyPair.PublicKey, intermediateKeyPair.PublicKey)
 
-	// Verify public keys match
+	// Verify public keys match.
 	if verificationPubKey.X.Cmp(masterPublicKey.X) != 0 || verificationPubKey.Y.Cmp(masterPublicKey.Y) != 0 {
 		return nil, fmt.Errorf("key verification failed")
 	}
 
-	// Compress the master public key
+	// Compress the master public key.
 	compressedMasterPubKey := crypto.CompressPubkey(masterPublicKey)
 
 	return &Keys{

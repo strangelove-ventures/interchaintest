@@ -1,6 +1,6 @@
 package types
 
-// Transaction structures
+// Transaction structures.
 type Payment struct {
 	TransactionType string `json:"TransactionType"`
 	Account         string `json:"Account"`
@@ -15,7 +15,7 @@ type Payment struct {
 	Memos           []Memo `json:"Memos,omitempty"`
 }
 
-// TransactionResponse represents the top-level response structure
+// TransactionResponse represents the top-level response structure.
 type TransactionResponse struct {
 	Accepted                 bool   `json:"accepted"`
 	AccountSequenceAvailable int    `json:"account_sequence_available"`
@@ -38,7 +38,7 @@ type TransactionResponse struct {
 	ValidatedLedgerIndex     int    `json:"validated_ledger_index"`
 }
 
-// TxJSON represents the transaction details
+// TxJSON represents the transaction details.
 type TxJSON struct {
 	Account         string `json:"Account"`
 	Amount          string `json:"Amount"`

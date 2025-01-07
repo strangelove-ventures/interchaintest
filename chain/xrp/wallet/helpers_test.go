@@ -13,7 +13,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 	tests := []struct {
 		name          string
 		seed          string
-		accountId     string
+		accountID     string
 		keyType       CryptoAlgorithm
 		masterSeedHex string
 		publicKey     string
@@ -23,7 +23,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 		{
 			name:          "Valid SECP256K1 seed",
 			seed:          "sswVV2EMPn8bcUqWnMKxQpVmZGgKT",
-			accountId:     "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
+			accountID:     "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
 			keyType:       SECP256K1,
 			masterSeedHex: "21A66FE3D048F8EE6071A84C6070D5DA",
 			publicKey:     "aB4PwLt3AMgsvLSUWjYyun7hdGr6tcbnbAU8TKjHgHRxjXycAwS2",
@@ -33,7 +33,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 		{
 			name:          "root account SECP256K1 seed",
 			seed:          "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
-			accountId:     "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+			accountID:     "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
 			keyType:       SECP256K1,
 			masterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
 			publicKey:     "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
@@ -43,7 +43,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 		{
 			name:      "dart SECP256K1 seed",
 			seed:      "sa9g98F1dxRtLbprVeAP5MonKgqPS",
-			accountId: "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ", // classic address
+			accountID: "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ", // classic address
 			// Xaddress: "X72W51px1i7iPTf4EwKFY2Nygdh5tGGNkvBFfbiuXKPxEPY"
 			// XtestNetAddress: "T7Ws3yBAjFp1Fx1yWyhbSZztwhbXPqvG5a9GRHaSf1fZnqk"
 			keyType:       SECP256K1,
@@ -55,7 +55,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 		{
 			name:      "dart ED25519 seed",
 			seed:      "sEdVkC96W1DQXBgcmNQFDcetKQqBvXw",
-			accountId: "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm", // classic address
+			accountID: "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm", // classic address
 			// Xaddress: "XVGNvtm1P2N6A6oyQ3TWFsjyXS124KjGTNeki4i9E5DGVp1"
 			// XtestNetAddress: "TVBmLzviEX8jPD22CAUH5sV1ztQ41uPJQQcDwhnCiMVzSCn"
 			keyType:       ED25519,
@@ -73,7 +73,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, strings.ToLower(tt.accountId), strings.ToLower(wallet.AccountID))
+				require.Equal(t, strings.ToLower(tt.accountID), strings.ToLower(wallet.AccountID))
 				require.Equal(t, tt.keyType, wallet.KeyType)
 				require.Equal(t, strings.ToLower(tt.seed), strings.ToLower(wallet.MasterSeed))
 				require.Equal(t, strings.ToLower(tt.masterSeedHex), strings.ToLower(wallet.MasterSeedHex))

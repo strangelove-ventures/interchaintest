@@ -5,26 +5,26 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160" //nolint:gosec,staticcheck
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
 )
 
-// Key derivation constants
+// Key derivation constants.
 var (
 	accountPrefix          = []byte{0x00}
 	accountPublicKeyPrefix = []byte{0x23}
-	SEED_PREFIX_ED25519    = []byte{0x01, 0xe1, 0x4b}
+	SeedPrefixEd25519      = []byte{0x01, 0xe1, 0x4b} //nolint:stylecheck
 )
 
-// Seed type constants
+// Seed type constants.
 const (
-	SEED_PREFIX_SECP256K1 = 0x21
-	SECP256K1_SEED_LENGTH = 21
-	ED25519_SEED_LENGTH   = 23
+	SeedPrefixSecp256k1 = 0x21
+	Secp256k1SeedLength = 21
+	Ed25519SeedLength   = 23
 )
 
-// checksum: first four bytes of sha256^2
+// checksum: first four bytes of sha256^2.
 func checksum(input []byte) (cksum [4]byte) {
 	h := sha256.Sum256(input)
 	h2 := sha256.Sum256(h[:])
@@ -49,9 +49,9 @@ func EncodeSeed(seed []byte, keyType CryptoAlgorithm) (string, error) {
 	var prefix []byte
 	switch keyType {
 	case ED25519:
-		prefix = SEED_PREFIX_ED25519
+		prefix = SeedPrefixEd25519
 	case SECP256K1:
-		prefix = []byte{SEED_PREFIX_SECP256K1}
+		prefix = []byte{SeedPrefixSecp256k1}
 	default:
 		return "", fmt.Errorf("unknown seed keytype: %s", keyType)
 	}
@@ -59,48 +59,48 @@ func EncodeSeed(seed []byte, keyType CryptoAlgorithm) (string, error) {
 	return Encode(seed, prefix), nil
 }
 
-// DecodeSeed extracts the seed payload and determines the intended algorithm
+// DecodeSeed extracts the seed payload and determines the intended algorithm.
 func DecodeSeed(encodedSeed string) (payload []byte, keyType CryptoAlgorithm, err error) {
 	decoded := base58.Decode(encodedSeed)
 	switch len(decoded) {
-	case ED25519_SEED_LENGTH:
+	case Ed25519SeedLength:
 		keyType = ED25519
-		if !bytes.Equal(decoded[:3], SEED_PREFIX_ED25519) {
+		if !bytes.Equal(decoded[:3], SeedPrefixEd25519) {
 			return nil, keyType, fmt.Errorf("invalid ed25519 seed prefix: %x", decoded[:3])
 		}
 		payload = decoded[3:19]
-	case SECP256K1_SEED_LENGTH:
+	case Secp256k1SeedLength:
 		keyType = SECP256K1
-		if decoded[0] != SEED_PREFIX_SECP256K1 {
+		if decoded[0] != SeedPrefixSecp256k1 {
 			return nil, keyType, fmt.Errorf("invalid secp256k1 seed prefix: %x", decoded[0])
 		}
 		payload = decoded[1:17]
 	default:
 		return nil, keyType, fmt.Errorf("invalid seed length: %d", len(decoded))
 	}
-	// TODO: check checksum
+	// TODO: check checksum.
 
 	return payload, keyType, nil
 }
 
-func masterPubKeyToAccountId(compressedMasterPubKey []byte) string {
-	// Generate SHA-256 hash of public key
+func masterPubKeyToAccountID(compressedMasterPubKey []byte) string {
+	// Generate SHA-256 hash of public key.
 	sha256Hash := sha256.Sum256(compressedMasterPubKey)
 
-	// Generate RIPEMD160 hash
-	ripemd160Hash := ripemd160.New()
+	// Generate RIPEMD160 hash.
+	ripemd160Hash := ripemd160.New() //nolint:gosec
 	ripemd160Hash.Write(sha256Hash[:])
-	accountId := ripemd160Hash.Sum(nil)
+	accountID := ripemd160Hash.Sum(nil)
 
-	// Add version prefix (0x00)
-	versionedAccountId := append(accountPrefix, accountId...)
+	// Add version prefix (0x00).
+	versionedAccountID := append(accountPrefix, accountID...)
 
-	// Generate checksum (first 4 bytes of double SHA256)
-	firstHash := sha256.Sum256(versionedAccountId)
+	// Generate checksum (first 4 bytes of double SHA256).
+	firstHash := sha256.Sum256(versionedAccountID)
 	secondHash := sha256.Sum256(firstHash[:])
 	checksum := secondHash[:4]
 
-	// Combine everything
-	finalAccountId := append(versionedAccountId, checksum...)
-	return base58.Encode(finalAccountId)
+	// Combine everything.
+	finalAccountID := append(versionedAccountID, checksum...)
+	return base58.Encode(finalAccountID)
 }

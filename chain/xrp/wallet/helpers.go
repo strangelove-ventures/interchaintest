@@ -10,7 +10,7 @@ import (
 )
 
 // Generate a master seed for a specific key type
-// New account generation
+// New account generation.
 func GenerateSeed(keyType CryptoAlgorithm) (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
@@ -20,7 +20,7 @@ func GenerateSeed(keyType CryptoAlgorithm) (string, error) {
 	return EncodeSeed(b, keyType)
 }
 
-// Key derivation from seed
+// Key derivation from seed.
 func GenerateXrpWalletFromSeed(keyName string, masterSeed string) (*XrpWallet, error) {
 	masterSeedBytes, keyType, err := DecodeSeed(masterSeed)
 	if err != nil {
@@ -46,7 +46,7 @@ func GenerateXrpWalletFromSeed(keyName string, masterSeed string) (*XrpWallet, e
 
 	return &XrpWallet{
 		keyName:       keyName,
-		AccountID:     masterPubKeyToAccountId(keys.GetFormattedPublicKey()),
+		AccountID:     masterPubKeyToAccountID(keys.GetFormattedPublicKey()),
 		KeyType:       keyType,
 		MasterSeed:    masterSeed,
 		MasterSeedHex: hex.EncodeToString(masterSeedBytes),

@@ -11,7 +11,7 @@ import (
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 )
 
-// Get account sequence number
+// Get account sequence number.
 func (x XrpClient) GetAccountSequence(account string) (int, error) {
 	params := []any{
 		map[string]string{
@@ -26,7 +26,7 @@ func (x XrpClient) GetAccountSequence(account string) (int, error) {
 	}
 
 	var result struct {
-		Account_data struct {
+		AccountData struct {
 			Sequence int `json:"Sequence"`
 		} `json:"account_data"`
 	}
@@ -35,7 +35,7 @@ func (x XrpClient) GetAccountSequence(account string) (int, error) {
 		return 0, err
 	}
 
-	return result.Account_data.Sequence, nil
+	return result.AccountData.Sequence, nil
 }
 
 func signPayment(wallet *xrpwallet.XrpWallet, payment *types.Payment) (string, error) {
@@ -69,10 +69,10 @@ func signPayment(wallet *xrpwallet.XrpWallet, payment *types.Payment) (string, e
 }
 
 func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *types.Payment) (string, error) {
-	// Set the public key in the payment
+	// Set the public key in the payment.
 	payment.SigningPubKey = wallet.PublicKeyHex
 
-	// Sign the transaction
+	// Sign the transaction.
 	signature, err := signPayment(wallet, payment)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign payment: %v", err)
@@ -85,7 +85,7 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *ty
 	}
 	txBlob := hex.EncodeToString(serializedTx)
 
-	// Submit the signed transaction
+	// Submit the signed transaction.
 	params := []any{
 		map[string]interface{}{
 			"tx_blob": txBlob,
@@ -120,7 +120,7 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *ty
 	return results.TxJSON.Hash, nil
 }
 
-// Signature verification
+// Signature verification.
 func VerifySignature(wallet *xrpwallet.XrpWallet, payment *types.Payment, signature []byte) (bool, error) {
 	txBytes, err := SerializePayment(payment, false)
 	if err != nil {

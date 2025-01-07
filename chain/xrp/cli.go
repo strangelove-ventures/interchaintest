@@ -8,7 +8,7 @@ import (
 )
 
 func (c *XrpChain) CreateValidatorKeys(ctx context.Context) error {
-	//./validator-keys create_keys --keyfile /root/validator-0-keys.json
+	// ./validator-keys create_keys --keyfile /root/validator-0-keys.json
 	keyfile := fmt.Sprintf("%s/validator-0-keys.json", c.HomeDir())
 	cmd := []string{
 		c.ValidatorKeysCli,
@@ -39,7 +39,7 @@ func (c *XrpChain) CreateValidatorToken(ctx context.Context) error {
 	if c.ValidatorKeyInfo == nil {
 		return fmt.Errorf("validator keys not created yet, must call c.CreateValidatorKeys()")
 	}
-	//./validator-keys create_keys --keyfile /root/validator-0-keys.json
+	// ./validator-keys create_keys --keyfile /root/validator-0-keys.json
 	keyfile := fmt.Sprintf("%s/validator-0-keys.json", c.HomeDir())
 	cmd := []string{
 		c.ValidatorKeysCli,

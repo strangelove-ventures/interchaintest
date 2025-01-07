@@ -52,7 +52,7 @@ func (x XrpClient) GetAccountInfo(account string, strict bool) (*types.AccountIn
 	return &accountInfo, nil
 }
 
-// Function to force ledger close
+// Function to force ledger close.
 func (x XrpClient) ForceLedgerClose() error {
 	_, err := makeRPCCall(x.url, "ledger_accept", nil)
 	if err != nil {
@@ -61,7 +61,7 @@ func (x XrpClient) ForceLedgerClose() error {
 	return nil
 }
 
-// Function to get current ledger index
+// Function to get current ledger index.
 func (x XrpClient) GetCurrentLedger() (int64, error) {
 	response, err := makeRPCCall(x.url, "ledger_current", nil)
 	if err != nil {
@@ -79,6 +79,7 @@ func (x XrpClient) GetCurrentLedger() (int64, error) {
 	return result.LedgerCurrent, nil
 }
 
+// TODO: fix this if needed.
 func (x XrpClient) GetFee(txBlob any) (int, error) {
 	params := []any{
 		map[string]any{
@@ -99,7 +100,7 @@ func (x XrpClient) GetFee(txBlob any) (int, error) {
 		return 0, fmt.Errorf("get server info error, code id: %d, message: %s", resp.Error.Code, resp.Error.Message)
 	}
 
-	fmt.Println("Fee:", string(resp.Result))
+	// fmt.Println("Fee:", string(resp.Result))
 
 	return 10, nil
 }

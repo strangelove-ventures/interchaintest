@@ -117,7 +117,7 @@ type AccountInfoResponse struct {
 	} `json:"account_flags,omitempty"`
 }
 
-// Reponse from tx api call
+// Reaponse from tx api call.
 type TxResponse struct {
 	Account         string        `json:"Account"`
 	Amount          string        `json:"Amount"`
