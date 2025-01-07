@@ -556,7 +556,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 	}
 	tx.Packet.TimeoutTimestamp = ibc.Nanoseconds(timeoutNano)
 
-	return tx, nil
+	return tx, err
 }
 
 // Shielded transfer (shielded account to shielded account) on Namada.
