@@ -16,7 +16,7 @@ func DefaultXrpChainConfig(
 		ChainID:        "1234",
 		Bech32Prefix:   "n/a",
 		CoinType:       "144",
-		Denom:          "uxrp",
+		Denom:          "drop",
 		GasPrices:      "0.00001", // flat fee
 		GasAdjustment:  0,         // N/A
 		TrustingPeriod: "0",

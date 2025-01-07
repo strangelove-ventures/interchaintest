@@ -6,6 +6,8 @@ import (
     "fmt"
     "io"
     "net/http"
+
+    "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
 type XrpClient struct {
@@ -18,8 +20,8 @@ func NewXrpClient(url string) *XrpClient {
 	}
 }
 
-func makeRPCCall(url string, method string, params []any) (*RPCResponse, error) {
-    request := RPCRequest{
+func makeRPCCall(url string, method string, params []any) (*types.RPCResponse, error) {
+    request := types.RPCRequest{
         Method: method,
         Params: params,
         ID:     1,
@@ -41,7 +43,7 @@ func makeRPCCall(url string, method string, params []any) (*RPCResponse, error) 
         return nil, err
     }
 
-    var response RPCResponse
+    var response types.RPCResponse
     if err := json.Unmarshal(body, &response); err != nil {
         return nil, err
     }

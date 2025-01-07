@@ -21,6 +21,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	xrpclient "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client"
+	xrpclienttypes "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -241,20 +242,6 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 	time.Sleep(time.Second * 5)
 	c.XrpClient = xrpclient.NewXrpClient(c.GetHostRPCAddress())
 
-	resp, err := c.XrpClient.GetServerInfo()
-	if err != nil {
-		fmt.Println("server info error:", err)
-	} else {
-		fmt.Println("server info resp:", resp.Info.CompleteLedgers)
-	}
-
-	height, err := c.Height(ctx)
-	if err != nil {
-		fmt.Println("height error:", err)
-	} else {
-		fmt.Println("height", height)
-	}
-
 	go func() {
 		// Don't use ctx from Start(), it gets cancelled soon after returning.
 		goRoutineCtx := context.Background()
@@ -276,26 +263,12 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		}
 	}()
 
-	time.Sleep(time.Second * 2)
-	resp, err = c.XrpClient.GetServerInfo()
-	if err != nil {
-		fmt.Println("server info error:", err)
-	} else {
-		fmt.Println("server info resp:", resp.Info.CompleteLedgers)
-	}
-
-	height, err = c.Height(ctx)
-	if err != nil {
-		fmt.Println("height error:", err)
-	} else {
-		fmt.Println("height", height)
-	}
-
 	// Then wait the standard 2 blocks which also gives the faucet a starting balance of 100 coins
-	// for height, err := c.Height(ctx); err == nil && height < int64(102); {
-	// 	time.Sleep(time.Second)
-	// 	height, err = c.Height(ctx)
-	// }
+	for height, err := c.Height(ctx); err == nil && height < int64(3); {
+		time.Sleep(time.Second)
+		c.logger().Info("waiting for chain to reach height of 2")
+		height, err = c.Height(ctx)
+	}
 	return err
 }
 
@@ -304,10 +277,6 @@ func (c *XrpChain) HostName() string {
 }
 
 func (c *XrpChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
-	//logger := zap.NewNop()
-	//if cmd[len(cmd)-1] != "getblockcount" && cmd[len(cmd)-3] != "generatetoaddress" { // too much logging, maybe switch to an rpc lib in the future
-	//	logger = c.logger()
-	//}
 	job := dockerutil.NewImage(c.logger(), c.DockerClient, c.NetworkID, c.testName, c.cfg.Images[0].Repository, c.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
 		Env:   env,
@@ -382,7 +351,6 @@ func (c *XrpChain) GetAddress(ctx context.Context, keyName string) ([]byte, erro
 	}
 
 	// Pre-start GetAddress doesn't matter
-	// TODO: do we still enter here?
 	if keyName == "faucet" {
 		return []byte(keyName), nil
 	}
@@ -417,19 +385,24 @@ func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 	}
 	feeScaled := fees * math.Pow10(int(*c.Config().CoinDecimals))
 
+	networkID, err := strconv.ParseUint(c.Config().ChainID, 10, 32)
+	if err != nil {
+		return "", err
+	}
+
 	// Create payment transaction
-	payment := &xrpclient.Payment{
+	payment := &xrpclienttypes.Payment{
 		TransactionType: "Payment",
 		Account:         srcWallet.FormattedAddress(),
 		Destination:     amount.Address,
 		Amount:          amount.Amount.String(),
 		Sequence:        sequence,
 		Fee:             strconv.Itoa(int(feeScaled)),
-		NetworkID:       1234,
+		NetworkID:       uint32(networkID),
 	}
 
 	if note != "" {
-		payment.Memos = []xrpclient.Memo{
+		payment.Memos = []xrpclienttypes.Memo{
 			{
 				MemoData: hex.EncodeToString([]byte(note)),
 			},

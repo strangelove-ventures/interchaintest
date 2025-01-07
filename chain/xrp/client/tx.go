@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 )
 
@@ -35,7 +36,7 @@ func (x XrpClient) GetAccountSequence(account string) (int, error) {
     return result.Account_data.Sequence, nil
 }
 
-func signPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) {
+func signPayment(wallet *xrpwallet.XrpWallet, payment *types.Payment) (string, error) {
     // // In a real implementation, you'd need to serialize the transaction fields
     // // in the exact order specified by XRPL
     // txBytes, err := json.Marshal(payment)
@@ -66,7 +67,7 @@ func signPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) 
 }
 
 
-func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Payment) (string, error) {
+func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *types.Payment) (string, error) {
     // Set the public key in the payment
     payment.SigningPubKey = wallet.PublicKeyHex
 
@@ -90,10 +91,10 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
         },
     }
 
-	_, err = x.GetFee(payment)
-	if err != nil {
-		return "", fmt.Errorf("get fee error: %v", err)
-	}
+	// _, err = x.GetFee(payment)
+	// if err != nil {
+	// 	return "", fmt.Errorf("get fee error: %v", err)
+	// }
 
     response, err := makeRPCCall(x.url, "submit", params)
     if err != nil {
@@ -104,7 +105,7 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
 		return "", fmt.Errorf("error submitting payment tx, code id: %d, message: %s", response.Error.Code, response.Error.Message)
 	}
 
-	var results TransactionResponse
+	var results types.TransactionResponse
 	err = json.Unmarshal(response.Result, &results)
 	if err != nil {
 		return "", fmt.Errorf("fail unmarshal submit response: %v", err)
@@ -114,12 +115,12 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *Pa
 		return "", fmt.Errorf("server side error submitting payment, error: %s, error code: %d, error message: %s, status: %s", results.Error, results.ErrorCode, results.ErrorMessage, results.Status)
 	}
 
-    fmt.Printf("Transaction submitted: %s\n", response.Result)
+    //fmt.Printf("Transaction submitted: %s\n", response.Result)
     return results.TxJSON.Hash, nil
 }
 
 // Signature verification
-func VerifySignature(wallet *xrpwallet.XrpWallet, payment *Payment, signature []byte) (bool, error) {
+func VerifySignature(wallet *xrpwallet.XrpWallet, payment *types.Payment, signature []byte) (bool, error) {
 	txBytes, err := SerializePayment(payment, false)
     if err != nil {
         return false, err

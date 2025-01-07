@@ -76,13 +76,11 @@ func (c *XrpChain) CreateRippledConfig(ctx context.Context) error {
 	}
 
 	validatorConfig := NewValidatorConfig(c.ValidatorKeyInfo.PublicKey)
-	fmt.Println("validator.txt:", string(validatorConfig))
 	if err := c.WriteFile(ctx, validatorConfig, "config/validators.txt"); err != nil {
 		return fmt.Errorf("error writing validator.txt: %v", err)
 	}
 
 	rippledConfig := NewRippledConfig(c.ValidatorToken)
-	fmt.Println("rippled.cfg:", string(rippledConfig))
 	if err := c.WriteFile(ctx, rippledConfig, "config/rippled.cfg"); err != nil {
 		return fmt.Errorf("error writing rippled.cfg: %v", err)
 	}

@@ -3,9 +3,11 @@ package client
 import (
     "encoding/json"
     "fmt"
+    
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
-func (x XrpClient) GetServerInfo() (*ServerInfoResponse, error) {
+func (x XrpClient) GetServerInfo() (*types.ServerInfoResponse, error) {
 	resp, err := makeRPCCall(x.url, "server_info", nil)
 	if err != nil {
 		return nil, err
@@ -13,7 +15,7 @@ func (x XrpClient) GetServerInfo() (*ServerInfoResponse, error) {
 	if resp.Error != nil {
 		return nil, fmt.Errorf("get server info error, code id: %d, message: %s", resp.Error.Code, resp.Error.Message)
 	}
-	var serverInfo ServerInfoResponse
+	var serverInfo types.ServerInfoResponse
 	if err := json.Unmarshal(resp.Result, &serverInfo); err != nil {
 		return nil, fmt.Errorf("get server info error, unmarshal: %v", err)
 	}
@@ -21,7 +23,7 @@ func (x XrpClient) GetServerInfo() (*ServerInfoResponse, error) {
 	return &serverInfo, nil
 }
 
-func (x XrpClient) GetAccountInfo(account string, strict bool) (*AccountInfoResponse, error) {
+func (x XrpClient) GetAccountInfo(account string, strict bool) (*types.AccountInfoResponse, error) {
 	strictStr := "false"
 	if strict {
 		strictStr = "true"
@@ -42,7 +44,7 @@ func (x XrpClient) GetAccountInfo(account string, strict bool) (*AccountInfoResp
 		return nil, fmt.Errorf("get server info error, code id: %d, message: %s", resp.Error.Code, resp.Error.Message)
 	}
 
-	var accountInfo AccountInfoResponse
+	var accountInfo types.AccountInfoResponse
 	if err := json.Unmarshal(resp.Result, &accountInfo); err != nil {
 		return nil, fmt.Errorf("get account info error, unmarshal: %v", err)
 	}
@@ -102,7 +104,7 @@ func (x XrpClient) GetFee(txBlob any) (int, error) {
 	return 10, nil
 }
 
-func (x XrpClient) GetTx(txHash string) error {
+func (x XrpClient) GetTx(txHash string) (*types.TxResponse, error) {
 	params := []any{
         map[string]string{
             "transaction": txHash,
@@ -110,17 +112,13 @@ func (x XrpClient) GetTx(txHash string) error {
     }
 	response, err := makeRPCCall(x.url, "tx", params)
     if err != nil {
-        return err
+        return nil, err
     }
     
-    // var result struct {
-    //     LedgerCurrent int64 `json:"ledger_current_index"`
-    // }
+	var txResponse types.TxResponse
+    if err := json.Unmarshal(response.Result, &txResponse); err != nil {
+        return nil, err
+    }
     
-    // if err := json.Unmarshal(response.Result, &result); err != nil {
-    //     return 0, err
-    // }
-	fmt.Println("Response:", string(response.Result))
-    
-    return nil
+    return &txResponse, nil
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
+    "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
 // Transaction Types
@@ -58,7 +59,7 @@ type FieldSorter struct {
 }
 
 // TODO: return error instead of panic
-func SerializePayment(payment *Payment, includeSig bool) ([]byte, error) {
+func SerializePayment(payment *types.Payment, includeSig bool) ([]byte, error) {
 	fields := []FieldSorter{
 		{TF_TRANSACTION_TYPE, ST_UINT16, uint16(PAYMENT_TRANSACTION_TYPE)},
 		{TF_ACCOUNT, ST_ACCOUNT, payment.Account},
@@ -122,23 +123,23 @@ func SerializePayment(payment *Payment, includeSig bool) ([]byte, error) {
 		buf.WriteByte(0x58) // 'X'
 		buf.WriteByte(0x00)
 	}
-	fmt.Println("Transaction prefix written:", hex.EncodeToString(buf.Bytes()))
-	fmt.Println("\nField order after sorting:")
-	for i, field := range fields {
-		fmt.Printf("Field %d: TypeID=%d, FieldID=%d\n", i, field.typeID, field.fieldID)
-	}
+	// fmt.Println("Transaction prefix written:", hex.EncodeToString(buf.Bytes()))
+	// fmt.Println("\nField order after sorting:")
+	// for i, field := range fields {
+	// 	fmt.Printf("Field %d: TypeID=%d, FieldID=%d\n", i, field.typeID, field.fieldID)
+	// }
 	// Serialize each field
 	for _, field := range fields {
 		serializeField(&buf, field)
 
 	}
-	finalBytes := buf.Bytes()
-	fmt.Printf("\nFinal tx_blob: %s\n", hex.EncodeToString(finalBytes))
+	// finalBytes := buf.Bytes()
+	// fmt.Printf("\nFinal tx_blob: %s\n", hex.EncodeToString(finalBytes))
 	return buf.Bytes(), nil
 }
 
 // Helper function to serialize memo fields
-func serializeMemos(memos []Memo) []FieldSorter {
+func serializeMemos(memos []types.Memo) []FieldSorter {
 	var memoFields []FieldSorter
 
 	for _, memo := range memos {

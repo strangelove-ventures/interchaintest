@@ -1,23 +1,4 @@
-package client
-
-import (
-	"encoding/json"
-)
-
-type RPCRequest struct {
-	Method string `json:"method"`
-	Params []any  `json:"params"`
-	ID     int    `json:"id"`
-}
-
-type RPCResponse struct {
-	Result json.RawMessage `json:"result"`
-	Error  *struct {
-		Message string `json:"message"`
-		Code    int    `json:"code"`
-	} `json:"error,omitempty"`
-	ID int `json:"id"`
-}
+package types
 
 type ServerInfoResponse struct {
 	Info struct {
@@ -136,62 +117,57 @@ type AccountInfoResponse struct {
 	} `json:"account_flags,omitempty"`
 }
 
-// Memo represents a single memo attached to a transaction
-type Memo struct {
-	MemoType   string `json:"MemoType,omitempty"` // must be hex-encoded
-	MemoData   string `json:"MemoData,omitempty"` // must be hex-encoded
-	MemoFormat string `json:"MemoFormat,omitempty"` // must be hex-encoded
-}
-
-// Transaction structures
-type Payment struct {
-	TransactionType string `json:"TransactionType"`
-	Account         string `json:"Account"`
-	Destination     string `json:"Destination"`
-	Amount          string `json:"Amount"`
-	Sequence        int    `json:"Sequence"`
-	Fee             string `json:"Fee"`
-	SigningPubKey   string `json:"SigningPubKey"`
-	NetworkID       uint32 `json:"NetworkID"`
-	TxnSignature    string `json:"TxnSignature,omitempty"`
-	Flags           uint32
-	Memos           []Memo `json:"Memos,omitempty"`
-}
-
-// TransactionResponse represents the top-level response structure
-type TransactionResponse struct {
-    Accepted                 bool    `json:"accepted"`
-    AccountSequenceAvailable int     `json:"account_sequence_available"`
-    AccountSequenceNext      int     `json:"account_sequence_next"`
-    Applied                  bool    `json:"applied"`
-    Broadcast               bool    `json:"broadcast"`
-    EngineResult            string  `json:"engine_result"`
-    EngineResultCode        int     `json:"engine_result_code"`
-    EngineResultMessage     string  `json:"engine_result_message"`
-	Error        string `json:"error,omitempty"`
-	ErrorCode    int    `json:"error_code,omitempty"`
-	ErrorMessage string `json:"error_message,omitempty"`
-    Kept                    bool    `json:"kept"`
-    OpenLedgerCost         string  `json:"open_ledger_cost"`
-    Queued                  bool    `json:"queued"`
-	Request      any    `json:"request,omitempty"`
-    Status                  string  `json:"status"`
-    TxBlob                  string  `json:"tx_blob"`
-    TxJSON                  TxJSON  `json:"tx_json"`
-    ValidatedLedgerIndex    int     `json:"validated_ledger_index"`
-}
-
-// TxJSON represents the transaction details
-type TxJSON struct {
-    Account         string `json:"Account"`
-    Amount          string `json:"Amount"`
-    Destination     string `json:"Destination"`
-    Fee            string `json:"Fee"`
-    Flags          int    `json:"Flags"`
-    NetworkID      int    `json:"NetworkID"`
-    Sequence       int    `json:"Sequence"`
-    SigningPubKey  string `json:"SigningPubKey"`
+// Reponse from tx api call
+type TxResponse struct {
+    Account        string  `json:"Account"`
+    Amount         string  `json:"Amount"`
+    DeliverMax    string  `json:"DeliverMax"`
+    Destination   string  `json:"Destination"`
+    Fee           string  `json:"Fee"`
+    Memos         []MemoWrapper `json:"Memos"`
+    NetworkID     int     `json:"NetworkID"`
+    Sequence      int     `json:"Sequence"`
+    SigningPubKey string  `json:"SigningPubKey"`
     TransactionType string `json:"TransactionType"`
-    TxnSignature   string `json:"TxnSignature"`
-    Hash           string `json:"hash"`
+    TxnSignature string   `json:"TxnSignature"`
+    Ctid         string   `json:"ctid"`
+    Date         int64    `json:"date"`
+    Hash         string   `json:"hash"`
+    InLedger     int      `json:"inLedger"`
+    LedgerIndex  int      `json:"ledger_index"`
+    Meta         Meta     `json:"meta"`
+    Status       string   `json:"status"`
+    Validated    bool     `json:"validated"`
+}
+
+type MemoWrapper struct {
+    Memo Memo `json:"Memo"`
+}
+
+type Meta struct {
+    AffectedNodes      []AffectedNode `json:"AffectedNodes"`
+    TransactionIndex   int            `json:"TransactionIndex"`
+    TransactionResult  string         `json:"TransactionResult"`
+    DeliveredAmount   string         `json:"delivered_amount"`
+}
+
+type AffectedNode struct {
+    ModifiedNode ModifiedNode `json:"ModifiedNode"`
+}
+
+type ModifiedNode struct {
+    FinalFields        AccountFields `json:"FinalFields"`
+    LedgerEntryType   string        `json:"LedgerEntryType"`
+    LedgerIndex       string        `json:"LedgerIndex"`
+    PreviousFields    AccountFields `json:"PreviousFields"`
+    PreviousTxnID     string        `json:"PreviousTxnID"`
+    PreviousTxnLgrSeq int           `json:"PreviousTxnLgrSeq"`
+}
+
+type AccountFields struct {
+    Account     string `json:"Account"`
+    Balance     string `json:"Balance"`
+    Flags       int    `json:"Flags"`
+    OwnerCount  int    `json:"OwnerCount"`
+    Sequence    int    `json:"Sequence"`
 }
