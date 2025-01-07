@@ -14,7 +14,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 		name     string
 		seed string
 		accountId string
-		keyType string
+		keyType CryptoAlgorithm
 		masterSeedHex string
 		publicKey string
 		publicKeyHex string
@@ -24,7 +24,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			name: "Valid SECP256K1 seed",
 			seed: "sswVV2EMPn8bcUqWnMKxQpVmZGgKT",
 			accountId: "r4qmPsHfdoqtNMPx9popoXG3nDtsCSzUZQ",
-			keyType: "secp256k1",
+			keyType: SECP256K1,
         	masterSeedHex: "21A66FE3D048F8EE6071A84C6070D5DA",
         	publicKey: "aB4PwLt3AMgsvLSUWjYyun7hdGr6tcbnbAU8TKjHgHRxjXycAwS2",
         	publicKeyHex: "0237FEF6D393A2D209C879A344EFD39C20C01A8E2413298EBC6E6CCDECEEBAA7AD",
@@ -34,7 +34,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			name: "root account SECP256K1 seed",
 			seed: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
 			accountId: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
-			keyType: "secp256k1",
+			keyType: SECP256K1,
         	masterSeedHex: "DEDCE9CE67B451D852FD4E846FCDE31C",
         	publicKey: "aBQG8RQAzjs1eTKFEAQXr2gS4utcDiEC9wmi7pfUPTi27VCahwgw",
         	publicKeyHex: "0330E7FC9D56BB25D6893BA3F317AE5BCF33B3291BD63DB32654A313222F7FD020",
@@ -46,7 +46,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			accountId: "rs3xN42EFLE23gUDG2Rw4rwxhR9MnjwZKQ", // classic address
 			// Xaddress: "X72W51px1i7iPTf4EwKFY2Nygdh5tGGNkvBFfbiuXKPxEPY"
 			// XtestNetAddress: "T7Ws3yBAjFp1Fx1yWyhbSZztwhbXPqvG5a9GRHaSf1fZnqk"
-			keyType: "secp256k1",
+			keyType: SECP256K1,
         	masterSeedHex: "f7f9ff93d716eaced222a3c52a3b2a36",
         	publicKey: "ab4fw1tjaqpcd5eemppubbrggkax62of1nvtdbiwpxbsw7asudqn",
         	publicKeyHex: "027190BF2204E1F99A9346C0717508788A73A8A3B7E5A925C349969ED1BA7FF2A0",
@@ -58,7 +58,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			accountId: "rELnd6Ae5ZYDhHkaqjSVg2vgtBnzjeDshm", // classic address
 			// Xaddress: "XVGNvtm1P2N6A6oyQ3TWFsjyXS124KjGTNeki4i9E5DGVp1"
 			// XtestNetAddress: "TVBmLzviEX8jPD22CAUH5sV1ztQ41uPJQQcDwhnCiMVzSCn"
-			keyType: "ed25519",
+			keyType: ED25519,
         	masterSeedHex: "f7f9ff93d716eaced222a3c52a3b2a36",
         	publicKey: "akgguljomjqdlzfw65hf4anmcy6osaz2c3xf7ztxttcdgqtekegh",
         	publicKeyHex: "EDFB7C70E528FE161ADDFDA8CB224BC19B9E6455916970F7992A356C3E77AC7EF8",
@@ -74,7 +74,7 @@ func TestSeedToXrpWallet(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, strings.ToLower(tt.accountId), strings.ToLower(wallet.AccountID))
-				require.Equal(t, strings.ToLower(tt.keyType), strings.ToLower(wallet.KeyType))
+				require.Equal(t, tt.keyType, wallet.KeyType)
 				require.Equal(t, strings.ToLower(tt.seed), strings.ToLower(wallet.MasterSeed))
 				require.Equal(t, strings.ToLower(tt.masterSeedHex), strings.ToLower(wallet.MasterSeedHex))
 				require.Equal(t, strings.ToLower(tt.publicKey), strings.ToLower(wallet.PublicKey))
@@ -105,7 +105,7 @@ func TestMasterSeedBase58ToMasterSeedHex(t *testing.T) {
 	tests := []struct {
 		name     string
 		masterSeedBase58 string
-		keyType string
+		keyType CryptoAlgorithm
 		expected string
 	}{
 		// {
@@ -125,13 +125,13 @@ func TestMasterSeedBase58ToMasterSeedHex(t *testing.T) {
 			name: "SECP256K1 root account master seed",
 			masterSeedBase58: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
 			expected: "DEDCE9CE67B451D852FD4E846FCDE31C",
-			keyType: "secp256k1",
+			keyType: SECP256K1,
 		},
 		{
 			name: "SECP256K1 random master seed",
 			masterSeedBase58: "sswVV2EMPn8bcUqWnMKxQpVmZGgKT",
 			expected: "21A66FE3D048F8EE6071A84C6070D5DA",
-			keyType: "secp256k1",
+			keyType: SECP256K1,
 		},
 		// {
 		// 	name: "Invalid KeyType",
@@ -166,14 +166,14 @@ func TestPassphraseToMasterSeed(t *testing.T) {
 	tests := []struct {
 		name     string
 		passphrase string
-		keyType string
+		keyType CryptoAlgorithm
 		expected string
 	}{
 		{
 			name: "SECP256K1 root account master key",
 			passphrase: "masterpassphrase",
 			expected: "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
-			keyType: "secp256k1",
+			keyType: SECP256K1,
 		},
 		
 	}

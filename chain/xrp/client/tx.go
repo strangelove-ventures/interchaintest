@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 )
@@ -115,7 +117,7 @@ func (x XrpClient) SignAndSubmitPayment(wallet *xrpwallet.XrpWallet, payment *ty
 		return "", fmt.Errorf("server side error submitting payment, error: %s, error code: %d, error message: %s, status: %s", results.Error, results.ErrorCode, results.ErrorMessage, results.Status)
 	}
 
-    //fmt.Printf("Transaction submitted: %s\n", response.Result)
+    x.log.Info("payment tx submitted", zap.String("results", string(response.Result)))
     return results.TxJSON.Hash, nil
 }
 

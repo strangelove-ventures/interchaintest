@@ -240,7 +240,7 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 
 	// Wait for rpc to come up
 	time.Sleep(time.Second * 5)
-	c.XrpClient = xrpclient.NewXrpClient(c.GetHostRPCAddress())
+	c.XrpClient = xrpclient.NewXrpClient(c.GetHostRPCAddress(), c.log)
 
 	go func() {
 		// Don't use ctx from Start(), it gets cancelled soon after returning.
@@ -325,7 +325,7 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 	if keyName == "faucet" {
 		seed = xrpwallet.GetRootAccountSeed()
 	} else {
-		seed, err = xrpwallet.GenerateSeed("ed25519")
+		seed, err = xrpwallet.GenerateSeed(xrpwallet.ED25519)
 		if err != nil {
 			return fmt.Errorf("error create key: %v", err)
 		}

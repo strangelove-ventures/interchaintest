@@ -11,7 +11,7 @@ import (
 
 // Generate a master seed for a specific key type
 // New account generation
-func GenerateSeed(keyType string) (string, error) {
+func GenerateSeed(keyType CryptoAlgorithm) (string, error) {
 	b := make([]byte, 16)
     _, err := rand.Read(b)
 	if err != nil {
@@ -29,12 +29,12 @@ func GenerateXrpWalletFromSeed(keyName string, masterSeed string) (*XrpWallet, e
 
 	var keys Keys
 	switch keyType {
-	case "ed25519":
+	case ED25519:
 		keys, err = ed25519.DeriveKeysFromSeed(masterSeedBytes)
 		if err != nil {
 			return nil, fmt.Errorf("fail generate xrp wallet from ed25519 seed: %v", err)
 		}
-	case "secp256k1":
+	case SECP256K1:
 		keys, err = secp256k1.DeriveKeysFromSeed(masterSeedBytes)
 		if err != nil {
 			return nil, fmt.Errorf("fail generate xrp wallet from secp256k1 seed: %v", err)

@@ -6,17 +6,21 @@ import (
     "fmt"
     "io"
     "net/http"
+	
+    "go.uber.org/zap"
 
     "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
 type XrpClient struct {
 	url string
+    log *zap.Logger
 }
 
-func NewXrpClient(url string) *XrpClient {
+func NewXrpClient(url string, log *zap.Logger) *XrpClient {
 	return &XrpClient{
 		url: url,
+        log: log,
 	}
 }
 

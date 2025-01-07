@@ -45,12 +45,12 @@ func EncodePublicKey(pk []byte) string {
 	return Encode(pk, accountPublicKeyPrefix)
 }
 
-func EncodeSeed(seed []byte, keyType string) (string, error) {
+func EncodeSeed(seed []byte, keyType CryptoAlgorithm) (string, error) {
 	var prefix []byte
 	switch keyType {
-	case "ed25519":
+	case ED25519:
 		prefix = SEED_PREFIX_ED25519
-	case "secp256k1":
+	case SECP256K1:
 		prefix = []byte{SEED_PREFIX_SECP256K1}
 	default:
 		return "", fmt.Errorf("unknown seed keytype: %s", keyType)
@@ -60,23 +60,23 @@ func EncodeSeed(seed []byte, keyType string) (string, error) {
 }
 
 // DecodeSeed extracts the seed payload and determines the intended algorithm
-func DecodeSeed(encodedSeed string) (payload []byte, keyType string, err error) {
+func DecodeSeed(encodedSeed string) (payload []byte, keyType CryptoAlgorithm, err error) {
 	decoded := base58.Decode(encodedSeed)
 	switch len(decoded) {
 	case ED25519_SEED_LENGTH:
+		keyType = ED25519
 		if !bytes.Equal(decoded[:3], SEED_PREFIX_ED25519) {
-			return nil, "", fmt.Errorf("invalid ed25519 seed prefix: %x", decoded[:3])
+			return nil, keyType, fmt.Errorf("invalid ed25519 seed prefix: %x", decoded[:3])
 		}
-		keyType = "ed25519"
 		payload = decoded[3:19]
 	case SECP256K1_SEED_LENGTH:
+		keyType = SECP256K1
 		if decoded[0] != SEED_PREFIX_SECP256K1 {
-			return nil, "", fmt.Errorf("invalid secp256k1 seed prefix: %x", decoded[0])
+			return nil, keyType, fmt.Errorf("invalid secp256k1 seed prefix: %x", decoded[0])
 		}
-		keyType = "secp256k1"
 		payload = decoded[1:17]
 	default:
-		return nil, "", fmt.Errorf("invalid seed length: %d", len(decoded))
+		return nil, keyType, fmt.Errorf("invalid seed length: %d", len(decoded))
 	}
 	// TODO: check checksum
 
