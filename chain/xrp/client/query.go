@@ -1,9 +1,9 @@
 package client
 
 import (
-    "encoding/json"
-    "fmt"
-    
+	"encoding/json"
+	"fmt"
+
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
@@ -29,11 +29,11 @@ func (x XrpClient) GetAccountInfo(account string, strict bool) (*types.AccountIn
 		strictStr = "true"
 	}
 	accountParams := []any{
-        map[string]string{
-            "account": account,
-            "strict": strictStr,
-        },
-    }
+		map[string]string{
+			"account": account,
+			"strict":  strictStr,
+		},
+	}
 
 	resp, err := makeRPCCall(x.url, "account_info", accountParams)
 	if err != nil {
@@ -54,38 +54,38 @@ func (x XrpClient) GetAccountInfo(account string, strict bool) (*types.AccountIn
 
 // Function to force ledger close
 func (x XrpClient) ForceLedgerClose() error {
-    _, err := makeRPCCall(x.url, "ledger_accept", nil)
-    if err != nil {
-        return err
-    }
-    return nil
+	_, err := makeRPCCall(x.url, "ledger_accept", nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Function to get current ledger index
 func (x XrpClient) GetCurrentLedger() (int64, error) {
-    response, err := makeRPCCall(x.url, "ledger_current", nil)
-    if err != nil {
-        return 0, err
-    }
-    
-    var result struct {
-        LedgerCurrent int64 `json:"ledger_current_index"`
-    }
-    
-    if err := json.Unmarshal(response.Result, &result); err != nil {
-        return 0, err
-    }
-    
-    return result.LedgerCurrent, nil
+	response, err := makeRPCCall(x.url, "ledger_current", nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var result struct {
+		LedgerCurrent int64 `json:"ledger_current_index"`
+	}
+
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		return 0, err
+	}
+
+	return result.LedgerCurrent, nil
 }
 
 func (x XrpClient) GetFee(txBlob any) (int, error) {
 	params := []any{
-        map[string]any{
-            "tx_blob": txBlob,
-            "id": 1,
-        },
-    }
+		map[string]any{
+			"tx_blob": txBlob,
+			"id":      1,
+		},
+	}
 	if txBlob == "" {
 		params = nil
 	}
@@ -106,19 +106,19 @@ func (x XrpClient) GetFee(txBlob any) (int, error) {
 
 func (x XrpClient) GetTx(txHash string) (*types.TxResponse, error) {
 	params := []any{
-        map[string]string{
-            "transaction": txHash,
-        },
-    }
+		map[string]string{
+			"transaction": txHash,
+		},
+	}
 	response, err := makeRPCCall(x.url, "tx", params)
-    if err != nil {
-        return nil, err
-    }
-    
+	if err != nil {
+		return nil, err
+	}
+
 	var txResponse types.TxResponse
-    if err := json.Unmarshal(response.Result, &txResponse); err != nil {
-        return nil, err
-    }
-    
-    return &txResponse, nil
+	if err := json.Unmarshal(response.Result, &txResponse); err != nil {
+		return nil, err
+	}
+
+	return &txResponse, nil
 }

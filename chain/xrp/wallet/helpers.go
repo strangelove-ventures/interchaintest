@@ -13,7 +13,7 @@ import (
 // New account generation
 func GenerateSeed(keyType CryptoAlgorithm) (string, error) {
 	b := make([]byte, 16)
-    _, err := rand.Read(b)
+	_, err := rand.Read(b)
 	if err != nil {
 		return "", fmt.Errorf("fail to generate seed: %v", err)
 	}
@@ -39,19 +39,19 @@ func GenerateXrpWalletFromSeed(keyName string, masterSeed string) (*XrpWallet, e
 		if err != nil {
 			return nil, fmt.Errorf("fail generate xrp wallet from secp256k1 seed: %v", err)
 		}
-	
+
 	default:
-		return nil, fmt.Errorf("unsupported key type")	
+		return nil, fmt.Errorf("unsupported key type")
 	}
 
 	return &XrpWallet{
-		keyName: keyName,
-		AccountID: masterPubKeyToAccountId(keys.GetFormattedPublicKey()),
-		KeyType: keyType,
-		MasterSeed: masterSeed,
+		keyName:       keyName,
+		AccountID:     masterPubKeyToAccountId(keys.GetFormattedPublicKey()),
+		KeyType:       keyType,
+		MasterSeed:    masterSeed,
 		MasterSeedHex: hex.EncodeToString(masterSeedBytes),
-		PublicKey: EncodePublicKey(keys.GetFormattedPublicKey()),
-		PublicKeyHex: hex.EncodeToString(keys.GetFormattedPublicKey()),
-		Keys: keys,
+		PublicKey:     EncodePublicKey(keys.GetFormattedPublicKey()),
+		PublicKeyHex:  hex.EncodeToString(keys.GetFormattedPublicKey()),
+		Keys:          keys,
 	}, nil
 }

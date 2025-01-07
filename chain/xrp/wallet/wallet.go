@@ -1,8 +1,5 @@
 package wallet
 
-import (
-)
-
 func (w *XrpWallet) KeyName() string {
 	return w.keyName
 }

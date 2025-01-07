@@ -5,6 +5,6 @@ import (
 )
 
 type Keys struct {
-	publicKey ed25519.PublicKey
+	publicKey  ed25519.PublicKey
 	privateKey ed25519.PrivateKey
 }

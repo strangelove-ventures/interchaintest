@@ -9,11 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-
 func generateSecp256k1KeyPairWithCurveOrder(seed []byte, sequence uint32, curveOrder *big.Int) (*KeyPair, error) {
 	// Append sequence number to seed
 	seedWithSequence := append(seed, byte(sequence>>24), byte(sequence>>16), byte(sequence>>8), byte(sequence))
-	
+
 	seedHash := sha512.Sum512(seedWithSequence)
 	privateKeyBytes := seedHash[:32]
 
@@ -38,7 +37,7 @@ func generateSecp256k1KeyPairWithCurveOrder(seed []byte, sequence uint32, curveO
 }
 
 func generateSecp256k1KeyPair(seed []byte, curveOrder *big.Int) (keypair *KeyPair, err error) {
-	//for sequence := uint32(0); sequence < math.MaxUint32; sequence++ {
+	// for sequence := uint32(0); sequence < math.MaxUint32; sequence++ {
 	for sequence := uint32(0); sequence < uint32(100); sequence++ {
 		keypair, err = generateSecp256k1KeyPairWithCurveOrder(seed, sequence, curveOrder)
 		if err == nil {
@@ -58,10 +57,10 @@ func addPrivateKeys(key1, key2 *big.Int, curveOrder *big.Int) *big.Int {
 // addPublicKeys adds two public keys on the secp256k1 curve
 func addPublicKeys(key1, key2 *ecdsa.PublicKey) (*ecdsa.PublicKey, error) {
 	curve := crypto.S256()
-	
+
 	// Add the points
 	x, y := curve.Add(key1.X, key1.Y, key2.X, key2.Y)
-	
+
 	return &ecdsa.PublicKey{
 		Curve: curve,
 		X:     x,
@@ -102,7 +101,7 @@ func DeriveKeysFromSeed(masterSeedBytes []byte) (k *Keys, err error) {
 
 	// Get master public key from private key
 	masterPublicKey := &masterPrivateKeyECDSA.PublicKey
-	
+
 	// Verify by adding public keys - should match master public key
 	verificationPubKey, err := addPublicKeys(rootKeyPair.PublicKey, intermediateKeyPair.PublicKey)
 	if err != nil {
@@ -118,9 +117,8 @@ func DeriveKeysFromSeed(masterSeedBytes []byte) (k *Keys, err error) {
 	compressedMasterPubKey := crypto.CompressPubkey(masterPublicKey)
 
 	return &Keys{
-		masterPublicKey: masterPublicKey,
-		masterPrivateKey: masterPrivateKeyECDSA,
+		masterPublicKey:           masterPublicKey,
+		masterPrivateKey:          masterPrivateKeyECDSA,
 		compressedMasterPublicKey: compressedMasterPubKey,
 	}, nil
-	
 }

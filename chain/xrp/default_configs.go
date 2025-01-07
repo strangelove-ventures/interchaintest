@@ -30,9 +30,9 @@ func DefaultXrpChainConfig(
 		},
 		Bin: "rippled,/opt/ripple/bin/validator-keys",
 		HostPortOverride: map[int]int{
-			80: 8001,
-			5005: 5005,
-			6006: 6006,
+			80:    8001,
+			5005:  5005,
+			6006:  6006,
 			51235: 51235,
 		},
 	}
@@ -59,7 +59,7 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 	sntpServers := "[sntp_servers]\ntime.windows.com\ntime.apple.com\ntime.nist.gov\npool.ntp.org\n\n"
 	validatorsFile := "[validators_file]\n/home/xrp/config/validators.txt\n\n"
 	rpcStartup := "[rpc_startup]\n{ \"command\": \"log_level\", \"severity\": \"debug\" }\n\n"
-	//rpcStartup := "[rpc_startup]\n{ \"command\": \"log_level\", \"severity\": \"warning\" }\n\n"
+	// rpcStartup := "[rpc_startup]\n{ \"command\": \"log_level\", \"severity\": \"warning\" }\n\n"
 	sslVerify := "[ssl_verify]\n0\n\n"
 	validationQuorum := "[validation_quorum]\n0\n\n"
 	networkId := "[network_id]\n1234\n\n"

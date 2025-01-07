@@ -4,8 +4,9 @@ import (
 	"crypto/sha512"
 	"encoding/asn1"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func (k *Keys) GetFormattedPublicKey() []byte {

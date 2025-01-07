@@ -36,7 +36,7 @@ func TestXrp(t *testing.T) {
 	xrpChain := chains[0].(*xrp.XrpChain)
 
 	ic := interchaintest.NewInterchain().
-			AddChain(xrpChain)
+		AddChain(xrpChain)
 
 	require.NoError(t, ic.Build(ctx, nil, interchaintest.InterchainBuildOptions{
 		TestName:         t.Name(),

@@ -67,7 +67,7 @@ func (c *XrpChain) CreateRippledConfig(ctx context.Context) error {
 	if err := c.CreateValidatorToken(ctx); err != nil {
 		return fmt.Errorf("error creating rippled config, %w", err)
 	}
-	
+
 	configDir := "config"
 	cmd := []string{"mkdir", "-p", fmt.Sprintf("%s/%s", c.HomeDir(), configDir)}
 	_, _, err := c.Exec(ctx, cmd, nil)

@@ -21,7 +21,7 @@ type RPCResponse struct {
 
 // Memo represents a single memo attached to a transaction
 type Memo struct {
-	MemoType   string `json:"MemoType,omitempty"` // must be hex-encoded
-	MemoData   string `json:"MemoData,omitempty"` // must be hex-encoded
+	MemoType   string `json:"MemoType,omitempty"`   // must be hex-encoded
+	MemoData   string `json:"MemoData,omitempty"`   // must be hex-encoded
 	MemoFormat string `json:"MemoFormat,omitempty"` // must be hex-encoded
 }

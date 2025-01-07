@@ -12,9 +12,9 @@ import (
 
 // Key derivation constants
 var (
-	accountPrefix = []byte{0x00}
+	accountPrefix          = []byte{0x00}
 	accountPublicKeyPrefix = []byte{0x23}
-	SEED_PREFIX_ED25519 = []byte{0x01, 0xe1, 0x4b}
+	SEED_PREFIX_ED25519    = []byte{0x01, 0xe1, 0x4b}
 )
 
 // Seed type constants
@@ -33,11 +33,11 @@ func checksum(input []byte) (cksum [4]byte) {
 }
 
 func Encode(b []byte, prefix []byte) string {
-	buf := make([]byte, 0, len(b)+len(prefix)) 
+	buf := make([]byte, 0, len(b)+len(prefix))
 	buf = append(buf, prefix...)
 	buf = append(buf, b...)
 	cs := checksum(buf)
-	buf = append(buf, cs[:]...)	
+	buf = append(buf, cs[:]...)
 	return base58.Encode(buf)
 }
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/base58"
-    "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
 
 // Transaction Types
@@ -42,7 +42,7 @@ const (
 	TF_SIGNATURE        = 4
 	TF_NETWORKID        = 1
 	TF_FLAGS            = 2
-	TF_MEMOS            = 9 // Field code for Memos array
+	TF_MEMOS            = 9  // Field code for Memos array
 	TF_MEMO             = 10 // FIeld code for Memo object
 
 	// Memo field identifiers
@@ -73,8 +73,8 @@ func SerializePayment(payment *types.Payment, includeSig bool) ([]byte, error) {
 	if payment.Flags != 0 {
 		fields = append(fields, FieldSorter{
 			fieldID: TF_FLAGS,
-			typeID: ST_UINT32,
-			value: payment.Flags,
+			typeID:  ST_UINT32,
+			value:   payment.Flags,
 		})
 	}
 
@@ -106,7 +106,7 @@ func SerializePayment(payment *types.Payment, includeSig bool) ([]byte, error) {
 		})
 	}
 
-	//Sort fields by type ID, then field ID
+	// Sort fields by type ID, then field ID
 	sort.Slice(fields, func(i, j int) bool {
 		if fields[i].typeID != fields[j].typeID {
 			return fields[i].typeID < fields[j].typeID
@@ -131,7 +131,6 @@ func SerializePayment(payment *types.Payment, includeSig bool) ([]byte, error) {
 	// Serialize each field
 	for _, field := range fields {
 		serializeField(&buf, field)
-
 	}
 	// finalBytes := buf.Bytes()
 	// fmt.Printf("\nFinal tx_blob: %s\n", hex.EncodeToString(finalBytes))
@@ -145,11 +144,11 @@ func serializeMemos(memos []types.Memo) []FieldSorter {
 	for _, memo := range memos {
 		var memoObjFields []FieldSorter
 
-        // Ensure at least one memo field is present
-        if memo.MemoType == "" && memo.MemoData == "" && memo.MemoFormat == "" {
-            continue // Skip empty memos
-        }
-		
+		// Ensure at least one memo field is present
+		if memo.MemoType == "" && memo.MemoData == "" && memo.MemoFormat == "" {
+			continue // Skip empty memos
+		}
+
 		if memo.MemoType != "" {
 			memoObjFields = append(memoObjFields, FieldSorter{
 				fieldID: TF_MEMO_TYPE,
@@ -187,7 +186,7 @@ func serializeMemos(memos []types.Memo) []FieldSorter {
 
 // Helper function to serialize a single field
 func serializeField(buf *bytes.Buffer, field FieldSorter) error {
-	//startPos := buf.Len()
+	// startPos := buf.Len()
 
 	// Write field header
 	if field.typeID <= 15 && field.fieldID <= 15 {
@@ -205,9 +204,9 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 		buf.WriteByte(byte(field.fieldID))
 	}
 
-	//headerBytes := buf.Bytes()[startPos:]
-	//fmt.Printf("\nField %d header bytes: %s\n", i, hex.EncodeToString(headerBytes))
-	//fieldStartPos := buf.Len()
+	// headerBytes := buf.Bytes()[startPos:]
+	// fmt.Printf("\nField %d header bytes: %s\n", i, hex.EncodeToString(headerBytes))
+	// fieldStartPos := buf.Len()
 
 	// Write field value based on type
 	switch field.typeID {
@@ -231,7 +230,7 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 		}
 
 		// Debug the amount encoding
-		//fmt.Printf("Encoding amount: %s\n", amountStr)
+		// fmt.Printf("Encoding amount: %s\n", amountStr)
 
 		// Create 8-byte buffer for amount
 		amtBytes := make([]byte, 8)
@@ -244,7 +243,7 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 		amtBytes[0] |= 0x40
 
 		// Print encoded bytes for debugging
-		//fmt.Printf("Encoded amount bytes: %x\n", amtBytes)
+		// fmt.Printf("Encoded amount bytes: %x\n", amtBytes)
 
 		buf.Write(amtBytes)
 	case ST_VL:
@@ -253,7 +252,7 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 		if err != nil {
 			return fmt.Errorf("error serialize VL: %v", err)
 		}
-		
+
 		// Write length
 		if len(blobBz) <= 192 {
 			buf.WriteByte(byte(len(blobBz)))
@@ -265,11 +264,11 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 			buf.WriteByte(byte2)
 		}
 		// Debug print
-		//fmt.Printf("PublicKey length: %d bytes\n", len(pubKeyBytes))
+		// fmt.Printf("PublicKey length: %d bytes\n", len(pubKeyBytes))
 
 		// Write actual bytes
 		buf.Write(blobBz)
-		
+
 	case ST_ACCOUNT:
 		addr := field.value.(string)
 		if !strings.HasPrefix(addr, "r") {
@@ -293,7 +292,7 @@ func serializeField(buf *bytes.Buffer, field FieldSorter) error {
 		// Write array ending marker
 		buf.WriteByte(0xF1)
 	}
-	//fieldBytes := buf.Bytes()[fieldStartPos:]
-	//fmt.Printf("Field %d value bytes: %s\n", i, hex.EncodeToString(fieldBytes))
+	// fieldBytes := buf.Bytes()[fieldStartPos:]
+	// fmt.Printf("Field %d value bytes: %s\n", i, hex.EncodeToString(fieldBytes))
 	return nil
 }

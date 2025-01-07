@@ -23,8 +23,7 @@ func DeriveKeysFromSeed(masterSeedBytes []byte) (k *Keys, err error) {
 	privKey = privKey[:32]
 
 	return &Keys{
-		publicKey: pubKey,
+		publicKey:  pubKey,
 		privateKey: privKey,
 	}, nil
-	
 }

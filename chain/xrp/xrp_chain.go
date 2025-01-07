@@ -31,7 +31,7 @@ import (
 var _ ibc.Chain = &XrpChain{}
 
 const (
-	//blockTime         = 2 // seconds
+	// blockTime         = 2 // seconds
 	rpcAdminLocalPort = "5005/tcp"
 	wsAdminLocalPort  = "6006/tcp"
 	wsPublicPort      = "80/tcp"
@@ -209,7 +209,7 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		return err
 	}
 
-	//entrypoint := []string{"/entrypoint.sh"}
+	// entrypoint := []string{"/entrypoint.sh"}
 	entrypoint := []string{}
 	cmd := []string{
 		c.RippledCli,

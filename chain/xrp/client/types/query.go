@@ -119,55 +119,55 @@ type AccountInfoResponse struct {
 
 // Reponse from tx api call
 type TxResponse struct {
-    Account        string  `json:"Account"`
-    Amount         string  `json:"Amount"`
-    DeliverMax    string  `json:"DeliverMax"`
-    Destination   string  `json:"Destination"`
-    Fee           string  `json:"Fee"`
-    Memos         []MemoWrapper `json:"Memos"`
-    NetworkID     int     `json:"NetworkID"`
-    Sequence      int     `json:"Sequence"`
-    SigningPubKey string  `json:"SigningPubKey"`
-    TransactionType string `json:"TransactionType"`
-    TxnSignature string   `json:"TxnSignature"`
-    Ctid         string   `json:"ctid"`
-    Date         int64    `json:"date"`
-    Hash         string   `json:"hash"`
-    InLedger     int      `json:"inLedger"`
-    LedgerIndex  int      `json:"ledger_index"`
-    Meta         Meta     `json:"meta"`
-    Status       string   `json:"status"`
-    Validated    bool     `json:"validated"`
+	Account         string        `json:"Account"`
+	Amount          string        `json:"Amount"`
+	DeliverMax      string        `json:"DeliverMax"`
+	Destination     string        `json:"Destination"`
+	Fee             string        `json:"Fee"`
+	Memos           []MemoWrapper `json:"Memos"`
+	NetworkID       int           `json:"NetworkID"`
+	Sequence        int           `json:"Sequence"`
+	SigningPubKey   string        `json:"SigningPubKey"`
+	TransactionType string        `json:"TransactionType"`
+	TxnSignature    string        `json:"TxnSignature"`
+	Ctid            string        `json:"ctid"`
+	Date            int64         `json:"date"`
+	Hash            string        `json:"hash"`
+	InLedger        int           `json:"inLedger"`
+	LedgerIndex     int           `json:"ledger_index"`
+	Meta            Meta          `json:"meta"`
+	Status          string        `json:"status"`
+	Validated       bool          `json:"validated"`
 }
 
 type MemoWrapper struct {
-    Memo Memo `json:"Memo"`
+	Memo Memo `json:"Memo"`
 }
 
 type Meta struct {
-    AffectedNodes      []AffectedNode `json:"AffectedNodes"`
-    TransactionIndex   int            `json:"TransactionIndex"`
-    TransactionResult  string         `json:"TransactionResult"`
-    DeliveredAmount   string         `json:"delivered_amount"`
+	AffectedNodes     []AffectedNode `json:"AffectedNodes"`
+	TransactionIndex  int            `json:"TransactionIndex"`
+	TransactionResult string         `json:"TransactionResult"`
+	DeliveredAmount   string         `json:"delivered_amount"`
 }
 
 type AffectedNode struct {
-    ModifiedNode ModifiedNode `json:"ModifiedNode"`
+	ModifiedNode ModifiedNode `json:"ModifiedNode"`
 }
 
 type ModifiedNode struct {
-    FinalFields        AccountFields `json:"FinalFields"`
-    LedgerEntryType   string        `json:"LedgerEntryType"`
-    LedgerIndex       string        `json:"LedgerIndex"`
-    PreviousFields    AccountFields `json:"PreviousFields"`
-    PreviousTxnID     string        `json:"PreviousTxnID"`
-    PreviousTxnLgrSeq int           `json:"PreviousTxnLgrSeq"`
+	FinalFields       AccountFields `json:"FinalFields"`
+	LedgerEntryType   string        `json:"LedgerEntryType"`
+	LedgerIndex       string        `json:"LedgerIndex"`
+	PreviousFields    AccountFields `json:"PreviousFields"`
+	PreviousTxnID     string        `json:"PreviousTxnID"`
+	PreviousTxnLgrSeq int           `json:"PreviousTxnLgrSeq"`
 }
 
 type AccountFields struct {
-    Account     string `json:"Account"`
-    Balance     string `json:"Balance"`
-    Flags       int    `json:"Flags"`
-    OwnerCount  int    `json:"OwnerCount"`
-    Sequence    int    `json:"Sequence"`
+	Account    string `json:"Account"`
+	Balance    string `json:"Balance"`
+	Flags      int    `json:"Flags"`
+	OwnerCount int    `json:"OwnerCount"`
+	Sequence   int    `json:"Sequence"`
 }

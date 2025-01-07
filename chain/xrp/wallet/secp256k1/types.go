@@ -6,17 +6,17 @@ import (
 )
 
 type Keys struct {
-	masterPublicKey *ecdsa.PublicKey
-	masterPrivateKey *ecdsa.PrivateKey
+	masterPublicKey           *ecdsa.PublicKey
+	masterPrivateKey          *ecdsa.PrivateKey
 	compressedMasterPublicKey []byte
 }
 
 type KeyPair struct {
 	PrivateKey *big.Int
-	PublicKey *ecdsa.PublicKey
+	PublicKey  *ecdsa.PublicKey
 }
 
 // ECDSASignature represents the R and S components of a signature
 type ECDSASignature struct {
-    R, S *big.Int
+	R, S *big.Int
 }
