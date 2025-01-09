@@ -6,26 +6,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"go.uber.org/zap"
-
-	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
 )
+
+// This XrpClient is a minimal implementation and covers the feature gap from xrpl-go
 
 type XrpClient struct {
 	url string
-	log *zap.Logger
 }
 
-func NewXrpClient(url string, log *zap.Logger) *XrpClient {
+func NewXrpClient(url string) *XrpClient {
 	return &XrpClient{
 		url: url,
-		log: log,
 	}
 }
 
-func makeRPCCall(url string, method string, params []any) (*types.RPCResponse, error) {
-	request := types.RPCRequest{
+func makeRPCCall(url string, method string, params []any) (*RPCResponse, error) {
+	request := RPCRequest{
 		Method: method,
 		Params: params,
 		ID:     1,
@@ -47,7 +43,7 @@ func makeRPCCall(url string, method string, params []any) (*types.RPCResponse, e
 		return nil, err
 	}
 
-	var response types.RPCResponse
+	var response RPCResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, err
 	}

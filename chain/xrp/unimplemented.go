@@ -4,7 +4,6 @@ import (
 	"context"
 	"runtime"
 
-	xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -60,5 +59,5 @@ func (c *XrpChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTime
 
 func (c *XrpChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
 	PanicFunctionName()
-	return &xrpwallet.XrpWallet{}, nil
+	return &WalletWrapper{}, nil
 }

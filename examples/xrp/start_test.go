@@ -7,10 +7,12 @@ import (
 	"math"
 	"strconv"
 	"testing"
+	//"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp"
+	xrpclient "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
 	"github.com/stretchr/testify/require"
@@ -92,9 +94,14 @@ func TestXrp(t *testing.T) {
 	expectedBalance = fundAmount.Add(transferAmount)
 	require.Equal(t, expectedBalance, balanceUser2, fmt.Errorf("User (%s) balance (%s) is not expected (%s) (check2)", user2.KeyName(), balanceUser2, expectedBalance))
 
-	txResp, err := xrpChain.XrpClient.GetTx(txHash)
+	xrpClient := xrpclient.NewXrpClient(xrpChain.GetHostRPCAddress())
+	txResp, err := xrpClient.GetTx(txHash)
 	require.NoError(t, err)
 	memoData, err := hex.DecodeString(txResp.Memos[0].Memo.MemoData)
 	require.NoError(t, err)
 	require.Equal(t, memo, string(memoData))
+	fmt.Println("Memo:", string(memoData))
+
+	//fmt.Println("Staying up 2 min")
+	//time.Sleep(time.Minute * 2)
 }
