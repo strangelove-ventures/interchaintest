@@ -43,8 +43,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
-	providertypes "github.com/cosmos/interchain-security/v5/x/ccv/provider/types"
+	ccvclient "github.com/cosmos/interchain-security/v6/x/ccv/provider/client"
+	providertypes "github.com/cosmos/interchain-security/v6/x/ccv/provider/types"
 	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"

@@ -26,7 +26,7 @@ import (
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
 	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	ccvclient "github.com/cosmos/interchain-security/v6/x/ccv/provider/client"
 	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
