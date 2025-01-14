@@ -310,6 +310,7 @@ func (c *XrpChain) Exec(ctx context.Context, cmd []string, env []string) (stdout
 
 func (c *XrpChain) logger() *zap.Logger {
 	return c.log.With(
+		zap.String("chain_name", c.cfg.Name),
 		zap.String("chain_id", c.cfg.ChainID),
 		zap.String("test", c.testName),
 	)
@@ -317,12 +318,12 @@ func (c *XrpChain) logger() *zap.Logger {
 
 func (c *XrpChain) GetRPCAddress() string {
 	rpcPortNumber := strings.Split(rpcPort, "/")
-	return fmt.Sprintf("http://%s:%s", c.HostName(), rpcPortNumber)
+	return fmt.Sprintf("http://%s:%s", c.HostName(), rpcPortNumber[0])
 }
 
 func (c *XrpChain) GetWSAddress() string {
 	wsPortNumber := strings.Split(wsPublicPort, "/")
-	return fmt.Sprintf("ws://%s:%s", c.HostName(), wsPortNumber)
+	return fmt.Sprintf("ws://%s:%s", c.HostName(), wsPortNumber[0])
 }
 
 func (c *XrpChain) GetHostRPCAddress() string {
@@ -395,9 +396,15 @@ func (c *XrpChain) SendFunds(ctx context.Context, keyName string, amount ibc.Wal
 }
 
 func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	return c.SendFundsWithRetry(ctx, keyName, amount, note, true)
+}
+
+func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amount ibc.WalletAmount, note string, retry bool) (string, error) {
 	c.MapAccess.Lock()
 	srcWallet := c.KeyNameToWalletMap[keyName]
 	c.MapAccess.Unlock()
+	srcWallet.txLock.Lock()
+	defer srcWallet.txLock.Unlock()
 
 	if srcWallet == nil {
 		return "", fmt.Errorf("invalid keyname")
@@ -454,8 +461,16 @@ func (c *XrpChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 		return "", err
 	}
 
+	c.logger().Info("sending xrp funds", zap.Any("tx", flatTx))
+
 	response, err := c.RpcClient.SubmitAndWait(txBlob, true)
 	if err != nil {
+		if strings.Contains(err.Error(), "tefPAST_SEQ") && retry {
+			if err := testutil.WaitForBlocks(ctx, 1, c); err != nil {
+				return "", err
+			}
+			return c.SendFundsWithRetry(ctx, keyName, amount, note, false)
+		}
 		return "", err
 	}
 
