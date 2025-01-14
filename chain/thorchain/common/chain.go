@@ -18,6 +18,7 @@ const (
 	TERRAChain = Chain("TERRA")
 	GAIAChain  = Chain("GAIA")
 	AVAXChain  = Chain("AVAX")
+	XRPChain   = Chain("XRP")
 )
 
 type Chain string
@@ -81,6 +82,8 @@ func (c Chain) GetGasAsset() Asset {
 		return AVAXAsset
 	case GAIAChain:
 		return ATOMAsset
+	case XRPChain:
+		return XRPAsset
 	case EmptyChain:
 		return EmptyAsset
 	default:
