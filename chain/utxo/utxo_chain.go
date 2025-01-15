@@ -494,10 +494,10 @@ func (c *UtxoChain) Height(ctx context.Context) (int64, error) {
 func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	c.MapAccess.Lock()
 	keyName, ok := c.AddrToKeyNameMap[address]
+	c.MapAccess.Unlock()
 	if !ok {
 		return sdkmath.Int{}, fmt.Errorf("wallet not found for address: %s", address)
 	}
-	c.MapAccess.Unlock()
 
 	var coinsWithDecimal float64
 	if c.WalletVersion >= noDefaultKeyWalletVersion {
