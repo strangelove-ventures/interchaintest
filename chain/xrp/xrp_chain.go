@@ -34,7 +34,6 @@ import (
 	txtypes "github.com/Peersyst/xrpl-go/xrpl/transaction/types"
 	transactions "github.com/Peersyst/xrpl-go/xrpl/transaction"
 	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
-	"github.com/Peersyst/xrpl-go/xrpl/currency"
 	"github.com/Peersyst/xrpl-go/xrpl/wallet"
 	"github.com/Peersyst/xrpl-go/pkg/crypto"
 )
@@ -403,12 +402,12 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	c.MapAccess.Lock()
 	srcWallet := c.KeyNameToWalletMap[keyName]
 	c.MapAccess.Unlock()
-	srcWallet.txLock.Lock()
-	defer srcWallet.txLock.Unlock()
-
 	if srcWallet == nil {
 		return "", fmt.Errorf("invalid keyname")
 	}
+
+	srcWallet.txLock.Lock()
+	defer srcWallet.txLock.Unlock()
 
 	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
 		Account: txtypes.Address(srcWallet.FormattedAddress()),
@@ -480,36 +479,23 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 
 func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
-	ledger, err := c.RpcClient.GetClosedLedger()
+	ledgerIndex, err := c.RpcClient.GetLedgerIndex()
 	if err != nil {
 		return 0, err
 	}
-	return int64(ledger.LedgerIndex.Uint32()), nil
-
-	//return c.XrpClient.GetCurrentLedger()
+	return int64(ledgerIndex), nil
 }
 
 func (c *XrpChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	// accountInfo, err := c.XrpClient.GetAccountInfo(address, false)
-	// if err != nil {
-	// 	return sdkmath.ZeroInt(), fmt.Errorf("error get balance, get account info, %v", err)
-	// }
-	xrpBalanceStr, err := c.RpcClient.GetXrpBalance(txtypes.Address(address))
+	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
+		Account: txtypes.Address(address),
+		LedgerIndex: qcommon.Validated,
+	})
 	if err != nil {
 		return sdkmath.ZeroInt(), err
 	}
 
-	dropsBalanceStr, err := currency.XrpToDrops(xrpBalanceStr)
-	if err != nil {
-		return sdkmath.ZeroInt(), err
-	}
-
-	// TODO: check for accountInfo errors (i.e. account not found).
-	balance, ok := sdkmath.NewIntFromString(dropsBalanceStr)
-	if !ok {
-		return sdkmath.ZeroInt(), fmt.Errorf("balance not okay")
-	}
-	return balance, nil
+	return sdkmath.NewInt(int64(ai.AccountData.Balance)), nil
 }
 
 func (c *XrpChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
