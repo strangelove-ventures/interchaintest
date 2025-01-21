@@ -496,6 +496,7 @@ func (c *UtxoChain) GetBalance(ctx context.Context, address string, denom string
 	keyName, ok := c.AddrToKeyNameMap[address]
 	c.MapAccess.Unlock()
 	if !ok {
+		// Check with btc client?
 		return sdkmath.Int{}, fmt.Errorf("wallet not found for address: %s", address)
 	}
 

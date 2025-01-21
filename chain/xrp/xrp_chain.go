@@ -267,9 +267,9 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		goRoutineCtx := context.Background()
 		goRoutineCtx, c.cancel = context.WithCancel(goRoutineCtx)
 
+		client := xrpclient.NewXrpClient(c.GetHostRPCAddress())
 		xrpBlockTime := time.Second * 2
 		timer := time.NewTimer(xrpBlockTime)
-		client := xrpclient.NewXrpClient(c.GetHostRPCAddress())
 		defer timer.Stop()
 		for {
 			select {

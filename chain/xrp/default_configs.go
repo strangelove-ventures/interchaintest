@@ -65,10 +65,11 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 	networkID := "[network_id]\n1234\n\n"
 	validatorToken := "[validator_token]\n"
 	ipsFixed := "[ips_fixed]\nxrp-1234-TestXrp 51235\n\n"
+	voting := "[voting]\nreference_fee=10\naccount_reserve=1000000\nowner_reserve=200000\n\n"
 
 	return []byte(
 		fmt.Sprintf(
-			"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+			"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
 			server,
 			portRPCAdminLocal,
 			portWsAdminLocal,
@@ -85,6 +86,7 @@ func NewRippledConfig(validatorTokenInput string) []byte {
 			rpcStartup,
 			sslVerify,
 			validationQuorum,
+			voting,
 			networkID,
 			ipsFixed,
 			validatorToken,
