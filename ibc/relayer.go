@@ -292,7 +292,9 @@ type CreateClientOptions struct {
 
 // empty values will use the relayer defaults.
 func DefaultClientOpts() CreateClientOptions {
-	return CreateClientOptions{}
+	return CreateClientOptions{
+		TrustingPeriod: "0",
+	}
 }
 
 func (opts CreateClientOptions) Validate() error {
