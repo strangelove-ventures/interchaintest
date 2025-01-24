@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"cosmossdk.io/math"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	ibcconntypes "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
 	interchaintest "github.com/strangelove-ventures/interchaintest/v9"
 	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v9/ibc"

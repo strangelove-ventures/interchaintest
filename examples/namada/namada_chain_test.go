@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v9"

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/multierr"
 
-	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
+	host "github.com/cosmos/ibc-go/v9/modules/core/24-host"
 )
 
 type Nanoseconds uint64

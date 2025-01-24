@@ -20,9 +20,9 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	//nolint:staticcheck
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 
 	asset "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/asset/v1"
 	ibcv1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/component/ibc/v1"
