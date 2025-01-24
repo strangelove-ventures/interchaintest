@@ -11,8 +11,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer"
 )
 
 var _ ibc.Relayer = &HyperspaceRelayer{}

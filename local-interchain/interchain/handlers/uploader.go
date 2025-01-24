@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/util"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
 )
 
 type upload struct {

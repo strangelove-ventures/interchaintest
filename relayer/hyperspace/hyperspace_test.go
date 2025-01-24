@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer/hyperspace"
 )
 
 func TestKeys(t *testing.T) {

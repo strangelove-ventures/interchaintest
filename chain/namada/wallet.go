@@ -3,7 +3,7 @@ package namada
 import (
 	"fmt"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 var _ ibc.Wallet = &NamadaWallet{}

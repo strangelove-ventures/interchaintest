@@ -11,7 +11,7 @@ import (
 	"github.com/rivo/tview"
 	"github.com/stretchr/testify/require"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
 )
 
 var (

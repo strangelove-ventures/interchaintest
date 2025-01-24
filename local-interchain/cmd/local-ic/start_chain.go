@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 const (
@@ -39,10 +39,10 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 		isURL := strings.HasPrefix(configPath, "http")
 
 		var (
-		    parentDir string
-		    config *types.Config
-		    err error
-	         )
+			parentDir string
+			config    *types.Config
+			err       error
+		)
 
 		if path.IsAbs(configPath) {
 			dir, err := filepath.Abs(configPath)

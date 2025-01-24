@@ -9,11 +9,11 @@ import (
 	"cosmossdk.io/math"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibcconntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	interchaintest "github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	interchaintest "github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer"
+	"github.com/strangelove-ventures/interchaintest/v9/testreporter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -24,7 +24,7 @@ var (
 )
 
 // This tests Cosmos Interchain Security, spinning up a provider and a single consumer chain.
-// go test -timeout 3000s -run ^TestICS$ github.com/strangelove-ventures/interchaintest/v8/examples/ibc -v  -test.short
+// go test -timeout 3000s -run ^TestICS$ github.com/strangelove-ventures/interchaintest/v9/examples/ibc -v  -test.short
 func TestICS(t *testing.T) {
 	if testing.Short() {
 		ver := icsVersions[0]

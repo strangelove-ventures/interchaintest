@@ -24,17 +24,17 @@ import (
 	//nolint:staticcheck
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 
-	asset "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1"
-	ibcv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/ibc/v1"
-	pool "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/component/shielded_pool/v1"
-	keys "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1"
-	num "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"
-	transactionv1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/transaction/v1"
-	custody "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/custody/v1"
-	view "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/view/v1"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	asset "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/asset/v1"
+	ibcv1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/component/ibc/v1"
+	pool "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/component/shielded_pool/v1"
+	keys "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/keys/v1"
+	num "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/num/v1"
+	transactionv1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/transaction/v1"
+	custody "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/custody/v1"
+	view "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/view/v1"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 // PenumbraClientNode represents an instance of pclientd.

@@ -8,7 +8,7 @@ import (
 	fmt "fmt"
 	types "github.com/cosmos/cosmos-sdk/codec/types"
 	proto "github.com/cosmos/gogoproto/proto"
-	v1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"
+	v1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/core/num/v1"
 	io "io"
 	math "math"
 	math_bits "math/bits"

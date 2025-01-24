@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/examples/thorchain/features"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/examples/thorchain/features"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
