@@ -438,10 +438,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	t.Run("transfer success", func(t *testing.T) {
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, chain0, chain1))
-
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", chain0.Config().Denom))
-		dstIbcDenom := srcDenomTrace.IBCDenom()
-
+		dstIbcDenom := transfertypes.NewDenom(chain0.Config().Denom, transfertypes.NewHop("transfer", "channel-0")).IBCDenom()
 		dstFinalBalance, err := chain1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.True(t, dstFinalBalance.Equal(sendAmount))

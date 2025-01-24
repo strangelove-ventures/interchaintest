@@ -122,9 +122,7 @@ func TestLearn(t *testing.T) {
 	require.True(t, gaiaUserBalNew.Equal(expectedBal))
 
 	// Trace IBC Denom
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, gaia.Config().Denom))
-	dstIbcDenom := srcDenomTrace.IBCDenom()
-
+	dstIbcDenom := transfertypes.NewDenom(gaia.Config().Denom, transfertypes.NewHop("transfer", osmoChannelID)).IBCDenom()
 	// Test destination wallet has increased funds
 	osmosUserBalNew, err := osmosis.GetBalance(ctx, osmosisUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)

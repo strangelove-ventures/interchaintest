@@ -181,10 +181,7 @@ func icsTest(t *testing.T, version string, rly ibc.RelayerImplementation) {
 		require.NoError(t, tx.Validate())
 
 		require.NoError(t, r.Flush(ctx, eRep, ibcPath, channelID))
-
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", consumerChannelID, provider.Config().Denom))
-		dstIbcDenom := srcDenomTrace.IBCDenom()
-
+		dstIbcDenom := transfertypes.NewDenom(provider.Config().Denom, transfertypes.NewHop("transfer", consumerChannelID)).IBCDenom()
 		consumerBal, err := consumer.BankQueryBalance(ctx, consumerUser.FormattedAddress(), dstIbcDenom)
 		require.NoError(t, err)
 		require.EqualValues(t, sendAmt, consumerBal)

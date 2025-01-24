@@ -421,9 +421,7 @@ func testPacketRelaySuccess(
 		req.NoError(srcAck.Validate(), "invalid acknowledgement on source chain")
 
 		// get ibc denom for src denom on dst chain
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
-		dstIbcDenom := srcDenomTrace.IBCDenom()
-
+		dstIbcDenom := transfertypes.NewDenom(srcDenom, transfertypes.NewHop(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID)).IBCDenom()
 		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
@@ -457,9 +455,7 @@ func testPacketRelaySuccess(
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
 
 		// get ibc denom for dst denom on src chain
-		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
-		srcIbcDenom := dstDenomTrace.IBCDenom()
-
+		srcIbcDenom := transfertypes.NewDenom(dstDenom, transfertypes.NewHop(channels[i].PortID, channels[i].ChannelID)).IBCDenom()
 		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
@@ -512,9 +508,7 @@ func testPacketRelayFail(
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
 
 		// get ibc denom for src denom on dst chain
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID, srcDenom))
-		dstIbcDenom := srcDenomTrace.IBCDenom()
-
+		dstIbcDenom := transfertypes.NewDenom(srcDenom, transfertypes.NewHop(channels[i].Counterparty.PortID, channels[i].Counterparty.ChannelID)).IBCDenom()
 		srcFinalBalance, err := srcChain.GetBalance(ctx, srcUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 
@@ -543,9 +537,7 @@ func testPacketRelayFail(
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, srcChain, dstChain))
 
 		// get ibc denom for dst denom on src chain
-		dstDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom(channels[i].PortID, channels[i].ChannelID, dstDenom))
-		srcIbcDenom := dstDenomTrace.IBCDenom()
-
+		srcIbcDenom := transfertypes.NewDenom(dstDenom, transfertypes.NewHop(channels[i].PortID, channels[i].ChannelID)).IBCDenom()
 		srcFinalBalance, err := srcChain.GetBalance(ctx, dstUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(srcChainCfg.Bech32Prefix), srcIbcDenom)
 		req.NoError(err, "failed to get balance from source chain")
 

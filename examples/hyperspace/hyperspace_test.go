@@ -309,8 +309,8 @@ func TestHyperspace(t *testing.T) {
 	require.True(t, cosmosUserStakeBal.Equal(finalStakeBal))
 
 	// Verify cosmos user's final "unit" balance
-	unitDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", "UNIT"))
-	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenomTrace.IBCDenom())
+	unitDenom := transfertypes.NewDenom("UNIT", transfertypes.NewHop("transfer", "channel-0")).IBCDenom()
+	cosmosUserUnitBal, err := cosmosChain.GetBalance(ctx, cosmosUser.FormattedAddress(), unitDenom)
 	require.NoError(t, err)
 	require.True(t, cosmosUserUnitBal.Equal(amountUnits))
 
