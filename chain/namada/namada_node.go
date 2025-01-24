@@ -15,9 +15,9 @@ import (
 	"github.com/docker/go-connections/nat"
 
 	// To use a legacy tendermint client.
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
