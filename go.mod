@@ -31,7 +31,6 @@ require (
 	github.com/cosmos/gogoproto v1.5.0
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
 	github.com/cosmos/ibc-go/v8 v8.4.0
-	github.com/cosmos/interchain-security/v5 v5.1.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
 	github.com/docker/docker v24.0.9+incompatible
@@ -77,7 +76,6 @@ require (
 	cosmossdk.io/depinject v1.0.0 // indirect
 	cosmossdk.io/errors v1.0.1 // indirect
 	cosmossdk.io/log v1.3.1 // indirect
-	cosmossdk.io/x/evidence v0.1.0 // indirect
 	cosmossdk.io/x/tx v0.13.4 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect

@@ -20,7 +20,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -36,6 +35,34 @@ const (
 	icsVer330 = "v3.3.0"
 	icsVer400 = "v4.0.0"
 )
+
+// https://github.com/cosmos/interchain-security/blob/v5.1.1/x/ccv/provider/client/legacy_proposals.go
+// may change with permissionless ICS.
+type ConsumerAdditionProposalJSON struct {
+	Title         string             `json:"title"`
+	Summary       string             `json:"summary"`
+	ChainId       string             `json:"chain_id"`
+	InitialHeight clienttypes.Height `json:"initial_height"`
+	GenesisHash   []byte             `json:"genesis_hash"`
+	BinaryHash    []byte             `json:"binary_hash"`
+	SpawnTime     time.Time          `json:"spawn_time"`
+
+	ConsumerRedistributionFraction    string        `json:"consumer_redistribution_fraction"`
+	BlocksPerDistributionTransmission int64         `json:"blocks_per_distribution_transmission"`
+	DistributionTransmissionChannel   string        `json:"distribution_transmission_channel"`
+	HistoricalEntries                 int64         `json:"historical_entries"`
+	CcvTimeoutPeriod                  time.Duration `json:"ccv_timeout_period"`
+	TransferTimeoutPeriod             time.Duration `json:"transfer_timeout_period"`
+	UnbondingPeriod                   time.Duration `json:"unbonding_period"`
+
+	Deposit string `json:"deposit"`
+
+	TopN               uint32   `json:"top_N"`
+	ValidatorsPowerCap uint32   `json:"validators_power_cap"`
+	ValidatorSetCap    uint32   `json:"validator_set_cap"`
+	Allowlist          []string `json:"allowlist"`
+	Denylist           []string `json:"denylist"`
+}
 
 // FinishICSProviderSetup sets up the base of an ICS connection with respect to the relayer, provider actions, and flushing of packets.
 // 1. Stop the relayer, then start it back up. This completes the ICS20-1 transfer channel setup.
@@ -161,7 +188,7 @@ func (c *CosmosChain) StartProvider(testName string, ctx context.Context, additi
 		return fmt.Errorf("invalid ICS_SPAWN_TIME_WAIT %s: %w", spawnTimeWait, err)
 	}
 	for _, consumer := range c.Consumers {
-		prop := ccvclient.ConsumerAdditionProposalJSON{
+		prop := ConsumerAdditionProposalJSON{
 			Title:         fmt.Sprintf("Addition of %s consumer chain", consumer.cfg.Name),
 			Summary:       "Proposal to add new consumer chain",
 			ChainId:       consumer.cfg.ChainID,

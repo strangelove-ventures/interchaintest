@@ -28,7 +28,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -887,7 +886,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ConsumerAdditionProposalJSON) (string, error) {
 	propBz, err := json.Marshal(prop)
 	if err != nil {
 		return "", err
