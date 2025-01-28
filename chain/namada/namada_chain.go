@@ -27,9 +27,9 @@ import (
 
 	cometbft "github.com/cometbft/cometbft/abci/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/internal/tendermint"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 const (
@@ -504,7 +504,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
 	}
 	const evType = "send_packet"
-	tendermintEvents := results.EndBlockEvents
+	tendermintEvents := results.FinalizeBlockEvents
 	var events []cometbft.Event
 	for _, event := range tendermintEvents {
 		if event.Type != evType {

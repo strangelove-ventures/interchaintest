@@ -9,7 +9,7 @@ import (
 	grpc1 "github.com/cosmos/gogoproto/grpc"
 	proto "github.com/cosmos/gogoproto/proto"
 	types "github.com/cosmos/gogoproto/types"
-	v1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/crypto/tct/v1"
+	v1 "github.com/strangelove-ventures/interchaintest/v9/chain/penumbra/crypto/tct/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

@@ -6,11 +6,11 @@ import (
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer/rly"
 )
 
 type TestName interface {

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/strangelove-ventures/interchaintest/v8"
-	tc "github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain/common"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	tc "github.com/strangelove-ventures/interchaintest/v9/chain/thorchain"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/thorchain/common"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 	"golang.org/x/sync/errgroup"
 )
 

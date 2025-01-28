@@ -11,11 +11,11 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	types23 "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
+	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
+	types23 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.

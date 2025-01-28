@@ -11,11 +11,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer"
+	"github.com/strangelove-ventures/interchaintest/v9/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 func TestRelayerFlushing(t *testing.T, ctx context.Context, cf interchaintest.ChainFactory, rf interchaintest.RelayerFactory, rep *testreporter.Reporter) {

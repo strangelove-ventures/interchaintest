@@ -6,7 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	// simappparams "github.com/cosmos/cosmos-sdk/simapp/params".
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
 )
 
 func WasmEncoding() *testutil.TestEncodingConfig {

@@ -15,7 +15,7 @@ import (
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramsutils "github.com/cosmos/cosmos-sdk/x/params/client/utils"
 
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
 )
 
 // VoteOnProposal submits a vote for the specified proposal.

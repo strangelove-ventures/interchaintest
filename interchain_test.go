@@ -12,8 +12,8 @@ import (
 
 	"cosmossdk.io/math"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types" // nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -22,12 +22,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
-	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/cosmos"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/relayer/rly"
+	"github.com/strangelove-ventures/interchaintest/v9/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 var (
@@ -438,10 +438,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 
 	t.Run("transfer success", func(t *testing.T) {
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, chain0, chain1))
-
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", chain0.Config().Denom))
-		dstIbcDenom := srcDenomTrace.IBCDenom()
-
+		dstIbcDenom := transfertypes.NewDenom(chain0.Config().Denom, transfertypes.NewHop("transfer", "channel-0")).IBCDenom()
 		dstFinalBalance, err := chain1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix), dstIbcDenom)
 		require.NoError(t, err, "failed to get balance from dest chain")
 		require.True(t, dstFinalBalance.Equal(sendAmount))

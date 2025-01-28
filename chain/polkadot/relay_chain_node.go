@@ -19,8 +19,8 @@ import (
 
 	"cosmossdk.io/math"
 
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 // RelayChainNode defines the properties required for running a polkadot relay chain node.

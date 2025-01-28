@@ -27,8 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	icatypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -46,10 +45,10 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
-	"github.com/strangelove-ventures/interchaintest/v8/testutil"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v9/dockerutil"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/testutil"
 )
 
 // ChainNode represents a node in the test network that is being created.
@@ -887,7 +886,7 @@ func (tn *ChainNode) SendIBCTransfer(
 	return tn.ExecTx(ctx, keyName, command...)
 }
 
-func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ccvclient.ConsumerAdditionProposalJSON) (string, error) {
+func (tn *ChainNode) ConsumerAdditionProposal(ctx context.Context, keyName string, prop ConsumerAdditionProposalJSON) (string, error) {
 	propBz, err := json.Marshal(prop)
 	if err != nil {
 		return "", err

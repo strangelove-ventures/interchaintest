@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
 )
 
 func TestTx(t *testing.T) {

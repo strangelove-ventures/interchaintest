@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 // NewConfig returns a hermes Config with an entry for each of the provided ChainConfigs.

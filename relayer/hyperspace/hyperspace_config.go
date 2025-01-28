@@ -12,8 +12,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
-	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v9/ibc"
 )
 
 type HyperspaceRelayerCoreConfig struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	"github.com/stretchr/testify/require"
 
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
+	"github.com/strangelove-ventures/interchaintest/v9/chain/polkadot"
 )
 
 func TestNodeKeyPeerID(t *testing.T) {

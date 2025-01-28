@@ -9,8 +9,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb"
-	"github.com/strangelove-ventures/interchaintest/v8/blockdb/tui/presenter"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb"
+	"github.com/strangelove-ventures/interchaintest/v9/blockdb/tui/presenter"
 )
 
 func headerView(m *Model) *tview.Flex {
