@@ -21,15 +21,11 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	xrpclient "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client"
-	//xrpclienttypes "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/client/types"
-	//xrpwallet "github.com/strangelove-ventures/interchaintest/v8/chain/xrp/wallet"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
-	//"github.com/Peersyst/xrpl-go/xrpl/websocket"
 	"github.com/Peersyst/xrpl-go/xrpl/queries/account"
-	//"github.com/Peersyst/xrpl-go/xrpl/queries/common"
 	"github.com/Peersyst/xrpl-go/xrpl/rpc"
 	txtypes "github.com/Peersyst/xrpl-go/xrpl/transaction/types"
 	transactions "github.com/Peersyst/xrpl-go/xrpl/transaction"
