@@ -37,10 +37,6 @@ func (c *XrpChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return 0
 }
 
-func (c *XrpChain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
-	PanicFunctionName()
-	return nil
-}
 
 func (c *XrpChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
 	PanicFunctionName()

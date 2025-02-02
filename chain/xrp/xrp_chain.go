@@ -368,6 +368,29 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 	return nil
 }
 
+func (c *XrpChain) RecoverKey(ctx context.Context, keyName, seed string) error {
+	c.MapAccess.Lock()
+	defer c.MapAccess.Unlock()
+
+	// If wallet already exists, just return
+	if c.KeyNameToWalletMap[keyName] != nil {
+		return fmt.Errorf("keyname: %s already exists", keyName)
+	}
+
+	var err error
+	newWallet, err := wallet.FromSeed(seed, "")
+	if err != nil {
+		return fmt.Errorf("error create root account wallet: %v", err)
+	}
+	
+	c.AddrToKeyNameMap[newWallet.ClassicAddress.String()] = keyName
+	c.KeyNameToWalletMap[keyName] = &WalletWrapper{
+		keyName: keyName,
+		Wallet: &newWallet,
+	}
+	return nil
+}
+
 // Get address of account, cast to a string to use.
 func (c *XrpChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
 	c.MapAccess.Lock()
@@ -430,10 +453,13 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 			Account: txtypes.Address(srcWallet.Wallet.ClassicAddress),
 			Sequence: ai.AccountData.Sequence,
 			Fee: txtypes.XRPCurrencyAmount(uint64(feeScaled)),
-			NetworkID: uint32(networkID), // currently does not get serialized due to upstream bug, but the client with insert it
 		},
 		Amount: txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
 		Destination: txtypes.Address(amount.Address),
+	}
+
+	if networkID > 1024 {
+		tx.BaseTx.NetworkID = uint32(networkID)
 	}
 
 	if note != "" {
