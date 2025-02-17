@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode"
 
-	dockertypes "github.com/docker/docker/api/types"
-	dockerclient "github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/container"
+	dockerclient "github.com/moby/moby/client"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"go.uber.org/zap"
 )
@@ -75,7 +75,7 @@ func (cs *ContainerStream) StreamContainer(w http.ResponseWriter, r *http.Reques
 	isColored := strings.HasPrefix(strings.ToLower(r.URL.Query().Get("colored")), "t")
 	tailLines := tailLinesParam(r.URL.Query().Get("lines"))
 
-	rr, err := cs.cli.ContainerLogs(cs.ctx, containerID, dockertypes.ContainerLogsOptions{
+	rr, err := cs.cli.ContainerLogs(cs.ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,

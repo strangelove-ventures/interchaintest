@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	dockerclient "github.com/docker/docker/client"
+	dockerclient "github.com/moby/moby/client"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/internal/tendermint"

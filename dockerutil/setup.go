@@ -15,8 +15,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/errdefs"
 )
 
 // DockerSetupTestingT is a subset of testing.T required for DockerSetup.
@@ -89,9 +89,8 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 	if err != nil {
 		panic(fmt.Errorf("failed to find an available subnet: %v", err))
 	}
-	network, err := cli.NetworkCreate(context.TODO(), name, types.NetworkCreate{
-		CheckDuplicate: true,
-		Driver:         "bridge",
+	network, err := cli.NetworkCreate(context.TODO(), name, network.CreateOptions{
+		Driver: "bridge",
 		IPAM: &network.IPAM{
 			Config: []network.IPAMConfig{
 				{
@@ -189,7 +188,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 
 		ctx := context.TODO()
 		cli.NegotiateAPIVersion(ctx)
-		cs, err := cli.ContainerList(ctx, types.ContainerListOptions{
+		cs, err := cli.ContainerList(ctx, container.ListOptions{
 			All: true,
 			Filters: filters.NewArgs(
 				filters.Arg("label", CleanupLabel+"="+t.Name()),
@@ -206,7 +205,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				if containerLogTail != "" {
 					logTail = containerLogTail
 				}
-				rc, err := cli.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{
+				rc, err := cli.ContainerLogs(ctx, c.ID, container.LogsOptions{
 					ShowStdout: true,
 					ShowStderr: true,
 					Tail:       logTail,
@@ -244,7 +243,7 @@ func DockerCleanup(t DockerSetupTestingT, cli *client.Client) func() {
 				}
 				cancel()
 
-				if err := cli.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+				if err := cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{
 					// Not removing volumes with the container, because we separately handle them conditionally.
 					Force: true,
 				}); err != nil {

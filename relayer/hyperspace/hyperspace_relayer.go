@@ -7,7 +7,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/zap"
 
