@@ -166,7 +166,7 @@ jobs:
           override: true
 
       - name: Download Tarball Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: local-ic
           path: /tmp
