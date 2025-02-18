@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
-	"github.com/moby/moby/api/types"
 	dockerclient "github.com/moby/moby/client"
-
-	// To use a legacy tendermint client.
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
@@ -290,7 +288,7 @@ func (n *NamadaNode) netAddress(ctx context.Context) (string, error) {
 	} else {
 		index = n.Index + 192
 	}
-	networkResource, err := n.DockerClient.NetworkInspect(ctx, n.NetworkID, types.NetworkInspectOptions{})
+	networkResource, err := n.DockerClient.NetworkInspect(ctx, n.NetworkID, network.InspectOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get the network resource: %v", err)
 	}

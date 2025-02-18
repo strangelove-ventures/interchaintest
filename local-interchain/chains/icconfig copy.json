@@ -1,0 +1,73 @@
+{
+  "chains": [
+    {
+      "name": "noble",
+      "chain_id": "noble-1",
+      "chain_name": "noble",
+      "chain_type": "cosmos",
+      "binary": "nobled",
+      "bech32_prefix": "noble",
+      "denom": "uusdc",
+      "rpc_address": "http://127.0.0.1:38829",
+      "grpc_address": "127.0.0.1:34917",
+      "gas_prices": "0%DENOM%",
+      "gas_adjustment": 2.0,
+      "docker_image": {
+        "repository": "ghcr.io/strangelove-ventures/heighliner/noble",
+        "version": "v4.0.2-rabbit",
+        "uid-gid": "1025:1025"
+      },
+      "block_time": "10s",
+      "coin_type": 118,
+      "trusting_period": "112h",
+      "number_vals": 1,
+      "number_node": 0,           
+      "genesis": {
+        "modify": [
+          {
+              "key": "app_state.params.params.authority",
+              "value": "noble1hj5fveer5cjtn4wd6wstzugjfdxzl0xpw0865d"
+          },
+          {
+              "key": "app_state.upgrade.params.authority",
+              "value": "noble1hj5fveer5cjtn4wd6wstzugjfdxzl0xpw0865d"
+          }
+      ],
+        "accounts": [
+          {
+            "name": "acc0",
+            "address": "noble1hj5fveer5cjtn4wd6wstzugjfdxzl0xpw0865d",
+            "amount": "10000000000%DENOM%",
+            "mnemonic": "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+          }
+        ]
+      }
+    },
+    {
+      "name": "osmosis",
+      "chain_id": "osmosis-1",
+      "chain_name": "osmosis",
+      "binary": "osmosisd",
+      "bech32_prefix": "osmo",
+      "denom": "uosmo",
+      "rpc_address": "http://127.0.0.1:38828",
+      "grpc_address": "127.0.0.1:34918",
+      "gas_prices": "0.01uosmo",
+      "gas_adjustment": 1.2,
+      "docker_image": {
+        "version": "v20.5.0-rabbit"
+      },
+      "block_time": "10s",
+      "genesis": {
+        "accounts": [
+          {
+            "name": "acc0",
+            "address": "osmo1hj5fveer5cjtn4wd6wstzugjfdxzl0xpwhpz63",
+            "amount": "10000000000%DENOM%",
+            "mnemonic": "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+          }
+        ]
+      }
+    }
+  ]
+}

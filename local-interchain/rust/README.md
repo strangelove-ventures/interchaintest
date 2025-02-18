@@ -138,7 +138,7 @@ jobs:
         run: cd interchaintest/local-interchain && go mod tidy && make install
 
       - name: Upload localic artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: local-ic
           path: ~/go/bin/local-ic

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/moby/moby/client"
 	"go.uber.org/zap"
@@ -111,7 +110,7 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		cc.ID,
 		mountPath,
 		&buf,
-		types.CopyToContainerOptions{},
+		container.CopyToContainerOptions{},
 	); err != nil {
 		return fmt.Errorf("copying tar to container: %w", err)
 	}

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
@@ -110,7 +109,7 @@ func DockerSetup(t DockerSetupTestingT) (*client.Client, string) {
 
 func getUsedSubnets(cli *client.Client) (map[string]bool, error) {
 	usedSubnets := make(map[string]bool)
-	networks, err := cli.NetworkList(context.TODO(), types.NetworkListOptions{})
+	networks, err := cli.NetworkList(context.TODO(), network.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

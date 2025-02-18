@@ -104,7 +104,7 @@ jobs:
             - /go/bin/nobled
 
       - name: Publish Tarball as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: noble-docker-image
           path: ${{ env.TAR_PATH }}
@@ -202,7 +202,7 @@ jobs:
 ...
 ...
       - name: Publish Tarball as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chain-docker-image
           path: ${{ env.TAR_PATH }}

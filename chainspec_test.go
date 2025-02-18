@@ -1,7 +1,6 @@
 package interchaintest_test
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -101,7 +100,7 @@ func TestChainSpec_Config(t *testing.T) {
 			cfg, err := s.Config(zaptest.NewLogger(t))
 			require.NoError(t, err)
 
-			require.Regexp(t, regexp.MustCompile(`^gaia-\d+$`), cfg.Name)
+			require.Regexp(t, `^gaia-\d+$`, cfg.Name)
 			require.Equal(t, cfg.Name, cfg.ChainID)
 		})
 
@@ -117,7 +116,7 @@ func TestChainSpec_Config(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, "mychain", cfg.Name)
-			require.Regexp(t, regexp.MustCompile(`^mychain-\d+$`), cfg.ChainID)
+			require.Regexp(t, `^mychain-\d+$`, cfg.ChainID)
 		})
 	})
 
