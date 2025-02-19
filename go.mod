@@ -22,7 +22,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/ChainSafe/go-schnorrkel/1 v0.0.0-00010101000000-000000000000
 	github.com/CosmWasm/wasmd v0.42.1-0.20230928145107-894076a25cb2
-	github.com/Peersyst/xrpl-go v0.1.0
+	github.com/Peersyst/xrpl-go v0.1.3
 	github.com/StirlingMarketingGroup/go-namecase v1.0.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/avast/retry-go/v4 v4.5.1
