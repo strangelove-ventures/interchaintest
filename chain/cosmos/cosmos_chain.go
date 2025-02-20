@@ -21,9 +21,9 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types" // nolint:staticcheck
+	chanTypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	ccvclient "github.com/cosmos/interchain-security/v7/x/ccv/provider/client"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"

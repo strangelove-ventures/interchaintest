@@ -19,8 +19,8 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	ccvclient "github.com/cosmos/interchain-security/v5/x/ccv/provider/client"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types" // nolint:staticcheck
+	ccvclient "github.com/cosmos/interchain-security/v7/x/ccv/provider/client"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"

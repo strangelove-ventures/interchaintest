@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
-	conntypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	conntypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"

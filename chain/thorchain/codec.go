@@ -4,9 +4,9 @@ import (
 	"cosmossdk.io/x/upgrade"
 
 	"github.com/cosmos/ibc-go/modules/capability"
-	transfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-	ibccore "github.com/cosmos/ibc-go/v8/modules/core"
-	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	transfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	ibccore "github.com/cosmos/ibc-go/v10/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"

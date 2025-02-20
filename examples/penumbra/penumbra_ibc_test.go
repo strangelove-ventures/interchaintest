@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -179,9 +179,9 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
 
 	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
-	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
+	ibcDenom := transfertypes.NewDenom(chainA.Config().Denom, transfertypes.NewHop(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID))
 
-	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
 
@@ -216,7 +216,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 10, chainA)
 	require.NoError(t, err)
 
-	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom.IBCDenom())
 	require.NoError(t, err)
 
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
@@ -252,7 +252,7 @@ func TestPenumbraToPenumbraIBC(t *testing.T) {
 	err = testutil.WaitForBlocks(ctx, 10, chainA)
 	require.NoError(t, err)
 
-	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom)
+	bobBal, err = chainB.GetBalance(ctx, bob.KeyName(), ibcDenom.IBCDenom())
 	require.NoError(t, err)
 
 	require.True(t, bobBal.Equal(transferAmount), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", bobBal, transferAmount))
@@ -436,9 +436,8 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.True(t, aliceBal.Equal(expectedBal), fmt.Sprintf("incorrect balance, got (%s) expected (%s)", aliceBal, expectedBal))
 
 	// Compose IBC token denom information for Chain A's native token denom represented on Chain B
-	ibcDenom := transfertypes.GetPrefixedDenom(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID, chainA.Config().Denom)
-	ibcDenomTrace := transfertypes.ParseDenomTrace(ibcDenom)
-	chainADenomOnChainB := ibcDenomTrace.IBCDenom()
+	ibcDenom := transfertypes.NewDenom(chainA.Config().Denom, transfertypes.NewHop(abChan.Counterparty.PortID, abChan.Counterparty.ChannelID))
+	chainADenomOnChainB := ibcDenom.IBCDenom()
 
 	bobBal, err = chainB.GetBalance(ctx, bob.FormattedAddress(), chainADenomOnChainB)
 	require.NoError(t, err)
@@ -449,7 +448,7 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 
 	transfer = ibc.WalletAmount{
 		Address: string(aliceAddr),
-		Denom:   ibcDenomTrace.IBCDenom(),
+		Denom:   ibcDenom.IBCDenom(),
 		Amount:  transferAmount,
 	}
 
@@ -558,9 +557,8 @@ func TestPenumbraToCosmosIBC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Compose IBC token denom information for Chain B's native token denom represented on Chain A
-	chainBIbcDenom := transfertypes.GetPrefixedDenom(abChan.PortID, abChan.ChannelID, chainB.Config().Denom)
-	chainBIbcDenomTrace := transfertypes.ParseDenomTrace(chainBIbcDenom)
-	chainBDenomOnChainA := chainBIbcDenomTrace.IBCDenom()
+	chainBIbcDenom := transfertypes.NewDenom(chainB.Config().Denom, transfertypes.NewHop(abChan.PortID, abChan.ChannelID))
+	chainBDenomOnChainA := chainBIbcDenom.IBCDenom()
 
 	transfer = ibc.WalletAmount{
 		Address: string(aliceAddr),
