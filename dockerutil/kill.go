@@ -2,10 +2,10 @@ package dockerutil
 
 import (
 	"context"
+	"github.com/docker/docker/api/types/container"
 	"os"
 	"strings"
 
-	dockerapitypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
@@ -25,7 +25,7 @@ func KillAllInterchaintestContainers(ctx context.Context) []string {
 		panic(err)
 	}
 
-	containers, err := cli.ContainerList(ctx, dockerapitypes.ContainerListOptions{
+	containers, err := cli.ContainerList(ctx, container.ListOptions{
 		// grabs only running containers
 		All: false,
 		Filters: filters.NewArgs(

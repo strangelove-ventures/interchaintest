@@ -2,14 +2,12 @@ package interchaintest
 
 import (
 	"fmt"
-
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
-	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
 	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
 )
 
@@ -65,14 +63,6 @@ func (f *builtinRelayerFactory) Build(
 		)
 		f.setRelayerVersion(r.ContainerImage())
 		return r
-	case ibc.Hyperspace:
-		return hyperspace.NewHyperspaceRelayer(
-			f.log,
-			t.Name(),
-			cli,
-			networkID,
-			f.options...,
-		)
 	case ibc.Hermes:
 		r := hermes.NewHermesRelayer(f.log, t.Name(), cli, networkID, f.options...)
 		f.setRelayerVersion(r.ContainerImage())
@@ -98,11 +88,6 @@ func (f *builtinRelayerFactory) Name() string {
 			return "hermes@" + f.version
 		}
 		return "hermes@" + hermes.DefaultContainerVersion
-	case ibc.Hyperspace:
-		if f.version == "" {
-			return "hyperspace@" + f.version
-		}
-		return "hyperspace@" + hyperspace.HyperspaceDefaultContainerVersion
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

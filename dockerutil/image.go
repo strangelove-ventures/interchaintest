@@ -5,12 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
@@ -132,7 +132,7 @@ func (image *Image) EnsurePulled(ctx context.Context) error {
 	ref := image.imageRef()
 	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
-		rc, err := image.client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		rc, err := image.client.ImagePull(ctx, ref, dockerimage.PullOptions{})
 		if err != nil {
 			return fmt.Errorf("pull image %s: %w", ref, err)
 		}
@@ -146,7 +146,7 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 	// Although this shouldn't happen because the name includes randomness, in reality there seems to intermittent
 	// chances of collisions.
 
-	containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := image.client.ContainerList(ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(filters.Arg("name", containerName)),
 	})
@@ -155,7 +155,7 @@ func (image *Image) CreateContainer(ctx context.Context, containerName, hostName
 	}
 
 	for _, c := range containers {
-		if err := image.client.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
+		if err := image.client.ContainerRemove(ctx, c.ID, container.RemoveOptions{
 			RemoveVolumes: true,
 			Force:         true,
 		}); err != nil {
@@ -294,7 +294,7 @@ func (c *Container) Wait(ctx context.Context, logTail uint64) ContainerExecResul
 		stderrBuf = new(bytes.Buffer)
 	)
 
-	logOpts := types.ContainerLogsOptions{
+	logOpts := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	}
@@ -366,7 +366,7 @@ func (c *Container) Stop(timeout time.Duration) error {
 	}
 
 	// RemoveContainerOptions duplicates (*dockertest.Resource).Prune.
-	err = c.image.client.ContainerRemove(ctx, c.containerID, types.ContainerRemoveOptions{
+	err = c.image.client.ContainerRemove(ctx, c.containerID, container.RemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})

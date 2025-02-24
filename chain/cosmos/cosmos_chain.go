@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"math"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -603,6 +603,10 @@ func (c *CosmosChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
 	return int64(math.Ceil(fees))
 }
 
+func (c *CosmosChain) ChangeBinary(_ context.Context, binary string) {
+	c.cfg.Bin = binary
+}
+
 func (c *CosmosChain) UpgradeVersion(ctx context.Context, cli *client.Client, containerRepo, version string) {
 	c.cfg.Images[0].Version = version
 	for _, n := range c.Validators {
@@ -624,7 +628,7 @@ func (c *CosmosChain) pullImages(ctx context.Context, cli *client.Client) {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockerimage.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",

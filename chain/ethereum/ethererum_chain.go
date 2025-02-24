@@ -3,10 +3,10 @@ package ethereum
 import (
 	"context"
 	"fmt"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"time"
 
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
@@ -118,7 +118,7 @@ func (c *EthereumChain) pullImages(ctx context.Context, cli *dockerclient.Client
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockerimage.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",

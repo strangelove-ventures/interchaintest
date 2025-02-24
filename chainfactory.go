@@ -16,7 +16,6 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/ethereum/geth"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/namada"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/penumbra"
-	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -140,26 +139,6 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return cosmos.NewCosmosChain(testName, cfg, nv, nf, log), nil
 	case ibc.Penumbra:
 		return penumbra.NewPenumbraChain(log, testName, cfg, nv, nf), nil
-	case ibc.Polkadot:
-		// TODO Clean this up. RelayChain config should only reference cfg.Images[0] and parachains should iterate through the remaining
-		// Maybe just pass everything in like NewCosmosChain and NewPenumbraChain, let NewPolkadotChain figure it out
-		// Or parachains and ICS consumer chains maybe should be their own chain
-		switch {
-		case strings.Contains(cfg.Name, "composable"):
-			parachains := []polkadot.ParachainConfig{{
-				// Bin:             "composable",
-				Bin:     "parachain-node",
-				ChainID: "dev-2000",
-				// ChainID:         "dali-dev",
-				Image:           cfg.Images[1],
-				NumNodes:        nf,
-				Flags:           []string{"--execution=wasm", "--wasmtime-instantiation-strategy=recreate-instance-copy-on-write"},
-				RelayChainFlags: []string{"--execution=wasm"},
-			}}
-			return polkadot.NewPolkadotChain(log, testName, cfg, nv, parachains), nil
-		default:
-			return nil, fmt.Errorf("unexpected error, unknown polkadot parachain: %s", cfg.Name)
-		}
 	case ibc.Ethereum:
 		switch cfg.Bin {
 		case "anvil":

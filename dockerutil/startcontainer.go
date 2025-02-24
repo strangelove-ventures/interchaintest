@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
 
@@ -17,7 +17,7 @@ func StartContainer(ctx context.Context, cli *client.Client, id string) error {
 		defer cancel()
 	}
 
-	err := cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
+	err := cli.ContainerStart(ctx, id, container.StartOptions{})
 	if err != nil {
 		return err
 	}

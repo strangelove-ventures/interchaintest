@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -76,14 +75,14 @@ func SetVolumeOwner(ctx context.Context, opts VolumeOwnerOptions) error {
 			return
 		}
 
-		if err := opts.Client.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{
+		if err := opts.Client.ContainerRemove(ctx, cc.ID, container.RemoveOptions{
 			Force: true,
 		}); err != nil {
 			opts.Log.Warn("Failed to remove volume-owner container", zap.String("container_id", cc.ID), zap.Error(err))
 		}
 	}()
 
-	if err := opts.Client.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
+	if err := opts.Client.ContainerStart(ctx, cc.ID, container.StartOptions{}); err != nil {
 		return fmt.Errorf("starting volume-owner container: %w", err)
 	}
 

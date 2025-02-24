@@ -309,7 +309,11 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
-	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", c.cfg.ChainID)
+	consumerId, err := c.Provider.GetNode().GetConsumerChainByChainId(ctx, c.cfg.ChainID)
+	if err != nil {
+		return err
+	}
+	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", consumerId)
 	if err != nil {
 		return fmt.Errorf("failed to query provider for ccv state: %w", err)
 	}

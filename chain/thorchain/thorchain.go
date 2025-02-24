@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"math"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"sync"
 
-	dockertypes "github.com/docker/docker/api/types"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -624,7 +624,7 @@ func (c *Thorchain) pullImages(ctx context.Context, cli *client.Client) {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockerimage.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",
