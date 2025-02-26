@@ -32,6 +32,7 @@ const (
 	Thorchain  = "thorchain"
 	UTXO       = "utxo"
 	Namada     = "namada"
+	Tron       = "tron"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.

@@ -2,6 +2,7 @@ package interchaintest
 
 import (
 	"fmt"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/tron"
 	"os"
 	"strings"
 	"sync"
@@ -175,6 +176,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return utxo.NewUtxoChain(testName, cfg, log), nil
 	case ibc.Namada:
 		return namada.NewNamadaChain(testName, cfg, nv, nf, log), nil
+	case ibc.Tron:
+		return tron.NewTronChain(testName, cfg, nv, nf, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}
