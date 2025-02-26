@@ -33,6 +33,7 @@ const (
 	UTXO       = "utxo"
 	Namada     = "namada"
 	Xrp        = "xrp"
+	Tron       = "tron"
 )
 
 // ChainConfig defines the chain parameters requires to run an interchaintest testnet for a chain.

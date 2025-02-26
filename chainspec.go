@@ -169,6 +169,7 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		xrp := int64(6)
 		thorchain := int64(8)
 		bitcoin := int64(8)
+		tron := int64(6)
 
 		switch cfg.CoinType {
 		case "0", "2", "3", "145":
@@ -181,6 +182,8 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 			cfg.CoinDecimals = &xrp
 		case "931":
 			cfg.CoinDecimals = &thorchain
+		case "195":
+			cfg.CoinDecimals = &tron
 		}
 	}
 
