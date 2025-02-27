@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"net"
+	"strings"
 
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -34,7 +36,8 @@ type Chain struct {
 	NetworkID    string
 	DockerClient *client.Client
 
-	lifecycle *dockerutil.ContainerLifecycle
+	fullnode  *dockerutil.ContainerLifecycle
+	supernode *dockerutil.ContainerLifecycle
 
 	api *api.TronApi
 }
@@ -42,15 +45,15 @@ type Chain struct {
 func NewTronChain(
 	testName string,
 	chainConfig ibc.ChainConfig,
-	numValidators int,
-	numFullNodes int,
+	_ int,
+	_ int,
 	logger *zap.Logger,
 ) *Chain {
 	return &Chain{
 		logger:   logger,
 		config:   chainConfig,
 		testName: testName,
-		api:      api.NewTronApi("http://localhost:1234", time.Second*2),
+		api:      api.NewTronApi("http://localhost:8090", time.Second*2),
 		wallets:  map[string]Wallet{},
 	}
 }
@@ -62,7 +65,7 @@ func (c *Chain) Config() ibc.ChainConfig {
 func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Client, networkID string) error {
 	image := c.Config().Images[0]
 
-	c.lifecycle = dockerutil.NewContainerLifecycle(c.logger, cli, c.Name())
+	c.fullnode = dockerutil.NewContainerLifecycle(c.logger, cli, c.Name())
 
 	v, err := cli.VolumeCreate(ctx, volume.CreateOptions{
 		Labels: map[string]string{
@@ -90,33 +93,101 @@ func (c *Chain) Initialize(ctx context.Context, testName string, cli *client.Cli
 		return fmt.Errorf("failed to set volume owner: %w", err)
 	}
 
+	if c.config.ChainID == "mocknet" {
+		name := c.NameWithNodeType("super")
+		c.supernode = dockerutil.NewContainerLifecycle(c.logger, cli, name)
+
+		v, err = cli.VolumeCreate(ctx, volume.CreateOptions{
+			Labels: map[string]string{
+				dockerutil.CleanupLabel:   testName,
+				dockerutil.NodeOwnerLabel: name,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create volume: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (c *Chain) Start(testName string, ctx context.Context, additionalGenesisWallets ...ibc.WalletAmount) error {
-	// TODO ports
+	if c.supernode != nil {
+		err := c.supernode.CreateContainer(
+			ctx,
+			testName,
+			c.NetworkID,
+			c.config.Images[0],
+			nat.PortMap{},
+			"",
+			[]string{
+				fmt.Sprintf("%s:%s", c.VolumeName, "/home/tron/db"),
+			},
+			[]mount.Mount{},
+			dockerutil.CondenseHostName(c.NameWithNodeType("super")),
+			[]string{"entrypoint.sh"},
+			[]string{
+				"TRON_NODE_TYPE=mocknet-supernode",
+			},
+			[]string{},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create supernode container: %w", err)
+		}
+
+		err = c.supernode.StartContainer(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	portMap := nat.PortMap{
+		nat.Port("8090/tcp"): {},
+		nat.Port("8091/tcp"): {},
+	}
+
+	for internal, external := range c.config.HostPortOverride {
+		port := nat.Port(fmt.Sprintf("%d/tcp", internal))
+		portMap[port] = []nat.PortBinding{{
+			HostPort: fmt.Sprintf("%d", external),
+		}}
+	}
 
 	c.logger.Info("starting container", zap.String("name", c.Name()))
 
-	err := c.lifecycle.CreateContainer(
+	env := c.config.Env
+	if c.supernode != nil {
+		seed_node := c.NameWithNodeType("super") + ":18888"
+		env = append(env, "TRON_SEED_NODE="+seed_node)
+	}
+
+	err := c.fullnode.CreateContainer(
 		ctx,
 		testName,
 		c.NetworkID,
 		c.config.Images[0],
-		nat.PortMap{},
+		portMap,
 		"",
-		[]string{},
+		[]string{
+			fmt.Sprintf("%s:%s", c.VolumeName, "/home/tron/db"),
+		},
 		[]mount.Mount{},
-		"hostname",
-		[]string{},
-		[]string{},
+		dockerutil.CondenseHostName(c.Name()),
+		[]string{"entrypoint.sh"},
+		env,
 		[]string{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
-	return nil
+	err = c.fullnode.StartContainer(ctx)
+	if err != nil {
+		return err
+	}
+
+	c.logger.Info("Waiting for chain to reach block 10")
+	return c.WaitForBlock(ctx, 10, time.Minute)
 }
 
 func (c *Chain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
@@ -266,14 +337,17 @@ func (c *Chain) Height(ctx context.Context) (int64, error) {
 }
 
 func (c *Chain) GetBalance(_ context.Context, address string, denom string) (math.Int, error) {
+	denom = strings.ToUpper(denom)
 	if denom != "TRX" {
-		return math.ZeroInt(), fmt.Errorf("only 'TRX' supported")
+		return math.ZeroInt(), fmt.Errorf("denom not supported: '%s'", denom)
 	}
 
 	balance, err := c.api.GetBalance(address)
 	if err != nil {
 		return math.Int{}, fmt.Errorf("failed to get balance: %w", err)
 	}
+
+	fmt.Println(balance)
 
 	return math.NewIntFromUint64(balance), nil
 }
@@ -318,5 +392,63 @@ func (c *Chain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wal
 }
 
 func (c *Chain) Name() string {
-	return fmt.Sprintf("tron-%s-%s", c.config.ChainID, dockerutil.SanitizeContainerName(c.testName))
+	return c.NameWithNodeType("full")
+}
+
+func (c *Chain) NameWithNodeType(nodeType string) string {
+	return fmt.Sprintf(
+		"tron-%s-%s-%s",
+		nodeType,
+		c.config.ChainID,
+		dockerutil.SanitizeContainerName(c.testName),
+	)
+}
+
+func (c *Chain) WaitForBlock(
+	ctx context.Context,
+	targetHeight int64,
+	timeout time.Duration,
+) error {
+	var height int64
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-timer.C:
+			err := fmt.Errorf("timed out waiting for block")
+			c.logger.Error("failed to wait for block", zap.Error(err))
+			return err
+		default:
+			_, err := net.DialTimeout("tcp", "localhost:8090", time.Second)
+			if err == nil {
+				height, err = c.Height(ctx)
+				if height >= targetHeight {
+					c.logger.Info(fmt.Sprintf("Block: %d", height))
+					return nil
+				}
+			}
+
+			if err != nil {
+				c.logger.Error("failed to get height", zap.Error(err))
+			}
+
+			time.Sleep(time.Second)
+		}
+	}
+}
+
+func (c *Chain) WaitBlocks(
+	ctx context.Context,
+	amount int64,
+	timeout time.Duration,
+) error {
+	height, err := c.Height(ctx)
+	if err != nil {
+		c.logger.Error("failed to get height <<", zap.Error(err))
+		return err
+	}
+
+	return c.WaitForBlock(ctx, height+amount, timeout)
 }

@@ -3,7 +3,6 @@ package tron
 import (
 	"context"
 	"cosmossdk.io/math"
-	"fmt"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/tron"
 	"github.com/stretchr/testify/require"
@@ -20,9 +19,6 @@ func TestTron(t *testing.T) {
 	client, network := interchaintest.DockerSetup(t)
 	ctx := context.Background()
 
-	fmt.Println(client)
-	fmt.Println(network)
-
 	factory := interchaintest.NewBuiltinChainFactory(
 		zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 			{ChainConfig: tron.DefaultChainConfig("trontest")},
@@ -33,8 +29,6 @@ func TestTron(t *testing.T) {
 	require.NoError(t, err)
 
 	tronChain := chains[0].(*tron.Chain)
-
-	fmt.Println(tronChain)
 
 	interchain := interchaintest.NewInterchain().
 		AddChain(tronChain)
@@ -50,14 +44,19 @@ func TestTron(t *testing.T) {
 		_ = interchain.Close()
 	})
 
-	time.Sleep(time.Second * 60)
+	block, err := tronChain.Height(ctx)
+	require.NoError(t, err)
+	require.Greater(t, block, int64(0))
 
 	amount := math.NewInt(1_000_000_000)
 
 	users := interchaintest.GetAndFundTestUsers(t, ctx, "user1", amount, tronChain)
 	user1 := users[0]
 
-	balance1, err := tronChain.GetBalance(ctx, user1.FormattedAddress(), "")
+	err = tronChain.WaitBlocks(ctx, 10, time.Second*40)
+	require.NoError(t, err)
+
+	balance1, err := tronChain.GetBalance(ctx, user1.FormattedAddress(), "TRX")
 	require.NoError(t, err)
 	require.Equal(t, amount, balance1)
 }
