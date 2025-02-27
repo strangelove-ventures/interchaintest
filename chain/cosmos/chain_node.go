@@ -1045,7 +1045,7 @@ func (tn *ChainNode) QueryParam(ctx context.Context, subspace, key string) (*Par
 
 // QueryBankMetadata returns the bank metadata of a token denomination.
 func (tn *ChainNode) QueryBankMetadata(ctx context.Context, denom string) (*BankMetaData, error) {
-	stdout, _, err := tn.ExecQuery(ctx, "bank", "denom-metadata", "--denom", denom)
+	stdout, _, err := tn.ExecQuery(ctx, "bank", "denom-metadata", denom)
 	if err != nil {
 		return nil, err
 	}
