@@ -248,6 +248,10 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	consumerId, err := c.Provider.GetNode().GetConsumerChainByChainId(ctx, c.cfg.ChainID)
+	if err != nil {
+		return err
+	}
 
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
@@ -267,7 +271,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 					return fmt.Errorf("failed to get consumer validator pubkey: %w", err)
 				}
 				keyStr := strings.TrimSpace(string(key))
-				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", c.cfg.ChainID, keyStr)
+				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", consumerId, keyStr)
 				if err != nil {
 					return fmt.Errorf("failed to assign consumer validator pubkey: %w", err)
 				}
@@ -311,10 +315,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
-	consumerId, err := c.Provider.GetNode().GetConsumerChainByChainId(ctx, c.cfg.ChainID)
-	if err != nil {
-		return err
-	}
 	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", consumerId)
 	if err != nil {
 		return fmt.Errorf("failed to query provider for ccv state: %w", err)
