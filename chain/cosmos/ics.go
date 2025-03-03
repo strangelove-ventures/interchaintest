@@ -438,7 +438,7 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 			imageVersion = providerVersion
 		}
 		if (semver.Major(providerVersion) == "v4" && semver.Compare(semver.MajorMinor(providerVersion), icsVer450) >= 0) ||
-			(semver.Major(providerVersion) == "v6" && semver.Compare(semver.MajorMinor(providerVersion), icsVer640) >= 0) {
+			(semver.Compare(semver.MajorMinor(providerVersion), icsVer640) >= 0) {
 			switch semver.Major(consumerVersion) {
 			case "v4":
 				if semver.Compare("v4.5.0", consumerVersion) >= 0 {
@@ -449,7 +449,9 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 			case "v5":
 				toVersion = "v5"
 			case "v6":
-				toVersion = "<v6.4"
+				if semver.Compare("v6.4.0", consumerVersion) < 0 {
+					toVersion = "<v6.4"
+				}
 			}
 		} else {
 			switch semver.Major(consumerVersion) {
