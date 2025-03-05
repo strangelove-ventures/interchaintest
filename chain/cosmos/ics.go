@@ -35,6 +35,8 @@ import (
 const (
 	icsVer330 = "v3.3.0"
 	icsVer400 = "v4.0.0"
+	icsVer450 = "v4.5.0"
+	icsVer640 = "v6.4.0"
 )
 
 // FinishICSProviderSetup sets up the base of an ICS connection with respect to the relayer, provider actions, and flushing of packets.
@@ -246,6 +248,10 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	consumerId, err := c.Provider.GetNode().GetConsumerChainByChainId(ctx, c.cfg.ChainID)
+	if err != nil {
+		return err
+	}
 
 	// Copy provider priv val keys to these nodes
 	for i, val := range c.Provider.Validators {
@@ -265,7 +271,7 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 					return fmt.Errorf("failed to get consumer validator pubkey: %w", err)
 				}
 				keyStr := strings.TrimSpace(string(key))
-				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", c.cfg.ChainID, keyStr)
+				_, err = c.Provider.Validators[i].ExecTx(ctx, valKey, "provider", "assign-consensus-key", consumerId, keyStr)
 				if err != nil {
 					return fmt.Errorf("failed to assign consumer validator pubkey: %w", err)
 				}
@@ -309,10 +315,6 @@ func (c *CosmosChain) StartConsumer(testName string, ctx context.Context, additi
 		return err
 	}
 
-	consumerId, err := c.Provider.GetNode().GetConsumerChainByChainId(ctx, c.cfg.ChainID)
-	if err != nil {
-		return err
-	}
 	ccvStateMarshaled, _, err := c.Provider.GetNode().ExecQuery(ctx, "provider", "consumer-genesis", consumerId)
 	if err != nil {
 		return fmt.Errorf("failed to query provider for ccv state: %w", err)
@@ -435,9 +437,33 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 		if semver.Compare(providerVersion, icsVer400) > 0 {
 			imageVersion = providerVersion
 		}
-		toVersion = semver.Major(consumerVersion)
-		if toVersion == "v3" {
-			toVersion = semver.MajorMinor(consumerVersion)
+		if (semver.Major(providerVersion) == "v4" && semver.Compare(semver.MajorMinor(providerVersion), icsVer450) >= 0) ||
+			(semver.Compare(semver.MajorMinor(providerVersion), icsVer640) >= 0) {
+			switch semver.Major(consumerVersion) {
+			case "v4":
+				if semver.Compare("v4.5.0", consumerVersion) >= 0 {
+					toVersion = "v4.5"
+				} else {
+					toVersion = "<v4.5"
+				}
+			case "v5":
+				toVersion = "v5"
+			case "v6":
+				if semver.Compare("v6.4.0", consumerVersion) < 0 {
+					toVersion = "<v6.4"
+				}
+			}
+		} else {
+			switch semver.Major(consumerVersion) {
+			case "v5":
+				toVersion = "v5"
+			case "v4":
+				toVersion = "v4"
+			case "v3":
+				toVersion = semver.MajorMinor(consumerVersion)
+			case "v2":
+				toVersion = "v2"
+			}
 		}
 	} else {
 		imageVersion = consumerVersion
@@ -449,8 +475,12 @@ func (c *CosmosChain) transformCCVState(ctx context.Context, ccvState []byte, co
 	if err != nil {
 		return nil, fmt.Errorf("failed to write ccv state to file: %w", err)
 	}
+	repo := icsCfg.ICSImageRepo
+	if repo == "" {
+		repo = "ghcr.io/strangelove-ventures/heighliner/ics"
+	}
 	job := dockerutil.NewImage(c.log, c.GetNode().DockerClient, c.GetNode().NetworkID,
-		c.GetNode().TestName, "ghcr.io/strangelove-ventures/heighliner/ics", imageVersion,
+		c.GetNode().TestName, repo, imageVersion,
 	)
 	cmd := []string{"interchain-security-cd", "genesis", "transform"}
 	if toVersion != "" {
