@@ -32,6 +32,7 @@ import (
 	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
 	"github.com/Peersyst/xrpl-go/xrpl/wallet"
 	"github.com/Peersyst/xrpl-go/pkg/crypto"
+	"github.com/Peersyst/xrpl-go/xrpl/hash"
 )
 
 var _ ibc.Chain = &XrpChain{}
@@ -497,6 +498,90 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 
 	err = testutil.WaitForBlocks(ctx, 1, c)
 	return response.Hash.String(), err
+}
+
+func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	c.MapAccess.Lock()
+	srcWallet := c.KeyNameToWalletMap[keyName]
+	c.MapAccess.Unlock()
+	if srcWallet == nil {
+		return "", fmt.Errorf("invalid keyname")
+	}
+
+	srcWallet.txLock.Lock()
+	defer srcWallet.txLock.Unlock()
+
+	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
+		Account: txtypes.Address(srcWallet.FormattedAddress()),
+		LedgerIndex: qcommon.Current,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	fees, err := strconv.ParseFloat(c.Config().GasPrices, 64)
+	if err != nil {
+		return "", err
+	}
+	feeScaled := fees * math.Pow10(int(*c.Config().CoinDecimals))
+
+	networkID, err := strconv.ParseUint(c.Config().ChainID, 10, 32)
+	if err != nil {
+		return "", err
+	}
+
+	// Create payment transaction.
+	tx := transactions.Payment{
+		BaseTx: transactions.BaseTx{
+			Account: txtypes.Address(srcWallet.Wallet.ClassicAddress),
+			Sequence: ai.AccountData.Sequence,
+			Fee: txtypes.XRPCurrencyAmount(uint64(feeScaled)),
+		},
+		Amount: txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
+		Destination: txtypes.Address(amount.Address),
+	}
+
+	if networkID > 1024 {
+		tx.BaseTx.NetworkID = uint32(networkID)
+	}
+
+	if note != "" {
+		tx.BaseTx.Memos = []txtypes.MemoWrapper{
+			{
+				Memo: txtypes.Memo{
+					MemoData: hex.EncodeToString([]byte(note)),
+				},
+			},
+		}
+	}
+
+	flatTx := tx.Flatten()
+	if err := c.RpcClient.Autofill(&flatTx); err != nil {
+		return "", err
+	}
+
+	txBlob, _, err := srcWallet.Wallet.Sign(flatTx)
+	if err != nil {
+		return "", err
+	}
+
+	c.logger().Info("sending xrp funds", zap.Any("tx", flatTx))
+
+	txResponse, err := c.RpcClient.Submit(txBlob, true)
+	if err != nil {
+		return "", err
+	}
+
+	if txResponse.EngineResult != "tesSUCCESS" {
+		return "", fmt.Errorf("transaction failed to submit with engine result: %s", txResponse.EngineResult)
+	}
+
+	txHash, err := hash.SignTxBlob(txBlob)
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, err
 }
 
 func (c *XrpChain) Height(ctx context.Context) (int64, error) {
