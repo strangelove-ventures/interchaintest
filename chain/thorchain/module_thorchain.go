@@ -42,6 +42,13 @@ func (c *Thorchain) SetMimir(ctx context.Context, keyName string, key string, va
 	return err
 }
 
+func (tn *ChainNode) SetMimir(ctx context.Context, keyName string, key string, value string) error {
+	_, err := tn.ExecTx(ctx,
+		keyName, "thorchain", "mimir", key, value,
+	)
+	return err
+}
+
 func (tn *ChainNode) Bond(ctx context.Context, amount math.Int) error {
 	_, err := tn.ExecTx(ctx,
 		valKey, "thorchain", "deposit",

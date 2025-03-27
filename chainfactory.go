@@ -19,6 +19,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/thorchain"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/utxo"
+	"github.com/strangelove-ventures/interchaintest/v8/chain/xrp"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 )
 
@@ -175,6 +176,8 @@ func buildChain(log *zap.Logger, testName string, cfg ibc.ChainConfig, numValida
 		return utxo.NewUtxoChain(testName, cfg, log), nil
 	case ibc.Namada:
 		return namada.NewNamadaChain(testName, cfg, nv, nf, log), nil
+	case ibc.Xrp:
+		return xrp.NewXrpChain(testName, cfg, log), nil
 	default:
 		return nil, fmt.Errorf("unexpected error, unknown chain type: %s for chain: %s", cfg.Type, cfg.Name)
 	}
