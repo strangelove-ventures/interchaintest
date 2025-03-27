@@ -25,14 +25,14 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 
-	"github.com/Peersyst/xrpl-go/xrpl/queries/account"
-	"github.com/Peersyst/xrpl-go/xrpl/rpc"
-	txtypes "github.com/Peersyst/xrpl-go/xrpl/transaction/types"
-	transactions "github.com/Peersyst/xrpl-go/xrpl/transaction"
-	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
-	"github.com/Peersyst/xrpl-go/xrpl/wallet"
 	"github.com/Peersyst/xrpl-go/pkg/crypto"
 	"github.com/Peersyst/xrpl-go/xrpl/hash"
+	"github.com/Peersyst/xrpl-go/xrpl/queries/account"
+	qcommon "github.com/Peersyst/xrpl-go/xrpl/queries/common"
+	"github.com/Peersyst/xrpl-go/xrpl/rpc"
+	transactions "github.com/Peersyst/xrpl-go/xrpl/transaction"
+	txtypes "github.com/Peersyst/xrpl-go/xrpl/transaction/types"
+	"github.com/Peersyst/xrpl-go/xrpl/wallet"
 )
 
 var _ ibc.Chain = &XrpChain{}
@@ -339,17 +339,17 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 		return nil
 	}
 
-	//var seed string
+	// var seed string
 	var err error
 	var newWallet wallet.Wallet
 	if keyName == "faucet" {
-		//seed = xrpwallet.GetRootAccountSeed()
+		// seed = xrpwallet.GetRootAccountSeed()
 		newWallet, err = wallet.FromSeed("snoPBrXtMeMyMHUVTgbuqAfg1SUTb", "")
 		if err != nil {
 			return fmt.Errorf("error create root account wallet: %v", err)
 		}
 	} else {
-		//seed, err = xrpwallet.GenerateSeed(xrpwallet.ED25519)
+		// seed, err = xrpwallet.GenerateSeed(xrpwallet.ED25519)
 		newWallet, err = wallet.New(crypto.ED25519())
 		if err != nil {
 			return fmt.Errorf("error create wallet: %v", err)
@@ -363,7 +363,7 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 	c.AddrToKeyNameMap[newWallet.ClassicAddress.String()] = keyName
 	c.KeyNameToWalletMap[keyName] = &WalletWrapper{
 		keyName: keyName,
-		Wallet: &newWallet,
+		Wallet:  &newWallet,
 	}
 
 	return nil
@@ -383,11 +383,11 @@ func (c *XrpChain) RecoverKey(ctx context.Context, keyName, seed string) error {
 	if err != nil {
 		return fmt.Errorf("error create root account wallet: %v", err)
 	}
-	
+
 	c.AddrToKeyNameMap[newWallet.ClassicAddress.String()] = keyName
 	c.KeyNameToWalletMap[keyName] = &WalletWrapper{
 		keyName: keyName,
-		Wallet: &newWallet,
+		Wallet:  &newWallet,
 	}
 	return nil
 }
@@ -430,7 +430,7 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	defer srcWallet.txLock.Unlock()
 
 	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
-		Account: txtypes.Address(srcWallet.FormattedAddress()),
+		Account:     txtypes.Address(srcWallet.FormattedAddress()),
 		LedgerIndex: qcommon.Current,
 	})
 	if err != nil {
@@ -451,11 +451,11 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	// Create payment transaction.
 	tx := transactions.Payment{
 		BaseTx: transactions.BaseTx{
-			Account: txtypes.Address(srcWallet.Wallet.ClassicAddress),
+			Account:  txtypes.Address(srcWallet.Wallet.ClassicAddress),
 			Sequence: ai.AccountData.Sequence,
-			Fee: txtypes.XRPCurrencyAmount(uint64(feeScaled)),
+			Fee:      txtypes.XRPCurrencyAmount(uint64(feeScaled)),
 		},
-		Amount: txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
+		Amount:      txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
 		Destination: txtypes.Address(amount.Address),
 	}
 
@@ -512,7 +512,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 	defer srcWallet.txLock.Unlock()
 
 	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
-		Account: txtypes.Address(srcWallet.FormattedAddress()),
+		Account:     txtypes.Address(srcWallet.FormattedAddress()),
 		LedgerIndex: qcommon.Current,
 	})
 	if err != nil {
@@ -533,11 +533,11 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 	// Create payment transaction.
 	tx := transactions.Payment{
 		BaseTx: transactions.BaseTx{
-			Account: txtypes.Address(srcWallet.Wallet.ClassicAddress),
+			Account:  txtypes.Address(srcWallet.Wallet.ClassicAddress),
 			Sequence: ai.AccountData.Sequence,
-			Fee: txtypes.XRPCurrencyAmount(uint64(feeScaled)),
+			Fee:      txtypes.XRPCurrencyAmount(uint64(feeScaled)),
 		},
-		Amount: txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
+		Amount:      txtypes.XRPCurrencyAmount(amount.Amount.Int64()),
 		Destination: txtypes.Address(amount.Address),
 	}
 
@@ -595,7 +595,7 @@ func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 
 func (c *XrpChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
 	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
-		Account: txtypes.Address(address),
+		Account:     txtypes.Address(address),
 		LedgerIndex: qcommon.Validated,
 	})
 	if err != nil {

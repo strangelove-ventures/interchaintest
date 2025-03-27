@@ -102,6 +102,6 @@ func TestXrp(t *testing.T) {
 	require.Equal(t, memo, string(memoData))
 	fmt.Println("Memo:", string(memoData))
 
-	//fmt.Println("Staying up 2 min")
-	//time.Sleep(time.Minute * 2)
+	// fmt.Println("Staying up 2 min")
+	// time.Sleep(time.Minute * 2)
 }

@@ -2,7 +2,7 @@ package xrp
 
 import (
 	"sync"
-	
+
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 
 	"github.com/Peersyst/xrpl-go/xrpl/wallet"
@@ -11,9 +11,9 @@ import (
 var _ ibc.Wallet = &WalletWrapper{}
 
 type WalletWrapper struct {
-	keyName       string
-	Wallet        *wallet.Wallet
-	txLock        sync.Mutex
+	keyName string
+	Wallet  *wallet.Wallet
+	txLock  sync.Mutex
 }
 
 func (w *WalletWrapper) KeyName() string {

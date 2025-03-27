@@ -30,9 +30,9 @@ type NamadaNode struct {
 	Chain        ibc.Chain
 	DockerClient *dockerclient.Client
 	Client       rpcclient.Client
-	Image      ibc.DockerImage
-	VolumeName string
-	NetworkID  string
+	Image        ibc.DockerImage
+	VolumeName   string
+	NetworkID    string
 
 	log *zap.Logger
 
