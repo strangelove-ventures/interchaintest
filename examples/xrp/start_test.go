@@ -7,7 +7,6 @@ import (
 	"math"
 	"strconv"
 	"testing"
-	//"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -101,7 +100,4 @@ func TestXrp(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, memo, string(memoData))
 	fmt.Println("Memo:", string(memoData))
-
-	// fmt.Println("Staying up 2 min")
-	// time.Sleep(time.Minute * 2)
 }

@@ -38,7 +38,6 @@ import (
 var _ ibc.Chain = &XrpChain{}
 
 const (
-	// blockTime         = 2 // seconds.
 	rpcAdminLocalPort = "5005/tcp"
 	wsAdminLocalPort  = "6006/tcp"
 	wsPublicPort      = "80/tcp"
@@ -71,14 +70,13 @@ type XrpChain struct {
 	hostRPCPort string
 	hostWSPort  string
 
-	RpcClient *rpc.Client
+	RPCClient *rpc.Client
 
 	// cli arguments.
 	RippledCli         string
 	ValidatorKeysCli   string
 	AddrToKeyNameMap   map[string]string
 	KeyNameToWalletMap map[string]*WalletWrapper
-	// KeyNameToWalletMap map[string]*xrpwallet.XrpWallet
 
 	ValidatorKeyInfo *ValidatorKeyOutput
 	ValidatorToken   string
@@ -202,22 +200,10 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		c.log.Info("Port overrides", fields...)
 	}
 
-	// env := []string{}
-	// if c.cfg.Images[0].UIDGID != "" {
-	// 	uidGID := strings.Split(c.cfg.Images[0].UIDGID, ":")
-	// 	if len(uidGID) != 2 {
-	// 		panic(fmt.Sprintf("%s chain does not have valid UidGid", c.cfg.Name))
-	// 	}
-	// 	env = []string{
-	// 		fmt.Sprintf("UID=%s", uidGID[0]),
-	// 		fmt.Sprintf("GID=%s", uidGID[1]),
-	// 	}
-	// }
 	if err := c.CreateRippledConfig(ctx); err != nil {
 		return err
 	}
 
-	// entrypoint := []string{"/entrypoint.sh"}
 	entrypoint := []string{}
 	cmd := []string{
 		c.RippledCli,
@@ -236,13 +222,6 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 		return err
 	}
 
-	// hostPorts, err := c.containerLifecycle.GetHostPorts(ctx, rpcPort, wsPublicPort)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// c.hostRPCPort = strings.Split(hostPorts[0], ":")[1]
-	// c.hostWSPort = strings.Split(hostPorts[1], ":")[1]
 	c.hostRPCPort = "5005"
 	c.hostWSPort = "8001"
 
@@ -252,12 +231,12 @@ func (c *XrpChain) Start(testName string, ctx context.Context, additionalGenesis
 	if err != nil {
 		return fmt.Errorf("unable to create rpc config, %w", err)
 	}
-	c.RpcClient = rpc.NewClient(rpcConfig)
+	c.RPCClient = rpc.NewClient(rpcConfig)
 	networkID, err := strconv.ParseUint(c.Config().ChainID, 10, 32)
 	if err != nil {
 		return err
 	}
-	c.RpcClient.NetworkID = uint32(networkID)
+	c.RPCClient.NetworkID = uint32(networkID)
 
 	go func() {
 		// Don't use ctx from Start(), it gets cancelled soon after returning.
@@ -339,27 +318,20 @@ func (c *XrpChain) CreateKey(ctx context.Context, keyName string) error {
 		return nil
 	}
 
-	// var seed string
 	var err error
 	var newWallet wallet.Wallet
 	if keyName == "faucet" {
-		// seed = xrpwallet.GetRootAccountSeed()
 		newWallet, err = wallet.FromSeed("snoPBrXtMeMyMHUVTgbuqAfg1SUTb", "")
 		if err != nil {
 			return fmt.Errorf("error create root account wallet: %v", err)
 		}
 	} else {
-		// seed, err = xrpwallet.GenerateSeed(xrpwallet.ED25519)
 		newWallet, err = wallet.New(crypto.ED25519())
 		if err != nil {
 			return fmt.Errorf("error create wallet: %v", err)
 		}
 	}
 
-	// wallet, err := xrpwallet.GenerateXrpWalletFromSeed(keyName, seed)
-	// if err != nil {
-	// 	return fmt.Errorf("error create key, wallet, %v", err)
-	// }
 	c.AddrToKeyNameMap[newWallet.ClassicAddress.String()] = keyName
 	c.KeyNameToWalletMap[keyName] = &WalletWrapper{
 		keyName: keyName,
@@ -429,7 +401,7 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	srcWallet.txLock.Lock()
 	defer srcWallet.txLock.Unlock()
 
-	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
+	ai, err := c.RPCClient.GetAccountInfo(&account.InfoRequest{
 		Account:     txtypes.Address(srcWallet.FormattedAddress()),
 		LedgerIndex: qcommon.Current,
 	})
@@ -451,7 +423,7 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	// Create payment transaction.
 	tx := transactions.Payment{
 		BaseTx: transactions.BaseTx{
-			Account:  txtypes.Address(srcWallet.Wallet.ClassicAddress),
+			Account:  srcWallet.Wallet.ClassicAddress,
 			Sequence: ai.AccountData.Sequence,
 			Fee:      txtypes.XRPCurrencyAmount(uint64(feeScaled)),
 		},
@@ -474,7 +446,7 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 	}
 
 	flatTx := tx.Flatten()
-	if err := c.RpcClient.Autofill(&flatTx); err != nil {
+	if err := c.RPCClient.Autofill(&flatTx); err != nil {
 		return "", err
 	}
 
@@ -485,7 +457,7 @@ func (c *XrpChain) SendFundsWithRetry(ctx context.Context, keyName string, amoun
 
 	c.logger().Info("sending xrp funds", zap.Any("tx", flatTx))
 
-	response, err := c.RpcClient.SubmitAndWait(txBlob, true)
+	response, err := c.RPCClient.SubmitAndWait(txBlob, true)
 	if err != nil {
 		if strings.Contains(err.Error(), "tefPAST_SEQ") && retry {
 			if err := testutil.WaitForBlocks(ctx, 1, c); err != nil {
@@ -511,7 +483,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 	srcWallet.txLock.Lock()
 	defer srcWallet.txLock.Unlock()
 
-	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
+	ai, err := c.RPCClient.GetAccountInfo(&account.InfoRequest{
 		Account:     txtypes.Address(srcWallet.FormattedAddress()),
 		LedgerIndex: qcommon.Current,
 	})
@@ -533,7 +505,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 	// Create payment transaction.
 	tx := transactions.Payment{
 		BaseTx: transactions.BaseTx{
-			Account:  txtypes.Address(srcWallet.Wallet.ClassicAddress),
+			Account:  srcWallet.Wallet.ClassicAddress,
 			Sequence: ai.AccountData.Sequence,
 			Fee:      txtypes.XRPCurrencyAmount(uint64(feeScaled)),
 		},
@@ -556,7 +528,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 	}
 
 	flatTx := tx.Flatten()
-	if err := c.RpcClient.Autofill(&flatTx); err != nil {
+	if err := c.RPCClient.Autofill(&flatTx); err != nil {
 		return "", err
 	}
 
@@ -567,7 +539,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 
 	c.logger().Info("sending xrp funds", zap.Any("tx", flatTx))
 
-	txResponse, err := c.RpcClient.Submit(txBlob, true)
+	txResponse, err := c.RPCClient.Submit(txBlob, true)
 	if err != nil {
 		return "", err
 	}
@@ -586,7 +558,7 @@ func (c *XrpChain) SendFundsWithoutWait(ctx context.Context, keyName string, amo
 
 func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 	time.Sleep(time.Millisecond * 200) // TODO: slow down WaitForBlocks instead of here
-	ledgerIndex, err := c.RpcClient.GetLedgerIndex()
+	ledgerIndex, err := c.RPCClient.GetLedgerIndex()
 	if err != nil {
 		return 0, err
 	}
@@ -594,7 +566,7 @@ func (c *XrpChain) Height(ctx context.Context) (int64, error) {
 }
 
 func (c *XrpChain) GetBalance(ctx context.Context, address string, denom string) (sdkmath.Int, error) {
-	ai, err := c.RpcClient.GetAccountInfo(&account.InfoRequest{
+	ai, err := c.RPCClient.GetAccountInfo(&account.InfoRequest{
 		Account:     txtypes.Address(address),
 		LedgerIndex: qcommon.Validated,
 	})
