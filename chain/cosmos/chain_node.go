@@ -121,6 +121,8 @@ const (
 	grpcPort    = "9090/tcp"
 	apiPort     = "1317/tcp"
 	privValPort = "1234/tcp"
+	ethRpcPort  = "8545/tcp" // for evm+cosmos networks
+	ethWsPort   = "8546/tcp" // for evm+cosmos networks
 
 	cometMockRawPort = "22331"
 )
@@ -131,6 +133,8 @@ var sentryPorts = nat.PortMap{
 	nat.Port(grpcPort):    {},
 	nat.Port(apiPort):     {},
 	nat.Port(privValPort): {},
+	nat.Port(ethRpcPort):  {},
+	nat.Port(ethWsPort):   {},
 }
 
 // NewClient creates and assigns a new Tendermint RPC client to the ChainNode.
