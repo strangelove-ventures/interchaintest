@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 )
 
@@ -31,7 +31,7 @@ func EnsureBusybox(ctx context.Context, cli *client.Client) error {
 		return nil
 	}
 
-	images, err := cli.ImageList(ctx, types.ImageListOptions{
+	images, err := cli.ImageList(ctx, image.ListOptions{
 		Filters: filters.NewArgs(filters.Arg("reference", busyboxRef)),
 	})
 	if err != nil {
@@ -43,7 +43,7 @@ func EnsureBusybox(ctx context.Context, cli *client.Client) error {
 		return nil
 	}
 
-	rc, err := cli.ImagePull(ctx, busyboxRef, types.ImagePullOptions{})
+	rc, err := cli.ImagePull(ctx, busyboxRef, image.PullOptions{})
 	if err != nil {
 		return err
 	}

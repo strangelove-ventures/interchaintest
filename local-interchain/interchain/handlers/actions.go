@@ -223,7 +223,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 	util.Write(w, []byte(output))
 }
 
-func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
+func (a *actions) relayerCheck(w http.ResponseWriter, _ *http.Request) error {
 	var err error = nil
 
 	if a.relayer == nil {
@@ -234,7 +234,7 @@ func (a *actions) relayerCheck(w http.ResponseWriter, r *http.Request) error {
 	return err
 }
 
-func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {
+func dumpContractState(_ *http.Request, cmdMap map[string]string, a *actions, val *cosmos.ChainNode) []byte {
 	contract, ok1 := cmdMap["contract"]
 	height, ok2 := cmdMap["height"]
 	if !ok1 || !ok2 {
@@ -259,7 +259,7 @@ func dumpContractState(r *http.Request, cmdMap map[string]string, a *actions, va
 	return jsonRes
 }
 
-func faucet(r *http.Request, cmdMap map[string]string, ctx context.Context, a *actions, val *cosmos.ChainNode) []byte {
+func faucet(_ *http.Request, cmdMap map[string]string, ctx context.Context, _ *actions, val *cosmos.ChainNode) []byte {
 	amount, ok1 := cmdMap["amount"]
 	toAddr, ok2 := cmdMap["address"]
 

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -77,7 +76,7 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 			return
 		}
 
-		if err := w.cli.ContainerRemove(ctx, cc.ID, types.ContainerRemoveOptions{
+		if err := w.cli.ContainerRemove(ctx, cc.ID, container.RemoveOptions{
 			Force: true,
 		}); err != nil {
 			w.log.Warn("Failed to remove file content container", zap.String("container_id", cc.ID), zap.Error(err))
@@ -111,12 +110,12 @@ func (w *FileWriter) WriteFile(ctx context.Context, volumeName, relPath string, 
 		cc.ID,
 		mountPath,
 		&buf,
-		types.CopyToContainerOptions{},
+		container.CopyToContainerOptions{},
 	); err != nil {
 		return fmt.Errorf("copying tar to container: %w", err)
 	}
 
-	if err := w.cli.ContainerStart(ctx, cc.ID, types.ContainerStartOptions{}); err != nil {
+	if err := w.cli.ContainerStart(ctx, cc.ID, container.StartOptions{}); err != nil {
 		return fmt.Errorf("starting write-file container: %w", err)
 	}
 

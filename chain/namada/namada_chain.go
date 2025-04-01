@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -74,7 +74,7 @@ func (c *NamadaChain) Initialize(ctx context.Context, testName string, cli *clie
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			types.ImagePullOptions{
+			dockerimage.PullOptions{
 				Platform: "amd64",
 			})
 		if err != nil {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	chantypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	chantypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 )
 
 func TestChannelOptsConfigured(t *testing.T) {

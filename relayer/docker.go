@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	dockerimage "github.com/docker/docker/api/types/image"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -389,7 +390,7 @@ func (r *DockerRelayer) StopRelayer(ctx context.Context, rep ibc.RelayerExecRepo
 	stdoutBuf := new(bytes.Buffer)
 	stderrBuf := new(bytes.Buffer)
 	containerID := r.containerLifecycle.ContainerID()
-	rc, err := r.client.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
+	rc, err := r.client.ContainerLogs(ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       "50",
@@ -481,7 +482,7 @@ func (r *DockerRelayer) pullContainerImageIfNecessary(containerImage ibc.DockerI
 		return nil
 	}
 
-	rc, err := r.client.ImagePull(context.TODO(), containerImage.Ref(), types.ImagePullOptions{})
+	rc, err := r.client.ImagePull(context.TODO(), containerImage.Ref(), dockerimage.PullOptions{})
 	if err != nil {
 		return err
 	}

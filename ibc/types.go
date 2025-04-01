@@ -9,13 +9,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/google/go-cmp/cmp"
 
 	"cosmossdk.io/math"
 
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
@@ -361,9 +361,9 @@ func (i DockerImage) Ref() string {
 
 func (i DockerImage) PullImage(ctx context.Context, client *client.Client) error {
 	ref := i.Ref()
-	_, _, err := client.ImageInspectWithRaw(ctx, ref)
+	_, err := client.ImageInspect(ctx, ref)
 	if err != nil {
-		rc, err := client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		rc, err := client.ImagePull(ctx, ref, dockerimage.PullOptions{})
 		if err != nil {
 			return fmt.Errorf("pull image %s: %w", ref, err)
 		}
@@ -458,6 +458,7 @@ type ICSConfig struct {
 	ProviderVerOverride     string         `yaml:"provider,omitempty" json:"provider,omitempty"`
 	ConsumerVerOverride     string         `yaml:"consumer,omitempty" json:"consumer,omitempty"`
 	ConsumerCopyProviderKey func(int) bool `yaml:"-" json:"-"`
+	ICSImageRepo            string         `yaml:"ics-image-repo,omitempty" json:"ics-image-repo,omitempty"`
 }
 
 // GenesisConfig is used to start a chain from a pre-defined genesis state.

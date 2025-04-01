@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
-	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -308,7 +308,7 @@ func (c *PenumbraChain) initializeChainNodes(
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			types.ImagePullOptions{},
+			dockerimage.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",

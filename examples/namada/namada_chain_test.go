@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
 	"cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -154,8 +154,8 @@ func TestNamadaNetwork(t *testing.T) {
 	require.True(t, chainUserBalAfter1.Equal(expectedBal))
 
 	// Test destination wallet has increased funds
-	dstIbcTrace := transfertypes.GetPrefixedDenom("transfer", namadaChannelID, chain.Config().Denom)
-	namadaUserIbcBalAfter1, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace)
+	dstIbcTrace := transfertypes.NewDenom(chain.Config().Denom, transfertypes.NewHop("transfer", namadaChannelID))
+	namadaUserIbcBalAfter1, err := namada.GetBalance(ctx, namadaUser.KeyName(), dstIbcTrace.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, namadaUserIbcBalAfter1.Equal(amountToSend))
 
@@ -181,7 +181,7 @@ func TestNamadaNetwork(t *testing.T) {
 	require.True(t, namadaUserBalAfter2.Equal(expectedBal))
 
 	// test destination wallet has increased funds
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", chainChannelID, namada.Config().Denom))
+	srcDenomTrace := transfertypes.NewDenom(namada.Config().Denom, transfertypes.NewHop("transfer", chainChannelID))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 	chainUserIbcBalAfter2, err := chain.GetBalance(ctx, chainUser.FormattedAddress(), dstIbcDenom)
 	require.NoError(t, err)
@@ -226,8 +226,8 @@ func TestNamadaNetwork(t *testing.T) {
 	require.True(t, chainUserBalAfter3.Equal(expectedBal))
 
 	// test destination wallet has increased funds
-	dstIbcTrace = transfertypes.GetPrefixedDenom("transfer", namadaChannelID, chain.Config().Denom)
-	namadaShieldedUserIbcBalAfter3, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	dstIbcTrace = transfertypes.NewDenom(chain.Config().Denom, transfertypes.NewHop("transfer", namadaChannelID))
+	namadaShieldedUserIbcBalAfter3, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, namadaShieldedUserIbcBalAfter3.Equal(amountToSend))
 
@@ -242,7 +242,7 @@ func TestNamadaNetwork(t *testing.T) {
 	amountToSend = math.NewInt(1)
 	transfer = ibc.WalletAmount{
 		Address: namadaShieldedUser2.FormattedAddress(),
-		Denom:   dstIbcTrace,
+		Denom:   dstIbcTrace.IBCDenom(),
 		Amount:  amountToSend,
 	}
 	err = namada.ShieldedTransfer(ctx, namadaShieldedUser.KeyName(), transfer)
@@ -251,12 +251,12 @@ func TestNamadaNetwork(t *testing.T) {
 
 	// test source wallet has decreased funds
 	expectedBal = namadaShieldedUserIbcBalAfter3.Sub(amountToSend)
-	namadaShieldedUserBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace)
+	namadaShieldedUserBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser.KeyName(), dstIbcTrace.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, namadaShieldedUserBalAfter4.Equal(expectedBal))
 
 	// test destination wallet has increased funds
-	namadaShieldedUser2IbcBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace)
+	namadaShieldedUser2IbcBalAfter4, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, namadaShieldedUser2IbcBalAfter4.Equal(amountToSend))
 
@@ -265,7 +265,7 @@ func TestNamadaNetwork(t *testing.T) {
 	dstAddress = chainUser.FormattedAddress()
 	transfer = ibc.WalletAmount{
 		Address: dstAddress,
-		Denom:   dstIbcTrace,
+		Denom:   dstIbcTrace.IBCDenom(),
 		Amount:  amountToSend,
 	}
 	tx, err = namada.SendIBCTransfer(ctx, namadaChannelID, namadaShieldedUser2.KeyName(), transfer, ibc.TransferOptions{})
@@ -277,7 +277,7 @@ func TestNamadaNetwork(t *testing.T) {
 
 	// test source wallet has decreased funds
 	expectedBal = namadaShieldedUser2IbcBalAfter4.Sub(amountToSend)
-	namadaShieldedUser2BalAfter5, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace)
+	namadaShieldedUser2BalAfter5, err := namada.GetBalance(ctx, namadaShieldedUser2.KeyName(), dstIbcTrace.IBCDenom())
 	require.NoError(t, err)
 	require.True(t, namadaShieldedUser2BalAfter5.Equal(expectedBal))
 

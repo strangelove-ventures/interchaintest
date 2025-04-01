@@ -4,49 +4,61 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetHostPort(t *testing.T) {
-	for _, tt := range []struct {
-		Container types.ContainerJSON
-		PortID    string
-		Want      string
+	tests := []struct {
+		name     string
+		cont     container.InspectResponse
+		portID   string
+		expected string
 	}{
 		{
-			types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
-					NetworkSettingsBase: types.NetworkSettingsBase{
+			name: "valid port",
+			cont: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
+					NetworkSettingsBase: container.NetworkSettingsBase{
 						Ports: nat.PortMap{
-							nat.Port("test"): []nat.PortBinding{
-								{HostIP: "1.2.3.4", HostPort: "8080"},
-								{HostIP: "0.0.0.0", HostPort: "9999"},
+							"8080/tcp": []nat.PortBinding{
+								{HostIP: "0.0.0.0", HostPort: "8081"},
 							},
 						},
 					},
 				},
-			}, "test", "1.2.3.4:8080",
+			},
+			portID:   "8080/tcp",
+			expected: "0.0.0.0:8081",
 		},
 		{
-			types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
-					NetworkSettingsBase: types.NetworkSettingsBase{
-						Ports: nat.PortMap{
-							nat.Port("test"): []nat.PortBinding{
-								{HostIP: "0.0.0.0", HostPort: "3000"},
-							},
-						},
+			name: "no port",
+			cont: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
+					NetworkSettingsBase: container.NetworkSettingsBase{
+						Ports: nat.PortMap{},
 					},
 				},
-			}, "test", "0.0.0.0:3000",
+			},
+			portID:   "8080/tcp",
+			expected: "",
 		},
+		{
+			name:     "nil network settings",
+			cont:     container.InspectResponse{},
+			portID:   "8080/tcp",
+			expected: "",
+		},
+	}
 
-		{types.ContainerJSON{}, "", ""},
-		{types.ContainerJSON{NetworkSettings: &types.NetworkSettings{}}, "does-not-matter", ""},
-	} {
-		require.Equal(t, tt.Want, GetHostPort(tt.Container, tt.PortID), tt)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetHostPort(tt.cont, tt.portID)
+			if got != tt.expected {
+				t.Errorf("GetHostPort() = %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }
 

@@ -130,7 +130,7 @@ func (i *info) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func config(w http.ResponseWriter, r *http.Request, val *cosmos.ChainNode) {
+func config(w http.ResponseWriter, _ *http.Request, val *cosmos.ChainNode) {
 	cfg := val.Chain.Config()
 	jsonRes, err := MarshalIBCChainConfig(cfg)
 	if err != nil {
@@ -141,7 +141,7 @@ func config(w http.ResponseWriter, r *http.Request, val *cosmos.ChainNode) {
 	util.Write(w, []byte(jsonRes))
 }
 
-func hasCommand(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+func hasCommand(w http.ResponseWriter, _ *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
 	cmd, ok := form["command"]
 	if !ok {
 		util.WriteError(w, fmt.Errorf("command not found in query params"))
@@ -151,7 +151,7 @@ func hasCommand(w http.ResponseWriter, r *http.Request, form url.Values, i *info
 	util.Write(w, []byte(strconv.FormatBool(val.HasCommand(i.ctx, cmd[0]))))
 }
 
-func readFile(w http.ResponseWriter, r *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
+func readFile(w http.ResponseWriter, _ *http.Request, form url.Values, i *info, val *cosmos.ChainNode) {
 	relPath, ok := form["relative_path"]
 	if !ok {
 		util.WriteError(w, fmt.Errorf("relPath not found in query params"))
@@ -167,7 +167,7 @@ func readFile(w http.ResponseWriter, r *http.Request, form url.Values, i *info, 
 	util.Write(w, bz)
 }
 
-func getBuildInfo(w http.ResponseWriter, r *http.Request, i *info, val *cosmos.ChainNode) {
+func getBuildInfo(w http.ResponseWriter, _ *http.Request, i *info, val *cosmos.ChainNode) {
 	bi := val.GetBuildInformation(i.ctx)
 	jsonRes, err := json.MarshalIndent(bi, "", "  ")
 	if err != nil {
@@ -177,7 +177,7 @@ func getBuildInfo(w http.ResponseWriter, r *http.Request, i *info, val *cosmos.C
 	util.Write(w, []byte(jsonRes))
 }
 
-func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
+func get_logs(w http.ResponseWriter, _ *http.Request, i *info) {
 	fp := filepath.Join(i.InstallDir, "configs", "logs.json")
 
 	bz, err := os.ReadFile(fp)

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	dockertypes "github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
@@ -22,8 +22,8 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
-	chanTypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types" // nolint:staticcheck
+	chanTypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -624,7 +624,7 @@ func (c *Thorchain) pullImages(ctx context.Context, cli *client.Client) {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockerimage.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",

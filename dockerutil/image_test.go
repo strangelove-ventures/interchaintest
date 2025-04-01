@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
@@ -151,7 +151,7 @@ func TestContainer(t *testing.T) {
 		require.Equal(t, "started", string(stdout))
 		require.Empty(t, stderr)
 
-		containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+		containers, err := image.client.ContainerList(ctx, container.ListOptions{
 			All:     true,
 			Filters: filters.NewArgs(filters.Arg("name", c.Name)),
 		})
@@ -167,7 +167,7 @@ func TestContainer(t *testing.T) {
 		require.NoError(t, c.Stop(10*time.Second))
 		require.NoError(t, c.Stop(10*time.Second)) // assert idempotent
 
-		containers, err := image.client.ContainerList(ctx, types.ContainerListOptions{
+		containers, err := image.client.ContainerList(ctx, container.ListOptions{
 			All:     true,
 			Filters: filters.NewArgs(filters.Arg("name", c.Name)),
 		})

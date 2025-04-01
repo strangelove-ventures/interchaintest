@@ -7,7 +7,7 @@ import (
 	fmt "fmt"
 	types "github.com/cosmos/cosmos-sdk/codec/types"
 	proto "github.com/cosmos/gogoproto/proto"
-	types1 "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	types1 "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	v11 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/asset/v1"
 	v12 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/keys/v1"
 	v1 "github.com/strangelove-ventures/interchaintest/v8/chain/penumbra/core/num/v1"

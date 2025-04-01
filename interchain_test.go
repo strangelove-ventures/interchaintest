@@ -12,8 +12,8 @@ import (
 
 	"cosmossdk.io/math"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types" // nolint:staticcheck
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types" // nolint:staticcheck
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -439,7 +439,7 @@ func broadcastTxCosmosChainTest(t *testing.T, relayerImpl ibc.RelayerImplementat
 	t.Run("transfer success", func(t *testing.T) {
 		require.NoError(t, testutil.WaitForBlocks(ctx, 5, chain0, chain1))
 
-		srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", "channel-0", chain0.Config().Denom))
+		srcDenomTrace := transfertypes.NewDenom(chain0.Config().Denom, transfertypes.NewHop("transfer", "channel-0"))
 		dstIbcDenom := srcDenomTrace.IBCDenom()
 
 		dstFinalBalance, err := chain1.GetBalance(ctx, testUser.(*cosmos.CosmosWallet).FormattedAddressWithPrefix(chain1.Config().Bech32Prefix), dstIbcDenom)

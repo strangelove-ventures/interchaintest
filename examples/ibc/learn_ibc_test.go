@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 
 	"cosmossdk.io/math"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
@@ -122,7 +122,7 @@ func TestLearn(t *testing.T) {
 	require.True(t, gaiaUserBalNew.Equal(expectedBal))
 
 	// Trace IBC Denom
-	srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, gaia.Config().Denom))
+	srcDenomTrace := transfertypes.NewDenom(gaia.Config().Denom, transfertypes.NewHop("transfer", osmoChannelID))
 	dstIbcDenom := srcDenomTrace.IBCDenom()
 
 	// Test destination wallet has increased funds
