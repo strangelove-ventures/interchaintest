@@ -3,7 +3,7 @@ package ibc
 import (
 	"context"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"cosmossdk.io/math"
 )

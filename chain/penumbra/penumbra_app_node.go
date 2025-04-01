@@ -10,8 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/client"
 	"go.uber.org/zap"
 
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"

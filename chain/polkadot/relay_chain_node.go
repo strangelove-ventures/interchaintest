@@ -10,11 +10,11 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	p2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	"github.com/moby/moby/client"
 	"go.uber.org/zap"
 
 	"cosmossdk.io/math"

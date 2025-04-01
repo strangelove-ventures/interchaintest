@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+	dockerimagetypes "github.com/docker/docker/api/types/image"
 	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/client"
 
 	"cosmossdk.io/math"
 
@@ -363,7 +363,7 @@ func (i DockerImage) PullImage(ctx context.Context, client *client.Client) error
 	ref := i.Ref()
 	_, _, err := client.ImageInspectWithRaw(ctx, ref)
 	if err != nil {
-		rc, err := client.ImagePull(ctx, ref, types.ImagePullOptions{})
+		rc, err := client.ImagePull(ctx, ref, dockerimagetypes.PullOptions{})
 		if err != nil {
 			return fmt.Errorf("pull image %s: %w", ref, err)
 		}

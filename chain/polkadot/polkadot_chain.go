@@ -10,13 +10,13 @@ import (
 
 	"github.com/99designs/keyring"
 	"github.com/StirlingMarketingGroup/go-namecase"
-	"github.com/docker/docker/api/types"
+	dockerimagetypes "github.com/docker/docker/api/types/image"
 	volumetypes "github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/misko9/go-substrate-rpc-client/v4/signature"
 	gstypes "github.com/misko9/go-substrate-rpc-client/v4/types"
+	"github.com/moby/moby/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -255,7 +255,7 @@ func (c *PolkadotChain) Initialize(ctx context.Context, testName string, cli *cl
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			types.ImagePullOptions{},
+			dockerimagetypes.PullOptions{},
 		)
 		if err != nil {
 			c.log.Error("Failed to pull image",

@@ -104,7 +104,7 @@ jobs:
             - /go/bin/nobled
 
       - name: Publish Tarball as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: noble-docker-image
           path: ${{ env.TAR_PATH }}
@@ -137,7 +137,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Download Tarball Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: noble-docker-image
 
@@ -202,7 +202,7 @@ jobs:
 ...
 ...
       - name: Publish Tarball as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chain-docker-image
           path: ${{ env.TAR_PATH }}
@@ -246,7 +246,7 @@ The example below will spin up 9 runners, one for each test.
         uses: actions/checkout@v3
 
       - name: Download Tarball Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: chain-docker-image
 

@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/docker/docker/client"
 	"github.com/icza/dyno"
 	p2pcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	gsrpc "github.com/misko9/go-substrate-rpc-client/v4"
+	"github.com/moby/moby/client"
 	"go.uber.org/zap"
 
 	"cosmossdk.io/math"
