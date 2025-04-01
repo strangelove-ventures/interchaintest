@@ -7,46 +7,44 @@ run:
 linters:
   disable-all: true
   enable:
-  - asciicheck
-  - bidichk
-  - bodyclose
-  - copyloopvar
-  - decorder
-  - dupl
-  - dupword
-  - errcheck
-  - errchkjson
-  - errname
-  - exhaustive
-  - forbidigo
-  - gci
-  - goconst
-  - gocritic
-  - godot
-  - gofumpt
-  - gosec
-  - gosimple
-  - gosmopolitan
-  - govet
-  - grouper
-  - ineffassign
-  - loggercheck
-  - misspell
-  # - nilerr disabled because we return nil when there are errors in places that need to keep running e.g. polling/waiting for a condition
-  # - nilnil disabled because we return nil, nil when polling but waiting for a conditional
-  - noctx
-  - staticcheck
-  - stylecheck
-  - testifylint
-  - thelper
-  - tparallel
-  - typecheck
-  - unconvert
-  - unparam
-  - unused
-  - usestdlibvars
-  - wastedassign
-  - whitespace
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - decorder
+    - dupl
+    - dupword
+    - errcheck
+    - errchkjson
+    - errname
+    - exhaustive
+    - forbidigo
+    - gci
+    - goconst
+    - gocritic
+    - godot
+    - gofumpt
+    - gosec
+    - gosimple
+    - gosmopolitan
+    - govet
+    - grouper
+    - ineffassign
+    - loggercheck
+    - misspell
+    - noctx
+    - staticcheck
+    - stylecheck
+    - testifylint
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
 
 linters-settings:
   gci:

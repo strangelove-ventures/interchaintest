@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/docker/docker/api/types/container"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
@@ -53,7 +54,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	}
 	defer cli.Close()
 
-	reader, err := cli.ImagePull(ctx, imageFull, image.PullOptions{})
+	reader, err := cli.ImagePull(ctx, imageFull, dockerimage.PullOptions{})
 	if err != nil {
 		return "", fmt.Errorf("pull image %s: %w", imageFull, err)
 	}
