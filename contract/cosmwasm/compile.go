@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
@@ -54,7 +53,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	}
 	defer cli.Close()
 
-	reader, err := cli.ImagePull(ctx, imageFull, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, imageFull, image.PullOptions{})
 	if err != nil {
 		return "", fmt.Errorf("pull image %s: %w", imageFull, err)
 	}
@@ -91,7 +90,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 		return "", fmt.Errorf("create container %s: %w", imageFull, err)
 	}
 
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		return "", fmt.Errorf("start container %s: %w", imageFull, err)
 	}
 
@@ -104,7 +103,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 	case <-statusCh:
 	}
 
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	out, err := cli.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true})
 	if err != nil {
 		return "", fmt.Errorf("logs container %s: %w", imageFull, err)
 	}
@@ -122,7 +121,7 @@ func compile(image string, optVersion string, repoPath string) (string, error) {
 		}
 	}
 
-	err = cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{
+	err = cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})
