@@ -3,13 +3,13 @@ package namada
 import (
 	"context"
 	"fmt"
-	dockernetwork "github.com/docker/docker/api/types/network"
 	"net"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	dockernetwork "github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"

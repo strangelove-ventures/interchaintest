@@ -29,7 +29,7 @@ func TestTx(t *testing.T) {
     "foo": true
   }
 }`
-		require.Equal(t, want, pres.Data())
+		require.JSONEq(t, want, pres.Data())
 	})
 
 	t.Run("non-json", func(t *testing.T) {

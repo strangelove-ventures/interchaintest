@@ -3,7 +3,6 @@ package utxo
 import (
 	"context"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"math"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"

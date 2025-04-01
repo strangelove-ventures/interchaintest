@@ -2,6 +2,7 @@ package interchaintest
 
 import (
 	"fmt"
+
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 

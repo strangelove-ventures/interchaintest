@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	stdmath "math"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"

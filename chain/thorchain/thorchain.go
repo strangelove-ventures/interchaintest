@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"math"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	dockerimage "github.com/docker/docker/api/types/image"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"

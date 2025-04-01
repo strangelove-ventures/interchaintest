@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -130,7 +130,7 @@ func (image *Image) imageRef() string {
 // EnsurePulled can only pull public images.
 func (image *Image) EnsurePulled(ctx context.Context) error {
 	ref := image.imageRef()
-	_, _, err := image.client.ImageInspectWithRaw(ctx, ref)
+	_, err := image.client.ImageInspect(ctx, ref)
 	if err != nil {
 		rc, err := image.client.ImagePull(ctx, ref, dockerimage.PullOptions{})
 		if err != nil {

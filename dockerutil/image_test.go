@@ -2,13 +2,13 @@ package dockerutil
 
 import (
 	"context"
-	"github.com/docker/docker/api/types/container"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"

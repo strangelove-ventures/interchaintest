@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"path/filepath"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"

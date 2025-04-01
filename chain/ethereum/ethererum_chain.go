@@ -3,10 +3,10 @@ package ethereum
 import (
 	"context"
 	"fmt"
-	dockerimage "github.com/docker/docker/api/types/image"
 	"io"
 	"time"
 
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	dockerclient "github.com/docker/docker/client"

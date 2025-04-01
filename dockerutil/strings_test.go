@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetHostPort(t *testing.T) {
 	for _, tt := range []struct {
-		Container types.ContainerJSON
+		Container container.InspectResponse
 		PortID    string
 		Want      string
 	}{
