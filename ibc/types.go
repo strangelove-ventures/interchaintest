@@ -361,7 +361,7 @@ func (i DockerImage) Ref() string {
 
 func (i DockerImage) PullImage(ctx context.Context, client *client.Client) error {
 	ref := i.Ref()
-	_, _, err := client.ImageInspectWithRaw(ctx, ref)
+	_, err := client.ImageInspect(ctx, ref)
 	if err != nil {
 		rc, err := client.ImagePull(ctx, ref, dockerimage.PullOptions{})
 		if err != nil {

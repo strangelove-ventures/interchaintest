@@ -68,6 +68,8 @@ func (f *builtinRelayerFactory) Build(
 		r := hermes.NewHermesRelayer(f.log, t.Name(), cli, networkID, f.options...)
 		f.setRelayerVersion(r.ContainerImage())
 		return r
+	case ibc.Hyperspace:
+		panic("Hyperspace relayer is not implemented")
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}
@@ -89,6 +91,8 @@ func (f *builtinRelayerFactory) Name() string {
 			return "hermes@" + f.version
 		}
 		return "hermes@" + hermes.DefaultContainerVersion
+	case ibc.Hyperspace:
+		return "hyperspace@latest"
 	default:
 		panic(fmt.Errorf("RelayerImplementation %v unknown", f.impl))
 	}

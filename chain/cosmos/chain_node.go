@@ -1373,21 +1373,19 @@ func (tn *ChainNode) AccountKeyBech32(ctx context.Context, name string) (string,
 }
 
 // PeerString returns the string for connecting the nodes passed in.
-func (nodes ChainNodes) PeerString(ctx context.Context) string {
-	addrs := make([]string, len(nodes))
-	for i, n := range nodes {
-		id, err := n.NodeID(ctx)
+func (tn ChainNodes) PeerString(ctx context.Context) string {
+	addrs := make([]string, len(tn))
+	for i, tn := range tn {
+		id, err := tn.NodeID(ctx)
 		if err != nil {
-			// TODO: would this be better to panic?
-			// When would NodeId return an error?
 			break
 		}
-		hostName := n.HostName()
+		hostName := tn.HostName()
 		ps := fmt.Sprintf("%s@%s:26656", id, hostName)
-		nodes.logger().Info("Peering",
+		tn.logger().Info("Peering",
 			zap.String("host_name", hostName),
 			zap.String("peer", ps),
-			zap.String("container", n.Name()),
+			zap.String("container", tn.Name()),
 		)
 		addrs[i] = ps
 	}
@@ -1395,23 +1393,23 @@ func (nodes ChainNodes) PeerString(ctx context.Context) string {
 }
 
 // LogGenesisHashes logs the genesis hashes for the various nodes.
-func (nodes ChainNodes) LogGenesisHashes(ctx context.Context) error {
-	for _, n := range nodes {
-		gen, err := n.GenesisFileContent(ctx)
+func (tn ChainNodes) LogGenesisHashes(ctx context.Context) error {
+	for _, tn := range tn {
+		gen, err := tn.GenesisFileContent(ctx)
 		if err != nil {
 			return err
 		}
 
-		n.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
+		tn.logger().Info("Genesis", zap.String("hash", fmt.Sprintf("%X", sha256.Sum256(gen))))
 	}
 	return nil
 }
 
-func (nodes ChainNodes) logger() *zap.Logger {
-	if len(nodes) == 0 {
+func (tn ChainNodes) logger() *zap.Logger {
+	if len(tn) == 0 {
 		return zap.NewNop()
 	}
-	return nodes[0].logger()
+	return tn[0].logger()
 }
 
 func (tn *ChainNode) Exec(ctx context.Context, cmd []string, env []string) ([]byte, []byte, error) {

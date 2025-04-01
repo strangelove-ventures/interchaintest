@@ -6,21 +6,21 @@ import (
 	"fmt"
 )
 
-func (node *ChainNode) GetConsumerChainByChainId(ctx context.Context, chainId string) (string, error) {
-	chains, err := node.ListConsumerChains(ctx)
+func (tn *ChainNode) GetConsumerChainByChainID(ctx context.Context, chainID string) (string, error) {
+	chains, err := tn.ListConsumerChains(ctx)
 	if err != nil {
 		return "", err
 	}
 	for _, chain := range chains.Chains {
-		if chain.ChainID == chainId {
+		if chain.ChainID == chainID {
 			return chain.ConsumerID, nil
 		}
 	}
 	return "", fmt.Errorf("chain not found")
 }
 
-func (node *ChainNode) ListConsumerChains(ctx context.Context) (ListConsumerChainsResponse, error) {
-	queryRes, _, err := node.ExecQuery(
+func (tn *ChainNode) ListConsumerChains(ctx context.Context) (ListConsumerChainsResponse, error) {
+	queryRes, _, err := tn.ExecQuery(
 		ctx,
 		"provider", "list-consumer-chains",
 	)
@@ -29,7 +29,7 @@ func (node *ChainNode) ListConsumerChains(ctx context.Context) (ListConsumerChai
 	}
 
 	var queryResponse ListConsumerChainsResponse
-	err = json.Unmarshal([]byte(queryRes), &queryResponse)
+	err = json.Unmarshal(queryRes, &queryResponse)
 	if err != nil {
 		return ListConsumerChainsResponse{}, err
 	}
