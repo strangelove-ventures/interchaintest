@@ -53,8 +53,7 @@ type AdaChain struct {
 	rnd                *rand.Rand
 	protocolParameters *cardano.PParams
 
-	blocks     map[uint64]ouroboroscommon.Point
-	blocksLock sync.Mutex
+	blocks *blockDB
 
 	keys     map[string]ed25519.PrivateKey
 	keysLock sync.Mutex
@@ -77,7 +76,7 @@ func NewAdaChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) 
 		log:          log,
 		networkError: make(chan error),
 		rnd:          rand.New(rand.NewPCG(uint64(time.Now().Unix()), 0)),
-		blocks:       make(map[uint64]ouroboroscommon.Point),
+		blocks:       &blockDB{},
 		keys:         make(map[string]ed25519.PrivateKey),
 		addrLocks:    make(map[string]*sync.Mutex),
 	}
@@ -205,12 +204,11 @@ func (a *AdaChain) Start(testName string, ctx context.Context, additionalGenesis
 		if time.Since(start) > 1*time.Minute {
 			return fmt.Errorf("timeout waiting for cardano node to start")
 		}
-		a.blocksLock.Lock()
-		if _, ok := a.blocks[3]; ok {
+		b, ok := a.blocks.last()
+		if ok && b.BlockNumber >= 3 {
 			break
 		}
 		time.Sleep(200 * time.Millisecond)
-		a.blocksLock.Unlock()
 	}
 
 	pparams, err := a.clientConn.LocalStateQuery().Client.GetCurrentProtocolParams()
@@ -386,33 +384,46 @@ func (a *AdaChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 }
 
 func (a *AdaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented())
 }
 
 func (a *AdaChain) Height(ctx context.Context) (int64, error) {
-	//TODO implement me
-	panic("implement me")
+	tip, err := a.clientConn.ChainSync().Client.GetCurrentTip()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get current tip: %w", err)
+	}
+	return int64(tip.BlockNumber), nil
 }
 
 func (a *AdaChain) GetBalance(ctx context.Context, address string, denom string) (math.Int, error) {
-	//TODO implement me
-	panic("implement me")
+	ledgerAddr, err := ledger.NewAddress(address)
+	if err != nil {
+		return math.Int{}, fmt.Errorf("invalid address: %w", err)
+	}
+	utxoRes, err := a.clientConn.LocalStateQuery().Client.GetUTxOByAddress([]ledger.Address{ledgerAddr})
+	if err != nil {
+		return math.Int{}, fmt.Errorf("failed to get utxo: %w", err)
+	}
+	if len(utxoRes.Results) == 0 {
+		return math.Int{}, fmt.Errorf("no utxo found for address: %s", address)
+	}
+	amount := math.ZeroInt()
+	for _, utxo := range utxoRes.Results {
+		amount = amount.Add(math.NewIntFromUint64(utxo.Amount()))
+	}
+	return amount, nil
 }
 
 func (a *AdaChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented())
 }
 
 func (a *AdaChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented())
 }
 
 func (a *AdaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented())
 }
 
 func (a *AdaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {

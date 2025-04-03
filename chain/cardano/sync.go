@@ -1,13 +1,60 @@
 package cardano
 
 import (
-	"encoding/hex"
+	"sync"
 
 	"github.com/blinklabs-io/gouroboros/ledger"
 	"github.com/blinklabs-io/gouroboros/protocol/chainsync"
 	ouroboroscommon "github.com/blinklabs-io/gouroboros/protocol/common"
-	"go.uber.org/zap"
 )
+
+type block struct {
+	SlotNumber  uint64
+	Hash        string
+	BlockNumber uint64
+}
+
+type blockDB struct {
+	blocks     []block
+	blocksLock sync.Mutex
+}
+
+func (db *blockDB) append(blockNumber, slotNumber uint64, hash string) {
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
+
+	// zero based index, index = blockNumber-1
+	for i := len(db.blocks); i < int(blockNumber-1); i++ {
+		// fill empty blocks if necessary
+		db.blocks = append(db.blocks, block{})
+	}
+
+	// append the new block
+	db.blocks = append(db.blocks, block{
+		SlotNumber:  slotNumber,
+		Hash:        hash,
+		BlockNumber: blockNumber,
+	})
+}
+
+func (db *blockDB) get(blockNumber uint64) (block, bool) {
+	idx := int(blockNumber - 1)
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
+	if idx < 0 || idx >= len(db.blocks) {
+		return block{}, false
+	}
+	return db.blocks[idx], true
+}
+
+func (db *blockDB) last() (block, bool) {
+	db.blocksLock.Lock()
+	defer db.blocksLock.Unlock()
+	if len(db.blocks) == 0 {
+		return block{}, false
+	}
+	return db.blocks[len(db.blocks)-1], true
+}
 
 func (a *AdaChain) chainSyncRollForwardHandler(
 	ctx chainsync.CallbackContext,
@@ -17,14 +64,7 @@ func (a *AdaChain) chainSyncRollForwardHandler(
 ) error {
 	switch h := blockData.(type) {
 	case ledger.Block:
-		hashBz, err := hex.DecodeString(h.Hash())
-		if err != nil {
-			a.log.Error("fail to decode block hash", zap.Error(err))
-		}
-		a.blocksLock.Lock()
-		point := ouroboroscommon.NewPoint(h.SlotNumber(), hashBz)
-		a.blocks[h.SlotNumber()] = point
-		a.blocksLock.Unlock()
+		a.blocks.append(h.BlockNumber(), h.SlotNumber(), h.Hash())
 
 		a.txWaitersLock.Lock()
 		for _, tx := range h.Transactions() {
