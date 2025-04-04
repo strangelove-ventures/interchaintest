@@ -17,13 +17,13 @@ import (
 	"github.com/blinklabs-io/gouroboros/ledger"
 	"github.com/blinklabs-io/gouroboros/protocol/chainsync"
 	ouroboroscommon "github.com/blinklabs-io/gouroboros/protocol/common"
-	dockertypes "github.com/docker/docker/api/types"
+	dockertypes "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/kocubinski/gardano/address"
 	gtx "github.com/kocubinski/gardano/tx"
+	dockerclient "github.com/moby/moby/client"
 	"github.com/strangelove-ventures/interchaintest/v8/dockerutil"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"github.com/utxorpc/go-codegen/utxorpc/v1alpha/cardano"
@@ -494,7 +494,7 @@ func (a *AdaChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
 		rc, err := cli.ImagePull(
 			ctx,
 			image.Repository+":"+image.Version,
-			dockertypes.ImagePullOptions{},
+			dockertypes.PullOptions{},
 		)
 		if err != nil {
 			a.log.Error("Failed to pull image",
