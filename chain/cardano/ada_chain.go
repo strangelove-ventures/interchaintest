@@ -246,17 +246,9 @@ func (a *AdaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout
 	return res.Stdout, res.Stderr, res.Err
 }
 
-func (a *AdaChain) ExportState(ctx context.Context, height int64) (string, error) {
-	panic(errNotImplemented())
-}
-
 func (a *AdaChain) GetRPCAddress() string {
 	rpcPortNumber := strings.Split(n2cPort, "/")
 	return fmt.Sprintf("%s:%s", a.HostName(), rpcPortNumber[0])
-}
-
-func (a *AdaChain) GetGRPCAddress() string {
-	panic(errNotImplemented())
 }
 
 func (a *AdaChain) GetHostRPCAddress() string {
@@ -267,10 +259,6 @@ func (a *AdaChain) GetHostRPCAddress() string {
 func (a *AdaChain) GetHostPeerAddress() string {
 	rpcPortNumber := strings.Split(n2nPort, "/")
 	return fmt.Sprintf("127.0.0.1:%s", rpcPortNumber[0])
-}
-
-func (a *AdaChain) GetHostGRPCAddress() string {
-	panic(errNotImplemented())
 }
 
 func (a *AdaChain) HomeDir() string {
@@ -441,10 +429,6 @@ func (a *AdaChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 	return txHashHex, nil
 }
 
-func (a *AdaChain) SendIBCTransfer(ctx context.Context, channelID, keyName string, amount ibc.WalletAmount, options ibc.TransferOptions) (ibc.Tx, error) {
-	panic(errNotImplemented())
-}
-
 func (a *AdaChain) Height(ctx context.Context) (int64, error) {
 	tip, err := a.clientConn.ChainSync().Client.GetCurrentTip()
 	if err != nil {
@@ -470,18 +454,6 @@ func (a *AdaChain) GetBalance(ctx context.Context, address string, denom string)
 		amount = amount.Add(math.NewIntFromUint64(utxo.Amount()))
 	}
 	return amount, nil
-}
-
-func (a *AdaChain) GetGasFeesInNativeDenom(gasPaid int64) int64 {
-	panic(errNotImplemented())
-}
-
-func (a *AdaChain) Acknowledgements(ctx context.Context, height int64) ([]ibc.PacketAcknowledgement, error) {
-	panic(errNotImplemented())
-}
-
-func (a *AdaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTimeout, error) {
-	panic(errNotImplemented())
 }
 
 func (a *AdaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
