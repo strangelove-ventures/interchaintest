@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"net"
 	"strings"
 	"sync"
@@ -50,8 +49,8 @@ type AdaChain struct {
 	clientConn         *ouroboros.Connection
 	containerLifecycle *dockerutil.ContainerLifecycle
 	networkError       chan error
-	rnd                *rand.Rand
 	protocolParameters *cardano.PParams
+	faucetAddress      address.Address
 
 	blocks *blockDB
 
@@ -75,10 +74,10 @@ func NewAdaChain(testName string, chainConfig ibc.ChainConfig, log *zap.Logger) 
 		cfg:          chainConfig,
 		log:          log,
 		networkError: make(chan error),
-		rnd:          rand.New(rand.NewPCG(uint64(time.Now().Unix()), 0)),
 		blocks:       &blockDB{},
 		keys:         make(map[string]ed25519.PrivateKey),
 		addrLocks:    make(map[string]*sync.Mutex),
+		txWaiters:    make(map[string]chan struct{}),
 	}
 }
 
@@ -123,7 +122,7 @@ func (a *AdaChain) Initialize(ctx context.Context, testName string, cli *dockerc
 }
 
 func (a *AdaChain) Name() string {
-	return fmt.Sprintf("xrp-%s-%s", a.cfg.ChainID, dockerutil.SanitizeContainerName(a.testName))
+	return fmt.Sprintf("ada-%s-%s", a.cfg.ChainID, dockerutil.SanitizeContainerName(a.testName))
 }
 
 func (a *AdaChain) Bind() []string {
@@ -159,6 +158,9 @@ func (a *AdaChain) Start(testName string, ctx context.Context, additionalGenesis
 		a.log.Info("Port overrides", fields...)
 	}
 
+	if len(a.faucetAddress) > 0 {
+		a.cfg.Env = append(a.cfg.Env, fmt.Sprintf("FUND_ACCOUNT=%s", a.faucetAddress.String()))
+	}
 	err := a.containerLifecycle.CreateContainer(ctx, a.testName, a.NetworkID, a.cfg.Images[0],
 		usingPorts, "", a.Bind(), []mount.Mount{}, a.HostName(), nil, a.cfg.Env, nil)
 	if err != nil {
@@ -174,8 +176,11 @@ func (a *AdaChain) Start(testName string, ctx context.Context, additionalGenesis
 	networkLogger := NewSlogWrapper(a.log)
 	networkMagic := uint32(42)
 
+	a.log.Info("waiting for cardano node to start")
+	time.Sleep(15 * time.Second)
+
 	// create n2c connection
-	n2cConn, err := net.Dial("tcp", a.GetHostPeerAddress())
+	n2cConn, err := net.Dial("tcp", a.GetHostRPCAddress())
 	if err != nil {
 		return fmt.Errorf("fail to dial n2c host: %w", err)
 	}
@@ -194,6 +199,7 @@ func (a *AdaChain) Start(testName string, ctx context.Context, additionalGenesis
 		return fmt.Errorf("fail to create ouroboros n2c connection: %w", err)
 	}
 
+	a.log.Info("Starting ouroboros n2c connection", zap.String("host", a.GetRPCAddress()))
 	err = a.clientConn.ChainSync().Client.Sync([]ouroboroscommon.Point{ouroboroscommon.NewPointOrigin()})
 	if err != nil {
 		return fmt.Errorf("fail to start chain sync: %w", err)
@@ -220,6 +226,16 @@ func (a *AdaChain) Start(testName string, ctx context.Context, additionalGenesis
 	return nil
 }
 
+func (a *AdaChain) Stop() error {
+	if a.clientConn != nil {
+		if err := a.clientConn.ChainSync().Client.Stop(); err != nil {
+			return fmt.Errorf("fail to stop chain sync: %w", err)
+		}
+		a.clientConn.Close()
+	}
+	return nil
+}
+
 func (a *AdaChain) Exec(ctx context.Context, cmd []string, env []string) (stdout, stderr []byte, err error) {
 	job := dockerutil.NewImage(a.logger(), a.DockerClient, a.NetworkID, a.testName, a.cfg.Images[0].Repository, a.cfg.Images[0].Version)
 	opts := dockerutil.ContainerOptions{
@@ -236,7 +252,7 @@ func (a *AdaChain) ExportState(ctx context.Context, height int64) (string, error
 
 func (a *AdaChain) GetRPCAddress() string {
 	rpcPortNumber := strings.Split(n2cPort, "/")
-	return fmt.Sprintf("http://%s:%s", a.HostName(), rpcPortNumber[0])
+	return fmt.Sprintf("%s:%s", a.HostName(), rpcPortNumber[0])
 }
 
 func (a *AdaChain) GetGRPCAddress() string {
@@ -245,12 +261,12 @@ func (a *AdaChain) GetGRPCAddress() string {
 
 func (a *AdaChain) GetHostRPCAddress() string {
 	rpcPortNumber := strings.Split(n2cPort, "/")
-	return fmt.Sprintf("http://127.0.0.1:%s", rpcPortNumber[0])
+	return fmt.Sprintf("127.0.0.1:%s", rpcPortNumber[0])
 }
 
 func (a *AdaChain) GetHostPeerAddress() string {
 	rpcPortNumber := strings.Split(n2nPort, "/")
-	return fmt.Sprintf("http://127.0.0.1:%s", rpcPortNumber[0])
+	return fmt.Sprintf("127.0.0.1:%s", rpcPortNumber[0])
 }
 
 func (a *AdaChain) GetHostGRPCAddress() string {
@@ -262,8 +278,8 @@ func (a *AdaChain) HomeDir() string {
 }
 
 func (a *AdaChain) CreateKey(ctx context.Context, keyName string) error {
-	seed := sha256.New().Sum([]byte(keyName))
-	privKey := ed25519.NewKeyFromSeed(seed)
+	seed := sha256.Sum256([]byte(keyName))
+	privKey := ed25519.NewKeyFromSeed(seed[:])
 
 	a.keysLock.Lock()
 	defer a.keysLock.Unlock()
@@ -273,7 +289,28 @@ func (a *AdaChain) CreateKey(ctx context.Context, keyName string) error {
 }
 
 func (a *AdaChain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	panic(errNotImplemented())
+	seed, err := mnemonicToEddKey(mnemonic, name)
+	if err != nil {
+		return fmt.Errorf("failed to recover key: %w", err)
+	}
+	privKey := ed25519.NewKeyFromSeed(seed)
+	a.keysLock.Lock()
+	defer a.keysLock.Unlock()
+	a.keys[name] = privKey
+	return nil
+}
+
+func (a *AdaChain) SetFaucet(ctx context.Context) (err error) {
+	const keyName = "faucet"
+	if err := a.CreateKey(ctx, keyName); err != nil {
+		return err
+	}
+	key, ok := a.keys[keyName]
+	if !ok {
+		return fmt.Errorf("key not found: %s", keyName)
+	}
+	a.faucetAddress, err = address.PaymentOnlyTestnetAddressFromPubkey(key.Public().(ed25519.PublicKey))
+	return err
 }
 
 func (a *AdaChain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
@@ -311,8 +348,28 @@ func (a *AdaChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 	addrLock.Lock()
 	defer addrLock.Unlock()
 
+	// create new n2c connection
+	conn, err := a.newQueryConnection()
+	if err != nil {
+		return "", fmt.Errorf("failed to create connection: %w", err)
+	}
+	defer func() {
+		if closeErr := conn.Close(); err != nil {
+			a.log.Error("failed to close n2c connection", zap.Error(closeErr))
+		}
+	}()
+	if err = a.clientConn.LocalStateQuery().Client.AcquireVolatileTip(); err != nil {
+		return "", fmt.Errorf("failed to acquire volatile tip: %w", err)
+	}
+	defer func() {
+		if err := a.clientConn.LocalStateQuery().Client.Release(); err != nil {
+			a.log.Error("failed to release volatile tip", zap.Error(err))
+		}
+	}()
+
 	// find tx inputs
-	ledgerAddr, err := ledger.NewAddress(amount.Address)
+	var txInputs []gtx.TxInput
+	ledgerAddr, err := ledger.NewAddress(fromAddr.String())
 	if err != nil {
 		return "", fmt.Errorf("invalid address: %w", err)
 	}
@@ -320,16 +377,15 @@ func (a *AdaChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 	if err != nil {
 		return "", fmt.Errorf("failed to get utxo: %w", err)
 	}
-	amt := amount.Amount.Uint64()
-	var txInputs []gtx.TxInput
+	amt := amount.Amount
 	for txID, utxo := range utxoRes.Results {
 		txInputs = append(txInputs, gtx.NewTxInput(txID.Hash.String(), uint16(txID.Idx), utxo.Amount()))
-		amt -= utxo.Amount()
-		if amt <= 0 {
+		amt = amt.Sub(math.NewIntFromUint64(utxo.Amount()))
+		if amt.LTE(math.ZeroInt()) {
 			break
 		}
 	}
-	if amt > 0 {
+	if amt.GT(math.ZeroInt()) {
 		return "", fmt.Errorf("not enough funds, short by %d", amt)
 	}
 
@@ -380,6 +436,8 @@ func (a *AdaChain) SendFundsWithNote(ctx context.Context, keyName string, amount
 		return "", fmt.Errorf("timeout waiting for tx to be seen")
 	}
 
+	a.log.Info("seen tx", zap.String("tx_hash", txHashHex))
+
 	return txHashHex, nil
 }
 
@@ -427,13 +485,36 @@ func (a *AdaChain) Timeouts(ctx context.Context, height int64) ([]ibc.PacketTime
 }
 
 func (a *AdaChain) BuildWallet(ctx context.Context, keyName string, mnemonic string) (ibc.Wallet, error) {
-	//TODO implement me
-	panic("implement me")
+	if mnemonic != "" {
+		if err := a.RecoverKey(ctx, keyName, mnemonic); err != nil {
+			return nil, fmt.Errorf("failed to recover key: %w", err)
+		}
+	} else {
+		if err := a.CreateKey(ctx, keyName); err != nil {
+			return nil, fmt.Errorf("failed to create key: %w", err)
+		}
+	}
+
+	a.keysLock.Lock()
+	defer a.keysLock.Unlock()
+	privKey, ok := a.keys[keyName]
+	if !ok {
+		return nil, fmt.Errorf("key not found: %s", keyName)
+	}
+	addr, err := address.PaymentOnlyTestnetAddressFromPubkey(privKey.Public().(ed25519.PublicKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address from public key: %w", err)
+	}
+
+	return &wallet{
+		keyName:  keyName,
+		address:  addr,
+		mnemonic: mnemonic,
+	}, nil
 }
 
 func (a *AdaChain) BuildRelayerWallet(ctx context.Context, keyName string) (ibc.Wallet, error) {
-	//TODO implement me
-	panic("implement me")
+	panic(errNotImplemented())
 }
 
 func (a *AdaChain) pullImages(ctx context.Context, cli *dockerclient.Client) {
@@ -473,4 +554,17 @@ func (a *AdaChain) getAddressLock(keyname string) *sync.Mutex {
 		a.addrLocks[keyname] = lock
 	}
 	return lock
+}
+
+func (a *AdaChain) newQueryConnection() (*ouroboros.Connection, error) {
+	n2cConn, err := net.Dial("tcp", a.GetHostRPCAddress())
+	if err != nil {
+		return nil, fmt.Errorf("fail to dial n2c host: %w", err)
+	}
+	return ouroboros.NewConnection(
+		ouroboros.WithConnection(n2cConn),
+		ouroboros.WithLogger(NewSlogWrapper(a.log)),
+		ouroboros.WithNetworkMagic(42),
+		ouroboros.WithKeepAlive(true),
+	)
 }
