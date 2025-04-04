@@ -40,6 +40,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/edwards v1.0.0
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/gdamore/tcell/v2 v2.7.4
@@ -140,7 +141,6 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.5.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
@@ -285,16 +285,16 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/oauth2 v0.20.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.171.0 // indirect
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240709173604-40e1e62336c5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/protobuf v1.36.3 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
