@@ -202,9 +202,12 @@ func (c *Chain) ExportState(ctx context.Context, height int64) (string, error) {
 	return "", nil
 }
 
+func (c *Chain) GetAPIAddress() string{
+	return fmt.Sprintf("http://%s:%s", dockerutil.CondenseHostName(c.Name()), "8090")
+}
+
 func (c *Chain) GetRPCAddress() string {
-	panic("not implemented")
-	return ""
+	return fmt.Sprintf("http://%s:%s", dockerutil.CondenseHostName(c.Name()), "8091")
 }
 
 func (c *Chain) GetGRPCAddress() string {
