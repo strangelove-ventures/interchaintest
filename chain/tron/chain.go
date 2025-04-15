@@ -10,6 +10,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
@@ -30,7 +31,8 @@ type Chain struct {
 	config   ibc.ChainConfig
 	testName string
 
-	wallets map[string]Wallet
+	walletMutex sync.Mutex
+	wallets map[string]*Wallet
 
 	VolumeName   string
 	NetworkID    string
@@ -54,7 +56,7 @@ func NewTronChain(
 		config:   chainConfig,
 		testName: testName,
 		api:      api.NewTronApi("http://localhost:8090", time.Second*2),
-		wallets:  map[string]Wallet{},
+		wallets:  make(map[string]*Wallet),
 	}
 }
 
@@ -229,56 +231,64 @@ func (c *Chain) HomeDir() string {
 	return "/home/tron"
 }
 
-func (c *Chain) CreateKey(ctx context.Context, name string) error {
+func (c *Chain) CreateKey(ctx context.Context, keyName string) error {
 	var (
 		err    error
-		wallet Wallet
+		wallet *Wallet
 	)
 
-	if name == "faucet" {
-		wallet, err = NewWalletFromKey(FaucetKey)
+	if keyName == "faucet" {
+		wallet, err = NewWalletFromKey(keyName, FaucetKey)
 	} else {
-		wallet, err = NewWallet()
+		wallet, err = NewWallet(keyName)
 	}
 	if err != nil {
 		c.logger.Error("failed to create wallet", zap.Error(err))
 		return err
 	}
 
-	c.wallets[name] = wallet
+	c.walletMutex.Lock()
+	defer c.walletMutex.Unlock()
+	c.wallets[keyName] = wallet
 	return nil
 }
 
-func (c *Chain) RecoverKey(ctx context.Context, name, mnemonic string) error {
-	wallet, err := NewWalletFromMnemonic(mnemonic)
+func (c *Chain) RecoverKey(ctx context.Context, keyName, mnemonic string) error {
+	wallet, err := NewWalletFromMnemonic(keyName, mnemonic)
 	if err != nil {
 		c.logger.Error("failed to recover key", zap.Error(err))
 		return err
 	}
-	c.wallets[name] = wallet
+	c.walletMutex.Lock()
+	defer c.walletMutex.Unlock()
+	c.wallets[keyName] = wallet
 	return nil
 }
 
-func (c *Chain) GetAddress(ctx context.Context, name string) ([]byte, error) {
-	wallet, ok := c.wallets[name]
+func (c *Chain) GetAddress(ctx context.Context, keyName string) ([]byte, error) {
+	c.walletMutex.Lock()
+	wallet, ok := c.wallets[keyName]
+	c.walletMutex.Unlock()
 	if !ok {
-		c.logger.Error("failed to find key", zap.String("name", name))
-		return nil, fmt.Errorf("failed to find key: %s", name)
+		c.logger.Error("failed to find key", zap.String("keyName", keyName))
+		return nil, fmt.Errorf("failed to find key, keyName: %s", keyName)
 	}
 
 	return crypto.FromECDSAPub(&wallet.key.PublicKey), nil
 }
 
-func (c *Chain) SendFunds(ctx context.Context, name string, amount ibc.WalletAmount) error {
-	_, err := c.SendFundsWithNote(ctx, name, amount, "")
+func (c *Chain) SendFunds(ctx context.Context, keyName string, amount ibc.WalletAmount) error {
+	_, err := c.SendFundsWithNote(ctx, keyName, amount, "")
 	return err
 }
 
-func (c *Chain) SendFundsWithNote(ctx context.Context, name string, amount ibc.WalletAmount, note string) (string, error) {
-	wallet, ok := c.wallets[name]
+func (c *Chain) SendFundsWithNote(ctx context.Context, keyName string, amount ibc.WalletAmount, note string) (string, error) {
+	c.walletMutex.Lock()
+	wallet, ok := c.wallets[keyName]
+	c.walletMutex.Unlock()
 	if !ok {
 		err := fmt.Errorf("key not found")
-		c.logger.Error("failed to find key", zap.String("name", name))
+		c.logger.Error("failed to find key", zap.String("name", keyName))
 		return "", err
 	}
 
@@ -382,7 +392,9 @@ func (c *Chain) BuildWallet(ctx context.Context, keyName string, mnemonic string
 		}
 	}
 
+	c.walletMutex.Lock()
 	wallet := c.wallets[keyName]
+	c.walletMutex.Unlock()
 	return wallet, nil
 }
 

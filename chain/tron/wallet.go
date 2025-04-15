@@ -1,6 +1,10 @@
 package tron
 
 import (
+	"sync"
+
+	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -9,88 +13,93 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
+var _ ibc.Wallet = &Wallet{}
+
 type Wallet struct {
 	key      *ecdsa.PrivateKey
-	name     string
+	keyName  string
 	mnemonic string
+	txLock   sync.Mutex
 }
 
-func NewWallet() (Wallet, error) {
+func NewWallet(keyName string) (*Wallet, error) {
 	entropy, err := bip39.NewEntropy(256)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
-	return NewWalletFromMnemonic(mnemonic)
+	return NewWalletFromMnemonic(keyName, mnemonic)
 }
 
-func NewWalletFromKey(hexkey string) (Wallet, error) {
+func NewWalletFromKey(keyName, hexkey string) (*Wallet, error) {
 	key, err := crypto.HexToECDSA(hexkey)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
-	return Wallet{
-		key: key,
+	return &Wallet{
+		keyName: keyName,
+		key:     key,
 	}, err
 }
 
-func NewWalletFromMnemonic(mnemonic string) (Wallet, error) {
+func NewWalletFromMnemonic(keyName, mnemonic string) (*Wallet, error) {
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
 	master, err := bip32.NewMasterKey(seed)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
 	path, err := accounts.ParseDerivationPath("m/44'/195'/0'/0/0")
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
 	key := master
 	for _, n := range path {
 		key, err = key.NewChildKey(n)
 		if err != nil {
-			return Wallet{}, err
+			return nil, err
 		}
 	}
 
 	priv, err := crypto.ToECDSA(key.Key)
 	if err != nil {
-		return Wallet{}, err
+		return nil, err
 	}
 
-	return Wallet{
+	return &Wallet{
+		keyName:  keyName,
 		key:      priv,
 		mnemonic: mnemonic,
 	}, nil
 }
 
-func (w Wallet) KeyName() string {
-	return w.name
+func (w *Wallet) KeyName() string {
+	return w.keyName
 }
 
-func (w Wallet) FormattedAddress() string {
+func (w *Wallet) FormattedAddress() string {
 	address, _ := api.ConvertAddress(
 		crypto.PubkeyToAddress(w.key.PublicKey).String(),
 	)
 	return address
 }
 
-func (w Wallet) Mnemonic() string {
+func (w *Wallet) Mnemonic() string {
 	return w.mnemonic
 }
 
-func (w Wallet) Address() []byte {
+func (w *Wallet) Address() []byte {
 	pub := w.key.Public().(*ecdsa.PublicKey)
 	return crypto.FromECDSAPub(pub)
 }
