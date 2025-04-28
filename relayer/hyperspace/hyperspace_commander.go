@@ -16,6 +16,7 @@ import (
 
 	"github.com/strangelove-ventures/interchaintest/v8/chain/polkadot"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
 )
 
 // hyperspaceCommander satisfies relayer.RelayerCommander.
@@ -23,6 +24,10 @@ type hyperspaceCommander struct {
 	log             *zap.Logger
 	paths           map[string]*pathConfiguration
 	extraStartFlags []string
+}
+
+func NewHyperspaceCommander() relayer.RelayerCommander {
+	return &hyperspaceCommander{}
 }
 
 // pathConfiguration represents the concept of a "path" which is implemented at the interchain test level rather

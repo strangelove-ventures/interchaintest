@@ -127,6 +127,10 @@ type commander struct {
 	extraStartFlags []string
 }
 
+func NewCommander() relayer.RelayerCommander {
+	return commander{}
+}
+
 func (commander) Name() string {
 	return "rly"
 }

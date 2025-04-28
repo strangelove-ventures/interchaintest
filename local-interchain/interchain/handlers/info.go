@@ -209,7 +209,7 @@ func get_logs(w http.ResponseWriter, r *http.Request, i *info) {
 	info := GetInfo{
 		Logs:   logs,
 		Chains: chains,
-		Relay:  i.Config.Relayer,
+		Relay:  *i.Config.Relayer,
 	}
 
 	jsonRes, err := json.MarshalIndent(info, "", "  ")

@@ -2,10 +2,14 @@ package ibc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
+	"maps"
 	"path"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -436,6 +440,36 @@ const (
 	Hermes
 	Hyperspace
 )
+
+var relayerImplementationMap = map[string]RelayerImplementation{
+	"rly":        CosmosRly,
+	"hermes":     Hermes,
+	"hyperspace": Hyperspace,
+}
+
+func (s *RelayerImplementation) UnmarshalYAML(value *yaml.Node) error {
+	var str string
+	if err := value.Decode(&str); err != nil {
+		return fmt.Errorf("failed to decode: %w", err)
+	}
+	if v, ok := relayerImplementationMap[str]; ok {
+		*s = v
+		return nil
+	}
+	return fmt.Errorf("invalid relayer type: %s, expecting %+v", str, slices.Collect(maps.Keys(relayerImplementationMap)))
+}
+
+func (s *RelayerImplementation) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return fmt.Errorf("failed to unmarshal: %w", err)
+	}
+	if v, ok := relayerImplementationMap[str]; ok {
+		*s = v
+		return nil
+	}
+	return fmt.Errorf("invalid relayer type: %s, expecting %+v", str, slices.Collect(maps.Keys(relayerImplementationMap)))
+}
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
 // which will be used to narrow down the list of channels a user wants to relay on.

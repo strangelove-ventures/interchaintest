@@ -21,6 +21,10 @@ type commander struct {
 	extraStartFlags []string
 }
 
+func NewHermesCommander() relayer.RelayerCommander {
+	return &commander{}
+}
+
 func (c commander) Name() string {
 	return hermes
 }

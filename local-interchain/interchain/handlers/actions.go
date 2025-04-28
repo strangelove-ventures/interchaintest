@@ -179,8 +179,7 @@ func (a *actions) PostActions(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if !strings.Contains(ah.Cmd, "--home") {
-				// does this ever change for any other relayer?
+			if strings.HasPrefix(ah.Cmd, "rly") && !strings.Contains(ah.Cmd, "--home") {
 				cmd = append(cmd, "--home", "/home/relayer")
 			}
 

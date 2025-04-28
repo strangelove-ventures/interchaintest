@@ -78,8 +78,6 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 
 	config := ac.Cfg
 
-	config.Relayer = ac.Relayer
-
 	WriteRunningChains(installDir, []byte("{}"))
 
 	// ibc-path-name -> index of []cosmos.CosmosChain
@@ -137,22 +135,20 @@ func StartChain(installDir, chainCfgFile string, ac *types.AppStartConfig) {
 	// setup a relayer if we have IBC paths to use.
 	if len(ibcpaths) > 0 || len(icsPair) > 0 {
 		rlyCfg := config.Relayer
-
-		relayerType, relayerName := ibc.CosmosRly, "relay"
 		rf := interchaintest.NewBuiltinRelayerFactory(
-			relayerType,
+			rlyCfg.Type,
 			logger,
 			interchaintestrelayer.CustomDockerImage(
 				rlyCfg.DockerImage.Repository,
 				rlyCfg.DockerImage.Version,
 				rlyCfg.DockerImage.UIDGID,
 			),
-			interchaintestrelayer.StartupFlags(rlyCfg.StartupFlags...),
+			interchaintestrelayer.StartupFlags(*rlyCfg.StartupFlags...),
 		)
 
 		// This also just needs the name.
 		relayer = rf.Build(fakeT, client, network)
-		ic = ic.AddRelayer(relayer, relayerName)
+		ic = ic.AddRelayer(relayer, "relay")
 
 		// Add links between chains
 		LinkIBCPaths(ibcpaths, chains, ic, relayer)

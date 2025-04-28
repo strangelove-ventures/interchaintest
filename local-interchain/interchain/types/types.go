@@ -15,7 +15,7 @@ import (
 
 type Config struct {
 	Chains  []Chain    `json:"chains" yaml:"chains"`
-	Relayer Relayer    `json:"relayer" yaml:"relayer"`
+	Relayer *Relayer   `json:"relayer" yaml:"relayer"`
 	Server  RestServer `json:"server" yaml:"server"`
 }
 
@@ -23,7 +23,6 @@ type AppStartConfig struct {
 	Address string
 	Port    uint16
 	Cfg     *Config
-	Relayer Relayer
 	AuthKey string // optional password for API interaction
 }
 
@@ -33,8 +32,9 @@ type RestServer struct {
 }
 
 type Relayer struct {
-	DockerImage  ibc.DockerImage `json:"docker_image" yaml:"docker_image"`
-	StartupFlags []string        `json:"startup_flags" yaml:"startup_flags"`
+	Type         ibc.RelayerImplementation `json:"type" yaml:"type"`
+	DockerImage  *ibc.DockerImage          `json:"docker_image" yaml:"docker_image"`
+	StartupFlags *[]string                 `json:"startup_flags" yaml:"startup_flags"`
 }
 
 type IBCChannel struct {

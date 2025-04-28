@@ -11,17 +11,17 @@ import (
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain"
 	"github.com/strangelove-ventures/interchaintest/local-interchain/interchain/types"
 	"github.com/strangelove-ventures/interchaintest/v8/ibc"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/hermes"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/hyperspace"
+	"github.com/strangelove-ventures/interchaintest/v8/relayer/rly"
 )
 
 const (
 	FlagAPIAddressOverride = "api-address"
 	FlagAPIPortOverride    = "api-port"
 
-	FlagRelayerImage        = "relayer-image"
-	FlagRelayerVersion      = "relayer-version"
-	FlagRelayerUidGid       = "relayer-uidgid"
-	FlagRelayerStartupFlags = "relayer-startup-flags"
-	FlagAuthKey             = "auth-key"
+	FlagAuthKey = "auth-key"
 )
 
 var startCmd = &cobra.Command{
@@ -39,10 +39,10 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 		isURL := strings.HasPrefix(configPath, "http")
 
 		var (
-		    parentDir string
-		    config *types.Config
-		    err error
-	         )
+			parentDir string
+			config    *types.Config
+			err       error
+		)
 
 		if path.IsAbs(configPath) {
 			dir, err := filepath.Abs(configPath)
@@ -79,25 +79,44 @@ local-ic start https://pastebin.com/raw/Ummk4DTM
 		apiAddr, _ := cmd.Flags().GetString(FlagAPIAddressOverride)
 		apiPort, _ := cmd.Flags().GetUint16(FlagAPIPortOverride)
 
-		relayerImg := cmd.Flag(FlagRelayerImage).Value.String()
-		relayerVer := cmd.Flag(FlagRelayerVersion).Value.String()
-		relayerUidGid := cmd.Flag(FlagRelayerUidGid).Value.String()
-		relayerFlags := strings.Split(cmd.Flag(FlagRelayerStartupFlags).Value.String(), " ")
+		if config.Relayer == nil {
+			config.Relayer = &types.Relayer{
+				Type: ibc.CosmosRly,
+			}
+		}
+
+		if config.Relayer.DockerImage == nil {
+			var commander relayer.RelayerCommander
+			switch config.Relayer.Type {
+			case ibc.CosmosRly:
+				commander = rly.NewCommander()
+			case ibc.Hermes:
+				commander = hermes.NewHermesCommander()
+			case ibc.Hyperspace:
+				commander = hyperspace.NewHyperspaceCommander()
+			}
+			config.Relayer.DockerImage = &ibc.DockerImage{
+				Repository: commander.DefaultContainerImage(),
+				Version:    commander.DefaultContainerVersion(),
+				UIDGID:     commander.DockerUser(),
+			}
+		}
+
+		if config.Relayer.StartupFlags == nil {
+			switch config.Relayer.Type {
+			case ibc.CosmosRly:
+				config.Relayer.StartupFlags = &[]string{"--block-history=100"}
+			case ibc.Hermes:
+				config.Relayer.StartupFlags = &[]string{""}
+			default:
+				panic("unsupported relayer type")
+			}
+		}
 
 		interchain.StartChain(parentDir, configPath, &types.AppStartConfig{
 			Address: apiAddr,
 			Port:    apiPort,
 			Cfg:     config,
-
-			Relayer: types.Relayer{
-				DockerImage: ibc.DockerImage{
-					Repository: relayerImg,
-					Version:    relayerVer,
-					UIDGID:     relayerUidGid,
-				},
-				StartupFlags: relayerFlags,
-			},
-
 			AuthKey: cmd.Flag(FlagAuthKey).Value.String(),
 		})
 	},
@@ -127,11 +146,6 @@ func GetConfigWithExtension(parentDir, config string) (string, error) {
 func init() {
 	startCmd.Flags().String(FlagAPIAddressOverride, "127.0.0.1", "override the default API address")
 	startCmd.Flags().Uint16(FlagAPIPortOverride, 8080, "override the default API port")
-
-	startCmd.Flags().String(FlagRelayerImage, "ghcr.io/cosmos/relayer", "override the docker relayer image")
-	startCmd.Flags().String(FlagRelayerVersion, "latest", "override the default relayer version")
-	startCmd.Flags().String(FlagRelayerUidGid, "100:1000", "override the default image UID:GID")
-	startCmd.Flags().String(FlagRelayerStartupFlags, "--block-history=100", "override the default relayer startup flags")
 
 	startCmd.Flags().String(FlagAuthKey, "", "require an auth key to use the internal API")
 }
