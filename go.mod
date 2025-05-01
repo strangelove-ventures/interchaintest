@@ -1,8 +1,7 @@
 module github.com/strangelove-ventures/interchaintest/v8
 
 go 1.22.5
-
-toolchain go1.23.0
+toolchain go1.24.1
 
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
@@ -34,6 +33,7 @@ require (
 	github.com/cosmos/interchain-security/v5 v5.1.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.1
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/gdamore/tcell/v2 v2.7.4
@@ -58,7 +58,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.32.0
-	golang.org/x/mod v0.19.0
+	golang.org/x/mod v0.24.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/tools v0.23.0
 	google.golang.org/grpc v1.69.4
@@ -130,7 +130,6 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.5.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
