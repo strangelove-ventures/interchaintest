@@ -20,6 +20,7 @@ type ForgeScriptOpts struct {
 	SignatureFn      string   // optional, signature function to run, empty string uses default run()
 	ConfigFile       string   // optional, json config file used for sol contract
 	RawOptions       []string // optional, appends additional options to command
+	Env              []string // optional, add env vars to call
 }
 
 // Add private-key or keystore to cmd.
@@ -115,6 +116,7 @@ func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts Forge
 			},
 		},
 		WorkingDir: dockerContractRootDir,
+		Env: opts.Env,
 	}
 	res := job.Run(ctx, cmd, containerOpts)
 
