@@ -96,7 +96,7 @@ func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts Forge
 	dockerContractRootDir := c.HomeDir() + path.Base(opts.ContractRootDir)
 
 	// Assemble cmd
-	cmd := []string{"forge", "script", opts.SolidityContract, "--rpc-url", c.GetRPCAddress(), "--broadcast"}
+	cmd := []string{"forge", "script", opts.SolidityContract, "--rpc-url", c.GetRPCAddress(), "--broadcast", "-v"}
 	cmd = c.AddKey(cmd, keyName)
 	cmd = AddSignature(cmd, opts.SignatureFn)
 	cmd = append(cmd, opts.RawOptions...)
