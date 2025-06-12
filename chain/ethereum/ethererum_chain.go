@@ -250,3 +250,22 @@ func (c *EthereumChain) GetBalance(ctx context.Context, address string, denom st
 	}
 	return sdkmath.NewIntFromBigInt(balance), nil
 }
+
+// ReadFile reads the contents of a single file at the specified path in the docker filesystem.
+// relPath describes the location of the file in the docker volume relative to the home directory.
+func (c *EthereumChain) ReadFile(ctx context.Context, relPath string) ([]byte, error) {
+	fr := dockerutil.NewFileRetriever(c.log, c.dockerClient, c.testName)
+	gen, err := fr.SingleFileContent(ctx, c.volumeName, relPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file at %s: %w", relPath, err)
+	}
+	return gen, nil
+}
+
+// WriteFile accepts file contents in a byte slice and writes the contents to
+// the docker filesystem. relPath describes the location of the file in the
+// docker volume relative to the home directory.
+func (c *EthereumChain) WriteFile(ctx context.Context, content []byte, relPath string) error {
+	fw := dockerutil.NewFileWriter(c.log, c.dockerClient, c.testName)
+	return fw.WriteFile(ctx, c.volumeName, relPath, content)
+}

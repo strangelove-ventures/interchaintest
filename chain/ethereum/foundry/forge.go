@@ -46,7 +46,7 @@ func AddSignature(cmd []string, signature string) []string {
 	return cmd
 }
 
-func GetConfigFilePath(configFile, localContractRootDir, solidityContractDir string) string {
+func  GetConfigFilePath(configFile, localContractRootDir, solidityContractDir string) string {
 	return filepath.Join(localContractRootDir, solidityContractDir, configFile)
 }
 
@@ -93,7 +93,7 @@ func (c *AnvilChain) ForgeScript(ctx context.Context, keyName string, opts Forge
 		return nil, nil, err
 	}
 	localContractRootDir := filepath.Join(pwd, opts.ContractRootDir)
-	dockerContractRootDir := c.HomeDir() + path.Base(opts.ContractRootDir)
+	dockerContractRootDir := filepath.Join(c.HomeDir(), path.Base(opts.ContractRootDir))
 
 	// Assemble cmd
 	cmd := []string{"forge", "script", opts.SolidityContract, "--rpc-url", c.GetRPCAddress(), "--broadcast", "-v"}
