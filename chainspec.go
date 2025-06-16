@@ -161,6 +161,10 @@ func (s *ChainSpec) applyConfigOverrides(cfg ibc.ChainConfig) (*ibc.ChainConfig,
 		cfg.Genesis = s.Genesis
 	}
 
+	if s.SigningAlgorithm != "" {
+		cfg.SigningAlgorithm = s.SigningAlgorithm
+	}
+
 	cfg.UsingChainIDFlagCLI = s.UsingChainIDFlagCLI
 
 	if cfg.CoinDecimals == nil {
