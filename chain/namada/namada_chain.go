@@ -504,7 +504,7 @@ func (c *NamadaChain) SendIBCTransfer(ctx context.Context, channelID, keyName st
 		return ibc.Tx{}, fmt.Errorf("checking the events failed: %v", err)
 	}
 	const evType = "send_packet"
-	tendermintEvents := results.EndBlockEvents
+	tendermintEvents := results.FinalizeBlockEvents
 	var events []cometbft.Event
 	for _, event := range tendermintEvents {
 		if event.Type != evType {
