@@ -1,6 +1,8 @@
 <div align="center">
 <h1><code>interchaintest</code></h1>
 
+**This repository is no longer actively maintained by Strangelove Ventures. All new PRs and issues should be directed to the upstream repository at <https://github.com/cosmos/interchaintest>**.
+
 Formerly known as `ibctest`.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/strangelove-ventures/interchaintest@main.svg)](https://pkg.go.dev/github.com/strangelove-ventures/interchaintest@main)
