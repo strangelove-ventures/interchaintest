@@ -23,7 +23,7 @@ jobs:
         working-directory: local-interchain/rust/localic-std
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install stable with clippy and rustfmt
         uses: actions-rs/toolchain@v1
         with:
@@ -45,7 +45,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6.1.0
