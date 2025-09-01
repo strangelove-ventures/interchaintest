@@ -21,7 +21,7 @@ jobs:
         working-directory: ./local-interchain
     steps:
       - name: Checkout interchaintest
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: checkout chain
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download Tarball Artifact
         uses: actions/download-artifact@v4
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: checkout chain
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install latest toolchain
         uses: actions-rs/toolchain@v1
@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: checkout chain
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -164,7 +164,7 @@ jobs:
 
     steps:
       - name: checkout chain
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js ${{ env.NODE_JS_VERSION }}
         uses: actions/setup-node@v4
