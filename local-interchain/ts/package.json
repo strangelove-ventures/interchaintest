@@ -8,6 +8,6 @@
     "start": "npx tsx src/index.ts"
   },
   "dependencies": {
-    "@cosmjs/stargate": "^0.32.4"
+    "@cosmjs/stargate": "^0.38.1"
   }
 }
