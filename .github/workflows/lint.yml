@@ -25,10 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install stable with clippy and rustfmt
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
           components: rustfmt, clippy
       - name: Install clippy
         run: rustup component add clippy
