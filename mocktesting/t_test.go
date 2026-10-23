@@ -151,11 +151,12 @@ func TestT_Parallel(t *testing.T) {
 	const delay = 10 * time.Millisecond
 
 	mt := mocktesting.NewT("x")
+	mt.ParallelDelay = delay
 	before := time.Now()
 	mt.Parallel()
 	after := time.Now()
 
-	require.GreaterOrEqual(t, before.Add(delay).UnixNano(), after.UnixNano(), "mt.Parallel did not delay the minimum of 10ms")
+	require.GreaterOrEqual(t, after.Sub(before), delay, "mt.Parallel did not delay the minimum of 10ms")
 }
 
 func TestT_Simulate(t *testing.T) {
